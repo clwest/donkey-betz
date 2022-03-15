@@ -3,10 +3,10 @@ import { Button, makeStyles } from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
     container: {
-        padding: theme.spacing(4),
+        padding: theme.spacing(2),
         display: "flex",
         justifyContent: "flex-end",
-        gap: theme.spacing(1)
+        gap: theme.spacing(4)
     },
 }))
 

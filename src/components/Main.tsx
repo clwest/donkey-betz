@@ -2,7 +2,7 @@
 import React, { useEffect, useState} from "react";
 import eth from "../eth.png";
 import dai from "../dai.png";
-import donkey from "../rebel.png";
+import rebel from "../rebel.png";
 import { YourWallet } from './yourWallet';
 import { DonkeyStakingContract } from './donkeyStakingContract';
 import {useEthers} from '@usedapp/core';
@@ -18,8 +18,8 @@ import helperConfig from "../helper-config.json";
 
 
 export type Token = {
-    image: string,
-    address: string,
+    image: string
+    address: string
     name: string
 }
 
@@ -55,7 +55,7 @@ export const Main = () => {
             name: "DAI",
         },
         {
-            image: donkey,
+            image: rebel,
             address: donkeyTokenAddress,
             name: "Donkey"
         }

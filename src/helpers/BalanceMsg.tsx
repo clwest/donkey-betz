@@ -5,14 +5,14 @@ const useStyles = makeStyles(theme => ({
     container: {
         display: "inline-grid",
         gridTemplateColumns: "auto auto auto",
-        gap: theme.spacing(1),
+        gap: theme.spacing(2),
         alignItems: "center"
     },
     tokenImg: {
-        width: "32px"
+        width: "50px"
     },
     amount: {
-        fontSize: 700
+        fontSize: 250,
     }
 }))
 
