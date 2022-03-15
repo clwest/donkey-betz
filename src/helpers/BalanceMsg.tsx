@@ -12,7 +12,7 @@ const useStyles = makeStyles(theme => ({
         width: "50px"
     },
     amount: {
-        fontSize: 250,
+        fontWeight: 700,
     }
 }))
 

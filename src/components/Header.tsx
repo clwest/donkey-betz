@@ -6,7 +6,7 @@ const useStyles = makeStyles((theme) => ({
         padding: theme.spacing(2),
         display: "flex",
         justifyContent: "flex-end",
-        gap: theme.spacing(4)
+        gap: theme.spacing(2)
     },
 }))
 

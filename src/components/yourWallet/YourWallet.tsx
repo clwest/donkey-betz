@@ -43,7 +43,7 @@ export const YourWallet = ({ supportedTokens }: YourWalletProps) => {
 
     return (
         <Box>
-          <h1 className={classes.header}>Your Wallet</h1>
+        <h1 className={classes.header}>Your Wallet</h1>
           <Box className={classes.box}>
             <div>
               {isConnected ? (
