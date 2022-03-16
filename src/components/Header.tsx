@@ -8,6 +8,14 @@ const useStyles = makeStyles((theme) => ({
         justifyContent: "flex-end",
         gap: theme.spacing(2)
     },
+    btn: {
+        backgroundColor: "#869232",
+        color: "black",
+    },
+    btn2: {
+        backgroundColor: "#869232",
+        color: "black",
+    }
 }))
 
 export const Header = () => {
@@ -22,15 +30,15 @@ export const Header = () => {
             {isConnected ? (
                 <>
             
-                <Button color="primary" variant="contained">
+                <Button className={classes.btn} color="primary" variant="contained">
                     {`${account?.slice(0, 4)}...${account?.slice(-3)}`}
                 </Button>
-                <Button variant="contained" onClick={deactivate}>
+                <Button className={classes.btn2} color="primary" variant="contained" onClick={deactivate}>
                     Disconnect
                 </Button>
                 </>
             ) : (
-                <Button color="primary" variant="contained" onClick={() => activateBrowserWallet()}>
+                <Button className={classes.btn} color="primary" variant="contained" onClick={() => activateBrowserWallet()}>
                     Connect
                 </Button>
             )

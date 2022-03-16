@@ -21,13 +21,18 @@ const useStyles = makeStyles((theme) => ({
         gap: theme.spacing(4),
     },
     box: {
-        backgroundColor: "white",
-        borderRadius: "25px",
+      backgroundColor: "#B06D0D",
+      borderRadius: "40px",
+      boxShadow: "0 9px #70AE0A",
+
     },
     header: {
-        color: "white",
+        color: "#DAA520",
+        textShadow: "2px 2px 5px #DC143C",
     }
-}))
+      }))
+
+
 export const YourWallet = ({ supportedTokens }: YourWalletProps) => {
     const [ selectedTokensIndex, setSelectedTokensIndex] = useState<number>(0);
 
@@ -66,8 +71,6 @@ export const YourWallet = ({ supportedTokens }: YourWalletProps) => {
                           <WalletBalance
                             token={supportedTokens[selectedTokensIndex]}
                           />
-                          {/* this is the same as */}
-                          {/* The chainlink_defi props passing */}
                           <StakeForm token={supportedTokens[selectedTokensIndex]} />
                         </div>
                       </TabPanel>

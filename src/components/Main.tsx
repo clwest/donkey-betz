@@ -19,15 +19,18 @@ import helperConfig from "../helper-config.json";
 
 export type Token = {
     image: string
-    address: string
+    address: string,
     name: string
 }
 
 const useStyles = makeStyles((theme) => ({
     title: {
-        color: theme.palette.common.white,
+        color: "#DC143C",
         textAlign: "center",
-        padding: theme.spacing(4)
+        textDecoration: "underline",
+        textShadow: "5px 5px 10px #0000F",
+        fontFamily: "Inconsolata, monospace",
+        padding: theme.spacing(4),
     }
 }))
 

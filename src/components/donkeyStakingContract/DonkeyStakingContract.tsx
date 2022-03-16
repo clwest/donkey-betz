@@ -20,13 +20,15 @@ const useStyles = makeStyles((theme) => ({
         gap: theme.spacing(4),
     },
     box: {
-        backgroundColor: "goldenrod",
-        borderRadius: "25px",
+        backgroundColor: "#B06D0D",
+        borderRadius: "40px",
+        boxShadow: "0 9px #9B300A",
         margin: `${theme.spacing(4)}px 0`,
         padding: theme.spacing(2),
     },
     header: {
-        color: "white",
+      color: "#DAA520",
+      textShadow: "2px 2px 5px #DC143C"
     }
 }))
 
@@ -46,7 +48,7 @@ export const DonkeyStakingContract = ({
 
     return (
         <Box>
-          <h1 className={classes.header}>The TokenFarm Contract</h1>
+          <h1 className={classes.header}>Donkey Yield Earnings</h1>
           <Box className={classes.box}>
             <div>
               {isConnected ? (

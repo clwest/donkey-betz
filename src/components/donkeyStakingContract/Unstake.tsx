@@ -22,8 +22,12 @@ const useStyles = makeStyles((theme) => ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        gap: theme.spacing(2),
+        gap: theme.spacing(4),
     },
+    btn: {
+        color: "black",
+        backgroundColor: "#C13B0D",
+    }
 }));
 
 export const Unstake = ({token}: UnstakeFormProps) => {
@@ -71,6 +75,7 @@ export const Unstake = ({token}: UnstakeFormProps) => {
                 tokenImgSrc={image}
                 />
                 <Button
+                className={classes.btn}
                 color="primary"
                 variant="contained"
                 onClick={handleUnstakeSubmit}
