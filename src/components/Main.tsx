@@ -104,7 +104,7 @@ export const Main = () => {
         onClose={handleCloseNetworkError}
     >
         <Alert onClose={handleCloseNetworkError} severity="warning">
-        You gotta connect to the Kovan or Rinkeby network!
+        You must be connected to the Kovan network!
         </Alert>
     </Snackbar>
     </>
