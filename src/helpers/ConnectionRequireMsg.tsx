@@ -16,7 +16,7 @@ export const ConnectionRequireMsg = () => {
     return (
         <div className={classes.container}>
             <Typography variant="h6" component="span">
-                Please connect to MetaMask!
+                Please connect MetaMask to the Kovan Network!
             </Typography>
         </div>
     )
