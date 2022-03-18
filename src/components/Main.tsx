@@ -25,7 +25,8 @@ export type Token = {
 
 const useStyles = makeStyles((theme) => ({
     title: {
-        color: "#DC143C",
+        color: "#DAA520",
+        boxShadow: "0px 0px 5px goldenrod",
         textAlign: "center",
         textDecoration: "underline",
         textShadow: "5px 5px 10px #0000F",
@@ -94,7 +95,7 @@ export const Main = () => {
             root: classes.title
         }}
         >
-            Donkey Token Staking
+           Donkey Token Staking
         </Typography>
         <YourWallet supportedTokens={supportedTokens} />
         <DonkeyStakingContract supportedTokens={supportedTokens} />

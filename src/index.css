@@ -17,18 +17,18 @@ body {
   min-height: 100vh;
   background: linear-gradient(
     135deg,
-    hsl(26, 88%, 3%),
-    hsl(52, 49%, 12%),
-    hsl(49, 72%, 36%)
+    hsl(222, 91%, 45%),
+    hsl(187, 72%, 29%),
+    hsl(39, 93%, 42%)
   );
 }
 
 body::backdrop {
   background-color: 
-  hsl(58, 91%, 37%),
-  hsl(56, 96%, 32%),
-  hsl(52, 91%, 23%),
-  hsl(49, 91%, 22%)
+  hsl(60, 67%, 4%),
+  hsl(133, 96%, 32%),
+  hsl(88, 74%, 35%),
+  hsl(125, 91%, 22%)
 }
 
 

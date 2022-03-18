@@ -1,5 +1,6 @@
 import {useEthers} from "@usedapp/core";
 import { Button, makeStyles } from "@material-ui/core";
+import rebel from "../rebel.png";
 
 const useStyles = makeStyles((theme) => ({
     container: {
@@ -9,11 +10,11 @@ const useStyles = makeStyles((theme) => ({
         gap: theme.spacing(2)
     },
     btn: {
-        backgroundColor: "#869232",
+        backgroundColor: "#C3DF10",
         color: "black",
     },
     btn2: {
-        backgroundColor: "#869232",
+        backgroundColor: "#C3DF10",
         color: "black",
     }
 }))

@@ -20,7 +20,7 @@ const useStyles = makeStyles((theme) => ({
         gap: theme.spacing(4),
     },
     box: {
-        backgroundColor: "#B06D0D",
+        backgroundColor: "#F09C22",
         borderRadius: "40px",
         boxShadow: "0 9px #9B300A",
         margin: `${theme.spacing(4)}px 0`,
