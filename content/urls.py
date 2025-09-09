@@ -10,7 +10,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ContentTemplateViewSet, DocumentViewSet, KnowledgeBaseViewSet,
     ContentGenerationViewSet, ContentWorkflowViewSet, WorkflowExecutionViewSet,
-    ContentAnalyticsViewSet
+    ContentAnalyticsViewSet, blog_list
 )
 
 # Create router for ViewSets
@@ -28,6 +28,9 @@ app_name = 'content'
 urlpatterns = [
     # Include router URLs
     path('', include(router.urls)),
+    # Additional endpoints
+    path('blog/list/', blog_list, name='blog-list'),
+    path('social/list/', blog_list, name='social-list'),  # Using same view for now
 ]
 
 # WebSocket URL patterns (to be included in core routing)

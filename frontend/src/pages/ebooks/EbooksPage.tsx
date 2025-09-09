@@ -85,7 +85,7 @@ export function EbooksPage() {
   const loadEbooks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8001/api/ebooks/', {
+      const response = await fetch('http://localhost:8000/api/ebooks/', {
         headers: {
           'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`
         }
@@ -122,7 +122,7 @@ export function EbooksPage() {
 
     try {
       setGenerating(true);
-      const response = await fetch('http://localhost:8001/api/ebooks/', {
+      const response = await fetch('http://localhost:8000/api/ebooks/', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`,
@@ -159,7 +159,7 @@ export function EbooksPage() {
   const generateFullEbook = async (ebookId: number) => {
     try {
       setGenerating(true);
-      const response = await fetch(`http://localhost:8001/api/ebooks/${ebookId}/generate-full/`, {
+      const response = await fetch(`http://localhost:8000/api/ebooks/${ebookId}/generate-full/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`,
@@ -210,7 +210,7 @@ export function EbooksPage() {
 
   const exportEbook = async (ebookId: number, format: 'pdf' | 'epub' | 'docx') => {
     try {
-      const response = await fetch(`http://localhost:8001/api/ebooks/${ebookId}/export/`, {
+      const response = await fetch(`http://localhost:8000/api/ebooks/${ebookId}/export/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`,
@@ -239,7 +239,7 @@ export function EbooksPage() {
 
   const loadEbookDetails = async (ebookId: number) => {
     try {
-      const response = await fetch(`http://localhost:8001/api/ebooks/${ebookId}/`, {
+      const response = await fetch(`http://localhost:8000/api/ebooks/${ebookId}/`, {
         headers: {
           'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`
         }
@@ -260,7 +260,7 @@ export function EbooksPage() {
   const loadChapterContent = async (ebook: EBook, chapter: Chapter) => {
     setLoadingChapter(true);
     try {
-      const response = await fetch(`http://localhost:8001/api/ebooks/${ebook.id}/chapters/${chapter.id}/`, {
+      const response = await fetch(`http://localhost:8000/api/ebooks/${ebook.id}/chapters/${chapter.id}/`, {
         headers: {
           'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`
         }
@@ -361,7 +361,7 @@ export function EbooksPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${selectedEbook.id}/chapters/`,
+        `http://localhost:8000/api/ebooks/${selectedEbook.id}/chapters/`,
         {
           method: 'DELETE',
           headers: {

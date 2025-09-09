@@ -1,0 +1,157 @@
+# =============================================================================
+# UNIFIED DONKEY BETZ PLATFORM - PROMETHEUS CONFIGURATION
+# Metrics collection configuration for complete platform monitoring
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'unified-donkey-betz'
+    environment: 'production'
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+  - "/etc/prometheus/alert-rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # ==========================================================================
+  # PROMETHEUS SELF-MONITORING
+  # ==========================================================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ==========================================================================
+  # SYSTEM METRICS
+  # ==========================================================================
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ==========================================================================
+  # DATABASE METRICS
+  # ==========================================================================
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ==========================================================================
+  # APPLICATION METRICS
+  # ==========================================================================
+  - job_name: 'django-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  - job_name: 'celery-workers'
+    static_configs:
+      - targets: ['celery:8000']  # Assuming celery exports metrics
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ==========================================================================
+  # WEB SERVER METRICS
+  # ==========================================================================
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:8080']  # nginx status endpoint
+    scrape_interval: 15s
+    metrics_path: /nginx-status
+
+  # ==========================================================================
+  # MONITORING STACK METRICS
+  # ==========================================================================
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ==========================================================================
+  # ELASTICSEARCH METRICS
+  # ==========================================================================
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 30s
+    metrics_path: /_prometheus/metrics
+
+  # ==========================================================================
+  # CUSTOM APPLICATION METRICS
+  # ==========================================================================
+  - job_name: 'unified-platform-custom'
+    static_configs:
+      - targets: ['backend:8000']
+    scrape_interval: 15s
+    metrics_path: /metrics/custom
+    params:
+      format: ['prometheus']
+
+  # ==========================================================================
+  # HEALTH CHECK METRICS
+  # ==========================================================================
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: 
+        - 'backend:8000'
+        - 'frontend:80'
+        - 'mobile-web:80'
+    scrape_interval: 30s
+    metrics_path: /health
+    params:
+      format: ['prometheus']
+
+  # ==========================================================================
+  # BUSINESS METRICS
+  # ==========================================================================
+  - job_name: 'business-metrics'
+    static_configs:
+      - targets: ['backend:8000']
+    scrape_interval: 60s
+    metrics_path: /metrics/business
+    params:
+      format: ['prometheus']
+
+# =============================================================================
+# STORAGE CONFIGURATION
+# =============================================================================
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+    path: /prometheus

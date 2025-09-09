@@ -90,6 +90,12 @@ class OpenAIProvider(BaseAIProvider):
         
         # Model pricing (per 1K tokens)
         self.pricing = {
+            # GPT-5 Models (Released August 2025)
+            'gpt-5': {'input': 1.25, 'output': 10.0},
+            'gpt-5-mini': {'input': 0.25, 'output': 2.0},
+            'gpt-5-nano': {'input': 0.05, 'output': 0.40},
+            'gpt-5-chat-latest': {'input': 1.25, 'output': 10.0},
+            # GPT-4 Models (kept for fallback)
             'gpt-4': {'input': 0.03, 'output': 0.06},
             'gpt-4-turbo': {'input': 0.01, 'output': 0.03},
             'gpt-4-turbo-preview': {'input': 0.01, 'output': 0.03},
@@ -120,16 +126,40 @@ class OpenAIProvider(BaseAIProvider):
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": user_prompt})
             
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=config.get('temperature', 0.7),
-                max_tokens=config.get('max_tokens', 2000),
-                top_p=config.get('top_p', 1.0),
-                frequency_penalty=config.get('frequency_penalty', 0.0),
-                presence_penalty=config.get('presence_penalty', 0.0),
-                stream=False
-            )
+            # Build base parameters
+            completion_params = {
+                "model": model,
+                "messages": messages,
+                "stream": False
+            }
+            
+            # Handle GPT-5 models differently - they have different parameters
+            try:
+                if 'gpt-5' in model.lower():
+                    # Try with max_completion_tokens first (new parameter for GPT-5)
+                    completion_params["max_completion_tokens"] = config.get('max_tokens', 2000)
+                    # GPT-5 doesn't support temperature and other parameters
+                else:
+                    # Non-GPT-5 models use standard parameters
+                    completion_params["max_tokens"] = config.get('max_tokens', 2000)
+                    completion_params["temperature"] = config.get('temperature', 0.7)
+                    completion_params["top_p"] = config.get('top_p', 1.0)
+                    completion_params["frequency_penalty"] = config.get('frequency_penalty', 0.0)
+                    completion_params["presence_penalty"] = config.get('presence_penalty', 0.0)
+                
+                response = self.client.chat.completions.create(**completion_params)
+            except Exception as e:
+                # If max_completion_tokens fails, try without any token limit
+                if 'gpt-5' in model.lower() and 'max_completion_tokens' in str(e):
+                    logger.warning(f"Retrying GPT-5 without token limit due to: {e}")
+                    completion_params = {
+                        "model": model,
+                        "messages": messages,
+                        "stream": False
+                    }
+                    response = self.client.chat.completions.create(**completion_params)
+                else:
+                    raise
             
             generation_time = int((time.time() - start_time) * 1000)
             
@@ -167,6 +197,10 @@ class OpenAIProvider(BaseAIProvider):
     def get_available_models(self) -> List[str]:
         """Get available OpenAI models"""
         return [
+            'gpt-5',
+            'gpt-5-mini',
+            'gpt-5-nano',
+            'gpt-5-chat-latest',
             'gpt-4o',
             'gpt-4-turbo-preview', 
             'gpt-4-turbo',
@@ -178,10 +212,10 @@ class OpenAIProvider(BaseAIProvider):
     def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
         """Estimate cost for OpenAI generation"""
         if model not in self.pricing:
-            # Default to GPT-4 pricing if model not found
-            model = 'gpt-4'
+            # Default to GPT-5-mini pricing if model not found
+            model = 'gpt-5-mini'
         
-        pricing = self.pricing.get(model, self.pricing['gpt-4'])
+        pricing = self.pricing.get(model, self.pricing['gpt-5-mini'])
         input_cost = (input_tokens / 1000) * pricing['input']
         output_cost = (output_tokens / 1000) * pricing['output']
         

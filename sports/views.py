@@ -54,6 +54,7 @@ class SportsAnalyticsPagination(PageNumberPagination):
 class LeagueViewSet(viewsets.ReadOnlyModelViewSet):
     """League API endpoints"""
     
+    permission_classes = [permissions.AllowAny]  # Allow public read access
     queryset = League.objects.filter(is_active=True)
     serializer_class = LeagueSerializer
     pagination_class = SportsAnalyticsPagination
@@ -263,11 +264,12 @@ class TeamViewSet(viewsets.ReadOnlyModelViewSet):
 class GameViewSet(viewsets.ReadOnlyModelViewSet):
     """Game API endpoints"""
     
+    permission_classes = [permissions.AllowAny]  # Allow public read access
     queryset = Game.objects.filter(is_active=True).select_related('league', 'home_team', 'away_team')
     serializer_class = GameSerializer
     pagination_class = SportsAnalyticsPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'league', 'home_team', 'away_team', 'season', 'is_playoff']
+    filterset_fields = ['status', 'home_team', 'away_team', 'season', 'is_playoff']  # Removed 'league' to handle manually
     search_fields = ['home_team__name', 'away_team__name', 'venue_name']
     ordering_fields = ['scheduled_start', 'created_at']
     ordering = ['-scheduled_start']
@@ -276,14 +278,35 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         """Filter games based on query parameters"""
         queryset = super().get_queryset()
         
+        # League filtering - accept either UUID or abbreviation/name
+        league_param = self.request.query_params.get('league')
+        if league_param:
+            # Try to filter by abbreviation or name if not a valid UUID
+            try:
+                import uuid
+                uuid.UUID(league_param)
+                # It's a valid UUID, use the default filter
+                queryset = queryset.filter(league__id=league_param)
+            except ValueError:
+                # Not a UUID, try abbreviation or name
+                queryset = queryset.filter(
+                    Q(league__abbreviation__iexact=league_param) |
+                    Q(league__name__iexact=league_param)
+                )
+        
         # Date filtering
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
+        date = self.request.query_params.get('date')
         
-        if date_from:
-            queryset = queryset.filter(scheduled_start__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(scheduled_start__lte=date_to)
+        if date:
+            # Single date filter
+            queryset = queryset.filter(scheduled_start__date=date)
+        else:
+            if date_from:
+                queryset = queryset.filter(scheduled_start__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(scheduled_start__lte=date_to)
         
         # Today's games
         if self.request.query_params.get('today') == 'true':

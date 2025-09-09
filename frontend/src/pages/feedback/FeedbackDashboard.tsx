@@ -28,7 +28,7 @@ export const FeedbackDashboard: React.FC = () => {
       ]);
       
       setAnalytics(analyticsData);
-      setFeedbackHistory(historyData.feedback);
+      setFeedbackHistory(historyData.feedback || []);
     } catch (error) {
       console.error('Failed to load feedback data:', error);
     } finally {
@@ -118,7 +118,7 @@ export const FeedbackDashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <MessageSquare className="w-8 h-8 text-purple-500" />
                 <span className="text-2xl font-bold text-white">
-                  {analytics.total_feedback}
+                  {analytics?.total_feedback || 0}
                 </span>
               </div>
               <p className="text-gray-400 text-sm">Total Feedback</p>
@@ -134,10 +134,12 @@ export const FeedbackDashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <Star className="w-8 h-8 text-yellow-500" />
                 <span className="text-2xl font-bold text-white">
-                  {(Object.values(analytics.by_content_type)
-                    .reduce((sum, item) => sum + item.average_rating, 0) / 
-                    Object.keys(analytics.by_content_type).length || 0
-                  ).toFixed(1)}
+                  {analytics?.by_content_type && Object.keys(analytics.by_content_type).length > 0 ? (
+                    (Object.values(analytics.by_content_type)
+                      .reduce((sum: number, item: any) => sum + (item.average_rating || 0), 0) / 
+                      Object.keys(analytics.by_content_type).length
+                    ).toFixed(1)
+                  ) : '0.0'}
                 </span>
               </div>
               <p className="text-gray-400 text-sm">Average Rating</p>
@@ -164,8 +166,10 @@ export const FeedbackDashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <ThumbsUp className="w-8 h-8 text-green-500" />
                 <span className="text-2xl font-bold text-white">
-                  {Object.values(analytics.by_content_type)
-                    .reduce((sum, item) => sum + item.positive, 0)}
+                  {analytics?.by_content_type 
+                    ? Object.values(analytics.by_content_type)
+                        .reduce((sum: number, item: any) => sum + (item.positive || 0), 0)
+                    : 0}
                 </span>
               </div>
               <p className="text-gray-400 text-sm">Positive Feedback</p>
@@ -181,7 +185,7 @@ export const FeedbackDashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <TrendingUp className="w-8 h-8 text-blue-500" />
                 <span className="text-2xl font-bold text-white">
-                  {analytics.user_contribution}
+                  {analytics?.user_contribution || 0}
                 </span>
               </div>
               <p className="text-gray-400 text-sm">Your Contribution</p>
@@ -194,18 +198,18 @@ export const FeedbackDashboard: React.FC = () => {
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-6">Feedback by Content Type</h3>
               <div className="space-y-4">
-                {Object.entries(analytics.by_content_type).map(([type, data]) => (
+                {analytics?.by_content_type ? Object.entries(analytics.by_content_type).map(([type, data]: [string, any]) => (
                   <div key={type} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-300 capitalize">{type}</span>
                       <div className="flex items-center gap-4">
                         <span className="text-sm text-gray-400">
-                          {data.total_feedback} reviews
+                          {data.total_feedback || 0} reviews
                         </span>
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                           <span className="text-white font-medium">
-                            {data.average_rating.toFixed(1)}
+                            {(data.average_rating || 0).toFixed(1)}
                           </span>
                         </div>
                       </div>
@@ -213,19 +217,23 @@ export const FeedbackDashboard: React.FC = () => {
                     <div className="flex gap-1">
                       <div
                         className="h-2 bg-green-500 rounded-l"
-                        style={{ width: `${(data.positive / data.total_feedback) * 100}%` }}
+                        style={{ width: `${data.total_feedback ? (data.positive / data.total_feedback) * 100 : 0}%` }}
                       />
                       <div
                         className="h-2 bg-yellow-500"
-                        style={{ width: `${(data.neutral / data.total_feedback) * 100}%` }}
+                        style={{ width: `${data.total_feedback ? (data.neutral / data.total_feedback) * 100 : 0}%` }}
                       />
                       <div
                         className="h-2 bg-red-500 rounded-r"
-                        style={{ width: `${(data.negative / data.total_feedback) * 100}%` }}
+                        style={{ width: `${data.total_feedback ? (data.negative / data.total_feedback) * 100 : 0}%` }}
                       />
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center text-gray-400 py-8">
+                    No feedback data available
+                  </div>
+                )}
               </div>
             </div>
 
@@ -233,7 +241,7 @@ export const FeedbackDashboard: React.FC = () => {
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-6">Recent Feedback</h3>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {feedbackHistory.slice(0, 5).map((feedback) => (
+                {(feedbackHistory || []).slice(0, 5).map((feedback) => (
                   <div
                     key={feedback.id}
                     className="p-3 bg-gray-900/50 rounded-lg border border-gray-700"

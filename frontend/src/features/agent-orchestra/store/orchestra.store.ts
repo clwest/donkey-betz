@@ -160,15 +160,15 @@ export const useOrchestraStore = create<OrchestraState>()(
       set({ wsState: 'connecting' });
 
       try {
-        // Get auth token from localStorage - use DBAO token
-        const token = localStorage.getItem('authToken') || 'cff3e8441c4e2490e970de2f921f0064e7cc88a7';
+        // Get auth token from localStorage
+        const token = localStorage.getItem('authToken');
         
-        // Orchestra connects to AI Content Studio WebSocket for agent features
-        const wsBase = import.meta.env.VITE_DBAO_WS_URL || 'ws://localhost:8001';
+        // Orchestra connects to the unified backend WebSocket
+        const wsBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
         const client = connectWS({
           base: wsBase,
-          path: '/ws/agents/', // DBAO WebSocket endpoint for agents
-          token, // Add authentication token
+          path: '/ws/agents/', // Unified WebSocket endpoint for agents
+          token, // Add authentication token if available
           maxAttempts: 5,
           
           onOpen: () => {

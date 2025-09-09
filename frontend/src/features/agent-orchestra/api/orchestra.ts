@@ -137,8 +137,8 @@ export async function orchHealth(): Promise<OrchestraHealth | null> {
 export async function getAgents(): Promise<Agent[]> {
   try {
     // Fetch all agents with a large page size to avoid pagination
-    // Note: Backend expects /agents/ with trailing slash, query params go after
-    const response = await apiRequest<{ results?: Agent[]; data?: Agent[]; count?: number } | Agent[]>('GET', '/agents/?page_size=100');
+    // Note: Backend expects /agents/templates/ with trailing slash, query params go after
+    const response = await apiRequest<{ results?: Agent[]; data?: Agent[]; count?: number } | Agent[]>('GET', '/agents/templates/?page_size=200');
     
     if (Array.isArray(response)) {
       return response;

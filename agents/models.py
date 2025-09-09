@@ -165,7 +165,7 @@ class UnifiedAgentTemplate(UnifiedBaseModel):
     
     llm_model = models.CharField(
         max_length=100,
-        default='gpt-4',
+        default='gpt-5-mini',
         help_text="Specific model name"
     )
     

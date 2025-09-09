@@ -697,11 +697,17 @@ class OddsLine(UnifiedBaseModel):
     
     def save(self, *args, **kwargs):
         """Calculate implied probabilities on save"""
+        # Only calculate if not already being updated
+        update_fields = kwargs.get('update_fields', None)
+        skip_calc = update_fields and 'implied_probabilities' in update_fields
+        
+        if not skip_calc:
+            self._calculate_fields()
+        
         super().save(*args, **kwargs)
-        self.calculate_implied_probabilities()
     
-    def calculate_implied_probabilities(self):
-        """Calculate implied probabilities from American odds"""
+    def _calculate_fields(self):
+        """Calculate implied probabilities from American odds (internal use)"""
         probabilities = {}
         
         # Calculate for moneyline odds
@@ -729,6 +735,10 @@ class OddsLine(UnifiedBaseModel):
         
         self.implied_probabilities = probabilities
         self.decimal_odds = decimal
+    
+    def calculate_implied_probabilities(self):
+        """Calculate implied probabilities from American odds (public API)"""
+        self._calculate_fields()
         self.save(update_fields=['implied_probabilities', 'decimal_odds'])
     
     @staticmethod

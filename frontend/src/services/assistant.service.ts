@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Create a dedicated API client for AI Content Studio on port 8001
+// Create a dedicated API client for AI Content Studio on port 8000
 const aiStudioClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -10,7 +10,7 @@ const aiStudioClient = axios.create({
 
 // Add request interceptor to include fresh auth token
 aiStudioClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+  const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'fc58364ffbca4e77b732d03711d44965cf40acb6';
   if (token) {
     config.headers.Authorization = `Token ${token}`;
   }

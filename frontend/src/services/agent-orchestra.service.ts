@@ -2,8 +2,8 @@ import { UCWSF_CONFIG } from './api.config';
 import { Logger } from '../utils/logger';
 import { toast } from 'sonner';
 
-// DBAO API Configuration - unified on port 8001
-const DBAO_BASE_URL = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8001/api/v1').replace(/\/$/,'');
+// DBAO API Configuration - unified on port 8000
+const DBAO_BASE_URL = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000/api').replace(/\/$/,'');
 const AUTH_TOKEN = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
 
 // Agent Orchestra Types
@@ -109,17 +109,17 @@ export interface OddsCalculationResponse {
  */
 export class AgentOrchestraService {
   private static readonly BASE_ENDPOINTS = {
-    AGENTS: '/agents/',
-    EXECUTE: '/execute/', 
-    SUGGEST: '/suggest/',
-    ROUTE: '/route/',
+    AGENTS: '/agents/templates/',  // Fixed to use correct endpoint
+    EXECUTE: '/agents/execute/',  // Fixed to use correct endpoint path
+    SUGGEST: '/agents/suggest/',  // Fixed to use correct endpoint path
+    ROUTE: '/agents/route/',  // Fixed to use correct endpoint path
     INSTANCES: '/instances/',
-    STATUS: '/status/',
-    ORCHESTRATE: '/orchestrate/',
+    STATUS: '/agents/status/',  // Fixed to use correct endpoint path
+    ORCHESTRATE: '/agents/orchestrate/',  // Fixed to use correct endpoint path
     ORCHESTRATIONS: '/orchestrations/',
     BETTING: '/betting/',
     ODDS: '/v1/odds/',  // Sports odds uses v1
-    HEALTH: '/health'
+    HEALTH: '/agents/health/'  // Fixed to use correct endpoint path
   } as const;
 
   // Mock data for development when DBAO backend is not available
@@ -134,7 +134,7 @@ export class AgentOrchestraService {
       system_prompt: 'You are an expert content writer...',
       personality_traits: { creativity: 0.8, analytical: 0.6 },
       llm_provider: 'openai',
-      llm_model: 'gpt-4',
+      llm_model: 'gpt-5-mini',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -148,7 +148,7 @@ export class AgentOrchestraService {
       system_prompt: 'You are a skilled data analyst...',
       personality_traits: { analytical: 0.9, creativity: 0.4 },
       llm_provider: 'openai',
-      llm_model: 'gpt-4',
+      llm_model: 'gpt-5-mini',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -185,7 +185,7 @@ Always include mathematical backing for your analysis and make content both educ
         entertainment: 0.80
       },
       llm_provider: 'openai',
-      llm_model: 'gpt-4',
+      llm_model: 'gpt-5-mini',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
@@ -212,7 +212,7 @@ Always include mathematical backing for your analysis and make content both educ
       system_prompt: 'You are a Wall Street financial analyst with access to real-time market data...',
       personality_traits: { analytical: 0.98, risk_assessment: 0.95, detail_oriented: 0.92 },
       llm_provider: 'openai',
-      llm_model: 'gpt-4',
+      llm_model: 'gpt-5-mini',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -370,11 +370,43 @@ Always include mathematical backing for your analysis and make content both educ
 
   // Agent Execution
   static async executeAgent(request: AgentExecutionRequest): Promise<AgentInstance | null> {
-    return this.makeRequest<AgentInstance>(
+    const response = await this.makeRequest<any>(
       'POST', 
       this.BASE_ENDPOINTS.EXECUTE, 
       request
     );
+    
+    // Transform the response to match AgentInstance interface
+    if (response && response.success) {
+      return {
+        id: response.instance_id,
+        template: {
+          id: request.agent_type || 'unknown',
+          name: response.agent_type || 'Unknown Agent',
+          display_name: response.agent_type || 'Unknown Agent',
+          description: request.task_description,
+          specialization: 'general',
+          capabilities: [],
+          usage_count: 0,
+          llm_provider: 'openai',
+          llm_model: 'gpt-5-mini',
+          created_at: response.task_details?.started_at || new Date().toISOString(),
+          updated_at: response.task_details?.started_at || new Date().toISOString()
+        },
+        task_description: response.task_details?.description || request.task_description,
+        status: response.status === 'running' ? 'processing' : response.status,
+        result: null,
+        error_message: null,
+        tokens_used: 0,
+        cost_estimate: 0,
+        execution_time: 0,
+        user: 1,
+        created_at: response.task_details?.started_at || new Date().toISOString(),
+        updated_at: response.task_details?.started_at || new Date().toISOString()
+      };
+    }
+    
+    return null;
   }
 
   static async suggestAgent(taskDescription: string): Promise<AgentSuggestion[]> {
@@ -613,7 +645,7 @@ export class AgentWebSocketManager {
 
   constructor(
     private token: string,
-    private baseUrl: string = import.meta.env.VITE_DBAO_WS_URL || import.meta.env.VITE_WS_URL || 'ws://localhost:8001'
+    private baseUrl: string = import.meta.env.VITE_DBAO_WS_URL || import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
   ) {
     // UCWSF: Feature gate WebSocket connections
     if (!UCWSF_CONFIG.websockets) {
@@ -647,7 +679,7 @@ export class AgentWebSocketManager {
     return new Promise((resolve, reject) => {
       try {
         // Construct WebSocket URL for DBAO (port 8001)
-        const dbaoWsUrl = import.meta.env.VITE_DBAO_WS_URL || 'ws://localhost:8001';
+        const dbaoWsUrl = import.meta.env.VITE_DBAO_WS_URL || 'ws://localhost:8000';
         // Use the correct DBAO testuser token
         const dbaoToken = 'cff3e8441c4e2490e970de2f921f0064e7cc88a7';
         const wsUrl = `${dbaoWsUrl}/ws/${endpoint}/?token=${dbaoToken}`;
@@ -909,7 +941,7 @@ export const getWebSocketManager = (): AgentWebSocketManager => {
   if (!wsManager) {
     const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'cff3e8441c4e2490e970de2f921f0064e7cc88a7';
     // Use DBAO WebSocket URL or fall back to main WebSocket URL
-    const wsBaseUrl = import.meta.env.VITE_DBAO_WS_URL || import.meta.env.VITE_WS_URL || 'ws://localhost:8001';
+    const wsBaseUrl = import.meta.env.VITE_DBAO_WS_URL || import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
     console.log('[DBAO] Creating WebSocket manager with URL:', wsBaseUrl);
     wsManager = new AgentWebSocketManager(token, wsBaseUrl);
   }

@@ -1,0 +1,337 @@
+# =============================================================================
+# UNIFIED DONKEY BETZ PLATFORM - DEVELOPMENT DOCKER COMPOSE
+# Complete development environment with all services
+# =============================================================================
+
+version: '3.8'
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  unified-donkey-betz:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  media_files:
+    driver: local
+  static_files:
+    driver: local
+  node_modules_frontend:
+    driver: local
+  node_modules_mobile:
+    driver: local
+
+# =============================================================================
+# SERVICES
+# =============================================================================
+services:
+  # ---------------------------------------------------------------------------
+  # INFRASTRUCTURE SERVICES
+  # ---------------------------------------------------------------------------
+  
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: unified-postgres
+    environment:
+      POSTGRES_DB: ai_unified_platform
+      POSTGRES_USER: unified_user
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unified_user -d ai_unified_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: postgres -c 'max_connections=200' -c 'shared_buffers=256MB'
+
+  # Redis Cache and Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: unified-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.11
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # BACKEND SERVICES
+  # ---------------------------------------------------------------------------
+
+  # Django Backend Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: unified-backend
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://unified_user:secure_password@postgres:5432/ai_unified_platform
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,backend
+    volumes:
+      - .:/app
+      - media_files:/app/media
+      - static_files:/app/staticfiles
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.20
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check", "--deploy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+
+  # Celery Worker
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: celery-worker
+    container_name: unified-celery
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://unified_user:secure_password@postgres:5432/ai_unified_platform
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - media_files:/app/media
+      - ./logs:/app/logs
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.21
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    healthcheck:
+      test: ["CMD", "celery", "-A", "core", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    command: ["celery", "-A", "core", "worker", "-l", "info", "--concurrency=4"]
+
+  # Celery Beat Scheduler
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: celery-beat
+    container_name: unified-celery-beat
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://unified_user:secure_password@postgres:5432/ai_unified_platform
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.22
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery.*beat"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    command: ["celery", "-A", "core", "beat", "-l", "info"]
+
+  # Flower (Celery Monitoring)
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: flower
+    container_name: unified-flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.23
+    depends_on:
+      - redis
+      - celery
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND SERVICES
+  # ---------------------------------------------------------------------------
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development-hot
+    container_name: unified-frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+      - VITE_WS_URL=ws://localhost:8000
+      - VITE_BACKEND_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - node_modules_frontend:/app/node_modules
+    ports:
+      - "3000:3000"
+      - "24678:24678"  # HMR port
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.30
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # React Native/Expo Mobile
+  mobile:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      target: expo-dev
+    container_name: unified-mobile
+    environment:
+      - EXPO_PUBLIC_API_URL=http://localhost:8000/api
+      - EXPO_PUBLIC_WS_URL=ws://localhost:8000
+      - EXPO_PUBLIC_BACKEND_URL=http://localhost:8000
+    volumes:
+      - ./mobile:/app
+      - node_modules_mobile:/app/node_modules
+    ports:
+      - "8081:8081"  # Metro bundler
+      - "19000:19000"  # Expo dev tools
+      - "19001:19001"  # Expo dev tools
+      - "19002:19002"  # Expo dev tools
+      - "19006:19006"  # Web port
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.31
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19002"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # ---------------------------------------------------------------------------
+  # DEVELOPMENT TOOLS
+  # ---------------------------------------------------------------------------
+
+  # Development Database Admin (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: unified-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@unified-donkey-betz.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - ./config/pgadmin_servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "5050:80"
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.40
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Redis Commander (Redis Admin)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: unified-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8082:8081"
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.41
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Mailhog (Email Testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: unified-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      unified-donkey-betz:
+        ipv4_address: 172.20.0.42
+    restart: unless-stopped

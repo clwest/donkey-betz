@@ -198,11 +198,13 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               <div className="flex items-center space-x-2 mb-2">
                 {getStatusIcon(instance.status, 'h-4 w-4')}
                 <h4 className="font-medium text-foreground truncate">
-                  {instance.template.name}
+                  {instance.template?.name || instance.name || 'Unknown Agent'}
                 </h4>
-                <Badge variant="secondary" size="sm">
-                  {instance.template.specialization}
-                </Badge>
+                {instance.template?.specialization && (
+                  <Badge variant="secondary" size="sm">
+                    {instance.template.specialization}
+                  </Badge>
+                )}
               </div>
               
               <p className="text-sm text-muted-foreground line-clamp-2 mb-3">

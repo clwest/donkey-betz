@@ -115,6 +115,9 @@ urlpatterns = [
     path('', platform_info, name='platform-info'),
     path('api/', api_root, name='api-root'),
     
+    # Dashboard endpoints (for compatibility with frontend)
+    path('api/dashboard/', include('dashboard.urls')),
+    
     # Unified API v1 endpoints
     path('api/v1/agents/', include('agents.urls')),
     path('api/v1/sports/', include('sports.urls')),

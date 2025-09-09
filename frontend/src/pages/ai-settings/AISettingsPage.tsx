@@ -10,7 +10,20 @@ import { Button } from '../../components/common/Button';
 
 export function AISettingsPage() {
   const [activeTab, setActiveTab] = useState<'settings' | 'stats' | 'test'>('settings');
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<any>({
+    enabled: true,
+    default_level: 'advanced',
+    use_memory: false,
+    auto_enhance: false,
+    content_preferences: {
+      blog: true,
+      social: true,
+      email: true,
+      video: true,
+      image: true,
+      ebook: true,
+    }
+  });
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -335,7 +348,7 @@ export function AISettingsPage() {
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={settings.use_memory}
+                        checked={!!settings.use_memory}
                         onChange={() => toggleSetting('use_memory')}
                         className="sr-only peer"
                       />
@@ -356,7 +369,7 @@ export function AISettingsPage() {
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={settings.auto_enhance}
+                        checked={!!settings.auto_enhance}
                         onChange={() => toggleSetting('auto_enhance')}
                         className="sr-only peer"
                       />

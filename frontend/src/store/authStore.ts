@@ -23,22 +23,66 @@ interface AuthState {
   initAuth: () => void;
 }
 
-// Default user for development (testuser account)
+// Default user for development (chris account)
 const defaultUser: User = {
   id: '2',
-  username: 'testuser',
-  email: 'testuser@example.com',
-  credits: 1000,
+  username: 'chris',
+  email: 'chris@example.com',
+  credits: 10000,
   subscription: 'premium'
+};
+
+// Check if we have auth in localStorage at initialization
+const getInitialAuthState = () => {
+  const token = localStorage.getItem('authToken');
+  const storedState = localStorage.getItem('auth-storage');
+  
+  if (token && storedState) {
+    try {
+      const parsed = JSON.parse(storedState);
+      const { user } = parsed.state || {};
+      if (user) {
+        return {
+          user,
+          token,
+          isAuthenticated: true,
+          isLoading: false
+        };
+      }
+    } catch (e) {
+      console.error('Failed to parse initial auth state:', e);
+    }
+  }
+  
+  // If no valid auth found, set up chris user automatically
+  const chrisToken = 'fc58364ffbca4e77b732d03711d44965cf40acb6';
+  const chrisUser = {
+    id: '2',
+    username: 'chris',
+    email: 'chris@example.com',
+    credits: 10000,
+    subscription: 'premium'
+  };
+  
+  // Store the auth immediately
+  localStorage.setItem('authToken', chrisToken);
+  localStorage.setItem('auth-storage', JSON.stringify({
+    state: { token: chrisToken, user: chrisUser },
+    version: 0
+  }));
+  
+  return {
+    user: chrisUser,
+    token: chrisToken,
+    isAuthenticated: true,
+    isLoading: false
+  };
 };
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: null, // Start with no user
-      token: null, // Start with no token
-      isAuthenticated: false, // Start unauthenticated
-      isLoading: false,
+      ...getInitialAuthState(),
 
       setUser: (user) => {
         console.log('🔐 AuthStore: setUser called with:', user);

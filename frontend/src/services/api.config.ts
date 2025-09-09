@@ -7,9 +7,9 @@ import type { AxiosInstance } from 'axios';
 import { Logger } from '../utils/logger';
 
 // API Configuration - UCWSF Enhanced with unified backend
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
-export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8001';
-export const DEFAULT_AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'; // testuser auth token
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8000';
+export const DEFAULT_AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN || 'fc58364ffbca4e77b732d03711d44965cf40acb6'; // chris auth token
 
 // UCWSF Feature Flags
 export const UCWSF_CONFIG = {
@@ -87,10 +87,7 @@ export const createAPIClient = (config: {
     },
   });
 
-  // Add auth token if available
-  if (config.defaultToken) {
-    client.defaults.headers.common['Authorization'] = `Token ${config.defaultToken}`;
-  }
+  // Don't set default token here - will be added via interceptor
 
   // Add response interceptor for unauthorized handling
   client.interceptors.response.use(
@@ -113,7 +110,7 @@ Logger.api('CONFIG', 'Default Auth Token', { token: DEFAULT_AUTH_TOKEN.substring
 // Create API client with web-specific configuration
 export const apiClient = createAPIClient({
   baseURL: API_BASE_URL,
-  defaultToken: DEFAULT_AUTH_TOKEN,
+  // Token will be added dynamically from localStorage via interceptor
   enableLogging: true,
   onUnauthorized: () => {
     // Temporarily disabled automatic redirect to prevent loops
@@ -130,19 +127,26 @@ export const apiClient = createAPIClient({
   },
 });
 
-// Add web-specific request interceptor for UCWSF custom headers
+// Add web-specific request interceptor for UCWSF custom headers and auth token
 apiClient.interceptors.request.use(
   (config) => {
-    // UCWSF: Add custom headers if enabled
-    if (UCWSF_CONFIG.customHeaders) {
-      // Add client version for debugging
-      config.headers['X-Client-Version'] = '1.0.0';
-      
-      // Add any custom headers based on URL patterns
-      if (config.url?.includes('/agent') || config.url?.includes('/orchestrat')) {
-        config.headers['X-Agent-Request'] = 'true';
-      }
+    // Add auth token from localStorage if available
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers['Authorization'] = `Token ${token}`;
     }
+    
+    // UCWSF: Add custom headers if enabled (optional)
+    // Temporarily disabled to avoid CORS issues
+    // if (UCWSF_CONFIG.customHeaders) {
+    //   // Add client version for debugging
+    //   config.headers['X-Client-Version'] = '1.0.0';
+    //   
+    //   // Add any custom headers based on URL patterns
+    //   if (config.url?.includes('/agent') || config.url?.includes('/orchestrat')) {
+    //     config.headers['X-Agent-Request'] = 'true';
+    //   }
+    // }
     
     // Log the request with our custom logger
     Logger.api(

@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.db.models import Q, Count, Avg
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 200
 
 
 class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
@@ -51,6 +51,7 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
     queryset = UnifiedAgentTemplate.objects.all()
     serializer_class = UnifiedAgentTemplateSerializer
     pagination_class = StandardResultsSetPagination
+    permission_classes = [permissions.IsAuthenticated]  # Require authentication
     filter_backends = [DjangoFilterBackend]
     filterset_fields = [
         'specialization', 'llm_provider', 'is_active', 
@@ -63,7 +64,8 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
         return UnifiedAgentTemplateSerializer
     
     def get_queryset(self):
-        queryset = self.queryset
+        # Show all active agents (including system agents without a creator)
+        queryset = self.queryset.filter(is_active=True)
         
         # Filter by search query
         search = self.request.query_params.get('search')
@@ -84,12 +86,19 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def execute(self, request, pk=None):
         """Execute an agent with the given parameters"""
+        from .tasks import execute_agent
+        
         agent_template = self.get_object()
+        
+        # Generate unique execution ID
+        import uuid
+        execution_id = f"exec_{agent_template.name}_{uuid.uuid4().hex[:8]}"
         
         # Create execution instance
         execution = AgentExecution.objects.create(
             template=agent_template,
             user=request.user if request.user.is_authenticated else None,
+            execution_id=execution_id,
             task_description=request.data.get('task_description', ''),
             task_type=request.data.get('task_type', ''),
             context=request.data.get('context', {}),
@@ -99,6 +108,9 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
         )
         
         logger.info(f"Created agent execution {execution.execution_id}")
+        
+        # Trigger the Celery task
+        execute_agent.delay(execution_id=execution.execution_id)
         
         return Response({
             'execution_id': execution.execution_id,
@@ -113,6 +125,7 @@ class AgentExecutionViewSet(viewsets.ModelViewSet):
     queryset = AgentExecution.objects.all()
     serializer_class = AgentExecutionSerializer
     pagination_class = StandardResultsSetPagination
+    permission_classes = [permissions.IsAuthenticated]  # Require authentication
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'priority', 'template__specialization']
     
@@ -122,7 +135,8 @@ class AgentExecutionViewSet(viewsets.ModelViewSet):
         return AgentExecutionSerializer
     
     def get_queryset(self):
-        return self.queryset.select_related('template', 'user', 'parent_orchestration').order_by('-created_at')
+        # Filter by authenticated user
+        return self.queryset.filter(user=self.request.user).select_related('template', 'user', 'parent_orchestration').order_by('-created_at')
 
 
 class AgentOrchestrationViewSet(viewsets.ModelViewSet):
@@ -131,11 +145,13 @@ class AgentOrchestrationViewSet(viewsets.ModelViewSet):
     queryset = AgentOrchestration.objects.all()
     serializer_class = AgentOrchestrationSerializer
     pagination_class = StandardResultsSetPagination
+    permission_classes = [permissions.IsAuthenticated]  # Require authentication
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'execution_strategy']
     
     def get_queryset(self):
-        return self.queryset.select_related('user').order_by('-created_at')
+        # Filter by authenticated user
+        return self.queryset.filter(user=self.request.user).select_related('user').order_by('-created_at')
 
 
 class AgentToolViewSet(viewsets.ModelViewSet):
@@ -179,3 +195,41 @@ class AgentRegistryViewSet(viewsets.ReadOnlyModelViewSet):
         }
         
         return Response(stats)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def discover_agents(request):
+    """
+    Discover available agents.
+    """
+    agents = UnifiedAgentTemplate.objects.filter(is_active=True).values(
+        'id', 'name', 'display_name', 'description', 
+        'specialization', 'capabilities', 'usage_count'
+    )
+    
+    return Response({
+        'agents': list(agents),
+        'total_count': UnifiedAgentTemplate.objects.filter(is_active=True).count()
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def orchestrations_list(request):
+    """
+    List active orchestrations.
+    """
+    orchestrations = AgentOrchestration.objects.filter(
+        status__in=['pending', 'running']
+    ).values(
+        'id', 'name', 'status', 
+        'execution_strategy', 'created_at'
+    )[:10]
+    
+    return Response({
+        'orchestrations': list(orchestrations),
+        'total_count': AgentOrchestration.objects.filter(
+            status__in=['pending', 'running']
+        ).count()
+    })

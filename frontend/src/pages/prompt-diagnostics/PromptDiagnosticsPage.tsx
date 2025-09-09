@@ -28,7 +28,7 @@ import type { PromptAnalysisSummary, DiagnosticsDashboardData } from '../../type
 
 type TabType = 'dashboard' | 'analyzer' | 'history' | 'templates';
 
-export function PromptDiagnosticsPage() {
+export default function PromptDiagnosticsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -54,7 +54,7 @@ export function PromptDiagnosticsPage() {
       id: 'dashboard' as const,
       name: 'Dashboard',
       icon: ChartBarIcon,
-      count: dashboardData?.overview.total_analyses || 0,
+      count: dashboardData?.overview?.total_analyses || 0,
     },
     {
       id: 'analyzer' as const,
@@ -66,13 +66,13 @@ export function PromptDiagnosticsPage() {
       id: 'history' as const,
       name: 'History',
       icon: ClockIcon,
-      count: analysesData?.analyses.length || 0,
+      count: analysesData?.analyses?.length || 0,
     },
     {
       id: 'templates' as const,
       name: 'Templates',
       icon: DocumentTextIcon,
-      count: dashboardData?.overview.templates_created || 0,
+      count: dashboardData?.overview?.templates_created || 0,
     },
   ];
 
@@ -94,9 +94,9 @@ export function PromptDiagnosticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-dark-900">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="glass border-b border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
@@ -129,7 +129,7 @@ export function PromptDiagnosticsPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="glass border-b border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
             {tabs.map((tab) => {
@@ -142,7 +142,7 @@ export function PromptDiagnosticsPage() {
                     flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap
                     ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }
                   `}
                 >
@@ -153,7 +153,7 @@ export function PromptDiagnosticsPage() {
                       ml-2 py-0.5 px-2 rounded-full text-xs font-medium
                       ${activeTab === tab.id
                         ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-200'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        : 'bg-dark-700 text-gray-400'
                       }
                     `}>
                       {tab.count}
@@ -221,7 +221,7 @@ export function PromptDiagnosticsPage() {
                     placeholder="Search analyses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-600 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-white placeholder-gray-400"
                   />
                 </div>
                 <Button variant="outline">Filter</Button>
@@ -233,9 +233,9 @@ export function PromptDiagnosticsPage() {
               <div className="flex justify-center py-12">
                 <LoadingSpinner size="lg" />
               </div>
-            ) : analysesData?.analyses.length ? (
+            ) : analysesData?.analyses?.length ? (
               <div className="grid gap-4">
-                {analysesData.analyses.map((analysis) => (
+                {analysesData.analyses?.map((analysis) => (
                   <Card key={analysis.id} className="p-6 hover:shadow-lg transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -244,7 +244,7 @@ export function PromptDiagnosticsPage() {
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {analysis.title}
                           </h3>
-                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded">
+                          <span className="px-2 py-1 text-xs font-medium bg-dark-700 text-gray-400 rounded">
                             {analysis.prompt_type}
                           </span>
                         </div>

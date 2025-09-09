@@ -46,7 +46,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     // Filter by specialization
     if (selectedSpecialization) {
       filtered = filtered.filter(agent => 
-        agent.specialization.toLowerCase() === selectedSpecialization.toLowerCase()
+        (agent.specialization?.toLowerCase() || '') === selectedSpecialization.toLowerCase()
       );
     }
 
@@ -54,10 +54,10 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(agent =>
-        agent.name.toLowerCase().includes(searchLower) ||
-        agent.description.toLowerCase().includes(searchLower) ||
-        agent.specialization.toLowerCase().includes(searchLower) ||
-        agent.capabilities.some(cap => cap.toLowerCase().includes(searchLower))
+        (agent.name?.toLowerCase() || '').includes(searchLower) ||
+        (agent.description?.toLowerCase() || '').includes(searchLower) ||
+        (agent.specialization?.toLowerCase() || '').includes(searchLower) ||
+        (agent.capabilities || []).some(cap => (typeof cap === 'string' ? cap.toLowerCase() : '').includes(searchLower))
       );
     }
 
@@ -66,7 +66,7 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
 
   // Get unique specializations
   const specializations = useMemo(() => {
-    const specs = agents.map(agent => agent.specialization);
+    const specs = agents.map(agent => agent.specialization).filter(Boolean);
     return Array.from(new Set(specs)).sort();
   }, [agents]);
 

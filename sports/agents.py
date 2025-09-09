@@ -68,7 +68,7 @@ class BaseSportsAgent:
         self.personality_traits = {}
         self.routing_keywords = []
         self.domain_tags = ["sports", "betting", "analytics"]
-        self.llm_model = "gpt-4"
+        self.llm_model = "gpt-5-mini"
         self.llm_config = {"temperature": 0.3, "max_tokens": 2000}
         
     def register(self) -> bool:

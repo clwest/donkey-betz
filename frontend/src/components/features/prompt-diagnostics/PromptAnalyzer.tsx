@@ -35,7 +35,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
   const [prompt, setPrompt] = useState('');
   const [title, setTitle] = useState('');
   const [promptType, setPromptType] = useState<'user' | 'system' | 'assistant' | 'function'>('user');
-  const [targetModel, setTargetModel] = useState('gpt-4');
+  const [targetModel, setTargetModel] = useState('gpt-5-mini');
   const [optimizationGoals, setOptimizationGoals] = useState<string[]>(['reduce_tokens', 'improve_clarity']);
   const [analysisResult, setAnalysisResult] = useState<PromptAnalysisResult | null>(null);
   const [quickAnalysis, setQuickAnalysis] = useState<QuickAnalysisResult | null>(null);
@@ -166,7 +166,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
           {/* Configuration Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Title (optional)
               </label>
               <input
@@ -174,18 +174,18 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Analysis title..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white placeholder-gray-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Prompt Type
               </label>
               <select
                 value={promptType}
                 onChange={(e) => setPromptType(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white"
               >
                 <option value="user">User Prompt</option>
                 <option value="system">System Prompt</option>
@@ -195,23 +195,26 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Target Model
               </label>
               <select
                 value={targetModel}
                 onChange={(e) => setTargetModel(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white"
               >
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="gpt-5">GPT-5 (Best Reasoning)</option>
+                <option value="gpt-5-mini">GPT-5 Mini (Balanced)</option>
+                <option value="gpt-5-nano">GPT-5 Nano (Fast & Cheap)</option>
+                <option value="gpt-4">GPT-4 (Legacy)</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo (Legacy)</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy)</option>
                 <option value="claude-3">Claude 3</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Goals
               </label>
               <div className="flex flex-wrap gap-1">
@@ -253,7 +256,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
             
             {/* Quick Analysis Feedback */}
             {quickAnalysis && (
-              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+              <div className="mt-3 p-3 bg-dark-900/50 backdrop-blur-sm rounded-md">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500 dark:text-gray-400">Tokens:</span>
@@ -395,7 +398,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">Original Prompt</h4>
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-sm">
+                <div className="bg-dark-900/50 backdrop-blur-sm p-4 rounded-lg text-sm">
                   <pre className="whitespace-pre-wrap font-mono">{analysisResult.original_prompt}</pre>
                 </div>
               </div>
@@ -413,7 +416,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Issues */}
             <Card className="p-6">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+              <h4 className="font-medium text-white mb-4 flex items-center">
                 <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-orange-500" />
                 Issues Detected ({analysisResult.issues.length})
               </h4>
@@ -442,7 +445,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
 
             {/* Quick Wins */}
             <Card className="p-6">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+              <h4 className="font-medium text-white mb-4 flex items-center">
                 <LightBulbIcon className="h-5 w-5 mr-2 text-green-500" />
                 Quick Wins ({analysisResult.quick_wins.length})
               </h4>

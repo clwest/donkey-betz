@@ -91,8 +91,8 @@ export function TemplateLibrary() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Template Library</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h2 className="text-2xl font-bold text-white">Template Library</h2>
+          <p className="text-gray-300">
             Browse and use optimized prompt templates from the community
           </p>
         </div>
@@ -103,18 +103,18 @@ export function TemplateLibrary() {
       </div>
 
       {/* Filters and Search */}
-      <Card className="p-6">
+      <Card className="p-6 bg-dark-800/50 backdrop-blur-sm border border-white/10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search templates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 border border-white/10 rounded-lg focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white placeholder-gray-400"
               />
             </div>
           </div>
@@ -124,7 +124,7 @@ export function TemplateLibrary() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-white/10 rounded-lg focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white"
             >
               {categories.map((category) => (
                 <option key={category.value} value={category.value}>
@@ -163,8 +163,8 @@ export function TemplateLibrary() {
         </div>
 
         {/* Sort Options */}
-        <div className="flex items-center space-x-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Sort by:</span>
+        <div className="flex items-center space-x-4 mt-4 pt-4 border-t border-white/10">
+          <span className="text-sm text-gray-400">Sort by:</span>
           <div className="flex space-x-2">
             <Button
               variant={sortBy === 'effectiveness' ? 'default' : 'outline'}
@@ -202,10 +202,10 @@ export function TemplateLibrary() {
       ) : error ? (
         <div className="text-center py-12">
           <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-white mb-2">
             Failed to load templates
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-gray-400 mb-4">
             Please try refreshing the page
           </p>
           <Button onClick={() => refetch()}>Retry</Button>
@@ -226,26 +226,26 @@ export function TemplateLibrary() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {templates.map((template) => (
-            <Card key={template.id} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={template.id} className="p-6 bg-dark-800/50 backdrop-blur-sm hover:bg-dark-700/50 transition-all border border-white/10">
               {/* Template Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="text-lg">{getCategoryIcon(template.category)}</span>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                    <h3 className="text-lg font-semibold text-white truncate">
                       {template.name}
                     </h3>
                     {template.is_verified && (
                       <CheckBadgeIcon className="h-5 w-5 text-blue-500" title="Verified Template" />
                     )}
                     {template.is_public && (
-                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 rounded">
+                      <span className="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-300 rounded">
                         Public
                       </span>
                     )}
                   </div>
                   
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                  <p className="text-sm text-gray-400 line-clamp-2 mb-3">
                     {template.description}
                   </p>
                 </div>
@@ -253,31 +253,31 @@ export function TemplateLibrary() {
 
               {/* Template Preview */}
               <div className="mb-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg text-sm font-mono text-gray-700 dark:text-gray-300 max-h-24 overflow-hidden">
+                <div className="bg-dark-800/50 backdrop-blur-sm p-3 rounded-lg text-sm font-mono text-gray-300 max-h-24 overflow-hidden">
                   {template.template_text}
                 </div>
                 {template.template_text.length > 200 && (
-                  <p className="text-xs text-gray-500 mt-1">Preview truncated...</p>
+                  <p className="text-xs text-gray-400 mt-1">Preview truncated...</p>
                 )}
               </div>
 
               {/* Template Variables */}
               {template.variables.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <p className="text-sm font-medium text-gray-300 mb-2">
                     Variables:
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {template.variables.slice(0, 3).map((variable) => (
                       <span
                         key={variable}
-                        className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 rounded"
+                        className="px-2 py-1 text-xs font-medium bg-primary-500/20 text-primary-300 rounded"
                       >
                         {'{' + variable + '}'}
                       </span>
                     ))}
                     {template.variables.length > 3 && (
-                      <span className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="px-2 py-1 text-xs text-gray-400">
                         +{template.variables.length - 3} more
                       </span>
                     )}
@@ -291,24 +291,24 @@ export function TemplateLibrary() {
                   <div className={`text-lg font-bold ${getEffectivenessColor(template.effectiveness_rating)}`}>
                     {template.effectiveness_rating.toFixed(1)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Effectiveness</div>
+                  <div className="text-xs text-gray-400">Effectiveness</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  <div className="text-lg font-bold text-white">
                     {template.usage_count}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Uses</div>
+                  <div className="text-xs text-gray-400">Uses</div>
                 </div>
                 <div>
                   <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                     {promptDiagnosticsService.formatTokenCount(template.token_count)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Size</div>
+                  <div className="text-xs text-gray-400">Size</div>
                 </div>
               </div>
 
               {/* Template Meta */}
-              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-4">
+              <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
                 <div className="flex items-center">
                   <UserIcon className="h-3 w-3 mr-1" />
                   {template.is_mine ? 'You' : 'Community'}

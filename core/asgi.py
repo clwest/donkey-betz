@@ -37,8 +37,10 @@ websocket_urlpatterns = [
     path('ws/content/analytics/', ContentAnalyticsConsumer.as_asgi()),
     
     # Agent System WebSockets
+    path('ws/agents/', AgentOrchestrationConsumer.as_asgi()),  # Main agents WebSocket endpoint
     path('ws/agents/execution/', AgentExecutionConsumer.as_asgi()),
     path('ws/agents/orchestration/', AgentOrchestrationConsumer.as_asgi()),
+    path('ws/assistant/', AgentOrchestrationConsumer.as_asgi()),  # Generic assistant endpoint
     
     # Sports Analytics WebSockets
     path('ws/sports/games/<uuid:game_id>/', GameConsumer.as_asgi()),

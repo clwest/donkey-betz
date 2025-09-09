@@ -63,6 +63,9 @@ INSTALLED_APPS = [
     'sports',                 # Sports Analytics Engine
     'content',                # Content Generation System
     'self_awareness',         # Code Introspection & Self-Modification
+    'dashboard',              # Dashboard API endpoints
+    'campaigns',              # Campaign management
+    'workflows',              # Workflow management
     # 'realtime',               # WebSocket & Event Bus
     # 'monitoring',             # System Health & Analytics
     # 'billing',                # Unified billing system
@@ -145,14 +148,20 @@ else:
         }
     }
 
-# PostgreSQL specific configuration
-DATABASES['default']['OPTIONS'] = {
-    'application_name': 'unified_donkey_betz',
-    'client_encoding': 'UTF8',
-    'connect_timeout': 10,
-}
-
-DATABASES['default']['CONN_MAX_AGE'] = 600
+# Database-specific configuration
+if 'postgresql' in os.environ.get('DATABASE_URL', ''):
+    # PostgreSQL specific configuration
+    DATABASES['default']['OPTIONS'] = {
+        'application_name': 'unified_donkey_betz',
+        'client_encoding': 'UTF8',
+        'connect_timeout': 10,
+        'options': '-c search_path=studio,public,dbao,shared'  # Include all schemas
+    }
+    DATABASES['default']['CONN_MAX_AGE'] = 600
+else:
+    # SQLite configuration
+    DATABASES['default']['OPTIONS'] = {}
+    DATABASES['default']['CONN_MAX_AGE'] = 0
 
 # AI Provider Configuration
 AI_PROVIDERS = {
@@ -164,6 +173,34 @@ AI_PROVIDERS = {
     'COHERE_API_KEY': os.environ.get('COHERE_API_KEY', ''),
     'GROQ_API_KEY': os.environ.get('GROQ_API_KEY', ''),
     'DEEPSEEK_API_KEY': os.environ.get('DEEPSEEK_API_KEY', ''),
+}
+
+# AI Configuration
+AI_CONFIG = {
+    'DEFAULT_LLM_MODEL': 'gpt-5-mini',
+    # GPT-5 Reasoning Configuration
+    'GPT5_REASONING_LEVELS': ['minimal', 'low', 'medium', 'high'],
+    'DEFAULT_REASONING_LEVEL': 'medium',
+    # Token Limits
+    'MAX_INPUT_TOKENS': {
+        'gpt-5': 272000,
+        'gpt-5-mini': 272000,
+        'gpt-5-nano': 272000,
+        'gpt-4': 128000,
+        'gpt-3.5-turbo': 16385
+    },
+    'MAX_OUTPUT_TOKENS': {
+        'gpt-5': 128000,
+        'gpt-5-mini': 128000,
+        'gpt-5-nano': 128000,
+        'gpt-4': 4096,
+        'gpt-3.5-turbo': 4096
+    },
+    # Prompt Caching
+    'ENABLE_PROMPT_CACHING': True,
+    'PROMPT_CACHE_TTL': 300,
+    'GPT5_FALLBACK_MODEL': 'gpt-4',
+    'ENABLE_GPT5_MIGRATION': True,
 }
 
 # Self-Awareness & Intelligence Configuration
@@ -219,11 +256,28 @@ REST_FRAMEWORK = {
 }
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-client-version',  # Custom header from frontend
+    'x-orchestrator',    # Custom header for orchestra
+    'x-agent-request',   # Custom header for agent requests
+    'x-orchestra-client',  # Custom header for agent orchestra client
+    'x-dbao-client',     # Custom header for DBAO client
+]
 
 # CSRF Configuration  
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -259,3 +313,14 @@ if DEBUG:
 
 # Testing Configuration
 TESTING_MODE = os.environ.get('TESTING_MODE', 'False') == 'True'
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/2')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/3')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

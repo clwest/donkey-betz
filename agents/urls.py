@@ -17,4 +17,6 @@ router.register(r'registry', views.AgentRegistryViewSet, basename='agent-registr
 urlpatterns = [
     # Include router URLs directly (prefix added in main urls.py)
     path('', include(router.urls)),
+    # Additional endpoints
+    path('discover/', views.discover_agents, name='agent-discover'),
 ]

@@ -104,7 +104,14 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
 
     // Parse JSON if we have content
     if (responseText.trim()) {
-      return JSON.parse(responseText);
+      const data = JSON.parse(responseText);
+      
+      // Handle paginated responses from Django REST Framework
+      if (data && typeof data === 'object' && 'results' in data && Array.isArray(data.results)) {
+        return data.results as T;
+      }
+      
+      return data;
     }
     
     return {} as T;

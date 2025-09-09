@@ -8,6 +8,7 @@ odds, analytics, and betting recommendations with advanced filtering and aggrega
 from rest_framework import serializers
 from decimal import Decimal
 from datetime import datetime, timedelta
+from django.db import models
 
 from .models import (
     League, Team, Game, Sportsbook, BettingMarket, OddsLine,
@@ -40,8 +41,8 @@ class LeagueSerializer(serializers.ModelSerializer):
     
     def get_active_markets(self, obj):
         return obj.games.filter(is_active=True).aggregate(
-            models.Count('markets', filter=models.Q(markets__is_active=True))
-        )['markets__count'] or 0
+            count=models.Count('markets', filter=models.Q(markets__is_active=True))
+        )['count'] or 0
 
 
 class TeamSerializer(serializers.ModelSerializer):

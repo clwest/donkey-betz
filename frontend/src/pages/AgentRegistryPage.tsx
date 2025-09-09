@@ -12,15 +12,13 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/common/Card';
+import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { agentDiscoveryService } from '@/services/agentDiscovery.service';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import clsx from 'clsx';
+import { toast } from 'react-hot-toast';
 
 interface Agent {
   id: string;
@@ -43,6 +41,7 @@ interface Agent {
     success_rate: number;
     last_used?: string;
   };
+  system_prompt?: string;
 }
 
 interface Capability {
@@ -90,8 +89,12 @@ export default function AgentRegistryPage() {
       setLoading(true);
       const response = await agentDiscoveryService.discoverAllAgents();
       console.log('AgentRegistryPage API response:', response);
+      console.log('Number of agents received:', response.agents?.length || 0);
       
-      if (response.success) {
+      if (response.agents && Array.isArray(response.agents)) {
+        setAgents(response.agents);
+        setError(null);
+      } else if (response.success && response.agents) {
         setAgents(response.agents);
         setError(null);
       } else {
@@ -108,8 +111,12 @@ export default function AgentRegistryPage() {
   const loadStats = async () => {
     try {
       const response = await agentDiscoveryService.getDiscoveryStats();
-      if (response.success) {
+      if (response.discovery_stats) {
         setDiscoveryStats(response.discovery_stats);
+      } else if (response.success && response.discovery_stats) {
+        setDiscoveryStats(response.discovery_stats);
+      } else if (response) {
+        setDiscoveryStats(response);
       }
     } catch (err) {
       console.error('Failed to load discovery stats:', err);
@@ -119,17 +126,15 @@ export default function AgentRegistryPage() {
   const refreshDiscovery = async () => {
     try {
       setRefreshing(true);
-      const response = await agentDiscoveryService.refreshDiscovery();
-      if (response.success) {
-        await loadAgents();
-        await loadStats();
-        setError(null);
-      } else {
-        throw new Error(response.error || 'Failed to refresh discovery');
-      }
+      await agentDiscoveryService.refreshDiscovery();
+      await loadAgents();
+      await loadStats();
+      setError(null);
+      toast.success('Discovery refreshed successfully');
     } catch (err) {
       console.error('Failed to refresh discovery:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh discovery');
+      toast.error('Failed to refresh discovery');
     } finally {
       setRefreshing(false);
     }
@@ -137,91 +142,95 @@ export default function AgentRegistryPage() {
 
   const filterAgents = () => {
     let filtered = agents;
+    console.log('Filtering agents. Starting with:', agents.length);
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(agent =>
-        agent.name.toLowerCase().includes(query) ||
-        agent.description.toLowerCase().includes(query) ||
-        agent.specialization.toLowerCase().includes(query) ||
-        agent.trigger_keywords.some(keyword => keyword.toLowerCase().includes(query))
+        agent.name?.toLowerCase().includes(query) ||
+        agent.description?.toLowerCase().includes(query) ||
+        agent.specialization?.toLowerCase().includes(query) ||
+        agent.trigger_keywords?.some(keyword => keyword?.toLowerCase().includes(query))
       );
+      console.log('After search filter:', filtered.length);
     }
 
-    // Filter by specialization
     if (selectedSpecialization !== 'all') {
       filtered = filtered.filter(agent => agent.specialization === selectedSpecialization);
+      console.log('After specialization filter:', filtered.length);
     }
 
+    console.log('Final filtered agents:', filtered.length);
     setFilteredAgents(filtered);
   };
 
   const viewAgentDetails = async (agent: Agent) => {
     try {
-      // Load detailed agent info including usage stats
       const response = await agentDiscoveryService.getAgentDetails(agent.id);
-      if (response.success) {
-        setSelectedAgent(response.agent);
+      if (response && (response.agent || response.success)) {
+        setSelectedAgent(response.agent || response);
         setShowAgentDetails(true);
       }
     } catch (err) {
       console.error('Failed to load agent details:', err);
+      toast.error('Failed to load agent details');
     }
   };
 
   const getSpecializationIcon = (specialization: string) => {
     const icons: Record<string, React.ReactNode> = {
-      orchestration: <CommandLineIcon className="h-4 w-4" />,
-      content_creation: <DocumentTextIcon className="h-4 w-4" />,
-      prompt_optimization: <SparklesIcon className="h-4 w-4" />,
-      general: <CpuChipIcon className="h-4 w-4" />,
-      finance: <ChartBarIcon className="h-4 w-4" />,
-      research: <MagnifyingGlassIcon className="h-4 w-4" />,
+      orchestration: <CommandLineIcon className="h-5 w-5" />,
+      content_creation: <DocumentTextIcon className="h-5 w-5" />,
+      prompt_optimization: <SparklesIcon className="h-5 w-5" />,
+      general: <CpuChipIcon className="h-5 w-5" />,
+      finance: <ChartBarIcon className="h-5 w-5" />,
+      research: <MagnifyingGlassIcon className="h-5 w-5" />,
     };
-    return icons[specialization] || <CpuChipIcon className="h-4 w-4" />;
+    return icons[specialization] || <CpuChipIcon className="h-5 w-5" />;
   };
 
   const getProviderColor = (provider: string) => {
+    if (!provider) return 'text-gray-400 bg-gray-400/10';
     const colors: Record<string, string> = {
-      openai: 'bg-emerald-100 text-emerald-800',
-      anthropic: 'bg-purple-100 text-purple-800',
-      google: 'bg-blue-100 text-blue-800',
+      openai: 'text-green-400 bg-green-400/10',
+      anthropic: 'text-purple-400 bg-purple-400/10',
+      google: 'text-blue-400 bg-blue-400/10',
     };
-    return colors[provider.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return colors[provider.toLowerCase()] || 'text-gray-400 bg-gray-400/10';
   };
 
   const getPriorityColor = (priority: number) => {
-    if (priority >= 8) return 'bg-red-100 text-red-800';
-    if (priority >= 5) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-green-100 text-green-800';
+    if (priority >= 8) return 'text-red-400 bg-red-400/10';
+    if (priority >= 5) return 'text-yellow-400 bg-yellow-400/10';
+    return 'text-green-400 bg-green-400/10';
   };
 
-  const specializations = discoveryStats ? Object.keys(discoveryStats.by_specialization) : [];
+
+  const specializations = discoveryStats?.by_specialization ? Object.keys(discoveryStats.by_specialization) : [];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner size="lg" />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
+      <div className="flex items-center justify-center h-64">
+        <Card>
+          <div className="text-center py-12">
             <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-white mb-2">
               Failed to Load Agents
             </h3>
-            <p className="text-gray-500 mb-4">{error}</p>
-            <Button onClick={() => loadAgents()} variant="outline">
-              <ArrowPathIcon className="h-4 w-4 mr-2" />
+            <p className="text-gray-400 mb-4">{error}</p>
+            <Button onClick={() => loadAgents()} variant="secondary">
+              <ArrowPathIcon className="h-4 w-4" />
               Try Again
             </Button>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );
@@ -230,183 +239,193 @@ export default function AgentRegistryPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agent Registry</h1>
-          <p className="text-gray-500">
-            Discover and manage all AI agents in your ecosystem
-          </p>
+          <h1 className="text-3xl font-bold text-white">Agent Registry</h1>
+          <p className="text-gray-400 mt-1">Discover and manage all AI agents in your ecosystem</p>
         </div>
         <Button
           onClick={refreshDiscovery}
           disabled={refreshing}
-          className="bg-emerald-600 hover:bg-emerald-700"
         >
-          <ArrowPathIcon className={clsx("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+          <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Refreshing...' : 'Refresh Discovery'}
         </Button>
       </div>
 
       {/* Stats Cards */}
       {discoveryStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Agents</p>
-                  <p className="text-2xl font-bold">{discoveryStats.total_agents}</p>
-                </div>
-                <CpuChipIcon className="h-8 w-8 text-emerald-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Total Agents</p>
+                <p className="text-2xl font-bold text-white">{discoveryStats?.total_agents || 0}</p>
               </div>
-            </CardContent>
+              <CpuChipIcon className="h-8 w-8 text-primary-400" />
+            </div>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Built-in Agents</p>
-                  <p className="text-2xl font-bold">{discoveryStats.by_source.builtin}</p>
-                </div>
-                <SparklesIcon className="h-8 w-8 text-purple-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Built-in Agents</p>
+                <p className="text-2xl font-bold text-purple-400">
+                  {discoveryStats?.by_source?.builtin || 0}
+                </p>
               </div>
-            </CardContent>
+              <SparklesIcon className="h-8 w-8 text-purple-400" />
+            </div>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Claude Agents</p>
-                  <p className="text-2xl font-bold">{discoveryStats.by_source.claude_files}</p>
-                </div>
-                <DocumentTextIcon className="h-8 w-8 text-blue-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Claude Agents</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {discoveryStats?.by_source?.claude_files || 0}
+                </p>
               </div>
-            </CardContent>
+              <DocumentTextIcon className="h-8 w-8 text-blue-400" />
+            </div>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Capabilities</p>
-                  <p className="text-2xl font-bold">{discoveryStats.total_capabilities}</p>
-                </div>
-                <CircleStackIcon className="h-8 w-8 text-orange-600" />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Total Capabilities</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {discoveryStats?.total_capabilities || 0}
+                </p>
               </div>
-            </CardContent>
+              <CircleStackIcon className="h-8 w-8 text-orange-400" />
+            </div>
           </Card>
         </div>
       )}
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Search agents by name, description, or capabilities..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="md:w-48">
-              <select
-                value={selectedSpecialization}
-                onChange={(e) => setSelectedSpecialization(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                <option value="all">All Specializations</option>
-                {specializations.map(spec => (
-                  <option key={spec} value={spec}>
-                    {spec.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </option>
-                ))}
-              </select>
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search agents by name, description, or capabilities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
             </div>
           </div>
-        </CardContent>
+          <div className="md:w-48">
+            <select
+              value={selectedSpecialization}
+              onChange={(e) => setSelectedSpecialization(e.target.value)}
+              className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="all">All Specializations</option>
+              {specializations.map(spec => (
+                <option key={spec} value={spec}>
+                  {spec.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </Card>
 
       {/* Agents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAgents.map((agent) => (
-          <Card key={agent.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  {getSpecializationIcon(agent.specialization)}
-                  <div>
-                    <CardTitle className="text-lg">{agent.name}</CardTitle>
-                    <CardDescription className="text-sm">
-                      {agent.description.substring(0, 80)}...
-                    </CardDescription>
+      {filteredAgents.length === 0 ? (
+        <Card>
+          <div className="text-center py-12">
+            <MagnifyingGlassIcon className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-400 mb-4">No agents found</p>
+            <p className="text-sm text-gray-500 mb-4">
+              Try adjusting your search criteria or refresh the discovery.
+            </p>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAgents.map((agent) => (
+            <Card key={agent.id} hover className="flex flex-col">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="text-primary-400">
+                    {getSpecializationIcon(agent.specialization)}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white">{agent.name}</h3>
+                    <p className="text-sm text-gray-400 line-clamp-2">
+                      {agent.description}
+                    </p>
                   </div>
                 </div>
-                <Badge className={getPriorityColor(agent.priority)}>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(agent.priority)}`}>
                   P{agent.priority}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Specialization & Provider */}
-              <div className="flex items-center justify-between">
-                <Badge variant="outline">
-                  {agent.specialization.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </Badge>
-                <Badge className={getProviderColor(agent.llm_provider)}>
-                  {agent.llm_provider.toUpperCase()}
-                </Badge>
+                </span>
               </div>
 
-              {/* Capabilities */}
-              <div>
-                <p className="text-sm text-gray-500 mb-2">
-                  {agent.capabilities.length} Capabilities
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {agent.capabilities.slice(0, 3).map((cap) => (
-                    <Badge key={cap.name} variant="secondary" className="text-xs">
-                      {cap.name.replace('_', ' ')}
-                    </Badge>
-                  ))}
-                  {agent.capabilities.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{agent.capabilities.length - 3} more
-                    </Badge>
-                  )}
+              {/* Info Section */}
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="text-gray-300 border-gray-600">
+                    {agent.specialization?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'General'}
+                  </Badge>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getProviderColor(agent.llm_provider)}`}>
+                    {agent.llm_provider?.toUpperCase() || 'UNKNOWN'}
+                  </span>
                 </div>
-              </div>
 
-              {/* Trigger Keywords */}
-              {agent.trigger_keywords.length > 0 && (
+                {/* Capabilities */}
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Trigger Keywords</p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    {agent.capabilities?.length || 0} Capabilities
+                  </p>
                   <div className="flex flex-wrap gap-1">
-                    {agent.trigger_keywords.slice(0, 4).map((keyword) => (
+                    {agent.capabilities?.slice(0, 3).map((cap, index) => (
                       <span
-                        key={keyword}
-                        className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
+                        key={cap.name || `cap-${index}`}
+                        className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded"
                       >
-                        {keyword}
+                        {cap.name?.replace('_', ' ') || cap.name}
                       </span>
                     ))}
-                    {agent.trigger_keywords.length > 4 && (
-                      <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-                        +{agent.trigger_keywords.length - 4}
+                    {(agent.capabilities?.length || 0) > 3 && (
+                      <span className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded">
+                        +{agent.capabilities.length - 3} more
                       </span>
                     )}
                   </div>
                 </div>
-              )}
+
+                {/* Trigger Keywords */}
+                {agent.trigger_keywords?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Trigger Keywords</p>
+                    <div className="flex flex-wrap gap-1">
+                      {agent.trigger_keywords?.slice(0, 3).map((keyword) => (
+                        <span
+                          key={keyword}
+                          className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded"
+                        >
+                          {keyword}
+                        </span>
+                      ))}
+                      {agent.trigger_keywords?.length > 3 && (
+                        <span className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded">
+                          +{agent.trigger_keywords.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Actions */}
-              <div className="flex justify-between items-center pt-2 border-t">
+              <div className="flex justify-between items-center pt-3 mt-3 border-t border-dark-700">
                 <div className="text-xs text-gray-500">
                   {agent.source_file ? (
                     <span>📄 File-based</span>
@@ -418,82 +437,69 @@ export default function AgentRegistryPage() {
                 </div>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => viewAgentDetails(agent)}
                 >
-                  <EyeIcon className="h-4 w-4 mr-1" />
-                  View Details
+                  <EyeIcon className="h-4 w-4" />
+                  View
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredAgents.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <MagnifyingGlassIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No agents found
-            </h3>
-            <p className="text-gray-500">
-              Try adjusting your search criteria or refresh the discovery.
-            </p>
-          </CardContent>
-        </Card>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Agent Details Modal */}
       <Dialog open={showAgentDetails} onOpenChange={setShowAgentDetails}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-dark-800 border-dark-700">
           {selectedAgent && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center space-x-2">
-                  {getSpecializationIcon(selectedAgent.specialization)}
+                <DialogTitle className="flex items-center space-x-2 text-white">
+                  <span className="text-primary-400">
+                    {getSpecializationIcon(selectedAgent.specialization)}
+                  </span>
                   <span>{selectedAgent.name}</span>
-                  <Badge className={getPriorityColor(selectedAgent.priority)}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedAgent.priority)}`}>
                     Priority {selectedAgent.priority}
-                  </Badge>
+                  </span>
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-gray-400">
                   {selectedAgent.description}
                 </DialogDescription>
               </DialogHeader>
 
               <Tabs defaultValue="overview" className="mt-4">
-                <TabsList>
+                <TabsList className="bg-dark-700">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
                   <TabsTrigger value="configuration">Configuration</TabsTrigger>
                   <TabsTrigger value="usage">Usage Stats</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="overview" className="space-y-4">
+                <TabsContent value="overview" className="space-y-4 text-white">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold mb-2">Basic Info</h4>
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-500">ID:</span>
+                          <span className="text-gray-400">ID:</span>
                           <span className="font-mono text-sm">{selectedAgent.id}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Specialization:</span>
-                          <Badge variant="outline">
+                          <span className="text-gray-400">Specialization:</span>
+                          <Badge variant="outline" className="text-gray-300 border-gray-600">
                             {selectedAgent.specialization.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </Badge>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Provider:</span>
-                          <Badge className={getProviderColor(selectedAgent.llm_provider)}>
+                          <span className="text-gray-400">Provider:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getProviderColor(selectedAgent.llm_provider)}`}>
                             {selectedAgent.llm_provider.toUpperCase()}
-                          </Badge>
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Model:</span>
+                          <span className="text-gray-400">Model:</span>
                           <span>{selectedAgent.llm_model}</span>
                         </div>
                       </div>
@@ -503,7 +509,7 @@ export default function AgentRegistryPage() {
                       <h4 className="font-semibold mb-2">Source Info</h4>
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Source:</span>
+                          <span className="text-gray-400">Source:</span>
                           <span>
                             {selectedAgent.source_file ? (
                               <span>📄 File-based</span>
@@ -516,14 +522,14 @@ export default function AgentRegistryPage() {
                         </div>
                         {selectedAgent.source_file && (
                           <div className="flex justify-between">
-                            <span className="text-gray-500">File:</span>
+                            <span className="text-gray-400">File:</span>
                             <span className="font-mono text-sm truncate max-w-48">
                               {selectedAgent.source_file.split('/').pop()}
                             </span>
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Confidence:</span>
+                          <span className="text-gray-400">Confidence:</span>
                           <span>{(selectedAgent.confidence_threshold * 100).toFixed(0)}%</span>
                         </div>
                       </div>
@@ -535,7 +541,7 @@ export default function AgentRegistryPage() {
                       <h4 className="font-semibold mb-2">Trigger Keywords</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedAgent.trigger_keywords.map((keyword) => (
-                          <Badge key={keyword} variant="secondary">
+                          <Badge key={keyword} variant="secondary" className="bg-dark-700 text-gray-300">
                             {keyword}
                           </Badge>
                         ))}
@@ -548,33 +554,31 @@ export default function AgentRegistryPage() {
                   <div className="grid gap-4">
                     {selectedAgent.capabilities.map((capability) => (
                       <Card key={capability.name}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h5 className="font-semibold">
-                                {capability.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                              </h5>
-                              <p className="text-gray-600 text-sm mt-1">
-                                {capability.description}
-                              </p>
-                              {capability.required_tools.length > 0 && (
-                                <div className="mt-2">
-                                  <p className="text-xs text-gray-500 mb-1">Required Tools:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {capability.required_tools.map((tool) => (
-                                      <Badge key={tool} variant="outline" className="text-xs">
-                                        {tool}
-                                      </Badge>
-                                    ))}
-                                  </div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h5 className="font-semibold text-white">
+                              {capability.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </h5>
+                            <p className="text-gray-400 text-sm mt-1">
+                              {capability.description}
+                            </p>
+                            {capability.required_tools && capability.required_tools.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-xs text-gray-500 mb-1">Required Tools:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {capability.required_tools.map((tool) => (
+                                    <Badge key={tool} variant="outline" className="text-xs text-gray-400 border-gray-600">
+                                      {tool}
+                                    </Badge>
+                                  ))}
                                 </div>
-                              )}
-                            </div>
-                            <Badge variant="outline" className="ml-2">
-                              {capability.category}
-                            </Badge>
+                              </div>
+                            )}
                           </div>
-                        </CardContent>
+                          <Badge variant="outline" className="ml-2 text-gray-300 border-gray-600">
+                            {capability.category}
+                          </Badge>
+                        </div>
                       </Card>
                     ))}
                   </div>
@@ -583,9 +587,9 @@ export default function AgentRegistryPage() {
                 <TabsContent value="configuration" className="space-y-4">
                   {selectedAgent.system_prompt && (
                     <div>
-                      <h4 className="font-semibold mb-2">System Prompt</h4>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <pre className="whitespace-pre-wrap text-sm">
+                      <h4 className="font-semibold mb-2 text-white">System Prompt</h4>
+                      <div className="bg-dark-700 p-4 rounded-lg">
+                        <pre className="whitespace-pre-wrap text-sm text-gray-300">
                           {selectedAgent.system_prompt}
                         </pre>
                       </div>
@@ -594,19 +598,19 @@ export default function AgentRegistryPage() {
 
                   {Object.keys(selectedAgent.personality_traits).length > 0 && (
                     <div>
-                      <h4 className="font-semibold mb-2">Personality Traits</h4>
+                      <h4 className="font-semibold mb-2 text-white">Personality Traits</h4>
                       <div className="space-y-2">
                         {Object.entries(selectedAgent.personality_traits).map(([trait, value]) => (
                           <div key={trait} className="flex items-center justify-between">
-                            <span>{trait.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            <span className="text-gray-300">{trait.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                             <div className="flex items-center space-x-2">
-                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div className="w-24 bg-dark-700 rounded-full h-2">
                                 <div 
-                                  className="bg-emerald-600 h-2 rounded-full" 
+                                  className="bg-primary-500 h-2 rounded-full" 
                                   style={{ width: `${value * 100}%` }}
                                 />
                               </div>
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-gray-400">
                                 {(value * 100).toFixed(0)}%
                               </span>
                             </div>
@@ -621,51 +625,51 @@ export default function AgentRegistryPage() {
                   {selectedAgent.usage_stats ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-bold text-emerald-600">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-green-400">
                             {selectedAgent.usage_stats.usage_count}
                           </p>
-                          <p className="text-sm text-gray-500">Total Uses</p>
-                        </CardContent>
+                          <p className="text-sm text-gray-400">Total Uses</p>
+                        </div>
                       </Card>
                       <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-bold text-blue-600">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-blue-400">
                             {selectedAgent.usage_stats.success_count}
                           </p>
-                          <p className="text-sm text-gray-500">Successful</p>
-                        </CardContent>
+                          <p className="text-sm text-gray-400">Successful</p>
+                        </div>
                       </Card>
                       <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-2xl font-bold text-purple-600">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-purple-400">
                             {(selectedAgent.usage_stats.success_rate * 100).toFixed(1)}%
                           </p>
-                          <p className="text-sm text-gray-500">Success Rate</p>
-                        </CardContent>
+                          <p className="text-sm text-gray-400">Success Rate</p>
+                        </div>
                       </Card>
                       {selectedAgent.usage_stats.last_used && (
                         <Card className="md:col-span-3">
-                          <CardContent className="p-4">
-                            <p className="text-sm text-gray-500">Last Used</p>
-                            <p className="font-semibold">
+                          <div>
+                            <p className="text-sm text-gray-400">Last Used</p>
+                            <p className="font-semibold text-white">
                               {new Date(selectedAgent.usage_stats.last_used).toLocaleString()}
                             </p>
-                          </CardContent>
+                          </div>
                         </Card>
                       )}
                     </div>
                   ) : (
                     <Card>
-                      <CardContent className="p-8 text-center">
-                        <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      <div className="text-center py-8">
+                        <ChartBarIcon className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-white mb-2">
                           No Usage Data
                         </h3>
-                        <p className="text-gray-500">
+                        <p className="text-gray-400">
                           This agent hasn't been used yet or usage tracking is not available.
                         </p>
-                      </CardContent>
+                      </div>
                     </Card>
                   )}
                 </TabsContent>

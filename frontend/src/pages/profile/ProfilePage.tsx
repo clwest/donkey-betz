@@ -52,13 +52,13 @@ export const ProfilePage: React.FC = () => {
       const data = await profileService.getProfile();
       setProfile(data);
       setFormData({
-        first_name: data.user.first_name,
-        last_name: data.user.last_name,
-        email: data.user.email,
-        bio: data.profile.bio,
-        display_name: data.profile.display_name,
-        occupation: data.profile.occupation,
-        location: data.profile.location,
+        first_name: data.user?.first_name || '',
+        last_name: data.user?.last_name || '',
+        email: data.user?.email || '',
+        bio: data.profile?.bio || '',
+        display_name: data.profile?.display_name || '',
+        occupation: data.profile?.occupation || '',
+        location: data.profile?.location || '',
       });
     } catch (error) {
       toast.error('Failed to load profile');
@@ -161,7 +161,7 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
-  if (!profile) {
+  if (!profile || !profile.user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -198,7 +198,7 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* Profile Tab */}
-      {activeTab === 'profile' && (
+      {activeTab === 'profile' && profile?.user && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Avatar Section */}
           <div className="lg:col-span-1">
@@ -206,16 +206,16 @@ export const ProfilePage: React.FC = () => {
               <h3 className="text-lg font-semibold text-white mb-4">Profile Picture</h3>
               
               <div className="relative w-32 h-32 mx-auto mb-4">
-                {profile.profile.avatar ? (
+                {profile?.profile?.avatar ? (
                   <img
-                    src={profile.profile.avatar}
+                    src={profile?.profile?.avatar}
                     alt="Avatar"
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                     <span className="text-4xl font-bold text-white">
-                      {profile.user.username[0].toUpperCase()}
+                      {profile?.user?.username?.[0]?.toUpperCase() || 'U'}
                     </span>
                   </div>
                 )}
@@ -231,7 +231,7 @@ export const ProfilePage: React.FC = () => {
                 </label>
               </div>
 
-              {profile.profile.avatar && (
+              {profile?.profile?.avatar && (
                 <button
                   onClick={handleDeleteAvatar}
                   className="w-full py-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition-colors flex items-center justify-center gap-2"
@@ -246,22 +246,22 @@ export const ProfilePage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Account Type</span>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    profile.profile.account_type === 'pro' 
+                    profile?.profile?.account_type === 'pro' 
                       ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black'
-                      : profile.profile.account_type === 'enterprise'
+                      : profile?.profile?.account_type === 'enterprise'
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                       : 'bg-gray-700 text-gray-300'
                   }`}>
-                    {profile.profile.account_type.toUpperCase()}
+                    {profile?.profile?.account_type?.toUpperCase() || 'FREE'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Credits</span>
-                  <span className="text-white font-semibold">{profile.profile.credits_remaining}</span>
+                  <span className="text-white font-semibold">{profile?.profile?.credits_remaining || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Storage Used</span>
-                  <span className="text-white">{profile.profile.storage_used_mb} MB</span>
+                  <span className="text-white">{profile?.profile?.storage_used_mb || 0} MB</span>
                 </div>
               </div>
             </div>
@@ -403,7 +403,7 @@ export const ProfilePage: React.FC = () => {
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={profile.profile.dark_mode}
+                    checked={profile?.profile?.dark_mode || false}
                     onChange={(e) => handleSettingToggle('dark_mode', e.target.checked)}
                     className="sr-only peer"
                   />
@@ -422,7 +422,7 @@ export const ProfilePage: React.FC = () => {
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={profile.profile.email_notifications}
+                    checked={profile?.profile?.email_notifications || false}
                     onChange={(e) => handleSettingToggle('email_notifications', e.target.checked)}
                     className="sr-only peer"
                   />
@@ -441,7 +441,7 @@ export const ProfilePage: React.FC = () => {
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={profile.profile.auto_save}
+                    checked={profile?.profile?.auto_save || false}
                     onChange={(e) => handleSettingToggle('auto_save', e.target.checked)}
                     className="sr-only peer"
                   />
@@ -457,12 +457,15 @@ export const ProfilePage: React.FC = () => {
                 <div>
                   <label className="block text-gray-400 mb-2">Default AI Model</label>
                   <select
-                    value={profile.profile.preferred_ai_model}
+                    value={profile?.profile?.preferred_ai_model || ''}
                     onChange={(e) => handleSettingToggle('preferred_ai_model', e.target.value)}
                     className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white"
                   >
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                    <option value="gpt-5-nano">GPT-5 Nano</option>
+                    <option value="gpt-4">GPT-4 (Legacy)</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy)</option>
                     <option value="claude">Claude</option>
                     <option value="gemini">Gemini</option>
                   </select>
@@ -471,7 +474,7 @@ export const ProfilePage: React.FC = () => {
                 <div>
                   <label className="block text-gray-400 mb-2">Default Content Tone</label>
                   <select
-                    value={profile.profile.default_content_tone}
+                    value={profile?.profile?.default_content_tone || ''}
                     onChange={(e) => handleSettingToggle('default_content_tone', e.target.value)}
                     className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white"
                   >
@@ -486,7 +489,7 @@ export const ProfilePage: React.FC = () => {
                 <div>
                   <label className="block text-gray-400 mb-2">Citation Style</label>
                   <select
-                    value={profile.profile.default_citation_style}
+                    value={profile?.profile?.default_citation_style || ''}
                     onChange={(e) => handleSettingToggle('default_citation_style', e.target.value)}
                     className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white"
                   >
@@ -552,18 +555,18 @@ export const ProfilePage: React.FC = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Username</span>
-                  <span className="text-white">{profile.user.username}</span>
+                  <span className="text-white">{profile?.user?.username || 'Unknown'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Member Since</span>
                   <span className="text-white">
-                    {new Date(profile.user.date_joined).toLocaleDateString()}
+                    {profile?.user?.date_joined ? new Date(profile?.user?.date_joined).toLocaleDateString() : 'Unknown'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Last Active</span>
                   <span className="text-white">
-                    {new Date(profile.profile.last_active).toLocaleDateString()}
+                    {profile?.profile?.last_active ? new Date(profile?.profile?.last_active).toLocaleDateString() : 'Unknown'}
                   </span>
                 </div>
               </div>
@@ -578,10 +581,10 @@ export const ProfilePage: React.FC = () => {
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Contents', value: stats.content_breakdown.texts || 0, icon: FileText, color: 'from-blue-500 to-cyan-500' },
-              { label: 'Images Created', value: stats.content_breakdown.images || 0, icon: Image, color: 'from-purple-500 to-pink-500' },
-              { label: 'Videos Generated', value: stats.content_breakdown.saved_videos || 0, icon: Video, color: 'from-green-500 to-emerald-500' },
-              { label: 'Blogs Written', value: stats.content_breakdown.blogs || 0, icon: BookOpen, color: 'from-orange-500 to-red-500' },
+              { label: 'Total Contents', value: stats?.total_content_generated || 0, icon: FileText, color: 'from-blue-500 to-cyan-500' },
+              { label: 'Agents Created', value: stats?.total_agents_created || 0, icon: Image, color: 'from-purple-500 to-pink-500' },
+              { label: 'Bets Analyzed', value: stats?.total_bets_analyzed || 0, icon: Video, color: 'from-green-500 to-emerald-500' },
+              { label: 'Credits Used', value: stats?.credits_used || 0, icon: BookOpen, color: 'from-orange-500 to-red-500' },
             ].map((stat, index) => (
               <motion.div
                 key={index}
@@ -608,7 +611,7 @@ export const ProfilePage: React.FC = () => {
                   <TrendingUp className="w-5 h-5 text-green-500" />
                   <span className="text-gray-400">Last 7 Days</span>
                 </div>
-                <p className="text-2xl font-bold text-white">{stats.recent_activity.last_7_days}</p>
+                <p className="text-2xl font-bold text-white">{stats?.recent_activity?.last_7_days || 0}</p>
                 <p className="text-sm text-gray-500">items created</p>
               </div>
               <div className="bg-gray-900/50 rounded-lg p-4">
@@ -616,7 +619,7 @@ export const ProfilePage: React.FC = () => {
                   <TrendingUp className="w-5 h-5 text-blue-500" />
                   <span className="text-gray-400">Last 30 Days</span>
                 </div>
-                <p className="text-2xl font-bold text-white">{stats.recent_activity.last_30_days}</p>
+                <p className="text-2xl font-bold text-white">{stats?.recent_activity?.last_30_days || 0}</p>
                 <p className="text-sm text-gray-500">items created</p>
               </div>
             </div>
@@ -628,9 +631,9 @@ export const ProfilePage: React.FC = () => {
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-4">Top Styles Used</h3>
               <div className="space-y-3">
-                {stats.top_styles.slice(0, 5).map((style, index) => {
+                {(stats?.top_styles || []).slice(0, 5).map((style, index) => {
                   const styleName = style.style || style['metadata__style'] || 'Default';
-                  const maxCount = stats.top_styles[0]?.count || 1;
+                  const maxCount = stats?.top_styles?.[0]?.count || 1;
                   return (
                     <div key={index} className="flex items-center justify-between">
                       <span className="text-gray-300">{styleName}</span>
@@ -646,7 +649,7 @@ export const ProfilePage: React.FC = () => {
                     </div>
                   );
                 })}
-                {stats.top_styles.length === 0 && (
+                {(stats?.top_styles || []).length === 0 && (
                   <p className="text-gray-500 text-center py-4">No style data available yet</p>
                 )}
               </div>
@@ -659,12 +662,12 @@ export const ProfilePage: React.FC = () => {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-400">Images</span>
-                    <span className="text-white">{stats.storage.images_mb} MB</span>
+                    <span className="text-white">{stats?.storage?.images_mb || 0} MB</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full"
-                      style={{ width: `${stats.storage.total_mb > 0 ? (stats.storage.images_mb / stats.storage.total_mb) * 100 : 0}%` }}
+                      style={{ width: `${(stats?.storage?.total_mb || 0) > 0 ? ((stats?.storage?.images_mb || 0) / (stats?.storage?.total_mb || 1)) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -672,12 +675,12 @@ export const ProfilePage: React.FC = () => {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-400">Videos</span>
-                    <span className="text-white">{stats.storage.videos_mb} MB</span>
+                    <span className="text-white">{stats?.storage?.videos_mb || 0} MB</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full"
-                      style={{ width: `${stats.storage.total_mb > 0 ? (stats.storage.videos_mb / stats.storage.total_mb) * 100 : 0}%` }}
+                      style={{ width: `${(stats?.storage?.total_mb || 0) > 0 ? ((stats?.storage?.videos_mb || 0) / (stats?.storage?.total_mb || 1)) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -688,7 +691,7 @@ export const ProfilePage: React.FC = () => {
                       <HardDrive className="w-5 h-5 text-gray-400" />
                       <span className="text-gray-400">Total Storage</span>
                     </div>
-                    <span className="text-xl font-bold text-white">{stats.storage.total_mb} MB</span>
+                    <span className="text-xl font-bold text-white">{stats?.storage?.total_mb || 0} MB</span>
                   </div>
                 </div>
               </div>

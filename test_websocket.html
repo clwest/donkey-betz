@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        .status {
+            font-weight: bold;
+            padding: 5px;
+            display: inline-block;
+        }
+        .connected { color: #00ff00; }
+        .disconnected { color: #ff0000; }
+        .connecting { color: #ffff00; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00cc00;
+        }
+        .log {
+            background: #000;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        input {
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px;
+            font-family: monospace;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 WebSocket Connection Test</h1>
+    
+    <div class="section">
+        <h2>Test Echo Endpoint (No Auth)</h2>
+        <div>URL: ws://localhost:8000/ws/test/echo/</div>
+        <div>Status: <span id="echo-status" class="status disconnected">DISCONNECTED</span></div>
+        <button onclick="connectEcho()">Connect Echo</button>
+        <button onclick="sendEchoPing()">Send Ping</button>
+        <button onclick="disconnectEcho()">Disconnect</button>
+        <div class="log" id="echo-log"></div>
+    </div>
+
+    <div class="section">
+        <h2>Agent Orchestra Endpoint</h2>
+        <div>URL: ws://localhost:8000/ws/agents/</div>
+        <div>
+            Token: <input type="text" id="auth-token" placeholder="Enter auth token (optional)" />
+        </div>
+        <div>Status: <span id="agents-status" class="status disconnected">DISCONNECTED</span></div>
+        <button onclick="connectAgents()">Connect Agents</button>
+        <button onclick="sendAgentsPing()">Send Ping</button>
+        <button onclick="disconnectAgents()">Disconnect</button>
+        <div class="log" id="agents-log"></div>
+    </div>
+
+    <script>
+        let echoWs = null;
+        let agentsWs = null;
+
+        function log(elementId, message) {
+            const logEl = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.textContent += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(elementId, status) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = status.toUpperCase();
+            statusEl.className = 'status ' + status.toLowerCase();
+        }
+
+        // Echo WebSocket Functions
+        function connectEcho() {
+            if (echoWs && echoWs.readyState === WebSocket.OPEN) {
+                log('echo-log', 'Already connected');
+                return;
+            }
+
+            updateStatus('echo-status', 'connecting');
+            log('echo-log', 'Connecting to echo endpoint...');
+
+            echoWs = new WebSocket('ws://localhost:8000/ws/test/echo/');
+
+            echoWs.onopen = () => {
+                updateStatus('echo-status', 'connected');
+                log('echo-log', '✅ Connected successfully');
+            };
+
+            echoWs.onmessage = (event) => {
+                log('echo-log', `📥 Received: ${event.data}`);
+            };
+
+            echoWs.onerror = (error) => {
+                log('echo-log', `❌ Error: WebSocket error occurred`);
+            };
+
+            echoWs.onclose = (event) => {
+                updateStatus('echo-status', 'disconnected');
+                log('echo-log', `🔌 Disconnected: Code ${event.code}, Reason: ${event.reason || 'No reason'}`);
+            };
+        }
+
+        function sendEchoPing() {
+            if (!echoWs || echoWs.readyState !== WebSocket.OPEN) {
+                log('echo-log', '⚠️ Not connected');
+                return;
+            }
+
+            const message = JSON.stringify({ type: 'ping', timestamp: Date.now() });
+            echoWs.send(message);
+            log('echo-log', `📤 Sent: ${message}`);
+        }
+
+        function disconnectEcho() {
+            if (echoWs) {
+                echoWs.close();
+                echoWs = null;
+                log('echo-log', 'Disconnected manually');
+            }
+        }
+
+        // Agent Orchestra WebSocket Functions
+        function connectAgents() {
+            if (agentsWs && agentsWs.readyState === WebSocket.OPEN) {
+                log('agents-log', 'Already connected');
+                return;
+            }
+
+            updateStatus('agents-status', 'connecting');
+            log('agents-log', 'Connecting to agents endpoint...');
+
+            const token = document.getElementById('auth-token').value;
+            let url = 'ws://localhost:8000/ws/agents/';
+            if (token) {
+                url += `?token=${token}`;
+                log('agents-log', `Using token: ${token.substring(0, 10)}...`);
+            }
+
+            agentsWs = new WebSocket(url);
+
+            agentsWs.onopen = () => {
+                updateStatus('agents-status', 'connected');
+                log('agents-log', '✅ Connected successfully');
+            };
+
+            agentsWs.onmessage = (event) => {
+                log('agents-log', `📥 Received: ${event.data}`);
+            };
+
+            agentsWs.onerror = (error) => {
+                log('agents-log', `❌ Error: WebSocket error occurred`);
+            };
+
+            agentsWs.onclose = (event) => {
+                updateStatus('agents-status', 'disconnected');
+                log('agents-log', `🔌 Disconnected: Code ${event.code}, Reason: ${event.reason || 'No reason'}`);
+            };
+        }
+
+        function sendAgentsPing() {
+            if (!agentsWs || agentsWs.readyState !== WebSocket.OPEN) {
+                log('agents-log', '⚠️ Not connected');
+                return;
+            }
+
+            const message = JSON.stringify({ type: 'ping', timestamp: Date.now() });
+            agentsWs.send(message);
+            log('agents-log', `📤 Sent: ${message}`);
+        }
+
+        function disconnectAgents() {
+            if (agentsWs) {
+                agentsWs.close();
+                agentsWs = null;
+                log('agents-log', 'Disconnected manually');
+            }
+        }
+
+        // Auto-connect to echo on load for testing
+        window.addEventListener('load', () => {
+            setTimeout(connectEcho, 500);
+        });
+    </script>
+</body>
+</html>

@@ -30,13 +30,13 @@ import { PublicBlogListPage } from './pages/public/PublicBlogListPage';
 import { PublicBlogPage } from './pages/public/PublicBlogPage';
 
 // Prompt Diagnostics
-import { PromptDiagnosticsPage } from './pages/prompt-diagnostics/PromptDiagnosticsPage';
+import PromptDiagnosticsPage from './pages/prompt-diagnostics/PromptDiagnosticsPage';
 
 // Agent Registry
 import AgentRegistryPage from './pages/AgentRegistryPage';
 
 // Multi-Agent Workflows
-import { WorkflowsPage as MultiAgentWorkflowsPage } from './pages/WorkflowsPage';
+import MultiAgentWorkflowsPage from './pages/WorkflowsPage';
 
 // Debug Page
 import DebugPage from './pages/DebugPage';
@@ -81,13 +81,12 @@ function App() {
 
   useEffect(() => {
     Logger.component('App', 'Mounting', { timestamp: new Date().toISOString() });
-    Logger.component('App', 'Initializing authentication');
-    initAuth();
+    Logger.component('App', 'Authentication already initialized from store');
     
     return () => {
       Logger.component('App', 'Unmounting');
     };
-  }, [initAuth]);
+  }, []);
 
   console.log('🔐 App: Current auth state', { 
     isAuthenticated, 

@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     
     # Third-party packages
     "rest_framework",
+    "rest_framework.authtoken",  # Add token authentication
     "django_filters",
     "channels",
     "corsheaders",
@@ -308,6 +309,34 @@ else:  # development
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
     CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
 
+# AI Configuration
+AI_CONFIG = {
+    'DEFAULT_LLM_MODEL': 'gpt-5-mini',
+    # GPT-5 Reasoning Configuration
+    'GPT5_REASONING_LEVELS': ['minimal', 'low', 'medium', 'high'],
+    'DEFAULT_REASONING_LEVEL': 'medium',
+    # Token Limits
+    'MAX_INPUT_TOKENS': {
+        'gpt-5': 272000,
+        'gpt-5-mini': 272000,
+        'gpt-5-nano': 272000,
+        'gpt-4': 128000,
+        'gpt-3.5-turbo': 16385
+    },
+    'MAX_OUTPUT_TOKENS': {
+        'gpt-5': 128000,
+        'gpt-5-mini': 128000,
+        'gpt-5-nano': 128000,
+        'gpt-4': 4096,
+        'gpt-3.5-turbo': 4096
+    },
+    # Prompt Caching
+    'ENABLE_PROMPT_CACHING': True,
+    'PROMPT_CACHE_TTL': 300,
+    'GPT5_FALLBACK_MODEL': 'gpt-4',
+    'ENABLE_GPT5_MIGRATION': True,
+}
+
 # Agent System Configuration
 AGENT_SYSTEM = {
     'MAX_CONCURRENT_EXECUTIONS': 10,
@@ -317,7 +346,7 @@ AGENT_SYSTEM = {
     'ENABLE_AGENT_LEARNING': True,
     'ENABLE_SELF_IMPROVEMENT': True,
     'DEFAULT_LLM_PROVIDER': 'openai',
-    'DEFAULT_LLM_MODEL': 'gpt-4',
+    'DEFAULT_LLM_MODEL': 'gpt-5-mini',
 }
 
 # Sports Analytics Configuration

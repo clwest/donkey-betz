@@ -137,15 +137,18 @@ export class PromptDiagnosticsService {
   /**
    * Utility: Calculate cost estimate based on token count
    */
-  calculateCostEstimate(tokens: number, model: string = 'gpt-4'): number {
+  calculateCostEstimate(tokens: number, model: string = 'gpt-5-mini'): number {
     const rates = {
-      'gpt-4': 0.00003, // $0.03 per 1K tokens
+      'gpt-5': 0.00125,      // $1.25 per 1K input tokens
+      'gpt-5-mini': 0.00025, // $0.25 per 1K input tokens
+      'gpt-5-nano': 0.00005, // $0.05 per 1K input tokens
+      'gpt-4': 0.00003,      // $0.03 per 1K tokens
       'gpt-4-turbo': 0.00001, // $0.01 per 1K tokens
       'gpt-3.5-turbo': 0.000002, // $0.002 per 1K tokens
     };
     
-    const rate = rates[model as keyof typeof rates] || rates['gpt-4'];
-    return tokens * rate;
+    const rate = rates[model as keyof typeof rates] || rates['gpt-5-mini'];
+    return (tokens / 1000) * rate;
   }
 
   /**
