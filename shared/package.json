@@ -1,0 +1,27 @@
+{
+  "name": "@ai-content-studio/shared",
+  "version": "1.0.0",
+  "description": "Shared API client and services for AI Content Studio",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "optionalDependencies": {
+    "@react-native-async-storage/async-storage": "^1.19.0",
+    "react-native": "*"
+  }
+}

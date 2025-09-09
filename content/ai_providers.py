@@ -1,0 +1,476 @@
+"""
+AI Providers Integration
+
+Unified interface for multiple AI providers supporting content generation.
+"""
+
+import logging
+import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Dict, Any, List, Optional
+
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+# Import AI provider libraries
+try:
+    import openai
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
+try:
+    import anthropic
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
+
+try:
+    from google import generativeai as genai
+    HAS_GOOGLE = True
+except ImportError:
+    HAS_GOOGLE = False
+
+
+@dataclass
+class GenerationResult:
+    """Result from content generation"""
+    success: bool
+    content: str = ""
+    token_usage: Dict[str, int] = None
+    cost: float = 0.0
+    generation_time_ms: int = 0
+    model_used: str = ""
+    error_message: str = ""
+    
+    def __post_init__(self):
+        if self.token_usage is None:
+            self.token_usage = {}
+
+
+class BaseAIProvider(ABC):
+    """Base class for AI providers"""
+    
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.client = None
+        self._initialize_client()
+    
+    @abstractmethod
+    def _initialize_client(self):
+        """Initialize the provider's client"""
+        pass
+    
+    @abstractmethod
+    def generate_content(self, model: str, system_prompt: str, user_prompt: str, 
+                        config: Dict[str, Any] = None) -> GenerationResult:
+        """Generate content using the provider"""
+        pass
+    
+    @abstractmethod
+    def get_available_models(self) -> List[str]:
+        """Get list of available models"""
+        pass
+    
+    def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
+        """Estimate generation cost"""
+        # Default implementation - providers should override with actual pricing
+        return 0.0
+
+
+class OpenAIProvider(BaseAIProvider):
+    """OpenAI provider implementation"""
+    
+    def __init__(self, api_key: str):
+        if not HAS_OPENAI:
+            raise ImportError("OpenAI library not installed")
+        super().__init__(api_key)
+        
+        # Model pricing (per 1K tokens)
+        self.pricing = {
+            'gpt-4': {'input': 0.03, 'output': 0.06},
+            'gpt-4-turbo': {'input': 0.01, 'output': 0.03},
+            'gpt-4-turbo-preview': {'input': 0.01, 'output': 0.03},
+            'gpt-4o': {'input': 0.005, 'output': 0.015},
+            'gpt-3.5-turbo': {'input': 0.001, 'output': 0.002},
+            'gpt-3.5-turbo-16k': {'input': 0.003, 'output': 0.004},
+        }
+    
+    def _initialize_client(self):
+        """Initialize OpenAI client"""
+        self.client = openai.OpenAI(api_key=self.api_key)
+    
+    def generate_content(self, model: str, system_prompt: str, user_prompt: str, 
+                        config: Dict[str, Any] = None) -> GenerationResult:
+        """Generate content using OpenAI"""
+        if not self.client:
+            return GenerationResult(
+                success=False,
+                error_message="OpenAI client not initialized"
+            )
+        
+        config = config or {}
+        start_time = time.time()
+        
+        try:
+            messages = []
+            if system_prompt.strip():
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": user_prompt})
+            
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=config.get('temperature', 0.7),
+                max_tokens=config.get('max_tokens', 2000),
+                top_p=config.get('top_p', 1.0),
+                frequency_penalty=config.get('frequency_penalty', 0.0),
+                presence_penalty=config.get('presence_penalty', 0.0),
+                stream=False
+            )
+            
+            generation_time = int((time.time() - start_time) * 1000)
+            
+            content = response.choices[0].message.content
+            token_usage = {
+                'prompt_tokens': response.usage.prompt_tokens,
+                'completion_tokens': response.usage.completion_tokens,
+                'total_tokens': response.usage.total_tokens
+            }
+            
+            cost = self.estimate_cost(
+                model, 
+                response.usage.prompt_tokens, 
+                response.usage.completion_tokens
+            )
+            
+            return GenerationResult(
+                success=True,
+                content=content,
+                token_usage=token_usage,
+                cost=cost,
+                generation_time_ms=generation_time,
+                model_used=model
+            )
+            
+        except Exception as e:
+            logger.error(f"OpenAI generation failed: {str(e)}")
+            return GenerationResult(
+                success=False,
+                error_message=str(e),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                model_used=model
+            )
+    
+    def get_available_models(self) -> List[str]:
+        """Get available OpenAI models"""
+        return [
+            'gpt-4o',
+            'gpt-4-turbo-preview', 
+            'gpt-4-turbo',
+            'gpt-4',
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-16k'
+        ]
+    
+    def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
+        """Estimate cost for OpenAI generation"""
+        if model not in self.pricing:
+            # Default to GPT-4 pricing if model not found
+            model = 'gpt-4'
+        
+        pricing = self.pricing.get(model, self.pricing['gpt-4'])
+        input_cost = (input_tokens / 1000) * pricing['input']
+        output_cost = (output_tokens / 1000) * pricing['output']
+        
+        return input_cost + output_cost
+
+
+class AnthropicProvider(BaseAIProvider):
+    """Anthropic (Claude) provider implementation"""
+    
+    def __init__(self, api_key: str):
+        if not HAS_ANTHROPIC:
+            raise ImportError("Anthropic library not installed")
+        super().__init__(api_key)
+        
+        # Model pricing (per 1K tokens)
+        self.pricing = {
+            'claude-3-5-sonnet-20241022': {'input': 0.003, 'output': 0.015},
+            'claude-3-5-sonnet-20240620': {'input': 0.003, 'output': 0.015},
+            'claude-3-opus-20240229': {'input': 0.015, 'output': 0.075},
+            'claude-3-sonnet-20240229': {'input': 0.003, 'output': 0.015},
+            'claude-3-haiku-20240307': {'input': 0.00025, 'output': 0.00125},
+        }
+    
+    def _initialize_client(self):
+        """Initialize Anthropic client"""
+        self.client = anthropic.Anthropic(api_key=self.api_key)
+    
+    def generate_content(self, model: str, system_prompt: str, user_prompt: str, 
+                        config: Dict[str, Any] = None) -> GenerationResult:
+        """Generate content using Anthropic Claude"""
+        if not self.client:
+            return GenerationResult(
+                success=False,
+                error_message="Anthropic client not initialized"
+            )
+        
+        config = config or {}
+        start_time = time.time()
+        
+        try:
+            message = self.client.messages.create(
+                model=model,
+                max_tokens=config.get('max_tokens', 2000),
+                temperature=config.get('temperature', 0.7),
+                system=system_prompt if system_prompt.strip() else None,
+                messages=[{"role": "user", "content": user_prompt}]
+            )
+            
+            generation_time = int((time.time() - start_time) * 1000)
+            
+            content = message.content[0].text
+            token_usage = {
+                'input_tokens': message.usage.input_tokens,
+                'output_tokens': message.usage.output_tokens,
+                'total_tokens': message.usage.input_tokens + message.usage.output_tokens
+            }
+            
+            cost = self.estimate_cost(
+                model,
+                message.usage.input_tokens,
+                message.usage.output_tokens
+            )
+            
+            return GenerationResult(
+                success=True,
+                content=content,
+                token_usage=token_usage,
+                cost=cost,
+                generation_time_ms=generation_time,
+                model_used=model
+            )
+            
+        except Exception as e:
+            logger.error(f"Anthropic generation failed: {str(e)}")
+            return GenerationResult(
+                success=False,
+                error_message=str(e),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                model_used=model
+            )
+    
+    def get_available_models(self) -> List[str]:
+        """Get available Anthropic models"""
+        return [
+            'claude-3-5-sonnet-20241022',
+            'claude-3-5-sonnet-20240620',
+            'claude-3-opus-20240229',
+            'claude-3-sonnet-20240229',
+            'claude-3-haiku-20240307'
+        ]
+    
+    def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
+        """Estimate cost for Anthropic generation"""
+        if model not in self.pricing:
+            # Default to Sonnet pricing if model not found
+            model = 'claude-3-sonnet-20240229'
+        
+        pricing = self.pricing.get(model, self.pricing['claude-3-sonnet-20240229'])
+        input_cost = (input_tokens / 1000) * pricing['input']
+        output_cost = (output_tokens / 1000) * pricing['output']
+        
+        return input_cost + output_cost
+
+
+class GoogleProvider(BaseAIProvider):
+    """Google AI provider implementation"""
+    
+    def __init__(self, api_key: str):
+        if not HAS_GOOGLE:
+            raise ImportError("Google GenerativeAI library not installed")
+        super().__init__(api_key)
+        
+        # Google AI pricing (rough estimates)
+        self.pricing = {
+            'gemini-pro': {'input': 0.00025, 'output': 0.0005},
+            'gemini-pro-vision': {'input': 0.00025, 'output': 0.0005},
+            'gemini-1.5-pro': {'input': 0.0035, 'output': 0.0105},
+            'gemini-1.5-flash': {'input': 0.000075, 'output': 0.0003},
+        }
+    
+    def _initialize_client(self):
+        """Initialize Google AI client"""
+        genai.configure(api_key=self.api_key)
+    
+    def generate_content(self, model: str, system_prompt: str, user_prompt: str, 
+                        config: Dict[str, Any] = None) -> GenerationResult:
+        """Generate content using Google AI"""
+        config = config or {}
+        start_time = time.time()
+        
+        try:
+            # Combine system and user prompts for Google AI
+            full_prompt = ""
+            if system_prompt.strip():
+                full_prompt = f"System: {system_prompt}\n\nUser: {user_prompt}"
+            else:
+                full_prompt = user_prompt
+            
+            model_instance = genai.GenerativeModel(model)
+            
+            generation_config = genai.types.GenerationConfig(
+                temperature=config.get('temperature', 0.7),
+                max_output_tokens=config.get('max_tokens', 2000),
+                top_p=config.get('top_p', 0.8),
+                top_k=config.get('top_k', 40),
+            )
+            
+            response = model_instance.generate_content(
+                full_prompt,
+                generation_config=generation_config
+            )
+            
+            generation_time = int((time.time() - start_time) * 1000)
+            
+            content = response.text
+            
+            # Google AI doesn't provide token usage in the same way
+            # Estimate tokens based on content length
+            estimated_input_tokens = len(full_prompt.split()) * 1.3
+            estimated_output_tokens = len(content.split()) * 1.3
+            
+            token_usage = {
+                'input_tokens': int(estimated_input_tokens),
+                'output_tokens': int(estimated_output_tokens),
+                'total_tokens': int(estimated_input_tokens + estimated_output_tokens)
+            }
+            
+            cost = self.estimate_cost(
+                model,
+                token_usage['input_tokens'],
+                token_usage['output_tokens']
+            )
+            
+            return GenerationResult(
+                success=True,
+                content=content,
+                token_usage=token_usage,
+                cost=cost,
+                generation_time_ms=generation_time,
+                model_used=model
+            )
+            
+        except Exception as e:
+            logger.error(f"Google AI generation failed: {str(e)}")
+            return GenerationResult(
+                success=False,
+                error_message=str(e),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                model_used=model
+            )
+    
+    def get_available_models(self) -> List[str]:
+        """Get available Google AI models"""
+        return [
+            'gemini-1.5-pro',
+            'gemini-1.5-flash',
+            'gemini-pro',
+            'gemini-pro-vision'
+        ]
+    
+    def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
+        """Estimate cost for Google AI generation"""
+        if model not in self.pricing:
+            # Default to Gemini Pro pricing if model not found
+            model = 'gemini-pro'
+        
+        pricing = self.pricing.get(model, self.pricing['gemini-pro'])
+        input_cost = (input_tokens / 1000) * pricing['input']
+        output_cost = (output_tokens / 1000) * pricing['output']
+        
+        return input_cost + output_cost
+
+
+class AIProviderManager:
+    """Manages multiple AI providers"""
+    
+    def __init__(self):
+        self.providers = {}
+        self._initialize_providers()
+    
+    def _initialize_providers(self):
+        """Initialize available AI providers"""
+        # OpenAI
+        if HAS_OPENAI and settings.AI_PROVIDERS.get('OPENAI_API_KEY'):
+            try:
+                self.providers['openai'] = OpenAIProvider(
+                    settings.AI_PROVIDERS['OPENAI_API_KEY']
+                )
+            except Exception as e:
+                logger.warning(f"Failed to initialize OpenAI provider: {str(e)}")
+        
+        # Anthropic
+        if HAS_ANTHROPIC and settings.AI_PROVIDERS.get('ANTHROPIC_API_KEY'):
+            try:
+                self.providers['anthropic'] = AnthropicProvider(
+                    settings.AI_PROVIDERS['ANTHROPIC_API_KEY']
+                )
+            except Exception as e:
+                logger.warning(f"Failed to initialize Anthropic provider: {str(e)}")
+        
+        # Google AI
+        if HAS_GOOGLE and settings.AI_PROVIDERS.get('GOOGLE_API_KEY'):
+            try:
+                self.providers['google'] = GoogleProvider(
+                    settings.AI_PROVIDERS['GOOGLE_API_KEY']
+                )
+            except Exception as e:
+                logger.warning(f"Failed to initialize Google AI provider: {str(e)}")
+    
+    def get_provider(self, provider_name: str) -> Optional[BaseAIProvider]:
+        """Get AI provider by name"""
+        return self.providers.get(provider_name.lower())
+    
+    def get_available_providers(self) -> List[str]:
+        """Get list of available provider names"""
+        return list(self.providers.keys())
+    
+    def generate_content(self, provider: str, model: str, system_prompt: str, 
+                        user_prompt: str, config: Dict[str, Any] = None) -> GenerationResult:
+        """Generate content using specified provider"""
+        provider_instance = self.get_provider(provider)
+        
+        if not provider_instance:
+            return GenerationResult(
+                success=False,
+                error_message=f"Provider '{provider}' not available",
+                model_used=model
+            )
+        
+        return provider_instance.generate_content(model, system_prompt, user_prompt, config)
+    
+    def get_available_models(self, provider: str = None) -> Dict[str, List[str]]:
+        """Get available models for providers"""
+        if provider:
+            provider_instance = self.get_provider(provider)
+            if provider_instance:
+                return {provider: provider_instance.get_available_models()}
+            else:
+                return {}
+        else:
+            return {
+                name: instance.get_available_models()
+                for name, instance in self.providers.items()
+            }
+    
+    def estimate_cost(self, provider: str, model: str, input_tokens: int, 
+                     output_tokens: int) -> float:
+        """Estimate generation cost"""
+        provider_instance = self.get_provider(provider)
+        if provider_instance:
+            return provider_instance.estimate_cost(model, input_tokens, output_tokens)
+        return 0.0

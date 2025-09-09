@@ -1,0 +1,38 @@
+"""
+Content Management System URLs
+
+URL routing for content management APIs and WebSocket endpoints.
+"""
+
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from .views import (
+    ContentTemplateViewSet, DocumentViewSet, KnowledgeBaseViewSet,
+    ContentGenerationViewSet, ContentWorkflowViewSet, WorkflowExecutionViewSet,
+    ContentAnalyticsViewSet
+)
+
+# Create router for ViewSets
+router = DefaultRouter()
+router.register(r'templates', ContentTemplateViewSet, basename='content-template')
+router.register(r'documents', DocumentViewSet, basename='document')
+router.register(r'knowledge-bases', KnowledgeBaseViewSet, basename='knowledge-base')
+router.register(r'generations', ContentGenerationViewSet, basename='content-generation')
+router.register(r'workflows', ContentWorkflowViewSet, basename='content-workflow')
+router.register(r'executions', WorkflowExecutionViewSet, basename='workflow-execution')
+router.register(r'analytics', ContentAnalyticsViewSet, basename='content-analytics')
+
+app_name = 'content'
+
+urlpatterns = [
+    # Include router URLs
+    path('', include(router.urls)),
+]
+
+# WebSocket URL patterns (to be included in core routing)
+# Note: These are defined separately and should be imported in the main ASGI routing
+# websocket_urlpatterns = [
+#     path('ws/content/processing/', 'content.consumers.ContentProcessingConsumer'),
+#     path('ws/content/analytics/', 'content.consumers.ContentAnalyticsConsumer'),
+# ]

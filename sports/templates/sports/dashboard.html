@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Analytics Dashboard - Unified Donkey Betz</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'sports/css/dashboard.css' %}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏈</text></svg>">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Sports Analytics Dashboard</h1>
+            <p class="text-gray-600">Real-time betting analytics and performance metrics</p>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="metric-card rounded-lg shadow-lg p-6 text-white">
+                <h3 class="text-lg font-semibold mb-2">Total Bets</h3>
+                <p class="text-3xl font-bold">{{ total_bets }}</p>
+            </div>
+            
+            <div class="metric-card rounded-lg shadow-lg p-6 text-white">
+                <h3 class="text-lg font-semibold mb-2">Total Wagered</h3>
+                <p class="text-3xl font-bold">${{ total_wagered|floatformat:2 }}</p>
+            </div>
+            
+            <div class="metric-card rounded-lg shadow-lg p-6 text-white">
+                <h3 class="text-lg font-semibold mb-2">Total P&L</h3>
+                <p class="text-3xl font-bold {% if total_profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    ${{ total_profit|floatformat:2 }}
+                </p>
+            </div>
+            
+            <div class="metric-card rounded-lg shadow-lg p-6 text-white">
+                <h3 class="text-lg font-semibold mb-2">ROI</h3>
+                <p class="text-3xl font-bold {% if roi >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                    {{ roi }}%
+                </p>
+            </div>
+        </div>
+
+        <!-- Bankroll Information -->
+        {% if bankroll %}
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Bankroll Management</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h4 class="font-semibold text-gray-700">Current Balance</h4>
+                    <p class="text-2xl font-bold text-blue-600">${{ bankroll.current_balance|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-700">Initial Balance</h4>
+                    <p class="text-2xl font-bold text-green-600">${{ bankroll.initial_balance|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-700">Kelly Multiplier</h4>
+                    <p class="text-2xl font-bold text-purple-600">{{ bankroll.kelly_multiplier|floatformat:2 }}x</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dashboard Sections -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Performance Chart -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Performance Trend</h2>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Bets</h2>
+                <div class="space-y-3 max-h-80 overflow-y-auto">
+                    {% for bet in recent_bets %}
+                    <div class="border-l-4 {% if bet.status == 'won' %}border-green-500{% elif bet.status == 'lost' %}border-red-500{% else %}border-yellow-500{% endif %} pl-4 py-2">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">{{ bet.game.away_team.name }} @ {{ bet.game.home_team.name }}</p>
+                                <p class="text-sm text-gray-600">{{ bet.betting_market.market_type }} - {{ bet.selected_option }}</p>
+                                <p class="text-sm text-gray-500">{{ bet.created_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold">${{ bet.amount|floatformat:2 }}</p>
+                                <p class="text-sm {% if bet.profit_loss > 0 %}text-green-600{% elif bet.profit_loss < 0 %}text-red-600{% else %}text-gray-600{% endif %}">
+                                    {% if bet.status == 'pending' %}Pending{% else %} ${{ bet.profit_loss|floatformat:2 }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center py-4">No recent bets found</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Arbitrage Opportunities -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Active Arbitrage Opportunities</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for opportunity in recent_opportunities %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-semibold text-sm">{{ opportunity.game.away_team.name }} @ {{ opportunity.game.home_team.name }}</h4>
+                        <span class="text-green-600 font-bold">{{ opportunity.profit_percentage|floatformat:2 }}%</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-1">{{ opportunity.market_type }}</p>
+                    <p class="text-sm text-gray-500">Stake: ${{ opportunity.total_stake|floatformat:2 }}</p>
+                    <p class="text-xs text-gray-400">{{ opportunity.created_at|timesince }} ago</p>
+                </div>
+                {% empty %}
+                <div class="col-span-full text-center py-8">
+                    <p class="text-gray-500">No active arbitrage opportunities</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Betting Recommendations -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Active Recommendations</h2>
+            <div class="space-y-4">
+                {% for rec in recent_recommendations %}
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-semibold">{{ rec.game.away_team.name }} @ {{ rec.game.home_team.name }}</h4>
+                            <p class="text-sm text-gray-600">{{ rec.betting_market.market_type }} - {{ rec.recommended_bet }}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded">
+                                {{ rec.confidence_score|floatformat:0 }}% Confidence
+                            </span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">Expected Value:</span>
+                            <span class="font-semibold {% if rec.expected_value > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ rec.expected_value|floatformat:2 }}%
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Kelly Bet Size:</span>
+                            <span class="font-semibold">${{ rec.kelly_bet_size|floatformat:2 }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Game Date:</span>
+                            <span>{{ rec.game.scheduled_date|date:"M d, H:i" }}</span>
+                        </div>
+                    </div>
+                    {% if rec.reasoning %}
+                    <div class="mt-3 text-sm text-gray-700 bg-gray-50 p-3 rounded">
+                        <strong>Reasoning:</strong> {{ rec.reasoning }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center py-8">
+                    <p class="text-gray-500">No active recommendations</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Real-time Data Controls -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Real-time Data</h2>
+            <div class="flex space-x-4 mb-4">
+                <button id="connectWebSocket" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Connect Live Feed
+                </button>
+                <button id="disconnectWebSocket" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" disabled>
+                    Disconnect
+                </button>
+                <span id="connectionStatus" class="flex items-center text-sm text-gray-600">
+                    <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                    Disconnected
+                </span>
+            </div>
+            <div id="liveUpdates" class="max-h-40 overflow-y-auto border border-gray-200 rounded p-3 bg-gray-50">
+                <p class="text-gray-500 text-sm">Connect to see live updates...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Performance chart
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Will be populated via AJAX
+                datasets: [{
+                    label: 'Daily P&L',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // WebSocket connection for real-time updates
+        let socket = null;
+        const connectBtn = document.getElementById('connectWebSocket');
+        const disconnectBtn = document.getElementById('disconnectWebSocket');
+        const statusIndicator = document.getElementById('connectionStatus');
+        const updatesContainer = document.getElementById('liveUpdates');
+
+        connectBtn.addEventListener('click', function() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/sports/dashboard/`;
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function(e) {
+                statusIndicator.innerHTML = '<span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>Connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                updatesContainer.innerHTML = '<p class="text-green-600 text-sm">Connected to live feed...</p>';
+            };
+            
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const timestamp = new Date().toLocaleTimeString();
+                const updateHtml = `<div class="text-sm mb-2"><span class="text-gray-500">[${timestamp}]</span> ${data.message}</div>`;
+                updatesContainer.innerHTML = updateHtml + updatesContainer.innerHTML;
+                
+                // Keep only last 10 updates
+                const updates = updatesContainer.children;
+                while (updates.length > 10) {
+                    updatesContainer.removeChild(updates[updates.length - 1]);
+                }
+            };
+            
+            socket.onclose = function(e) {
+                statusIndicator.innerHTML = '<span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>Disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                updatesContainer.innerHTML = '<p class="text-gray-500 text-sm">Disconnected from live feed</p>';
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updatesContainer.innerHTML = '<p class="text-red-500 text-sm">Connection error occurred</p>';
+            };
+        });
+
+        disconnectBtn.addEventListener('click', function() {
+            if (socket) {
+                socket.close();
+            }
+        });
+
+        // Load dashboard metrics via AJAX
+        fetch('/api/v1/sports/dashboard/metrics/')
+            .then(response => response.json())
+            .then(data => {
+                // Update performance chart
+                const dates = data.daily_performance.map(d => new Date(d.date).toLocaleDateString()).reverse();
+                const profits = data.daily_performance.map(d => d.profit).reverse();
+                
+                performanceChart.data.labels = dates;
+                performanceChart.data.datasets[0].data = profits;
+                performanceChart.update();
+            })
+            .catch(error => {
+                console.error('Error loading dashboard metrics:', error);
+            });
+
+        // Auto-refresh dashboard every 5 minutes
+        setInterval(() => {
+            window.location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>

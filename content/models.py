@@ -1,0 +1,1346 @@
+"""
+Unified Content Management System Models
+
+This module provides comprehensive content generation, document processing, 
+RAG (Retrieval-Augmented Generation), and knowledge management capabilities
+for the Unified Donkey Betz Platform.
+
+Features:
+- Multi-format document processing and storage
+- Vector embeddings for semantic search
+- Content generation templates and workflows
+- Knowledge base with tagging and categorization
+- Content analytics and usage tracking
+- Cross-domain content integration (sports, betting, agents)
+- Real-time content processing pipeline
+"""
+
+import uuid
+import json
+import hashlib
+from decimal import Decimal
+from enum import Enum
+from pathlib import Path
+
+from django.db import models
+from django.contrib.auth import get_user_model
+# from django.contrib.postgres.fields import ArrayField  # Not available in SQLite
+from django.core.files.storage import default_storage
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+
+from core.models import UnifiedBaseModel
+
+User = get_user_model()
+
+
+class DocumentType(models.TextChoices):
+    """Document type classification"""
+    TEXT = 'text', 'Plain Text'
+    MARKDOWN = 'markdown', 'Markdown'
+    HTML = 'html', 'HTML'
+    PDF = 'pdf', 'PDF Document'
+    DOCX = 'docx', 'Word Document'
+    RTF = 'rtf', 'Rich Text Format'
+    
+    # Structured data
+    JSON = 'json', 'JSON Data'
+    CSV = 'csv', 'CSV Data'
+    XML = 'xml', 'XML Data'
+    YAML = 'yaml', 'YAML Data'
+    
+    # Code files
+    PYTHON = 'python', 'Python Code'
+    JAVASCRIPT = 'javascript', 'JavaScript Code'
+    TYPESCRIPT = 'typescript', 'TypeScript Code'
+    SQL = 'sql', 'SQL Code'
+    
+    # Media
+    IMAGE = 'image', 'Image File'
+    AUDIO = 'audio', 'Audio File'
+    VIDEO = 'video', 'Video File'
+    
+    # Specialized content
+    SPORTS_DATA = 'sports_data', 'Sports Analytics Data'
+    BETTING_ANALYSIS = 'betting_analysis', 'Betting Analysis'
+    AGENT_LOG = 'agent_log', 'Agent Execution Log'
+    KNOWLEDGE_EXTRACT = 'knowledge_extract', 'Knowledge Base Extract'
+
+
+class ContentStatus(models.TextChoices):
+    """Content processing status"""
+    PENDING = 'pending', 'Pending Processing'
+    PROCESSING = 'processing', 'Currently Processing'
+    PROCESSED = 'processed', 'Successfully Processed'
+    FAILED = 'failed', 'Processing Failed'
+    ARCHIVED = 'archived', 'Archived'
+    DELETED = 'deleted', 'Soft Deleted'
+
+
+class ContentSource(models.TextChoices):
+    """Source of content"""
+    UPLOAD = 'upload', 'User Upload'
+    GENERATED = 'generated', 'AI Generated'
+    IMPORTED = 'imported', 'Imported from External System'
+    SCRAPED = 'scraped', 'Web Scraped'
+    API = 'api', 'API Integration'
+    WORKFLOW = 'workflow', 'Workflow Generated'
+    SPORTS_FEED = 'sports_feed', 'Sports Data Feed'
+    BETTING_SYSTEM = 'betting_system', 'Betting Analysis System'
+
+
+class EmbeddingModel(models.TextChoices):
+    """Vector embedding models"""
+    OPENAI_SMALL = 'openai_text_embedding_3_small', 'OpenAI text-embedding-3-small'
+    OPENAI_LARGE = 'openai_text_embedding_3_large', 'OpenAI text-embedding-3-large'
+    OPENAI_ADA = 'openai_text_embedding_ada_002', 'OpenAI text-embedding-ada-002'
+    SENTENCE_TRANSFORMER = 'sentence_transformer', 'Sentence Transformer'
+    COHERE = 'cohere_embed_english', 'Cohere Embed English'
+    LOCAL = 'local_model', 'Local Embedding Model'
+
+
+class ContentTemplate(UnifiedBaseModel):
+    """
+    Reusable content generation templates
+    """
+    
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text="Unique template name"
+    )
+    
+    display_name = models.CharField(
+        max_length=250,
+        help_text="Human-friendly display name"
+    )
+    
+    description = models.TextField(
+        help_text="Template description and usage instructions"
+    )
+    
+    # Template configuration
+    template_type = models.CharField(
+        max_length=100,
+        choices=[
+            ('article', 'Article/Blog Post'),
+            ('summary', 'Content Summary'),
+            ('analysis', 'Analysis Report'),
+            ('sports_report', 'Sports Analysis Report'),
+            ('betting_guide', 'Betting Strategy Guide'),
+            ('news_brief', 'News Brief'),
+            ('social_post', 'Social Media Post'),
+            ('email', 'Email Content'),
+            ('documentation', 'Technical Documentation'),
+            ('creative', 'Creative Writing'),
+            ('translation', 'Translation Template'),
+            ('qa', 'Question & Answer'),
+        ],
+        help_text="Type of content this template generates"
+    )
+    
+    # Template structure
+    system_prompt = models.TextField(
+        help_text="System prompt that defines content generation behavior"
+    )
+    
+    user_prompt_template = models.TextField(
+        help_text="Template for user prompts with variable placeholders"
+    )
+    
+    variables = models.JSONField(
+        default=dict,
+        help_text="Template variables and their configuration"
+    )
+    
+    output_format = models.CharField(
+        max_length=50,
+        choices=[
+            ('text', 'Plain Text'),
+            ('markdown', 'Markdown'),
+            ('html', 'HTML'),
+            ('json', 'JSON Structure'),
+            ('structured', 'Structured Data'),
+        ],
+        default='markdown',
+        help_text="Expected output format"
+    )
+    
+    # AI configuration
+    llm_provider = models.CharField(
+        max_length=50,
+        choices=[
+            ('openai', 'OpenAI'),
+            ('anthropic', 'Anthropic'),
+            ('google', 'Google AI'),
+            ('local', 'Local Model'),
+        ],
+        default='openai'
+    )
+    
+    llm_model = models.CharField(
+        max_length=100,
+        default='gpt-4-turbo-preview',
+        help_text="Specific AI model to use"
+    )
+    
+    generation_config = models.JSONField(
+        default=dict,
+        help_text="Model-specific generation parameters"
+    )
+    
+    # Template metadata
+    tags = models.JSONField(
+        default=list,
+        help_text="Tags for categorization and discovery"
+    )
+    
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Primary category"
+    )
+    
+    # Usage statistics
+    usage_count = models.PositiveIntegerField(
+        default=0
+    )
+    
+    avg_generation_time = models.FloatField(
+        default=0.0,
+        help_text="Average generation time in seconds"
+    )
+    
+    success_rate = models.FloatField(
+        default=1.0,
+        help_text="Success rate for content generation"
+    )
+    
+    avg_user_rating = models.FloatField(
+        default=0.0,
+        help_text="Average user satisfaction rating"
+    )
+    
+    # Access control
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='content_templates'
+    )
+    
+    is_public = models.BooleanField(
+        default=True,
+        help_text="Whether template is available to all users"
+    )
+    
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Whether template has been verified for quality"
+    )
+    
+    class Meta:
+        verbose_name = "Content Template"
+        verbose_name_plural = "Content Templates"
+        ordering = ['-usage_count', 'name']
+        indexes = [
+            models.Index(fields=['template_type']),
+            models.Index(fields=['category']),
+            models.Index(fields=['is_public', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.display_name} ({self.template_type})"
+    
+    def render_prompt(self, **kwargs):
+        """Render the user prompt template with provided variables"""
+        import re
+        
+        prompt = self.user_prompt_template
+        
+        # Replace variables in the template
+        for var_name, var_config in self.variables.items():
+            if var_name in kwargs:
+                value = kwargs[var_name]
+                prompt = re.sub(f"{{{{ *{var_name} *}}}}", str(value), prompt)
+            elif var_config.get('required', False):
+                raise ValueError(f"Required variable '{var_name}' not provided")
+        
+        return prompt
+    
+    def update_stats(self, generation_time=None, success=True, rating=None):
+        """Update template usage statistics"""
+        self.usage_count += 1
+        
+        if generation_time is not None:
+            total_time = self.avg_generation_time * (self.usage_count - 1) + generation_time
+            self.avg_generation_time = total_time / self.usage_count
+        
+        if success is not None:
+            total_success = self.success_rate * (self.usage_count - 1) + (1 if success else 0)
+            self.success_rate = total_success / self.usage_count
+        
+        if rating is not None:
+            total_rating = self.avg_user_rating * (self.usage_count - 1) + rating
+            self.avg_user_rating = total_rating / self.usage_count
+        
+        self.save()
+
+
+class Document(UnifiedBaseModel):
+    """
+    Comprehensive document storage and processing
+    """
+    
+    # Basic identification
+    title = models.CharField(
+        max_length=500,
+        help_text="Document title"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Optional document description"
+    )
+    
+    document_type = models.CharField(
+        max_length=50,
+        choices=DocumentType.choices,
+        help_text="Type of document"
+    )
+    
+    # File information
+    file_path = models.CharField(
+        max_length=1000,
+        blank=True,
+        help_text="Path to the stored file"
+    )
+    
+    original_filename = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Original filename when uploaded"
+    )
+    
+    file_size = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="File size in bytes"
+    )
+    
+    mime_type = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="MIME type of the document"
+    )
+    
+    # Content and processing
+    raw_content = models.TextField(
+        blank=True,
+        help_text="Raw extracted text content"
+    )
+    
+    processed_content = models.TextField(
+        blank=True,
+        help_text="Cleaned and processed text content"
+    )
+    
+    content_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="SHA-256 hash of content for deduplication"
+    )
+    
+    # Status and processing
+    status = models.CharField(
+        max_length=20,
+        choices=ContentStatus.choices,
+        default=ContentStatus.PENDING
+    )
+    
+    source = models.CharField(
+        max_length=50,
+        choices=ContentSource.choices,
+        default=ContentSource.UPLOAD
+    )
+    
+    processing_log = models.JSONField(
+        default=list,
+        help_text="Log of processing steps and results"
+    )
+    
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if processing failed"
+    )
+    
+    # Content analysis
+    language = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text="Detected language code (e.g., 'en', 'es')"
+    )
+    
+    word_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Number of words in the document"
+    )
+    
+    readability_score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Automated readability assessment"
+    )
+    
+    # Metadata extraction
+    extracted_metadata = models.JSONField(
+        default=dict,
+        help_text="Metadata extracted from document"
+    )
+    
+    key_phrases = models.JSONField(
+        default=list,
+        help_text="Extracted key phrases and topics"
+    )
+    
+    entities = models.JSONField(
+        default=list,
+        help_text="Named entities found in the document"
+    )
+    
+    # Organization
+    tags = models.JSONField(
+        default=list,
+        help_text="User-defined tags"
+    )
+    
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Document category"
+    )
+    
+    collection = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Collection or folder this document belongs to"
+    )
+    
+    # Relationships
+    parent_document = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='child_documents',
+        help_text="Parent document if this is a section/chapter"
+    )
+    
+    related_documents = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=True,
+        help_text="Related documents"
+    )
+    
+    # Access control
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Whether document is publicly accessible"
+    )
+    
+    allowed_users = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='accessible_documents',
+        help_text="Users with explicit access to this document"
+    )
+    
+    # Usage tracking
+    view_count = models.PositiveIntegerField(
+        default=0
+    )
+    
+    download_count = models.PositiveIntegerField(
+        default=0
+    )
+    
+    last_accessed = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    
+    # Cross-domain integration
+    source_system = models.CharField(
+        max_length=100,
+        blank=True,
+        choices=[
+            ('sports', 'Sports Analytics'),
+            ('agents', 'Agent System'),
+            ('betting', 'Betting Analysis'),
+            ('manual', 'Manual Upload'),
+            ('api', 'API Integration'),
+        ],
+        help_text="System that created this document"
+    )
+    
+    source_reference = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Reference ID in source system"
+    )
+    
+    cross_references = models.JSONField(
+        default=dict,
+        help_text="References to related objects in other systems"
+    )
+    
+    class Meta:
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['document_type']),
+            models.Index(fields=['status']),
+            models.Index(fields=['category']),
+            models.Index(fields=['owner']),
+            models.Index(fields=['content_hash']),
+            models.Index(fields=['-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} ({self.document_type})"
+    
+    def save(self, *args, **kwargs):
+        # Generate content hash for deduplication
+        if self.processed_content and not self.content_hash:
+            self.content_hash = hashlib.sha256(
+                self.processed_content.encode('utf-8')
+            ).hexdigest()
+        
+        super().save(*args, **kwargs)
+    
+    def get_content(self):
+        """Get the best available content representation"""
+        return self.processed_content or self.raw_content or ""
+    
+    def add_processing_log(self, step, status, details=None):
+        """Add entry to processing log"""
+        log_entry = {
+            'step': step,
+            'status': status,
+            'timestamp': timezone.now().isoformat(),
+            'details': details or {}
+        }
+        self.processing_log.append(log_entry)
+        self.save(update_fields=['processing_log'])
+    
+    def increment_view_count(self):
+        """Increment view count and update last accessed"""
+        self.view_count += 1
+        self.last_accessed = timezone.now()
+        self.save(update_fields=['view_count', 'last_accessed'])
+
+
+class DocumentEmbedding(UnifiedBaseModel):
+    """
+    Vector embeddings for semantic search and RAG
+    """
+    
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='embeddings'
+    )
+    
+    # Embedding configuration
+    embedding_model = models.CharField(
+        max_length=100,
+        choices=EmbeddingModel.choices,
+        help_text="Model used to generate embeddings"
+    )
+    
+    # Content segmentation
+    chunk_index = models.PositiveIntegerField(
+        help_text="Index of this chunk within the document"
+    )
+    
+    chunk_text = models.TextField(
+        help_text="Text content of this chunk"
+    )
+    
+    chunk_size = models.PositiveIntegerField(
+        help_text="Size of text chunk in characters"
+    )
+    
+    overlap_size = models.PositiveIntegerField(
+        default=0,
+        help_text="Overlap with adjacent chunks in characters"
+    )
+    
+    # Vector embedding
+    embedding_vector = models.JSONField(
+        help_text="The actual embedding vector as JSON array"
+    )
+    
+    embedding_dimension = models.PositiveIntegerField(
+        help_text="Dimension of the embedding vector"
+    )
+    
+    # Context and metadata
+    context_before = models.TextField(
+        blank=True,
+        help_text="Context text before this chunk"
+    )
+    
+    context_after = models.TextField(
+        blank=True,
+        help_text="Context text after this chunk"
+    )
+    
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional metadata for this chunk"
+    )
+    
+    # Processing info
+    processing_time_ms = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Time taken to generate embedding in milliseconds"
+    )
+    
+    embedding_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=6,
+        default=Decimal('0.000000'),
+        help_text="Cost to generate this embedding"
+    )
+    
+    class Meta:
+        verbose_name = "Document Embedding"
+        verbose_name_plural = "Document Embeddings"
+        ordering = ['document', 'chunk_index']
+        indexes = [
+            models.Index(fields=['document', 'chunk_index']),
+            models.Index(fields=['embedding_model']),
+        ]
+        unique_together = ['document', 'chunk_index', 'embedding_model']
+    
+    def __str__(self):
+        return f"{self.document.title} - Chunk {self.chunk_index}"
+    
+    def similarity_search_preview(self, max_length=200):
+        """Get preview text for similarity search results"""
+        text = self.chunk_text
+        if len(text) > max_length:
+            text = text[:max_length] + "..."
+        return text
+
+
+class KnowledgeBase(UnifiedBaseModel):
+    """
+    Structured knowledge base with semantic organization
+    """
+    
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text="Knowledge base name"
+    )
+    
+    description = models.TextField(
+        help_text="Description of the knowledge base"
+    )
+    
+    # Configuration
+    embedding_model = models.CharField(
+        max_length=100,
+        choices=EmbeddingModel.choices,
+        default=EmbeddingModel.OPENAI_SMALL,
+        help_text="Default embedding model for this knowledge base"
+    )
+    
+    chunk_size = models.PositiveIntegerField(
+        default=1000,
+        help_text="Default chunk size for document processing"
+    )
+    
+    chunk_overlap = models.PositiveIntegerField(
+        default=200,
+        help_text="Default overlap between chunks"
+    )
+    
+    # Organization
+    categories = models.JSONField(
+        default=list,
+        help_text="Available categories for documents in this KB"
+    )
+    
+    tags = models.JSONField(
+        default=list,
+        help_text="Available tags for documents in this KB"
+    )
+    
+    # Statistics
+    document_count = models.PositiveIntegerField(
+        default=0
+    )
+    
+    total_chunks = models.PositiveIntegerField(
+        default=0
+    )
+    
+    total_tokens = models.PositiveIntegerField(
+        default=0
+    )
+    
+    last_indexed = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time the knowledge base was fully indexed"
+    )
+    
+    # Access control
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='knowledge_bases'
+    )
+    
+    contributors = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='contributed_knowledge_bases',
+        help_text="Users who can add/edit documents in this KB"
+    )
+    
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Whether this knowledge base is publicly searchable"
+    )
+    
+    # Cross-domain specialization
+    domain = models.CharField(
+        max_length=100,
+        choices=[
+            ('general', 'General Knowledge'),
+            ('sports', 'Sports Analytics'),
+            ('betting', 'Betting & Gambling'),
+            ('agents', 'AI Agents & Automation'),
+            ('technical', 'Technical Documentation'),
+            ('business', 'Business Intelligence'),
+        ],
+        default='general',
+        help_text="Domain specialization of this knowledge base"
+    )
+    
+    integration_config = models.JSONField(
+        default=dict,
+        help_text="Configuration for cross-system integration"
+    )
+    
+    class Meta:
+        verbose_name = "Knowledge Base"
+        verbose_name_plural = "Knowledge Bases"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['domain']),
+            models.Index(fields=['is_public', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.domain})"
+    
+    def get_documents(self):
+        """Get all documents in this knowledge base"""
+        return Document.objects.filter(
+            collection=self.name,
+            is_active=True
+        )
+    
+    def update_statistics(self):
+        """Update knowledge base statistics"""
+        documents = self.get_documents()
+        self.document_count = documents.count()
+        
+        embeddings = DocumentEmbedding.objects.filter(
+            document__in=documents
+        )
+        self.total_chunks = embeddings.count()
+        
+        # Calculate total tokens (approximate)
+        total_chars = documents.aggregate(
+            total=models.Sum('word_count')
+        )['total'] or 0
+        self.total_tokens = int(total_chars * 0.75)  # Rough token estimate
+        
+        self.save(update_fields=['document_count', 'total_chunks', 'total_tokens'])
+
+
+class ContentGeneration(UnifiedBaseModel):
+    """
+    Content generation requests and results
+    """
+    
+    # Request information
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='content_generations'
+    )
+    
+    template = models.ForeignKey(
+        ContentTemplate,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generations'
+    )
+    
+    # Generation parameters
+    prompt = models.TextField(
+        help_text="The prompt used for content generation"
+    )
+    
+    system_prompt = models.TextField(
+        blank=True,
+        help_text="System prompt for this generation"
+    )
+    
+    generation_config = models.JSONField(
+        default=dict,
+        help_text="AI model configuration used"
+    )
+    
+    # Context and RAG
+    context_documents = models.ManyToManyField(
+        Document,
+        blank=True,
+        related_name='content_generations',
+        help_text="Documents used as context for RAG"
+    )
+    
+    knowledge_base = models.ForeignKey(
+        KnowledgeBase,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generations'
+    )
+    
+    rag_context = models.TextField(
+        blank=True,
+        help_text="Retrieved context for RAG generation"
+    )
+    
+    # Generation results
+    generated_content = models.TextField(
+        blank=True,
+        help_text="The generated content"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=ContentStatus.choices,
+        default=ContentStatus.PENDING
+    )
+    
+    # Performance metrics
+    generation_time_ms = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Time taken to generate content in milliseconds"
+    )
+    
+    token_usage = models.JSONField(
+        default=dict,
+        help_text="Token usage statistics"
+    )
+    
+    generation_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=6,
+        default=Decimal('0.000000'),
+        help_text="Cost of content generation"
+    )
+    
+    # Quality assessment
+    quality_score = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Automated quality assessment (0-1)"
+    )
+    
+    user_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="User satisfaction rating (1-5)"
+    )
+    
+    user_feedback = models.TextField(
+        blank=True,
+        help_text="User feedback on generated content"
+    )
+    
+    # Error handling
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if generation failed"
+    )
+    
+    retry_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of retry attempts"
+    )
+    
+    # Integration
+    source_system = models.CharField(
+        max_length=100,
+        blank=True,
+        choices=[
+            ('web', 'Web Interface'),
+            ('api', 'API Request'),
+            ('workflow', 'Workflow System'),
+            ('agent', 'Agent Generated'),
+            ('sports', 'Sports Analysis'),
+            ('betting', 'Betting System'),
+        ],
+        help_text="System that initiated this generation"
+    )
+    
+    workflow_context = models.JSONField(
+        default=dict,
+        help_text="Context from workflow or orchestration system"
+    )
+    
+    # Output management
+    output_document = models.OneToOneField(
+        Document,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generation_source',
+        help_text="Document created from this generation"
+    )
+    
+    export_formats = models.JSONField(
+        default=list,
+        help_text="Formats this content has been exported to"
+    )
+    
+    class Meta:
+        verbose_name = "Content Generation"
+        verbose_name_plural = "Content Generations"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['template']),
+            models.Index(fields=['status']),
+            models.Index(fields=['source_system']),
+        ]
+    
+    def __str__(self):
+        return f"Generation {self.id} - {self.status}"
+    
+    def create_document(self):
+        """Create a Document from the generated content"""
+        if not self.generated_content or self.output_document:
+            return self.output_document
+        
+        # Determine document type based on template
+        doc_type = DocumentType.MARKDOWN
+        if self.template:
+            if self.template.output_format == 'html':
+                doc_type = DocumentType.HTML
+            elif self.template.output_format == 'json':
+                doc_type = DocumentType.JSON
+            elif self.template.output_format == 'text':
+                doc_type = DocumentType.TEXT
+        
+        # Create document
+        document = Document.objects.create(
+            title=f"Generated: {self.template.display_name if self.template else 'Custom'}",
+            document_type=doc_type,
+            processed_content=self.generated_content,
+            status=ContentStatus.PROCESSED,
+            source=ContentSource.GENERATED,
+            owner=self.user,
+            source_system='content_generation',
+            source_reference=str(self.id),
+            metadata={
+                'generation_id': str(self.id),
+                'template_id': str(self.template.id) if self.template else None,
+                'generation_config': self.generation_config,
+                'token_usage': self.token_usage,
+            }
+        )
+        
+        self.output_document = document
+        self.save(update_fields=['output_document'])
+        
+        return document
+
+
+class ContentWorkflow(UnifiedBaseModel):
+    """
+    Multi-step content generation workflows
+    """
+    
+    name = models.CharField(
+        max_length=200,
+        help_text="Workflow name"
+    )
+    
+    description = models.TextField(
+        help_text="Workflow description and purpose"
+    )
+    
+    # Workflow definition
+    workflow_steps = models.JSONField(
+        help_text="Ordered list of workflow steps with configurations"
+    )
+    
+    # Default configuration
+    default_config = models.JSONField(
+        default=dict,
+        help_text="Default configuration for workflow execution"
+    )
+    
+    # Templates and dependencies
+    required_templates = models.ManyToManyField(
+        ContentTemplate,
+        blank=True,
+        related_name='workflows',
+        help_text="Templates required for this workflow"
+    )
+    
+    required_knowledge_bases = models.ManyToManyField(
+        KnowledgeBase,
+        blank=True,
+        related_name='workflows',
+        help_text="Knowledge bases required for this workflow"
+    )
+    
+    # Usage statistics
+    execution_count = models.PositiveIntegerField(
+        default=0
+    )
+    
+    success_rate = models.FloatField(
+        default=1.0
+    )
+    
+    avg_execution_time = models.FloatField(
+        default=0.0,
+        help_text="Average execution time in seconds"
+    )
+    
+    # Access control
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='content_workflows'
+    )
+    
+    is_public = models.BooleanField(
+        default=True
+    )
+    
+    # Cross-domain integration
+    domain = models.CharField(
+        max_length=100,
+        choices=[
+            ('general', 'General Content'),
+            ('sports', 'Sports Content'),
+            ('betting', 'Betting Analysis'),
+            ('news', 'News and Updates'),
+            ('social', 'Social Media'),
+            ('documentation', 'Documentation'),
+            ('marketing', 'Marketing Content'),
+        ],
+        default='general'
+    )
+    
+    integration_points = models.JSONField(
+        default=dict,
+        help_text="Integration points with other platform systems"
+    )
+    
+    class Meta:
+        verbose_name = "Content Workflow"
+        verbose_name_plural = "Content Workflows"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['domain']),
+            models.Index(fields=['is_public', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.domain})"
+
+
+class WorkflowExecution(UnifiedBaseModel):
+    """
+    Individual workflow execution instances
+    """
+    
+    workflow = models.ForeignKey(
+        ContentWorkflow,
+        on_delete=models.CASCADE,
+        related_name='executions'
+    )
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='workflow_executions'
+    )
+    
+    # Execution parameters
+    input_data = models.JSONField(
+        default=dict,
+        help_text="Input data for workflow execution"
+    )
+    
+    execution_config = models.JSONField(
+        default=dict,
+        help_text="Configuration overrides for this execution"
+    )
+    
+    # Status and progress
+    status = models.CharField(
+        max_length=20,
+        choices=ContentStatus.choices,
+        default=ContentStatus.PENDING
+    )
+    
+    current_step = models.PositiveIntegerField(
+        default=0,
+        help_text="Currently executing step index"
+    )
+    
+    progress_percentage = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
+    # Step results
+    step_results = models.JSONField(
+        default=list,
+        help_text="Results from each completed step"
+    )
+    
+    final_output = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Final workflow output"
+    )
+    
+    # Performance
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    
+    execution_time_seconds = models.FloatField(
+        null=True,
+        blank=True
+    )
+    
+    # Generated content
+    generated_documents = models.ManyToManyField(
+        Document,
+        blank=True,
+        related_name='workflow_executions',
+        help_text="Documents generated by this workflow"
+    )
+    
+    generated_content = models.ManyToManyField(
+        ContentGeneration,
+        blank=True,
+        related_name='workflow_executions',
+        help_text="Content generations from this workflow"
+    )
+    
+    # Error handling
+    error_message = models.TextField(
+        blank=True
+    )
+    
+    error_step = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Step where error occurred"
+    )
+    
+    # Integration
+    agent_execution = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Agent execution ID if triggered by agent"
+    )
+    
+    websocket_channel = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="WebSocket channel for real-time updates"
+    )
+    
+    class Meta:
+        verbose_name = "Workflow Execution"
+        verbose_name_plural = "Workflow Executions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['workflow', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.workflow.name} execution {self.id} - {self.status}"
+
+
+class ContentAnalytics(UnifiedBaseModel):
+    """
+    Analytics and metrics for content system usage
+    """
+    
+    # Metric identification
+    metric_name = models.CharField(
+        max_length=100,
+        help_text="Name of the metric"
+    )
+    
+    metric_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('counter', 'Counter'),
+            ('gauge', 'Gauge'),
+            ('histogram', 'Histogram'),
+            ('rate', 'Rate'),
+        ]
+    )
+    
+    # Metric value and context
+    metric_value = models.FloatField(
+        help_text="Numeric value of the metric"
+    )
+    
+    context = models.JSONField(
+        default=dict,
+        help_text="Additional context and dimensions"
+    )
+    
+    # Categorization
+    subsystem = models.CharField(
+        max_length=100,
+        choices=[
+            ('documents', 'Document Processing'),
+            ('generation', 'Content Generation'),
+            ('embeddings', 'Vector Embeddings'),
+            ('knowledge_base', 'Knowledge Base'),
+            ('workflows', 'Workflow Execution'),
+            ('templates', 'Template Usage'),
+            ('search', 'Semantic Search'),
+            ('system', 'System Performance'),
+        ]
+    )
+    
+    # Time series data
+    timestamp = models.DateTimeField(
+        default=timezone.now
+    )
+    
+    time_period = models.CharField(
+        max_length=20,
+        choices=[
+            ('instant', 'Instant'),
+            ('minute', 'Per Minute'),
+            ('hour', 'Per Hour'),
+            ('day', 'Per Day'),
+            ('week', 'Per Week'),
+            ('month', 'Per Month'),
+        ],
+        default='instant'
+    )
+    
+    # Associated objects
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='content_analytics'
+    )
+    
+    document = models.ForeignKey(
+        Document,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='analytics'
+    )
+    
+    template = models.ForeignKey(
+        ContentTemplate,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='analytics'
+    )
+    
+    knowledge_base = models.ForeignKey(
+        KnowledgeBase,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='analytics'
+    )
+    
+    class Meta:
+        verbose_name = "Content Analytics"
+        verbose_name_plural = "Content Analytics"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['metric_name', '-timestamp']),
+            models.Index(fields=['subsystem', '-timestamp']),
+            models.Index(fields=['user', '-timestamp']),
+        ]
+    
+    def __str__(self):
+        return f"{self.subsystem}.{self.metric_name}: {self.metric_value}"
+    
+    @classmethod
+    def record_metric(cls, name, value, metric_type='gauge', subsystem='system', 
+                     context=None, user=None, document=None, template=None, 
+                     knowledge_base=None):
+        """Record a new metric value"""
+        return cls.objects.create(
+            metric_name=name,
+            metric_value=value,
+            metric_type=metric_type,
+            subsystem=subsystem,
+            context=context or {},
+            user=user,
+            document=document,
+            template=template,
+            knowledge_base=knowledge_base
+        )

@@ -1,0 +1,276 @@
+"""
+Content Management System Admin
+
+Django admin interface for content management models.
+"""
+
+from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils.safestring import mark_safe
+
+from .models import (
+    ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
+    ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics
+)
+
+
+@admin.register(ContentTemplate)
+class ContentTemplateAdmin(admin.ModelAdmin):
+    """Admin interface for content templates"""
+    
+    list_display = [
+        'display_name', 'template_type', 'category', 'usage_count', 
+        'success_rate', 'is_public', 'is_verified', 'creator_name', 'created_at'
+    ]
+    list_filter = [
+        'template_type', 'category', 'llm_provider', 'is_public', 
+        'is_verified', 'is_active', 'created_at'
+    ]
+    search_fields = ['name', 'display_name', 'description', 'tags']
+    readonly_fields = [
+        'usage_count', 'avg_generation_time', 'success_rate', 
+        'avg_user_rating', 'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'display_name', 'description', 'template_type', 'category')
+        }),
+        ('Template Configuration', {
+            'fields': ('system_prompt', 'user_prompt_template', 'variables', 'output_format')
+        }),
+        ('AI Configuration', {
+            'fields': ('llm_provider', 'llm_model', 'generation_config')
+        }),
+        ('Metadata', {
+            'fields': ('tags', 'routing_keywords', 'capabilities')
+        }),
+        ('Statistics', {
+            'fields': ('usage_count', 'avg_generation_time', 'success_rate', 'avg_user_rating'),
+            'classes': ('collapse',)
+        }),
+        ('Access Control', {
+            'fields': ('creator', 'is_public', 'is_verified', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def creator_name(self, obj):
+        return obj.creator.username if obj.creator else 'System'
+    creator_name.short_description = 'Creator'
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Creating new template
+            obj.creator = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    """Admin interface for documents"""
+    
+    list_display = [
+        'title', 'document_type', 'status', 'owner_name', 'file_size_mb',
+        'word_count', 'view_count', 'has_embeddings', 'created_at'
+    ]
+    list_filter = [
+        'document_type', 'status', 'source', 'language', 'category',
+        'is_public', 'created_at', 'source_system'
+    ]
+    search_fields = ['title', 'description', 'tags', 'key_phrases']
+    readonly_fields = [
+        'content_hash', 'word_count', 'readability_score', 'extracted_metadata',
+        'key_phrases', 'entities', 'view_count', 'download_count', 
+        'last_accessed', 'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'description', 'document_type', 'category', 'collection')
+        }),
+        ('File Information', {
+            'fields': ('file_path', 'original_filename', 'file_size', 'mime_type')
+        }),
+        ('Content', {
+            'fields': ('raw_content', 'processed_content'),
+            'classes': ('collapse',)
+        }),
+        ('Processing', {
+            'fields': ('status', 'processing_log', 'error_message')
+        }),
+        ('Analysis', {
+            'fields': (
+                'content_hash', 'language', 'word_count', 'readability_score',
+                'extracted_metadata', 'key_phrases', 'entities'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Organization', {
+            'fields': ('tags', 'owner', 'is_public')
+        }),
+        ('Usage Statistics', {
+            'fields': ('view_count', 'download_count', 'last_accessed'),
+            'classes': ('collapse',)
+        }),
+        ('Cross-System Integration', {
+            'fields': ('source_system', 'source_reference', 'cross_references'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def owner_name(self, obj):
+        return obj.owner.username
+    owner_name.short_description = 'Owner'
+    
+    def file_size_mb(self, obj):
+        if obj.file_size:
+            return f"{obj.file_size / (1024*1024):.2f} MB"
+        return "N/A"
+    file_size_mb.short_description = 'File Size'
+    
+    def has_embeddings(self, obj):
+        return obj.embeddings.exists()
+    has_embeddings.boolean = True
+    has_embeddings.short_description = 'Has Embeddings'
+
+
+@admin.register(DocumentEmbedding)
+class DocumentEmbeddingAdmin(admin.ModelAdmin):
+    """Admin interface for document embeddings"""
+    
+    list_display = [
+        'document_title', 'embedding_model', 'chunk_index', 'chunk_size',
+        'embedding_dimension', 'processing_time_ms', 'embedding_cost', 'created_at'
+    ]
+    list_filter = ['embedding_model', 'created_at']
+    search_fields = ['document__title', 'chunk_text']
+    readonly_fields = [
+        'embedding_dimension', 'processing_time_ms', 'embedding_cost',
+        'created_at', 'updated_at'
+    ]
+    
+    def document_title(self, obj):
+        return obj.document.title
+    document_title.short_description = 'Document'
+
+
+@admin.register(KnowledgeBase)
+class KnowledgeBaseAdmin(admin.ModelAdmin):
+    """Admin interface for knowledge bases"""
+    
+    list_display = [
+        'name', 'domain', 'document_count', 'total_chunks', 'total_tokens',
+        'owner_name', 'is_public', 'last_indexed'
+    ]
+    list_filter = ['domain', 'embedding_model', 'is_public', 'created_at']
+    search_fields = ['name', 'description', 'tags', 'categories']
+    readonly_fields = [
+        'document_count', 'total_chunks', 'total_tokens', 'last_indexed',
+        'created_at', 'updated_at'
+    ]
+    
+    def owner_name(self, obj):
+        return obj.owner.username
+    owner_name.short_description = 'Owner'
+
+
+@admin.register(ContentGeneration)
+class ContentGenerationAdmin(admin.ModelAdmin):
+    """Admin interface for content generations"""
+    
+    list_display = [
+        'id', 'template_name', 'user_name', 'status', 'generation_time_ms',
+        'generation_cost', 'user_rating', 'created_at'
+    ]
+    list_filter = [
+        'status', 'source_system', 'template', 'knowledge_base', 
+        'user_rating', 'created_at'
+    ]
+    search_fields = ['prompt', 'generated_content', 'user_feedback']
+    readonly_fields = [
+        'generated_content', 'generation_time_ms', 'token_usage',
+        'generation_cost', 'quality_score', 'retry_count', 'output_document',
+        'created_at', 'updated_at'
+    ]
+    
+    def template_name(self, obj):
+        return obj.template.display_name if obj.template else 'Custom'
+    template_name.short_description = 'Template'
+    
+    def user_name(self, obj):
+        return obj.user.username
+    user_name.short_description = 'User'
+
+
+@admin.register(ContentWorkflow)
+class ContentWorkflowAdmin(admin.ModelAdmin):
+    """Admin interface for content workflows"""
+    
+    list_display = [
+        'name', 'domain', 'execution_count', 'success_rate',
+        'avg_execution_time', 'creator_name', 'is_public', 'created_at'
+    ]
+    list_filter = ['domain', 'is_public', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = [
+        'execution_count', 'success_rate', 'avg_execution_time',
+        'created_at', 'updated_at'
+    ]
+    
+    def creator_name(self, obj):
+        return obj.creator.username if obj.creator else 'System'
+    creator_name.short_description = 'Creator'
+
+
+@admin.register(WorkflowExecution)
+class WorkflowExecutionAdmin(admin.ModelAdmin):
+    """Admin interface for workflow executions"""
+    
+    list_display = [
+        'id', 'workflow_name', 'user_name', 'status', 'progress_percentage',
+        'execution_time_seconds', 'started_at', 'completed_at'
+    ]
+    list_filter = ['status', 'workflow', 'created_at']
+    search_fields = ['workflow__name', 'user__username']
+    readonly_fields = [
+        'status', 'current_step', 'progress_percentage', 'step_results',
+        'final_output', 'started_at', 'completed_at', 'execution_time_seconds',
+        'created_at', 'updated_at'
+    ]
+    
+    def workflow_name(self, obj):
+        return obj.workflow.name
+    workflow_name.short_description = 'Workflow'
+    
+    def user_name(self, obj):
+        return obj.user.username
+    user_name.short_description = 'User'
+
+
+@admin.register(ContentAnalytics)
+class ContentAnalyticsAdmin(admin.ModelAdmin):
+    """Admin interface for content analytics"""
+    
+    list_display = [
+        'metric_name', 'subsystem', 'metric_value', 'metric_type',
+        'user_name', 'timestamp'
+    ]
+    list_filter = ['subsystem', 'metric_type', 'time_period', 'timestamp']
+    search_fields = ['metric_name', 'context']
+    readonly_fields = ['timestamp']
+    
+    def user_name(self, obj):
+        return obj.user.username if obj.user else 'System'
+    user_name.short_description = 'User'
+    
+    def has_add_permission(self, request):
+        # Analytics are automatically generated
+        return False
