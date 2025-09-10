@@ -13,14 +13,17 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
+  rememberToken: string | null;
+  rememberMe: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   
   // Actions
   setUser: (user: User) => void;
-  setToken: (token: string) => void;
+  setToken: (token: string, rememberMe?: boolean) => void;
   logout: () => void;
   initAuth: () => void;
+  validateSession: () => Promise<boolean>;
 }
 
 // Default user for development (chris account)
@@ -62,6 +65,8 @@ const getInitialAuthState = () => {
   return {
     user: defaultUser,
     token: chrisToken,
+    rememberToken: null,
+    rememberMe: false,
     isAuthenticated: true,
     isLoading: false
   };
@@ -79,11 +84,22 @@ export const useAuthStore = create<AuthState>()(
         console.log('🔐 AuthStore: User set, isAuthenticated: true');
       },
       
-      setToken: (token) => {
-        console.log('🔐 AuthStore: setToken called with:', token);
-        Logger.state('AuthStore', 'Set token', { tokenPrefix: token.substring(0, 10) + '...' });
+      setToken: (token, rememberMe = false) => {
+        console.log('🔐 AuthStore: setToken called with:', token, 'rememberMe:', rememberMe);
+        Logger.state('AuthStore', 'Set token', { tokenPrefix: token.substring(0, 10) + '...', rememberMe });
+        
         localStorage.setItem('authToken', token);
-        set({ token, isAuthenticated: true });
+        
+        if (rememberMe) {
+          // Store remember me token for 30 days
+          const rememberData = {
+            token,
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          };
+          localStorage.setItem('rememberToken', JSON.stringify(rememberData));
+        }
+        
+        set({ token, isAuthenticated: true, rememberMe });
         console.log('🔐 AuthStore: Token stored in localStorage and state');
       },
       
@@ -92,7 +108,8 @@ export const useAuthStore = create<AuthState>()(
         Logger.state('AuthStore', 'User logout');
         localStorage.removeItem('authToken');
         localStorage.removeItem('auth-storage');
-        set({ user: null, token: null, isAuthenticated: false });
+        localStorage.removeItem('rememberToken');
+        set({ user: null, token: null, rememberToken: null, rememberMe: false, isAuthenticated: false });
         console.log('🔐 AuthStore: User logged out, storage cleared');
       },
       
@@ -135,6 +152,79 @@ export const useAuthStore = create<AuthState>()(
           user: null
         });
         Logger.state('AuthStore', 'No auth found', { hasUser: false });
+      },
+      
+      validateSession: async () => {
+        console.log('🔐 AuthStore: validateSession called');
+        
+        // Check for remember token first
+        const rememberTokenStr = localStorage.getItem('rememberToken');
+        if (rememberTokenStr) {
+          try {
+            const rememberData = JSON.parse(rememberTokenStr);
+            const expires = new Date(rememberData.expires);
+            
+            if (expires > new Date()) {
+              // Token is still valid
+              console.log('🔐 AuthStore: Remember token is valid');
+              
+              // Validate with backend
+              const response = await fetch('http://localhost:8000/api/auth/validate-token/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ token: rememberData.token })
+              });
+              
+              const data = await response.json();
+              
+              if (data.valid) {
+                set({
+                  token: rememberData.token,
+                  user: data.user,
+                  isAuthenticated: true,
+                  rememberMe: true
+                });
+                return true;
+              }
+            } else {
+              // Token expired, remove it
+              localStorage.removeItem('rememberToken');
+            }
+          } catch (e) {
+            console.error('🔐 AuthStore: Failed to validate remember token:', e);
+          }
+        }
+        
+        // Check regular token
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          try {
+            const response = await fetch('http://localhost:8000/api/auth/validate-token/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ token })
+            });
+            
+            const data = await response.json();
+            
+            if (data.valid) {
+              set({
+                token,
+                user: data.user,
+                isAuthenticated: true
+              });
+              return true;
+            }
+          } catch (e) {
+            console.error('🔐 AuthStore: Failed to validate token:', e);
+          }
+        }
+        
+        return false;
       },
     }),
     {

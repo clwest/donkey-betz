@@ -92,35 +92,65 @@ def current_user(request):
 def user_profile(request):
     """
     Get or update user profile information.
+    Returns the full profile structure expected by the frontend.
     """
     if request.method == 'GET':
-        # In production, get real user data
-        # For now, return comprehensive mock data
+        # Get current user or use demo data
+        if request.user.is_authenticated:
+            user_obj = request.user
+            user_data = {
+                'id': user_obj.id,
+                'username': user_obj.username,
+                'email': user_obj.email,
+                'first_name': getattr(user_obj, 'first_name', ''),
+                'last_name': getattr(user_obj, 'last_name', ''),
+                'date_joined': user_obj.date_joined.isoformat() if hasattr(user_obj, 'date_joined') else '2025-01-01T00:00:00Z'
+            }
+        else:
+            # Demo user for unauthenticated requests
+            user_data = {
+                'id': 1,
+                'username': 'demo_user',
+                'email': 'demo@unified-donkey-betz.com',
+                'first_name': 'Demo',
+                'last_name': 'User',
+                'date_joined': '2025-01-01T00:00:00Z'
+            }
+        
+        # Return the nested structure expected by frontend
         return Response({
-            'id': 1,
-            'username': 'demo_user',
-            'email': 'demo@unified-donkey-betz.com',
-            'full_name': 'Demo User',
-            'credits': 10000,
-            'subscription': 'premium',
-            'joined': '2025-01-01T00:00:00Z',
-            'last_login': '2025-09-09T18:00:00Z',
-            'avatar': 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo_user',
-            'preferences': {
-                'theme': 'dark',
-                'language': 'en',
-                'notifications': True,
-                'email_updates': True,
-                'default_model': 'gpt-5-mini',
+            'user': user_data,
+            'profile': {
+                'avatar': 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user_data['username'],
+                'bio': 'AI enthusiast and content creator',
+                'display_name': user_data.get('first_name', '') + ' ' + user_data.get('last_name', ''),
+                'occupation': 'Content Creator',
+                'location': 'San Francisco, CA',
+                'preferred_ai_model': 'gpt-5-mini',
+                'default_content_tone': 'professional',
                 'auto_save': True,
-                'show_tips': True
+                'dark_mode': True,
+                'email_notifications': True,
+                'default_citation_style': 'APA',
+                'preferred_book_length': 'medium',
+                'research_topics': ['AI', 'Technology', 'Sports Analytics'],
+                'account_type': 'premium',
+                'credits_remaining': 10000,
+                'storage_used_mb': 256,
+                'last_active': '2025-09-10T00:00:00Z'
             },
-            'stats': {
-                'total_agents': 42,
-                'content_generated': 1337,
-                'tokens_used': 250000,
-                'bets_analyzed': 89,
-                'win_rate': 0.67
+            'statistics': {
+                'total_contents': 1337,
+                'total_images': 234,
+                'total_videos': 45,
+                'total_blogs': 456,
+                'total_social_posts': 389,
+                'total_ebooks': 12,
+                'total_research_docs': 67,
+                'total_ai_requests': 5000,
+                'total_tokens_used': 250000,
+                'total_exports': 89,
+                'favorite_style': 'modern'
             }
         })
     
@@ -137,11 +167,33 @@ def user_profile(request):
 @permission_classes([AllowAny])
 def profile_stats(request):
     """
-    Get user profile statistics.
+    Get user profile statistics matching frontend expectations.
     """
-    # In production, calculate real stats from database
-    # For now, return comprehensive mock statistics
+    # Return stats in the structure expected by frontend
     return Response({
+        'content_breakdown': {
+            'blog_posts': 234,
+            'social_media': 456,
+            'emails': 189,
+            'video_scripts': 78,
+            'ebooks': 12,
+            'podcasts': 45
+        },
+        'recent_activity': {
+            'last_7_days': 47,
+            'last_30_days': 178
+        },
+        'top_styles': [
+            {'style': 'modern', 'count': 89},
+            {'style': 'professional', 'count': 67},
+            {'style': 'casual', 'count': 45}
+        ],
+        'storage': {
+            'images_mb': 128,
+            'videos_mb': 256,
+            'total_mb': 384
+        },
+        # Additional stats for backwards compatibility
         'total_agents_created': 42,
         'total_content_generated': 1337,
         'total_bets_analyzed': 89,

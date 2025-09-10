@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { SparklesIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { QuickLogin } from '../../components/auth/QuickLogin';
 
@@ -9,6 +9,8 @@ const LoginPage: React.FC = () => {
   console.log('🔐 LoginPage: Component rendering');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -23,10 +25,15 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Call the actual Django auth API
-      const response = await axios.post('http://localhost:8000/api/auth/login/', {
+      // Use enhanced login endpoint for remember me support
+      const endpoint = rememberMe ? 
+        'http://localhost:8000/api/auth/login-enhanced/' : 
+        'http://localhost:8000/api/auth/login/';
+        
+      const response = await axios.post(endpoint, {
         username,
-        password
+        password,
+        remember_me: rememberMe
       });
 
       console.log('🔐 LoginPage: Login response:', response.data);
@@ -117,6 +124,12 @@ const LoginPage: React.FC = () => {
         <h2 className="mt-6 text-center text-2xl font-bold text-gray-300">
           Sign in to your account
         </h2>
+        <p className="mt-2 text-center text-sm text-gray-400">
+          Need an account?{' '}
+          <Link to="/register" className="font-medium text-purple-400 hover:text-purple-300">
+            Create one
+          </Link>
+        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -151,18 +164,51 @@ const LoginPage: React.FC = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-200">
                 Password
               </label>
-              <div className="mt-1">
+              <div className="mt-1 relative">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-600 rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                   placeholder="Enter your password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-300" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-300" />
+                  )}
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-800"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                  Remember me for 30 days
+                </label>
+              </div>
+              
+              <div className="text-sm">
+                <Link to="/forgot-password" className="font-medium text-purple-400 hover:text-purple-300">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
