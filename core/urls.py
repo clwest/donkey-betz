@@ -16,9 +16,11 @@ from core.views import (
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
     agent_instances, prompt_diagnostics_dashboard, prompt_diagnostics_analyses,
     feedback_analytics, feedback_history, prompting_stats,
-    assistant_context, assistant_chat, research_books, research_documents,
+    assistant_context, research_books, research_documents,
     personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
 )
+# Import RAG-enhanced assistant
+from core.views_assistant_rag_enhanced import assistant_chat_enhanced as assistant_chat
 from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats
 from agents.views import orchestrations_list
 
@@ -30,7 +32,11 @@ from core.views_analytics import (
 from core.views_content import (
     create_content, list_content, generate_blog_post, generate_social_media_post,
     generate_video_script, content_templates, import_file_to_memory, supported_file_formats,
-    gallery_videos, content_library, podcasts_list
+    gallery_videos, gallery_list, content_library, podcasts_list
+)
+from core.views_video import (
+    text_to_video, image_to_video, check_video_status, get_video_detail,
+    video_gallery, save_video_to_gallery
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -80,7 +86,7 @@ urlpatterns = [
     
     # Placeholder endpoints for missing APIs
     path('api/content/blog/list/', blog_list, name='blog-list'),
-    path('api/campaigns/', campaigns_list, name='campaigns'),  # Add campaigns at root API level
+    # path('api/campaigns/', campaigns_list, name='campaigns'),  # Removed - using campaigns.urls instead
     path('api/styles/', styles_list, name='styles-list'),
     path('api/prompting/settings/', prompting_settings, name='prompting-settings'),
     path('api/prompting/stats/', prompting_stats, name='prompting-stats'),
@@ -136,8 +142,17 @@ urlpatterns = [
     path('api/content/social/generate/', generate_social_media_post, name='social-generate'),
     path('api/content/video/script/', generate_video_script, name='video-script'),
     path('api/content/templates/', content_templates, name='content-templates'),
+    
+    # Video Generation endpoints (RunwayML)
+    path('api/video/text-to-video/', text_to_video, name='text-to-video'),
+    path('api/video/image-to-video/', image_to_video, name='image-to-video'),
+    path('api/video/status/<str:task_id>/', check_video_status, name='video-status'),
+    path('api/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
+    path('api/video/gallery/', video_gallery, name='video-gallery'),
+    path('api/video/save/', save_video_to_gallery, name='save-video'),
     path('api/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/memory/supported-formats/', supported_file_formats, name='supported-formats'),
+    path('api/gallery/list/', gallery_list, name='gallery-list'),
     path('api/gallery/videos/', gallery_videos, name='gallery-videos'),
     path('api/content/library/', content_library, name='content-library'),
     path('api/podcasts/', podcasts_list, name='podcasts-list'),

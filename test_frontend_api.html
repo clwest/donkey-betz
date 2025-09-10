@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API Test - From Browser Perspective</title>
+    <style>
+        body {
+            font-family: 'SF Mono', Monaco, monospace;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #00ff00;
+        }
+        h1 { color: #00ff00; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .page-test {
+            border: 1px solid #00ff00;
+            padding: 15px;
+            background: #1a1a1a;
+        }
+        .page-test h3 {
+            margin: 0 0 10px 0;
+            color: #ffff00;
+        }
+        .endpoint {
+            margin: 5px 0;
+            padding: 5px;
+            font-size: 12px;
+            border-left: 3px solid #333;
+        }
+        .endpoint.success {
+            border-left-color: #00ff00;
+            background: rgba(0, 255, 0, 0.05);
+        }
+        .endpoint.error {
+            border-left-color: #ff0000;
+            background: rgba(255, 0, 0, 0.05);
+        }
+        .endpoint.pending {
+            border-left-color: #ffff00;
+            background: rgba(255, 255, 0, 0.05);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover {
+            background: #444;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #00ff00;
+            background: #0a0a0a;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Unified Donkey Betz - Frontend API Test</h1>
+    <p>Testing all API calls as they would be made from the React frontend (with CORS)</p>
+    
+    <div>
+        <button onclick="testAllPages()">Test All Pages</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="summary" id="summary">
+        Ready to test. Click "Test All Pages" to begin.
+    </div>
+    
+    <div class="grid" id="results"></div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        const AUTH_TOKEN = localStorage.getItem('authToken') || 'fc58364ffbca4e77b732d03711d44965cf40acb6';
+        
+        // Page configurations matching frontend routes
+        const pages = {
+            'Dashboard': {
+                endpoints: [
+                    { path: '/status/', method: 'GET' },
+                    { path: '/analytics/dashboard/', method: 'GET' },
+                    { path: '/agents/discovery/stats/', method: 'GET' }
+                ]
+            },
+            'Workflows': {
+                endpoints: [
+                    { path: '/campaigns/templates/', method: 'GET' },
+                    { path: '/workflows/templates/', method: 'GET' }
+                ]
+            },
+            'Studio': {
+                endpoints: [
+                    { path: '/content/templates/', method: 'GET' },
+                    { path: '/prompting/settings/', method: 'GET' },
+                    { path: '/content/library/', method: 'GET' }
+                ]
+            },
+            'Gallery': {
+                endpoints: [
+                    { path: '/gallery/videos/', method: 'GET' },
+                    { path: '/content/list/', method: 'GET' }
+                ]
+            },
+            'Campaigns': {
+                endpoints: [
+                    { path: '/campaigns/', method: 'GET' },
+                    { path: '/campaigns/templates/', method: 'GET' }
+                ]
+            },
+            'Agents': {
+                endpoints: [
+                    { path: '/agents/list/', method: 'GET' },
+                    { path: '/agents/health/', method: 'GET' }
+                ]
+            },
+            'Sports Board': {
+                endpoints: [
+                    { path: '/v1/sports/live-opportunities/', method: 'GET' },
+                    { path: '/v1/odds/markets/', method: 'GET' }
+                ]
+            },
+            'Agent Orchestra': {
+                endpoints: [
+                    { path: '/agents/list/', method: 'GET' },
+                    { path: '/agents/health/', method: 'GET' }
+                ]
+            },
+            'Assistant': {
+                endpoints: [
+                    { path: '/assistant/context/', method: 'GET' },
+                    { path: '/assistant/chat/', method: 'POST', 
+                      body: { message: 'Test message', use_personal_assistant: true } }
+                ]
+            }
+        };
+        
+        async function testEndpoint(endpoint) {
+            const url = `${API_URL}${endpoint.path}`;
+            const options = {
+                method: endpoint.method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${AUTH_TOKEN}`
+                },
+                credentials: 'include' // Important for CORS
+            };
+            
+            if (endpoint.body) {
+                options.body = JSON.stringify(endpoint.body);
+            }
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(url, options);
+                const elapsed = Date.now() - startTime;
+                
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    // Response might not be JSON
+                }
+                
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    elapsed: elapsed,
+                    data: data,
+                    error: response.ok ? null : (data?.error || data?.detail || `Status ${response.status}`)
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    status: 0,
+                    elapsed: 0,
+                    error: error.message
+                };
+            }
+        }
+        
+        async function testPage(pageName, config) {
+            const results = [];
+            
+            for (const endpoint of config.endpoints) {
+                const result = await testEndpoint(endpoint);
+                results.push({
+                    ...endpoint,
+                    ...result
+                });
+            }
+            
+            return results;
+        }
+        
+        async function testAllPages() {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            
+            resultsDiv.innerHTML = '';
+            summaryDiv.innerHTML = 'Testing in progress...';
+            
+            let totalEndpoints = 0;
+            let successfulEndpoints = 0;
+            let failedPages = [];
+            
+            for (const [pageName, config] of Object.entries(pages)) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'page-test';
+                pageDiv.innerHTML = `<h3>${pageName}</h3>`;
+                
+                const results = await testPage(pageName, config);
+                let pageSuccess = true;
+                
+                for (const result of results) {
+                    totalEndpoints++;
+                    const endpointDiv = document.createElement('div');
+                    
+                    if (result.success) {
+                        successfulEndpoints++;
+                        endpointDiv.className = 'endpoint success';
+                        endpointDiv.innerHTML = `✅ ${result.method} ${result.path} (${result.elapsed}ms)`;
+                    } else {
+                        pageSuccess = false;
+                        endpointDiv.className = 'endpoint error';
+                        endpointDiv.innerHTML = `❌ ${result.method} ${result.path}<br>Error: ${result.error}`;
+                    }
+                    
+                    pageDiv.appendChild(endpointDiv);
+                }
+                
+                if (!pageSuccess) {
+                    failedPages.push(pageName);
+                }
+                
+                resultsDiv.appendChild(pageDiv);
+            }
+            
+            // Update summary
+            const successRate = ((successfulEndpoints / totalEndpoints) * 100).toFixed(1);
+            summaryDiv.innerHTML = `
+                <h3>Test Complete!</h3>
+                <p>✅ Successful: ${successfulEndpoints}/${totalEndpoints} endpoints (${successRate}%)</p>
+                ${failedPages.length > 0 ? 
+                    `<p>⚠️ Pages with issues: ${failedPages.join(', ')}</p>` : 
+                    '<p>🎉 All pages working perfectly!</p>'}
+                <p>Tested with CORS and browser credentials</p>
+            `;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('summary').innerHTML = 'Ready to test. Click "Test All Pages" to begin.';
+        }
+        
+        // Log auth token status
+        console.log('Using auth token:', AUTH_TOKEN ? AUTH_TOKEN.substring(0, 10) + '...' : 'None');
+    </script>
+</body>
+</html>

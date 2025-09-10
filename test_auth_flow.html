@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Flow Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #e0e0e0;
+        }
+        .test-section {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5558e3;
+        }
+        button.danger {
+            background: #ef4444;
+        }
+        button.danger:hover {
+            background: #dc2626;
+        }
+        .success {
+            color: #10b981;
+            padding: 10px;
+            background: #064e3b;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .error {
+            color: #ef4444;
+            padding: 10px;
+            background: #7f1d1d;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .info {
+            color: #3b82f6;
+            padding: 10px;
+            background: #1e3a8a;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        pre {
+            background: #262626;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        input {
+            background: #262626;
+            border: 1px solid #404040;
+            color: #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-right: 10px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Authentication Flow Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Check Current Auth Status</h2>
+        <button onclick="checkAuthStatus()">Check Status</button>
+        <button onclick="clearAuth()" class="danger">Clear Auth</button>
+        <div id="auth-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Login Test</h2>
+        <div>
+            <input type="text" id="username" placeholder="Username" value="testuser">
+            <input type="password" id="password" placeholder="Password" value="testpass123">
+        </div>
+        <button onclick="testLogin()">Login</button>
+        <button onclick="quickLogin('testuser', 'testpass123')">Quick: Test User</button>
+        <button onclick="quickLogin('demo', 'demo123')">Quick: Demo</button>
+        <button onclick="quickLogin('admin', 'admin123')">Quick: Admin</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Protected API Calls</h2>
+        <button onclick="testAssistantContext()">Get Assistant Context</button>
+        <button onclick="testAssistantChat()">Send Test Message</button>
+        <div id="api-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Frontend State Check</h2>
+        <button onclick="checkFrontendState()">Check localStorage & Zustand</button>
+        <div id="frontend-state"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        function checkAuthStatus() {
+            const token = localStorage.getItem('authToken');
+            const authStorage = localStorage.getItem('auth-storage');
+            
+            let html = '<div class="info">';
+            html += `<strong>Token:</strong> ${token ? token.substring(0, 20) + '...' : 'Not set'}<br>`;
+            html += `<strong>Auth Storage:</strong> ${authStorage ? 'Present' : 'Not set'}`;
+            
+            if (authStorage) {
+                try {
+                    const parsed = JSON.parse(authStorage);
+                    html += `<br><strong>User:</strong> ${parsed.state?.user?.username || 'None'}`;
+                } catch (e) {
+                    html += `<br><strong>Parse Error:</strong> ${e.message}`;
+                }
+            }
+            html += '</div>';
+            
+            document.getElementById('auth-status').innerHTML = html;
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('auth-storage');
+            document.getElementById('auth-status').innerHTML = '<div class="success">Auth cleared!</div>';
+        }
+
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    
+                    // Simulate Zustand storage
+                    const authState = {
+                        state: {
+                            user: data.user,
+                            token: data.token,
+                            isAuthenticated: true,
+                            isLoading: false
+                        },
+                        version: 0
+                    };
+                    localStorage.setItem('auth-storage', JSON.stringify(authState));
+                    
+                    document.getElementById('login-result').innerHTML = 
+                        `<div class="success">Login successful!<br>User: ${data.user.username}<br>Token: ${data.token.substring(0, 20)}...</div>`;
+                } else {
+                    document.getElementById('login-result').innerHTML = 
+                        `<div class="error">Login failed: ${data.detail || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('login-result').innerHTML = 
+                    `<div class="error">Network error: ${error.message}</div>`;
+            }
+        }
+
+        function quickLogin(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+            testLogin();
+        }
+
+        async function testAssistantContext() {
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                document.getElementById('api-result').innerHTML = 
+                    '<div class="error">No auth token! Please login first.</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/assistant/context/`, {
+                    headers: {
+                        'Authorization': `Token ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('api-result').innerHTML = 
+                        `<div class="success">Context retrieved successfully!<pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                } else {
+                    document.getElementById('api-result').innerHTML = 
+                        `<div class="error">API call failed (${response.status}): ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('api-result').innerHTML = 
+                    `<div class="error">Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function testAssistantChat() {
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                document.getElementById('api-result').innerHTML = 
+                    '<div class="error">No auth token! Please login first.</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/assistant/chat/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Hello, this is a test message',
+                        session_id: null
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('api-result').innerHTML = 
+                        `<div class="success">Chat message sent!<pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                } else {
+                    document.getElementById('api-result').innerHTML = 
+                        `<div class="error">API call failed (${response.status}): ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('api-result').innerHTML = 
+                    `<div class="error">Network error: ${error.message}</div>`;
+            }
+        }
+
+        function checkFrontendState() {
+            const items = {
+                'authToken': localStorage.getItem('authToken'),
+                'auth-storage': localStorage.getItem('auth-storage'),
+            };
+
+            let html = '<div class="info"><h3>localStorage Contents:</h3>';
+            
+            for (const [key, value] of Object.entries(items)) {
+                if (value) {
+                    html += `<strong>${key}:</strong><br>`;
+                    if (key === 'auth-storage') {
+                        try {
+                            const parsed = JSON.parse(value);
+                            html += `<pre>${JSON.stringify(parsed, null, 2)}</pre>`;
+                        } catch (e) {
+                            html += `<pre>${value.substring(0, 100)}...</pre>`;
+                        }
+                    } else {
+                        html += `<pre>${value.substring(0, 50)}...</pre>`;
+                    }
+                } else {
+                    html += `<strong>${key}:</strong> Not set<br>`;
+                }
+            }
+            
+            html += '</div>';
+            document.getElementById('frontend-state').innerHTML = html;
+        }
+
+        // Check status on load
+        window.onload = () => {
+            checkAuthStatus();
+        };
+    </script>
+</body>
+</html>

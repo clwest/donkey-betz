@@ -173,6 +173,20 @@ AI_PROVIDERS = {
     'COHERE_API_KEY': os.environ.get('COHERE_API_KEY', ''),
     'GROQ_API_KEY': os.environ.get('GROQ_API_KEY', ''),
     'DEEPSEEK_API_KEY': os.environ.get('DEEPSEEK_API_KEY', ''),
+    'RUNWAY_API_KEY': os.environ.get('RUNWAY_API_KEY', ''),
+}
+
+# Make Runway key directly accessible for video provider
+RUNWAY_API_KEY = os.environ.get('RUNWAY_API_KEY', '')
+
+# External Service API Keys (for non-LLM services)
+EXTERNAL_API_KEYS = {
+    'STABILITY_API_KEY': os.environ.get('STABILITY_API_KEY', ''),
+    'RUNWAY_API_KEY': os.environ.get('RUNWAY_API_KEY', ''),
+    'ELEVENLABS_API_KEY': os.environ.get('ELEVENLABS_API_KEY', ''),
+    'GIPHY_API_KEY': os.environ.get('GIPHY_API_KEY', ''),
+    'ALPHA_VANTAGE_API_KEY': os.environ.get('ALPHA_VANTAGE_API_KEY', ''),
+    'POLYGON_API_KEY': os.environ.get('POLYGON_API_KEY', ''),
 }
 
 # AI Configuration

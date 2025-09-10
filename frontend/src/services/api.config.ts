@@ -9,7 +9,7 @@ import { Logger } from '../utils/logger';
 // API Configuration - UCWSF Enhanced with unified backend
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8000';
-export const DEFAULT_AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN || 'fc58364ffbca4e77b732d03711d44965cf40acb6'; // chris auth token
+export const DEFAULT_AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN || ''; // No default token - users must authenticate
 
 // UCWSF Feature Flags
 export const UCWSF_CONFIG = {

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #444;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #00ff00;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .info { color: #ffff00; }
+    </style>
+</head>
+<body>
+    <h1>Unified Donkey Betz - API Connection Test</h1>
+    
+    <div>
+        <button onclick="testHealth()">Test Health Check</button>
+        <button onclick="testAssistant()">Test Assistant Chat</button>
+        <button onclick="testAgents()">Test Agent List</button>
+        <button onclick="testWebSocket()">Test WebSocket</button>
+        <button onclick="testOdds()">Test Odds API</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        const WS_URL = 'ws://localhost:8000';
+        const AUTH_TOKEN = 'fc58364ffbca4e77b732d03711d44965cf40acb6'; // chris token
+        
+        function log(message, type = 'info') {
+            const result = document.getElementById('result');
+            const timestamp = new Date().toISOString().split('T')[1].substring(0, 8);
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            result.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            result.scrollTop = result.scrollHeight;
+        }
+        
+        async function testHealth() {
+            log('Testing health check endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/health/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`
+                    }
+                });
+                const data = await response.json();
+                log(`Health Check Response: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                log(`Health Check Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAssistant() {
+            log('Testing assistant chat endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/assistant/chat/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        message: 'Hello! Can you help me test the connection?',
+                        use_personal_assistant: true
+                    })
+                });
+                const data = await response.json();
+                log(`Assistant Response: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                log(`Assistant Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAgents() {
+            log('Testing agent list endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/agents/list/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`
+                    }
+                });
+                const data = await response.json();
+                log(`Agents Response: Found ${data.length || 0} agents`, 'success');
+                if (data.length > 0) {
+                    log(`First agent: ${JSON.stringify(data[0], null, 2)}`, 'info');
+                }
+            } catch (error) {
+                log(`Agents Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function testWebSocket() {
+            log('Testing WebSocket connection...');
+            try {
+                const ws = new WebSocket(`${WS_URL}/ws/assistant/?token=${AUTH_TOKEN}`);
+                
+                ws.onopen = () => {
+                    log('WebSocket connected successfully!', 'success');
+                    ws.send(JSON.stringify({
+                        type: 'test',
+                        message: 'Hello WebSocket!'
+                    }));
+                };
+                
+                ws.onmessage = (event) => {
+                    log(`WebSocket message: ${event.data}`, 'info');
+                };
+                
+                ws.onerror = (error) => {
+                    log(`WebSocket error: ${error}`, 'error');
+                };
+                
+                ws.onclose = (event) => {
+                    log(`WebSocket closed: Code ${event.code}, Reason: ${event.reason}`, 'info');
+                };
+                
+                // Close after 5 seconds
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                        log('WebSocket test completed, connection closed.', 'info');
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                log(`WebSocket Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testOdds() {
+            log('Testing odds conversion endpoint...');
+            try {
+                const response = await fetch(`${API_URL}/v1/odds/convert-odds/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        american_odds: '+150'
+                    })
+                });
+                const data = await response.json();
+                log(`Odds Response: ${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                log(`Odds Error: ${error.message}`, 'error');
+            }
+        }
+        
+        log('API Connection Test Ready. Click buttons to test endpoints.', 'info');
+    </script>
+</body>
+</html>

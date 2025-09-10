@@ -345,11 +345,30 @@ export function ImageGenerator() {
       console.log('Image generation result:', result); // Debug log
       
       let images = [];
-      if (Array.isArray(result.images)) {
-        // Batch response
+      
+      // Check if response has a content wrapper (from /api/content/create/)
+      if (result.success && result.content) {
+        const content = result.content;
+        if (Array.isArray(content.images)) {
+          // Multiple images in content
+          images = content.images;
+        } else if (content.results) {
+          // Results array in content
+          images = content.results;
+        } else if (content.result) {
+          // Single image URL in content
+          images = [{
+            id: content.id,
+            url: content.result,
+            image_url: content.result,
+            metadata: content.metadata
+          }];
+        }
+      } else if (Array.isArray(result.images)) {
+        // Direct batch response
         images = result.images;
       } else if (result.result) {
-        // Single image response from /api/content/create/
+        // Single image response
         images = [{
           id: result.id,
           url: result.result,

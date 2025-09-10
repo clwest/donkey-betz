@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
+import { QuickLogin } from '../../components/auth/QuickLogin';
 
 const LoginPage: React.FC = () => {
   console.log('🔐 LoginPage: Component rendering');
