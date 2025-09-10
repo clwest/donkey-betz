@@ -225,8 +225,619 @@ def campaigns_list(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def styles_list(request):
-    """Placeholder styles list endpoint"""
-    return Response([])
+    """Get visual styles for image generation"""
+    styles = {
+        "categories": {
+            "Professional": [
+                {
+                    "id": "corporate_minimal",
+                    "name": "Corporate Minimal",
+                    "description": "Clean, professional minimal design for business presentations",
+                    "prompt": "corporate minimal design, clean layout, professional, business style, white background, modern typography",
+                    "negative_prompt": "cluttered, messy, unprofessional, comic, cartoon",
+                    "tags": ["professional", "minimal", "business"],
+                    "use_cases": ["presentations", "corporate materials"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "tech_startup",
+                    "name": "Tech Startup",
+                    "description": "Modern tech startup aesthetic with bold colors and clean lines",
+                    "prompt": "tech startup style, modern interface, bold colors, clean design, gradient backgrounds, tech aesthetic",
+                    "negative_prompt": "old fashioned, traditional, boring, dull colors",
+                    "tags": ["tech", "startup", "modern"],
+                    "use_cases": ["tech presentations", "startup materials"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "professional_presentation",
+                    "name": "Professional Presentation",
+                    "description": "Polished presentation style with clear hierarchy and professional color scheme",
+                    "prompt": "professional presentation style, clear hierarchy, elegant design, business colors, polished layout",
+                    "negative_prompt": "amateur, messy, unprofessional, childish",
+                    "tags": ["professional", "presentation", "business"],
+                    "use_cases": ["business presentations", "reports"],
+                    "cfg_scale": 8,
+                    "steps": 30
+                }
+            ],
+            "Creative": [
+                {
+                    "id": "digital_art_masterpiece",
+                    "name": "Digital Art",
+                    "description": "High-quality digital artwork with artistic flair and creative composition",
+                    "prompt": "digital art masterpiece, trending on artstation, highly detailed, creative composition, vibrant colors, artistic",
+                    "negative_prompt": "low quality, blurry, amateur, simple",
+                    "tags": ["digital art", "creative", "artistic"],
+                    "use_cases": ["artwork", "creative projects"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "van_gogh_style",
+                    "name": "Van Gogh",
+                    "description": "Vincent van Gogh inspired post-impressionist painting style",
+                    "prompt": "Van Gogh style, post-impressionist painting, swirling brushstrokes, vibrant colors, expressive style",
+                    "negative_prompt": "photorealistic, smooth, digital, modern, flat colors",
+                    "tags": ["van gogh", "impressionist", "classic art"],
+                    "use_cases": ["artistic portraits", "landscape art"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "pop_art",
+                    "name": "Pop Art",
+                    "description": "Bold pop art style with bright colors and graphic elements",
+                    "prompt": "pop art style, bold colors, graphic design, Andy Warhol style, bright contrasts, screen print effect",
+                    "negative_prompt": "subtle, muted colors, realistic, traditional, classical",
+                    "tags": ["pop art", "bold", "graphic"],
+                    "use_cases": ["modern art", "graphic design"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "watercolor_dream",
+                    "name": "Watercolor",
+                    "description": "Soft, flowing watercolor painting style with dreamy quality",
+                    "prompt": "watercolor painting, soft flowing colors, dreamy atmosphere, artistic brushstrokes, paper texture",
+                    "negative_prompt": "digital, sharp edges, photo realistic, harsh colors",
+                    "tags": ["watercolor", "painting", "dreamy"],
+                    "use_cases": ["artistic illustrations", "soft designs"],
+                    "cfg_scale": 6,
+                    "steps": 25
+                },
+                {
+                    "id": "sketch_notebook",
+                    "name": "Sketch",
+                    "description": "Hand-drawn pencil sketch style like from an artist's notebook",
+                    "prompt": "pencil sketch, hand drawn, notebook style, artistic sketching, graphite drawing, paper texture",
+                    "negative_prompt": "colored, digital, polished, clean",
+                    "tags": ["sketch", "pencil", "notebook"],
+                    "use_cases": ["concept art", "rough designs"],
+                    "cfg_scale": 6,
+                    "steps": 20
+                },
+                {
+                    "id": "oil_painting_classical",
+                    "name": "Oil Painting",
+                    "description": "Traditional oil painting style with rich textures and classical techniques",
+                    "prompt": "oil painting, classical art style, rich textures, masterpiece, museum quality, traditional techniques",
+                    "negative_prompt": "digital, modern, cartoon, flat",
+                    "tags": ["oil painting", "classical", "traditional"],
+                    "use_cases": ["fine art", "portraits"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "abstract_modern",
+                    "name": "Abstract",
+                    "description": "Contemporary abstract art with bold shapes and modern composition",
+                    "prompt": "abstract modern art, bold geometric shapes, contemporary style, vibrant colors, artistic composition",
+                    "negative_prompt": "realistic, traditional, representational, boring",
+                    "tags": ["abstract", "modern", "contemporary"],
+                    "use_cases": ["modern art", "abstract designs"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                }
+            ],
+            "Digital": [
+                {
+                    "id": "cyberpunk_neon",
+                    "name": "Cyberpunk Neon",
+                    "description": "Futuristic cyberpunk aesthetic with neon lights and dark atmosphere",
+                    "prompt": "cyberpunk style, neon lights, futuristic cityscape, dark atmosphere, glowing effects, high tech",
+                    "negative_prompt": "natural, rustic, medieval, bright daylight",
+                    "tags": ["cyberpunk", "neon", "futuristic"],
+                    "use_cases": ["sci-fi designs", "tech aesthetics"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "synthwave_retro",
+                    "name": "Synthwave Retro",
+                    "description": "80s inspired synthwave aesthetic with retro futuristic vibes",
+                    "prompt": "synthwave style, 80s retro futuristic, neon grids, sunset colors, retro aesthetic, outrun style",
+                    "negative_prompt": "modern, realistic, natural, dull colors",
+                    "tags": ["synthwave", "retro", "80s"],
+                    "use_cases": ["retro designs", "music covers"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "glassmorphism_ui",
+                    "name": "Glassmorphism UI",
+                    "description": "Modern glassmorphism design with transparent elements and blur effects",
+                    "prompt": "glassmorphism design, transparent glass effect, blur background, modern UI, clean interface, frosted glass",
+                    "negative_prompt": "opaque, solid colors, old fashioned, cluttered",
+                    "tags": ["glassmorphism", "UI", "modern"],
+                    "use_cases": ["UI design", "modern interfaces"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "isometric_3d",
+                    "name": "Isometric 3D",
+                    "description": "Clean isometric 3D illustration style perfect for infographics",
+                    "prompt": "isometric 3D illustration, clean geometric style, bright colors, vector-like, infographic style",
+                    "negative_prompt": "realistic perspective, messy, photorealistic, dark",
+                    "tags": ["isometric", "3D", "illustration"],
+                    "use_cases": ["infographics", "technical illustrations"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                }
+            ],
+            "Photography": [
+                {
+                    "id": "photorealistic",
+                    "name": "Photorealistic",
+                    "description": "Ultra-realistic photography style with professional quality",
+                    "prompt": "photorealistic, high quality photography, professional lighting, sharp focus, detailed",
+                    "negative_prompt": "cartoon, illustration, painting, anime, artificial",
+                    "tags": ["photorealistic", "photography", "professional"],
+                    "use_cases": ["product photography", "portraits"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "vintage_photo",
+                    "name": "Vintage Photo",
+                    "description": "Vintage film photography with retro color grading",
+                    "prompt": "vintage photography, film grain, retro color grading, old camera, nostalgic mood",
+                    "negative_prompt": "digital, modern, clean, sharp, high definition",
+                    "tags": ["vintage", "film", "retro"],
+                    "use_cases": ["retro photography", "nostalgic images"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "cinematic_portrait",
+                    "name": "Cinematic Portrait",
+                    "description": "Dramatic cinematic portrait photography with professional lighting",
+                    "prompt": "cinematic portrait, dramatic lighting, film photography, professional studio lighting, shallow depth of field",
+                    "negative_prompt": "amateur, flat lighting, cartoon, illustration",
+                    "tags": ["cinematic", "portrait", "photography"],
+                    "use_cases": ["professional portraits", "headshots"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "studio_portrait",
+                    "name": "Studio Portrait",
+                    "description": "Clean studio portrait photography with professional lighting setup",
+                    "prompt": "studio portrait photography, professional lighting, clean background, high quality, sharp focus",
+                    "negative_prompt": "outdoor, natural lighting, casual, amateur",
+                    "tags": ["studio", "portrait", "professional"],
+                    "use_cases": ["business headshots", "professional portraits"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "food_photography",
+                    "name": "Food Photography",
+                    "description": "Appetizing food photography with perfect lighting and composition",
+                    "prompt": "food photography, appetizing presentation, professional lighting, mouth-watering, high quality",
+                    "negative_prompt": "unappetizing, dark, blurry, amateur",
+                    "tags": ["food", "photography", "culinary"],
+                    "use_cases": ["restaurant menus", "food blogs"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "product_showcase",
+                    "name": "Product Showcase",
+                    "description": "Professional product photography for e-commerce and marketing",
+                    "prompt": "product photography, clean background, professional lighting, commercial quality, detailed",
+                    "negative_prompt": "cluttered background, poor lighting, amateur, blurry",
+                    "tags": ["product", "photography", "commercial"],
+                    "use_cases": ["e-commerce", "product catalogs"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                }
+            ],
+            "3D": [
+                {
+                    "id": "3d_render_octane",
+                    "name": "3D Render Octane",
+                    "description": "High-quality 3D rendering with Octane Render quality",
+                    "prompt": "3D render, octane render, unreal engine, photorealistic 3D, high quality rendering, professional 3D",
+                    "negative_prompt": "2D, flat, low quality, amateur 3D",
+                    "tags": ["3D", "render", "octane"],
+                    "use_cases": ["product visualization", "architectural renders"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "architectural_render",
+                    "name": "Architectural Render",
+                    "description": "Professional architectural visualization and building renders",
+                    "prompt": "architectural render, building visualization, professional architecture, clean design, modern architecture",
+                    "negative_prompt": "cartoon, unrealistic, poor proportions, amateur",
+                    "tags": ["architectural", "building", "visualization"],
+                    "use_cases": ["architecture", "real estate"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Gaming": [
+                {
+                    "id": "pixel_art",
+                    "name": "Pixel Art",
+                    "description": "Retro pixel art style reminiscent of classic video games",
+                    "prompt": "pixel art, 8-bit style, retro gaming, pixelated, video game art, classic arcade style",
+                    "negative_prompt": "smooth, realistic, high resolution, modern",
+                    "tags": ["pixel art", "retro", "gaming"],
+                    "use_cases": ["game assets", "retro designs"],
+                    "cfg_scale": 6,
+                    "steps": 25
+                },
+                {
+                    "id": "game_concept",
+                    "name": "Game Concept",
+                    "description": "Video game concept art style with dynamic composition",
+                    "prompt": "game concept art, video game style, dynamic composition, gaming aesthetic, digital illustration",
+                    "negative_prompt": "realistic photo, static, boring composition",
+                    "tags": ["game art", "concept", "digital"],
+                    "use_cases": ["game development", "concept art"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "minecraft",
+                    "name": "Minecraft",
+                    "description": "Minecraft blocky voxel art style",
+                    "prompt": "Minecraft style, blocky, voxel art, cubic blocks, pixelated textures, game blocks",
+                    "negative_prompt": "smooth, realistic, curved, organic shapes, high resolution",
+                    "tags": ["minecraft", "voxel", "blocky"],
+                    "use_cases": ["minecraft art", "voxel designs"],
+                    "cfg_scale": 6,
+                    "steps": 25
+                }
+            ],
+            "Anime": [
+                {
+                    "id": "anime_character",
+                    "name": "Anime Character",
+                    "description": "Japanese anime character art style with cel shading",
+                    "prompt": "anime character, manga style, cel shaded, Japanese animation style, detailed anime art",
+                    "negative_prompt": "realistic, western cartoon, 3D, photorealistic",
+                    "tags": ["anime", "character", "manga"],
+                    "use_cases": ["character design", "anime illustrations"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "anime_background",
+                    "name": "Anime Background",
+                    "description": "Beautiful anime-style background scenery and environments",
+                    "prompt": "anime background, beautiful scenery, Japanese animation style, detailed environment, anime landscape",
+                    "negative_prompt": "realistic photo, western style, dark, gloomy",
+                    "tags": ["anime", "background", "scenery"],
+                    "use_cases": ["anime backgrounds", "environment art"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "manga_style",
+                    "name": "Manga Style",
+                    "description": "Black and white manga comic book art style",
+                    "prompt": "manga style, black and white, comic book art, Japanese manga, detailed line art",
+                    "negative_prompt": "colored, western comic, simple lines, amateur",
+                    "tags": ["manga", "comic", "black and white"],
+                    "use_cases": ["manga creation", "comic art"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "studio_ghibli",
+                    "name": "Studio Ghibli",
+                    "description": "Studio Ghibli inspired art style with soft, magical atmosphere",
+                    "prompt": "Studio Ghibli style, magical atmosphere, soft colors, beautiful scenery, Miyazaki style",
+                    "negative_prompt": "dark, harsh, realistic photo, western animation",
+                    "tags": ["Studio Ghibli", "magical", "anime"],
+                    "use_cases": ["fantasy art", "magical illustrations"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Retro": [
+                {
+                    "id": "retro_vintage",
+                    "name": "Retro Vintage",
+                    "description": "Nostalgic vintage design with retro color palettes",
+                    "prompt": "retro vintage style, nostalgic design, vintage colors, classic aesthetic, old school design",
+                    "negative_prompt": "modern, contemporary, bright neon, futuristic",
+                    "tags": ["retro", "vintage", "nostalgic"],
+                    "use_cases": ["vintage designs", "retro branding"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "film_noir",
+                    "name": "Film Noir",
+                    "description": "Classic film noir aesthetic with dramatic shadows and lighting",
+                    "prompt": "film noir style, dramatic shadows, black and white, classic cinema, moody lighting",
+                    "negative_prompt": "colorful, bright, modern, cheerful",
+                    "tags": ["film noir", "dramatic", "classic"],
+                    "use_cases": ["dramatic art", "classic designs"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Fantasy": [
+                {
+                    "id": "fantasy_world",
+                    "name": "Fantasy World",
+                    "description": "Magical fantasy world with epic landscapes and mystical elements",
+                    "prompt": "fantasy world, magical landscape, epic scenery, mystical atmosphere, fantasy art",
+                    "negative_prompt": "realistic, modern, scientific, mundane",
+                    "tags": ["fantasy", "magical", "epic"],
+                    "use_cases": ["fantasy art", "game environments"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "dark_gothic",
+                    "name": "Dark Gothic",
+                    "description": "Dark gothic aesthetic with mysterious and dramatic atmosphere",
+                    "prompt": "dark gothic style, mysterious atmosphere, dramatic shadows, gothic architecture, dark fantasy",
+                    "negative_prompt": "bright, cheerful, modern, colorful",
+                    "tags": ["gothic", "dark", "mysterious"],
+                    "use_cases": ["gothic art", "dark fantasy"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "steampunk",
+                    "name": "Steampunk",
+                    "description": "Victorian-era inspired steampunk with mechanical elements",
+                    "prompt": "steampunk style, Victorian era, mechanical elements, brass and copper, steam-powered technology",
+                    "negative_prompt": "modern technology, digital, clean, minimalist",
+                    "tags": ["steampunk", "mechanical", "Victorian"],
+                    "use_cases": ["steampunk art", "mechanical designs"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Animation": [
+                {
+                    "id": "pixar_style",
+                    "name": "Pixar",
+                    "description": "Pixar-style 3D animated movie characters and scenes",
+                    "prompt": "Pixar style, 3D animated movie, cartoon character, Disney Pixar animation, colorful, family-friendly",
+                    "negative_prompt": "realistic, dark, scary, adult content, 2D animation",
+                    "tags": ["pixar", "3D animation", "disney"],
+                    "use_cases": ["character design", "family content"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "south_park",
+                    "name": "South Park",
+                    "description": "South Park cartoon style with simple cut-out animation look",
+                    "prompt": "South Park style, simple cartoon, cut-out animation, flat colors, comedy cartoon style",
+                    "negative_prompt": "realistic, 3D, detailed, complex shading, photorealistic",
+                    "tags": ["south park", "cartoon", "comedy"],
+                    "use_cases": ["comedy animation", "simple cartoons"],
+                    "cfg_scale": 6,
+                    "steps": 25
+                },
+                {
+                    "id": "disney_classic",
+                    "name": "Disney Classic",
+                    "description": "Classic Disney 2D animation style from golden age films",
+                    "prompt": "Disney classic animation, 2D cartoon, traditional animation, Disney golden age style, hand-drawn",
+                    "negative_prompt": "3D, modern, realistic, computer generated, dark",
+                    "tags": ["disney", "classic", "2D animation"],
+                    "use_cases": ["classic animation", "fairytale art"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "rick_and_morty",
+                    "name": "Rick and Morty",
+                    "description": "Rick and Morty adult animated series style",
+                    "prompt": "Rick and Morty style, adult swim animation, sci-fi cartoon, colorful, comedy animation style",
+                    "negative_prompt": "realistic, serious, photorealistic, live action, 3D",
+                    "tags": ["rick and morty", "adult animation", "sci-fi cartoon"],
+                    "use_cases": ["adult animation", "sci-fi comedy"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "comic_book",
+                    "name": "Comic Book",
+                    "description": "Classic comic book art style with bold lines and vibrant colors",
+                    "prompt": "comic book art, bold lines, vibrant colors, superhero style, pop art influence",
+                    "negative_prompt": "realistic, muted colors, photographic, subtle",
+                    "tags": ["comic", "bold", "colorful"],
+                    "use_cases": ["comic art", "graphic novels"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "double_exposure",
+                    "name": "Double Exposure",
+                    "description": "Artistic double exposure effect blending multiple images",
+                    "prompt": "double exposure effect, artistic blend, multiple exposures, creative composition, surreal",
+                    "negative_prompt": "single image, simple, straightforward, literal",
+                    "tags": ["double exposure", "artistic", "creative"],
+                    "use_cases": ["artistic photography", "creative designs"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Art": [
+                {
+                    "id": "minimalist",
+                    "name": "Minimalist",
+                    "description": "Clean minimalist design with simple forms and limited color palette",
+                    "prompt": "minimalist design, clean simple forms, limited color palette, negative space, elegant simplicity",
+                    "negative_prompt": "cluttered, complex, busy, ornate, excessive detail",
+                    "tags": ["minimalist", "clean", "simple"],
+                    "use_cases": ["modern design", "clean aesthetics"],
+                    "cfg_scale": 6,
+                    "steps": 25
+                },
+                {
+                    "id": "surreal",
+                    "name": "Surreal",
+                    "description": "Surreal artistic style with dreamlike and impossible elements",
+                    "prompt": "surreal art, dreamlike quality, impossible geometry, artistic surrealism, creative composition",
+                    "negative_prompt": "realistic, logical, mundane, ordinary, conventional",
+                    "tags": ["surreal", "dreamlike", "artistic"],
+                    "use_cases": ["surreal art", "creative illustrations"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "renaissance",
+                    "name": "Renaissance",
+                    "description": "Renaissance classical art style with detailed realism",
+                    "prompt": "Renaissance art, classical painting, detailed realism, masterpiece, museum quality, traditional techniques",
+                    "negative_prompt": "modern, abstract, digital, cartoon, simple",
+                    "tags": ["renaissance", "classical", "realistic"],
+                    "use_cases": ["classical art", "historical portraits"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Urban": [
+                {
+                    "id": "graffiti_street",
+                    "name": "Graffiti Street Art",
+                    "description": "Urban street art and graffiti style with bold colors and urban aesthetic",
+                    "prompt": "graffiti street art, urban style, bold colors, spray paint effect, street culture",
+                    "negative_prompt": "formal, corporate, clean, traditional, conservative",
+                    "tags": ["graffiti", "street art", "urban"],
+                    "use_cases": ["urban design", "street art"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                }
+            ],
+            "Sci-Fi": [
+                {
+                    "id": "sci_fi_concept",
+                    "name": "Sci-Fi Concept",
+                    "description": "Futuristic science fiction concept art with advanced technology",
+                    "prompt": "sci-fi concept art, futuristic technology, space age design, advanced civilization, concept design",
+                    "negative_prompt": "primitive, medieval, low-tech, rustic, natural",
+                    "tags": ["sci-fi", "futuristic", "technology"],
+                    "use_cases": ["sci-fi art", "concept design"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                },
+                {
+                    "id": "space_exploration",
+                    "name": "Space Exploration",
+                    "description": "Space exploration themes with cosmic landscapes and spacecraft",
+                    "prompt": "space exploration, cosmic landscape, spacecraft, stars and galaxies, space travel",
+                    "negative_prompt": "earthbound, terrestrial, familiar, mundane",
+                    "tags": ["space", "exploration", "cosmic"],
+                    "use_cases": ["space art", "cosmic designs"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Nature": [
+                {
+                    "id": "nature_landscape",
+                    "name": "Nature Landscape",
+                    "description": "Beautiful natural landscapes with organic forms and natural lighting",
+                    "prompt": "nature landscape, beautiful scenery, natural lighting, organic forms, peaceful environment",
+                    "negative_prompt": "urban, artificial, mechanical, industrial, harsh",
+                    "tags": ["nature", "landscape", "organic"],
+                    "use_cases": ["landscape art", "nature photography"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "underwater",
+                    "name": "Underwater",
+                    "description": "Underwater scenes with marine life and aquatic environments",
+                    "prompt": "underwater scene, marine life, aquatic environment, ocean depths, underwater photography",
+                    "negative_prompt": "surface, dry, terrestrial, above water",
+                    "tags": ["underwater", "marine", "aquatic"],
+                    "use_cases": ["underwater photography", "marine art"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                }
+            ],
+            "Fashion": [
+                {
+                    "id": "fashion_editorial",
+                    "name": "Fashion Editorial",
+                    "description": "High-fashion editorial photography with dramatic styling",
+                    "prompt": "fashion editorial photography, high fashion, dramatic styling, professional modeling, fashion magazine",
+                    "negative_prompt": "casual wear, everyday clothing, amateur, simple",
+                    "tags": ["fashion", "editorial", "high fashion"],
+                    "use_cases": ["fashion photography", "editorial shoots"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Horror": [
+                {
+                    "id": "horror_atmospheric",
+                    "name": "Horror Atmospheric",
+                    "description": "Atmospheric horror with dark, eerie, and unsettling elements",
+                    "prompt": "horror atmosphere, dark and eerie, unsettling mood, gothic horror, creepy ambiance",
+                    "negative_prompt": "bright, cheerful, comforting, safe, pleasant",
+                    "tags": ["horror", "dark", "atmospheric"],
+                    "use_cases": ["horror art", "dark atmospheres"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ],
+            "Achievement": [
+                {
+                    "id": "achievement_badge",
+                    "name": "Achievement Badge",
+                    "description": "Gaming-style achievement badge with metallic effects and emblematic design",
+                    "prompt": "achievement badge, gaming trophy, metallic effects, emblematic design, award symbol",
+                    "negative_prompt": "plain, simple, non-metallic, dull, boring",
+                    "tags": ["achievement", "badge", "award"],
+                    "use_cases": ["gaming achievements", "award designs"],
+                    "cfg_scale": 7,
+                    "steps": 30
+                },
+                {
+                    "id": "trophy_gold",
+                    "name": "Golden Trophy",
+                    "description": "Prestigious golden trophy design with elegant form and luxurious finish",
+                    "prompt": "golden trophy, prestigious award, elegant design, luxurious finish, championship trophy",
+                    "negative_prompt": "cheap, plastic, dull, simple, unimpressive",
+                    "tags": ["trophy", "gold", "prestigious"],
+                    "use_cases": ["awards", "competitions"],
+                    "cfg_scale": 8,
+                    "steps": 35
+                }
+            ]
+        }
+    }
+    
+    return Response(styles)
 
 
 @api_view(['GET', 'PUT'])
@@ -435,7 +1046,7 @@ def assistant_context(request):
 @permission_classes([IsAuthenticated])
 def assistant_chat(request):
     """
-    Personal AI Assistant Chat - powered by real AI providers
+    Personal AI Assistant Chat - powered by real AI providers with RAG
     """
     user = request.user
     logger = logging.getLogger(__name__)
@@ -445,6 +1056,7 @@ def assistant_chat(request):
         message = request.data.get('message', '').strip()
         conversation_id = request.data.get('conversation_id', str(uuid.uuid4()))
         use_personal_assistant = request.data.get('use_personal_assistant', True)
+        use_rag = request.data.get('use_rag', True)  # Enable RAG by default
         
         if not message:
             return Response({
@@ -455,6 +1067,8 @@ def assistant_chat(request):
         # Import and initialize AI provider
         try:
             from content.ai_providers import AIProviderManager
+            from core.rag_integration import get_rag_context, enhance_prompt_with_rag
+            
             ai_manager = AIProviderManager()
             
             # Get available providers
@@ -488,36 +1102,55 @@ def assistant_chat(request):
                 provider = available_providers[0]  # Use any available provider
                 model = 'default'
             
+            # Get RAG context if enabled
+            rag_context = None
+            enhanced_message = message
+            
+            if use_rag:
+                try:
+                    logger.info(f"Getting RAG context for query: {message[:100]}...")
+                    rag_context = get_rag_context(message)
+                    
+                    if rag_context.get('has_context'):
+                        enhanced_message = enhance_prompt_with_rag(message, rag_context)
+                        logger.info(f"RAG context found: {rag_context['used_documents']} documents used")
+                    else:
+                        logger.info("No relevant RAG context found")
+                except Exception as e:
+                    logger.error(f"RAG integration failed: {e}")
+                    # Continue without RAG if it fails
+            
             # Create system prompt for personal assistant
             system_prompt = f"""You are {user.username if hasattr(user, 'username') else user.email}'s personal AI assistant in the Unified Donkey Betz Platform. 
 
 You have access to a comprehensive business intelligence platform with:
-- Advanced AI agent orchestration
+- Advanced AI agent orchestration with 73,000+ knowledge base entries
 - Multi-LLM provider integration  
-- RAG-powered knowledge management
+- RAG-powered knowledge management from unified embeddings
 - Sports betting analytics with Kelly Criterion optimization
 - Content creation and management tools
 - Real-time workflow automation
 
-Be helpful, concise, and professional. If the user asks about platform features, provide specific guidance on what's available. Keep responses focused and actionable."""
+Be helpful, concise, and professional. If the user asks about platform features, provide specific guidance on what's available. Keep responses focused and actionable.
+When you use knowledge from the context provided, naturally integrate it into your response without explicitly mentioning "from the context" or "based on the documents"."""
 
             # Generate AI response
             # Use different config for GPT-5 models (no temperature parameter)
             if 'gpt-5' in model.lower():
-                config = {'max_tokens': 500}
+                config = {'max_tokens': 1500}  # Increased for RAG responses
             else:
-                config = {'temperature': 0.7, 'max_tokens': 500}
+                config = {'temperature': 0.7, 'max_tokens': 1500}
             
             result = ai_manager.generate_content(
                 provider=provider,
                 model=model,
                 system_prompt=system_prompt,
-                user_prompt=message,
+                user_prompt=enhanced_message,
                 config=config
             )
             
             if result.success:
-                return Response({
+                response_data = {
                     'message': result.content,
                     'conversation_id': conversation_id,
                     'timestamp': datetime.now().isoformat(),
@@ -525,7 +1158,16 @@ Be helpful, concise, and professional. If the user asks about platform features,
                     'model': result.model_used or model,
                     'token_usage': result.token_usage,
                     'generation_time_ms': result.generation_time_ms
-                })
+                }
+                
+                # Add RAG context info if available
+                if rag_context and rag_context.get('has_context'):
+                    response_data['rag_context'] = {
+                        'documents_used': rag_context['used_documents'],
+                        'total_documents_found': rag_context['total_documents']
+                    }
+                
+                return Response(response_data)
             else:
                 logger.error(f"AI generation failed: {result.error_message}")
                 return Response({
