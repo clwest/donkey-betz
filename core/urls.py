@@ -22,6 +22,15 @@ from core.views import (
 # Import RAG-enhanced assistant
 from core.views_assistant_rag_enhanced import assistant_chat_enhanced as assistant_chat
 from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats
+from core.auth_views_enhanced import (
+    register_view, verify_email_view, login_enhanced_view,
+    forgot_password_view, reset_password_view, change_password_view,
+    profile_view, logout_enhanced_view, validate_token_view,
+    resend_verification_view
+)
+from core.profile_views import (
+    upload_avatar_view, delete_avatar_view, update_profile_view, generate_avatar_view
+)
 from agents.views import orchestrations_list
 
 # Import migrated API views
@@ -71,10 +80,22 @@ urlpatterns = [
     # Django admin
     path('admin/', admin.site.urls),
     
-    # Authentication endpoints
+    # Authentication endpoints (original)
     path('api/auth/login/', login_view, name='auth-login'),
     path('api/auth/logout/', logout_view, name='auth-logout'),
     path('api/auth/user/', current_user, name='auth-current-user'),
+    
+    # Enhanced authentication endpoints
+    path('api/auth/register/', register_view, name='auth-register'),
+    path('api/auth/verify-email/', verify_email_view, name='auth-verify-email'),
+    path('api/auth/login-enhanced/', login_enhanced_view, name='auth-login-enhanced'),
+    path('api/auth/forgot-password/', forgot_password_view, name='auth-forgot-password'),
+    path('api/auth/reset-password/', reset_password_view, name='auth-reset-password'),
+    path('api/auth/change-password/', change_password_view, name='auth-change-password'),
+    path('api/auth/profile/', profile_view, name='auth-profile'),
+    path('api/auth/logout-enhanced/', logout_enhanced_view, name='auth-logout-enhanced'),
+    path('api/auth/validate-token/', validate_token_view, name='auth-validate-token'),
+    path('api/auth/resend-verification/', resend_verification_view, name='auth-resend-verification'),
     
     # Core platform APIs
     path('api/status/', platform_status, name='platform-status'),
@@ -121,6 +142,10 @@ urlpatterns = [
     # Profile endpoints
     path('api/profile/', user_profile, name='user-profile'),
     path('api/profile/stats/', profile_stats, name='profile-stats'),
+    path('api/profile/update/', update_profile_view, name='profile-update'),
+    path('api/profile/avatar/', upload_avatar_view, name='avatar-upload'),
+    path('api/profile/avatar/delete/', delete_avatar_view, name='avatar-delete'),
+    path('api/profile/avatar/generate/', generate_avatar_view, name='avatar-generate'),
     
     # API router
     path('api/v1/', include(router.urls)),

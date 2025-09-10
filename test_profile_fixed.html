@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile Test - Fixed</title>
+    <style>
+        body { 
+            font-family: system-ui; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .info { color: #3b82f6; }
+        pre {
+            background: #0a0a0a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background: #10b981; }
+        .status-error { background: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>Profile API Test - Fixed Structure</h1>
+    
+    <div class="section">
+        <h2>Test Configuration</h2>
+        <p>Token: Using Chris's token (993f8273f70877e23b5c7d2f92ed30562a089fe3)</p>
+        <p>Endpoints:</p>
+        <ul>
+            <li>/api/profile/ - Should return {user, profile, statistics}</li>
+            <li>/api/profile/stats/ - Should return {content_breakdown, recent_activity, top_styles, storage}</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Profile Endpoint Test</h2>
+        <div id="profile-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Stats Endpoint Test</h2>
+        <div id="stats-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const TOKEN = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
+
+        async function testProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/profile/`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                // Check structure
+                const hasUser = 'user' in data;
+                const hasProfile = 'profile' in data;
+                const hasStatistics = 'statistics' in data;
+                
+                let html = '<h3>Structure Check:</h3>';
+                html += '<ul>';
+                html += `<li><span class="status-indicator ${hasUser ? 'status-success' : 'status-error'}"></span>Has 'user' object: ${hasUser}</li>`;
+                html += `<li><span class="status-indicator ${hasProfile ? 'status-success' : 'status-error'}"></span>Has 'profile' object: ${hasProfile}</li>`;
+                html += `<li><span class="status-indicator ${hasStatistics ? 'status-success' : 'status-error'}"></span>Has 'statistics' object: ${hasStatistics}</li>`;
+                html += '</ul>';
+                
+                if (hasUser) {
+                    html += '<h4>User Data:</h4>';
+                    html += `<pre>${JSON.stringify(data.user, null, 2)}</pre>`;
+                }
+                
+                if (hasProfile) {
+                    html += '<h4>Profile Data (first 5 fields):</h4>';
+                    const profilePreview = Object.fromEntries(
+                        Object.entries(data.profile).slice(0, 5)
+                    );
+                    html += `<pre>${JSON.stringify(profilePreview, null, 2)}</pre>`;
+                }
+                
+                if (hasStatistics) {
+                    html += '<h4>Statistics Data:</h4>';
+                    html += `<pre>${JSON.stringify(data.statistics, null, 2)}</pre>`;
+                }
+                
+                resultDiv.innerHTML = html;
+                
+                if (hasUser && hasProfile && hasStatistics) {
+                    resultDiv.innerHTML = '<p class="success">✅ Profile structure is correct!</p>' + html;
+                } else {
+                    resultDiv.innerHTML = '<p class="error">❌ Profile structure is incorrect</p>' + html;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testStats() {
+            const resultDiv = document.getElementById('stats-result');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/profile/stats/`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                // Check structure
+                const hasContentBreakdown = 'content_breakdown' in data;
+                const hasRecentActivity = 'recent_activity' in data;
+                const hasTopStyles = 'top_styles' in data;
+                const hasStorage = 'storage' in data;
+                
+                let html = '<h3>Structure Check:</h3>';
+                html += '<ul>';
+                html += `<li><span class="status-indicator ${hasContentBreakdown ? 'status-success' : 'status-error'}"></span>Has 'content_breakdown': ${hasContentBreakdown}</li>`;
+                html += `<li><span class="status-indicator ${hasRecentActivity ? 'status-success' : 'status-error'}"></span>Has 'recent_activity': ${hasRecentActivity}</li>`;
+                html += `<li><span class="status-indicator ${hasTopStyles ? 'status-success' : 'status-error'}"></span>Has 'top_styles': ${hasTopStyles}</li>`;
+                html += `<li><span class="status-indicator ${hasStorage ? 'status-success' : 'status-error'}"></span>Has 'storage': ${hasStorage}</li>`;
+                html += '</ul>';
+                
+                html += '<h4>Stats Data (partial):</h4>';
+                const preview = {
+                    content_breakdown: data.content_breakdown,
+                    recent_activity: data.recent_activity,
+                    top_styles: data.top_styles?.slice(0, 2),
+                    storage: data.storage
+                };
+                html += `<pre>${JSON.stringify(preview, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = html;
+                
+                if (hasContentBreakdown && hasRecentActivity && hasTopStyles && hasStorage) {
+                    resultDiv.innerHTML = '<p class="success">✅ Stats structure is correct!</p>' + html;
+                } else {
+                    resultDiv.innerHTML = '<p class="error">❌ Stats structure is incorrect</p>' + html;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Run tests on load
+        window.onload = () => {
+            testProfile();
+            testStats();
+        };
+    </script>
+</body>
+</html>

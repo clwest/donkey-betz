@@ -56,6 +56,9 @@ import { OrchestraPage } from './features/agent-orchestra/pages/OrchestraPage';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 
 // Features
@@ -102,6 +105,9 @@ function App() {
         <Routes>
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* Public Blog Routes (no auth required) */}
           <Route path="/blog" element={<PublicBlogListPage />} />
