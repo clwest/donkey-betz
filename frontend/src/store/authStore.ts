@@ -54,25 +54,13 @@ const getInitialAuthState = () => {
     }
   }
   
-  // If no valid auth found, set up chris user automatically
-  const chrisToken = 'fc58364ffbca4e77b732d03711d44965cf40acb6';
-  const chrisUser = {
-    id: '2',
-    username: 'chris',
-    email: 'chris@example.com',
-    credits: 10000,
-    subscription: 'premium'
-  };
-  
-  // Store the auth immediately
+  // If no valid auth found, use chris user with actual token from database
+  // Chris token: 993f8273f70877e23b5c7d2f92ed30562a089fe3
+  const chrisToken = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
   localStorage.setItem('authToken', chrisToken);
-  localStorage.setItem('auth-storage', JSON.stringify({
-    state: { token: chrisToken, user: chrisUser },
-    version: 0
-  }));
   
   return {
-    user: chrisUser,
+    user: defaultUser,
     token: chrisToken,
     isAuthenticated: true,
     isLoading: false

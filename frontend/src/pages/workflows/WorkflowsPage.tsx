@@ -10,6 +10,7 @@ export function WorkflowsPage() {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createdCampaigns, setCreatedCampaigns] = useState<any[]>([]);
 
   useEffect(() => {
     loadTemplates();
@@ -62,22 +63,55 @@ export function WorkflowsPage() {
 
   const handleTemplateClick = async (templateId: string, templateName: string) => {
     try {
+      console.log('Creating campaign from template:', templateName);
       const loadingToast = toast.loading('Creating campaign from template...');
+      
       const campaign = await campaignService.createFromTemplate(templateId, {
         title: `New ${templateName}`,
         target_audience: 'General audience',
       });
+      
       toast.dismiss(loadingToast);
-      toast.success('Campaign created successfully!');
-      navigate(`/campaigns/${campaign.id}`);
+      
+      console.log('Campaign created:', campaign);
+      
+      if (campaign && campaign.id) {
+        // Add to created campaigns list
+        setCreatedCampaigns(prev => [...prev, campaign]);
+        
+        // Show success message
+        toast.success(
+          <div>
+            <strong>Campaign Created!</strong>
+            <br />
+            {campaign.title || 'New Campaign'}
+            <br />
+            <small>ID: {campaign.id}</small>
+          </div>,
+          { duration: 5000 }
+        );
+        
+        // Optional: Navigate after a delay
+        setTimeout(() => {
+          if (window.confirm(`Campaign "${campaign.title}" created! Would you like to view it now?`)) {
+            navigate(`/campaigns/${campaign.id}`);
+          }
+        }, 1000);
+      } else {
+        toast.error('Campaign created but no ID returned');
+        console.error('Invalid campaign response:', campaign);
+      }
     } catch (error) {
       toast.error('Failed to create campaign from template');
-      console.error(error);
+      console.error('Error creating campaign:', error);
     }
   };
 
   const handleCreateCustom = async () => {
     try {
+      console.log('Creating custom campaign...');
+      const loadingToast = toast.loading('Creating custom campaign...');
+      
       // Create a blank campaign
       const campaign = await campaignService.createCampaign({
         title: 'Custom Campaign',
@@ -86,11 +120,38 @@ export function WorkflowsPage() {
         target_audience: 'Define your audience',
       });
       
-      toast.success('Custom campaign created!');
-      navigate(`/campaigns/${campaign.id}`);
+      toast.dismiss(loadingToast);
+      console.log('Custom campaign created:', campaign);
+      
+      if (campaign && campaign.id) {
+        // Add to created campaigns list
+        setCreatedCampaigns(prev => [...prev, campaign]);
+        
+        // Show success message
+        toast.success(
+          <div>
+            <strong>Custom Campaign Created!</strong>
+            <br />
+            {campaign.title}
+            <br />
+            <small>ID: {campaign.id}</small>
+          </div>,
+          { duration: 5000 }
+        );
+        
+        // Optional: Navigate after a delay
+        setTimeout(() => {
+          if (window.confirm(`Custom campaign created! Would you like to configure it now?`)) {
+            navigate(`/campaigns/${campaign.id}`);
+          }
+        }, 1000);
+      } else {
+        toast.error('Campaign created but no ID returned');
+        console.error('Invalid campaign response:', campaign);
+      }
     } catch (error) {
       toast.error('Failed to create custom campaign');
-      console.error(error);
+      console.error('Error creating custom campaign:', error);
     }
   };
 
@@ -116,6 +177,28 @@ export function WorkflowsPage() {
         </Button>
       </div>
 
+      {/* Recently Created Campaigns */}
+      {createdCampaigns.length > 0 && (
+        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-green-400 mb-2">Recently Created Campaigns</h2>
+          <div className="space-y-2">
+            {createdCampaigns.map((campaign, index) => (
+              <div key={campaign.id} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300">
+                  {index + 1}. {campaign.title} 
+                  <span className="text-gray-500 ml-2">(ID: {campaign.id.substring(0, 8)}...)</span>
+                </span>
+                <button 
+                  className="px-3 py-1 text-xs bg-primary-500 hover:bg-primary-600 text-white rounded"
+                  onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                >
+                  View
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Workflow Templates */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

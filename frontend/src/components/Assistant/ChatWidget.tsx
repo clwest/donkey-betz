@@ -28,11 +28,13 @@ export function ChatWidget() {
   const { user } = useAuthStore();
   const location = useLocation();
   
-  // Fallback user for development if auth store doesn't have one
+  // Use chris as fallback for development if auth store doesn't have a user
   const currentUser = user || { 
-    id: '1', 
-    username: 'testuser', 
-    email: 'test@example.com' 
+    id: '2', 
+    username: 'chris', 
+    email: 'chris@example.com',
+    credits: 10000,
+    subscription: 'premium'
   };
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -117,6 +119,13 @@ export function ChatWidget() {
   }, [messages, isOpen, isMinimized]);
 
   const loadUserContext = async () => {
+    // Only load context if user is authenticated
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.log('No auth token, skipping context load');
+      return;
+    }
+    
     try {
       const response = await assistantService.getContext();
       if (response?.stats) {
@@ -129,14 +138,32 @@ export function ChatWidget() {
         });
       }
     } catch (error) {
-      console.error('Failed to load context:', error);
+      // Silently fail for 401 errors - user just isn't logged in
+      if (error?.response?.status === 401) {
+        console.log('User not authenticated, skipping context');
+      } else {
+        console.error('Failed to load context:', error);
+      }
     }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!message.trim() || loading || !currentUser) return;
+    if (!message.trim() || loading) return;
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken');
+    if (!token && !currentUser) {
+      const loginMessage: Message = {
+        id: `login-${Date.now()}`,
+        role: 'assistant',
+        content: "Please log in to use the AI assistant. You can use the test credentials: username 'testuser', password 'testpass123' or 'demo'/'demo123'.",
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, loginMessage]);
+      return;
+    }
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -212,18 +239,19 @@ export function ChatWidget() {
         <button
           onClick={() => setIsOpen(true)}
           className={clsx(
-            "fixed bottom-6 right-6 p-4",
-            "bg-gradient-to-br from-emerald-500 to-teal-600",
+            "fixed bottom-6 right-6 p-5",
+            "bg-gradient-to-br from-purple-600 to-purple-800",
             "text-white rounded-full shadow-2xl",
-            "hover:shadow-emerald-500/25 hover:scale-110",
-            "transition-all duration-300 z-50 group"
+            "hover:shadow-purple-500/30 hover:scale-110",
+            "transition-all duration-300 z-50 group",
+            "ring-2 ring-purple-500/20"
           )}
           aria-label="Open AI Assistant"
         >
-          <ChatBubbleLeftRightIcon className="h-6 w-6" />
+          <ChatBubbleLeftRightIcon className="h-7 w-7" />
           {/* Pulse indicator for context awareness */}
           {pageContext && (
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-400 rounded-full animate-pulse" />
           )}
           {/* Tooltip */}
           <span className={clsx(
@@ -240,27 +268,29 @@ export function ChatWidget() {
       {/* Chat window */}
       {isOpen && (
         <div className={clsx(
-          "fixed bottom-6 right-6 z-50",
+          "fixed bottom-4 right-4 z-50",
           "animate-in fade-in slide-in-from-bottom-5 duration-300"
         )}>
           <div className={clsx(
             "glass rounded-2xl shadow-2xl",
-            isMinimized ? "w-80" : "w-96 h-[600px]",
-            "flex flex-col overflow-hidden"
+            "shadow-purple-500/20",
+            isMinimized ? "w-96" : "w-[520px] h-[720px]",
+            "flex flex-col overflow-hidden",
+            "border border-purple-500/20"
           )}>
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-800 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
                     <div className="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center">
                       <SparklesIcon className="h-6 w-6 text-white" />
                     </div>
-                    <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-400 rounded-full border-2 border-emerald-600" />
+                    <span className="absolute bottom-0 right-0 h-3 w-3 bg-purple-400 rounded-full border-2 border-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">AI Assistant</h3>
-                    <p className="text-emerald-100 text-xs">
+                    <h3 className="text-white font-semibold text-lg">AI Assistant</h3>
+                    <p className="text-purple-100 text-sm opacity-90">
                       {pageContext ? `Helping with ${pageContext.page}` : 'Always here to help'}
                     </p>
                   </div>
@@ -289,18 +319,18 @@ export function ChatWidget() {
             {!isMinimized && (
               <>
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {messages.length === 0 && (
-                    <div className="text-center py-8">
-                      <SparklesIcon className="h-12 w-12 text-emerald-500/30 mx-auto mb-4" />
-                      <p className="text-gray-400 mb-2">
+                    <div className="text-center py-12">
+                      <SparklesIcon className="h-12 w-12 text-purple-500/30 mx-auto mb-4" />
+                      <p className="text-gray-300 mb-2 text-lg font-medium">
                         Hi {currentUser.username}! 👋
                       </p>
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-gray-400 text-base">
                         I'm your AI assistant. Ask me anything about content creation!
                       </p>
                       {userStats?.favorite_styles?.length > 0 && (
-                        <p className="text-emerald-500 text-xs mt-4">
+                        <p className="text-purple-500 text-sm mt-4">
                           I noticed you like {userStats.favorite_styles[0]} style images
                         </p>
                       )}
@@ -317,16 +347,16 @@ export function ChatWidget() {
                     >
                       <div
                         className={clsx(
-                          'max-w-[85%] rounded-2xl px-4 py-2.5',
+                          'max-w-[85%] rounded-2xl px-5 py-3',
                           msg.role === 'user'
-                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white'
+                            ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white'
                             : 'glass-dark text-gray-100'
                         )}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-base whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                         <p className={clsx(
                           "text-xs mt-1 opacity-70",
-                          msg.role === 'user' ? 'text-emerald-100' : 'text-gray-400'
+                          msg.role === 'user' ? 'text-purple-100' : 'text-gray-400'
                         )}>
                           {formatTime(msg.timestamp)}
                         </p>
@@ -338,9 +368,9 @@ export function ChatWidget() {
                     <div className="flex justify-start">
                       <div className="glass-dark px-4 py-3 rounded-2xl">
                         <div className="flex space-x-2">
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" />
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                         </div>
                       </div>
                     </div>
@@ -350,18 +380,18 @@ export function ChatWidget() {
                 </div>
 
                 {/* Input */}
-                <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
+                <form onSubmit={handleSendMessage} className="p-5 border-t border-white/10 bg-dark-900/50">
                   <div className="flex space-x-2">
                     <input
                       ref={inputRef}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Ask me anything..."
+                      placeholder="Type your message here..."
                       disabled={loading}
                       className={clsx(
-                        "flex-1 bg-dark-800/50 text-white",
-                        "px-4 py-2.5 rounded-xl",
-                        "border border-white/10 focus:border-emerald-500",
+                        "flex-1 bg-dark-800/50 text-white text-base",
+                        "px-5 py-3 rounded-xl",
+                        "border border-white/10 focus:border-purple-500",
                         "focus:outline-none placeholder-gray-500",
                         "transition-colors"
                       )}
@@ -370,18 +400,19 @@ export function ChatWidget() {
                       type="submit"
                       disabled={loading || !message.trim()}
                       className={clsx(
-                        "p-2.5 rounded-xl",
-                        "bg-gradient-to-r from-emerald-500 to-teal-600",
-                        "text-white hover:shadow-lg hover:shadow-emerald-500/25",
+                        "px-4 py-3 rounded-xl",
+                        "bg-gradient-to-r from-purple-600 to-purple-700",
+                        "text-white hover:shadow-lg hover:shadow-purple-500/25",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
-                        "transition-all duration-200 hover:scale-105"
+                        "transition-all duration-200 hover:scale-105",
+                        "flex items-center justify-center"
                       )}
                     >
                       <PaperAirplaneIcon className="h-5 w-5" />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Powered by GPT-4 • {pageContext?.page || 'AI Content Studio'}
+                  <p className="text-xs text-gray-400 mt-2 text-center">
+                    Powered by GPT-5 • {pageContext?.page || 'AI Content Studio'}
                   </p>
                 </form>
               </>

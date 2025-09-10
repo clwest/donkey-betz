@@ -10,7 +10,7 @@ const aiStudioClient = axios.create({
 
 // Add request interceptor to include fresh auth token
 aiStudioClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'fc58364ffbca4e77b732d03711d44965cf40acb6';
+  const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Token ${token}`;
   }

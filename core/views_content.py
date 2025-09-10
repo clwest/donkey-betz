@@ -11,8 +11,18 @@ from django.contrib.auth import get_user_model
 from datetime import datetime
 import json
 import uuid
+import logging
+
+# Import image generation service
+try:
+    from content.image_generation import image_generation_service
+    HAS_IMAGE_GENERATION = True
+except ImportError as e:
+    HAS_IMAGE_GENERATION = False
+    logging.warning(f"Image generation service not available: {e}")
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -21,34 +31,195 @@ def create_content(request):
     Create new content - migrated from ai-content-studio
     """
     user = request.user
-    data = json.loads(request.body)
+    
+    # Handle both request.data (DRF) and request.body (raw JSON)
+    if hasattr(request, 'data'):
+        data = request.data
+    else:
+        data = json.loads(request.body)
     
     content_type = data.get('content_type', 'text')
     prompt = data.get('prompt', '')
     style = data.get('style', 'default')
     length = data.get('length', 'medium')
+    size = data.get('size', '1024x1024')
     
     # Simulate content generation
     content_id = int(datetime.now().timestamp())
     
-    return Response({
+    # Create response based on content type
+    response_data = {
         'success': True,
         'content': {
             'id': content_id,
             'type': content_type,
             'prompt': prompt,
             'style': style,
-            'length': length,
             'status': 'generated',
             'created_at': datetime.now().isoformat(),
-            'generated_content': f'Generated {content_type} content based on: {prompt}',
-            'metadata': {
-                'word_count': 250 if length == 'medium' else 150,
-                'estimated_read_time': '1-2 minutes',
-                'style_applied': style
-            }
         }
-    })
+    }
+    
+    if content_type == 'image':
+        # Use real AI image generation if available
+        if HAS_IMAGE_GENERATION:
+            try:
+                # Extract additional parameters
+                negative_prompt = data.get('negative_prompt', '')
+                num_images = data.get('batch_size', 1)
+                quality = data.get('quality', 'standard')
+                cfg_scale = data.get('cfg_scale', 7.0)
+                steps = data.get('steps', 30)
+                
+                # Generate images using AI service
+                result = image_generation_service.generate_image(
+                    prompt=prompt,
+                    style=style,
+                    size=size,
+                    negative_prompt=negative_prompt,
+                    num_images=min(num_images, 4),  # Limit to 4 for safety
+                    quality=quality,
+                    cfg_scale=cfg_scale,
+                    steps=steps
+                )
+                
+                if result.success and result.images:
+                    # Format images for frontend
+                    images = []
+                    for i, image_url in enumerate(result.images):
+                        images.append({
+                            'id': f"{content_id}_{i}",
+                            'url': image_url,
+                            'image_url': image_url,
+                            'result': image_url,
+                            'result_url': image_url,
+                            'type': 'image',
+                            'title': f"{prompt[:50]}..." if len(prompt) > 50 else prompt,
+                            'prompt': prompt,
+                            'style': style,
+                            'size': size,
+                            'created_at': datetime.now().isoformat()
+                        })
+                    
+                    response_data['content']['images'] = images
+                    response_data['content']['result'] = images[0]['url'] if images else None
+                    response_data['content']['results'] = images
+                    response_data['content']['metadata'] = {
+                        'style_applied': style,
+                        'size': size,
+                        'variations': len(images),
+                        'provider': result.provider_used,
+                        'model': result.model_used,
+                        'generation_time_ms': result.generation_time_ms
+                    }
+                else:
+                    # If AI generation fails, log error and use fallback
+                    logger.error(f"AI image generation failed: {result.error_message}")
+                    # Fall back to placeholder images
+                    base_url = 'https://picsum.photos'
+                    width, height = size.split('x')
+                    images = []
+                    for i in range(min(num_images, 4)):
+                        seed = content_id + i
+                        image_url = f"{base_url}/{width}/{height}?random={seed}"
+                        images.append({
+                            'id': f"{content_id}_{i}",
+                            'url': image_url,
+                            'image_url': image_url,
+                            'result': image_url,
+                            'result_url': image_url,
+                            'type': 'image',
+                            'title': f"{prompt[:50]}..." if len(prompt) > 50 else prompt,
+                            'prompt': prompt,
+                            'style': style,
+                            'size': size,
+                            'created_at': datetime.now().isoformat()
+                        })
+                    
+                    response_data['content']['images'] = images
+                    response_data['content']['result'] = images[0]['url'] if images else None
+                    response_data['content']['results'] = images
+                    response_data['content']['metadata'] = {
+                        'style_applied': style,
+                        'size': size,
+                        'variations': len(images),
+                        'note': 'Using placeholder images - AI generation unavailable'
+                    }
+                    
+            except Exception as e:
+                logger.error(f"Error in AI image generation: {str(e)}")
+                # Fall back to placeholder images
+                base_url = 'https://picsum.photos'
+                width, height = size.split('x')
+                images = []
+                for i in range(4):
+                    seed = content_id + i
+                    image_url = f"{base_url}/{width}/{height}?random={seed}"
+                    images.append({
+                        'id': f"{content_id}_{i}",
+                        'url': image_url,
+                        'image_url': image_url,
+                        'result': image_url,
+                        'result_url': image_url,
+                        'type': 'image',
+                        'title': f"{prompt[:50]}..." if len(prompt) > 50 else prompt,
+                        'prompt': prompt,
+                        'style': style,
+                        'size': size,
+                        'created_at': datetime.now().isoformat()
+                    })
+                
+                response_data['content']['images'] = images
+                response_data['content']['result'] = images[0]['url'] if images else None
+                response_data['content']['results'] = images
+                response_data['content']['metadata'] = {
+                    'style_applied': style,
+                    'size': size,
+                    'variations': len(images),
+                    'error': str(e)
+                }
+        else:
+            # No AI service available, use placeholder images
+            base_url = 'https://picsum.photos'
+            width, height = size.split('x')
+            images = []
+            for i in range(4):
+                seed = content_id + i
+                image_url = f"{base_url}/{width}/{height}?random={seed}"
+                images.append({
+                    'id': f"{content_id}_{i}",
+                    'url': image_url,
+                    'image_url': image_url,
+                    'result': image_url,
+                    'result_url': image_url,
+                    'type': 'image',
+                    'title': f"{prompt[:50]}..." if len(prompt) > 50 else prompt,
+                    'prompt': prompt,
+                    'style': style,
+                    'size': size,
+                    'created_at': datetime.now().isoformat()
+                })
+            
+            response_data['content']['images'] = images
+            response_data['content']['result'] = images[0]['url'] if images else None
+            response_data['content']['results'] = images
+            response_data['content']['metadata'] = {
+                'style_applied': style,
+                'size': size,
+                'variations': len(images),
+                'note': 'AI image generation service not configured'
+            }
+    else:
+        # For text content
+        response_data['content']['length'] = length
+        response_data['content']['generated_content'] = f'Generated {content_type} content based on: {prompt}'
+        response_data['content']['metadata'] = {
+            'word_count': 250 if length == 'medium' else 150,
+            'estimated_read_time': '1-2 minutes',
+            'style_applied': style
+        }
+    
+    return Response(response_data)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -343,6 +514,37 @@ def supported_file_formats(request):
             'batch_upload_limit': 10
         }
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gallery_list(request):
+    """
+    Get gallery images - endpoint that frontend expects
+    """
+    limit = int(request.GET.get('limit', 50))
+    
+    # Get images from ContentGeneration model
+    images = []
+    
+    # Mock some sample images for now since we don't have actual images stored yet
+    sample_images = [
+        {
+            'id': 1,
+            'title': 'Sample Image 1',
+            'image_url': '/media/images/sample1.jpg',
+            'tags': ['sample', 'test'],
+            'category': 'generated',
+            'saved_at': '2024-01-01T00:00:00Z',
+            'is_public': False,
+            'style_used': 'realistic'
+        }
+    ]
+    
+    return JsonResponse({
+        'success': True,
+        'images': sample_images[:limit]
+    })
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Error Debugger</title>
+    <style>
+        body {
+            font-family: 'SF Mono', Monaco, monospace;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #00ff00;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #00ff00; }
+        h2 { color: #ffff00; margin-top: 30px; }
+        .error-log {
+            background: #1a1a1a;
+            border: 1px solid #ff0000;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .network-log {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffff00; }
+        .info { color: #00ffff; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover {
+            background: #444;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #00ff00;
+            margin-top: 20px;
+        }
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            border-left: 3px solid #333;
+        }
+        .log-entry.error { border-left-color: #ff0000; }
+        .log-entry.success { border-left-color: #00ff00; }
+        .log-entry.warning { border-left-color: #ffff00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Frontend Error Debugger</h1>
+        <p>Monitor real-time errors and network requests from the React app</p>
+        
+        <div>
+            <button onclick="openWorkflowsPage()">Open Workflows in iframe</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+            <button onclick="testAPIDirectly()">Test API Directly</button>
+        </div>
+        
+        <h2>Console Errors</h2>
+        <div id="console-errors" class="error-log">
+            No errors captured yet...
+        </div>
+        
+        <h2>Network Requests</h2>
+        <div id="network-log" class="network-log">
+            Monitoring network activity...
+        </div>
+        
+        <h2>Frontend Page (iframe)</h2>
+        <iframe id="frontend-frame" src="about:blank"></iframe>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        const FRONTEND_URL = 'http://localhost:3000';
+        const AUTH_TOKEN = 'fc58364ffbca4e77b732d03711d44965cf40acb6';
+        
+        let networkLog = [];
+        let errorLog = [];
+        
+        function log(message, type = 'info', target = 'network-log') {
+            const timestamp = new Date().toISOString().split('T')[1].substring(0, 8);
+            const element = document.getElementById(target);
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            if (element.children.length === 0 || element.textContent === 'No errors captured yet...' || element.textContent === 'Monitoring network activity...') {
+                element.innerHTML = '';
+            }
+            
+            element.appendChild(entry);
+            element.scrollTop = element.scrollHeight;
+        }
+        
+        function openWorkflowsPage() {
+            const iframe = document.getElementById('frontend-frame');
+            iframe.src = `${FRONTEND_URL}/workflows`;
+            log('Loading /workflows page...', 'info');
+            
+            // Try to inject monitoring script into iframe (may be blocked by CORS)
+            iframe.onload = function() {
+                try {
+                    // This might fail due to same-origin policy
+                    const iframeWindow = iframe.contentWindow;
+                    
+                    // Override console.error in iframe
+                    const originalError = iframeWindow.console.error;
+                    iframeWindow.console.error = function(...args) {
+                        log(`CONSOLE ERROR: ${args.join(' ')}`, 'error', 'console-errors');
+                        originalError.apply(iframeWindow.console, args);
+                    };
+                    
+                    // Monitor fetch in iframe
+                    const originalFetch = iframeWindow.fetch;
+                    iframeWindow.fetch = function(url, options) {
+                        log(`FETCH: ${options?.method || 'GET'} ${url}`, 'info');
+                        
+                        return originalFetch.apply(this, arguments)
+                            .then(response => {
+                                if (!response.ok) {
+                                    log(`FETCH ERROR: ${url} - Status ${response.status}`, 'error');
+                                } else {
+                                    log(`FETCH SUCCESS: ${url} - Status ${response.status}`, 'success');
+                                }
+                                return response;
+                            })
+                            .catch(error => {
+                                log(`FETCH FAILED: ${url} - ${error.message}`, 'error');
+                                throw error;
+                            });
+                    };
+                    
+                    log('Monitoring injection successful!', 'success');
+                } catch (e) {
+                    log('Cannot inject monitoring (CORS). Check browser console for errors.', 'warning');
+                    console.log('Injection error:', e);
+                }
+            };
+        }
+        
+        async function testAPIDirectly() {
+            log('Testing API endpoints directly...', 'info');
+            
+            // Test campaigns/templates endpoint
+            try {
+                const response = await fetch(`${API_URL}/campaigns/templates/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ /campaigns/templates/ - OK (${data.templates?.length || 0} templates)`, 'success');
+                } else {
+                    log(`❌ /campaigns/templates/ - Error ${response.status}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ /campaigns/templates/ - ${e.message}`, 'error');
+            }
+            
+            // Test workflows/templates endpoint
+            try {
+                const response = await fetch(`${API_URL}/workflows/templates/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ /workflows/templates/ - OK`, 'success');
+                } else {
+                    log(`❌ /workflows/templates/ - Error ${response.status}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ /workflows/templates/ - ${e.message}`, 'error');
+            }
+        }
+        
+        function clearLogs() {
+            document.getElementById('console-errors').innerHTML = 'No errors captured yet...';
+            document.getElementById('network-log').innerHTML = 'Monitoring network activity...';
+            networkLog = [];
+            errorLog = [];
+        }
+        
+        // Monitor global fetch (for this page)
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            const method = options?.method || 'GET';
+            log(`${method} ${url}`, 'info');
+            
+            return originalFetch.apply(this, arguments)
+                .then(response => {
+                    if (!response.ok) {
+                        log(`Response ${response.status} from ${url}`, 'error');
+                    }
+                    return response;
+                })
+                .catch(error => {
+                    log(`Network error: ${error.message}`, 'error');
+                    throw error;
+                });
+        };
+        
+        // Listen for messages from iframe (if we set up postMessage communication)
+        window.addEventListener('message', (event) => {
+            if (event.origin === FRONTEND_URL) {
+                log(`Message from frontend: ${JSON.stringify(event.data)}`, 'info');
+            }
+        });
+        
+        log('Debugger ready. Click "Open Workflows in iframe" to start monitoring.', 'success');
+    </script>
+</body>
+</html>

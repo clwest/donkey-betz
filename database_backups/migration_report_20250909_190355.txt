@@ -1,0 +1,101 @@
+MOVEYOURAZZ_DEV DATABASE MIGRATION REPORT
+==========================================
+Date: Tue Sep  9 19:04:17 MDT 2025
+Source Database: moveyourazz_dev
+Target Database: ai_unified_platform
+
+DATABASE STATISTICS
+-------------------
+                  table_name                  | record_count 
+----------------------------------------------+--------------
+ unified_memory_entries                       |        36656
+ ai_partner_conversationtopic                 |         1882
+ django_celery_results_taskresult             |         1634
+ ai_partner_conversationmemory                |         1592
+ auth_permission                              |         1424
+ core_aiusagetracking                         |         1345
+ prompting_system_extractedtemplatecomponent  |         1230
+ token_blacklist_outstandingtoken             |          675
+ agent_memory_contributions                   |          661
+ agent_mythology_profiles                     |          626
+ memory_memoryentry                           |          560
+ django_session                               |          494
+ django_content_type                          |          355
+ security_dataprocessingauditlog              |          318
+ agent_orchestra_queryjob                     |          279
+ agent_orchestra_agentresult                  |          265
+ django_migrations                            |          250
+ mythology_events                             |          242
+ learning_intelligence_anchordriftlog         |          211
+ unified_memory_searches                      |          208
+ learning_intelligence_anchorreinforcementlog |          200
+ agent_orchestra_agentinstance                |          179
+ prompting_system_extractedexample            |          168
+ api_tracking_apiusage                        |          162
+ ai_partner_personalinsight                   |           94
+ learning_intelligence_symbolicmemoryanchor   |           78
+ agent_orchestra_agenttemplate                |           78
+ agent_orchestra_taskorchestration            |           74
+ ai_partner_conversationsession               |           69
+ accounts_user                                |           55
+ token_blacklist_blacklistedtoken             |           45
+ content_batchjob                             |           39
+ learning_intelligence_learningsession        |           37
+ ai_partner_conversationfactextraction        |           35
+ ai_partner_system_health_snapshot            |           33
+ prompting_system_prompttemplate              |           30
+ prompting_system_importedpromptset_templates |           29
+ prompting_system_importedpromptset           |           29
+ api_tracking_apipricing                      |           23
+ system_migration_logs                        |           20
+ content_assetgenerationrequest               |           19
+ ai_partner_onboardingquestion                |           19
+ myth_propagation                             |           17
+ agent_orchestra_toolusage                    |           15
+ prompting_system_componentpattern_components |           13
+ api_tracking_dailyapiusagesummary            |           13
+ content_generatedimage                       |           10
+ ai_partner_onboardingresponse                |           10
+ security_piidetectionlog                     |            9
+ ai_partner_profileupdatelog                  |            8
+ ai_partner_userlifeprofile                   |            7
+ api_tracking_apiprovider                     |            7
+ agent_orchestra_stockopportunity             |            7
+ myth_patterns                                |            7
+ mythology_experiments                        |            7
+ ai_partner_chatcommand                       |            6
+ obs_studio_obsrecording                      |            5
+ content_aigeneratedimage                     |            5
+ core_profile                                 |            5
+ content_aigeneratedasset                     |            5
+ prompting_system_componentpattern            |            4
+ ai_partner_userprofile                       |            4
+ ai_partner_extractedfact                     |            4
+ agent_orchestra_agenttool_allowed_agents     |            3
+ content_aigeneratedvideo                     |            3
+ ai_partner_workflow_template                 |            3
+ content_stablediffusionimage                 |            3
+ content_brandidentity                        |            2
+ agent_orchestra_collaborationsession         |            2
+ prompting_system_prompttemplatecomponent     |            2
+ authtoken_token                              |            2
+ ai_partner_onboardinginsight                 |            2
+ prompting_system_promptcomponent             |            2
+ ai_partner_onboardingprofile                 |            1
+ obs_studio_obsconnection                     |            1
+ ai_partner_commandhistory                    |            1
+ davinci_resolve_davinciproject               |            1
+ obs_studio_obsscene                          |            1
+ abstracted_prompt_templates                  |            1
+ content_assetgenerationquota                 |            1
+ socialaccount_socialaccount                  |            1
+ content_contentitem                          |            1
+(82 rows)
+
+
+DATABASE SIZE
+     datname     |  size  
+-----------------+--------
+ moveyourazz_dev | 685 MB
+(1 row)
+

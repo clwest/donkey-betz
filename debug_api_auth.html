@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Auth Debug</title>
+</head>
+<body>
+    <h1>API Authentication Debug</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const TOKEN = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
+        
+        const results = document.getElementById('results');
+        
+        async function testEndpoint(name, url) {
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.text();
+                const status = response.status;
+                
+                results.innerHTML += `
+                    <h3>${name} (${url})</h3>
+                    <p>Status: ${status} ${status === 200 ? '✅' : '❌'}</p>
+                    <p>Response: ${data.substring(0, 200)}${data.length > 200 ? '...' : ''}</p>
+                    <hr>
+                `;
+            } catch (error) {
+                results.innerHTML += `
+                    <h3>${name} (${url})</h3>
+                    <p>Status: ERROR ❌</p>
+                    <p>Error: ${error.message}</p>
+                    <hr>
+                `;
+            }
+        }
+        
+        // Test the endpoints that the user mentioned
+        async function runTests() {
+            await testEndpoint('Gallery List', '/gallery/list/');
+            await testEndpoint('Styles List', '/styles/');
+            await testEndpoint('Prompting Settings', '/prompting/settings/');
+            await testEndpoint('Dashboard Embeddings Stats', '/dashboard/embeddings-stats/');
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>

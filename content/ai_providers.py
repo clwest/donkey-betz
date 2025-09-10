@@ -163,7 +163,22 @@ class OpenAIProvider(BaseAIProvider):
             
             generation_time = int((time.time() - start_time) * 1000)
             
+            # Debug and handle potential None content
             content = response.choices[0].message.content
+            if content is None:
+                logger.warning(f"OpenAI returned None content for model {model}")
+                # Try to get any available text
+                if hasattr(response.choices[0], 'text'):
+                    content = response.choices[0].text
+                    logger.info(f"Used text field instead: {content[:50] if content else 'empty'}...")
+                elif hasattr(response.choices[0].message, 'text'):
+                    content = response.choices[0].message.text
+                    logger.info(f"Used message.text field: {content[:50] if content else 'empty'}...")
+                else:
+                    content = ""
+                    logger.error(f"No content field found in response for {model}")
+                    logger.debug(f"Response structure: {response}")
+            
             token_usage = {
                 'prompt_tokens': response.usage.prompt_tokens,
                 'completion_tokens': response.usage.completion_tokens,
@@ -176,9 +191,47 @@ class OpenAIProvider(BaseAIProvider):
                 response.usage.completion_tokens
             )
             
+            # Ensure we always return some content
+            if not content or len(str(content).strip()) == 0:
+                logger.warning(f"Empty or None content after processing for {model}, attempting fallback")
+                # Try a simpler retry without any special parameters
+                try:
+                    # Use correct parameter for GPT-5
+                    if 'gpt-5' in model.lower():
+                        simple_response = self.client.chat.completions.create(
+                            model=model,
+                            messages=[{"role": "user", "content": "Please respond with 'I am working.'"}],
+                            max_completion_tokens=50
+                        )
+                    else:
+                        simple_response = self.client.chat.completions.create(
+                            model=model,
+                            messages=[{"role": "user", "content": "Please respond with 'I am working.'"}],
+                            max_tokens=50
+                        )
+                    test_content = simple_response.choices[0].message.content
+                    if test_content:
+                        logger.info(f"Simple test worked, retrying original")
+                        # Retry the original with minimal parameters
+                        if 'gpt-5' in model.lower():
+                            retry_response = self.client.chat.completions.create(
+                                model=model,
+                                messages=messages,
+                                max_completion_tokens=500
+                            )
+                        else:
+                            retry_response = self.client.chat.completions.create(
+                                model=model,
+                                messages=messages,
+                                max_tokens=500
+                            )
+                        content = retry_response.choices[0].message.content or ""
+                except Exception as e:
+                    logger.error(f"Fallback attempt failed: {e}")
+            
             return GenerationResult(
                 success=True,
-                content=content,
+                content=content or "",  # Ensure never None
                 token_usage=token_usage,
                 cost=cost,
                 generation_time_ms=generation_time,
