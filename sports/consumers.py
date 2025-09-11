@@ -46,18 +46,23 @@ class SportsBaseConsumer(AsyncWebsocketConsumer):
         # Get user from scope (set by AuthMiddleware)
         self.user = self.scope.get('user')
         
-        if not self.user or not self.user.is_authenticated:
-            await self.close(code=4001)
-            return
+        # Allow anonymous connections for development/testing
+        from django.contrib.auth.models import AnonymousUser
+        if not self.user or isinstance(self.user, AnonymousUser):
+            # For anonymous users, we still accept but with limited functionality
+            self.user = AnonymousUser()
         
         await self.accept()
         
         # Add user to their personal group
-        user_group = f"user_{self.user.id}"
-        await self.channel_layer.group_add(user_group, self.channel_name)
-        self.groups.append(user_group)
-        
-        logger.info(f"WebSocket connected: {self.user.username}")
+        from django.contrib.auth.models import AnonymousUser
+        if not isinstance(self.user, AnonymousUser):
+            user_group = f"user_{self.user.id}"
+            await self.channel_layer.group_add(user_group, self.channel_name)
+            self.groups.append(user_group)
+            logger.info(f"WebSocket connected: {self.user.username}")
+        else:
+            logger.info("WebSocket connected: anonymous user")
     
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
@@ -473,7 +478,8 @@ class RecommendationConsumer(SportsBaseConsumer):
         """Connect to betting recommendations"""
         await super().connect()
         
-        if not self.user:
+        from django.contrib.auth.models import AnonymousUser
+        if not self.user or isinstance(self.user, AnonymousUser):
             return
         
         # Join user's recommendation group
@@ -499,6 +505,10 @@ class RecommendationConsumer(SportsBaseConsumer):
     @database_sync_to_async
     def get_user_recommendations(self):
         """Get user's active recommendations"""
+        from django.contrib.auth.models import AnonymousUser
+        if isinstance(self.user, AnonymousUser):
+            return []  # Return empty list for anonymous users
+        
         return list(BettingRecommendation.objects.filter(
             user=self.user,
             is_active=True,
@@ -610,7 +620,8 @@ class DashboardConsumer(SportsBaseConsumer):
         """Connect to dashboard updates"""
         await super().connect()
         
-        if not self.user:
+        from django.contrib.auth.models import AnonymousUser
+        if not self.user or isinstance(self.user, AnonymousUser):
             return
         
         # Join dashboard group
@@ -635,6 +646,24 @@ class DashboardConsumer(SportsBaseConsumer):
     def get_dashboard_data(self):
         """Get dashboard data for user"""
         from django.db.models import Sum, Count, Avg
+        from django.contrib.auth.models import AnonymousUser
+        
+        if isinstance(self.user, AnonymousUser):
+            # Return demo data for anonymous users
+            return {
+                'user_stats': {
+                    'total_bets': 0,
+                    'total_wagered': '0.00',
+                    'total_profit': '0.00',
+                    'roi': 0.0
+                },
+                'system_stats': {
+                    'active_arbitrage': 0,
+                    'total_games': Game.objects.filter(status='scheduled').count(),
+                    'active_markets': Market.objects.filter(is_active=True).count()
+                },
+                'recent_activity': []
+            }
         
         # User's betting stats
         user_bets = self.user.bets.filter(is_active=True)
