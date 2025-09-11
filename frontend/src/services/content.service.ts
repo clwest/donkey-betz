@@ -75,7 +75,7 @@ export interface StabilityEditRequest {
 export const contentService = {
   // Text Generation
   async generateText(request: ContentGenerationRequest) {
-    const { data } = await apiClient.post('/content/create/', {
+    const { data } = await apiClient.post('/api/v1/content/create/', {
       content_type: 'text',
       ...request,
     });
@@ -89,7 +89,7 @@ export const contentService = {
       ? `${request.width}x${request.height}`
       : '1024x1024';
     
-    const { data } = await apiClient.post('/content/create/', {
+    const { data } = await apiClient.post('/api/v1/content/create/', {
       content_type: 'image',
       ...request,
       size,
@@ -99,7 +99,7 @@ export const contentService = {
 
   // Batch Image Generation
   async generateImageBatch(request: ImageGenerationRequest & { variations: number }) {
-    const { data } = await apiClient.post('/content/batch/', request);
+    const { data } = await apiClient.post('/api/v1/content/batch/', request);
     return data;
   },
 
@@ -110,7 +110,7 @@ export const contentService = {
       ...request,
     });
     
-    const { data } = await apiClient.post('/content/img2img/', formData, {
+    const { data } = await apiClient.post('/api/v1/content/img2img/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -126,26 +126,26 @@ export const contentService = {
 
   // Generate text-to-video
   async generateTextToVideo(request: VideoGenerationRequest): Promise<VideoResponse> {
-    const { data } = await apiClient.post('/video/text-to-video/', request);
+    const { data } = await apiClient.post('/api/v1/video/text-to-video/', request);
     return data;
   },
 
   // Generate image-to-video
   async generateImageToVideo(request: VideoGenerationRequest): Promise<VideoResponse> {
-    const { data } = await apiClient.post('/video/image-to-video/', request);
+    const { data } = await apiClient.post('/api/v1/video/image-to-video/', request);
     return data;
   },
 
   // Get video generation status
   async getVideoStatus(taskId: string): Promise<VideoStatusResponse> {
-    const { data } = await apiClient.get(`/video/status/${taskId}/`);
+    const { data } = await apiClient.get(`/api/v1/video/status/${taskId}/`);
     return data;
   },
 
 
   // Get video detail
   async getVideoDetail(contentId: number): Promise<{ video: any }> {
-    const { data } = await apiClient.get(`/video/${contentId}/`);
+    const { data } = await apiClient.get(`/api/v1/video/${contentId}/`);
     return data;
   },
 
@@ -157,7 +157,7 @@ export const contentService = {
       creativity,
     });
     
-    const { data } = await apiClient.post('/stability/upscale/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/upscale/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -166,7 +166,7 @@ export const contentService = {
   async removeBackground(image: File) {
     const formData = createFormData({ image });
     
-    const { data } = await apiClient.post('/stability/remove-background/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/remove-background/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -179,7 +179,7 @@ export const contentService = {
       prompt,
     });
     
-    const { data } = await apiClient.post('/stability/inpaint/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/inpaint/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -192,7 +192,7 @@ export const contentService = {
       prompt,
     });
     
-    const { data } = await apiClient.post('/stability/outpaint/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/outpaint/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -205,7 +205,7 @@ export const contentService = {
       replace_prompt: replacePrompt,
     });
     
-    const { data } = await apiClient.post('/stability/search-replace/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/search-replace/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -217,7 +217,7 @@ export const contentService = {
       mask,
     });
     
-    const { data } = await apiClient.post('/stability/erase/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/erase/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -229,7 +229,7 @@ export const contentService = {
       prompt,
     });
     
-    const { data } = await apiClient.post('/stability/sketch/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/sketch/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -238,7 +238,7 @@ export const contentService = {
   async generate3D(image: File) {
     const formData = createFormData({ image });
     
-    const { data } = await apiClient.post('/stability/3d/', formData, {
+    const { data } = await apiClient.post('/api/v1/stability/3d/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -251,14 +251,14 @@ export const contentService = {
       output_type: outputType,  // Backend expects output_type, not format
     });
     
-    const { data } = await apiClient.post('/voice/transcribe/', formData, {
+    const { data } = await apiClient.post('/api/v1/voice/transcribe/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
   },
 
   async formatConversation(transcriptId: string, speakers?: string[]) {
-    const { data } = await apiClient.post('/voice/format-conversation/', {
+    const { data } = await apiClient.post('/api/v1/voice/format-conversation/', {
       transcript_id: transcriptId,
       speakers,
     });
@@ -274,7 +274,7 @@ export const contentService = {
     target_audience?: string;
     keywords?: string[];
   }) {
-    const { data } = await apiClient.post('/content/blog/generate/', request, {
+    const { data } = await apiClient.post('/api/v1/content/blog/generate/', request, {
       timeout: 90000, // 90 seconds for blog generation
     });
     return data;
@@ -288,7 +288,7 @@ export const contentService = {
     variations?: number;
     hashtags?: boolean;
   }) {
-    const { data } = await apiClient.post('/content/social/generate/', request, {
+    const { data } = await apiClient.post('/api/v1/content/social/generate/', request, {
       timeout: 90000, // 90 seconds for social generation
     });
     return data;
@@ -296,24 +296,24 @@ export const contentService = {
 
   // Get saved social media posts
   async getSocialPostsList() {
-    const { data } = await apiClient.get('/content/social/list/');
+    const { data } = await apiClient.get('/api/v1/content/social/list/');
     return data;
   },
 
   // Get specific social post details
   async getSocialPost(id: number) {
-    const { data } = await apiClient.get(`/content/social/${id}/`);
+    const { data } = await apiClient.get(`/api/v1/content/social/${id}/`);
     return data;
   },
 
   // Custom Styles
   async getStyles() {
-    const { data } = await apiClient.get('/styles/');
+    const { data } = await apiClient.get('/api/v1/styles/');
     return data;
   },
 
   async getCustomStyles() {
-    const { data } = await apiClient.get('/custom-styles/');
+    const { data } = await apiClient.get('/api/v1/custom-styles/');
     return data;
   },
 
@@ -326,7 +326,7 @@ export const contentService = {
     steps?: number;
     is_public?: boolean;
   }) {
-    const { data } = await apiClient.post('/custom-styles/', style);
+    const { data } = await apiClient.post('/api/v1/custom-styles/', style);
     return data;
   },
 
@@ -335,12 +335,12 @@ export const contentService = {
     const params = new URLSearchParams({ limit: limit.toString() });
     if (content_type) params.append('content_type', content_type);
     
-    const { data } = await apiClient.get(`/gallery/?${params}`);
+    const { data } = await apiClient.get(`/api/v1/gallery/?${params}`);
     return data;
   },
 
   async saveToGallery(contentId: string, title?: string, tags?: string[]) {
-    const { data } = await apiClient.post('/gallery/save/', {
+    const { data } = await apiClient.post('/api/v1/gallery/save/', {
       content_id: contentId,
       title,
       tags,
@@ -358,7 +358,7 @@ export const contentService = {
     style_used?: string;
     is_public?: boolean;
   }) {
-    const { data } = await apiClient.post('/gallery/save/', params);
+    const { data } = await apiClient.post('/api/v1/gallery/save/', params);
     return data;
   },
 
@@ -376,7 +376,7 @@ export const contentService = {
     metadata?: Record<string, any>;
     is_public?: boolean;
   }) {
-    const { data } = await apiClient.post('/gallery/save-video/', params);
+    const { data } = await apiClient.post('/api/v1/gallery/save-video/', params);
     return data;
   },
 
@@ -408,7 +408,7 @@ export const contentService = {
     description: string;
     keywords: string[];
   }) {
-    const { data } = await apiClient.post('/podcasts/', podcastData);
+    const { data } = await apiClient.post('/api/v1/podcasts/', podcastData);
     return data;
   },
 
@@ -421,17 +421,17 @@ export const contentService = {
     enhance_prompt?: boolean;
     use_memory?: boolean;
   }) {
-    const { data } = await apiClient.post('/podcasts/generate/', podcastData);
+    const { data } = await apiClient.post('/api/v1/podcasts/generate/', podcastData);
     return data;
   },
 
   async generatePodcastScript(episodeId: number) {
-    const { data } = await apiClient.post(`/podcasts/${episodeId}/generate-full/`);
+    const { data } = await apiClient.post(`/api/v1/podcasts/${episodeId}/generate-full/`);
     return data;
   },
 
   async getPodcastList() {
-    const { data } = await apiClient.get('/podcasts/');
+    const { data } = await apiClient.get('/api/v1/podcasts/');
     return data;
   },
 
@@ -448,19 +448,19 @@ export const contentService = {
       ...blogData,
       is_live: blogData.is_live ?? false
     };
-    const { data } = await apiClient.post('/content/blog/save/', dataToSave);
+    const { data } = await apiClient.post('/api/v1/content/blog/save/', dataToSave);
     return data;
   },
 
   // Get saved blog posts
   async getBlogList() {
-    const { data } = await apiClient.get('/content/blog/list/');
+    const { data } = await apiClient.get('/api/v1/content/blog/list/');
     return data;
   },
 
   // Get specific blog post
   async getBlogPost(id: number) {
-    const { data } = await apiClient.get(`/content/blog/${id}/`);
+    const { data } = await apiClient.get(`/api/v1/content/blog/${id}/`);
     return data;
   },
 
@@ -473,7 +473,7 @@ export const contentService = {
     is_live?: boolean;
     is_deleted?: boolean;
   }) {
-    const { data } = await apiClient.put(`/content/blog/${id}/`, blogData);
+    const { data } = await apiClient.put(`/api/v1/content/blog/${id}/`, blogData);
     return data;
   },
 
@@ -484,7 +484,7 @@ export const contentService = {
     helpful?: boolean;
     feedback_type?: string;
   }) {
-    const { data } = await apiClient.post(`/content/blog/${id}/feedback/`, feedbackData);
+    const { data } = await apiClient.post(`/api/v1/content/blog/${id}/feedback/`, feedbackData);
     return data;
   },
 
@@ -495,7 +495,7 @@ export const contentService = {
     const currentBlog = response.blog_post || response;
     
     // Mark as deleted and unpublished using PUT
-    const { data } = await apiClient.put(`/content/blog/${id}/`, {
+    const { data } = await apiClient.put(`/api/v1/content/blog/${id}/`, {
       title: currentBlog.title,
       content: currentBlog.content,
       meta_description: currentBlog.meta_description,
@@ -513,7 +513,7 @@ export const contentService = {
     const currentBlog = response.blog_post || response;
     
     // Update with the new is_live status using PUT with all required fields
-    const { data } = await apiClient.put(`/content/blog/${id}/`, {
+    const { data } = await apiClient.put(`/api/v1/content/blog/${id}/`, {
       title: currentBlog.title,
       content: currentBlog.content,
       meta_description: currentBlog.meta_description,
@@ -525,7 +525,7 @@ export const contentService = {
 
   // Export
   async exportContent(contentId: string, format: 'png' | 'jpg' | 'pdf' | 'docx') {
-    const { data } = await apiClient.post(`/export/${contentId}/`, {
+    const { data } = await apiClient.post(`/api/v1/export/${contentId}/`, {
       format,
     }, {
       responseType: 'blob',
@@ -540,7 +540,7 @@ export const contentService = {
     tone: string;
     platforms: string[];
   }) {
-    const { data } = await apiClient.post('/content/social/generate/', {
+    const { data } = await apiClient.post('/api/v1/content/social/generate/', {
       topic: request.topic,
       platforms: request.platforms,
       tone: request.tone,
@@ -560,7 +560,7 @@ export const contentService = {
     tone: string;
     duration: string;
   }) {
-    const { data } = await apiClient.post('/podcasts/generate/', {
+    const { data } = await apiClient.post('/api/v1/podcasts/generate/', {
       topic: request.title,
       title: `Podcast: ${request.title}`,
       format: 'interview',
@@ -580,7 +580,7 @@ export const contentService = {
     tone: string;
     targetWordCount: number;
   }) {
-    const { data } = await apiClient.post('/ebooks/', {
+    const { data } = await apiClient.post('/api/v1/ebooks/', {
       title: `${request.title} - eBook`,
       description: `Comprehensive eBook expanded from: ${request.title}`,
       genre: 'business',

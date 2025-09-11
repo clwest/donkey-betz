@@ -3,7 +3,7 @@ import { API_CONFIG } from '../../../config/api.config';
 
 // Get DBAO API URL from environment and strip trailing slash
 // Using AI Content Studio backend which has the sports endpoints  
-const BASE = (import.meta.env.VITE_DBAO_API_URL || API_CONFIG.BASE_URL + '/api/v1').replace(/\/$/, '');
+const BASE = (import.meta.env.VITE_DBAO_API_URL || API_CONFIG.BASE_URL).replace(/\/$/, '');
 const DBAO_API_URL = BASE;
 
 // Enhanced types for multi-sport support
@@ -43,6 +43,31 @@ export interface Team {
   division?: string;
   logo_url?: string;
   current_record?: Record<string, any>;
+}
+
+export interface BettingMarket {
+  id: string;
+  game_id: string;
+  market_type: string;
+  market_name: string;
+  status: string;
+  odds_lines?: OddsLine[];
+}
+
+export interface OddsLine {
+  id: string;
+  market_id: string;
+  sportsbook: string;
+  home_odds?: number;
+  away_odds?: number;
+  home_spread?: number;
+  away_spread?: number;
+  total_line?: number;
+  over_odds?: number;
+  under_odds?: number;
+  decimal_odds?: number;
+  is_current: boolean;
+  updated_at: string;
 }
 
 export interface Game {
@@ -119,8 +144,21 @@ export interface KellyResponse {
 async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${DBAO_API_URL}${path}`;
   
-  // Get auth token from localStorage - using AI Content Studio testuser token
-  const token = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+  console.log('🔍 [Sports API] Request:', {
+    method: options.method || 'GET',
+    path,
+    url,
+    body: options.body ? JSON.parse(options.body as string) : undefined
+  });
+  
+  // Get auth token from localStorage - no hardcoded fallback
+  const token = localStorage.getItem('authToken');
+  
+  if (!token) {
+    console.error('[Sports API] No auth token found - user must be logged in');
+    toast.error('Please log in to access sports data');
+    throw new Error('Authentication required');
+  }
   
   try {
     const response = await fetch(url, {
@@ -146,8 +184,16 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
     if (responseText.trim()) {
       const data = JSON.parse(responseText);
       
+      console.log('✅ [Sports API] Response:', {
+        path,
+        rawData: data,
+        isPaginated: data && typeof data === 'object' && 'results' in data,
+        dataLength: Array.isArray(data) ? data.length : (data?.results ? data.results.length : 'not array')
+      });
+      
       // Handle paginated responses from Django REST Framework
       if (data && typeof data === 'object' && 'results' in data && Array.isArray(data.results)) {
+        console.log('📄 [Sports API] Paginated response, returning results array');
         return data.results as T;
       }
       
@@ -178,29 +224,37 @@ export async function listLeagues(sportType?: SportType): Promise<League[]> {
     params.append('sport_type', sportType);
   }
   
-  const url = `${BASE}/sports/leagues/?${params.toString()}`;
-  return fetchApi<League[]>(`/sports/leagues/?${params.toString()}`);
+  console.log('🏆 [listLeagues] Fetching leagues:', { sportType, params: params.toString() });
+  const result = await fetchApi<League[]>(`/api/v1/sports/leagues/?${params.toString()}`);
+  console.log('🏆 [listLeagues] Got leagues:', result);
+  return result;
 }
 
 /**
  * Get sports types with active leagues
  */
 export async function getSportsTypes(): Promise<{ sport_type: SportType; name: string; count: number }[]> {
-  return fetchApi<{ sport_type: SportType; name: string; count: number }[]>('/sports/summary/');
+  console.log('📊 [getSportsTypes] Fetching sports summary');
+  const result = await fetchApi<{ sport_type: SportType; name: string; count: number }[]>('/api/v1/sports/summary/');
+  console.log('📊 [getSportsTypes] Got sports types:', result);
+  return result;
 }
 
 /**
  * Get teams for a specific league
  */
 export async function getTeams(leagueId: string): Promise<Team[]> {
-  return fetchApi<Team[]>(`/sports/teams/?league=${leagueId}`);
+  return fetchApi<Team[]>(`/api/v1/sports/teams/?league=${leagueId}`);
 }
 
 /**
  * Get live games across all sports
  */
 export async function getLiveGames(): Promise<Game[]> {
-  return fetchApi<Game[]>('/sports/games/?status=live');
+  console.log('🔴 [getLiveGames] Fetching live games');
+  const result = await fetchApi<Game[]>('/api/v1/sports/games/?status=live');
+  console.log('🔴 [getLiveGames] Got live games:', result);
+  return result;
 }
 
 /**
@@ -212,14 +266,45 @@ export async function getGamesBySport(sportType: SportType, date?: string): Prom
     params.append('date', date);
   }
   
-  return fetchApi<Game[]>(`/sports/games/?${params.toString()}`);
+  console.log('🎮 [getGamesBySport] Fetching games:', { sportType, date, params: params.toString() });
+  const result = await fetchApi<Game[]>(`/api/v1/sports/games/?${params.toString()}`);
+  console.log('🎮 [getGamesBySport] Got games:', result);
+  return result;
+}
+
+/**
+ * Get betting markets for a game or all markets
+ */
+export async function getMarkets(params?: { game_id?: string; market_type?: string }): Promise<BettingMarket[]> {
+  const queryParams = new URLSearchParams();
+  if (params?.game_id) queryParams.append('game', params.game_id);
+  if (params?.market_type) queryParams.append('market_type', params.market_type);
+  
+  const query = queryParams.toString();
+  console.log('📊 [getMarkets] Fetching markets:', { params, query });
+  const result = await fetchApi<BettingMarket[]>(`/api/v1/sports/markets/${query ? `?${query}` : ''}`);
+  console.log('📊 [getMarkets] Got markets:', result);
+  return result;
+}
+
+/**
+ * Get game odds with all betting lines
+ */
+export async function getGameOdds(gameId: string): Promise<any> {
+  console.log('💰 [getGameOdds] Fetching odds for game:', gameId);
+  const result = await fetchApi<any>(`/api/v1/sports/games/${gameId}/odds/`);
+  console.log('💰 [getGameOdds] Got odds:', result);
+  return result;
 }
 
 /**
  * Get trending games with high betting volume
  */
 export async function getTrendingGames(limit = 10): Promise<Game[]> {
-  return fetchApi<Game[]>(`/sports/games/trending/?limit=${limit}`);
+  console.log('🔥 [getTrendingGames] Fetching trending games:', { limit });
+  const result = await fetchApi<Game[]>(`/api/v1/sports/games/trending/?limit=${limit}`);
+  console.log('🔥 [getTrendingGames] Got trending games:', result);
+  return result;
 }
 
 /**
@@ -249,7 +334,7 @@ export async function games(params: {
   const url = `${BASE}/sports/games/?${searchParams.toString()}`;
   console.log('[WEB SPORTS] GET', url);
   
-  return fetchApi<Game[]>(`/sports/games/?${searchParams.toString()}`);
+  return fetchApi(`/api/v1/sports/games/?${searchParams.toString()}`);
 }
 
 /**
@@ -273,7 +358,7 @@ export async function markets(params: {
   const url = `${BASE}/sports/markets/?${searchParams.toString()}`;
   console.log('[WEB SPORTS] GET', url);
   
-  return fetchApi<Market[]>(`/sports/markets/?${searchParams.toString()}`);
+  return fetchApi<Market[]>(`/api/v1/sports/markets/?${searchParams.toString()}`);
 }
 
 /**
@@ -290,7 +375,7 @@ export async function kelly(payload: KellyPayload): Promise<KellyResponse> {
     kelly_multiplier: payload.fractional_kelly
   };
   
-  return fetchApi<KellyResponse>('/odds-calc/kelly-criterion/', {
+  return fetchApi<KellyResponse>('/api/v1/odds-calc/kelly-criterion/', {
     method: 'POST',
     body: JSON.stringify(backendPayload),
   });
@@ -493,8 +578,11 @@ export async function syncSportsData(options: {
   if (options.odds) params.append('odds', 'true');
   if (options.sport) params.append('sport', options.sport);
   
-  return fetchApi<{ success: boolean; message: string }>('/sports/sync/', {
+  console.log('🔄 [syncSportsData] Syncing sports data:', options);
+  const result = await fetchApi<{ success: boolean; message: string }>('/api/v1/sports/sync/', {
     method: 'POST',
     body: JSON.stringify(options),
   });
+  console.log('🔄 [syncSportsData] Sync result:', result);
+  return result;
 }

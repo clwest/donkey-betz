@@ -27,8 +27,8 @@ const LoginPage: React.FC = () => {
     try {
       // Use enhanced login endpoint for remember me support
       const endpoint = rememberMe ? 
-        'http://localhost:8000/api/auth/login-enhanced/' : 
-        'http://localhost:8000/api/auth/login/';
+        'http://localhost:8000/api/v1/auth/login-enhanced/' : 
+        'http://localhost:8000/api/v1/auth/login/';
         
       const response = await axios.post(endpoint, {
         username,
@@ -82,7 +82,7 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/auth/login/', {
+      const response = await axios.post('http://localhost:8000/api/v1/auth/login/', {
         username: quickUsername,
         password: quickPassword
       });

@@ -3,8 +3,8 @@ import { Logger } from '../utils/logger';
 import { toast } from 'sonner';
 
 // DBAO API Configuration - unified on port 8000
-const DBAO_BASE_URL = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000/api').replace(/\/$/,'');
-const AUTH_TOKEN = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+const DBAO_BASE_URL = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000').replace(/\/$/,'');
+const AUTH_TOKEN = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN;
 
 // Agent Orchestra Types
 export interface Agent {
@@ -109,15 +109,15 @@ export interface OddsCalculationResponse {
  */
 export class AgentOrchestraService {
   private static readonly BASE_ENDPOINTS = {
-    AGENTS: '/agents/templates/',  // Fixed to use correct endpoint
-    EXECUTE: '/agents/execute/',  // Fixed to use correct endpoint path
-    SUGGEST: '/agents/suggest/',  // Fixed to use correct endpoint path
-    ROUTE: '/agents/route/',  // Fixed to use correct endpoint path
-    INSTANCES: '/instances/',
-    STATUS: '/agents/status/',  // Fixed to use correct endpoint path
-    ORCHESTRATE: '/agents/orchestrate/',  // Fixed to use correct endpoint path
-    ORCHESTRATIONS: '/orchestrations/',
-    BETTING: '/betting/',
+    AGENTS: '/api/v1/agents/templates/',  // Fixed to use correct endpoint
+    EXECUTE: '/api/v1/agents/execute/',  // Fixed to use correct endpoint path
+    SUGGEST: '/api/v1/agents/suggest/',  // Fixed to use correct endpoint path
+    ROUTE: '/api/v1/agents/route/',  // Fixed to use correct endpoint path
+    INSTANCES: '/api/v1/instances/',
+    STATUS: '/api/v1/agents/status/',  // Fixed to use correct endpoint path
+    ORCHESTRATE: '/api/v1/agents/orchestrate/',  // Fixed to use correct endpoint path
+    ORCHESTRATIONS: '/api/v1/orchestrations/',
+    BETTING: '/api/v1/betting/',
     ODDS: '/v1/odds/',  // Sports odds uses v1
     HEALTH: '/agents/health/'  // Fixed to use correct endpoint path
   } as const;

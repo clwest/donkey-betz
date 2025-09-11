@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+        }
+        .endpoint {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1a1a1a;
+        }
+        .success { border-color: #10b981; }
+        .error { border-color: #ef4444; }
+        .info { color: #60a5fa; }
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Testing Fixed API Paths</h1>
+    <p class="info">Testing that frontend can now connect to backend sports API</p>
+    
+    <div>
+        <button onclick="testCorrectPath()">Test Correct Path (/api/sports/)</button>
+        <button onclick="testOldPath()">Test Old Path (/api/v1/sports/)</button>
+        <button onclick="testBothPaths()">Test Both Paths</button>
+        <button onclick="clearResults()">Clear</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        function addResult(title, content, status = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `endpoint ${status}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                ${content}
+            `;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testEndpoint(path, label) {
+            const url = `http://localhost:8000${path}`;
+            
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`,
+                        'Content-Type': 'application/json',
+                        'X-DBAO-Client': 'Test'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const summary = Array.isArray(data) 
+                        ? `${data.length} items returned`
+                        : `${Object.keys(data).length} fields returned`;
+                    
+                    addResult(
+                        `✅ ${label}`,
+                        `<p>Status: ${response.status} OK</p>
+                         <p>Summary: ${summary}</p>
+                         <pre>${JSON.stringify(data, null, 2).substring(0, 300)}...</pre>`,
+                        'success'
+                    );
+                    return true;
+                } else {
+                    addResult(
+                        `❌ ${label}`,
+                        `<p>Status: ${response.status}</p>
+                         <pre>${JSON.stringify(data, null, 2)}</pre>`,
+                        'error'
+                    );
+                    return false;
+                }
+            } catch (error) {
+                addResult(
+                    `❌ ${label}`,
+                    `<p>Network Error: ${error.message}</p>`,
+                    'error'
+                );
+                return false;
+            }
+        }
+        
+        async function testCorrectPath() {
+            clearResults();
+            addResult('Testing Correct Path', '<p>Using /api/sports/ endpoints (what frontend should use)</p>');
+            
+            await testEndpoint('/api/sports/summary/', 'Sports Summary');
+            await testEndpoint('/api/sports/leagues/', 'Sports Leagues');
+            await testEndpoint('/api/sports/games/', 'Sports Games');
+            await testEndpoint('/api/sports/games/trending/?limit=5', 'Trending Games');
+        }
+        
+        async function testOldPath() {
+            clearResults();
+            addResult('Testing Old Path', '<p>Using /api/v1/sports/ endpoints (what frontend was using)</p>');
+            
+            await testEndpoint('/api/v1/sports/summary/', 'Sports Summary (v1)');
+            await testEndpoint('/api/v1/sports/leagues/', 'Sports Leagues (v1)');
+            await testEndpoint('/api/v1/sports/games/', 'Sports Games (v1)');
+            await testEndpoint('/api/v1/sports/games/trending/?limit=5', 'Trending Games (v1)');
+        }
+        
+        async function testBothPaths() {
+            clearResults();
+            addResult('Testing Both Paths', '<p>Comparing /api/sports/ vs /api/v1/sports/</p>');
+            
+            const endpoints = [
+                '/summary/',
+                '/leagues/',
+                '/games/',
+                '/games/trending/?limit=5'
+            ];
+            
+            for (const endpoint of endpoints) {
+                const correctWorks = await testEndpoint(`/api/sports${endpoint}`, `[/api] ${endpoint}`);
+                const v1Works = await testEndpoint(`/api/v1/sports${endpoint}`, `[/api/v1] ${endpoint}`);
+                
+                if (correctWorks && v1Works) {
+                    console.log(`✅ Both paths work for ${endpoint}`);
+                } else if (correctWorks) {
+                    console.log(`⚠️ Only /api/sports${endpoint} works`);
+                } else if (v1Works) {
+                    console.log(`⚠️ Only /api/v1/sports${endpoint} works`);
+                } else {
+                    console.log(`❌ Neither path works for ${endpoint}`);
+                }
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = () => {
+            addResult('Ready', '<p>Click a button to test API endpoints</p>');
+        };
+    </script>
+</body>
+</html>

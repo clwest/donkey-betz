@@ -52,7 +52,7 @@ export interface FeedbackAnalytics {
 
 class FeedbackService {
   async submitFeedback(feedback: Feedback): Promise<any> {
-    const response = await apiClient.post('/feedback/submit/', feedback);
+    const response = await apiClient.post('/api/v1/feedback/submit/', feedback);
     return response.data;
   }
 
@@ -61,7 +61,7 @@ class FeedbackService {
     content_id: number,
     is_positive: boolean
   ): Promise<any> {
-    const response = await apiClient.post('/feedback/quick/', {
+    const response = await apiClient.post('/api/v1/feedback/quick/', {
       content_type,
       content_id,
       is_positive,
@@ -77,7 +77,7 @@ class FeedbackService {
     stats: FeedbackStats | null;
     recent_feedback: any[];
   }> {
-    const response = await apiClient.get(`/feedback/${content_type}/${content_id}/`);
+    const response = await apiClient.get(`/api/v1/feedback/${content_type}/${content_id}/`);
     return response.data;
   }
 
@@ -87,24 +87,24 @@ class FeedbackService {
     page?: number;
     per_page?: number;
   }): Promise<any> {
-    const response = await apiClient.get('/feedback/history/', { params });
+    const response = await apiClient.get('/api/v1/feedback/history/', { params });
     return response.data;
   }
 
   async updateFeedback(feedbackId: number, data: Partial<Feedback>): Promise<any> {
-    const response = await apiClient.put(`/feedback/${feedbackId}/`, data);
+    const response = await apiClient.put(`/api/v1/feedback/${feedbackId}/`, data);
     return response.data;
   }
 
   async deleteFeedback(feedbackId: number): Promise<any> {
-    const response = await apiClient.delete(`/feedback/${feedbackId}/`);
+    const response = await apiClient.delete(`/api/v1/feedback/${feedbackId}/`);
     return response.data;
   }
 
   async getAnalytics(days: number = 30, content_type?: string): Promise<FeedbackAnalytics> {
     const params: any = { days };
     if (content_type) params.content_type = content_type;
-    const response = await apiClient.get('/feedback/analytics/', { params });
+    const response = await apiClient.get('/api/v1/feedback/analytics/', { params });
     return response.data;
   }
 }

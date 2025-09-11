@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard API Fix Test</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #00ff00; }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #0a0a0a;
+        }
+        .success { border-color: #00ff00; }
+        .error { border-color: #ff0000; }
+        .info { color: #00ffff; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        button:hover { background: #00cc00; }
+        .important {
+            background: #333300;
+            padding: 15px;
+            border: 2px solid #ffff00;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Dashboard API Fix Verification</h1>
+    
+    <div class="important">
+        <h3>⚠️ IMPORTANT: Clear Browser Cache First!</h3>
+        <p>1. Open Chrome DevTools (F12)</p>
+        <p>2. Right-click the Refresh button</p>
+        <p>3. Select "Empty Cache and Hard Reload"</p>
+        <p>4. Or use Cmd+Shift+R (Mac) / Ctrl+Shift+R (Windows)</p>
+    </div>
+
+    <button onclick="testDirectAPI()">Test Direct API Calls</button>
+    <button onclick="testDashboardPage()">Open Dashboard Page</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const TOKEN = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            div.innerHTML = `<span class="info">[${timestamp}]</span> ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            log('Results cleared', 'info');
+        }
+
+        async function testDirectAPI() {
+            log('Testing Direct API Endpoints...', 'info');
+            log('Expected format: /api/v1/dashboard/...', 'info');
+            
+            const endpoints = [
+                '/api/v1/dashboard/stats/',
+                '/api/v1/dashboard/activity/',
+                '/api/v1/dashboard/embeddings-stats/',
+                '/api/v1/sports/leagues/',
+                '/api/v1/agents/',
+                '/api/v1/content/blog/list/'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const url = `${API_BASE}${endpoint}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `Token ${TOKEN}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        log(`✅ SUCCESS: ${endpoint} (Status: ${response.status})`, 'success');
+                    } else {
+                        log(`❌ FAILED: ${endpoint} (Status: ${response.status})`, 'error');
+                    }
+                } catch (error) {
+                    log(`❌ ERROR: ${endpoint} - ${error.message}`, 'error');
+                }
+            }
+            
+            log('Test complete!', 'info');
+        }
+        
+        function testDashboardPage() {
+            log('Opening Dashboard at http://localhost:3000/dashboard', 'info');
+            log('Check the browser console for any /api/api/ double prefix errors', 'info');
+            window.open('http://localhost:3000/dashboard', '_blank');
+        }
+        
+        // Initial message
+        log('Dashboard API Fix Test Ready', 'info');
+        log('The React dev server has been restarted with the fix applied', 'success');
+        log('API_BASE_URL is now configured without the /api suffix', 'success');
+    </script>
+</body>
+</html>

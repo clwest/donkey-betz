@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Helper - Development</title>
+    <style>
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 40px;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            margin: 0 0 30px 0;
+            text-align: center;
+            font-size: 2em;
+        }
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .credential {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+        .credential strong {
+            color: #ffd700;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .success {
+            background: #4CAF50;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+        .error {
+            background: #f44336;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+        .token-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Development Login Helper</h1>
+        
+        <div class="info-box">
+            <h3>Available Test Accounts:</h3>
+            <div class="credential">
+                <strong>Username:</strong> <span>testuser</span>
+            </div>
+            <div class="credential">
+                <strong>Password:</strong> <span>testpass123</span>
+            </div>
+        </div>
+
+        <button onclick="loginTestUser()">Login as Test User</button>
+        <button onclick="checkCurrentAuth()">Check Current Auth Status</button>
+        <button onclick="clearAuth()">Clear Authentication</button>
+        <button onclick="goToApp()">Go to Application</button>
+
+        <div id="success" class="success"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        async function loginTestUser() {
+            const successDiv = document.getElementById('success');
+            const errorDiv = document.getElementById('error');
+            
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'testuser',
+                        password: 'testpass123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    // Store the token
+                    localStorage.setItem('authToken', data.token);
+                    
+                    // Store user data
+                    const authStorage = {
+                        state: {
+                            user: data.user,
+                            token: data.token,
+                            isAuthenticated: true,
+                            isLoading: false
+                        },
+                        version: 0
+                    };
+                    localStorage.setItem('auth-storage', JSON.stringify(authStorage));
+                    
+                    successDiv.innerHTML = `
+                        ✅ Login Successful!<br>
+                        User: ${data.user.username}<br>
+                        <div class="token-display">Token: ${data.token}</div>
+                        <br>You can now access the Sports Betting Hub!
+                    `;
+                    successDiv.style.display = 'block';
+                } else {
+                    throw new Error(data.detail || 'Login failed');
+                }
+            } catch (error) {
+                errorDiv.innerHTML = `❌ Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function checkCurrentAuth() {
+            const token = localStorage.getItem('authToken');
+            const authStorage = localStorage.getItem('auth-storage');
+            
+            const successDiv = document.getElementById('success');
+            const errorDiv = document.getElementById('error');
+            
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            
+            if (token) {
+                let userInfo = '';
+                try {
+                    const auth = JSON.parse(authStorage);
+                    userInfo = `<br>User: ${auth.state.user?.username || 'Unknown'}`;
+                } catch (e) {
+                    userInfo = '<br>User data corrupted';
+                }
+                
+                successDiv.innerHTML = `
+                    ✅ Authenticated!
+                    ${userInfo}
+                    <div class="token-display">Token: ${token}</div>
+                `;
+                successDiv.style.display = 'block';
+            } else {
+                errorDiv.innerHTML = '❌ Not authenticated - please login';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('auth-storage');
+            
+            const successDiv = document.getElementById('success');
+            successDiv.innerHTML = '✅ Authentication cleared!';
+            successDiv.style.display = 'block';
+            
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function goToApp() {
+            window.location.href = 'http://localhost:3000';
+        }
+
+        // Check auth status on load
+        window.addEventListener('load', checkCurrentAuth);
+    </script>
+</body>
+</html>

@@ -118,17 +118,8 @@ urlpatterns = [
     # Core endpoints (auth, profile, assistant, etc.)
     path('', include('core.urls')),
     
-    # Dashboard endpoints (for compatibility with frontend)
-    path('api/dashboard/', include('dashboard.urls')),
-    
-    # Style Memory endpoints (for frontend compatibility)
-    path('api/style-memory/', include('style_memory.urls')),
-    
-    # Unified API v1 endpoints
-    path('api/v1/agents/', include('agents.urls')),
-    path('api/v1/sports/', include('sports.urls')),
-    path('api/v1/content/', include('content.urls')),
-    path('api/v1/self-awareness/', include('self_awareness.urls')),
+    # All API v1 endpoints are handled by core.urls
+    # This file just provides the root platform info and delegates to core
     
     # API Documentation (OpenAPI/Swagger)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

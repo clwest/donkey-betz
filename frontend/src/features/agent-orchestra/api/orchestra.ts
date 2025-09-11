@@ -13,7 +13,7 @@ import { API_CONFIG, buildApiUrl, buildWsUrl } from '../../../config/api.config'
 // Environment configuration
 // Use AI Content Studio API for Orchestra endpoints (agents, instances, etc.)
 // Agent/orchestra endpoints are under /api/v1/
-const ORCH_REST = import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL + '/api/v1';
+const ORCH_REST = import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL;
 // Use AI Content Studio WebSocket URL for Agent Orchestra communication
 const ORCH_WS_BASE = import.meta.env.VITE_WS_URL || API_CONFIG.WS_URL;
 console.log('[Orchestra API] WebSocket base URL:', ORCH_WS_BASE);
@@ -113,9 +113,8 @@ async function apiRequest<T>(
  */
 export async function orchHealth(): Promise<OrchestraHealth | null> {
   try {
-    // Use the main health endpoint at root API level
-    const rootUrl = ORCH_REST.replace('/v1', '');
-    const response = await fetch(`${rootUrl}/health/`);
+    // Use the main health endpoint at /api/v1/health/
+    const response = await fetch(`${ORCH_REST}/api/v1/health/`);
     const health = await response.json();
     return {
       status: health?.status === 'healthy' ? 'healthy' : 'unhealthy',
@@ -138,8 +137,8 @@ export async function orchHealth(): Promise<OrchestraHealth | null> {
 export async function getAgents(): Promise<Agent[]> {
   try {
     // Fetch all agents with a large page size to avoid pagination
-    // Note: Backend expects /agents/templates/ with trailing slash, query params go after
-    const response = await apiRequest<{ results?: Agent[]; data?: Agent[]; count?: number } | Agent[]>('GET', '/agents/templates/?page_size=200');
+    // Note: Backend expects /api/v1/agents/templates/ with trailing slash, query params go after
+    const response = await apiRequest<{ results?: Agent[]; data?: Agent[]; count?: number } | Agent[]>('GET', '/api/v1/agents/templates/?page_size=200');
     
     if (Array.isArray(response)) {
       return response;
@@ -157,7 +156,7 @@ export async function getAgents(): Promise<Agent[]> {
  */
 export async function getInstances(): Promise<AgentInstance[]> {
   try {
-    const response = await apiRequest<any>('GET', '/orchestrations/');
+    const response = await apiRequest<any>('GET', '/api/v1/orchestrations/');
     
     // Handle nested data structure from API
     if (response?.data?.instances) {
@@ -184,7 +183,7 @@ export async function executeAgent(
   taskDescription: string, 
   parameters?: Record<string, any>
 ): Promise<AgentInstance> {
-  return apiRequest<AgentInstance>('POST', '/execute/', {
+  return apiRequest<AgentInstance>('POST', '/api/v1/execute/', {
     agent_type: agentType,
     task_description: taskDescription,
     parameters

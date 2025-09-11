@@ -30,12 +30,32 @@ def convert_odds(request):
     """
     Convert betting odds between formats - migrated from DBAO
     """
-    data = json.loads(request.body)
+    data = request.data
     
-    odds_value = data.get('odds', 0)
+    # Handle string odds input (e.g., "+150", "-110", "3/2")
+    odds_input = data.get('odds', 0)
     from_format = data.get('from_format', 'decimal')
     
-    if odds_value <= 0:
+    # Convert string odds to numeric value
+    if isinstance(odds_input, str):
+        # Remove + prefix if present
+        odds_input = odds_input.lstrip('+')
+        # For fractional odds, keep as string for now
+        if '/' not in odds_input:
+            try:
+                odds_value = float(odds_input)
+            except (ValueError, TypeError):
+                return Response({
+                    'success': False,
+                    'error': f'Invalid odds value: {odds_input}'
+                }, status=400)
+        else:
+            odds_value = odds_input  # Keep fractional as string
+    else:
+        odds_value = float(odds_input) if odds_input else 0
+    
+    # For non-fractional formats, check if positive
+    if from_format != 'fractional' and (not odds_value or odds_value == 0):
         return Response({
             'success': False,
             'error': 'Invalid odds value'
@@ -85,7 +105,7 @@ def calculate_expected_value(request):
     """
     Calculate expected value for betting opportunities - migrated from DBAO
     """
-    data = json.loads(request.body)
+    data = request.data
     
     odds = data.get('odds', 0)
     odds_format = data.get('odds_format', 'decimal')
@@ -134,7 +154,7 @@ def calculate_kelly_criterion(request):
     """
     Calculate optimal bet sizing using Kelly Criterion - migrated from DBAO
     """
-    data = json.loads(request.body)
+    data = request.data
     
     odds = data.get('odds', 0)
     odds_format = data.get('odds_format', 'decimal')
@@ -195,7 +215,7 @@ def detect_arbitrage(request):
     """
     Detect arbitrage opportunities across bookmakers - migrated from DBAO
     """
-    data = json.loads(request.body)
+    data = request.data
     
     odds_list = data.get('odds_list', [])
     
@@ -261,7 +281,7 @@ def sports_game_analysis(request):
     """
     Comprehensive game analysis with betting insights - migrated from DBAO
     """
-    data = json.loads(request.body)
+    data = request.data
     
     game_id = data.get('game_id', '')
     sport = data.get('sport', 'football')
@@ -586,10 +606,12 @@ def sports_teams(request):
     
     try:
         league_id = request.GET.get('league')
-        if not league_id:
-            return Response({'error': 'league parameter required'}, status=400)
         
-        teams = Team.objects.filter(league__abbreviation=league_id)
+        # If league_id is provided, filter by it; otherwise return all teams
+        if league_id:
+            teams = Team.objects.filter(league__abbreviation=league_id)
+        else:
+            teams = Team.objects.all()[:100]  # Limit to 100 teams if no filter
         
         result = []
         for team in teams:
@@ -789,7 +811,7 @@ def sports_sync(request):
         })
     
     try:
-        data = json.loads(request.body)
+        data = request.data
         
         if data.get('leagues'):
             results = sports_data_manager.sync_leagues()

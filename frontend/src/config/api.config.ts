@@ -46,18 +46,18 @@ export const API_CONFIG = {
   endpoints: {
     // Authentication
     auth: {
-      login: '/api/auth/login/',
-      logout: '/api/auth/logout/',
-      register: '/api/auth/register/',
-      refresh: '/api/auth/refresh/',
-      profile: '/api/auth/profile/',
-      forgotPassword: '/api/auth/forgot-password/',
-      resetPassword: '/api/auth/reset-password/',
+      login: '/api/v1/auth/login/',
+      logout: '/api/v1/auth/logout/',
+      register: '/api/v1/auth/register/',
+      refresh: '/api/v1/auth/refresh/',
+      profile: '/api/v1/auth/profile/',
+      forgotPassword: '/api/v1/auth/forgot-password/',
+      resetPassword: '/api/v1/auth/reset-password/',
     },
     
     // Assistant
     assistant: {
-      chat: '/api/assistant/chat/',
+      chat: '/api/v1/assistant/chat/',
       ws: '/ws/assistant/',
     },
     
@@ -80,23 +80,23 @@ export const API_CONFIG = {
     
     // Content
     content: {
-      generate: '/api/content/generate/',
-      images: '/api/content/images/',
-      videos: '/api/content/videos/',
-      upload: '/api/content/upload/',
+      generate: '/api/v1/content/generate/',
+      images: '/api/v1/content/images/',
+      videos: '/api/v1/content/videos/',
+      upload: '/api/v1/content/upload/',
     },
     
     // Knowledge/RAG
     knowledge: {
-      embeddings: '/api/knowledge/embeddings/',
-      search: '/api/knowledge/search/',
-      documents: '/api/knowledge/documents/',
+      embeddings: '/api/v1/knowledge/embeddings/',
+      search: '/api/v1/knowledge/search/',
+      documents: '/api/v1/knowledge/documents/',
     },
     
     // Health
     health: {
-      check: '/api/health/',
-      status: '/api/status/',
+      check: '/api/v1/health/',
+      status: '/api/v1/status/',
     },
   },
 };

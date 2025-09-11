@@ -37,7 +37,7 @@ class StylesService {
 
     try {
       Logger.api('GET', '/api/styles/');
-      const response = await apiClient.get('/styles/');
+      const response = await apiClient.get('/api/v1/styles/');
       
       // The backend returns an object with categories
       const data = response.data;

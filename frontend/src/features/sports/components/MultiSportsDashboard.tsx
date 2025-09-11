@@ -18,6 +18,7 @@ import { Badge } from '../../../components/common/Badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/common/Tabs';
 import { Select, SelectItem } from '../../../components/common/Select';
 import { toast } from 'sonner';
+// import { GameOddsCard } from './GameOddsCard';
 import { 
   RefreshCw, 
   Calendar, 
@@ -63,7 +64,7 @@ interface SportsType {
 }
 
 export default function MultiSportsDashboard() {
-  const [selectedSport, setSelectedSport] = useState<SportType>(SportType.NFL);
+  const [selectedSport, setSelectedSport] = useState<SportType>(SportType.NCAAF);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -94,84 +95,120 @@ export default function MultiSportsDashboard() {
   };
 
   useEffect(() => {
+    console.log('🚀 [Dashboard] Component mounted, loading initial data...');
     loadDashboardData();
   }, []);
 
   useEffect(() => {
+    console.log('🔄 [Dashboard] Sport or date changed:', { selectedSport, selectedDate });
     if (selectedSport) {
       loadGamesForSport();
     }
   }, [selectedSport, selectedDate]);
 
   const loadDashboardData = async () => {
+    console.log('🏁 [Dashboard] Starting to load dashboard data...');
     setLoading(true);
     try {
       // Load all data in parallel
+      console.log('📊 [Dashboard] Fetching sports types, live games, and trending games...');
       const [sportsTypesData, liveGamesData, trendingGamesData] = await Promise.all([
         getSportsTypes(),
         getLiveGames(),
         getTrendingGames(20)
       ]);
 
-      setSportsTypes(sportsTypesData);
-      setLiveGames(liveGamesData);
-      setTrendingGames(trendingGamesData);
+      console.log('✅ [Dashboard] Data loaded:', {
+        sportsTypes: sportsTypesData,
+        sportsTypesCount: sportsTypesData?.length || 0,
+        liveGames: liveGamesData,
+        liveGamesCount: liveGamesData?.length || 0,
+        trendingGames: trendingGamesData,
+        trendingGamesCount: trendingGamesData?.length || 0
+      });
 
-      // Set default sport to the one with the most leagues
-      if (sportsTypesData.length > 0) {
-        const defaultSport = sportsTypesData.reduce((prev, current) => 
-          prev.count > current.count ? prev : current
-        );
-        setSelectedSport(defaultSport.sport_type);
-      }
+      setSportsTypes(sportsTypesData || []);
+      setLiveGames(liveGamesData || []);
+      setTrendingGames(trendingGamesData || []);
+
+      // Keep NCAAF as default sport - don't override
+      console.log('🎯 [Dashboard] Keeping NCAAF as default sport');
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ [Dashboard] Error loading dashboard data:', error);
       toast.error('Failed to load sports data');
     } finally {
       setLoading(false);
+      console.log('🏁 [Dashboard] Dashboard data loading complete');
     }
   };
 
   const loadGamesForSport = async () => {
-    if (!selectedSport) return;
+    if (!selectedSport) {
+      console.log('⏸️ [Dashboard] No sport selected, skipping games load');
+      return;
+    }
 
+    console.log(`🎮 [Dashboard] Loading games for sport: ${selectedSport} on date: ${selectedDate}`);
     try {
       const [leaguesData, gamesData] = await Promise.all([
         listLeagues(selectedSport),
         getGamesBySport(selectedSport, selectedDate)
       ]);
 
-      setLeagues(leaguesData);
-      setGames(gamesData);
+      // If no games found for today, fetch upcoming games without date filter
+      let finalGamesData = gamesData;
+      if ((!gamesData || gamesData.length === 0) && selectedDate === getTodayDateString()) {
+        console.log(`📅 [Dashboard] No games today, fetching upcoming games for ${selectedSport}`);
+        finalGamesData = await getGamesBySport(selectedSport, ''); // Empty string for no date filter
+      }
+
+      console.log(`✅ [Dashboard] Games loaded for ${selectedSport}:`, {
+        leagues: leaguesData,
+        leaguesCount: leaguesData?.length || 0,
+        games: finalGamesData,
+        gamesCount: finalGamesData?.length || 0,
+        selectedDate
+      });
+
+      setLeagues(leaguesData || []);
+      setGames(finalGamesData || []);
     } catch (error) {
-      console.error('Error loading games for sport:', error);
+      console.error(`❌ [Dashboard] Error loading games for ${selectedSport}:`, error);
       toast.error(`Failed to load ${getSportDisplayName(selectedSport)} games`);
     }
   };
 
   const handleSyncData = async () => {
+    console.log('🔄 [Dashboard] Starting sync for sport:', selectedSport);
     setSyncing(true);
     try {
-      const result = await syncSportsData({
+      const syncOptions = {
         leagues: true,
         teams: true,
         games: true,
         odds: true,
         sport: selectedSport
-      });
+      };
+      console.log('📡 [Dashboard] Sync options:', syncOptions);
+      
+      const result = await syncSportsData(syncOptions);
+      console.log('📥 [Dashboard] Sync result:', result);
 
-      if (result.success) {
-        toast.success(result.message);
+      if (result?.success) {
+        toast.success(result.message || 'Data synced successfully');
+        console.log('♻️ [Dashboard] Reloading data after sync...');
         await loadDashboardData();
         await loadGamesForSport();
       } else {
-        toast.error(result.message);
+        console.error('❌ [Dashboard] Sync failed:', result);
+        toast.error(result?.message || 'Sync failed');
       }
     } catch (error) {
-      console.error('Error syncing data:', error);
+      console.error('❌ [Dashboard] Error syncing data:', error);
       toast.error('Failed to sync sports data');
     } finally {
       setSyncing(false);
+      console.log('✅ [Dashboard] Sync complete');
     }
   };
 
@@ -306,7 +343,9 @@ export default function MultiSportsDashboard() {
     );
   };
 
-  const renderSportsOverview = () => (
+  const renderSportsOverview = () => {
+    console.log('🎨 [Dashboard] Rendering sports overview with:', sportsTypes);
+    return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
       {sportsTypes.map((sport) => (
         <Card 
@@ -343,9 +382,12 @@ export default function MultiSportsDashboard() {
         </Card>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderLiveGames = () => (
+  const renderLiveGames = () => {
+    console.log('🔴 [Dashboard] Rendering live games:', { count: liveGames.length, games: liveGames });
+    return (
     <div className="space-y-6">
       {/* Live Games Header */}
       <div className="flex items-center justify-between">
@@ -381,9 +423,12 @@ export default function MultiSportsDashboard() {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
-  const renderTrendingGames = () => (
+  const renderTrendingGames = () => {
+    console.log('📈 [Dashboard] Rendering trending games:', { count: trendingGames.length, games: trendingGames.slice(0, 3) });
+    return (
     <div className="space-y-6">
       {/* Trending Games Header */}
       <div className="flex items-center justify-between">
@@ -408,7 +453,8 @@ export default function MultiSportsDashboard() {
         {trendingGames.slice(0, 12).map(renderGameCard)}
       </div>
     </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -615,6 +661,7 @@ export default function MultiSportsDashboard() {
                       </div>
                     </div>
 
+                    {console.log(`🎯 [Dashboard] Rendering ${games.length} games for ${selectedSport}`)}
                     {games.length === 0 ? (
                       <Card className="border-2 border-dashed border-dark-700">
                         <div className="p-12 text-center space-y-4">
@@ -643,8 +690,14 @@ export default function MultiSportsDashboard() {
                         </div>
                       </Card>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {games.map(game => renderGameCard(game, selectedSport))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {games.map(game => 
+                          <div key={game.id} className="p-4 border rounded-lg">
+                            <div className="font-bold">{game.away_team_name} @ {game.home_team_name}</div>
+                            <div className="text-sm text-gray-500">{new Date(game.scheduled_start).toLocaleString()}</div>
+                            {game.venue_name && <div className="text-sm">{game.venue_name}</div>}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

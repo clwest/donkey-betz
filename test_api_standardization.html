@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Standardization Test</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ff00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            border-radius: 5px;
+        }
+        .endpoint {
+            background: #222;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .success { background: #00ff00; color: #000; }
+        .error { background: #ff0000; color: #fff; }
+        .pending { background: #ffff00; color: #000; }
+        .method {
+            background: #444;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 10px;
+            font-size: 11px;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #00cc00;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: #111;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+        }
+        .log {
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px;
+        }
+        .log-success { color: #00ff00; }
+        .log-error { color: #ff0000; }
+        .log-info { color: #00ffff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 API v1 Standardization Test Suite</h1>
+        
+        <div class="summary" id="summary">
+            <h3>Test Summary</h3>
+            <p>Total Endpoints: <span id="total">0</span></p>
+            <p>Successful: <span id="successful">0</span></p>
+            <p>Failed: <span id="failed">0</span></p>
+            <p>Progress: <span id="progress">0%</span></p>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>Authentication & Core APIs</h3>
+            <div id="auth-tests"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Content & Gallery APIs</h3>
+            <div id="content-tests"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Sports & Betting APIs</h3>
+            <div id="sports-tests"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Agent Orchestra APIs</h3>
+            <div id="agent-tests"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Other Module APIs</h3>
+            <div id="other-tests"></div>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-entry log-info">Test console initialized...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const AUTH_TOKEN = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        // Define all endpoints to test
+        const endpoints = {
+            auth: [
+                { method: 'GET', path: '/api/v1/auth/user/', name: 'Current User' },
+                { method: 'GET', path: '/api/v1/profile/', name: 'User Profile' },
+                { method: 'GET', path: '/api/v1/health/', name: 'Health Check' },
+                { method: 'GET', path: '/api/v1/status/', name: 'Platform Status' }
+            ],
+            content: [
+                { method: 'GET', path: '/api/v1/content/blog/list/', name: 'Blog List' },
+                { method: 'GET', path: '/api/v1/gallery/', name: 'Gallery Items' },
+                { method: 'GET', path: '/api/v1/styles/', name: 'Styles' },
+                { method: 'GET', path: '/api/v1/podcasts/', name: 'Podcasts' }
+            ],
+            sports: [
+                { method: 'GET', path: '/api/v1/sports/leagues/', name: 'Sports Leagues' },
+                { method: 'GET', path: '/api/v1/sports/games/', name: 'Sports Games' },
+                { method: 'GET', path: '/api/v1/sports/summary/', name: 'Sports Summary' },
+                { method: 'GET', path: '/api/v1/odds/markets/', name: 'Betting Markets' }
+            ],
+            agent: [
+                { method: 'GET', path: '/api/v1/agents/', name: 'Agent List' },
+                { method: 'GET', path: '/api/v1/agents/discovery/stats/', name: 'Agent Discovery Stats' },
+                { method: 'GET', path: '/api/v1/agents/health/', name: 'Agent Health' }
+            ],
+            other: [
+                { method: 'GET', path: '/api/v1/campaigns/', name: 'Campaigns' },
+                { method: 'GET', path: '/api/v1/dashboard/stats/', name: 'Dashboard Stats' },
+                { method: 'GET', path: '/api/v1/mythology/stats/', name: 'Mythology Stats' },
+                { method: 'GET', path: '/api/v1/workflows/', name: 'Workflows' },
+                { method: 'GET', path: '/api/v1/style-memory/', name: 'Style Memory' }
+            ]
+        };
+
+        let testResults = {
+            total: 0,
+            successful: 0,
+            failed: 0
+        };
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div class="log-entry log-info">Test console cleared...</div>';
+        }
+
+        function updateSummary() {
+            document.getElementById('total').textContent = testResults.total;
+            document.getElementById('successful').textContent = testResults.successful;
+            document.getElementById('failed').textContent = testResults.failed;
+            const progress = testResults.total > 0 
+                ? Math.round((testResults.successful / testResults.total) * 100) 
+                : 0;
+            document.getElementById('progress').textContent = `${progress}%`;
+        }
+
+        function createEndpointElement(endpoint, containerId) {
+            const container = document.getElementById(containerId);
+            const el = document.createElement('div');
+            el.className = 'endpoint';
+            el.id = `test-${endpoint.path.replace(/\//g, '-')}`;
+            el.innerHTML = `
+                <div>
+                    <span class="method">${endpoint.method}</span>
+                    <span>${endpoint.name}: ${endpoint.path}</span>
+                </div>
+                <span class="status pending" id="status-${endpoint.path.replace(/\//g, '-')}">PENDING</span>
+            `;
+            container.appendChild(el);
+        }
+
+        async function testEndpoint(endpoint) {
+            const statusId = `status-${endpoint.path.replace(/\//g, '-')}`;
+            const statusEl = document.getElementById(statusId);
+            
+            try {
+                log(`Testing ${endpoint.method} ${endpoint.path}...`, 'info');
+                
+                const response = await fetch(`${API_BASE}${endpoint.path}`, {
+                    method: endpoint.method,
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok || response.status === 404) {
+                    // 404 might be expected for some endpoints without data
+                    const isSuccess = response.ok;
+                    statusEl.className = `status ${isSuccess ? 'success' : 'error'}`;
+                    statusEl.textContent = response.status;
+                    
+                    if (isSuccess) {
+                        testResults.successful++;
+                        log(`✓ ${endpoint.name} returned ${response.status}`, 'success');
+                    } else {
+                        testResults.failed++;
+                        log(`✗ ${endpoint.name} returned ${response.status}`, 'error');
+                    }
+                } else {
+                    statusEl.className = 'status error';
+                    statusEl.textContent = `ERROR ${response.status}`;
+                    testResults.failed++;
+                    log(`✗ ${endpoint.name} failed with status ${response.status}`, 'error');
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'NETWORK ERROR';
+                testResults.failed++;
+                log(`✗ ${endpoint.name} failed: ${error.message}`, 'error');
+            }
+            
+            updateSummary();
+        }
+
+        async function runAllTests() {
+            log('Starting comprehensive API v1 standardization test...', 'info');
+            testResults = { total: 0, successful: 0, failed: 0 };
+            
+            // Reset all status indicators
+            document.querySelectorAll('.status').forEach(el => {
+                el.className = 'status pending';
+                el.textContent = 'TESTING...';
+            });
+
+            for (const [category, endpointList] of Object.entries(endpoints)) {
+                log(`\nTesting ${category.toUpperCase()} endpoints...`, 'info');
+                for (const endpoint of endpointList) {
+                    await testEndpoint(endpoint);
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between tests
+                }
+            }
+
+            log('\n=== Test Complete ===', 'info');
+            log(`Total: ${testResults.total}, Success: ${testResults.successful}, Failed: ${testResults.failed}`, 
+                testResults.failed === 0 ? 'success' : 'error');
+        }
+
+        // Initialize UI
+        function initializeUI() {
+            // Create endpoint elements
+            for (const endpoint of endpoints.auth) {
+                createEndpointElement(endpoint, 'auth-tests');
+                testResults.total++;
+            }
+            for (const endpoint of endpoints.content) {
+                createEndpointElement(endpoint, 'content-tests');
+                testResults.total++;
+            }
+            for (const endpoint of endpoints.sports) {
+                createEndpointElement(endpoint, 'sports-tests');
+                testResults.total++;
+            }
+            for (const endpoint of endpoints.agent) {
+                createEndpointElement(endpoint, 'agent-tests');
+                testResults.total++;
+            }
+            for (const endpoint of endpoints.other) {
+                createEndpointElement(endpoint, 'other-tests');
+                testResults.total++;
+            }
+            
+            updateSummary();
+            log(`Initialized ${testResults.total} API endpoint tests`, 'info');
+        }
+
+        // Initialize on load
+        initializeUI();
+    </script>
+</body>
+</html>

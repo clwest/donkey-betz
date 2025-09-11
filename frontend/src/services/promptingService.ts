@@ -43,17 +43,17 @@ export interface EnhancementSuggestions {
 
 class PromptingService {
   async getSettings(): Promise<PromptingSettings> {
-    const response = await apiClient.get('/prompting/settings/');
+    const response = await apiClient.get('/api/v1/prompting/settings/');
     return response.data;
   }
 
   async updateSettings(settings: Partial<PromptingSettings>): Promise<any> {
-    const response = await apiClient.put('/prompting/settings/', settings);
+    const response = await apiClient.put('/api/v1/prompting/settings/', settings);
     return response.data;
   }
 
   async getStats(days: number = 30): Promise<PromptingStats> {
-    const response = await apiClient.get(`/prompting/stats/?days=${days}`);
+    const response = await apiClient.get(`/api/v1/prompting/stats/?days=${days}`);
     return response.data;
   }
 
@@ -64,12 +64,12 @@ class PromptingService {
     use_memory?: boolean;
     context?: any;
   }): Promise<EnhancementTest> {
-    const response = await apiClient.post('/prompting/test/', params);
+    const response = await apiClient.post('/api/v1/prompting/test/', params);
     return response.data;
   }
 
   async getSuggestions(contentType: string = 'default'): Promise<EnhancementSuggestions> {
-    const response = await apiClient.get(`/prompting/suggestions/?content_type=${contentType}`);
+    const response = await apiClient.get(`/api/v1/prompting/suggestions/?content_type=${contentType}`);
     return response.data;
   }
 }

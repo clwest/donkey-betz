@@ -268,13 +268,14 @@ class TheSportsDBProvider(SportsDataProvider):
         """Get leagues from TheSportsDB"""
         # TheSportsDB has specific league lookups
         known_leagues = [
-            {'id': '4391', 'name': 'NFL', 'sport': 'American Football'},
-            {'id': '4387', 'name': 'NBA', 'sport': 'Basketball'},
-            {'id': '4424', 'name': 'MLB', 'sport': 'Baseball'},
-            {'id': '4380', 'name': 'NHL', 'sport': 'Ice Hockey'},
-            {'id': '4346', 'name': 'English Premier League', 'sport': 'Soccer'},
-            {'id': '4344', 'name': 'MLS', 'sport': 'Soccer'},
-            {'id': '4370', 'name': 'UFC', 'sport': 'Fighting'},
+            {'id': '4391', 'name': 'NFL', 'abbrev': 'NFL', 'sport': 'American Football'},
+            {'id': '4387', 'name': 'NBA', 'abbrev': 'NBA', 'sport': 'Basketball'},
+            {'id': '4424', 'name': 'MLB', 'abbrev': 'MLB', 'sport': 'Baseball'},
+            {'id': '4380', 'name': 'NHL', 'abbrev': 'NHL', 'sport': 'Ice Hockey'},
+            {'id': '4346', 'name': 'English Premier League', 'abbrev': 'EPL', 'sport': 'Soccer'},
+            {'id': '4344', 'name': 'MLS', 'abbrev': 'MLS', 'sport': 'Soccer'},
+            # Note: 4370 is Formula 1, not UFC - removing for now
+            # {'id': '4370', 'name': 'Formula 1', 'abbrev': 'F1', 'sport': 'Motorsport'},
         ]
         
         leagues = []
@@ -296,10 +297,13 @@ class TheSportsDBProvider(SportsDataProvider):
                 
                 sport_type = sport_type_mapping.get(league_info['sport'], SportType.SOCCER)
                 
+                # Use our predefined abbreviation - strLeagueAlternate often contains full name
+                abbreviation = league_info['abbrev']
+                
                 leagues.append({
                     'external_id': league_data.get('idLeague'),
                     'name': league_data.get('strLeague'),
-                    'abbreviation': league_data.get('strLeagueAlternate') or league_info['name'],
+                    'abbreviation': abbreviation,
                     'sport_type': sport_type,
                     'country': league_data.get('strCountry', 'USA'),
                     'api_provider': 'TheSportsDB',
@@ -461,26 +465,71 @@ class UnifiedSportsDataManager:
                 
                 for league_data in leagues_data:
                     try:
-                        league, created = League.objects.update_or_create(
-                            abbreviation=league_data['abbreviation'],
-                            defaults={
-                                'name': league_data['name'],
-                                'sport_type': league_data['sport_type'],
-                                'country': league_data.get('country', 'USA'),
-                                'api_provider': league_data['api_provider'],
-                                'current_season': str(datetime.now().year),
-                                'api_config': {
-                                    'source': source.value,
-                                    'external_id': league_data.get('external_id'),
-                                    'last_sync': timezone.now().isoformat()
-                                }
+                        # First try to find by name (since it's unique)
+                        try:
+                            league = League.objects.get(name=league_data['name'])
+                            # Update existing league but check for abbreviation conflicts
+                            if league.abbreviation != league_data['abbreviation']:
+                                # Check if new abbreviation would conflict
+                                if League.objects.filter(abbreviation=league_data['abbreviation']).exclude(id=league.id).exists():
+                                    logger.warning(f"Cannot update {league.name} abbreviation to {league_data['abbreviation']} - already in use")
+                                else:
+                                    league.abbreviation = league_data['abbreviation']
+                            league.sport_type = league_data['sport_type']
+                            league.country = league_data.get('country', 'USA')
+                            league.api_provider = league_data['api_provider']
+                            league.current_season = str(datetime.now().year)
+                            league.api_config = {
+                                'source': source.value,
+                                'external_id': league_data.get('external_id'),
+                                'last_sync': timezone.now().isoformat()
                             }
-                        )
-                        
-                        if created:
-                            results['created'] += 1
-                        else:
+                            league.save()
                             results['updated'] += 1
+                        except League.DoesNotExist:
+                            # Check if abbreviation already exists with different name
+                            existing_by_abbr = League.objects.filter(abbreviation=league_data['abbreviation']).first()
+                            if existing_by_abbr:
+                                # Abbreviation exists but with different name
+                                # Skip this league or create with modified abbreviation
+                                logger.warning(f"League {league_data['name']} has abbreviation {league_data['abbreviation']} which is already used by {existing_by_abbr.name}")
+                                # Generate unique abbreviation by appending source
+                                unique_abbr = f"{league_data['abbreviation']}_{source.value[:3].upper()}"
+                                if not League.objects.filter(abbreviation=unique_abbr).exists():
+                                    league = League.objects.create(
+                                        name=league_data['name'],
+                                        abbreviation=unique_abbr,
+                                        sport_type=league_data['sport_type'],
+                                        country=league_data.get('country', 'USA'),
+                                        api_provider=league_data['api_provider'],
+                                        current_season=str(datetime.now().year),
+                                        api_config={
+                                            'source': source.value,
+                                            'external_id': league_data.get('external_id'),
+                                            'last_sync': timezone.now().isoformat()
+                                        }
+                                    )
+                                    results['created'] += 1
+                                    logger.info(f"Created {league_data['name']} with modified abbreviation {unique_abbr}")
+                                else:
+                                    logger.error(f"Cannot create {league_data['name']} - abbreviation conflict")
+                                    results['errors'] += 1
+                            else:
+                                # Create new league
+                                league = League.objects.create(
+                                    name=league_data['name'],
+                                    abbreviation=league_data['abbreviation'],
+                                    sport_type=league_data['sport_type'],
+                                    country=league_data.get('country', 'USA'),
+                                    api_provider=league_data['api_provider'],
+                                    current_season=str(datetime.now().year),
+                                    api_config={
+                                        'source': source.value,
+                                        'external_id': league_data.get('external_id'),
+                                        'last_sync': timezone.now().isoformat()
+                                    }
+                                )
+                                results['created'] += 1
                             
                     except Exception as e:
                         logger.error(f"Error syncing league {league_data.get('name')}: {e}")

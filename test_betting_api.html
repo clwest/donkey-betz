@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports API Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+        .success { border-color: #00ff00; }
+        .error { border-color: #ff0000; color: #ff0000; }
+        .pending { border-color: #ffff00; color: #ffff00; }
+        button {
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏈 Sports API Connection Test</h1>
+    
+    <div id="results"></div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        <button onclick="testSyncEndpoint()">Test Sync</button>
+        <button onclick="clearResults()">Clear</button>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8000';
+        const API_V1 = BASE_URL + '/api/v1';
+        const API = BASE_URL + '/api';
+        const TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        function log(message, type = 'pending') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testEndpoint(name, url, options = {}) {
+            log(`Testing ${name}: ${url}`, 'pending');
+            
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`,
+                        'Content-Type': 'application/json',
+                        'X-DBAO-Client': 'Test-Client',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = text;
+                }
+                
+                if (response.ok) {
+                    log(`✅ ${name} (${response.status}): <pre>${JSON.stringify(data, null, 2).substring(0, 500)}</pre>`, 'success');
+                } else {
+                    log(`❌ ${name} (${response.status}): <pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+                
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                log(`❌ ${name}: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function testAllEndpoints() {
+            clearResults();
+            log('<h2>Testing API Endpoints...</h2>');
+            
+            // Test both API paths that frontend might use
+            await testEndpoint('Sports Summary (API)', `${API}/sports/summary/`);
+            await testEndpoint('Sports Summary (API v1)', `${API_V1}/sports/summary/`);
+            
+            await testEndpoint('Sports Leagues (API)', `${API}/sports/leagues/`);
+            await testEndpoint('Sports Leagues (API v1)', `${API_V1}/sports/leagues/`);
+            
+            await testEndpoint('Live Games (API)', `${API}/sports/games/?status=live`);
+            await testEndpoint('Live Games (API v1)', `${API_V1}/sports/games/?status=live`);
+            
+            await testEndpoint('Trending Games (API)', `${API}/sports/games/trending/?limit=5`);
+            await testEndpoint('Trending Games (API v1)', `${API_V1}/sports/games/trending/?limit=5`);
+            
+            await testEndpoint('All Games (API)', `${API}/sports/games/`);
+            await testEndpoint('All Games (API v1)', `${API_V1}/sports/games/`);
+            
+            // Test CORS headers with OPTIONS
+            log('<h3>Testing CORS...</h3>');
+            await testEndpoint('CORS Check', `${API}/sports/summary/`, {
+                method: 'OPTIONS'
+            });
+        }
+        
+        async function testSyncEndpoint() {
+            clearResults();
+            log('<h2>Testing Sync Endpoint...</h2>');
+            
+            await testEndpoint('Sports Sync', `${API}/sports/sync/`, {
+                method: 'POST',
+                body: JSON.stringify({ leagues: true })
+            });
+        }
+        
+        // Auto-run on load
+        window.onload = () => {
+            log('<h2>Ready to test sports API endpoints</h2>');
+            log('Click "Test All Endpoints" to begin testing');
+        };
+    </script>
+</body>
+</html>

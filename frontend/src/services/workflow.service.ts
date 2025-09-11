@@ -24,7 +24,7 @@ export const workflowService = {
   },
 
   async deleteWorkflow(id: string) {
-    await apiClient.delete(`/workflows/${id}/`);
+    await apiClient.delete(`/api/v1/workflows/${id}/`);
   },
 
   async duplicateWorkflow(id: string) {
@@ -57,12 +57,12 @@ export const workflowService = {
 
   // Workflow scheduling
   async scheduleWorkflow(id: string, schedule: any) {
-    const { data } = await apiClient.post(`/workflows/${id}/schedule/`, schedule);
+    const { data } = await apiClient.post(`/api/v1/workflows/${id}/schedule/`, schedule);
     return data;
   },
 
   async removeSchedule(id: string) {
-    await apiClient.delete(`/workflows/${id}/schedule/`);
+    await apiClient.delete(`/api/v1/workflows/${id}/schedule/`);
   },
 
   // Templates
@@ -81,12 +81,12 @@ export const workflowService = {
 
   // Node registry
   async getAvailableNodes() {
-    const { data } = await apiClient.get('/workflow-nodes/');
+    const { data } = await apiClient.get('/api/v1/workflow-nodes/');
     return data;
   },
 
   async getNodeConfig(nodeType: string) {
-    const { data } = await apiClient.get(`/workflow-nodes/${nodeType}/config/`);
+    const { data } = await apiClient.get(`/api/v1/workflow-nodes/${nodeType}/config/`);
     return data;
   },
 };

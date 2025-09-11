@@ -31,13 +31,13 @@ export interface Voice {
 export const voiceService = {
   // Generate voice/narration from text
   async generateVoice(request: VoiceGenerationRequest): Promise<VoiceResponse> {
-    const { data } = await apiClient.post('/voice/generate/', request);
+    const { data } = await apiClient.post('/api/v1/voice/generate/', request);
     return data;
   },
 
   // Get available voices
   async getVoices(): Promise<Voice[]> {
-    const { data } = await apiClient.get('/voice/voices/');
+    const { data } = await apiClient.get('/api/v1/voice/voices/');
     return data.voices || [];
   },
 
@@ -48,7 +48,7 @@ export const voiceService = {
     voice?: string;
     style?: string;
   }): Promise<VoiceResponse> {
-    const { data } = await apiClient.post('/voice/video-narration/', params);
+    const { data } = await apiClient.post('/api/v1/voice/video-narration/', params);
     return data;
   },
 
@@ -58,7 +58,7 @@ export const voiceService = {
     formData.append('audio', audioFile);
     formData.append('format', format);
     
-    const { data } = await apiClient.post('/voice/transcribe/', formData, {
+    const { data } = await apiClient.post('/api/v1/voice/transcribe/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;

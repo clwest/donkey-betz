@@ -84,76 +84,76 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Authentication endpoints (original)
-    path('api/auth/login/', login_view, name='auth-login'),
-    path('api/auth/logout/', logout_view, name='auth-logout'),
-    path('api/auth/user/', current_user, name='auth-current-user'),
+    path('api/v1/auth/login/', login_view, name='auth-login'),
+    path('api/v1/auth/logout/', logout_view, name='auth-logout'),
+    path('api/v1/auth/user/', current_user, name='auth-current-user'),
     
     # Enhanced authentication endpoints
-    path('api/auth/register/', register_view, name='auth-register'),
-    path('api/auth/verify-email/', verify_email_view, name='auth-verify-email'),
-    path('api/auth/login-enhanced/', login_enhanced_view, name='auth-login-enhanced'),
-    path('api/auth/forgot-password/', forgot_password_view, name='auth-forgot-password'),
-    path('api/auth/reset-password/', reset_password_view, name='auth-reset-password'),
-    path('api/auth/change-password/', change_password_view, name='auth-change-password'),
-    path('api/auth/profile/', profile_view, name='auth-profile'),
-    path('api/auth/logout-enhanced/', logout_enhanced_view, name='auth-logout-enhanced'),
-    path('api/auth/validate-token/', validate_token_view, name='auth-validate-token'),
-    path('api/auth/resend-verification/', resend_verification_view, name='auth-resend-verification'),
+    path('api/v1/auth/register/', register_view, name='auth-register'),
+    path('api/v1/auth/verify-email/', verify_email_view, name='auth-verify-email'),
+    path('api/v1/auth/login-enhanced/', login_enhanced_view, name='auth-login-enhanced'),
+    path('api/v1/auth/forgot-password/', forgot_password_view, name='auth-forgot-password'),
+    path('api/v1/auth/reset-password/', reset_password_view, name='auth-reset-password'),
+    path('api/v1/auth/change-password/', change_password_view, name='auth-change-password'),
+    path('api/v1/auth/profile/', profile_view, name='auth-profile'),
+    path('api/v1/auth/logout-enhanced/', logout_enhanced_view, name='auth-logout-enhanced'),
+    path('api/v1/auth/validate-token/', validate_token_view, name='auth-validate-token'),
+    path('api/v1/auth/resend-verification/', resend_verification_view, name='auth-resend-verification'),
     
     # Core platform APIs
-    path('api/status/', platform_status, name='platform-status'),
-    path('api/info/', platform_info, name='platform-info'),
-    path('api/metrics/', record_metric, name='record-metric'),
-    path('api/health/', health_check, name='health-check'),
-    path('api/orchestrations/', orchestrations_list, name='orchestrations-list'),
-    path('api/instances/', agent_instances, name='agent-instances'),
+    path('api/v1/status/', platform_status, name='platform-status'),
+    path('api/v1/info/', platform_info, name='platform-info'),
+    path('api/v1/metrics/', record_metric, name='record-metric'),
+    path('api/v1/health/', health_check, name='health-check'),
+    path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
+    path('api/v1/instances/', agent_instances, name='agent-instances'),
     
     # Placeholder endpoints for missing APIs
-    path('api/content/blog/list/', blog_list, name='blog-list'),
+    path('api/v1/content/blog/list/', blog_list, name='blog-list'),
     # path('api/campaigns/', campaigns_list, name='campaigns'),  # Removed - using campaigns.urls instead
-    path('api/styles/', styles_list, name='styles-list'),
-    path('api/prompting/settings/', prompting_settings, name='prompting-settings'),
-    path('api/prompting/stats/', prompting_stats, name='prompting-stats'),
-    path('api/prompting/test/', prompting_test, name='prompting-test'),
-    path('api/execute/', execute_agent, name='execute-agent'),
+    path('api/v1/styles/', styles_list, name='styles-list'),
+    path('api/v1/prompting/settings/', prompting_settings, name='prompting-settings'),
+    path('api/v1/prompting/stats/', prompting_stats, name='prompting-stats'),
+    path('api/v1/prompting/test/', prompting_test, name='prompting-test'),
+    path('api/v1/execute/', execute_agent, name='execute-agent'),
     
     # Prompt diagnostics endpoints
-    path('api/prompt-diagnostics/dashboard/', prompt_diagnostics_dashboard, name='prompt-diagnostics-dashboard'),
-    path('api/prompt-diagnostics/analyses/', prompt_diagnostics_analyses, name='prompt-diagnostics-analyses'),
+    path('api/v1/prompt-diagnostics/dashboard/', prompt_diagnostics_dashboard, name='prompt-diagnostics-dashboard'),
+    path('api/v1/prompt-diagnostics/analyses/', prompt_diagnostics_analyses, name='prompt-diagnostics-analyses'),
     
     # Feedback endpoints
-    path('api/feedback/submit/', feedback_submit, name='feedback-submit'),
-    path('api/feedback/analytics/', feedback_analytics, name='feedback-analytics'),
-    path('api/feedback/history/', feedback_history, name='feedback-history'),
+    path('api/v1/feedback/submit/', feedback_submit, name='feedback-submit'),
+    path('api/v1/feedback/analytics/', feedback_analytics, name='feedback-analytics'),
+    path('api/v1/feedback/history/', feedback_history, name='feedback-history'),
     
     # Assistant endpoints
-    path('api/assistant/context/', assistant_context, name='assistant-context'),
-    path('api/assistant/chat/', assistant_chat, name='assistant-chat'),
+    path('api/v1/assistant/context/', assistant_context, name='assistant-context'),
+    path('api/v1/assistant/chat/', assistant_chat, name='assistant-chat'),
     
     # Research endpoints
-    path('api/research/books/', research_books, name='research-books'),
-    path('api/research/documents/', research_documents, name='research-documents'),
+    path('api/v1/research/books/', research_books, name='research-books'),
+    path('api/v1/research/documents/', research_documents, name='research-documents'),
     
     # Personal knowledge endpoints
-    path('api/personal-knowledge/list/', personal_knowledge_list, name='personal-knowledge-list'),
-    path('api/personal-knowledge/upload/', personal_knowledge_upload, name='personal-knowledge-upload'),
-    path('api/personal-knowledge/<str:knowledge_id>/delete/', personal_knowledge_delete, name='personal-knowledge-delete'),
-    path('api/personal-knowledge/stats/', personal_knowledge_stats, name='personal-knowledge-stats'),
+    path('api/v1/personal-knowledge/list/', personal_knowledge_list, name='personal-knowledge-list'),
+    path('api/v1/personal-knowledge/upload/', personal_knowledge_upload, name='personal-knowledge-upload'),
+    path('api/v1/personal-knowledge/<str:knowledge_id>/delete/', personal_knowledge_delete, name='personal-knowledge-delete'),
+    path('api/v1/personal-knowledge/stats/', personal_knowledge_stats, name='personal-knowledge-stats'),
     
     # Agent discovery stats
-    path('api/agents/discovery/stats/', agents_discovery_stats, name='agents-discovery-stats'),
+    path('api/v1/agents/discovery/stats/', agents_discovery_stats, name='agents-discovery-stats'),
     
     # E-books and voice
-    path('api/ebooks/', ebooks_list, name='ebooks-list'),
-    path('api/voice/history/', voice_history, name='voice-history'),
+    path('api/v1/ebooks/', ebooks_list, name='ebooks-list'),
+    path('api/v1/voice/history/', voice_history, name='voice-history'),
     
     # Profile endpoints
-    path('api/profile/', user_profile, name='user-profile'),
-    path('api/profile/stats/', profile_stats, name='profile-stats'),
-    path('api/profile/update/', update_profile_view, name='profile-update'),
-    path('api/profile/avatar/', upload_avatar_view, name='avatar-upload'),
-    path('api/profile/avatar/delete/', delete_avatar_view, name='avatar-delete'),
-    path('api/profile/avatar/generate/', generate_avatar_view, name='avatar-generate'),
+    path('api/v1/profile/', user_profile, name='user-profile'),
+    path('api/v1/profile/stats/', profile_stats, name='profile-stats'),
+    path('api/v1/profile/update/', update_profile_view, name='profile-update'),
+    path('api/v1/profile/avatar/', upload_avatar_view, name='avatar-upload'),
+    path('api/v1/profile/avatar/delete/', delete_avatar_view, name='avatar-delete'),
+    path('api/v1/profile/avatar/generate/', generate_avatar_view, name='avatar-generate'),
     
     # API router
     path('api/v1/', include(router.urls)),
@@ -161,47 +161,47 @@ urlpatterns = [
     # ===== MIGRATED API ENDPOINTS =====
     
     # Analytics & Dashboard APIs (from donkey_betz core)
-    path('api/analytics/dashboard/', analytics_dashboard, name='analytics-dashboard'),
-    path('api/analytics/track-usage/', track_usage, name='track-usage'),
-    path('api/analytics/track-feature/', track_feature_usage, name='track-feature'),
-    path('api/analytics/cost-breakdown/', cost_breakdown, name='cost-breakdown'),
-    path('api/analytics/update-budget/', update_budget, name='update-budget'),
-    path('api/analytics/model-performance/', model_performance_analytics, name='model-performance'),
+    path('api/v1/analytics/dashboard/', analytics_dashboard, name='analytics-dashboard'),
+    path('api/v1/analytics/track-usage/', track_usage, name='track-usage'),
+    path('api/v1/analytics/track-feature/', track_feature_usage, name='track-feature'),
+    path('api/v1/analytics/cost-breakdown/', cost_breakdown, name='cost-breakdown'),
+    path('api/v1/analytics/update-budget/', update_budget, name='update-budget'),
+    path('api/v1/analytics/model-performance/', model_performance_analytics, name='model-performance'),
     
     # Content Generation APIs (from ai-content-studio)
-    path('api/content/create/', create_content, name='content-create'),
-    path('api/content/list/', list_content, name='content-list'),
-    path('api/content/blog/generate/', generate_blog_post, name='blog-generate'),
-    path('api/content/social/generate/', generate_social_media_post, name='social-generate'),
-    path('api/content/video/script/', generate_video_script, name='video-script'),
-    path('api/content/templates/', content_templates, name='content-templates'),
+    path('api/v1/content/create/', create_content, name='content-create'),
+    path('api/v1/content/list/', list_content, name='content-list'),
+    path('api/v1/content/blog/generate/', generate_blog_post, name='blog-generate'),
+    path('api/v1/content/social/generate/', generate_social_media_post, name='social-generate'),
+    path('api/v1/content/video/script/', generate_video_script, name='video-script'),
+    path('api/v1/content/templates/', content_templates, name='content-templates'),
     
     # Video Generation endpoints (RunwayML)
-    path('api/video/text-to-video/', text_to_video, name='text-to-video'),
-    path('api/video/image-to-video/', image_to_video, name='image-to-video'),
-    path('api/video/status/<str:task_id>/', check_video_status, name='video-status'),
-    path('api/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
-    path('api/video/gallery/', video_gallery, name='video-gallery'),
-    path('api/video/save/', save_video_to_gallery, name='save-video'),
-    path('api/video/test-runway/', test_runway_connection, name='test-runway'),
-    path('api/memory/import-file/', import_file_to_memory, name='import-file'),
-    path('api/memory/supported-formats/', supported_file_formats, name='supported-formats'),
-    path('api/gallery/list/', gallery_list, name='gallery-list'),
-    path('api/gallery/videos/', gallery_videos, name='gallery-videos'),
-    path('api/content/library/', content_library, name='content-library'),
-    path('api/podcasts/', podcasts_list, name='podcasts-list'),
+    path('api/v1/video/text-to-video/', text_to_video, name='text-to-video'),
+    path('api/v1/video/image-to-video/', image_to_video, name='image-to-video'),
+    path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
+    path('api/v1/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
+    path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
+    path('api/v1/video/save/', save_video_to_gallery, name='save-video'),
+    path('api/v1/video/test-runway/', test_runway_connection, name='test-runway'),
+    path('api/v1/memory/import-file/', import_file_to_memory, name='import-file'),
+    path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),
+    path('api/v1/gallery/list/', gallery_list, name='gallery-list'),
+    path('api/v1/gallery/videos/', gallery_videos, name='gallery-videos'),
+    path('api/v1/content/library/', content_library, name='content-library'),
+    path('api/v1/podcasts/', podcasts_list, name='podcasts-list'),
     
     # Agent Orchestration APIs (from DBAO tools-manifest)
-    path('api/agents/list/', list_agents, name='agents-list'),
-    path('api/agents/by-specialization/', get_agents_by_specialization, name='agents-by-specialization'),
-    path('api/agents/execute/', execute_agent_orchestration, name='agents-execute'),
-    path('api/agents/orchestrate/', orchestrate_multi_agent_task, name='agents-orchestrate'),
-    path('api/agents/suggest/', suggest_agent, name='agents-suggest'),
-    path('api/agents/route/', route_task, name='agents-route'),
-    path('api/agents/status/<str:instance_id>/', get_agent_status, name='agent-status'),
-    path('api/agents/health/', health_check_agents, name='agents-health'),
-    path('api/agents/<str:agent_id>/details/', get_agent_details, name='agent-details'),
-    path('api/agents/discovery/refresh/', refresh_agent_discovery, name='agent-discovery-refresh'),
+    path('api/v1/agents/list/', list_agents, name='agents-list'),
+    path('api/v1/agents/by-specialization/', get_agents_by_specialization, name='agents-by-specialization'),
+    path('api/v1/agents/execute/', execute_agent_orchestration, name='agents-execute'),
+    path('api/v1/agents/orchestrate/', orchestrate_multi_agent_task, name='agents-orchestrate'),
+    path('api/v1/agents/suggest/', suggest_agent, name='agents-suggest'),
+    path('api/v1/agents/route/', route_task, name='agents-route'),
+    path('api/v1/agents/status/<str:instance_id>/', get_agent_status, name='agent-status'),
+    path('api/v1/agents/health/', health_check_agents, name='agents-health'),
+    path('api/v1/agents/<str:agent_id>/details/', get_agent_details, name='agent-details'),
+    path('api/v1/agents/discovery/refresh/', refresh_agent_discovery, name='agent-discovery-refresh'),
     
     # Odds & Sports Analytics APIs (from DBAO tools-manifest)
     path('api/v1/odds/convert-odds/', convert_odds, name='odds-convert'),
@@ -220,46 +220,43 @@ urlpatterns = [
     # ===== PHASE 2 ADVANCED FEATURES =====
     
     # Advanced RAG & Embeddings APIs
-    path('api/rag/upload-document/', upload_document_for_rag, name='rag-upload'),
-    path('api/rag/semantic-search/', semantic_search, name='semantic-search'),
-    path('api/rag/generate/', rag_generate, name='rag-generate'),
-    path('api/rag/stats/', embeddings_stats, name='rag-stats'),
-    path('api/knowledge/collections/create/', create_knowledge_collection, name='create-knowledge-collection'),
-    path('api/knowledge/collections/list/', list_knowledge_collections, name='list-knowledge-collections'),
-    path('api/rag/advanced-query/', advanced_rag_query, name='advanced-rag-query'),
-    path('api/rag/optimize/', optimize_embeddings, name='optimize-embeddings'),
+    path('api/v1/rag/upload-document/', upload_document_for_rag, name='rag-upload'),
+    path('api/v1/rag/semantic-search/', semantic_search, name='semantic-search'),
+    path('api/v1/rag/generate/', rag_generate, name='rag-generate'),
+    path('api/v1/rag/stats/', embeddings_stats, name='rag-stats'),
+    path('api/v1/knowledge/collections/create/', create_knowledge_collection, name='create-knowledge-collection'),
+    path('api/v1/knowledge/collections/list/', list_knowledge_collections, name='list-knowledge-collections'),
+    path('api/v1/rag/advanced-query/', advanced_rag_query, name='advanced-rag-query'),
+    path('api/v1/rag/optimize/', optimize_embeddings, name='optimize-embeddings'),
     
     # Multi-LLM Provider Integration APIs
-    path('api/llm/providers/', available_llm_providers, name='llm-providers'),
-    path('api/llm/intelligent-selection/', intelligent_model_selection, name='intelligent-model-selection'),
-    path('api/llm/multi-model-compare/', multi_model_comparison, name='multi-model-compare'),
-    path('api/llm/analytics/', llm_analytics, name='llm-analytics'),
-    path('api/llm/preferences/', set_model_preferences, name='set-llm-preferences'),
+    path('api/v1/llm/providers/', available_llm_providers, name='llm-providers'),
+    path('api/v1/llm/intelligent-selection/', intelligent_model_selection, name='intelligent-model-selection'),
+    path('api/v1/llm/multi-model-compare/', multi_model_comparison, name='multi-model-compare'),
+    path('api/v1/llm/analytics/', llm_analytics, name='llm-analytics'),
+    path('api/v1/llm/preferences/', set_model_preferences, name='set-llm-preferences'),
     
-    # App-specific APIs (existing modules) - MUST come FIRST to avoid conflicts
-    path('api/workflows/', include('workflows.urls')),  # REAL workflows with actual agents - HIGHEST PRIORITY
-    path('api/dashboard/', include('dashboard.urls')),  # Dashboard at /api/dashboard/ for compatibility
-    path('api/style-memory/', include('style_memory.urls')),  # Style Memory at /api/style-memory/ for frontend compatibility
-    path('api/agents/', include('agents.urls')),  # Also expose at /api/agents/ for compatibility
-    path('api/v1/agents/', include('agents.urls')),
-    path('api/sports/', include('sports.urls')),  # Also expose at /api/sports/ for compatibility
-    path('api/v1/sports/', include('sports.urls')),
-    path('api/content/', include('content.urls')),  # Also expose at /api/content/ for compatibility
-    path('api/v1/content/', include('content.urls')),
-    path('api/v1/self-awareness/', include('self_awareness.urls')),
-    path('api/campaigns/', include('campaigns.urls')),
+    # App-specific APIs - Using standardized /api/v1/ pattern
+    path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows with actual agents
+    path('api/v1/dashboard/', include('dashboard.urls')),  # Dashboard module
+    path('api/v1/style-memory/', include('style_memory.urls')),  # Style Memory module
+    path('api/v1/agents/', include('agents.urls')),  # Agent Orchestra module
+    path('api/v1/sports/', include('sports.urls')),  # Sports/Betting module
+    path('api/v1/content/', include('content.urls')),  # Content Generation module
+    path('api/v1/self-awareness/', include('self_awareness.urls')),  # Self-Awareness module
+    path('api/v1/campaigns/', include('campaigns.urls')),  # Campaigns module
+    path('api/v1/mythology/', include('mythology.urls')),  # Mythology/Hallucination Review module
+    path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
-    path('api/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
-    path('api/workflows/execute-advanced/', execute_advanced_workflow, name='execute-advanced-workflow'),
-    path('api/workflows/execution/<str:execution_id>/status/', get_workflow_execution_status, name='workflow-execution-status'),
-    path('api/workflows/templates-advanced/', list_workflow_templates, name='workflow-templates-advanced'),  # RENAMED to avoid conflict
-    path('api/workflows/from-template/', create_workflow_from_template, name='workflow-from-template'),
-    path('api/workflows/analytics/', workflow_analytics, name='workflow-analytics'),
-    path('api/workflows/schedule/', schedule_workflow, name='schedule-workflow'),
-    path('api/workflows/collaborate/', workflow_collaboration, name='workflow-collaboration'),
-    path('api/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
-    path('api/mythology/', include('mythology.urls')),  # Hallucination review dashboard
+    path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
+    path('api/v1/workflows/execute-advanced/', execute_advanced_workflow, name='execute-advanced-workflow'),
+    path('api/v1/workflows/execution/<str:execution_id>/status/', get_workflow_execution_status, name='workflow-execution-status'),
+    path('api/v1/workflows/templates-advanced/', list_workflow_templates, name='workflow-templates-advanced'),  # RENAMED to avoid conflict
+    path('api/v1/workflows/from-template/', create_workflow_from_template, name='workflow-from-template'),
+    path('api/v1/workflows/analytics/', workflow_analytics, name='workflow-analytics'),
+    path('api/v1/workflows/schedule/', schedule_workflow, name='schedule-workflow'),
+    path('api/v1/workflows/collaborate/', workflow_collaboration, name='workflow-collaboration'),
     
     # REST framework browsable API (development only)
     path('api-auth/', include('rest_framework.urls')),
