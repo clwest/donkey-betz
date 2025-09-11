@@ -1435,7 +1435,7 @@ def create_orchestration_channel(sender, instance, created, **kwargs):
                 'orchestration': instance,
                 'created_by': instance.user,
                 'metadata': {
-                    'orchestration_id': instance.id,
+                    'orchestration_id': str(instance.id),
                     'auto_created': True,
                 }
             }

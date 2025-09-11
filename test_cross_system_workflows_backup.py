@@ -24,7 +24,6 @@ django.setup()
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from asgiref.sync import sync_to_async
 
 # Import models
 from agents.models import (
@@ -51,7 +50,6 @@ class CrossSystemWorkflowTester:
         self.test_results = []
         self.performance_metrics = {}
         
-    @sync_to_async
     def setup_test_data(self):
         """Setup test data for cross-system testing"""
         print("🔧 Setting up test data...")
@@ -166,27 +164,27 @@ class CrossSystemWorkflowTester:
             }
         )
         
-        # Clear any existing odds lines first
-        OddsLine.objects.filter(market=self.ml_market, sportsbook=self.sportsbook1).delete()
-        OddsLine.objects.filter(market=self.spread_market, sportsbook=self.sportsbook1).delete()
-        
         # Create odds lines
-        self.ml_odds_line = OddsLine.objects.create(
+        OddsLine.objects.get_or_create(
             market=self.ml_market,
             sportsbook=self.sportsbook1,
-            home_odds=-110,
-            away_odds=-110,
-            is_current=True
+            defaults={
+                "home_odds": -110,
+                "away_odds": -110,
+                "is_current": True
+            }
         )
         
-        self.spread_odds_line = OddsLine.objects.create(
+        OddsLine.objects.get_or_create(
             market=self.spread_market,
             sportsbook=self.sportsbook1,
-            home_spread=-3.0,
-            away_spread=3.0,
-            home_odds=-110,
-            away_odds=-110,
-            is_current=True
+            defaults={
+                "home_spread": -3.0,
+                "away_spread": 3.0,
+                "home_odds": -110,
+                "away_odds": -110,
+                "is_current": True
+            }
         )
         
         # Create bankroll management
@@ -247,15 +245,13 @@ class CrossSystemWorkflowTester:
         start_time = time.time()
         
         try:
-            # Test agent discovery with sync_to_async
-            sports_agents = await sync_to_async(
-                lambda: list(UnifiedAgentTemplate.objects.filter(
-                    domain_tags__contains=["sports"],
-                    is_active=True
-                ))
-            )()
+            # Test agent discovery
+            sports_agents = UnifiedAgentTemplate.objects.filter(
+                domain_tags__contains=["sports"],
+                is_active=True
+            )
             
-            print(f"   Found {len(sports_agents)} sports agents")
+            print(f"   Found {sports_agents.count()} sports agents")
             
             # Test routing for different query types
             test_queries = [
@@ -267,9 +263,9 @@ class CrossSystemWorkflowTester:
             
             routing_results = {}
             for query in test_queries:
-                suitable_agents = await sync_to_async(
-                    self.agent_registry.find_agents_for_task
-                )(query, limit=3)
+                suitable_agents = self.agent_registry.find_agents_for_task(
+                    query, limit=3
+                )
                 routing_results[query] = [
                     agent_info['agent_name'] for agent_info in suitable_agents
                 ]
@@ -282,7 +278,7 @@ class CrossSystemWorkflowTester:
                 "test": "agent_discovery_and_routing",
                 "status": "passed",
                 "metrics": {
-                    "total_agents": len(sports_agents),
+                    "total_agents": sports_agents.count(),
                     "routing_results": routing_results,
                     "execution_time": execution_time
                 }
@@ -303,53 +299,49 @@ class CrossSystemWorkflowTester:
         start_time = time.time()
         
         try:
-            # Create orchestration workflow with sync_to_async
-            orchestration = await sync_to_async(
-                lambda: AgentOrchestration.objects.create(
-                    name="Daily Betting Analysis Workflow",
-                    description="Comprehensive daily betting analysis using multiple agents",
-                    user=self.test_user,
-                    workflow_definition={
-                        "steps": [
-                            {"agent": "odds-calculation-agent", "task": "analyze_value"},
-                            {"agent": "kelly-bet-sizing-agent", "task": "calculate_sizing"},
-                            {"agent": "betting-recommendation-agent", "task": "generate_recommendations"}
-                        ]
-                    },
-                    agent_sequence=[
-                        "odds-calculation-agent",
-                        "kelly-bet-sizing-agent", 
-                        "betting-recommendation-agent"
-                    ],
-                    execution_strategy="sequential"
-                )
-            )()
+            # Create orchestration workflow
+            orchestration = AgentOrchestration.objects.create(
+                name="Daily Betting Analysis Workflow",
+                description="Comprehensive daily betting analysis using multiple agents",
+                user=self.test_user,
+                workflow_definition={
+                    "steps": [
+                        {"agent": "odds-calculation-agent", "task": "analyze_value"},
+                        {"agent": "kelly-bet-sizing-agent", "task": "calculate_sizing"},
+                        {"agent": "betting-recommendation-agent", "task": "generate_recommendations"}
+                    ]
+                },
+                agent_sequence=[
+                    "odds-calculation-agent",
+                    "kelly-bet-sizing-agent", 
+                    "betting-recommendation-agent"
+                ],
+                execution_strategy="sequential"
+            )
             
             # Test agent executions
             executions = []
             for agent_name in orchestration.agent_sequence:
                 try:
-                    agent_template = await sync_to_async(
-                        UnifiedAgentTemplate.objects.get
-                    )(name=agent_name, is_active=True)
+                    agent_template = UnifiedAgentTemplate.objects.get(
+                        name=agent_name, is_active=True
+                    )
                     
-                    execution = await sync_to_async(
-                        lambda: AgentExecution.objects.create(
-                            template=agent_template,
-                            user=self.test_user,
-                            task_description=f"Analyze {str(self.test_game)}",
-                            context={
-                                "game_id": str(self.test_game.id),
-                                "markets": [str(self.ml_market.id), str(self.spread_market.id)]
-                            },
-                            parent_orchestration=orchestration
-                        )
-                    )()
+                    execution = AgentExecution.objects.create(
+                        template=agent_template,
+                        user=self.test_user,
+                        task_description=f"Analyze {self.test_game}",
+                        context={
+                            "game_id": self.test_game.id,
+                            "markets": [self.ml_market.id, self.spread_market.id]
+                        },
+                        parent_orchestration=orchestration
+                    )
                     
-                    # Simulate execution with sync_to_async
-                    await sync_to_async(execution.start_execution)()
-                    await sync_to_async(execution.update_progress)(50, "Processing market data")
-                    await sync_to_async(execution.complete_execution)({
+                    # Simulate execution
+                    execution.start_execution()
+                    execution.update_progress(50, "Processing market data")
+                    execution.complete_execution({
                         "analysis": "Market analysis completed",
                         "recommendations": ["Value found in spread market"]
                     })
@@ -366,7 +358,7 @@ class CrossSystemWorkflowTester:
                 "test": "sports_betting_orchestration", 
                 "status": "passed",
                 "metrics": {
-                    "orchestration_id": str(orchestration.id),
+                    "orchestration_id": orchestration.id,
                     "executions_count": len(executions),
                     "execution_time": execution_time
                 }
@@ -387,27 +379,25 @@ class CrossSystemWorkflowTester:
         start_time = time.time()
         
         try:
-            # Create betting recommendation with sync_to_async
-            recommendation = await sync_to_async(
-                lambda: BettingRecommendation.objects.create(
-                    user=self.test_user,
-                    game=self.test_game,
-                    market=self.spread_market,
-                    recommended_selection=f"{self.away_team.abbreviation} +3",
-                    recommended_sportsbook=self.sportsbook1,
-                    recommended_odds=-110,
-                    recommended_stake=Decimal("50.00"),
-                    expected_value=Decimal("2.5000"),
-                    win_probability=0.55,
-                    confidence_level=0.75,
-                    edge_percentage=5.0,
-                    kelly_percentage=2.5,
-                    risk_level="moderate",
-                    generating_agent="betting-recommendation-agent",
-                    reasoning="Strong value based on analytical models",
-                    expires_at=timezone.now() + timedelta(hours=24)
-                )
-            )()
+            # Create betting recommendation
+            recommendation = BettingRecommendation.objects.create(
+                user=self.test_user,
+                game=self.test_game,
+                market=self.spread_market,
+                recommended_selection=f"{self.away_team.abbreviation} +3",
+                recommended_sportsbook=self.sportsbook1,
+                recommended_odds=-110,
+                recommended_stake=Decimal("50.00"),
+                expected_value=Decimal("2.5000"),
+                win_probability=0.55,
+                confidence_level=0.75,
+                edge_percentage=5.0,
+                kelly_percentage=2.5,
+                risk_level="moderate",
+                generating_agent="betting-recommendation-agent",
+                reasoning="Strong value based on analytical models",
+                expires_at=timezone.now() + timedelta(hours=24)
+            )
             
             # Simulate content generation workflow
             content_context = {
@@ -431,7 +421,9 @@ class CrossSystemWorkflowTester:
             }
             
             # Create content piece incorporating betting data
-            article_content = f"""
+            content = Document.objects.create(
+                title=f"Betting Analysis: {self.away_team.abbreviation} @ {self.home_team.abbreviation}",
+                processed_content=f"""
 # Game Analysis: Week {self.test_game.week}
 
 ## Matchup Overview
@@ -451,22 +443,16 @@ class CrossSystemWorkflowTester:
 
 ## Reasoning
 {recommendation.reasoning}
-"""
-            
-            content = await sync_to_async(
-                lambda: Document.objects.create(
-                    title=f"Betting Analysis: {self.away_team.abbreviation} @ {self.home_team.abbreviation}",
-                    processed_content=article_content,
-                    document_type="markdown",
-                    owner=self.test_user,
-                    category="analysis",
-                    cross_references={
-                        "game_id": str(self.test_game.id),
-                        "recommendation_id": str(recommendation.id),
-                        "generated_from_betting_data": True
-                    }
-                )
-            )()
+""",
+                document_type="markdown",
+                owner=self.test_user,
+                category="analysis",
+                cross_references={
+                    "game_id": self.test_game.id,
+                    "recommendation_id": recommendation.id,
+                    "generated_from_betting_data": True
+                }
+            )
             
             execution_time = time.time() - start_time
             self.performance_metrics['content_generation'] = execution_time
@@ -475,9 +461,9 @@ class CrossSystemWorkflowTester:
                 "test": "content_generation_with_betting_data",
                 "status": "passed", 
                 "metrics": {
-                    "content_id": str(content.id),
-                    "recommendation_id": str(recommendation.id),
-                    "content_length": len(content.processed_content),
+                    "content_id": content.id,
+                    "recommendation_id": recommendation.id,
+                    "content_length": len(content.content),
                     "execution_time": execution_time
                 }
             })
@@ -497,48 +483,42 @@ class CrossSystemWorkflowTester:
         start_time = time.time()
         
         try:
-            # Clear existing odds for sportsbook2 first
-            await sync_to_async(
-                lambda: OddsLine.objects.filter(market=self.ml_market, sportsbook=self.sportsbook2).delete()
-            )()
+            # Create odds that present arbitrage opportunity
+            # Book 1: Chiefs -110, Bills -110 (fair line)
+            # Book 2: Chiefs +120, Bills -130 (create arb opportunity)
             
-            # Create odds that present arbitrage opportunity with sync_to_async
-            odds_line_2 = await sync_to_async(
-                lambda: OddsLine.objects.create(
-                    market=self.ml_market,
-                    sportsbook=self.sportsbook2,
-                    home_odds=120,  # Chiefs +120
-                    away_odds=-130, # Bills -130
-                    is_current=True
-                )
-            )()
+            odds_line_2 = OddsLine.objects.create(
+                market=self.ml_market,
+                sportsbook=self.sportsbook2,
+                home_odds=120,  # Chiefs +120
+                away_odds=-130, # Bills -130
+                is_current=True
+            )
             
             # Test arbitrage detection
-            opportunities = await sync_to_async(ArbitrageOpportunity.detect_opportunities)(
+            opportunities = ArbitrageOpportunity.detect_opportunities(
                 market_type=BetType.MONEYLINE,
                 min_profit=0.01  # 1% minimum profit
             )
             
             if opportunities:
                 # Create arbitrage opportunity record
-                arb_opp = await sync_to_async(
-                    lambda: ArbitrageOpportunity.objects.create(
-                        game=self.test_game,
-                        market_type=BetType.MONEYLINE,
-                        sportsbook_1=self.sportsbook1,
-                        sportsbook_2=self.sportsbook2,
-                        odds_1=-110,  # Bills at sportsbook1
-                        odds_2=120,   # Chiefs at sportsbook2
-                        selection_1=f"{self.away_team.abbreviation} ML",
-                        selection_2=f"{self.home_team.abbreviation} ML",
-                        arbitrage_percentage=opportunities[0]['arbitrage_percentage'],
-                        stake_1_percentage=opportunities[0]['stake_1_percentage'],
-                        stake_2_percentage=opportunities[0]['stake_2_percentage'],
-                        minimum_profit=opportunities[0]['minimum_profit'],
-                        expires_at=timezone.now() + timedelta(hours=2),
-                        confidence_score=0.85
-                    )
-                )()
+                arb_opp = ArbitrageOpportunity.objects.create(
+                    game=self.test_game,
+                    market_type=BetType.MONEYLINE,
+                    sportsbook_1=self.sportsbook1,
+                    sportsbook_2=self.sportsbook2,
+                    odds_1=-110,  # Bills at sportsbook1
+                    odds_2=120,   # Chiefs at sportsbook2
+                    selection_1=f"{self.away_team.abbreviation} ML",
+                    selection_2=f"{self.home_team.abbreviation} ML",
+                    arbitrage_percentage=opportunities[0]['arbitrage_percentage'],
+                    stake_1_percentage=opportunities[0]['stake_1_percentage'],
+                    stake_2_percentage=opportunities[0]['stake_2_percentage'],
+                    minimum_profit=opportunities[0]['minimum_profit'],
+                    expires_at=timezone.now() + timedelta(hours=2),
+                    confidence_score=0.85
+                )
                 
                 print(f"   Arbitrage opportunity detected: {arb_opp.arbitrage_percentage:.2f}% profit")
             else:
@@ -571,44 +551,44 @@ class CrossSystemWorkflowTester:
         start_time = time.time()
         
         try:
-            # Step 1: Agent orchestration to gather betting data with sync_to_async
-            orchestration = await sync_to_async(
-                lambda: AgentOrchestration.objects.create(
-                    name="Best Opportunities Analysis",
-                    description="Identify and analyze today's best betting opportunities",
-                    user=self.test_user,
-                    workflow_definition={
-                        "steps": [
-                            {
-                                "agent": "odds-calculation-agent",
-                                "task": "identify_value_opportunities",
-                                "parallel": False
-                            },
-                            {
-                                "agent": "arbitrage-hunter-agent", 
-                                "task": "scan_arbitrage_opportunities",
-                                "parallel": True
-                            },
-                            {
-                                "agent": "kelly-bet-sizing-agent",
-                                "task": "calculate_optimal_sizing",
-                                "parallel": True
-                            },
-                            {
-                                "agent": "betting-recommendation-agent",
-                                "task": "synthesize_recommendations",
-                                "parallel": False
-                            }
-                        ]
-                    },
-                    agent_sequence=[
-                        "odds-calculation-agent",
-                        "arbitrage-hunter-agent",
-                        "kelly-bet-sizing-agent", 
-                        "betting-recommendation-agent"
+            # Simulate the "Generate article about today's best betting opportunities" workflow
+            
+            # Step 1: Agent orchestration to gather betting data
+            orchestration = AgentOrchestration.objects.create(
+                name="Best Opportunities Analysis",
+                description="Identify and analyze today's best betting opportunities",
+                user=self.test_user,
+                workflow_definition={
+                    "steps": [
+                        {
+                            "agent": "odds-calculation-agent",
+                            "task": "identify_value_opportunities",
+                            "parallel": False
+                        },
+                        {
+                            "agent": "arbitrage-hunter-agent", 
+                            "task": "scan_arbitrage_opportunities",
+                            "parallel": True
+                        },
+                        {
+                            "agent": "kelly-bet-sizing-agent",
+                            "task": "calculate_optimal_sizing",
+                            "parallel": True
+                        },
+                        {
+                            "agent": "betting-recommendation-agent",
+                            "task": "synthesize_recommendations",
+                            "parallel": False
+                        }
                     ]
-                )
-            )()
+                },
+                agent_sequence=[
+                    "odds-calculation-agent",
+                    "arbitrage-hunter-agent",
+                    "kelly-bet-sizing-agent", 
+                    "betting-recommendation-agent"
+                ]
+            )
             
             # Step 2: Execute analysis agents
             analysis_results = {
@@ -672,22 +652,20 @@ All recommendations are based on mathematical models and historical analysis. Pa
 *Generated by AI Agent Orchestration System at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 """
             
-            # Step 4: Create content piece with sync_to_async
-            article = await sync_to_async(
-                lambda: Document.objects.create(
-                    title=f"Best Betting Opportunities - {datetime.now().strftime('%m/%d/%Y')}",
-                    processed_content=article_content,
-                    document_type="markdown",
-                    owner=self.test_user,
-                    category="analysis",
-                    cross_references={
-                        "workflow_type": "cross_domain_best_opportunities",
-                        "orchestration_id": str(orchestration.id),
-                        "analysis_results": analysis_results,
-                        "generation_timestamp": datetime.now().isoformat()
-                    }
-                )
-            )()
+            # Step 4: Create content piece
+            article = Document.objects.create(
+                title=f"Best Betting Opportunities - {datetime.now().strftime('%m/%d/%Y')}",
+                processed_content=article_content,
+                document_type="markdown",
+                owner=self.test_user,
+                category="analysis",
+                cross_references={
+                    "workflow_type": "cross_domain_best_opportunities",
+                    "orchestration_id": orchestration.id,
+                    "analysis_results": analysis_results,
+                    "generation_timestamp": datetime.now().isoformat()
+                }
+            )
             
             execution_time = time.time() - start_time
             self.performance_metrics['cross_domain_workflow'] = execution_time
@@ -696,9 +674,9 @@ All recommendations are based on mathematical models and historical analysis. Pa
                 "test": "cross_domain_workflow_best_opportunities",
                 "status": "passed",
                 "metrics": {
-                    "orchestration_id": str(orchestration.id),
-                    "article_id": str(article.id),
-                    "content_length": len(article.processed_content),
+                    "orchestration_id": orchestration.id,
+                    "article_id": article.id,
+                    "content_length": len(article.content),
                     "opportunities_analyzed": len(analysis_results['value_opportunities']),
                     "execution_time": execution_time
                 }
@@ -729,6 +707,7 @@ All recommendations are based on mathematical models and historical analysis. Pa
             
             try:
                 # Simulate WebSocket connection test
+                # In a real scenario, this would connect to the actual WebSocket server
                 ws_test_results["connection_successful"] = True
                 print("   ✅ WebSocket connection established")
                 
@@ -740,28 +719,24 @@ All recommendations are based on mathematical models and historical analysis. Pa
                 ws_test_results["message_received"] = True
                 print("   ✅ Message received successfully")
                 
-                # Set existing line as not current first
-                await sync_to_async(
-                    lambda: OddsLine.objects.filter(
-                        market=self.spread_market,
-                        sportsbook=self.sportsbook1,
-                        is_current=True
-                    ).update(is_current=False)
-                )()
+                # Test real-time sports update
+                # Create a line movement that should trigger WebSocket broadcast
+                new_line = OddsLine.objects.create(
+                    market=self.spread_market,
+                    sportsbook=self.sportsbook1,
+                    home_spread=-2.5,  # Line moved from -3.0 to -2.5
+                    away_spread=2.5,
+                    home_odds=-110,
+                    away_odds=-110,
+                    is_current=True,
+                    movement_reason="Sharp action on away team"
+                )
                 
-                # Test real-time sports update with sync_to_async
-                new_line = await sync_to_async(
-                    lambda: OddsLine.objects.create(
-                        market=self.spread_market,
-                        sportsbook=self.sportsbook1,
-                        home_spread=-2.5,  # Line moved from -3.0 to -2.5
-                        away_spread=2.5,
-                        home_odds=-110,
-                        away_odds=-110,
-                        is_current=True,
-                        movement_reason="Sharp action on away team"
-                    )
-                )()
+                # Set old line as not current
+                OddsLine.objects.filter(
+                    market=self.spread_market,
+                    sportsbook=self.sportsbook1
+                ).exclude(id=new_line.id).update(is_current=False)
                 
                 ws_test_results["real_time_update"] = True
                 print("   ✅ Real-time line movement update simulated")
@@ -804,23 +779,21 @@ All recommendations are based on mathematical models and historical analysis. Pa
             
             for agent_name in agent_names:
                 try:
-                    agent_template = await sync_to_async(
-                        UnifiedAgentTemplate.objects.get
-                    )(name=agent_name, is_active=True)
+                    agent_template = UnifiedAgentTemplate.objects.get(
+                        name=agent_name, is_active=True
+                    )
                     
-                    execution = await sync_to_async(
-                        lambda: AgentExecution.objects.create(
-                            template=agent_template,
-                            user=self.test_user,
-                            task_description="Performance benchmark test",
-                            context={"benchmark": True, "game_id": str(self.test_game.id)}
-                        )
-                    )()
+                    execution = AgentExecution.objects.create(
+                        template=agent_template,
+                        user=self.test_user,
+                        task_description="Performance benchmark test",
+                        context={"benchmark": True, "game_id": self.test_game.id}
+                    )
                     
                     # Simulate execution timing
-                    await sync_to_async(execution.start_execution)()
-                    await asyncio.sleep(0.1)  # Simulate processing
-                    await sync_to_async(execution.complete_execution)({"benchmark_result": "completed"})
+                    execution.start_execution()
+                    time.sleep(0.1)  # Simulate processing
+                    execution.complete_execution({"benchmark_result": "completed"})
                     
                     concurrent_executions.append(execution)
                     
@@ -830,27 +803,21 @@ All recommendations are based on mathematical models and historical analysis. Pa
             # Test database query performance
             db_start = time.time()
             
-            # Complex query test with sync_to_async
-            games_with_odds = await sync_to_async(
-                lambda: Game.objects.filter(
-                    scheduled_start__gte=timezone.now(),
-                    markets__status=MarketStatus.OPEN,
-                    markets__odds_lines__is_current=True
-                ).distinct().count()
-            )()
+            # Complex query test
+            games_with_odds = Game.objects.filter(
+                scheduled_start__gte=timezone.now(),
+                markets__status=MarketStatus.OPEN,
+                markets__odds_lines__is_current=True
+            ).distinct().count()
             
-            active_agents = await sync_to_async(
-                lambda: UnifiedAgentTemplate.objects.filter(
-                    is_active=True,
-                    domain_tags__contains=["sports"]
-                ).count()
-            )()
+            active_agents = UnifiedAgentTemplate.objects.filter(
+                is_active=True,
+                domain_tags__contains=["sports"]
+            ).count()
             
-            recent_executions = await sync_to_async(
-                lambda: AgentExecution.objects.filter(
-                    created_at__gte=timezone.now() - timedelta(hours=24)
-                ).count()
-            )()
+            recent_executions = AgentExecution.objects.filter(
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).count()
             
             db_query_time = time.time() - db_start
             
@@ -880,7 +847,6 @@ All recommendations are based on mathematical models and historical analysis. Pa
             })
             print(f"❌ Performance benchmark test failed: {e}")
     
-    @sync_to_async
     def generate_comprehensive_report(self):
         """Generate comprehensive test report"""
         print("\n" + "="*80)
@@ -896,7 +862,7 @@ All recommendations are based on mathematical models and historical analysis. Pa
         print(f"   Total Tests: {total_tests}")
         print(f"   Passed: {passed_tests} ✅")
         print(f"   Failed: {failed_tests} ❌")
-        print(f"   Success Rate: {(passed_tests/total_tests)*100:.1f}%" if total_tests > 0 else "   Success Rate: 0.0%")
+        print(f"   Success Rate: {(passed_tests/total_tests)*100:.1f}%")
         
         # Performance Metrics
         print(f"\n⚡ PERFORMANCE METRICS:")
@@ -933,36 +899,35 @@ All recommendations are based on mathematical models and historical analysis. Pa
         # Detailed Results
         print(f"\n📋 DETAILED TEST RESULTS:")
         for i, test in enumerate(self.test_results, 1):
-            status_icon = "✅" if test['status'] == 'passed' else "❌"
-            test_name = test['test'].replace('_', ' ').title()
-            print(f"\n   {i}. {test_name}: {test['status'].upper()}")
-            if test['status'] == 'failed':
+            print(f"\n   {i}. {test['test'].replace('_', ' ').title()}: {test['status'].upper()}")
+            if test['status'] == 'passed' and 'metrics' in test:
+                for key, value in test['metrics'].items():
+                    if isinstance(value, dict):
+                        print(f"      {key}: {len(value)} items")
+                    else:
+                        print(f"      {key}: {value}")
+            elif test['status'] == 'failed':
                 print(f"      Error: {test.get('error', 'Unknown error')}")
-            elif 'metrics' in test:
-                for metric_key, metric_value in test['metrics'].items():
-                    if not metric_key.startswith('_'):
-                        print(f"      {metric_key}: {metric_value}")
         
+        # Recommendations
         print(f"\n💡 RECOMMENDATIONS:")
         if failed_tests == 0:
-            print("   • All tests passed - system ready for production deployment")
-        elif failed_tests <= 2:
-            print("   • Minor issues detected - review failed tests before deployment")
+            print("   • All tests passed - system is ready for production")
+            print("   • Consider implementing automated test suite for CI/CD")
+            print("   • Monitor performance metrics in production environment")
         else:
-            print("   • Multiple failures detected - significant work needed")
-        
-        if not working_workflows:
-            print("   • No workflows fully operational - check agent registration")
+            print("   • Review failed tests and address underlying issues")
+            print("   • Verify agent registration and database setup")
+            print("   • Check WebSocket server configuration if applicable")
         
         print("\n" + "="*80)
         
-        # Return summary for any calling code
         return {
             "summary": {
                 "total_tests": total_tests,
                 "passed_tests": passed_tests,
                 "failed_tests": failed_tests,
-                "success_rate": (passed_tests/total_tests)*100 if total_tests > 0 else 0
+                "success_rate": (passed_tests/total_tests)*100
             },
             "performance_metrics": self.performance_metrics,
             "test_results": self.test_results,
@@ -970,15 +935,16 @@ All recommendations are based on mathematical models and historical analysis. Pa
         }
 
 
-# Main execution
 async def main():
-    """Main test execution"""
+    """Main test execution function"""
+    print("🚀 Starting Comprehensive Cross-System Workflow Testing...")
+    
     tester = CrossSystemWorkflowTester()
     
-    # Setup test data (now async)
-    await tester.setup_test_data()
+    # Setup test data
+    tester.setup_test_data()
     
-    # Run all async tests
+    # Run all tests
     await tester.test_agent_discovery_and_routing()
     await tester.test_sports_betting_orchestration()
     await tester.test_content_generation_with_betting_data()
@@ -987,10 +953,18 @@ async def main():
     await tester.test_websocket_integration()
     await tester.test_performance_benchmarks()
     
-    # Generate report (now async)
-    return await tester.generate_comprehensive_report()
+    # Generate comprehensive report
+    report = tester.generate_comprehensive_report()
+    
+    # Save report to file
+    import json
+    with open('cross_system_workflow_test_report.json', 'w') as f:
+        json.dump(report, f, indent=2, default=str)
+    
+    print("\n📄 Full report saved to: cross_system_workflow_test_report.json")
+    
+    return report
 
 
 if __name__ == "__main__":
-    result = asyncio.run(main())
-    print(f"\n🏁 Test execution completed with {result['summary']['success_rate']:.1f}% success rate")
+    asyncio.run(main())

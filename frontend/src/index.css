@@ -1,51 +1,93 @@
+@import './styles/design-tokens.css';
+@import './styles/gaming-theme.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --gradient-success: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --gradient-dark: linear-gradient(135deg, #0a0a0f 0%, #1e293b 100%);
-  }
-
   html, body {
     margin: 0;
     padding: 0;
+    height: 100%;
   }
 
   body {
-    @apply bg-dark-900 text-gray-100 antialiased;
+    background-color: var(--gaming-bg-primary);
+    color: var(--gaming-text-primary);
+    font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom scrollbar */
+  /* Apply gaming theme by default */
+  body.gaming-theme,
+  body {
+    background-color: var(--gaming-bg-primary);
+  }
+
+  /* Enhanced scrollbar with design tokens */
   ::-webkit-scrollbar {
-    @apply w-2 h-2;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-dark-900;
+    background: var(--bg-primary);
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-dark-700 rounded-full;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    border: 2px solid var(--bg-primary);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-dark-600;
+    background: var(--border-secondary);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: var(--bg-primary);
+  }
+
+  /* Focus visible improvements */
+  *:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+  }
+
+  /* Selection colors */
+  ::selection {
+    background-color: var(--primary-500);
+    color: white;
+  }
+
+  ::-moz-selection {
+    background-color: var(--primary-500);
+    color: white;
   }
 }
 
 @layer components {
-  /* Glass morphism effect */
+  /* Gaming Glass morphism effect */
   .glass {
-    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+    @apply backdrop-blur-xl border;
+    background: var(--gaming-bg-secondary);
+    border-color: var(--gaming-border);
   }
 
   .glass-dark {
-    @apply backdrop-blur-xl bg-black/20 border border-white/5;
+    @apply backdrop-blur-xl border;
+    background: rgba(26, 26, 35, 0.8);
+    border-color: var(--gaming-border);
+  }
+
+  /* Gaming glass with neon accents */
+  .glass-gaming {
+    @apply backdrop-blur-xl border;
+    background: var(--gaming-bg-secondary);
+    border-color: var(--gaming-neon-cyan);
+    box-shadow: var(--gaming-glow-subtle);
   }
 
   /* Gradient backgrounds */
@@ -66,46 +108,121 @@
       radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 0.1) 0px, transparent 50%);
   }
 
-  /* Button styles */
+  /* Gaming Button styles */
   .btn-primary {
-    @apply px-4 py-2 bg-gradient-primary text-white font-medium rounded-lg 
-           hover:shadow-lg hover:shadow-primary-500/25 
+    @apply px-4 py-2 font-medium rounded-lg text-white
            transform transition-all duration-200 hover:-translate-y-0.5
            active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: var(--gaming-gradient-primary);
+    border: 1px solid var(--gaming-neon-cyan);
+    box-shadow: var(--gaming-glow-primary);
+  }
+
+  .btn-primary:hover {
+    box-shadow: var(--gaming-glow-primary), 0 0 30px rgba(0, 255, 255, 0.3);
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-dark-800 text-gray-100 font-medium rounded-lg 
-           border border-dark-700 hover:bg-dark-700 
+    @apply px-4 py-2 font-medium rounded-lg border
            transform transition-all duration-200 hover:-translate-y-0.5
            active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: var(--gaming-bg-elevated);
+    border-color: var(--gaming-border);
+    color: var(--gaming-text-primary);
+  }
+
+  .btn-secondary:hover {
+    background: var(--gaming-bg-tertiary);
+    border-color: var(--gaming-neon-cyan);
+    box-shadow: var(--gaming-glow-subtle);
   }
 
   .btn-ghost {
-    @apply px-4 py-2 text-gray-300 font-medium rounded-lg 
-           hover:bg-white/5 hover:text-white
+    @apply px-4 py-2 font-medium rounded-lg
            transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    color: var(--gaming-text-secondary);
   }
 
-  /* Card styles */
+  .btn-ghost:hover {
+    background: rgba(0, 255, 255, 0.05);
+    color: var(--gaming-text-primary);
+  }
+
+  /* Gaming Card styles */
   .card {
-    @apply glass rounded-xl p-6 hover:bg-white/10 transition-all duration-300;
+    @apply glass rounded-xl p-6 transition-all duration-300;
+    background: var(--gaming-bg-secondary);
+    border: 1px solid var(--gaming-border);
+  }
+
+  .card:hover {
+    background: var(--gaming-bg-tertiary);
+    border-color: var(--gaming-neon-cyan);
+    box-shadow: var(--gaming-glow-subtle);
   }
 
   .card-hover {
-    @apply hover:shadow-2xl hover:shadow-primary-500/10 hover:-translate-y-1;
+    @apply hover:-translate-y-1;
   }
 
-  /* Input styles */
+  .card-hover:hover {
+    box-shadow: var(--gaming-glow-medium);
+  }
+
+  /* Gaming card with neon border animation */
+  .card-gaming {
+    @apply glass rounded-xl p-6 transition-all duration-300 relative overflow-hidden;
+    background: var(--gaming-bg-secondary);
+    border: 1px solid var(--gaming-border);
+  }
+
+  .card-gaming::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: var(--gaming-gradient-neon);
+    transition: left 0.5s ease-out;
+  }
+
+  .card-gaming:hover::before {
+    left: 0;
+  }
+
+  .card-gaming:hover {
+    border-color: var(--gaming-neon-cyan);
+    box-shadow: var(--gaming-glow-subtle);
+    transform: translateY(-4px);
+  }
+
+  /* Gaming Input styles */
   .input {
-    @apply w-full px-4 py-2 bg-dark-900/50 border border-dark-700 rounded-lg
-           text-gray-100 placeholder-gray-500
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-           transition-all duration-200;
+    @apply w-full px-4 py-2 rounded-lg border
+           focus:outline-none transition-all duration-200;
+    background: var(--gaming-bg-tertiary);
+    border-color: var(--gaming-border);
+    color: var(--gaming-text-primary);
+  }
+
+  .input::placeholder {
+    color: var(--gaming-text-muted);
+  }
+
+  .input:focus {
+    border-color: var(--gaming-neon-cyan);
+    box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+    background: var(--gaming-bg-elevated);
   }
 
   .input-error {
-    @apply border-red-500 focus:ring-red-500;
+    border-color: var(--gaming-neon-pink);
+  }
+
+  .input-error:focus {
+    border-color: var(--gaming-neon-pink);
+    box-shadow: 0 0 0 2px rgba(255, 20, 147, 0.2);
   }
 
   /* Loading states */
@@ -126,9 +243,31 @@
 }
 
 @layer utilities {
-  /* Text gradient */
+  /* Gaming Text gradient */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-purple-400;
+    @apply bg-clip-text text-transparent;
+    background: var(--gaming-gradient-primary);
+  }
+
+  /* Gaming utility classes */
+  .text-neon-cyan {
+    color: var(--gaming-neon-cyan);
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  }
+
+  .text-neon-purple {
+    color: var(--gaming-neon-purple);
+    text-shadow: 0 0 10px rgba(157, 78, 221, 0.5);
+  }
+
+  .text-neon-green {
+    color: var(--gaming-neon-green);
+    text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+  }
+
+  .text-neon-pink {
+    color: var(--gaming-neon-pink);
+    text-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
   }
 
   /* Animations */
@@ -195,7 +334,8 @@
 }
 
 [cmdk-item][aria-selected="true"] {
-  @apply bg-primary-500/20 text-white;
+  background-color: rgba(var(--primary-500-rgb), 0.2);
+  @apply text-white;
 }
 
 /* Sonner toast customization */

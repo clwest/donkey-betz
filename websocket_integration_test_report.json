@@ -1,0 +1,42 @@
+{
+  "total_tests": 4,
+  "passed": 3,
+  "failed": 1,
+  "success_rate": 75.0,
+  "integration_features": {
+    "Agent Execution Updates": "agent_execution_websocket_updates",
+    "Real-time Sports Data": "real_time_sports_data_updates",
+    "Multi-Agent Coordination": "multi_agent_coordination_websocket",
+    "Content Streaming": "content_generation_websocket_stream"
+  },
+  "test_results": [
+    {
+      "test": "agent_execution_websocket_updates",
+      "status": "PASSED",
+      "execution_id": "agent orchestra coordinator_20250911_192144_f0d34481",
+      "websocket_messages": 3,
+      "channel": "agent_execution_1757618504"
+    },
+    {
+      "test": "real_time_sports_data_updates",
+      "status": "FAILED",
+      "error": "duplicate key value violates unique constraint \"sports_league_name_key\"\nDETAIL:  Key (name)=(Test League) already exists."
+    },
+    {
+      "test": "multi_agent_coordination_websocket",
+      "status": "PASSED",
+      "orchestration_id": "a3ee8c4a-39bf-4b41-9e65-0a207ac09c37",
+      "agents_coordinated": 3,
+      "websocket_messages": 8,
+      "channel": "orchestration_1757618504"
+    },
+    {
+      "test": "content_generation_websocket_stream",
+      "status": "PASSED",
+      "content_id": "1b8b3a85-755f-4170-9570-efe7cc46ad17",
+      "chunks_streamed": 14,
+      "websocket_messages": 16,
+      "final_content_length": 607
+    }
+  ]
+}

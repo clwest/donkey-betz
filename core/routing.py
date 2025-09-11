@@ -13,12 +13,23 @@ except ImportError:
     sports_ws_patterns = []
 
 websocket_urlpatterns = [
+    # Test endpoints
+    re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
+    
     # Agent orchestration WebSocket (for orchestra frontend)
     re_path(r'^ws/agents/$', consumers.AgentProgressConsumer.as_asgi()),
+    
+    # Agent execution and orchestration endpoints
+    re_path(r'^ws/agents/execution/$', consumers.AgentExecutionConsumer.as_asgi()),
+    re_path(r'^ws/agents/orchestration/$', consumers.AgentOrchestrationConsumer.as_asgi()),
     
     # Agent progress monitoring (from DBAO tools-manifest)
     re_path(r'^ws/agent-progress/$', consumers.AgentProgressConsumer.as_asgi()),
     re_path(r'^ws/agent-progress/(?P<instance_id>[^/]+)/$', consumers.AgentProgressConsumer.as_asgi()),
+    
+    # Content processing and analytics
+    re_path(r'^ws/content/processing/$', consumers.ContentProcessingConsumer.as_asgi()),
+    re_path(r'^ws/content/analytics/$', consumers.ContentAnalyticsConsumer.as_asgi()),
     
     # Dashboard real-time updates (from DBAO tools-manifest)
     re_path(r'^ws/dashboard/$', consumers.DashboardConsumer.as_asgi()),

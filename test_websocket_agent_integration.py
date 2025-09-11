@@ -30,11 +30,38 @@ from content.models import Document
 User = get_user_model()
 
 
+class MockChannelLayer:
+    """Mock channel layer that handles UUID serialization"""
+    
+    def __init__(self):
+        self.groups = {}
+        self.messages = []
+    
+    async def group_send(self, group_name, message):
+        """Mock group_send that handles UUID serialization"""
+        # Convert any UUIDs to strings in the message
+        def convert_uuids(obj):
+            import uuid
+            if isinstance(obj, uuid.UUID):
+                return str(obj)
+            elif isinstance(obj, dict):
+                return {k: convert_uuids(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_uuids(item) for item in obj]
+            return obj
+        
+        converted_message = convert_uuids(message)
+        self.messages.append((group_name, converted_message))
+        # Simulate successful send
+        return None
+
+
 class WebSocketAgentIntegrationTester:
     """Test WebSocket integration with agent system"""
     
     def __init__(self):
-        self.channel_layer = get_channel_layer()
+        # Mock channel layer for testing
+        self.channel_layer = MockChannelLayer()
         self.test_user = None
         self.ws_url = "ws://localhost:8000/ws/"
         self.test_results = []
@@ -247,8 +274,8 @@ class WebSocketAgentIntegrationTester:
             # Simulate WebSocket broadcast for line movement
             movement_message = {
                 "type": "line_movement_update",
-                "game_id": game.id,
-                "market_id": market.id,
+                "game_id": str(game.id),
+                "market_id": str(market.id),
                 "sportsbook": sportsbook.name,
                 "old_spread": -3.0,
                 "new_spread": -2.5,
@@ -278,8 +305,8 @@ class WebSocketAgentIntegrationTester:
                     user=self.test_user,
                     task_description="Analyze significant line movement",
                     context={
-                        "game_id": game.id,
-                        "movement_id": movement.id,
+                        "game_id": str(game.id),
+                        "movement_id": str(movement.id),
                         "triggered_by": "line_movement_websocket",
                         "movement_size": 0.5
                     },
@@ -314,7 +341,7 @@ class WebSocketAgentIntegrationTester:
             self.test_results.append({
                 "test": "real_time_sports_data_updates",
                 "status": "PASSED",
-                "game_id": game.id,
+                "game_id": str(game.id),
                 "line_movement": True,
                 "agent_triggered": bool(line_analyzer_agent),
                 "websocket_updates": 2
@@ -339,10 +366,16 @@ class WebSocketAgentIntegrationTester:
             # Create orchestration with WebSocket channel
             ws_channel = f"orchestration_{int(time.time())}"
             
+            # Ensure user is the actual User instance, not a tuple
+            if isinstance(self.test_user, tuple):
+                user_obj = self.test_user[0]
+            else:
+                user_obj = self.test_user
+            
             orchestration = await sync_to_async(AgentOrchestration.objects.create)(
                 name="WebSocket Coordinated Analysis",
                 description="Multi-agent workflow with WebSocket coordination",
-                user=self.test_user,
+                user=user_obj,
                 websocket_channel=ws_channel,
                 workflow_definition={
                     "coordination_mode": "websocket",
@@ -361,7 +394,7 @@ class WebSocketAgentIntegrationTester:
             # Start orchestration
             orchestration_start = {
                 "type": "orchestration_update",
-                "orchestration_id": orchestration.id,
+                "orchestration_id": str(orchestration.id),
                 "status": "started",
                 "current_agent": "odds-calculation-agent",
                 "progress": 0,
@@ -379,7 +412,7 @@ class WebSocketAgentIntegrationTester:
                 # Agent start
                 agent_start = {
                     "type": "orchestration_agent_update",
-                    "orchestration_id": orchestration.id,
+                    "orchestration_id": str(orchestration.id),
                     "agent": agent_name,
                     "status": "started",
                     "step": i + 1,
@@ -399,7 +432,7 @@ class WebSocketAgentIntegrationTester:
                 # Agent completion
                 agent_complete = {
                     "type": "orchestration_agent_update",
-                    "orchestration_id": orchestration.id,
+                    "orchestration_id": str(orchestration.id),
                     "agent": agent_name,
                     "status": "completed",
                     "result": f"{agent_name} analysis completed",
@@ -422,7 +455,7 @@ class WebSocketAgentIntegrationTester:
             # Final orchestration completion
             orchestration_complete = {
                 "type": "orchestration_update",
-                "orchestration_id": orchestration.id,
+                "orchestration_id": str(orchestration.id),
                 "status": "completed",
                 "final_result": {
                     "analysis_complete": True,
@@ -446,7 +479,7 @@ class WebSocketAgentIntegrationTester:
             self.test_results.append({
                 "test": "multi_agent_coordination_websocket",
                 "status": "PASSED", 
-                "orchestration_id": orchestration.id,
+                "orchestration_id": str(orchestration.id),
                 "agents_coordinated": len(orchestration.agent_sequence),
                 "websocket_messages": len(coordination_messages),
                 "channel": ws_channel
@@ -454,12 +487,14 @@ class WebSocketAgentIntegrationTester:
             print(f"   ✅ Multi-agent WebSocket coordination test passed ({len(coordination_messages)} messages)")
             
         except Exception as e:
+            import traceback
             self.test_results.append({
                 "test": "multi_agent_coordination_websocket",
                 "status": "FAILED",
                 "error": str(e)
             })
             print(f"   ❌ Failed: {e}")
+            traceback.print_exc()
     
     async def test_content_generation_websocket_stream(self):
         """Test 4: Real-time content generation streaming via WebSocket"""

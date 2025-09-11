@@ -18,7 +18,6 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from asgiref.sync import sync_to_async
 
 from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
 from sports.models import Game, Team, League, BettingMarket, OddsLine, Sportsbook, BankrollManagement
@@ -31,30 +30,24 @@ class WorkflowScenarioTester:
     """Test specific workflow scenarios"""
     
     def __init__(self):
-        self.test_user = None
+        self.test_user = User.objects.get_or_create(
+            username="workflow_test_user",
+            defaults={"email": "workflow@test.com"}
+        )[0]
         self.scenarios_passed = 0
         self.scenarios_failed = 0
         self.detailed_results = []
     
-    async def setup_test_user(self):
-        """Setup test user asynchronously"""
-        if self.test_user is None:
-            self.test_user = await sync_to_async(
-                lambda: User.objects.get_or_create(
-                    username="workflow_test_user",
-                    defaults={"email": "workflow@test.com"}
-                )[0]
-            )()
-    
-    async def scenario_1_generate_article_best_opportunities(self):
+    def scenario_1_generate_article_best_opportunities(self):
         """Scenario 1: Generate article about today's best betting opportunities"""
         print("\n📝 Scenario 1: Generate article about today's best betting opportunities")
         
         try:
-            await self.setup_test_user()
+            from django.db import transaction
             
-            # Step 1: Agent orchestration discovers relevant agents
-            orchestration = await sync_to_async(AgentOrchestration.objects.create)(
+            with transaction.atomic():
+                # Step 1: Agent orchestration discovers relevant agents
+                orchestration = AgentOrchestration.objects.create(
                 name="Best Opportunities Article Generation",
                 description="Multi-agent workflow to identify and analyze betting opportunities, then generate article",
                 user=self.test_user,
@@ -116,7 +109,7 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
 """
             
             # Create content piece
-            article = await sync_to_async(Document.objects.create)(
+            article = Document.objects.create(
                 title=f"Best Betting Opportunities - {datetime.now().strftime('%m/%d/%Y')}",
                 processed_content=article_content,
                 document_type="markdown",
@@ -124,7 +117,7 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
                 category="analysis",
                 cross_references={
                     "workflow": "best_opportunities_article",
-                    "orchestration_id": str(orchestration.id),
+                    "orchestration_id": orchestration.id,
                     "analysis_data": analysis_data,
                     "auto_generated": True
                 }
@@ -134,8 +127,8 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
             result = {
                 "scenario": "generate_article_best_opportunities",
                 "status": "PASSED",
-                "orchestration_id": str(orchestration.id),
-                "article_id": str(article.id),
+                "orchestration_id": orchestration.id,
+                "article_id": article.id,
                 "opportunities_found": len(analysis_data['value_opportunities']) + len(analysis_data['arbitrage_opportunities'])
             }
             print(f"   ✅ Article generated successfully (ID: {article.id})")
@@ -151,39 +144,34 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
         
         self.detailed_results.append(result)
     
-    async def scenario_2_analyze_team_performance_predictive_content(self):
+    def scenario_2_analyze_team_performance_predictive_content(self):
         """Scenario 2: Analyze team performance and create predictive content"""
         print("\n⚽ Scenario 2: Analyze team performance and create predictive content")
         
         try:
-            await self.setup_test_user()
+            from django.db import transaction
             
-            # Setup test teams and data
-            league = await sync_to_async(
-                lambda: League.objects.get_or_create(
-                    abbreviation="NFL",
-                    defaults={"name": "National Football League", "sport_type": "nfl", "current_season": "2024"}
-                )[0]
-            )()
+            with transaction.atomic():
+                # Setup test teams and data
+                league = League.objects.get_or_create(
+                abbreviation="NFL",
+                defaults={"name": "National Football League", "sport_type": "nfl", "current_season": "2024"}
+            )[0]
             
-            chiefs = await sync_to_async(
-                lambda: Team.objects.get_or_create(
-                    abbreviation="KC",
-                    league=league,
-                    defaults={"name": "Chiefs", "city": "Kansas City", "conference": "AFC"}
-                )[0]
-            )()
+            chiefs = Team.objects.get_or_create(
+                abbreviation="KC",
+                league=league,
+                defaults={"name": "Chiefs", "city": "Kansas City", "conference": "AFC"}
+            )[0]
             
-            bills = await sync_to_async(
-                lambda: Team.objects.get_or_create(
-                    abbreviation="BUF", 
-                    league=league,
-                    defaults={"name": "Bills", "city": "Buffalo", "conference": "AFC"}
-                )[0]
-            )()
+            bills = Team.objects.get_or_create(
+                abbreviation="BUF", 
+                league=league,
+                defaults={"name": "Bills", "city": "Buffalo", "conference": "AFC"}
+            )[0]
             
             # Create orchestration for team analysis
-            orchestration = await sync_to_async(AgentOrchestration.objects.create)(
+            orchestration = AgentOrchestration.objects.create(
                 name="Team Performance Analysis & Prediction",
                 description="Analyze team performance trends and generate predictive content",
                 user=self.test_user,
@@ -267,7 +255,7 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
 """
             
             # Create predictive content piece
-            prediction_article = await sync_to_async(Document.objects.create)(
+            prediction_article = Document.objects.create(
                 title="Chiefs vs Bills: AI Performance Analysis & Predictions",
                 processed_content=predictive_content,
                 document_type="markdown",
@@ -275,7 +263,7 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
                 category="prediction",
                 cross_references={
                     "workflow": "team_performance_prediction",
-                    "orchestration_id": str(orchestration.id),
+                    "orchestration_id": orchestration.id,
                     "team_analysis": team_analysis,
                     "prediction_type": "game_outcome",
                     "confidence_level": team_analysis['prediction']['confidence']
@@ -286,8 +274,8 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
             result = {
                 "scenario": "analyze_team_performance_predictive_content",
                 "status": "PASSED",
-                "orchestration_id": str(orchestration.id),
-                "article_id": str(prediction_article.id),
+                "orchestration_id": orchestration.id,
+                "article_id": prediction_article.id,
                 "prediction_confidence": team_analysis['prediction']['confidence']
             }
             print(f"   ✅ Predictive analysis completed (Confidence: {team_analysis['prediction']['confidence']*100:.0f}%)")
@@ -303,15 +291,13 @@ All recommendations sized according to Kelly Criterion with {analysis_data['kell
         
         self.detailed_results.append(result)
     
-    async def scenario_3_generate_betting_strategy_guide(self):
+    def scenario_3_generate_betting_strategy_guide(self):
         """Scenario 3: Generate betting strategy guide using historical data"""
         print("\n📚 Scenario 3: Generate betting strategy guide using historical data")
         
         try:
-            await self.setup_test_user()
-            
             # Create orchestration for strategy guide generation
-            orchestration = await sync_to_async(AgentOrchestration.objects.create)(
+            orchestration = AgentOrchestration.objects.create(
                 name="Betting Strategy Guide Generation",
                 description="Generate comprehensive betting strategy guide using historical performance data",
                 user=self.test_user,
@@ -409,7 +395,7 @@ Successful sports betting requires discipline, proper bankroll management, and d
 """
             
             # Create strategy guide content
-            strategy_guide = await sync_to_async(Document.objects.create)(
+            strategy_guide = Document.objects.create(
                 title="Complete Data-Driven Betting Strategy Guide",
                 processed_content=strategy_guide_content,
                 document_type="markdown",
@@ -417,7 +403,7 @@ Successful sports betting requires discipline, proper bankroll management, and d
                 category="guide",
                 cross_references={
                     "workflow": "betting_strategy_guide",
-                    "orchestration_id": str(orchestration.id),
+                    "orchestration_id": orchestration.id,
                     "strategy_data": strategy_data,
                     "historical_sample_size": strategy_data['historical_performance']['total_bets_analyzed'],
                     "guide_version": "2.0"
@@ -425,7 +411,7 @@ Successful sports betting requires discipline, proper bankroll management, and d
             )
             
             # Also create RAG document for future reference
-            rag_doc = await sync_to_async(Document.objects.create)(
+            rag_doc = Document.objects.create(
                 title="Betting Strategy Guide - Historical Analysis Data",
                 processed_content=json.dumps(strategy_data, indent=2),
                 document_type="json",
@@ -442,9 +428,9 @@ Successful sports betting requires discipline, proper bankroll management, and d
             result = {
                 "scenario": "generate_betting_strategy_guide",
                 "status": "PASSED",
-                "orchestration_id": str(orchestration.id),
-                "guide_id": str(strategy_guide.id),
-                "rag_doc_id": str(rag_doc.id),
+                "orchestration_id": orchestration.id,
+                "guide_id": strategy_guide.id,
+                "rag_doc_id": rag_doc.id,
                 "strategies_analyzed": len(strategy_data['historical_performance']['winning_strategies'])
             }
             print(f"   ✅ Strategy guide generated with {len(strategy_data['historical_performance']['winning_strategies'])} winning strategies")
@@ -460,15 +446,13 @@ Successful sports betting requires discipline, proper bankroll management, and d
         
         self.detailed_results.append(result)
     
-    async def scenario_4_personal_assistant_orchestration(self):
+    def scenario_4_personal_assistant_orchestration(self):
         """Scenario 4: Personal Assistant orchestrates complex workflow"""
         print("\n🤖 Scenario 4: Personal Assistant orchestrates complex multi-agent workflow")
         
         try:
-            await self.setup_test_user()
-            
             # Create complex orchestration managed by Personal Assistant
-            orchestration = await sync_to_async(AgentOrchestration.objects.create)(
+            orchestration = AgentOrchestration.objects.create(
                 name="Personal Assistant Managed Workflow",
                 description="PA coordinates multiple agents for comprehensive betting analysis and content creation",
                 user=self.test_user,
@@ -578,7 +562,7 @@ Your PA made **{len(pa_coordination_log['coordination_decisions'])} key coordina
 """
             
             # Create PA-managed content
-            pa_content = await sync_to_async(Document.objects.create)(
+            pa_content = Document.objects.create(
                 title="Daily Betting Intelligence - PA Coordinated Analysis",
                 processed_content=pa_managed_content,
                 document_type="markdown",
@@ -586,7 +570,7 @@ Your PA made **{len(pa_coordination_log['coordination_decisions'])} key coordina
                 category="intelligence_report",
                 cross_references={
                     "workflow": "personal_assistant_orchestration",
-                    "orchestration_id": str(orchestration.id),
+                    "orchestration_id": orchestration.id,
                     "coordination_log": pa_coordination_log,
                     "parallel_processing": True,
                     "pa_managed": True,
@@ -598,8 +582,8 @@ Your PA made **{len(pa_coordination_log['coordination_decisions'])} key coordina
             result = {
                 "scenario": "personal_assistant_orchestration",
                 "status": "PASSED",
-                "orchestration_id": str(orchestration.id),
-                "content_id": str(pa_content.id),
+                "orchestration_id": orchestration.id,
+                "content_id": pa_content.id,
                 "agents_coordinated": len(orchestration.agent_sequence),
                 "parallel_streams": len(pa_coordination_log['parallel_streams']),
                 "coordination_decisions": len(pa_coordination_log['coordination_decisions'])
@@ -650,17 +634,17 @@ Your PA made **{len(pa_coordination_log['coordination_decisions'])} key coordina
         }
 
 
-async def main():
+def main():
     """Run all workflow scenario tests"""
     print("🎯 Starting Workflow Scenario Testing...")
     
     tester = WorkflowScenarioTester()
     
     # Run all scenarios
-    await tester.scenario_1_generate_article_best_opportunities()
-    await tester.scenario_2_analyze_team_performance_predictive_content()
-    await tester.scenario_3_generate_betting_strategy_guide()
-    await tester.scenario_4_personal_assistant_orchestration()
+    tester.scenario_1_generate_article_best_opportunities()
+    tester.scenario_2_analyze_team_performance_predictive_content()
+    tester.scenario_3_generate_betting_strategy_guide()
+    tester.scenario_4_personal_assistant_orchestration()
     
     # Generate report
     report = tester.generate_scenario_report()
@@ -675,6 +659,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-    result = asyncio.run(main())
-    print(f"\n🏁 Scenario testing completed with {result['success_rate']:.1f}% success rate")
+    main()
