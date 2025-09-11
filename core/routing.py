@@ -10,6 +10,9 @@ from channels.security.websocket import AllowedHostsOriginValidator
 from . import consumers
 
 websocket_urlpatterns = [
+    # Agent orchestration WebSocket (for orchestra frontend)
+    re_path(r'^ws/agents/$', consumers.AgentProgressConsumer.as_asgi()),
+    
     # Agent progress monitoring (from DBAO tools-manifest)
     re_path(r'^ws/agent-progress/$', consumers.AgentProgressConsumer.as_asgi()),
     re_path(r'^ws/agent-progress/(?P<instance_id>[^/]+)/$', consumers.AgentProgressConsumer.as_asgi()),
@@ -27,8 +30,15 @@ websocket_urlpatterns = [
     # Multi-agent orchestration updates
     re_path(r'^ws/orchestration/(?P<orchestration_id>[^/]+)/$', consumers.OrchestrationConsumer.as_asgi()),
     
+    # Agent Channels - "Slack for AI Agents" (integrated from donkey_betz)
+    re_path(r'^ws/channels/$', consumers.AgentChannelsConsumer.as_asgi()),
+    re_path(r'^ws/channels/(?P<channel_id>[^/]+)/$', consumers.AgentChannelsConsumer.as_asgi()),
+    
     # System notifications and alerts
     re_path(r'^ws/notifications/$', consumers.NotificationConsumer.as_asgi()),
+    
+    # Mythology/Content Review notifications
+    re_path(r'^ws/mythology/$', consumers.MythologyConsumer.as_asgi()),
 ]
 
 application = ProtocolTypeRouter({
