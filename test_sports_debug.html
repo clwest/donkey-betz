@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Betting Debug Console</title>
+    <style>
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .console-output {
+            background: #0f0f23;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+        .log-entry.success {
+            border-left-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        .log-entry.warning {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        .log-entry.info {
+            border-left-color: #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+        .instructions {
+            background: #2a2a4a;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions h2 {
+            color: #FFC107;
+            margin-top: 0;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        .code {
+            background: #0f0f23;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #4CAF50;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.active {
+            background: #4CAF50;
+        }
+        .status.inactive {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏈 Sports Betting Debug Console</h1>
+    
+    <div class="instructions">
+        <h2>📋 How to Use This Debug Tool</h2>
+        <ol>
+            <li>Open your browser's Developer Console:
+                <ul>
+                    <li>Chrome/Edge: Press <span class="code">Cmd+Option+J</span> (Mac) or <span class="code">Ctrl+Shift+J</span> (Windows)</li>
+                    <li>Firefox: Press <span class="code">Cmd+Option+K</span> (Mac) or <span class="code">Ctrl+Shift+K</span> (Windows)</li>
+                    <li>Safari: Enable Developer menu, then press <span class="code">Cmd+Option+C</span></li>
+                </ul>
+            </li>
+            <li>Navigate to your React app at <a href="http://localhost:3000" style="color: #4CAF50;">http://localhost:3000</a></li>
+            <li>Go to the Sports Betting Hub page</li>
+            <li>Watch the console for detailed debug logs showing:
+                <ul>
+                    <li>🔍 API requests and responses</li>
+                    <li>✅ Successful data loads</li>
+                    <li>❌ Any errors or issues</li>
+                    <li>📊 Data counts and structure</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="instructions">
+        <h2>🔍 What to Look For in Console</h2>
+        <p>The debug logs are color-coded with emojis:</p>
+        <ul>
+            <li>🏁 <strong>[Dashboard]</strong> - Component lifecycle and rendering</li>
+            <li>🔍 <strong>[Sports API]</strong> - API requests and responses</li>
+            <li>✅ <strong>Success logs</strong> - Data successfully loaded</li>
+            <li>❌ <strong>Error logs</strong> - Problems or failures</li>
+            <li>⚠️ <strong>Warning logs</strong> - Missing or unexpected data</li>
+            <li>🎯 <strong>Data counts</strong> - Number of items received</li>
+        </ul>
+    </div>
+
+    <div class="instructions">
+        <h2>🎯 Expected Data Flow</h2>
+        <ol>
+            <li><strong>Component Mount:</strong> 🚀 [Dashboard] Component mounted, loading initial data...</li>
+            <li><strong>API Requests:</strong> 🔍 [Sports API] Request: GET /api/v1/sports/summary/</li>
+            <li><strong>Data Reception:</strong> ✅ [Sports API] Response: {data with counts}</li>
+            <li><strong>State Updates:</strong> ✅ [Dashboard] Data loaded: {sports types, games, etc.}</li>
+            <li><strong>Rendering:</strong> 🎨 [Dashboard] Rendering sports overview with: [array of sports]</li>
+        </ol>
+    </div>
+
+    <div class="instructions" style="background: rgba(244, 67, 54, 0.2); border: 1px solid #f44336;">
+        <h2>⚠️ Common Issues to Check</h2>
+        <ul>
+            <li><strong>Empty Arrays:</strong> If you see <span class="code">[]</span> or <span class="code">length: 0</span>, the API is returning no data</li>
+            <li><strong>404 Errors:</strong> API endpoints may be incorrect or not running</li>
+            <li><strong>CORS Errors:</strong> Backend may not be configured for frontend access</li>
+            <li><strong>Network Errors:</strong> Backend server may not be running on port 8000</li>
+            <li><strong>Auth Errors:</strong> Token may be invalid or expired</li>
+        </ul>
+    </div>
+
+    <div class="instructions" style="background: rgba(76, 175, 80, 0.2); border: 1px solid #4CAF50;">
+        <h2>✅ What Success Looks Like</h2>
+        <p>When everything is working correctly, you should see:</p>
+        <ul>
+            <li>Sports types with counts > 0</li>
+            <li>Live games array (may be empty if no games are live)</li>
+            <li>Trending games with actual game data</li>
+            <li>Successful rendering of sports cards</li>
+            <li>Games loading when you select a sport</li>
+        </ul>
+    </div>
+
+    <script>
+        // Simple console log interceptor for demo
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        const logs = [];
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logs.push({type: 'log', message: args.join(' '), timestamp: new Date()});
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logs.push({type: 'error', message: args.join(' '), timestamp: new Date()});
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            logs.push({type: 'warning', message: args.join(' '), timestamp: new Date()});
+        };
+        
+        // Test the logging
+        console.log('🏁 [Debug Console] Ready to monitor sports betting hub');
+        console.log('📡 [Debug Console] Open your React app and navigate to Sports Betting Hub');
+        console.log('👀 [Debug Console] Watch your browser console for detailed logs');
+    </script>
+</body>
+</html>

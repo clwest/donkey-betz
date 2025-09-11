@@ -135,35 +135,35 @@ export interface CheckoutSessionResponse {
 class BillingAPI {
   // Pricing and Plans
   async getPricingTiers(): Promise<PricingTier[]> {
-    const response = await apiClient.get('/billing/pricing/');
+    const response = await apiClient.get('/api/v1/billing/pricing/');
     return response.data;
   }
 
   // Subscription Management
   async getSubscription(): Promise<Subscription> {
-    const response = await apiClient.get('/billing/subscription/');
+    const response = await apiClient.get('/api/v1/billing/subscription/');
     return response.data;
   }
 
   async createCheckoutSession(request: CheckoutSessionRequest): Promise<CheckoutSessionResponse> {
-    const response = await apiClient.post('/billing/checkout/', request);
+    const response = await apiClient.post('/api/v1/billing/checkout/', request);
     return response.data;
   }
 
   async cancelSubscription(cancelImmediately: boolean = false): Promise<{ message: string; subscription: Subscription }> {
-    const response = await apiClient.post('/billing/subscription/cancel/', {
+    const response = await apiClient.post('/api/v1/billing/subscription/cancel/', {
       cancel_immediately: cancelImmediately
     });
     return response.data;
   }
 
   async reactivateSubscription(): Promise<{ message: string; subscription: Subscription }> {
-    const response = await apiClient.post('/billing/subscription/reactivate/');
+    const response = await apiClient.post('/api/v1/billing/subscription/reactivate/');
     return response.data;
   }
 
   async createBillingPortalSession(): Promise<{ portal_url: string }> {
-    const response = await apiClient.post('/billing/portal/');
+    const response = await apiClient.post('/api/v1/billing/portal/');
     return response.data;
   }
 
@@ -179,23 +179,23 @@ class BillingAPI {
     previous: string | null;
     results: UsageRecord[];
   }> {
-    const response = await apiClient.get('/billing/usage/', { params });
+    const response = await apiClient.get('/api/v1/billing/usage/', { params });
     return response.data;
   }
 
   async getBillingSummary(): Promise<BillingSummary> {
-    const response = await apiClient.get('/billing/summary/');
+    const response = await apiClient.get('/api/v1/billing/summary/');
     return response.data;
   }
 
   // Invoice Management
   async getInvoices(): Promise<Invoice[]> {
-    const response = await apiClient.get('/billing/invoices/');
+    const response = await apiClient.get('/api/v1/billing/invoices/');
     return response.data;
   }
 
   async downloadInvoice(invoiceId: number): Promise<Blob> {
-    const response = await apiClient.get(`/billing/invoices/${invoiceId}/download/`, {
+    const response = await apiClient.get(`/api/v1/billing/invoices/${invoiceId}/download/`, {
       responseType: 'blob'
     });
     return response.data;
@@ -203,7 +203,7 @@ class BillingAPI {
 
   // Payment Methods
   async getPaymentMethods(): Promise<PaymentMethod[]> {
-    const response = await apiClient.get('/billing/payment-methods/');
+    const response = await apiClient.get('/api/v1/billing/payment-methods/');
     return response.data;
   }
 
@@ -211,16 +211,16 @@ class BillingAPI {
     stripe_payment_method_id: string;
     is_default?: boolean;
   }): Promise<PaymentMethod> {
-    const response = await apiClient.post('/billing/payment-methods/', paymentMethodData);
+    const response = await apiClient.post('/api/v1/billing/payment-methods/', paymentMethodData);
     return response.data;
   }
 
   async deletePaymentMethod(paymentMethodId: number): Promise<void> {
-    await apiClient.delete(`/billing/payment-methods/${paymentMethodId}/`);
+    await apiClient.delete(`/api/v1/billing/payment-methods/${paymentMethodId}/`);
   }
 
   async setDefaultPaymentMethod(paymentMethodId: number): Promise<PaymentMethod> {
-    const response = await apiClient.patch(`/billing/payment-methods/${paymentMethodId}/`, {
+    const response = await apiClient.patch(`/api/v1/billing/payment-methods/${paymentMethodId}/`, {
       is_default: true
     });
     return response.data;
@@ -236,7 +236,7 @@ class BillingAPI {
     amount_paid: number;
     transaction_id: number;
   }> {
-    const response = await apiClient.post('/billing/credits/purchase/', data);
+    const response = await apiClient.post('/api/v1/billing/credits/purchase/', data);
     return response.data;
   }
 
@@ -258,7 +258,7 @@ class BillingAPI {
     }>;
     period_days: number;
   }> {
-    const response = await apiClient.get('/billing/admin/dashboard/', {
+    const response = await apiClient.get('/api/v1/billing/admin/dashboard/', {
       params: { days }
     });
     return response.data;
@@ -275,7 +275,7 @@ class BillingAPI {
     credits_remaining: number;
     current_period_end: string | null;
   }>> {
-    const response = await apiClient.get('/billing/admin/users/');
+    const response = await apiClient.get('/api/v1/billing/admin/users/');
     return response.data;
   }
 }

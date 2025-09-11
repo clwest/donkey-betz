@@ -76,7 +76,7 @@ class AgentDiscoveryService {
    */
   async discoverAllAgents(refresh = false) {
     const params = refresh ? '?refresh=true' : '';
-    const response = await apiClient.get(`/agents/discover/${params}`);
+    const response = await apiClient.get(`/api/v1/agents/discover/${params}`);
     return response.data;
   }
 
@@ -84,7 +84,7 @@ class AgentDiscoveryService {
    * Get detailed information about a specific agent
    */
   async getAgentDetails(agentId: string) {
-    const response = await apiClient.get(`/agents/${agentId}/details/`);
+    const response = await apiClient.get(`/api/v1/agents/${agentId}/details/`);
     return response.data;
   }
 
@@ -92,7 +92,7 @@ class AgentDiscoveryService {
    * Get comprehensive discovery statistics
    */
   async getDiscoveryStats() {
-    const response = await apiClient.get('/agents/discovery/stats/');
+    const response = await apiClient.get('/api/v1/agents/discovery/stats/');
     return response.data;
   }
 
@@ -100,7 +100,7 @@ class AgentDiscoveryService {
    * Refresh agent discovery cache
    */
   async refreshDiscovery() {
-    const response = await apiClient.post('/agents/discovery/refresh/');
+    const response = await apiClient.post('/api/v1/agents/discovery/refresh/');
     return response.data;
   }
 
@@ -108,7 +108,7 @@ class AgentDiscoveryService {
    * Suggest the best agent for a given task
    */
   async suggestAgentForTask(task: string) {
-    const response = await apiClient.post('/agents/suggest/', {
+    const response = await apiClient.post('/api/v1/agents/suggest/', {
       task
     });
     return response.data;
@@ -118,7 +118,7 @@ class AgentDiscoveryService {
    * Search for agents by capability
    */
   async searchAgentsByCapability(capability: string) {
-    const response = await apiClient.get(`/agents/search/?capability=${encodeURIComponent(capability)}`);
+    const response = await apiClient.get(`/api/v1/agents/search/?capability=${encodeURIComponent(capability)}`);
     return response.data;
   }
 

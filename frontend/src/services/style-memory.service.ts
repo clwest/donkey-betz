@@ -53,7 +53,7 @@ export const styleMemoryService = {
 
   // Respond to a suggestion (use it or dismiss it)
   async respondToSuggestion(suggestionId: string, response: 'used' | 'dismissed') {
-    const { data } = await apiClient.post(`/style-memory/suggestions/${suggestionId}/respond/`, {
+    const { data } = await apiClient.post(`/api/v1/style-memory/suggestions/${suggestionId}/respond/`, {
       response,
     });
     return data;
@@ -67,13 +67,13 @@ export const styleMemoryService = {
 
   // Extract style recipe from a successful generation
   async extractRecipe(contentId: string) {
-    const { data } = await apiClient.get(`/style-memory/recipe/${contentId}/`);
+    const { data } = await apiClient.get(`/api/v1/style-memory/recipe/${contentId}/`);
     return data;
   },
 
   // Search similar styles using semantic search
   async searchSimilarStyles(query: string, limit = 10) {
-    const { data } = await apiClient.post('/style-memory/search/', {
+    const { data } = await apiClient.post('/api/v1/style-memory/search/', {
       query,
       limit,
     });
@@ -86,7 +86,7 @@ export const styleMemoryService = {
     interaction_type: InteractionType;
     notes?: string;
   }>) {
-    const { data } = await apiClient.post('/style-memory/batch/', {
+    const { data } = await apiClient.post('/api/v1/style-memory/batch/', {
       interactions,
     });
     return data;
@@ -94,7 +94,7 @@ export const styleMemoryService = {
 
   // Get evolution timeline of user's style preferences
   async getEvolutionTimeline(timeRange = '30d') {
-    const { data } = await apiClient.get(`/style-memory/evolution/?range=${timeRange}`);
+    const { data } = await apiClient.get(`/api/v1/style-memory/evolution/?range=${timeRange}`);
     return data;
   },
 };

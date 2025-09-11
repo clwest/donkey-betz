@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Search, Tag, Folder, Download, Trash2, Edit, Plus, X, CheckCircle, AlertCircle, BookOpen, Brain, Hash, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface KnowledgeEntry {
   id: string;
@@ -95,7 +95,7 @@ const PersonalKnowledge: React.FC = () => {
       params.append('page', currentPage.toString());
       params.append('per_page', itemsPerPage.toString());
       
-      const response = await fetch(`${API_BASE_URL}/personal-knowledge/list/?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/list/?${params}`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -123,7 +123,7 @@ const PersonalKnowledge: React.FC = () => {
 
   const fetchEmbeddingsCount = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/dashboard/embeddings-stats/`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/dashboard/embeddings-stats/`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -160,8 +160,8 @@ const PersonalKnowledge: React.FC = () => {
     formData.append('use_in_generation', String(newKnowledge.use_in_generation));
     
     try {
-      console.log('Uploading file to:', `${API_BASE_URL}/personal-knowledge/upload/`);
-      const response = await fetch(`${API_BASE_URL}/personal-knowledge/upload/`, {
+      console.log('Uploading file to:', `${API_BASE_URL}/api/v1/personal-knowledge/upload/`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/upload/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`
@@ -203,7 +203,7 @@ const PersonalKnowledge: React.FC = () => {
     
     setUploading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/personal-knowledge/upload/`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/upload/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,
@@ -242,7 +242,7 @@ const PersonalKnowledge: React.FC = () => {
     if (!confirm('Are you sure you want to delete this knowledge entry?')) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/personal-knowledge/${id}/delete/`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/${id}/delete/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Token ${token}`

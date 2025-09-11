@@ -120,7 +120,7 @@ export default function WorkflowsPage() {
 
   const loadExecutionHistory = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/workflows/history/', {
+      const response = await fetch('http://localhost:8000/api/v1/workflows/history/', {
         headers: {
           'Authorization': `Token ${localStorage.getItem('auth_token') || '993f8273f70877e23b5c7d2f92ed30562a089fe3'}`,
           'Content-Type': 'application/json'

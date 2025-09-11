@@ -62,7 +62,13 @@ async function postJson<T>(path: string, body: any): Promise<T> {
   const url = `${BASE}${path}`;
   
   // Get auth token from localStorage - using AI Content Studio testuser token
-  const token = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+  const token = localStorage.getItem('authToken');
+  
+  if (!token) {
+    console.error('[Odds API] No auth token found - user must be logged in');
+    toast.error('Please log in to access odds data');
+    throw new Error('Authentication required');
+  }
   
   try {
     const response = await fetch(url, {
@@ -362,7 +368,7 @@ export async function fetchLeagues(): Promise<League[]> {
       headers: {
         'Content-Type': 'application/json',
         'X-DBAO-Client': 'AI-Studio-Web',
-        'Authorization': `Token ${localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'}`
+        'Authorization': `Token ${localStorage.getItem('authToken')}`
       }
     });
 
@@ -398,7 +404,7 @@ export async function fetchGames(league: string, date?: string): Promise<Game[]>
       headers: {
         'Content-Type': 'application/json',
         'X-DBAO-Client': 'AI-Studio-Web',
-        'Authorization': `Token ${localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'}`
+        'Authorization': `Token ${localStorage.getItem('authToken')}`
       }
     });
 
@@ -445,7 +451,7 @@ export async function fetchMarkets(gameId: string): Promise<Market[]> {
       headers: {
         'Content-Type': 'application/json',
         'X-DBAO-Client': 'AI-Studio-Web',
-        'Authorization': `Token ${localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'}`
+        'Authorization': `Token ${localStorage.getItem('authToken')}`
       }
     });
 

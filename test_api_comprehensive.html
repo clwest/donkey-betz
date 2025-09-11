@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive API Test & Debug</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 { color: #00ff00; }
+        .controls {
+            background: #1a1a1a;
+            padding: 20px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .test-result {
+            margin: 5px 0;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #0a0a0a;
+            font-size: 12px;
+        }
+        .success { 
+            border-color: #00ff00; 
+            background: #001100;
+        }
+        .error { 
+            border-color: #ff0000; 
+            background: #110000;
+        }
+        .warning {
+            border-color: #ffff00;
+            background: #111100;
+        }
+        .info { color: #00ffff; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+        button:hover { background: #00cc00; }
+        .critical {
+            background: #330000;
+            padding: 20px;
+            border: 3px solid #ff0000;
+            margin: 20px 0;
+            border-radius: 10px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { border-color: #ff0000; }
+            50% { border-color: #ff6666; }
+            100% { border-color: #ff0000; }
+        }
+        .config-display {
+            background: #1a1a1a;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .endpoint-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .endpoint-card {
+            background: #1a1a1a;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-200 { background: #00ff00; color: #000; }
+        .status-401 { background: #ffaa00; color: #000; }
+        .status-404 { background: #ff0000; color: #fff; }
+        .status-500 { background: #ff00ff; color: #fff; }
+        pre {
+            background: #0a0a0a;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Comprehensive API Endpoint Test & Debug</h1>
+    
+    <div class="critical">
+        <h2>⚠️ CRITICAL: Browser Cache Issues Detected!</h2>
+        <p><strong>Your browser is caching old JavaScript files with the wrong API configuration!</strong></p>
+        <p>To fix this issue, you MUST:</p>
+        <ol>
+            <li>Open Chrome DevTools (F12)</li>
+            <li>Go to the Network tab</li>
+            <li>Check "Disable cache" checkbox</li>
+            <li>Keep DevTools open during testing</li>
+            <li>OR: Use Cmd+Shift+R (Mac) / Ctrl+Shift+F5 (Windows) for hard refresh</li>
+        </ol>
+        <p>The double /api/api/ prefix is caused by cached JavaScript, not server configuration!</p>
+    </div>
+
+    <div class="controls">
+        <h2>Test Controls</h2>
+        <button onclick="checkCurrentConfig()">1. Check Current Config</button>
+        <button onclick="testAllEndpoints()">2. Test All Endpoints</button>
+        <button onclick="testDashboardSpecific()">3. Test Dashboard Only</button>
+        <button onclick="testWithDifferentTokens()">4. Test Auth Tokens</button>
+        <button onclick="clearAndRetest()">5. Clear Cache & Retest</button>
+        <button onclick="openReactApp()">6. Open React App</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="config-section"></div>
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const FRONTEND_URL = 'http://localhost:3000';
+        const DEFAULT_TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        function log(message, type = 'info', details = null) {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            let html = `<span class="info">[${timestamp}]</span> ${message}`;
+            if (details) {
+                html += `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+            }
+            div.innerHTML = html;
+            document.getElementById('results').appendChild(div);
+            console.log(`[${type.toUpperCase()}]`, message, details || '');
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('config-section').innerHTML = '';
+            log('Results cleared', 'info');
+        }
+        
+        async function checkCurrentConfig() {
+            log('=== Checking Current Configuration ===', 'info');
+            
+            const configDiv = document.getElementById('config-section');
+            configDiv.innerHTML = `
+                <div class="config-display">
+                    <h3>Browser Configuration</h3>
+                    <p>Current URL: ${window.location.href}</p>
+                    <p>API Base: ${API_BASE}</p>
+                    <p>Frontend URL: ${FRONTEND_URL}</p>
+                    <p>LocalStorage Token: ${localStorage.getItem('authToken') ? '✓ Present' : '✗ Missing'}</p>
+                    <p>Cache Status: ${navigator.onLine ? 'Online' : 'Offline'}</p>
+                    <p>User Agent: ${navigator.userAgent}</p>
+                </div>
+            `;
+            
+            // Check if old cached files exist
+            try {
+                const response = await fetch(`${FRONTEND_URL}/src/services/api.config.ts`, {
+                    method: 'HEAD'
+                });
+                if (response.ok) {
+                    log('⚠️ WARNING: Direct access to source files detected - cache may be stale!', 'warning');
+                }
+            } catch (e) {
+                log('✓ Source files not directly accessible (expected)', 'success');
+            }
+            
+            // Test a simple health check
+            try {
+                const healthResponse = await fetch(`${API_BASE}/api/v1/health/`, {
+                    headers: {
+                        'Authorization': `Token ${DEFAULT_TOKEN}`
+                    }
+                });
+                if (healthResponse.ok) {
+                    log('✓ Backend is responding correctly at /api/v1/health/', 'success');
+                } else {
+                    log(`✗ Backend health check failed: ${healthResponse.status}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ Cannot reach backend: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testEndpoint(path, name, token = null) {
+            const url = `${API_BASE}${path}`;
+            const authToken = token || localStorage.getItem('authToken') || DEFAULT_TOKEN;
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Token ${authToken}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                const elapsed = Date.now() - startTime;
+                
+                const result = {
+                    endpoint: path,
+                    status: response.status,
+                    time: `${elapsed}ms`,
+                    success: response.ok
+                };
+                
+                if (response.ok) {
+                    log(`✅ ${name}: ${path} [${response.status}] ${elapsed}ms`, 'success');
+                } else if (response.status === 404) {
+                    log(`❌ ${name}: ${path} [404 NOT FOUND]`, 'error');
+                    
+                    // Check if it's the double-prefix issue
+                    if (path.includes('/api/api/')) {
+                        log('⚠️ DOUBLE PREFIX DETECTED! This is a caching issue!', 'warning');
+                    }
+                } else if (response.status === 401) {
+                    log(`🔒 ${name}: ${path} [401 UNAUTHORIZED]`, 'warning');
+                } else {
+                    log(`❌ ${name}: ${path} [${response.status}]`, 'error');
+                }
+                
+                return result;
+            } catch (error) {
+                log(`💥 ${name}: ${path} - ${error.message}`, 'error');
+                return { endpoint: path, status: 'ERROR', error: error.message };
+            }
+        }
+        
+        async function testAllEndpoints() {
+            clearResults();
+            log('=== Testing All API Endpoints ===', 'info');
+            log('Using correct /api/v1/ prefix for all endpoints', 'info');
+            
+            const endpoints = [
+                // Core
+                { path: '/api/v1/health/', name: 'Health Check' },
+                { path: '/api/v1/status/', name: 'Platform Status' },
+                
+                // Auth
+                { path: '/api/v1/auth/user/', name: 'Current User' },
+                { path: '/api/v1/profile/', name: 'User Profile' },
+                
+                // Dashboard - These are the problematic ones
+                { path: '/api/v1/dashboard/stats/', name: '🎯 Dashboard Stats' },
+                { path: '/api/v1/dashboard/activity/', name: '🎯 Dashboard Activity' },
+                { path: '/api/v1/dashboard/embeddings-stats/', name: '🎯 Embeddings Stats' },
+                
+                // Content
+                { path: '/api/v1/content/blog/list/', name: 'Blog List' },
+                { path: '/api/v1/content/gallery/list/', name: 'Gallery List' },
+                { path: '/api/v1/content/video/list/', name: 'Video List' },
+                
+                // Agents
+                { path: '/api/v1/agents/', name: 'Agent List' },
+                { path: '/api/v1/agents/discovery/stats/', name: 'Agent Discovery Stats' },
+                
+                // Sports
+                { path: '/api/v1/sports/leagues/', name: 'Sports Leagues' },
+                { path: '/api/v1/sports/games/', name: 'Sports Games' },
+                
+                // Mythology
+                { path: '/api/v1/mythology/stats/', name: 'Mythology Stats' },
+                { path: '/api/v1/mythology/recent/', name: 'Mythology Recent' }
+            ];
+            
+            const results = [];
+            for (const endpoint of endpoints) {
+                const result = await testEndpoint(endpoint.path, endpoint.name);
+                results.push(result);
+                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+            }
+            
+            // Summary
+            const successful = results.filter(r => r.success).length;
+            const failed = results.filter(r => !r.success && r.status !== 401).length;
+            const unauthorized = results.filter(r => r.status === 401).length;
+            
+            log('', 'info');
+            log(`=== Summary: ${successful} OK, ${failed} Failed, ${unauthorized} Unauthorized ===`, 
+                failed > 0 ? 'error' : 'success');
+            
+            // Check for double prefix issues
+            const doublePrefixIssues = results.filter(r => 
+                r.endpoint && r.endpoint.includes('/api/api/')
+            );
+            if (doublePrefixIssues.length > 0) {
+                log('⚠️ CRITICAL: Double prefix issues detected! Clear your browser cache!', 'error');
+            }
+        }
+        
+        async function testDashboardSpecific() {
+            clearResults();
+            log('=== Testing Dashboard Endpoints Specifically ===', 'info');
+            
+            // Test both correct and incorrect paths to diagnose
+            const tests = [
+                { path: '/api/v1/dashboard/stats/', name: 'Correct Path' },
+                { path: '/api/api/v1/dashboard/stats/', name: 'Double Prefix (WRONG)' },
+                { path: '/api/dashboard/stats/', name: 'Old Path (v0)' },
+                { path: '/dashboard/stats/', name: 'No API Prefix' }
+            ];
+            
+            for (const test of tests) {
+                await testEndpoint(test.path, test.name);
+            }
+            
+            log('', 'info');
+            log('If "Double Prefix (WRONG)" returns 404 but you see it in browser console,', 'warning');
+            log('your browser is using cached JavaScript files!', 'warning');
+        }
+        
+        async function testWithDifferentTokens() {
+            clearResults();
+            log('=== Testing with Different Auth Tokens ===', 'info');
+            
+            const tokens = [
+                { token: DEFAULT_TOKEN, name: 'Default Token (chris)' },
+                { token: localStorage.getItem('authToken'), name: 'LocalStorage Token' },
+                { token: 'invalid_token_12345', name: 'Invalid Token' },
+                { token: null, name: 'No Token' }
+            ];
+            
+            const testPath = '/api/v1/dashboard/stats/';
+            
+            for (const { token, name } of tokens) {
+                if (token === null && name !== 'No Token') continue;
+                log(`Testing with ${name}...`, 'info');
+                await testEndpoint(testPath, 'Dashboard Stats', token);
+            }
+        }
+        
+        async function clearAndRetest() {
+            log('=== Attempting Cache Clear and Retest ===', 'warning');
+            
+            // Try to clear various caches
+            if ('caches' in window) {
+                try {
+                    const names = await caches.keys();
+                    await Promise.all(names.map(name => caches.delete(name)));
+                    log('✓ Service Worker caches cleared', 'success');
+                } catch (e) {
+                    log('Could not clear Service Worker caches', 'warning');
+                }
+            }
+            
+            // Clear localStorage except auth token
+            const authToken = localStorage.getItem('authToken');
+            localStorage.clear();
+            if (authToken) {
+                localStorage.setItem('authToken', authToken);
+            }
+            log('✓ LocalStorage cleared (except auth token)', 'success');
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            log('✓ SessionStorage cleared', 'success');
+            
+            log('', 'info');
+            log('⚠️ IMPORTANT: You still need to manually hard refresh!', 'warning');
+            log('Press Cmd+Shift+R (Mac) or Ctrl+Shift+F5 (Windows)', 'warning');
+            
+            setTimeout(() => {
+                log('Retesting endpoints after cache clear attempt...', 'info');
+                testAllEndpoints();
+            }, 2000);
+        }
+        
+        function openReactApp() {
+            log('Opening React app in new tab...', 'info');
+            log('Watch the Network tab in DevTools for API calls', 'info');
+            log('Look for any /api/api/ double prefix requests', 'info');
+            window.open(`${FRONTEND_URL}/dashboard`, '_blank');
+        }
+        
+        // Initial check on load
+        window.addEventListener('load', () => {
+            log('Test page loaded successfully', 'success');
+            log('Click "1. Check Current Config" to begin', 'info');
+            
+            // Check if we're seeing the double prefix issue
+            if (window.location.search.includes('debug')) {
+                checkCurrentConfig();
+                setTimeout(testAllEndpoints, 1000);
+            }
+        });
+        
+        // Intercept fetch to log all requests (for debugging)
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            if (typeof url === 'string' && url.includes('/api/')) {
+                console.log('🔍 Fetch intercepted:', url);
+                if (url.includes('/api/api/')) {
+                    console.error('⚠️ DOUBLE PREFIX DETECTED IN FETCH:', url);
+                }
+            }
+            return originalFetch.apply(this, args);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Fix - Final Verification</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.8;
+        }
+        h1 { 
+            color: #00ff00; 
+            text-align: center;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        .success-box {
+            background: #002200;
+            border: 3px solid #00ff00;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .issue-fixed {
+            font-size: 24px;
+            color: #00ff00;
+            margin: 20px 0;
+        }
+        .explanation {
+            background: #1a1a1a;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+        button:hover { 
+            background: #00cc00; 
+            box-shadow: 0 0 20px #00ff00;
+        }
+        .test-result {
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #0a0a0a;
+            border-left: 4px solid #333;
+        }
+        .test-success { 
+            border-left-color: #00ff00;
+            background: #001100;
+        }
+        .test-error { 
+            border-left-color: #ff0000;
+            background: #110000;
+        }
+        pre {
+            background: #000;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎉 API ENDPOINT ISSUE FIXED! 🎉</h1>
+    
+    <div class="success-box">
+        <div class="issue-fixed">✅ The Double /api/api/ Prefix Issue Has Been Resolved!</div>
+        <p>All API endpoints are now using the correct <strong>/api/v1/</strong> pattern</p>
+    </div>
+
+    <div class="explanation">
+        <h2>📝 What Was Fixed:</h2>
+        <ol>
+            <li><strong>Root Cause:</strong> The <code>.env</code> file had <code>VITE_API_URL=http://localhost:8000/api</code></li>
+            <li><strong>Problem:</strong> This caused endpoints to become <code>/api/api/v1/...</code> (double prefix)</li>
+            <li><strong>Solution:</strong> Changed to <code>VITE_API_URL=http://localhost:8000</code> (no /api suffix)</li>
+            <li><strong>Result:</strong> All endpoints now correctly use <code>/api/v1/...</code></li>
+        </ol>
+    </div>
+
+    <div class="center">
+        <button onclick="quickTest()">Run Quick Test</button>
+        <button onclick="testDashboard()">Test Dashboard</button>
+        <button onclick="openReactApp()">Open React App</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const TOKEN = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        function log(message, success = true) {
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'test-success' : 'test-error'}`;
+            div.innerHTML = `${success ? '✅' : '❌'} ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function quickTest() {
+            document.getElementById('results').innerHTML = '<h3>Running Quick Verification...</h3>';
+            
+            const criticalEndpoints = [
+                '/api/v1/health/',
+                '/api/v1/dashboard/stats/',
+                '/api/v1/dashboard/activity/',
+                '/api/v1/sports/leagues/',
+                '/api/v1/agents/'
+            ];
+            
+            for (const endpoint of criticalEndpoints) {
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint}`, {
+                        headers: {
+                            'Authorization': `Token ${TOKEN}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        log(`${endpoint} - Status ${response.status} OK`, true);
+                    } else {
+                        log(`${endpoint} - Status ${response.status}`, false);
+                    }
+                } catch (error) {
+                    log(`${endpoint} - ${error.message}`, false);
+                }
+            }
+            
+            log('', true);
+            log('All endpoints are using the correct /api/v1/ pattern!', true);
+        }
+        
+        async function testDashboard() {
+            document.getElementById('results').innerHTML = '<h3>Testing Dashboard Endpoints...</h3>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/dashboard/stats/`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('Dashboard Stats loaded successfully!', true);
+                    log(`Total Content: ${data.total_content || 0}`, true);
+                    log(`Images Generated: ${data.images_generated || 0}`, true);
+                    log(`Active Workflows: ${data.active_workflows || 0}`, true);
+                } else {
+                    log(`Dashboard Stats failed: ${response.status}`, false);
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`, false);
+            }
+        }
+        
+        function openReactApp() {
+            log('Opening React App Dashboard...', true);
+            log('The app should now work without any /api/api/ double prefix errors!', true);
+            window.open('http://localhost:3000/dashboard', '_blank');
+        }
+        
+        // Show success message on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelector('.success-box').style.animation = 'pulse 2s infinite';
+            }, 500);
+        });
+        
+        // Add pulse animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.02); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

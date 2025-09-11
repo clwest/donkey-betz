@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Frontend Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 12px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .success { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .error { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .loading { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        button {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #7c3aed;
+        }
+        .data-preview {
+            background: #000;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .sports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .sport-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .emoji { font-size: 2em; }
+        .count { font-size: 1.5em; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Live Sports Board Testing</h1>
+        
+        <div class="status-card">
+            <h2>Frontend Status</h2>
+            <p id="frontend-status">Checking...</p>
+            <button onclick="checkFrontend()">Check Frontend</button>
+            <button onclick="checkBackend()">Check Backend</button>
+            <button onclick="loadSportsData()">Load Sports Data</button>
+        </div>
+        
+        <div id="sports-coverage" class="status-card">
+            <h2>Sports Coverage</h2>
+            <div id="sports-grid" class="sports-grid"></div>
+        </div>
+        
+        <div id="live-games" class="status-card">
+            <h2>Live Games</h2>
+            <div id="live-games-content"></div>
+        </div>
+        
+        <div id="trending-games" class="status-card">
+            <h2>Trending Games</h2>
+            <div id="trending-games-content"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        const TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        const sportEmojis = {
+            'nfl': '🏈',
+            'nba': '🏀',
+            'mlb': '⚾',
+            'nhl': '🏒',
+            'soccer': '⚽',
+            'ncaaf': '🏈',
+            'ncaab': '🏀',
+            'mma': '🥊',
+            'tennis': '🎾',
+            'golf': '⛳',
+            'boxing': '🥊',
+            'esports': '🎮'
+        };
+        
+        async function checkFrontend() {
+            const status = document.getElementById('frontend-status');
+            try {
+                const response = await fetch('http://localhost:3000/');
+                if (response.ok) {
+                    status.innerHTML = '✅ Frontend is running on port 3000';
+                    status.parentElement.classList.add('success');
+                } else {
+                    status.innerHTML = '❌ Frontend returned status: ' + response.status;
+                    status.parentElement.classList.add('error');
+                }
+            } catch (error) {
+                status.innerHTML = '❌ Cannot connect to frontend: ' + error.message;
+                status.parentElement.classList.add('error');
+            }
+        }
+        
+        async function checkBackend() {
+            const status = document.getElementById('frontend-status');
+            try {
+                const response = await fetch(`${API_URL}/sports/summary/`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    status.innerHTML = `✅ Backend is working - ${data.length} sports available`;
+                    status.parentElement.classList.add('success');
+                } else {
+                    status.innerHTML = '❌ Backend error: ' + JSON.stringify(data);
+                    status.parentElement.classList.add('error');
+                }
+            } catch (error) {
+                status.innerHTML = '❌ Cannot connect to backend: ' + error.message;
+                status.parentElement.classList.add('error');
+            }
+        }
+        
+        async function loadSportsData() {
+            // Load sports summary
+            try {
+                const response = await fetch(`${API_URL}/sports/summary/`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const sports = await response.json();
+                
+                const grid = document.getElementById('sports-grid');
+                grid.innerHTML = '';
+                
+                sports.forEach(sport => {
+                    const card = document.createElement('div');
+                    card.className = 'sport-card';
+                    card.innerHTML = `
+                        <div class="emoji">${sportEmojis[sport.sport_type] || '🏆'}</div>
+                        <div>${sport.name}</div>
+                        <div class="count">${sport.count} league${sport.count !== 1 ? 's' : ''}</div>
+                    `;
+                    grid.appendChild(card);
+                });
+                
+                document.getElementById('sports-coverage').classList.add('success');
+            } catch (error) {
+                document.getElementById('sports-grid').innerHTML = '❌ Error loading sports: ' + error.message;
+            }
+            
+            // Load live games
+            try {
+                const response = await fetch(`${API_URL}/sports/games/?status=live`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`
+                    }
+                });
+                const games = await response.json();
+                
+                const content = document.getElementById('live-games-content');
+                if (games.length === 0) {
+                    content.innerHTML = '<p>No live games at the moment</p>';
+                } else {
+                    content.innerHTML = `<div class="data-preview">${JSON.stringify(games, null, 2)}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('live-games-content').innerHTML = '❌ Error: ' + error.message;
+            }
+            
+            // Load trending games
+            try {
+                const response = await fetch(`${API_URL}/sports/games/trending/?limit=5`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`
+                    }
+                });
+                const games = await response.json();
+                
+                const content = document.getElementById('trending-games-content');
+                if (games.length === 0) {
+                    content.innerHTML = '<p>No trending games found</p>';
+                } else {
+                    let html = '<ul>';
+                    games.forEach(game => {
+                        const date = new Date(game.scheduled_start).toLocaleDateString();
+                        html += `<li>${game.away_team_name} @ ${game.home_team_name} - ${date}</li>`;
+                    });
+                    html += '</ul>';
+                    content.innerHTML = html;
+                }
+            } catch (error) {
+                document.getElementById('trending-games-content').innerHTML = '❌ Error: ' + error.message;
+            }
+        }
+        
+        // Auto-check on load
+        window.onload = async () => {
+            await checkFrontend();
+            await checkBackend();
+            await loadSportsData();
+        };
+    </script>
+</body>
+</html>

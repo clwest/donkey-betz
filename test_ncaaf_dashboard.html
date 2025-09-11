@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCAAF Dashboard Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: white; margin-bottom: 20px; text-align: center; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-value { font-size: 2em; font-weight: bold; color: #764ba2; }
+        .stat-label { color: #666; margin-top: 5px; }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .game-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .game-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .game-date { color: #666; font-size: 0.9em; }
+        .team-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .team-name { font-weight: 600; }
+        .odds {
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .odds.positive { color: green; }
+        .odds.negative { color: red; }
+        .market-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .market-title { font-weight: 600; margin-bottom: 10px; color: #333; }
+        .loading { text-align: center; color: white; font-size: 1.2em; }
+        .error { background: #ff4444; color: white; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .filter-bar {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        select, input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .bet-calc {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+        .kelly-stake { color: #764ba2; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏈 NCAAF Betting Dashboard</h1>
+        
+        <div class="filter-bar">
+            <select id="dateFilter">
+                <option value="">All Upcoming Games</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="week">Next 7 Days</option>
+            </select>
+            <input type="number" id="bankroll" placeholder="Bankroll ($)" value="4000">
+            <input type="number" id="winProb" placeholder="Win % (50-100)" value="55" min="50" max="100">
+            <select id="kellyFraction">
+                <option value="0.25">25% Kelly</option>
+                <option value="0.5" selected>50% Kelly</option>
+                <option value="1">Full Kelly</option>
+            </select>
+        </div>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">Total Games</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">Games with Odds</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">Avg Odds Lines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">-</div>
+                <div class="stat-label">Best Edge</div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">Loading NCAAF games...</div>
+        <div id="error" class="error" style="display:none;"></div>
+        <div class="games-grid" id="gamesGrid"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        let allGames = [];
+        let bankroll = 4000;
+        let winProb = 0.55;
+        let kellyFraction = 0.5;
+
+        // Update betting params
+        document.getElementById('bankroll').addEventListener('change', e => {
+            bankroll = parseFloat(e.target.value) || 4000;
+            renderGames();
+        });
+        document.getElementById('winProb').addEventListener('change', e => {
+            winProb = (parseFloat(e.target.value) || 55) / 100;
+            renderGames();
+        });
+        document.getElementById('kellyFraction').addEventListener('change', e => {
+            kellyFraction = parseFloat(e.target.value);
+            renderGames();
+        });
+        document.getElementById('dateFilter').addEventListener('change', renderGames);
+
+        async function loadGames() {
+            try {
+                // Fetch NCAAF games
+                const response = await fetch(`${API_BASE}/api/v1/sports/games/?league=NCAAF`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const games = await response.json();
+                console.log('Loaded games:', games);
+                
+                // Fetch markets for each game
+                const gamesWithOdds = await Promise.all(games.map(async game => {
+                    try {
+                        const marketsResp = await fetch(`${API_BASE}/api/v1/sports/markets/?game=${game.id}`);
+                        const markets = await marketsResp.json();
+                        return { ...game, markets: markets || [] };
+                    } catch (err) {
+                        console.error(`Failed to load markets for game ${game.id}:`, err);
+                        return { ...game, markets: [] };
+                    }
+                }));
+                
+                allGames = gamesWithOdds.sort((a, b) => 
+                    new Date(a.scheduled_start) - new Date(b.scheduled_start)
+                );
+                
+                updateStats();
+                renderGames();
+                document.getElementById('loading').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error loading games:', error);
+                document.getElementById('error').textContent = `Error: ${error.message}`;
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function updateStats() {
+            const totalGames = allGames.length;
+            const gamesWithOdds = allGames.filter(g => g.markets && g.markets.length > 0).length;
+            const totalOddsLines = allGames.reduce((sum, g) => 
+                sum + (g.markets || []).reduce((mSum, m) => 
+                    mSum + (m.odds_lines || []).length, 0), 0);
+            const avgLines = gamesWithOdds > 0 ? (totalOddsLines / gamesWithOdds).toFixed(1) : 0;
+            
+            const stats = document.querySelectorAll('.stat-value');
+            stats[0].textContent = totalGames;
+            stats[1].textContent = gamesWithOdds;
+            stats[2].textContent = avgLines;
+            stats[3].textContent = '-'; // Will calculate best edge later
+        }
+
+        function calculateKellyStake(americanOdds, winProbability) {
+            let decimalOdds;
+            if (americanOdds > 0) {
+                decimalOdds = (americanOdds / 100) + 1;
+            } else {
+                decimalOdds = (100 / Math.abs(americanOdds)) + 1;
+            }
+            
+            const b = decimalOdds - 1;
+            const p = winProbability;
+            const q = 1 - p;
+            const kelly = (b * p - q) / b;
+            
+            if (kelly <= 0) return { stake: 0, edge: 0 };
+            
+            const stake = bankroll * kelly * kellyFraction;
+            const edge = (p * b - q) * 100;
+            
+            return { stake: Math.round(stake), edge: edge.toFixed(1) };
+        }
+
+        function renderGames() {
+            const grid = document.getElementById('gamesGrid');
+            const filter = document.getElementById('dateFilter').value;
+            
+            let filteredGames = [...allGames];
+            const now = new Date();
+            
+            if (filter === 'today') {
+                filteredGames = filteredGames.filter(g => {
+                    const gameDate = new Date(g.scheduled_start);
+                    return gameDate.toDateString() === now.toDateString();
+                });
+            } else if (filter === 'tomorrow') {
+                const tomorrow = new Date(now);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                filteredGames = filteredGames.filter(g => {
+                    const gameDate = new Date(g.scheduled_start);
+                    return gameDate.toDateString() === tomorrow.toDateString();
+                });
+            } else if (filter === 'week') {
+                const weekFromNow = new Date(now);
+                weekFromNow.setDate(weekFromNow.getDate() + 7);
+                filteredGames = filteredGames.filter(g => {
+                    const gameDate = new Date(g.scheduled_start);
+                    return gameDate <= weekFromNow;
+                });
+            }
+            
+            if (filteredGames.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white;">No games found for selected filter</div>';
+                return;
+            }
+            
+            grid.innerHTML = filteredGames.map(game => {
+                const gameDate = new Date(game.scheduled_start);
+                const dateStr = gameDate.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+                
+                // Find moneyline market
+                const moneylineMarket = game.markets?.find(m => 
+                    m.market_type === 'MONEYLINE' || m.market_type === 'moneyline'
+                );
+                
+                let oddsHtml = '';
+                let kellyHtml = '';
+                
+                if (moneylineMarket && moneylineMarket.odds_lines?.length > 0) {
+                    const bestLine = moneylineMarket.odds_lines[0];
+                    const homeOdds = bestLine.home_odds || 0;
+                    const awayOdds = bestLine.away_odds || 0;
+                    
+                    // Calculate Kelly for each side
+                    const homeKelly = calculateKellyStake(homeOdds, winProb);
+                    const awayKelly = calculateKellyStake(awayOdds, winProb);
+                    
+                    oddsHtml = `
+                        <div class="team-row">
+                            <span class="team-name">${game.away_team_name || game.away_team?.name || 'Away'}</span>
+                            <div>
+                                <span class="odds ${awayOdds > 0 ? 'positive' : 'negative'}">
+                                    ${awayOdds > 0 ? '+' : ''}${awayOdds}
+                                </span>
+                                ${awayKelly.stake > 0 ? `
+                                    <span class="kelly-stake" style="margin-left: 10px;">
+                                        $${awayKelly.stake} (${awayKelly.edge}% edge)
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="team-row">
+                            <span class="team-name">${game.home_team_name || game.home_team?.name || 'Home'}</span>
+                            <div>
+                                <span class="odds ${homeOdds > 0 ? 'positive' : 'negative'}">
+                                    ${homeOdds > 0 ? '+' : ''}${homeOdds}
+                                </span>
+                                ${homeKelly.stake > 0 ? `
+                                    <span class="kelly-stake" style="margin-left: 10px;">
+                                        $${homeKelly.stake} (${homeKelly.edge}% edge)
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Show additional markets if expanded
+                    const spreadMarket = game.markets?.find(m => 
+                        m.market_type === 'SPREAD' || m.market_type === 'spread'
+                    );
+                    const totalMarket = game.markets?.find(m => 
+                        m.market_type === 'TOTAL' || m.market_type === 'total' || 
+                        m.market_type === 'OVER_UNDER' || m.market_type === 'over_under'
+                    );
+                    
+                    if (spreadMarket || totalMarket) {
+                        oddsHtml += '<div class="market-section">';
+                        
+                        if (spreadMarket && spreadMarket.odds_lines?.length > 0) {
+                            const line = spreadMarket.odds_lines[0];
+                            oddsHtml += `
+                                <div class="market-title">Spread</div>
+                                <div style="font-size: 0.9em;">
+                                    ${line.away_spread ? `Away: ${line.away_spread > 0 ? '+' : ''}${line.away_spread}` : ''}
+                                    ${line.home_spread ? `| Home: ${line.home_spread > 0 ? '+' : ''}${line.home_spread}` : ''}
+                                </div>
+                            `;
+                        }
+                        
+                        if (totalMarket && totalMarket.odds_lines?.length > 0) {
+                            const line = totalMarket.odds_lines[0];
+                            oddsHtml += `
+                                <div class="market-title">Total</div>
+                                <div style="font-size: 0.9em;">
+                                    ${line.total_line ? `O/U ${line.total_line}` : ''}
+                                </div>
+                            `;
+                        }
+                        
+                        oddsHtml += '</div>';
+                    }
+                } else {
+                    oddsHtml = `
+                        <div class="team-row">
+                            <span class="team-name">${game.away_team_name || game.away_team?.name || 'Away'}</span>
+                            <span style="color: #999;">No odds</span>
+                        </div>
+                        <div class="team-row">
+                            <span class="team-name">${game.home_team_name || game.home_team?.name || 'Home'}</span>
+                            <span style="color: #999;">No odds</span>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="game-card">
+                        <div class="game-header">
+                            <span style="font-weight: bold;">${game.league || 'NCAAF'}</span>
+                            <span class="game-date">${dateStr}</span>
+                        </div>
+                        ${oddsHtml}
+                        ${game.venue_name ? `
+                            <div style="margin-top: 10px; font-size: 0.85em; color: #666;">
+                                📍 ${game.venue_name}${game.venue_city ? `, ${game.venue_city}` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load games on page load
+        loadGames();
+        
+        // Refresh every 30 seconds
+        setInterval(loadGames, 30000);
+    </script>
+</body>
+</html>

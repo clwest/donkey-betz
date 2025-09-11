@@ -9,12 +9,14 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
+from django.views.decorators.csrf import csrf_exempt
 from .models import UserProfile, UserStatistics
 
 User = get_user_model()
 
 
-@api_view(['POST'])
+@csrf_exempt
+@api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
 def login_view(request):
     """

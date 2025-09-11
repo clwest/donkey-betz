@@ -3,11 +3,17 @@ WebSocket routing configuration for unified-donkey-betz platform.
 Migrated from DBAO tools-manifest WebSocket capabilities.
 """
 
-from django.urls import re_path
+from django.urls import re_path, path
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
 from . import consumers
+
+# Import sports routing if available
+try:
+    from sports.routing import websocket_urlpatterns as sports_ws_patterns
+except ImportError:
+    sports_ws_patterns = []
 
 websocket_urlpatterns = [
     # Agent orchestration WebSocket (for orchestra frontend)
@@ -40,6 +46,9 @@ websocket_urlpatterns = [
     # Mythology/Content Review notifications
     re_path(r'^ws/mythology/$', consumers.MythologyConsumer.as_asgi()),
 ]
+
+# Add sports WebSocket patterns if available
+websocket_urlpatterns.extend(sports_ws_patterns)
 
 application = ProtocolTypeRouter({
     'websocket': AllowedHostsOriginValidator(

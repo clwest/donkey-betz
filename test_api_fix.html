@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Fix Test</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        .success { background: #003300; }
+        .error { background: #330000; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Fix Verification</h1>
+    <button onclick="testDashboard()">Test Dashboard API</button>
+    <button onclick="testSports()">Test Sports API</button>
+    <button onclick="testAll()">Test All APIs</button>
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const TOKEN = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'test ' + (isError ? 'error' : 'success');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testEndpoint(path, name) {
+            try {
+                const response = await fetch(`${API_BASE}${path}`, {
+                    headers: {
+                        'Authorization': `Token ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    log(`✓ ${name}: ${path} - Status ${response.status}`);
+                    return true;
+                } else {
+                    log(`✗ ${name}: ${path} - Status ${response.status}`, true);
+                    return false;
+                }
+            } catch (error) {
+                log(`✗ ${name}: ${path} - ${error.message}`, true);
+                return false;
+            }
+        }
+
+        async function testDashboard() {
+            log('Testing Dashboard APIs...');
+            await testEndpoint('/api/v1/dashboard/stats/', 'Dashboard Stats');
+            await testEndpoint('/api/v1/dashboard/activity/', 'Dashboard Activity');
+            await testEndpoint('/api/v1/dashboard/breakdown/', 'Dashboard Breakdown');
+        }
+
+        async function testSports() {
+            log('Testing Sports APIs...');
+            await testEndpoint('/api/v1/sports/leagues/', 'Sports Leagues');
+            await testEndpoint('/api/v1/sports/games/', 'Sports Games');
+            await testEndpoint('/api/v1/sports/summary/', 'Sports Summary');
+        }
+
+        async function testAll() {
+            document.getElementById('results').innerHTML = '';
+            log('=== Starting Comprehensive API Test ===');
+            
+            // Test core endpoints
+            log('Testing Core APIs...');
+            await testEndpoint('/api/v1/health/', 'Health Check');
+            await testEndpoint('/api/v1/status/', 'Platform Status');
+            
+            // Test auth endpoints
+            log('Testing Auth APIs...');
+            await testEndpoint('/api/v1/auth/user/', 'Current User');
+            await testEndpoint('/api/v1/profile/', 'User Profile');
+            
+            // Test content endpoints
+            log('Testing Content APIs...');
+            await testEndpoint('/api/v1/content/blog/list/', 'Blog List');
+            
+            // Test agent endpoints
+            log('Testing Agent APIs...');
+            await testEndpoint('/api/v1/agents/', 'Agent List');
+            await testEndpoint('/api/v1/agents/discovery/stats/', 'Agent Stats');
+            
+            // Test sports endpoints
+            await testSports();
+            
+            // Test dashboard endpoints
+            await testDashboard();
+            
+            log('=== Test Complete ===');
+        }
+    </script>
+</body>
+</html>

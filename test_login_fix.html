@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Fix Test</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { 
+            color: #00ff00; 
+            text-align: center;
+        }
+        .test-section {
+            background: #1a1a1a;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .success { 
+            background: #002200;
+            border: 1px solid #00ff00;
+        }
+        .error { 
+            background: #220000;
+            border: 1px solid #ff0000;
+        }
+        .warning {
+            background: #222200;
+            border: 1px solid #ffff00;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        button:hover { background: #00cc00; }
+        input {
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #666;
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            width: 200px;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Login Endpoint Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Login Endpoints</h2>
+        <p>Testing both old and new login endpoints to verify the fix</p>
+        
+        <div class="form-group">
+            <input type="text" id="username" placeholder="Username" value="testuser">
+            <input type="password" id="password" placeholder="Password" value="testpass123">
+        </div>
+        
+        <button onclick="testOldEndpoint()">Test OLD: /api/auth/login/</button>
+        <button onclick="testNewEndpoint()">Test NEW: /api/v1/auth/login/</button>
+        <button onclick="testBothEndpoints()">Test Both Endpoints</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        function log(message, type = 'info', details = null) {
+            const div = document.createElement('div');
+            div.className = `test-result ${type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning'}`;
+            const timestamp = new Date().toLocaleTimeString();
+            let html = `[${timestamp}] ${message}`;
+            if (details) {
+                html += `<pre>${typeof details === 'object' ? JSON.stringify(details, null, 2) : details}</pre>`;
+            }
+            div.innerHTML = html;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testLogin(endpoint, description) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            log(`Testing ${description}: ${endpoint}`, 'warning');
+            
+            try {
+                // First try OPTIONS to check CORS
+                const optionsResponse = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'http://localhost:3000',
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'content-type'
+                    }
+                });
+                
+                if (optionsResponse.ok) {
+                    log('✓ OPTIONS request successful', 'success');
+                } else {
+                    log(`✗ OPTIONS request failed: ${optionsResponse.status}`, 'error');
+                }
+                
+                // Now try actual POST
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const responseText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch {
+                    data = responseText;
+                }
+                
+                if (response.ok) {
+                    log(`✅ SUCCESS: ${description} - Status ${response.status}`, 'success', data);
+                    if (data.token) {
+                        log(`✅ Token received: ${data.token.substring(0, 20)}...`, 'success');
+                        localStorage.setItem('authToken', data.token);
+                    }
+                } else if (response.status === 403) {
+                    log(`❌ CSRF ERROR: ${description} - Status 403 Forbidden`, 'error', data);
+                    log('This means CSRF protection is blocking the request', 'error');
+                } else if (response.status === 404) {
+                    log(`❌ NOT FOUND: ${description} - Endpoint doesn't exist`, 'error');
+                } else if (response.status === 401) {
+                    log(`🔒 UNAUTHORIZED: ${description} - Invalid credentials`, 'warning', data);
+                } else {
+                    log(`❌ ERROR: ${description} - Status ${response.status}`, 'error', data);
+                }
+                
+            } catch (error) {
+                log(`💥 NETWORK ERROR: ${description} - ${error.message}`, 'error');
+            }
+        }
+        
+        async function testOldEndpoint() {
+            clearResults();
+            await testLogin('/api/auth/login/', 'OLD Endpoint');
+        }
+        
+        async function testNewEndpoint() {
+            clearResults();
+            await testLogin('/api/v1/auth/login/', 'NEW Endpoint');
+        }
+        
+        async function testBothEndpoints() {
+            clearResults();
+            log('=== Testing Both Login Endpoints ===', 'warning');
+            await testLogin('/api/auth/login/', 'OLD Endpoint');
+            log('---', 'warning');
+            await testLogin('/api/v1/auth/login/', 'NEW Endpoint');
+            log('=== Test Complete ===', 'warning');
+        }
+        
+        // Test on load
+        window.addEventListener('load', () => {
+            log('Login test page ready', 'success');
+            log('Default credentials: testuser / testpass123', 'warning');
+        });
+    </script>
+</body>
+</html>

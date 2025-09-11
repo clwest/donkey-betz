@@ -27,14 +27,7 @@ interface AuthState {
   validateSession: () => Promise<boolean>;
 }
 
-// Default user for development (chris account)
-const defaultUser: User = {
-  id: '2',
-  username: 'chris',
-  email: 'chris@example.com',
-  credits: 10000,
-  subscription: 'premium'
-};
+// No default user - authentication is required
 
 // Check if we have auth in localStorage at initialization
 const getInitialAuthState = () => {
@@ -58,17 +51,14 @@ const getInitialAuthState = () => {
     }
   }
   
-  // If no valid auth found, use chris user with actual token from database
-  // Chris token: 993f8273f70877e23b5c7d2f92ed30562a089fe3
-  const chrisToken = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
-  localStorage.setItem('authToken', chrisToken);
-  
+  // If no valid auth found, return unauthenticated state
+  // User must log in to get a token
   return {
-    user: defaultUser,
-    token: chrisToken,
+    user: null,
+    token: null,
     rememberToken: null,
     rememberMe: false,
-    isAuthenticated: true,
+    isAuthenticated: false,
     isLoading: false
   };
 };
