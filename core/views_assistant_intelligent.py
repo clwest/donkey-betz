@@ -296,34 +296,25 @@ def _process_direct(user, message: str, context: str, response_metadata: Dict[st
             model = 'default'
         
         # Build enhanced system prompt (optimized for personal assistant role)
-        system_prompt = f"""You are {getattr(user, 'username', user.email)}'s personal AI assistant with access to their conversation history and knowledge base.
+        system_prompt = f"""You are {getattr(user, 'username', user.email)}'s personal AI assistant.
 
-You have learned from all our previous conversations and can recall what we've discussed. Use this knowledge naturally when relevant.
+Be concise but comprehensive. Aim for 3-5 sentences that directly answer the question. Focus on practical, actionable information.
 
-Response Guidelines:
-- Be conversational and natural, like talking to a knowledgeable friend
-- Reference our past conversations when relevant ("As we discussed earlier...")
-- Provide helpful, accurate responses based on the context
-- If you find relevant information in the knowledge base, use it seamlessly
-- Keep responses focused but not overly terse - aim for clarity
+Platform capabilities: AI agent orchestration (87+ agents), multi-LLM integration, RAG knowledge system, content creation, workflow automation.
 
-Remember: You're learning and growing from every conversation. Each interaction helps you understand the user better."""
+Provide helpful answers with specific recommendations when relevant."""
         
-        # Add context to user message if available
+        # Add compressed context to user message if available
         enhanced_message = message
         if context:
-            enhanced_message = f"""Knowledge Base Context:
-{context[:1000]}...
-
-User Question: {message}
-
-Please provide a comprehensive response using both your general knowledge and the specific context provided."""
+            # Very brief context format to avoid token bloat
+            enhanced_message = f"Context: {context[:200]}\n\nQuestion: {message}"
         
-        # Generate AI response with correct parameters
+        # Generate AI response with balanced token limits
         if 'gpt-5' in model.lower():
-            config = {'max_completion_tokens': 1200}
+            config = {'max_completion_tokens': 1000}
         else:
-            config = {'max_tokens': 1200, 'temperature': 0.7}
+            config = {'max_tokens': 1000, 'temperature': 0.7}
         
         result = ai_manager.generate_content(
             provider=provider,
@@ -334,6 +325,39 @@ Please provide a comprehensive response using both your general knowledge and th
         )
         
         if result.success and result.content:
+            # Validate and enforce response length limits
+            def validate_response_length(content: str) -> str:
+                """Enforce 5-sentence maximum and 800 character limit"""
+                if not content:
+                    return content
+                    
+                # Split into sentences
+                sentences = [s.strip() for s in content.split('.') if s.strip()]
+                
+                # Allow up to 5 sentences for comprehensive responses
+                if len(sentences) > 5:
+                    truncated = '. '.join(sentences[:5]) + '.'
+                    logger.info(f"Truncated response from {len(sentences)} to 5 sentences")
+                    return truncated
+                
+                # Check character length (max 800 characters - balanced approach)
+                if len(content) > 800:
+                    # Find a good breaking point near the limit
+                    truncated = content[:797] + "..."
+                    logger.info(f"Truncated response from {len(content)} to 800 characters")
+                    return truncated
+                    
+                return content
+            
+            # Apply length validation
+            validated_content = validate_response_length(result.content)
+            result.content = validated_content
+            
+            # Log response metrics for monitoring
+            char_count = len(validated_content)
+            sentence_count = len([s for s in validated_content.split('.') if s.strip()])
+            logger.info(f"Response metrics - Characters: {char_count}, Sentences: {sentence_count}")
+            
             # Save conversation to memory for learning
             try:
                 logger.info(f"Attempting to save conversation in intelligent assistant...")

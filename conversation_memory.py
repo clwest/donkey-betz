@@ -12,6 +12,7 @@ import django
 from datetime import datetime, timedelta
 import json
 import hashlib
+import logging
 from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
 
@@ -29,6 +30,7 @@ from core.models import SystemConfiguration, PlatformMetrics
 from content.models import ContentGeneration, Feedback
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class ConversationMemory:
@@ -42,14 +44,19 @@ class ConversationMemory:
         
     def store_interaction(self, user_id: int, user_input: str, assistant_response: str, 
                          context: Dict[str, Any] = None) -> str:
-        """Store a conversation interaction"""
+        """Store a conversation interaction (filters out verbose responses)"""
+        
+        # Filter out verbose responses to prevent feedback loop
+        if self._is_response_too_verbose(assistant_response):
+            logger.info(f"Skipping storage of verbose response (length: {len(assistant_response)})")
+            return "skipped_verbose"
         
         interaction_id = self._generate_interaction_id(user_id, user_input)
         
         interaction_data = {
             'user_id': user_id,
             'user_input': user_input[:self.max_context_length],
-            'assistant_response': assistant_response[:self.max_context_length],
+            'assistant_response': assistant_response[:800],  # Limit stored responses to 800 chars
             'timestamp': timezone.now().isoformat(),
             'context': context or {},
             'interaction_id': interaction_id
@@ -82,6 +89,26 @@ class ConversationMemory:
         )
         
         return interaction_id
+    
+    def _is_response_too_verbose(self, response: str) -> bool:
+        """Check if a response is too verbose to store in memory"""
+        if not response:
+            return False
+            
+        # Filter criteria for verbose responses (adjusted to match new limits)
+        char_limit = 800
+        sentence_limit = 5
+        
+        # Check character count
+        if len(response) > char_limit:
+            return True
+            
+        # Check sentence count
+        sentences = [s.strip() for s in response.split('.') if s.strip()]
+        if len(sentences) > sentence_limit:
+            return True
+            
+        return False
     
     def retrieve_user_context(self, user_id: int, max_interactions: int = 10) -> List[Dict[str, Any]]:
         """Retrieve recent conversation context for a user"""

@@ -231,16 +231,24 @@ class RAGAssistant:
             if not sources:
                 sources = self.search_embeddings(query)
         
-        # Build context string
+        # Build compressed context string - limit to 200 characters total
         context_parts = []
+        total_chars = 0
+        max_context_chars = 200
         
         if sources:
-            context_parts.append("Based on the knowledge base, here's relevant information:\n")
-            for source in sources[:5]:  # Limit to top 5 sources for context
-                context_parts.append(f"\n[{source['type'].upper()}] {source['title']}:")
-                context_parts.append(source['content'])
+            for source in sources[:3]:  # Limit to top 3 sources only
+                # Create a very brief summary instead of full content
+                source_summary = source['content'][:50] + "..."
+                source_line = f"{source['type']}: {source_summary}"
+                
+                if total_chars + len(source_line) > max_context_chars:
+                    break
+                    
+                context_parts.append(source_line)
+                total_chars += len(source_line)
         
-        context = "\n".join(context_parts) if context_parts else ""
+        context = "; ".join(context_parts) if context_parts else ""
         return context, sources
 
 
@@ -320,35 +328,22 @@ def assistant_chat_enhanced(request):
             provider = available_providers[0]
             model = 'default'
         
-        # Build enhanced system prompt
+        # Build balanced system prompt - concise but informative
         system_prompt = f"""You are {user.username if hasattr(user, 'username') else user.email}'s personal AI assistant.
 
-You have access to a comprehensive knowledge base with business intelligence, AI capabilities, and domain expertise.
-Focus on providing helpful, accurate information based on the user's actual knowledge base and platform capabilities.
+Be concise but comprehensive. Aim for 3-5 sentences that directly answer the question. Focus on practical, actionable information.
 
-Key Platform Features:
-- Advanced AI agent orchestration with 87+ specialized agents
-- Multi-LLM provider integration (OpenAI, Anthropic, Google)
-- RAG-powered knowledge management system
-- Content creation and automation tools
-- Real-time workflow orchestration
-- Self-awareness and code understanding capabilities
+Platform capabilities: AI agent orchestration (87+ agents), multi-LLM integration, RAG knowledge system, content creation, workflow automation.
 
-Be helpful, accurate, and cite sources when available. Keep responses focused and actionable."""
+Provide helpful answers with specific recommendations when relevant."""
         
-        # Add context to user message if available
+        # Add compressed context to user message if available
         enhanced_message = message
         if context:
-            # Simplify context format to avoid confusing the model
-            enhanced_message = f"""Based on the following information from the knowledge base:
-
-{context[:1000]}...
-
-User question: {message}
-
-Please provide a helpful response."""
+            # Very brief context format to avoid token bloat
+            enhanced_message = f"Context: {context}\n\nQuestion: {message}"
         
-        # Generate AI response with correct parameter for GPT-5
+        # Generate AI response with reasonable token limits (increased from 150 to 1000 for better quality)
         if 'gpt-5' in model.lower():
             config = {'max_completion_tokens': 1000}
         else:
@@ -363,11 +358,35 @@ Please provide a helpful response."""
         )
         
         if result.success:
+            # Validate and enforce response length limits
+            def validate_response_length(content: str) -> str:
+                """Enforce 3-sentence maximum and reasonable length"""
+                if not content:
+                    return content
+                    
+                # Split into sentences
+                sentences = [s.strip() for s in content.split('.') if s.strip()]
+                
+                # Allow up to 5 sentences for comprehensive responses
+                if len(sentences) > 5:
+                    truncated = '. '.join(sentences[:5]) + '.'
+                    logger.info(f"Truncated response from {len(sentences)} to 5 sentences")
+                    return truncated
+                
+                # Check character length (max 800 characters - balanced approach)
+                if len(content) > 800:
+                    # Find a good breaking point near the limit
+                    truncated = content[:797] + "..."
+                    logger.info(f"Truncated response from {len(content)} to 800 characters")
+                    return truncated
+                    
+                return content
+            
             # Handle empty responses with fallback
             if not result.content or len(result.content.strip()) == 0:
                 logger.warning("Empty response from AI provider, using fallback")
-                # Use correct parameter name for GPT-5 models
-                fallback_config = {'max_completion_tokens': 200} if 'gpt-5' in model.lower() else {'max_tokens': 200}
+                # Use correct parameter name for GPT-5 models with reasonable fallback tokens
+                fallback_config = {'max_completion_tokens': 300} if 'gpt-5' in model.lower() else {'max_tokens': 300}
                 fallback_result = ai_manager.generate_content(
                     provider=provider,
                     model=model,
@@ -379,11 +398,16 @@ Please provide a helpful response."""
                     result = fallback_result
                     logger.info("Fallback response successful")
                 
-            # Make sure content is a string
+            # Make sure content is a string and apply length validation
             response_content = str(result.content) if result.content is not None else ""
+            response_content = validate_response_length(response_content)
             
-            # Log for debugging
-            if not response_content:
+            # Log response metrics for monitoring
+            if response_content:
+                char_count = len(response_content)
+                sentence_count = len([s for s in response_content.split('.') if s.strip()])
+                logger.info(f"Response metrics - Characters: {char_count}, Sentences: {sentence_count}")
+            else:
                 logger.error(f"Still empty content after all processing. Token usage: {result.token_usage}")
             
             return Response({
