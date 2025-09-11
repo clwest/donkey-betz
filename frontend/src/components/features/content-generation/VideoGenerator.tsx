@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { contentService } from '../../../services/content.service';
 import { galleryService } from '../../../services/gallery.service';
+import { API_CONFIG, buildApiUrl } from '../../../config/api.config';
 // import { voiceService } from '../../../services/voice.service'; // TODO: Enable when API is ready
 
 interface VideoTask {
@@ -374,7 +375,7 @@ export function VideoGenerator() {
     }
     // Remove leading slash if present and add backend base URL
     const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-    return `http://localhost:8001/${cleanUrl}`;
+    return `${API_CONFIG.BASE_URL}/${cleanUrl}`;
   };
 
   const loadGalleryImages = async () => {
@@ -385,13 +386,13 @@ export function VideoGenerator() {
       // 2. Content (old model) - 176 images  
       // 3. GeneratedContent (universal) - 0 image types
       const [galleryResponse, oldContentResponse] = await Promise.all([
-        fetch('http://localhost:8001/api/gallery/list/?limit=200', {
+        fetch(buildApiUrl('/gallery/list/?limit=200'), {
           headers: {
             'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
             'Content-Type': 'application/json',
           },
         }),
-        fetch('http://localhost:8001/api/content/list/?type=image&limit=200', {
+        fetch(buildApiUrl('/content/list/?type=image&limit=200'), {
           headers: {
             'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
             'Content-Type': 'application/json',

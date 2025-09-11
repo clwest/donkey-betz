@@ -67,7 +67,7 @@ const initialState = {
 
 // Mock sports API service (to replace the mixed functionality from agent-orchestra.service.ts)
 class SportsService {
-  private static BASE_URL = import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8001/api/v1';
+  private static BASE_URL = import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000/api/v1';
   
   static async analyzeBettingOpportunity(request: SportsBettingAnalysisRequest): Promise<BettingOpportunity[]> {
     try {

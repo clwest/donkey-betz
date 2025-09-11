@@ -23,7 +23,23 @@ load_dotenv(BASE_DIR / '.env')
 # Security
 SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Dynamic ALLOWED_HOSTS for production
+if DEBUG:
+    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,192.168.*,*').split(',')
+else:
+    # Production hosts
+    default_hosts = [
+        'localhost',
+        '127.0.0.1',
+        '.donkeybetz.com',  # Allow all subdomains
+        '.vercel.app',      # Allow Vercel deployments
+        '.netlify.app',     # Allow Netlify deployments
+        '.herokuapp.com',   # Allow Heroku deployments
+        '.railway.app',     # Allow Railway deployments
+    ]
+    custom_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+    ALLOWED_HOSTS = default_hosts + custom_hosts
 
 # Platform Configuration
 PLATFORM_NAME = os.environ.get('PLATFORM_NAME', 'Unified Donkey Betz')
@@ -63,9 +79,11 @@ INSTALLED_APPS = [
     'sports',                 # Sports Analytics Engine
     'content',                # Content Generation System
     'self_awareness',         # Code Introspection & Self-Modification
+    'style_memory',           # Style Memory System
     'dashboard',              # Dashboard API endpoints
     'campaigns',              # Campaign management
     'workflows',              # Workflow management
+    'mythology',              # Mythology detection and prevention system
     # 'realtime',               # WebSocket & Event Bus
     # 'monitoring',             # System Health & Analytics
     # 'billing',                # Unified billing system
@@ -178,6 +196,7 @@ AI_PROVIDERS = {
 
 # Make Runway key directly accessible for video provider
 RUNWAY_API_KEY = os.environ.get('RUNWAY_API_KEY', '')
+RUNWAY_MOCK_MODE = os.environ.get('RUNWAY_MOCK_MODE', 'True') == 'True'  # Enable mock mode by default
 
 # External Service API Keys (for non-LLM services)
 EXTERNAL_API_KEYS = {
@@ -270,9 +289,23 @@ REST_FRAMEWORK = {
 }
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
+# In production, dynamically allow the origin if not in development
+if DEBUG:
+    # Development - allow specific origins
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:8080,http://localhost:5173').split(',')
+    CORS_ALLOW_ALL_ORIGINS = True  # For development only
+else:
+    # Production - allow configured origins or use regex pattern
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else []
+    CORS_ALLOW_ALL_ORIGINS = False
+    # Allow any HTTPS origin in production (can be restricted later)
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://.*\.donkeybetz\.com$",  # Allow all subdomains
+        r"^https://.*\.vercel\.app$",      # Allow Vercel deployments
+        r"^https://.*\.netlify\.app$",     # Allow Netlify deployments
+    ]
+
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -291,7 +324,17 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # CSRF Configuration  
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://localhost:8080').split(',')
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://localhost:8080,http://localhost:5173').split(',')
+else:
+    # In production, trust HTTPS origins
+    default_trusted = [
+        'https://*.donkeybetz.com',
+        'https://*.vercel.app', 
+        'https://*.netlify.app'
+    ]
+    custom_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
+    CSRF_TRUSTED_ORIGINS = default_trusted + custom_origins
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -338,3 +381,53 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'level': 'DEBUG' if DEBUG else 'INFO',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'django_debug.log'),
+            'formatter': 'verbose',
+            'level': 'DEBUG',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'content': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}

@@ -596,7 +596,7 @@ export default function AgentRegistryPage() {
                     </div>
                   )}
 
-                  {Object.keys(selectedAgent.personality_traits).length > 0 && (
+                  {selectedAgent.personality_traits && Object.keys(selectedAgent.personality_traits).length > 0 && (
                     <div>
                       <h4 className="font-semibold mb-2 text-white">Personality Traits</h4>
                       <div className="space-y-2">

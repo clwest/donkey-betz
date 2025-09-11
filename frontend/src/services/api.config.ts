@@ -5,10 +5,11 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import { Logger } from '../utils/logger';
+import { API_CONFIG } from '../config/api.config';
 
-// API Configuration - UCWSF Enhanced with unified backend
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8000';
+// API Configuration - Dynamic URLs for development and production
+export const API_BASE_URL = import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL + '/api';
+export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || API_CONFIG.BASE_URL;
 export const DEFAULT_AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN || ''; // No default token - users must authenticate
 
 // UCWSF Feature Flags

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Workflows Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 40px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #3a3a3a;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .warning { color: #fbbf24; }
+        .info { color: #60a5fa; }
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #3a3a3a;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .status-success { background: #059669; }
+        .status-error { background: #dc2626; }
+        .status-pending { background: #6b7280; }
+        .endpoint-test {
+            margin: 10px 0;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Workflows Page Integration Test</h1>
+        
+        <div class="section">
+            <h2>Test Controls</h2>
+            <button onclick="testAllEndpoints()">Test All Endpoints</button>
+            <button onclick="testWorkflowList()">Test Workflow List</button>
+            <button onclick="testTemplates()">Test Templates</button>
+            <button onclick="testCreateWorkflow()">Test Create Workflow</button>
+            <button onclick="testExecuteWorkflow()">Test Execute Workflow</button>
+            <button onclick="testAgentDiscovery()">Test Agent Discovery</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="section">
+            <h2>Test Results</h2>
+            <div id="results"></div>
+        </div>
+
+        <div class="section">
+            <h2>Connection Status</h2>
+            <div id="status">
+                <p>Backend API: <span id="api-status" class="status-badge status-pending">Checking...</span></p>
+                <p>Frontend: <span id="frontend-status" class="status-badge status-pending">Checking...</span></p>
+                <p>Auth Token: <span id="auth-status" class="status-badge status-pending">Checking...</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const AUTH_TOKEN = localStorage.getItem('auth_token') || '6e1b3e09-8c89-4e3f-be49-47edc2f8797f';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const entry = document.createElement('div');
+            entry.className = `endpoint-test ${type}`;
+            entry.innerHTML = `<span class="${type}">${new Date().toLocaleTimeString()}</span> - ${message}`;
+            results.appendChild(entry);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function checkStatus() {
+            // Check API
+            try {
+                const response = await fetch(`${API_BASE}/health/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`
+                    }
+                });
+                document.getElementById('api-status').className = response.ok ? 'status-badge status-success' : 'status-badge status-error';
+                document.getElementById('api-status').textContent = response.ok ? 'Connected' : 'Error';
+            } catch (e) {
+                document.getElementById('api-status').className = 'status-badge status-error';
+                document.getElementById('api-status').textContent = 'Offline';
+            }
+
+            // Check Frontend
+            try {
+                const response = await fetch('http://localhost:3000');
+                document.getElementById('frontend-status').className = response.ok ? 'status-badge status-success' : 'status-badge status-error';
+                document.getElementById('frontend-status').textContent = response.ok ? 'Running' : 'Error';
+            } catch (e) {
+                document.getElementById('frontend-status').className = 'status-badge status-error';
+                document.getElementById('frontend-status').textContent = 'Offline';
+            }
+
+            // Check Auth
+            document.getElementById('auth-status').className = AUTH_TOKEN ? 'status-badge status-success' : 'status-badge status-warning';
+            document.getElementById('auth-status').textContent = AUTH_TOKEN ? 'Set' : 'Missing';
+        }
+
+        async function testWorkflowList() {
+            log('Testing GET /api/workflows/list/', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/workflows/list/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Workflow List: Found ${data.workflows?.length || 0} workflows`, 'success');
+                    if (data.workflows?.length > 0) {
+                        log(`<pre>${JSON.stringify(data.workflows[0], null, 2)}</pre>`, 'info');
+                    }
+                } else {
+                    log(`❌ Workflow List Failed: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ Workflow List Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testTemplates() {
+            log('Testing GET /api/workflows/templates/', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/workflows/templates/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Templates: Found ${data.templates?.length || 0} templates`, 'success');
+                    if (data.templates?.length > 0) {
+                        log(`Template example: ${data.templates[0].name} - ${data.templates[0].description}`, 'info');
+                        log(`Agents in template: ${data.templates[0].agents?.length || 0}`, 'info');
+                    }
+                } else {
+                    log(`❌ Templates Failed: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ Templates Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testAgentDiscovery() {
+            log('Testing GET /api/agents/discover/', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/agents/discover/`, {
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Agent Discovery: Found ${data.agents?.length || 0} agents`, 'success');
+                    if (data.agents?.length > 0) {
+                        const specializations = [...new Set(data.agents.map(a => a.specialization))];
+                        log(`Specializations: ${specializations.join(', ')}`, 'info');
+                    }
+                } else {
+                    log(`❌ Agent Discovery Failed: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ Agent Discovery Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testCreateWorkflow() {
+            log('Testing POST /api/workflows/create/', 'info');
+            const testWorkflow = {
+                name: `Test Workflow ${Date.now()}`,
+                description: 'Automated test workflow',
+                agents: [
+                    { name: 'research-agent', order: 1, params: {} },
+                    { name: 'content-agent', order: 2, params: {} }
+                ],
+                flow_config: {
+                    type: 'sequential',
+                    error_handling: 'stop',
+                    save_intermediate: true
+                }
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/workflows/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testWorkflow)
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log(`✅ Create Workflow: Created "${testWorkflow.name}"`, 'success');
+                    log(`Workflow ID: ${data.workflow?.id}`, 'info');
+                    window.lastCreatedWorkflow = data.workflow;
+                } else {
+                    log(`❌ Create Workflow Failed: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ Create Workflow Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testExecuteWorkflow() {
+            log('Testing POST /api/workflows/execute/', 'info');
+            const executeRequest = {
+                workflow_name: window.lastCreatedWorkflow?.name || 'Blog Content Workflow',
+                prompt: 'Test execution from integration test',
+                params: {}
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/workflows/execute/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(executeRequest)
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    log(`✅ Execute Workflow: Started execution`, 'success');
+                    log(`Conversation ID: ${data.conversation_id}`, 'info');
+                    log(`Execution ID: ${data.execution_result?.execution_id}`, 'info');
+                } else {
+                    log(`❌ Execute Workflow Failed: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ Execute Workflow Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function testAllEndpoints() {
+            clearResults();
+            log('🚀 Starting comprehensive workflow API tests...', 'info');
+            
+            await testWorkflowList();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testTemplates();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testAgentDiscovery();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testCreateWorkflow();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testExecuteWorkflow();
+            
+            log('✅ All tests completed!', 'success');
+        }
+
+        // Check status on load
+        checkStatus();
+        setInterval(checkStatus, 5000);
+
+        // Auto-run tests on load
+        setTimeout(() => {
+            log('🔄 Auto-running initial tests...', 'info');
+            testAllEndpoints();
+        }, 1000);
+    </script>
+</body>
+</html>

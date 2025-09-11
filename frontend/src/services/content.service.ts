@@ -8,6 +8,9 @@ export interface ContentGenerationRequest {
   temperature?: number;
   type?: 'blog' | 'social' | 'email' | 'general';
   tone?: 'professional' | 'casual' | 'technical' | 'marketing';
+  // GPT-5 specific parameters
+  verbosity?: 'low' | 'medium' | 'high';
+  reasoning_effort?: 'minimal' | 'standard' | 'maximum';
 }
 
 export interface ImageGenerationRequest {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { OddsToolbar } from '../components/OddsToolbar';
 import { OddsTable } from '../components/OddsTable';
@@ -9,11 +9,15 @@ import {
   DEFAULT_ROWS, 
   STORAGE_KEYS 
 } from '../types';
+import { generateRealOddsRows } from '../api/odds';
 
 // Generate unique ID for rows
 const generateRowId = () => `row-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export function OddsPage() {
+  // Local state for API data loading
+  const [isLoadingRealData, setIsLoadingRealData] = useState(false);
+  
   // Use the dedicated odds store
   const {
     rows,
@@ -31,24 +35,9 @@ export function OddsPage() {
 
   // Initialize data from localStorage or defaults on first load
   useEffect(() => {
-    const initializeData = () => {
+    const initializeData = async () => {
       try {
-        // Load stored rows or use defaults
-        const storedRows = localStorage.getItem(STORAGE_KEYS.ROWS_DATA);
-        
-        if (storedRows) {
-          const parsedRows = JSON.parse(storedRows);
-          updateRows(parsedRows);
-        } else if (rows.length === 0) {
-          // Initialize with default rows only if no rows exist
-          const initialRows: OddsRow[] = DEFAULT_ROWS.map(row => ({
-            ...row,
-            id: generateRowId(),
-          }));
-          updateRows(initialRows);
-        }
-
-        // Load stored params or use defaults
+        // Load stored params first
         const storedParams = localStorage.getItem(STORAGE_KEYS.TOOLBAR_PARAMS);
         if (storedParams) {
           const parsedParams = JSON.parse(storedParams);
@@ -59,9 +48,58 @@ export function OddsPage() {
             updateParams(DEFAULT_TOOLBAR_PARAMS);
           }
         }
+
+        // Load stored rows first
+        const storedRows = localStorage.getItem(STORAGE_KEYS.ROWS_DATA);
+        
+        if (storedRows) {
+          const parsedRows = JSON.parse(storedRows);
+          updateRows(parsedRows);
+          return; // Use stored data, don't fetch from API
+        }
+
+        // If no stored data and no existing rows, try to fetch real data
+        if (rows.length === 0) {
+          setIsLoadingRealData(true);
+          
+          try {
+            console.log('[Odds Calculator] Attempting to fetch real odds data...');
+            const realRows = await generateRealOddsRows();
+            
+            if (realRows.length > 0) {
+              console.log('[Odds Calculator] Using real odds data:', realRows);
+              const initialRows: OddsRow[] = realRows.map(row => ({
+                ...row,
+                id: generateRowId(),
+              }));
+              updateRows(initialRows);
+              toast.success('Loaded real odds data from API');
+            } else {
+              console.log('[Odds Calculator] No real data available, using defaults');
+              // Fallback to default fake data
+              const initialRows: OddsRow[] = DEFAULT_ROWS.map(row => ({
+                ...row,
+                id: generateRowId(),
+              }));
+              updateRows(initialRows);
+              toast.info('Using sample odds data (real data unavailable)');
+            }
+          } catch (error) {
+            console.error('[Odds Calculator] Failed to fetch real odds data:', error);
+            // Fallback to default fake data
+            const initialRows: OddsRow[] = DEFAULT_ROWS.map(row => ({
+              ...row,
+              id: generateRowId(),
+            }));
+            updateRows(initialRows);
+            toast.info('Using sample odds data (API unavailable)');
+          } finally {
+            setIsLoadingRealData(false);
+          }
+        }
       } catch (error) {
         console.error('Failed to initialize odds page data:', error);
-        toast.error('Failed to load saved data, using defaults');
+        toast.error('Failed to load data, using defaults');
         
         // Fallback to defaults
         const initialRows: OddsRow[] = DEFAULT_ROWS.map(row => ({
@@ -70,6 +108,7 @@ export function OddsPage() {
         }));
         updateRows(initialRows);
         updateParams(DEFAULT_TOOLBAR_PARAMS);
+        setIsLoadingRealData(false);
       }
     };
 
@@ -114,13 +153,42 @@ export function OddsPage() {
     updateRows(newRows);
   };
 
+  // Handle refreshing real odds data
+  const handleRefreshRealData = async () => {
+    setIsLoadingRealData(true);
+    
+    try {
+      console.log('[Odds Calculator] Refreshing real odds data...');
+      const realRows = await generateRealOddsRows();
+      
+      if (realRows.length > 0) {
+        console.log('[Odds Calculator] Updated with real odds data:', realRows);
+        const initialRows: OddsRow[] = realRows.map(row => ({
+          ...row,
+          id: generateRowId(),
+        }));
+        updateRows(initialRows);
+        toast.success('Refreshed with latest real odds data');
+      } else {
+        toast.info('No real odds data available at this time');
+      }
+    } catch (error) {
+      console.error('[Odds Calculator] Failed to refresh real odds data:', error);
+      toast.error('Failed to refresh real odds data');
+    } finally {
+      setIsLoadingRealData(false);
+    }
+  };
+
   // Show loading state during initialization
-  if (isLoading) {
+  if (isLoading || isLoadingRealData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading odds calculator...</p>
+          <p className="text-gray-400">
+            {isLoadingRealData ? 'Loading real odds data...' : 'Loading odds calculator...'}
+          </p>
         </div>
       </div>
     );
@@ -144,7 +212,9 @@ export function OddsPage() {
           onParamsChange={handleParamsChange}
           onAddRow={handleAddRow}
           onClearRows={handleClearRows}
+          onRefreshRealData={handleRefreshRealData}
           rowCount={totalRows}
+          isLoadingRealData={isLoadingRealData}
         />
 
         {/* Table */}

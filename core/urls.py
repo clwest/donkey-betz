@@ -15,12 +15,15 @@ from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
     agent_instances, prompt_diagnostics_dashboard, prompt_diagnostics_analyses,
-    feedback_analytics, feedback_history, prompting_stats,
-    assistant_context, research_books, research_documents,
+    feedback_analytics, feedback_history, feedback_submit, prompting_stats,
+    assistant_context, research_books, research_documents, prompting_test,
     personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
 )
-# Import RAG-enhanced assistant
-from core.views_assistant_rag_enhanced import assistant_chat_enhanced as assistant_chat
+from core.views_knowledge import (
+    personal_knowledge_upload, personal_knowledge_delete, personal_knowledge_stats
+)
+# Import Intelligent Assistant with Agent Integration
+from core.views_assistant_intelligent import assistant_chat_intelligent as assistant_chat
 from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats
 from core.auth_views_enhanced import (
     register_view, verify_email_view, login_enhanced_view,
@@ -45,7 +48,7 @@ from core.views_content import (
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
-    video_gallery, save_video_to_gallery
+    video_gallery, save_video_to_gallery, test_runway_connection
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -111,6 +114,7 @@ urlpatterns = [
     path('api/styles/', styles_list, name='styles-list'),
     path('api/prompting/settings/', prompting_settings, name='prompting-settings'),
     path('api/prompting/stats/', prompting_stats, name='prompting-stats'),
+    path('api/prompting/test/', prompting_test, name='prompting-test'),
     path('api/execute/', execute_agent, name='execute-agent'),
     
     # Prompt diagnostics endpoints
@@ -118,6 +122,7 @@ urlpatterns = [
     path('api/prompt-diagnostics/analyses/', prompt_diagnostics_analyses, name='prompt-diagnostics-analyses'),
     
     # Feedback endpoints
+    path('api/feedback/submit/', feedback_submit, name='feedback-submit'),
     path('api/feedback/analytics/', feedback_analytics, name='feedback-analytics'),
     path('api/feedback/history/', feedback_history, name='feedback-history'),
     
@@ -131,6 +136,9 @@ urlpatterns = [
     
     # Personal knowledge endpoints
     path('api/personal-knowledge/list/', personal_knowledge_list, name='personal-knowledge-list'),
+    path('api/personal-knowledge/upload/', personal_knowledge_upload, name='personal-knowledge-upload'),
+    path('api/personal-knowledge/<str:knowledge_id>/delete/', personal_knowledge_delete, name='personal-knowledge-delete'),
+    path('api/personal-knowledge/stats/', personal_knowledge_stats, name='personal-knowledge-stats'),
     
     # Agent discovery stats
     path('api/agents/discovery/stats/', agents_discovery_stats, name='agents-discovery-stats'),
@@ -175,6 +183,7 @@ urlpatterns = [
     path('api/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
     path('api/video/gallery/', video_gallery, name='video-gallery'),
     path('api/video/save/', save_video_to_gallery, name='save-video'),
+    path('api/video/test-runway/', test_runway_connection, name='test-runway'),
     path('api/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/memory/supported-formats/', supported_file_formats, name='supported-formats'),
     path('api/gallery/list/', gallery_list, name='gallery-list'),
@@ -204,6 +213,9 @@ urlpatterns = [
     path('api/v1/odds/markets/', list_betting_markets, name='betting-markets'),
     path('api/v1/odds/bankroll/', get_bankroll_management, name='bankroll'),
     path('api/v1/odds/bankroll/stats/', get_bankroll_stats, name='bankroll-stats'),
+    # Add missing betting endpoints expected by verification
+    path('api/v1/betting/live/', live_betting_opportunities, name='betting-live'),
+    path('api/v1/betting/arbitrage/', detect_arbitrage, name='betting-arbitrage'),
     
     # ===== PHASE 2 ADVANCED FEATURES =====
     
@@ -224,18 +236,10 @@ urlpatterns = [
     path('api/llm/analytics/', llm_analytics, name='llm-analytics'),
     path('api/llm/preferences/', set_model_preferences, name='set-llm-preferences'),
     
-    # Advanced Workflow Orchestration APIs
-    path('api/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
-    path('api/workflows/execute-advanced/', execute_advanced_workflow, name='execute-advanced-workflow'),
-    path('api/workflows/execution/<str:execution_id>/status/', get_workflow_execution_status, name='workflow-execution-status'),
-    path('api/workflows/templates/', list_workflow_templates, name='workflow-templates'),
-    path('api/workflows/from-template/', create_workflow_from_template, name='workflow-from-template'),
-    path('api/workflows/analytics/', workflow_analytics, name='workflow-analytics'),
-    path('api/workflows/schedule/', schedule_workflow, name='schedule-workflow'),
-    path('api/workflows/collaborate/', workflow_collaboration, name='workflow-collaboration'),
-    
-    # App-specific APIs (existing modules)
+    # App-specific APIs (existing modules) - MUST come FIRST to avoid conflicts
+    path('api/workflows/', include('workflows.urls')),  # REAL workflows with actual agents - HIGHEST PRIORITY
     path('api/dashboard/', include('dashboard.urls')),  # Dashboard at /api/dashboard/ for compatibility
+    path('api/style-memory/', include('style_memory.urls')),  # Style Memory at /api/style-memory/ for frontend compatibility
     path('api/agents/', include('agents.urls')),  # Also expose at /api/agents/ for compatibility
     path('api/v1/agents/', include('agents.urls')),
     path('api/sports/', include('sports.urls')),  # Also expose at /api/sports/ for compatibility
@@ -244,8 +248,18 @@ urlpatterns = [
     path('api/v1/content/', include('content.urls')),
     path('api/v1/self-awareness/', include('self_awareness.urls')),
     path('api/campaigns/', include('campaigns.urls')),
-    path('api/workflows/', include('workflows.urls')),
+    
+    # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
+    path('api/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
+    path('api/workflows/execute-advanced/', execute_advanced_workflow, name='execute-advanced-workflow'),
+    path('api/workflows/execution/<str:execution_id>/status/', get_workflow_execution_status, name='workflow-execution-status'),
+    path('api/workflows/templates-advanced/', list_workflow_templates, name='workflow-templates-advanced'),  # RENAMED to avoid conflict
+    path('api/workflows/from-template/', create_workflow_from_template, name='workflow-from-template'),
+    path('api/workflows/analytics/', workflow_analytics, name='workflow-analytics'),
+    path('api/workflows/schedule/', schedule_workflow, name='schedule-workflow'),
+    path('api/workflows/collaborate/', workflow_collaboration, name='workflow-collaboration'),
     path('api/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
+    path('api/mythology/', include('mythology.urls')),  # Hallucination review dashboard
     
     # REST framework browsable API (development only)
     path('api-auth/', include('rest_framework.urls')),

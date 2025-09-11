@@ -39,7 +39,7 @@ const EmbeddingsTracker: React.FC = () => {
     try {
       const authToken = token || localStorage.getItem('authToken') || '993f8273f70877e23b5c7d2f92ed30562a089fe3';
       // Use the API base URL from environment or default
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
       const response = await fetch(`${baseUrl}/dashboard/embeddings-stats/`, {
         headers: {
           'Authorization': `Token ${authToken}`,

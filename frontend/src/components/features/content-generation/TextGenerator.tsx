@@ -6,8 +6,17 @@ import {
   EnvelopeIcon,
   MicrophoneIcon,
   AdjustmentsHorizontalIcon,
+  StarIcon,
+  HandThumbUpIcon,
+  HandThumbDownIcon,
 } from '@heroicons/react/24/outline';
+import { 
+  StarIcon as StarIconSolid,
+  HandThumbUpIcon as ThumbUpSolid,
+  HandThumbDownIcon as ThumbDownSolid,
+} from '@heroicons/react/24/solid';
 import { contentService } from '../../../services/content.service';
+import { feedbackService } from '../../../services/feedbackService';
 import { toast } from 'sonner';
 import { Logger } from '../../../utils/logger';
 import { useNavigate } from 'react-router-dom';
@@ -50,6 +59,13 @@ export function TextGenerator() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [lastGeneratedId, setLastGeneratedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Feedback state
+  const [userRating, setUserRating] = useState<number>(0);
+  const [userFeedback, setUserFeedback] = useState<'positive' | 'negative' | null>(null);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackComments, setFeedbackComments] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const contentTypes = [
     { id: 'blog', label: 'Blog Post', icon: DocumentTextIcon, desc: 'SEO-optimized articles' },
@@ -63,6 +79,9 @@ export function TextGenerator() {
       toast.error('Please enter a prompt');
       return;
     }
+
+    // Reset feedback for new generation
+    resetFeedback();
 
     Logger.event('TextGenerator', 'Starting text generation', { type: params.type, model: params.model });
     setIsGenerating(true);
@@ -98,6 +117,8 @@ export function TextGenerator() {
           temperature: params.temperature,
           type: 'email',
           tone: params.tone,
+          verbosity: params.verbosity,
+          reasoning_effort: params.reasoning_effort,
         });
         const emailContent = result.result || result.content || result.text || 'Generated email';
         setGeneratedContent(`# Email Draft\n\n${emailContent}`);
@@ -117,8 +138,8 @@ export function TextGenerator() {
           format: 'solo', // Default format
           tone: params.tone,
           duration: 10, // Default 10 minutes
-          enhance_prompt: aiSettings.enableEnhancement,
-          use_memory: aiSettings.useMemory
+          enhance_prompt: true, // Default to true for better results
+          use_memory: true // Default to true for context awareness
         };
         
         result = await contentService.generatePodcast(podcastRequest);
@@ -142,6 +163,8 @@ export function TextGenerator() {
           temperature: params.temperature,
           type: params.type,
           tone: params.tone,
+          verbosity: params.verbosity,
+          reasoning_effort: params.reasoning_effort,
         });
         setGeneratedContent(result.result || result.content || result.text || 'Generated content');
         setLastGeneratedId(result.id?.toString() || null);
@@ -224,6 +247,103 @@ export function TextGenerator() {
     }
   };
 
+  const handleRatingSubmit = async (rating: number) => {
+    if (!lastGeneratedId) {
+      toast.error('No content ID available for feedback');
+      return;
+    }
+
+    setUserRating(rating);
+    
+    try {
+      await feedbackService.submitFeedback({
+        content_type: 'text',
+        content_id: parseInt(lastGeneratedId),
+        overall_rating: rating,
+        feedback_type: 'rating',
+        comments: '',
+        suggestions: '',
+      });
+      
+      toast.success('Thank you for your rating!');
+      
+      // Show feedback form for detailed feedback if rating is low
+      if (rating <= 3) {
+        setShowFeedbackForm(true);
+      }
+    } catch (error) {
+      Logger.error('TextGenerator.handleRatingSubmit', error);
+      toast.error('Failed to submit rating');
+    }
+  };
+
+  const handleThumbsFeedback = async (isPositive: boolean) => {
+    if (!lastGeneratedId) {
+      toast.error('No content ID available for feedback');
+      return;
+    }
+
+    setUserFeedback(isPositive ? 'positive' : 'negative');
+    
+    try {
+      await feedbackService.submitQuickFeedback(
+        'text',
+        parseInt(lastGeneratedId),
+        isPositive
+      );
+      
+      toast.success('Feedback recorded. Thank you!');
+      
+      // Show feedback form for detailed feedback if negative
+      if (!isPositive) {
+        setShowFeedbackForm(true);
+      }
+    } catch (error) {
+      Logger.error('TextGenerator.handleThumbsFeedback', error);
+      toast.error('Failed to submit feedback');
+    }
+  };
+
+  const handleDetailedFeedback = async () => {
+    if (!lastGeneratedId || !feedbackComments.trim()) {
+      toast.error('Please provide your feedback comments');
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    
+    try {
+      await feedbackService.submitFeedback({
+        content_type: 'text',
+        content_id: parseInt(lastGeneratedId),
+        overall_rating: userRating || 3,
+        feedback_type: 'detailed',
+        comments: feedbackComments,
+        suggestions: '',
+        quality_rating: userRating,
+        accuracy_rating: userRating,
+        usefulness_rating: userRating,
+      });
+      
+      toast.success('Thank you for your detailed feedback! This helps us improve.');
+      setShowFeedbackForm(false);
+      setFeedbackComments('');
+    } catch (error) {
+      Logger.error('TextGenerator.handleDetailedFeedback', error);
+      toast.error('Failed to submit feedback');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  // Reset feedback when generating new content
+  const resetFeedback = () => {
+    setUserRating(0);
+    setUserFeedback(null);
+    setShowFeedbackForm(false);
+    setFeedbackComments('');
+  };
+
   return (
     <div className="space-y-6">
       {/* Content Type Selection */}
@@ -285,10 +405,11 @@ export function TextGenerator() {
                   value={params.model}
                   onChange={(e) => setParams({ ...params, model: e.target.value as any })}
                 >
-                  <option value="gpt-4">GPT-4 (Best)</option>
-                  <option value="gpt-3.5">GPT-3.5 (Fast)</option>
-                  <option value="claude">Claude (Creative)</option>
-                  <option value="gemini">Gemini (Analytical)</option>
+                  <option value="gpt-5">GPT-5 (Most Advanced)</option>
+                  <option value="gpt-5-mini">GPT-5 Mini (Balanced)</option>
+                  <option value="gpt-5-nano">GPT-5 Nano (Fast)</option>
+                  <option value="claude">Claude 3 Opus (Creative)</option>
+                  <option value="gemini">Gemini Pro (Analytical)</option>
                 </select>
               </div>
               
@@ -364,6 +485,39 @@ export function TextGenerator() {
                     max="4000"
                   />
                 </div>
+
+                {/* GPT-5 Specific Settings */}
+                {params.model.startsWith('gpt-5') && (
+                  <>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Verbosity Level</label>
+                      <select
+                        className="input"
+                        value={params.verbosity}
+                        onChange={(e) => setParams({ ...params, verbosity: e.target.value as any })}
+                      >
+                        <option value="low">Low (Concise)</option>
+                        <option value="medium">Medium (Balanced)</option>
+                        <option value="high">High (Detailed)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Controls response detail level</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Reasoning Effort</label>
+                      <select
+                        className="input"
+                        value={params.reasoning_effort}
+                        onChange={(e) => setParams({ ...params, reasoning_effort: e.target.value as any })}
+                      >
+                        <option value="minimal">Minimal (Fast)</option>
+                        <option value="standard">Standard (Balanced)</option>
+                        <option value="maximum">Maximum (Deep Analysis)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">GPT-5 reasoning depth</p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -426,6 +580,110 @@ export function TextGenerator() {
                 <span>Words: {generatedContent.split(' ').length}</span>
                 <span>Characters: {generatedContent.length}</span>
                 <span>Est. reading time: {Math.ceil(generatedContent.split(' ').length / 200)} min</span>
+              </div>
+
+              {/* Feedback Section */}
+              <div className="border-t border-gray-700 pt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-300">How was this content?</h4>
+                  <div className="flex items-center gap-3">
+                    {/* Star Rating */}
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => handleRatingSubmit(star)}
+                          className="p-1 hover:scale-110 transition-transform"
+                          title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                        >
+                          {userRating >= star ? (
+                            <StarIconSolid className="h-5 w-5 text-yellow-500" />
+                          ) : (
+                            <StarIcon className="h-5 w-5 text-gray-500 hover:text-yellow-500" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Thumbs Up/Down */}
+                    <div className="flex gap-2 ml-4 border-l border-gray-700 pl-4">
+                      <button
+                        onClick={() => handleThumbsFeedback(true)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          userFeedback === 'positive' 
+                            ? 'bg-green-500/20 text-green-500' 
+                            : 'hover:bg-gray-800 text-gray-400 hover:text-green-500'
+                        }`}
+                        title="Helpful"
+                      >
+                        {userFeedback === 'positive' ? (
+                          <ThumbUpSolid className="h-5 w-5" />
+                        ) : (
+                          <HandThumbUpIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleThumbsFeedback(false)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          userFeedback === 'negative' 
+                            ? 'bg-red-500/20 text-red-500' 
+                            : 'hover:bg-gray-800 text-gray-400 hover:text-red-500'
+                        }`}
+                        title="Not helpful"
+                      >
+                        {userFeedback === 'negative' ? (
+                          <ThumbDownSolid className="h-5 w-5" />
+                        ) : (
+                          <HandThumbDownIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed Feedback Form */}
+                {showFeedbackForm && (
+                  <div className="bg-gray-800/30 rounded-lg p-4 space-y-3">
+                    <p className="text-sm text-gray-400">
+                      Help us improve! What could be better about this content?
+                    </p>
+                    <textarea
+                      value={feedbackComments}
+                      onChange={(e) => setFeedbackComments(e.target.value)}
+                      placeholder="Your feedback helps us improve the content generation..."
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none resize-none"
+                      rows={3}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleDetailedFeedback}
+                        disabled={isSubmittingFeedback || !feedbackComments.trim()}
+                      >
+                        {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setShowFeedbackForm(false);
+                          setFeedbackComments('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Feedback Thank You Message */}
+                {(userRating > 0 || userFeedback) && !showFeedbackForm && (
+                  <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-3">
+                    <p className="text-sm text-primary-400">
+                      Thank you for your feedback! Your input helps us improve.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

@@ -19,6 +19,12 @@ from .dashboard_views import (
     recommendations_dashboard, market_overview
 )
 
+# Import enhanced multi-sport endpoints
+from core.views_odds_sports import (
+    sports_summary, sports_leagues, sports_teams, sports_games,
+    sports_games_trending, sports_sync
+)
+
 # Create router for ViewSets
 router = DefaultRouter()
 
@@ -45,6 +51,14 @@ urlpatterns = [
     path('dashboard/arbitrage/', arbitrage_dashboard, name='dashboard-arbitrage'),
     path('dashboard/recommendations/', recommendations_dashboard, name='dashboard-recommendations'),
     path('dashboard/market/', market_overview, name='dashboard-market'),
+    
+    # Enhanced Multi-Sport API Endpoints
+    path('summary/', sports_summary, name='sports-summary'),
+    path('leagues/', sports_leagues, name='sports-leagues'),  
+    path('teams/', sports_teams, name='sports-teams'),
+    path('games/', sports_games, name='sports-games'),
+    path('games/trending/', sports_games_trending, name='sports-games-trending'),
+    path('sync/', sports_sync, name='sports-sync'),
     
     # Main API router (prefix removed as it's added in main urls.py)
     path('', include(router.urls)),

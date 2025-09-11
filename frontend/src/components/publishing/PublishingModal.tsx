@@ -121,7 +121,7 @@ export function PublishingModal({
     try {
       setGeneratingCover(true);
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebook.id}/generate-cover/`,
+        `http://localhost:8000/api/ebooks/${ebook.id}/generate-cover/`,
         {
           method: 'POST',
           headers: {
@@ -169,7 +169,7 @@ export function PublishingModal({
 
     try {
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebook.id}/update-isbn/`,
+        `http://localhost:8000/api/ebooks/${ebook.id}/update-isbn/`,
         {
           method: 'POST',
           headers: {
@@ -198,7 +198,7 @@ export function PublishingModal({
       
       // First publish the ebook
       const publishResponse = await fetch(
-        `http://localhost:8001/api/ebooks/${ebook.id}/publish/`,
+        `http://localhost:8000/api/ebooks/${ebook.id}/publish/`,
         {
           method: 'POST',
           headers: {
@@ -241,7 +241,7 @@ export function PublishingModal({
   const exportFormat = async (format: string) => {
     try {
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebook.id}/export/?format=${format}`,
+        `http://localhost:8000/api/ebooks/${ebook.id}/export/?format=${format}`,
         {
           headers: {
             'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3'

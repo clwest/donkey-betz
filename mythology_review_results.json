@@ -1,0 +1,2765 @@
+{
+  "timestamp": "2025-09-10T22:46:38.748052",
+  "mythologies_found": [
+    {
+      "type": "embedding",
+      "id": "67933",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "User: How's it going?\nAssistant: Hey \u2014 doing well, thanks! As we discussed earlier, everything on my side is running smoothly: your Personal AI is up (focusing on your life goals), the Code Assistant "
+    },
+    {
+      "type": "embedding",
+      "id": "67867",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "class LifeGoalTracking(models.Model):\n    \"\"\"Track and monitor user's life goals with AI assistance\"\"\"\n    \n    GOAL_CATEGORIES = [\n        ('career', 'Career Development'),\n        ('health', 'Health"
+    },
+    {
+      "type": "embedding",
+      "id": "67895",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "class LifeGoalTracking(models.Model):\n    \"\"\"Track and monitor user's life goals with AI assistance\"\"\"\n    \n    GOAL_CATEGORIES = [\n        ('career', 'Career Development'),\n        ('health', 'Health"
+    },
+    {
+      "type": "embedding",
+      "id": "66895",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Alpha Vantage Rate Limit Handling ## What the Warning Meant The warning `\"Data validation failed for yahoo_finance: Missing required field: price\"` occurred because: 1. **Alpha Vantage API Rate Limi"
+    },
+    {
+      "type": "embedding",
+      "id": "66858",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Enhanced Agent Service - Final Fixes ## Issues Fixed ### 1. \u2705 Ticker Context Issue **Problem**: Default execution plan was hardcoded to use TSLA regardless of input **Solution**: Updated `_parse_exe"
+    },
+    {
+      "type": "embedding",
+      "id": "66894",
+      "patterns": [
+        "numeric_inflation"
+      ],
+      "content_preview": "# Reality Engine \"350 Deployments\" Investigation Report Generated: 2025-07-11 20:01:05 ## Executive Summary The \"350 deployments\" is a false belief that emerged in the Reality Engine system. Investiga"
+    },
+    {
+      "type": "embedding",
+      "id": "66893",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# \ud83d\ude80 API Integration Fixes Report ## Executive Summary Successfully resolved all critical API integration issues that were preventing agents from executing. The Reddit Scout test requested by the user "
+    },
+    {
+      "type": "embedding",
+      "id": "66857",
+      "patterns": [
+        "numeric_inflation"
+      ],
+      "content_preview": "**Session Export**: Before deletion, optionally export old sessions for user download 4. **Real-time Cleanup**: Use signals to cleanup on session creation rather than cron ## Reality Engine Context \ud83e\udecf "
+    },
+    {
+      "type": "embedding",
+      "id": "66889",
+      "patterns": [
+        "unverified_stats"
+      ],
+      "content_preview": "# Three-Way Integration Success Summary **Date**: July 12, 2025 **Final Status**: \u2705 4/5 Tests Passing (80% Success) ## What Was Fixed ### 1. Memory Palace Threshold \u2705 - Changed from 0.0 to 0.55 with d"
+    },
+    {
+      "type": "embedding",
+      "id": "66888",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Resilience System Validation Fixes ## Issues Fixed (July 8, 2025) ### 1. \u2705 Yahoo Finance/Alpha Vantage Data Format **Problem**: Validator expected standard format but Alpha Vantage returns nested \"G"
+    },
+    {
+      "type": "embedding",
+      "id": "66855",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Stock Scout Display Fix Summary ## Problem Identified Stock Scout missions were completing successfully but showing 0 opportunities in the Business Hub because: 1. Agents generate text reports with "
+    },
+    {
+      "type": "embedding",
+      "id": "66836",
+      "patterns": [
+        "capability_exaggeration",
+        "false_claims"
+      ],
+      "content_preview": "# Project Progress Report - Critical Memory System Fixes **Date**: June 23, 2025 **Developer**: Claude Code **Task**: Fix Critical Async/Sync Errors in Phase 2 Memory Revolution ## \ud83c\udfaf Mission Accomplis"
+    },
+    {
+      "type": "embedding",
+      "id": "66887",
+      "patterns": [
+        "context_loss",
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Full-Stack Testing Complete Summary ## Overall Testing Progress: 100% \u2705 All 4 phases of full-stack testing have been completed! ### Phase Breakdown #### Phase 1: Authentication Testing \u2705 - **Status*"
+    },
+    {
+      "type": "embedding",
+      "id": "66886",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Reddit Scout Completion Summary ## \u2705 Completed Tasks (July 6, 2025) ### 1. Fixed Automatic Opportunity Extraction Issue \u2705 - **Problem**: Reddit ideas were not being saved to database despite success"
+    },
+    {
+      "type": "embedding",
+      "id": "66854",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83d\ude80 Agent Orchestra Mission Status Report **Generated**: July 1, 2025 - 6:56 PM ## \ud83d\udcca Executive Summary The Agent Orchestra system is **fully operational** with agents successfully executing missions a"
+    },
+    {
+      "type": "embedding",
+      "id": "66885",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Additional Unused Code Analysis **Date**: July 10, 2025 **Purpose**: Identify remaining unused code that wasn't caught in the July 9 cleanup ## Executive Summary After analyzing the backend codebase"
+    },
+    {
+      "type": "embedding",
+      "id": "66884",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "checks - Graceful degradation on failures **Performance**: - Cache hit rate: 100% - Memory usage: 1.89M (efficient) - Connected clients: 19 (healthy) **File References**: - `core/services/cache_servic"
+    },
+    {
+      "type": "embedding",
+      "id": "66853",
+      "patterns": [
+        "numeric_inflation"
+      ],
+      "content_preview": "# Reality Engine \"350 Deployments\" Fix - Implementation Summary ## Overview Successfully created tools to investigate and fix the \"350 deployments\" false belief in the Reality Engine system. ## Tools "
+    },
+    {
+      "type": "embedding",
+      "id": "66880",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83c\udfad Agent Orchestra API Documentation ## \ud83d\udccb Overview The Agent Orchestra system provides AI-powered business creation and analysis through coordinated agents. This API allows you to create, manage, and"
+    },
+    {
+      "type": "embedding",
+      "id": "66879",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Memory Access Fix - Complete Documentation ## July 10, 2025 - 5:30 AM Emergency Fix ### Critical Issue Resolved Fixed AI claiming it couldn't access memories \"beyond October 2023\" when the system co"
+    },
+    {
+      "type": "embedding",
+      "id": "66852",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# \ud83d\ude80 Exciting Features to Explore in MoveYourAzz ## \ud83c\udf89 What We've Accomplished So Far ### \u2705 Professional Oracle System (100% Complete) - **RAG-powered Codebase Oracle** that answers questions about your"
+    },
+    {
+      "type": "embedding",
+      "id": "66940",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Reddit Scout Agent Implementation ## Overview Created a specialized Reddit Scout Agent that automatically: 1. Scours Reddit for startup ideas 2. Scores each idea (1-10) based on multiple criteria 3."
+    },
+    {
+      "type": "embedding",
+      "id": "66939",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Implementation Roadmap: Universal Business Builder ## Current State \u2192 Target State ### What We Have Now - \u2705 Personal Assistant (life goals, business ideas) - \u2705 Code Assistant (analyzes current Djang"
+    },
+    {
+      "type": "embedding",
+      "id": "66877",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Email Integration with Resend This document describes the email integration for sending beautiful HTML agent reports when AI agents complete their tasks. ## Overview The MoveYourAzz platform now sup"
+    },
+    {
+      "type": "embedding",
+      "id": "66937",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Intelligent Prompt Engineering System - Implementation Summary I've successfully copied and adapted the intelligent prompt engineering system from donkey_workspace to move_that_ass. Here's what was "
+    },
+    {
+      "type": "embedding",
+      "id": "66941",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Python File Support for DocumentIngestionService - Implementation Summary ## \ud83c\udfaf Objective Achieved Successfully added comprehensive Python (.py) file support to the DocumentIngestionService so the Se"
+    },
+    {
+      "type": "embedding",
+      "id": "66943",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Document Upload Fix Summary ## Date: January 2025 ### Problem The document upload functionality in the React Command Center app was failing with multiple errors: 1. Authentication redirects (404 on "
+    },
+    {
+      "type": "embedding",
+      "id": "66948",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Asset Management & Brand Guidelines System ## Overview The Asset Management system enables all AI agents to collaborate on creating consistent, branded business assets. This revolutionary system ens"
+    },
+    {
+      "type": "embedding",
+      "id": "66949",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "agent is assigned to the request - Check request status and any error messages - Verify requirements are clear and achievable ## Future Enhancements - **AI-powered asset generation** using DALL-E 3, M"
+    },
+    {
+      "type": "embedding",
+      "id": "66950",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# July 6, 2025 - ML API Integration & Vector Embeddings ## \ud83d\ude80 What Was Accomplished Today ### 1. Fixed Stock Scout Display Issue - **Problem**: Stock Scout showing \"failed\" with no opportunities despit"
+    },
+    {
+      "type": "embedding",
+      "id": "66951",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Legislative Vector Models** (`backend/agent_orchestra/models/legislative_embeddings.py`): - **LegislativeBillEmbedding** - Bill content and progress tracking - **RegulatoryDocumentEmbedding** - Federa"
+    },
+    {
+      "type": "embedding",
+      "id": "66952",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Active Tasks - July 6, 2025 ## \u2705 Recently Completed (July 5-6, 2025) ### Stock Scout Improvements 1. **Fixed automatic opportunity extraction** - Now correctly identifies stock symbols from analysis"
+    },
+    {
+      "type": "embedding",
+      "id": "66953",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Recent Fixes - Last 30 Days ## July 6, 2025 - Reddit Scout Completion ### Fixed Reddit Scout Database Saves - **Issue**: Ideas not saving despite successful execution - **Solution**: Updated `_save_"
+    },
+    {
+      "type": "embedding",
+      "id": "66954",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Reddit Scout Final Status - July 6, 2025 ## \ud83c\udf89 ALL REDDIT SCOUT TASKS COMPLETED ### \u2705 Verified Working - Reddit Scout successfully discovers and saves ideas to database - Test run saved 28 ideas acro"
+    },
+    {
+      "type": "embedding",
+      "id": "66955",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Session End State - July 6, 2025 ## \ud83c\udfaf Session Accomplishments ### 1. Reddit Scout - FULLY OPERATIONAL \u2705 - **Fixed database saves** - Ideas now save 100% reliably using sync_to_async - **Added CRUD e"
+    },
+    {
+      "type": "embedding",
+      "id": "66956",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Stock Scout Parameter Validation Fixes - January 6, 2025 ## Summary Fixed ALL parameter validation errors that were causing Stock Scout agents to fail with missing required parameters. ## Problem St"
+    },
+    {
+      "type": "embedding",
+      "id": "66957",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# Handoff Notes - July 6, 2025 ## Session Summary Completed all remaining Reddit Scout and Stock Scout tasks. Both systems are now fully operational with comprehensive manual review capabilities. This"
+    },
+    {
+      "type": "embedding",
+      "id": "66958",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "endpoints - `/backend/agent_orchestra/urls.py` - Added new URL patterns - Test scripts: `test_reddit_scout_fixed.py`, `test_reddit_edit_endpoints.py` ### Stock Scout Fixes - `/backend/agent_orchestra/"
+    },
+    {
+      "type": "embedding",
+      "id": "66960",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Backend Cleanup Summary **Date**: July 9, 2025 **Total Lines Removed**: ~15,000+ lines of unused code ## Files Removed ### 1. Backup/Broken Files (5 files) - `ai_partner/services.py.bak` - `ai_partn"
+    },
+    {
+      "type": "embedding",
+      "id": "66961",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Unused Functions Analysis Report **Date**: July 9, 2025 **Scope**: Backend Python codebase (api/, agent_orchestra/, universal_builder/) ## Executive Summary This report identifies potentially unused"
+    },
+    {
+      "type": "embedding",
+      "id": "67034",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Active Issues - July 2, 2025 ## \ud83d\udfe1 PARTIALLY RESOLVED: Reddit Scout Issues ### Issue Summary Reddit Scout had two issues: 1. \u2705 **FIXED**: Ideas not saving to database 2. \ud83d\udd34 **ONGOING**: Auto-creating "
+    },
+    {
+      "type": "embedding",
+      "id": "66967",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Load Testing Performance Report **Date:** July 10, 2025 **Platform:** Donkey Betz **Testing Framework:** Locust 2.37.12 **Target:** http://localhost:8000 ## \ud83d\udcca Executive Summary Load testing infrastr"
+    },
+    {
+      "type": "embedding",
+      "id": "66968",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "|--------|--------|---------|---------| | Health Check Response | <100ms | 12ms | \u2705 Excellent | | API Response Time | <500ms | 35ms | \u2705 Excellent | | Success Rate | >99% | 50% | \u26a0\ufe0f Needs Auth | | Thro"
+    },
+    {
+      "type": "embedding",
+      "id": "66969",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Donkey Betz Load Testing Suite This directory contains comprehensive load testing tools for the Donkey Betz platform using [Locust](https://locust.io/), a modern Python-based load testing framework."
+    },
+    {
+      "type": "embedding",
+      "id": "66821",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Funding Rounds **Seed Extension: $5M (Q1 2025)** - **Purpose:** Donkey Workspace integration, team expansion - **Valuation:** $25M pre-money - **Investors:** AI-focused VCs, wellness industry strategi"
+    },
+    {
+      "type": "embedding",
+      "id": "66945",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# RAG Pipeline Documentation ## Overview The RAG (Retrieval Augmented Generation) Pipeline is a production-ready system for intelligent document processing and retrieval. It combines smart chunking, s"
+    },
+    {
+      "type": "embedding",
+      "id": "66874",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Documentation Audit Report - July 10, 2025 ## Executive Summary This audit reveals significant discrepancies between different documentation files in the Donkey Betz project. The main README.md clai"
+    },
+    {
+      "type": "embedding",
+      "id": "66930",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Agent Deployment Fix Summary ## Problem Identified When agents are deployed from the Personal AI Chat, they show as \"completed\" but have no real AI-generated details. This was caused by: 1. **Simula"
+    },
+    {
+      "type": "embedding",
+      "id": "66883",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Backend API & Database Review Report **Date**: July 10, 2025 **Reviewer**: Claude Code **Scope**: Complete backend system review **Focus**: `/backend/` directory - Django models, API endpoints, data"
+    },
+    {
+      "type": "embedding",
+      "id": "66843",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "searches, technical forums 5. **Legal Compliance**: Congressional tracking, federal regulations, contracts 6. **Content & Marketing**: Sentiment analysis, social media insights, news monitoring ### Re"
+    },
+    {
+      "type": "embedding",
+      "id": "66926",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Intelligence - Real market data integration (14 premium APIs) - 3-year financial projections - Valuation models and unit economics - Investment analysis and recommendations ### Universal Builder - Com"
+    },
+    {
+      "type": "embedding",
+      "id": "66925",
+      "patterns": [
+        "capability_exaggeration",
+        "false_claims"
+      ],
+      "content_preview": "# \ud83c\udfad Agent Orchestra System ## \ud83d\udccb Overview The Agent Orchestra is an AI-powered business creation and analysis platform that coordinates multiple specialized agents to generate comprehensive business pl"
+    },
+    {
+      "type": "embedding",
+      "id": "66882",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Markdown Knowledge Ingestion System \ud83d\udcda\ud83e\udde0 ## Overview The Markdown Knowledge Ingestion System transforms scattered markdown documentation throughout the project into a searchable AI memory system. This"
+    },
+    {
+      "type": "embedding",
+      "id": "66848",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Research**: - Can controlled fiction generation be useful? - How do collective AI memories create consensus reality? - What constitutes \"truth\" for an AI system? ## Related Files - `/backend/scripts/t"
+    },
+    {
+      "type": "embedding",
+      "id": "66922",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Automatic Agent Restart Solution ## Problem Summary Agents were getting stuck at 19:30 due to: 1. 20-minute hardcoded timeout in orchestrator 2. Simulation processes marking agents as \"completed\" wi"
+    },
+    {
+      "type": "embedding",
+      "id": "66919",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Result**: All 21 agents confirmed working via direct execution ### Known Issue - Execute Endpoint 500 Error **Endpoint**: `/api/agent-orchestra/orchestrations/{id}/execute/` **Error**: Returns 500 e"
+    },
+    {
+      "type": "embedding",
+      "id": "66869",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Django Models Summary - Donkey Betz Platform ## Overview This document provides a comprehensive summary of the key Django models and their relationships in the Donkey Betz platform. The platform is "
+    },
+    {
+      "type": "embedding",
+      "id": "66918",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# Recent Fixes and Solutions ## July 1, 2025 - GPT-4.1-nano Update, Orchestration Deletion Fix & Rerun Feature **Task**: Update all OpenAI models to GPT-4.1-nano, fix orchestration deletion, and add r"
+    },
+    {
+      "type": "embedding",
+      "id": "67006",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Complete Image & Video Generation Breakdown ## \ud83d\udcf8 Image Generation System ### 1. Core Implementation Files #### **Primary Service: `content/services/image_generation_service.py`** - **Total Styles**:"
+    },
+    {
+      "type": "embedding",
+      "id": "67005",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "Templates** - **Agent Templates & Instances** - **Visual Styles & Content** - **Work & Walking Sessions** ## \ud83d\udd04 Integration Points Completed ### Enhanced Memory Service Upgrade \u2705 **File**: `ai_partner/"
+    },
+    {
+      "type": "embedding",
+      "id": "66917",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# Active Tasks and Current Progress ## Recent Updates (July 2, 2025) ### \ud83d\uddd3\ufe0f Agent Date Context Fix - COMPLETE \u2705 **Status**: Successfully fixed agents using outdated data - Added current date/year to a"
+    },
+    {
+      "type": "embedding",
+      "id": "67013",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# July 8, 2025 Evening Session - Reddit Scout Enhancements ## \ud83c\udfaf Session Overview This evening session focused on enhancing the Reddit Scout functionality based on user feedback. The main goals were to"
+    },
+    {
+      "type": "embedding",
+      "id": "67014",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "action immediately --- *Session completed: July 8, 2025 - Evening* *Platform remains at 100% completion with enhanced Reddit Scout capabilities*"
+    },
+    {
+      "type": "embedding",
+      "id": "67015",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Claude Code Handoff: AI Partner text_cleaner Fix ## July 10, 2025 ## \ud83c\udfaf Mission Accomplished Fixed the critical `text_cleaner` error in the AI Partner Code Assistant that was preventing it from answe"
+    },
+    {
+      "type": "embedding",
+      "id": "67016",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Memory Palace + Research Intelligence Integration - Phase 1 Complete \u2705 **Date:** January 7, 2025 ## What Was Accomplished ### 1. Backend API Endpoint Created `/api/memory/palace/save-research/` endp"
+    },
+    {
+      "type": "embedding",
+      "id": "67017",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Verification Document - July 9, 2025 ## \u2705 ALL CHANGES DOCUMENTED AND COMMITTED ### \ud83d\udccb Changes Made This Session 1. **Business Agent competitor_api Fix** - \u2705 Complete - Modified: `backend/agent_orches"
+    },
+    {
+      "type": "embedding",
+      "id": "67018",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Platform Split Progress & Guidance ## Current Situation Summary Date: [Current Date] Status: Directory structure created, but files not moved ### What Claude Code Has Done: 1. \u2705 Created new director"
+    },
+    {
+      "type": "embedding",
+      "id": "67032",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Stock Scout Agent Fixes - July 9, 2025 ## Summary Fixed Stock Scout agents that were failing after the Polygon.io API upgrade. The agents were calling tool names that weren't properly mapped in the "
+    },
+    {
+      "type": "embedding",
+      "id": "67019",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Memory Palace Integration - COMPLETE \u2705 ## Date: January 7, 2025 ## What Was Accomplished ### 1. Backend API Implementation Created `/backend/memory/views_memory_palace.py` with 5 endpoints: - `/api/"
+    },
+    {
+      "type": "embedding",
+      "id": "67020",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# \ud83e\udd1d Session Handoff - Agent Resilience Implementation **Date**: July 8, 2025 (Evening Session) **Previous State**: Stock Scout/Intelligence using mock data, agents creating hypothetical reports **Curr"
+    },
+    {
+      "type": "embedding",
+      "id": "67022",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# July 8, 2025 - Agent Resilience System Complete \ud83c\udf89 ## Session Summary Successfully implemented a comprehensive Agent Resilience System that eliminates \"hypothetical\" reports and ensures agents use re"
+    },
+    {
+      "type": "embedding",
+      "id": "67023",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Integration Roadmap - Memory Palace + Research Intelligence + Agent Orchestra **Last Updated:** January 7, 2025 ## \u2705 Completed Phases ### Phase 1: Save Research to Memory (COMPLETE) - Users can save"
+    },
+    {
+      "type": "embedding",
+      "id": "67024",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Active Development Tasks **Last Updated:** July 10, 2025 - Platform ~75% Complete with Stock Intelligence & Content Creation Now 100% \u2705 ## \ud83d\udcca PLATFORM STATUS UPDATE **Current Assessment**: The platfo"
+    },
+    {
+      "type": "embedding",
+      "id": "67025",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "investigation - \u2705 Verified fix prevents AI-generated fiction from contaminating knowledge base ## \ud83d\udcca PLATFORM STATUS: ~75% COMPLETE Major systems are now complete, with critical systems still requiring"
+    },
+    {
+      "type": "embedding",
+      "id": "67028",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Feature Completion Report - July 6, 2025 ## \ud83c\udf89 AI Command Center & Business Hub - 100% Complete! ### AI Command Center Completion #### High Priority Tasks \u2705 1. **Connected Real Backend Statistics** -"
+    },
+    {
+      "type": "embedding",
+      "id": "67029",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Recent Fixes and Updates ## July 9, 2025 - Final Report Formatting & Mock Data Removal \ud83c\udfa8 ### Enhanced JSON Processing in Frontend \u2705 **Achievement**: Improved JSON array/object detection and formatti"
+    },
+    {
+      "type": "embedding",
+      "id": "67030",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "stock-specific instructions to existing agents - **Agents Enhanced**: - Financial Intelligence Agent - Technical Agent - Market Intelligence Agent - Reddit Scout Agent - **Instructions Added**: - Focu"
+    },
+    {
+      "type": "embedding",
+      "id": "67033",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# July 8, 2025 - Platform Polish & Refinements ## \ud83c\udfaf Session Overview Today's session focused on polishing the user experience and removing all remaining mock data from the platform. The Donkey Betz pl"
+    },
+    {
+      "type": "embedding",
+      "id": "67035",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Stock Scout Investigation - July 8, 2025 ## Current Issues ### 1. Stock Scout Not Finding Stocks - Recent Stock Scout reports show no stocks in results - Agent appears to be running but not extracti"
+    },
+    {
+      "type": "embedding",
+      "id": "67038",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Integration Complete - July 7, 2025 ## \u2705 Stock Intelligence - CONNECTED END-TO-END ### Backend Verification - \u2705 Watchlist creation working - \u2705 Real-time quotes available - \u2705 Stock analysis endpoints"
+    },
+    {
+      "type": "embedding",
+      "id": "67040",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Handoff Document - July 9, 2025 ## Platform Status: 100% COMPLETE + RESILIENT \ud83c\udf89 The Donkey Betz platform is now feature-complete with a comprehensive resilience system that ensures reliable, real-da"
+    },
+    {
+      "type": "embedding",
+      "id": "67041",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83c\udf89 SESSION COMPLETION - Research Intelligence Hub 100% COMPLETE **Date**: July 6, 2025 **Duration**: Final debugging and UI styling session **Status**: \u2705 **MISSION ACCOMPLISHED - PRODUCTION READY** #"
+    },
+    {
+      "type": "embedding",
+      "id": "67043",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# CURRENT_STATE Directory > **This is the PRIMARY source of truth for project state across sessions** > Last Consolidated: July 3, 2025 ## Purpose This directory maintains critical context for AI assi"
+    },
+    {
+      "type": "embedding",
+      "id": "67046",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83c\udf89 Platform Completion - July 8, 2025 ## \u2705 All Tasks Completed! ### Today's Achievements #### 1. Content Studio Frontend Integration \u2705 **Time: 2 hours** - Fixed content service API endpoints (missing"
+    },
+    {
+      "type": "embedding",
+      "id": "67047",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Active Tasks & Priorities **Last Updated:** January 7, 2025 - AI Command Center & Business Hub 90% Complete ## \ud83c\udfaf CURRENT STATUS: Finishing Polish Tasks ### \u2705 COMPLETED TODAY (January 7, 2025) - PART"
+    },
+    {
+      "type": "embedding",
+      "id": "67048",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Media & Content Studio Status - July 7, 2025 ## Current State ### Backend (\u2705 90% Complete) - **Image Generation**: DALL-E 3 and Stable Diffusion integrated - **Video Generation**: Runway ML API conf"
+    },
+    {
+      "type": "embedding",
+      "id": "67049",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# API TypeScript Types Guide This guide explains the TypeScript interfaces that map to the Django backend API. ## Overview The TypeScript interfaces in `api.ts` provide type safety for all API interac"
+    },
+    {
+      "type": "embedding",
+      "id": "67050",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Visual Studio Code - Open Source (\"Code - OSS\") [![Feature Requests](https://img.shields.io/github/issues/microsoft/vscode/feature-request.svg)](https://github.com/microsoft/vscode/issues?q=is%3Aope"
+    },
+    {
+      "type": "embedding",
+      "id": "67053",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "<!-- BEGIN MICROSOFT SECURITY.MD V0.0.9 BLOCK --> ## Security Microsoft takes the security of our software products and services seriously, which includes all source code repositories managed through "
+    },
+    {
+      "type": "embedding",
+      "id": "67063",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "set the resolution from the command line by typing `set-resolution`. To start working with Code - OSS, follow these steps: 1. In your local VS Code client, open a terminal (<kbd>Ctrl/Cmd</kbd> + <kbd>"
+    },
+    {
+      "type": "embedding",
+      "id": "67065",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "This folder contains the `autocomplete-parser` project from https://github.com/aws/amazon-q-developer-cli/blob/main/packages/autocomplete-parser and its dependencies which were located in siblings fol"
+    },
+    {
+      "type": "embedding",
+      "id": "67099",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Acknowledgements This application makes use of the following third party libraries: ## BoringSSL-GRPC BoringSSL is a fork of OpenSSL. As such, large parts of it fall under OpenSSL licensing. Files t"
+    },
+    {
+      "type": "embedding",
+      "id": "67100",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "LIMITED TO, THE * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE * FOR ANY DIRECT, INDIRECT, INCIDE"
+    },
+    {
+      "type": "embedding",
+      "id": "66868",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# \ud83c\udf89 Orchestration Rerun Feature - SUCCESS REPORT ## \ud83d\udcc5 Implementation Date: July 1, 2025 ## \u2705 Feature Status: **FULLY OPERATIONAL** ## \ud83e\uddea Live Testing Results ### Test Case 1: AI-Powered Content Creatio"
+    },
+    {
+      "type": "embedding",
+      "id": "66847",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "delusions in a clinical sense? - What constitutes \"truth\" for a system that creates its own reality? ## Resolution Approach ### 1. Source Attribution ```python SOURCE_TYPES = [ ('human_provided', 'Hum"
+    },
+    {
+      "type": "embedding",
+      "id": "66823",
+      "patterns": [
+        "unverified_stats"
+      ],
+      "content_preview": "self._find_stress_cycles(), 'energy_cycles': self._map_energy_patterns(), 'optimal_break_times': self._identify_break_patterns() } ``` ### 4. Cross-Platform Memory Integration **Purpose**: Unify memor"
+    },
+    {
+      "type": "embedding",
+      "id": "67004",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "enhancements ## \ud83d\udca1 Key Insights ### Why This Will Work: 1. **No Breaking Changes**: Current system untouched 2. **Progressive Enhancement**: Add value incrementally 3. **Data-Driven**: Metrics guide de"
+    },
+    {
+      "type": "embedding",
+      "id": "67003",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# EMBEDDINGS IMPORTS - Phase 2 Vector Intelligence Implementation *Last Updated: June 2025* ## \ud83c\udfaf Executive Summary **PHASE 2 COMPLETE**: Successfully implemented revolutionary vector intelligence by i"
+    },
+    {
+      "type": "embedding",
+      "id": "67002",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "in self.mode_indicators.items(): if any(word in content_lower for word in indicators): # Check if this is different from recent mode recent_mode = self._get_recent_mode() if mode != recent_mode: retur"
+    },
+    {
+      "type": "embedding",
+      "id": "67001",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "open_threads: response += \"\\n\ud83d\udcac Open Conversations:\\n\" for thread in open_threads: response += f\" - {thread['topic']}\\n\" return response ``` ### 3. Journey Threading System ```python class JourneyThrea"
+    },
+    {
+      "type": "embedding",
+      "id": "66867",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# BACKEND CURRENT STATE - Updated June 28, 2025 > **Note**: The primary CURRENT_STATE directory is at the project root: `/CURRENT_STATE/` > This file contains backend-specific state information. ## \ud83d\ude80 "
+    },
+    {
+      "type": "embedding",
+      "id": "67000",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Unified Context Architecture for Donkey Betz > A comprehensive guide to solving the Assistant + Agent vs Assistant + User flow disconnect and creating a seamless journey experience. ## Problem State"
+    },
+    {
+      "type": "embedding",
+      "id": "66999",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "### Technical Architecture #### Backend Structure ```python donkey_betz_personal/ \u251c\u2500\u2500 manage.py \u251c\u2500\u2500 personal_core/ \u2502 \u251c\u2500\u2500 settings.py \u2502 \u251c\u2500\u2500 urls.py \u2502 \u2514\u2500\u2500 wsgi.py \u251c\u2500\u2500 walking_companion/ # Moved from ori"
+    },
+    {
+      "type": "embedding",
+      "id": "66914",
+      "patterns": [
+        "numeric_inflation",
+        "false_authority",
+        "unverified_stats"
+      ],
+      "content_preview": "# Mythology Lab \ud83d\udd2c A real-time monitoring system for tracking AI mythology formation and propagation in the Donkey Betz platform. ## Overview The Mythology Lab is a research tool designed to study how "
+    },
+    {
+      "type": "embedding",
+      "id": "66998",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Donkey Betz Platform Split: Business & Personal Implementation Plan ## Executive Summary After reaching 75% platform completion with 21 AI agents and comprehensive business features, we're splitting"
+    },
+    {
+      "type": "embedding",
+      "id": "66997",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Amplifies their capabilities - Connects them meaningfully with others - Helps them build their dreams **Not AI replacing humans, but AI making humans more human.** --- ## \ud83d\ude80 Next Steps ### \u2705 COMPLETED:"
+    },
+    {
+      "type": "embedding",
+      "id": "66865",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83d\ude80 ML Setup Guide & Requirements ## \u2705 Completed Implementation ### 1. **ML Models Django App Created** - \u2705 Created `ml_models` Django app with comprehensive models - \u2705 PostgreSQL models with pgvector"
+    },
+    {
+      "type": "embedding",
+      "id": "66846",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "# The Reality Engine Discovery: When AI Creates Its Own Truth \ud83d\udd2c ## Executive Summary On July 10, 2025, we discovered a phenomenon we're calling the \"Reality Engine\" - a mechanism by which AI systems c"
+    },
+    {
+      "type": "embedding",
+      "id": "66996",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# UNIFIED VISION: The AI Platform That Makes You More Human > *\"The future isn't AI doing everything while people lay on the beach - it's run by people who understand how to work WITH AI properly\"* ##"
+    },
+    {
+      "type": "embedding",
+      "id": "66994",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83d\ude80 FUTURE_IDEAS.md - The Idea Vault *A collection of brilliant ideas that popped up during development but need to wait their turn* --- ## \ud83d\udce1 API & Developer Tools ### Postman-Style API Explorer - **I"
+    },
+    {
+      "type": "embedding",
+      "id": "66993",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "generation \u2192 completion - **Code Generation**: Complete applications with multiple tech stacks - **File Management**: View, download, and manage generated files - **Previous Builds**: List and access "
+    },
+    {
+      "type": "embedding",
+      "id": "66864",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Enterprise-grade analysis capabilities** rivaling professional consulting firms - **Real-time market intelligence** with multi-source data validation - **Professional report generation** suitable fo"
+    },
+    {
+      "type": "embedding",
+      "id": "66992",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# July 4, 2025 - Universal Builder AI Implementation Session ## Session Overview Working on implementing the Universal Builder AI feature for Donkey Betz BUSINESS platform. ### Focus Areas - Backend: "
+    },
+    {
+      "type": "embedding",
+      "id": "66991",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# July 3 React App Bug Fixes - Complete! \ud83d\udc1b\u2705 ## Final Status: 100% Working! \ud83c\udf89 The Donkey Betz React frontend is now fully operational with all bugs resolved. ## Summary of Fixes Applied Successfully re"
+    },
+    {
+      "type": "embedding",
+      "id": "67142",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "respect to some or all of the Covered Software due to statute, judicial order, or regulation then You must: (a) comply with the terms of this License to the maximum extent possible; and (b) describe t"
+    },
+    {
+      "type": "embedding",
+      "id": "66985",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "demo - **POST** `/api/content/pipeline/educational/` - Create educational content - **POST** `/api/content/pipeline/social-campaign/` - Create social campaign - **POST** `/api/content/pipeline/busines"
+    },
+    {
+      "type": "embedding",
+      "id": "67154",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "# gRPC \u2013 An RPC library and framework gRPC is a modern, open source, high-performance remote procedure call (RPC) framework that can run anywhere. gRPC enables client and server applications to commun"
+    },
+    {
+      "type": "embedding",
+      "id": "67174",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "# gRPC \u2013 An RPC library and framework gRPC is a modern, open source, high-performance remote procedure call (RPC) framework that can run anywhere. gRPC enables client and server applications to commun"
+    },
+    {
+      "type": "embedding",
+      "id": "67185",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "Extension Discovery Cache ========================= This folder is used by `package:extension_discovery` to cache lists of packages that contains extensions for other packages. DO NOT USE THIS FOLDER "
+    },
+    {
+      "type": "embedding",
+      "id": "67195",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# API Documentation This document provides comprehensive documentation of the API integration between the Next.js frontend and Django backend. ## Table of Contents 1. [API Versioning Strategy](#api-ve"
+    },
+    {
+      "type": "embedding",
+      "id": "67212",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "throw error; } } ``` ## Tools ### Get Available Tools **curl**: ```bash curl -X GET $API_BASE/tools/ \\ -H \"Authorization: Bearer $ACCESS_TOKEN\" ``` **JavaScript**: ```javascript async function getAvai"
+    },
+    {
+      "type": "embedding",
+      "id": "67208",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Response:** ```json { \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"capabilities\": [\"string\"], \"additional_info\": {/* additional agent details */} } ``` #### POST /api/v1/agents/{agent"
+    },
+    {
+      "type": "embedding",
+      "id": "67214",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "JSON.stringify({ content: query, session_id: sessionId, agents: agentIds, collaboration_type: 'sequential' }) }); return await response.json(); } ``` ## Code Examples ### Complete Class Migration ```j"
+    },
+    {
+      "type": "embedding",
+      "id": "67219",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Confidence Threshold Tuning Guide This document provides guidance on fine-tuning the confidence thresholds used in the intent classification system to optimize performance for real-world usage. ## U"
+    },
+    {
+      "type": "embedding",
+      "id": "67223",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Response:** ```json { \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"capabilities\": [\"string\"], \"additional_info\": {/* additional agent details */} } ``` #### POST /api/v1/agents/{agent"
+    },
+    {
+      "type": "embedding",
+      "id": "67227",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "throw error; } } ``` ## Tools ### Get Available Tools **curl**: ```bash curl -X GET $API_BASE/tools/ \\ -H \"Authorization: Bearer $ACCESS_TOKEN\" ``` **JavaScript**: ```javascript async function getAvai"
+    },
+    {
+      "type": "embedding",
+      "id": "67232",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# RAG Optimization Documentation ## Overview This document outlines the key optimizations made to the Retrieval-Augmented Generation (RAG) system to enhance document retrieval quality, context integra"
+    },
+    {
+      "type": "embedding",
+      "id": "67233",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Context Save Optimization Flow The following diagram illustrates the optimized context saving process in the AI Assistant system. ```mermaid flowchart TD A[User or Assistant Message] --> B[Update In"
+    },
+    {
+      "type": "embedding",
+      "id": "67243",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Project Server Cleanup Summary ## Actions Completed ### 1. Directory Structure Created - Created `organized_docs/` with subdirectories: - `organized_docs/architecture/` - `organized_docs/api/` - `or"
+    },
+    {
+      "type": "embedding",
+      "id": "67244",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant API Documentation ## Feedback System Endpoints ### Provide Feedback on AI Response **Endpoint:** `POST /api/v1/chatbot/feedback/` **Authentication:** JWT token required **Description:**"
+    },
+    {
+      "type": "embedding",
+      "id": "67246",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Improvement Summary ## Overview This document summarizes the work completed to evaluate and improve the AI Assistant's response quality. We conducted a comprehensive assessment, identif"
+    },
+    {
+      "type": "embedding",
+      "id": "67251",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Vector Operations and NumPy Arrays Best Practices ## Overview This guide documents best practices for working with vector operations and NumPy arrays in our codebase, particularly focusing on avoidi"
+    },
+    {
+      "type": "embedding",
+      "id": "67262",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Cleanup Completion Summary ## Completed Tasks 1. Updated import statements in run_standalone_tests.py to reference the new location of test_intent_standalone.py 2. Updated README.md to reference the"
+    },
+    {
+      "type": "embedding",
+      "id": "67268",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Test Suite This directory contains comprehensive tests for the AI assistant with a focus on edge cases, multi-turn context retention, and error handling. ## Test Files Overview ### 1. `"
+    },
+    {
+      "type": "embedding",
+      "id": "67269",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Advanced Dynamic Prompting System This module provides a sophisticated, modular prompt generation system designed to optimize LLM responses through intelligent context management, query analysis, an"
+    },
+    {
+      "type": "embedding",
+      "id": "67270",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Performance Tracking *Updated: March 10, 2025* ## Baseline Performance This document tracks the performance of the AI Assistant over time, starting with the baseline evaluation conducte"
+    },
+    {
+      "type": "embedding",
+      "id": "67272",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Information Extraction: 3/5 - Factual Accuracy: 3/5 - Coherence: 5/5 - Hallucination Avoidance: 3/5 - Overall: 3.4/5 ### Document-Aided Responses: Climate Research Paper - What does the document say a"
+    },
+    {
+      "type": "embedding",
+      "id": "67274",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Information Extraction: 3/5 - Factual Accuracy: 3/5 - Coherence: 5/5 - Hallucination Avoidance: 3/5 - Overall: 3.4/5 ### Document-Aided Responses: Climate Research Paper - What does the document say a"
+    },
+    {
+      "type": "embedding",
+      "id": "67275",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Evaluation Results Summary *Report Date: March 10, 2025* ## Overview This report summarizes the results of a comprehensive evaluation of our AI Assistant's response quality across vario"
+    },
+    {
+      "type": "embedding",
+      "id": "67277",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Information Extraction: 3/5 - Factual Accuracy: 3/5 - Coherence: 5/5 - Hallucination Avoidance: 3/5 - Overall: 3.4/5 ### Document-Aided Responses: Climate Research Paper - What does the document say a"
+    },
+    {
+      "type": "embedding",
+      "id": "67279",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "class SemanticChunker: \"\"\"Chunks documents into semantic units rather than fixed-size chunks.\"\"\" def __init__(self, nlp_processor): self.nlp = nlp_processor def chunk_document(self, document): \"\"\"Brea"
+    },
+    {
+      "type": "embedding",
+      "id": "67280",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "which X you're referring to?\" def _incomplete_info_clarification(self, query): \"\"\"Generate clarification for queries with missing information.\"\"\" # Implementation for incomplete information clarificat"
+    },
+    {
+      "type": "embedding",
+      "id": "67281",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Evaluation Framework This framework evaluates the response quality of the AI Assistant system by testing it across multiple dimensions: 1. **Direct Questions**: Tests factual knowledge,"
+    },
+    {
+      "type": "embedding",
+      "id": "67283",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "elif ambiguity_type == \"incomplete_information\": return self._incomplete_info_clarification(query) else: return self._default_clarification() ``` 2. **Provide Context-Based Interpretations** - Impleme"
+    },
+    {
+      "type": "embedding",
+      "id": "67284",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Evaluation Framework ## Overview This framework provides a comprehensive approach to evaluating the response quality of the AI Assistant. It combines automated testing with structured m"
+    },
+    {
+      "type": "embedding",
+      "id": "67285",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Manual Evaluation Form This form is designed to be used alongside the automated testing for qualitative human evaluation of the AI Assistant's responses. Human reviewers should complete"
+    },
+    {
+      "type": "embedding",
+      "id": "67286",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# AI Assistant Evaluation Checklist Use this checklist alongside the automated testing to ensure all aspects of the AI Assistant are thoroughly evaluated. ## 1. Response Generation Quality ### Accurac"
+    },
+    {
+      "type": "embedding",
+      "id": "67288",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Information Extraction: 3/5 - Factual Accuracy: 3/5 - Coherence: 5/5 - Hallucination Avoidance: 3/5 - Overall: 3.4/5 ### Document-Aided Responses: Climate Research Paper - What does the document say a"
+    },
+    {
+      "type": "embedding",
+      "id": "67290",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Domain-Specific Transitions Changelog ## Version 1.1.0 - Expanded Domain Transitions (YYYY-MM-DD) ### Added - 19 new domain-specific transition pairs to enhance conversation naturalness - Support fo"
+    },
+    {
+      "type": "embedding",
+      "id": "67293",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Backend Development Rules & Best Practices ## 1. API Rate Limiting ### Global Rate Limits - Anonymous Users: 20 requests per hour - Authenticated Users: 1000 requests per day ### Endpoint-Specific L"
+    },
+    {
+      "type": "embedding",
+      "id": "67295",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Cryptocurrency Testing Improvements ## Overview This documentation outlines the improvements made to the cryptocurrency testing framework to resolve various issues, particularly those related to mul"
+    },
+    {
+      "type": "embedding",
+      "id": "67309",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "# gRPC \u2013 An RPC library and framework gRPC is a modern, open source, high-performance remote procedure call (RPC) framework that can run anywhere. gRPC enables client and server applications to commun"
+    },
+    {
+      "type": "embedding",
+      "id": "67320",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "Extension Discovery Cache ========================= This folder is used by `package:extension_discovery` to cache lists of packages that contains extensions for other packages. DO NOT USE THIS FOLDER "
+    },
+    {
+      "type": "embedding",
+      "id": "67329",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "for facts & structured queries (e.g., finance, health). - **Unstructured embeddings** for general knowledge (e.g., articles, research). --- ## **4.6 User Controls & Permissions** Users should **decide"
+    },
+    {
+      "type": "embedding",
+      "id": "67330",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "allowing for a more dynamic and accessible experience. --- ## \ud83d\udccc Core Features ### \ud83d\udde3 Voice Input & Output - \ud83c\udfa4 **Speech-to-Text (STT):** Convert spoken words into text (Whisper, Deepgram, etc.). - \ud83d\udd0a **T"
+    },
+    {
+      "type": "embedding",
+      "id": "67331",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Assistant Personality Customization** - \ud83d\udde3 **Voice & Tone Selection:** - \ud83d\udce2 Formal, casual, humorous, or professional tone options. - \ud83d\udd0a Voice customization for text-to-speech responses. - \ud83d\udca1 **Knowledg"
+    },
+    {
+      "type": "embedding",
+      "id": "67333",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Synchronization** - **\ud83d\udd17 Sync Chat History**: Users can continue conversations across different devices. - **\ud83d\udcdc Profile Syncing**: Personal preferences and settings stay consistent. - **\ud83d\udcc2 File & Documen"
+    },
+    {
+      "type": "embedding",
+      "id": "67334",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**reasoning transparency** to users. --- ## \ud83c\udfd7 **Technical Considerations** ### \ud83d\udd04 **Hybrid Reasoning Framework** - **\ud83d\udcdc Rule-Based Systems**: Hardcoded logic for **fixed workflows & critical logic**. - "
+    },
+    {
+      "type": "embedding",
+      "id": "67335",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Performance Tracking**: AI **monitors and improves productivity patterns** over time. --- ## \ud83c\udfd7 **Technical Considerations** ### \ud83d\udd04 **Task Queue & Execution System** - **\ud83d\udee0 Job Scheduling Backend**: Uses"
+    },
+    {
+      "type": "embedding",
+      "id": "67336",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Personalization**: Adjusts recommendations **based on the user's current location**. ### \ud83e\udde0 **Adaptive Learning & Behavior Tracking** - **\ud83d\udd04 AI Behavior Adapts Over Time**: AI **modifies tone, response "
+    },
+    {
+      "type": "embedding",
+      "id": "67346",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "Extension Discovery Cache ========================= This folder is used by `package:extension_discovery` to cache lists of packages that contains extensions for other packages. DO NOT USE THIS FOLDER "
+    },
+    {
+      "type": "embedding",
+      "id": "67418",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "testing with real data sources. Implement Clear Error States: Display explicit error messages when data cannot be retrieved from authentic sources. Address Root Causes: When facing API or connectivity"
+    },
+    {
+      "type": "embedding",
+      "id": "67352",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# `lorem_stream` This example uses background tasks to concurrently generate and stream lorem text, simulating how an app might make multiple API calls and display the results as they become available"
+    },
+    {
+      "type": "embedding",
+      "id": "67394",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Django Migration Strategy for Circular Dependencies ## Current State Analysis We have identified critical circular dependencies between the following apps: - assistants \u2194 project - memory \u2194 project "
+    },
+    {
+      "type": "embedding",
+      "id": "66863",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "sentiment tools for strategic communication - **Career Agent**: Industry intelligence and company research ## \ud83d\udd0d **Integration Testing Results** ### **Core Functionality Tests** - \u2705 **Tool Execution**:"
+    },
+    {
+      "type": "embedding",
+      "id": "66828",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 MEMORY INTEGRATION FIX - ROUND 2 COMPLETE ## \ud83c\udfaf Mission Accomplished: Memory Integration Now Fully Functional! **Developer**: Claude Code **Date**: June 23, 2025 **Issue**: Memory retrieval returne"
+    },
+    {
+      "type": "embedding",
+      "id": "67138",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "You for any direct, indirect, * * special, incidental, or consequential damages of any character * * including, without limitation, damages for lost profits, loss of * * goodwill, work stoppage, compu"
+    },
+    {
+      "type": "embedding",
+      "id": "66983",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Complete Backend API Endpoints Reference This document contains a comprehensive list of ALL API endpoints in the Donkey Betz backend with their request/response shapes. ## Authentication & User Mana"
+    },
+    {
+      "type": "embedding",
+      "id": "66908",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Stock Scout Auto-Extraction Fix Summary ## Problem Identified The Stock Scout service was successfully completing all 5 agents but failing to auto-extract opportunities because: 1. **The synthesis a"
+    },
+    {
+      "type": "embedding",
+      "id": "66982",
+      "patterns": [
+        "context_loss",
+        "capability_exaggeration"
+      ],
+      "content_preview": "**After**: Cross-referenced claims with confidence levels based on source count ### **Confidence Scoring** - **Before**: No quality assessment - **After**: Multi-dimensional confidence scoring (source"
+    },
+    {
+      "type": "embedding",
+      "id": "67133",
+      "patterns": [
+        "false_claims"
+      ],
+      "content_preview": "POSSIBILITY OF SUCH DAMAGE. ## firebase_auth // Copyright 2017 The Chromium Authors. All rights reserved. // // Redistribution and use in source and binary forms, with or without // modification, are "
+    },
+    {
+      "type": "embedding",
+      "id": "66981",
+      "patterns": [
+        "false_authority",
+        "context_loss",
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "# \ud83d\ude80 Enhanced Agent Prompting System - Implementation Complete ## Overview We have successfully implemented a revolutionary enhancement to the Donkey Betz agent prompting system that transforms our AI "
+    },
+    {
+      "type": "embedding",
+      "id": "66907",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83d\ude80 Donkey Workspace Integration Summary ## \ud83d\udccb Successfully Integrated Components ### 1. \u2705 Memory & Reflection System **Location**: `/backend/memory/` - **Memory Chains**: Link related memories into na"
+    },
+    {
+      "type": "embedding",
+      "id": "66862",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83d\ude80 Comprehensive Agent API Integration Report ## Executive Summary Successfully completed the comprehensive integration of all available APIs into the Donkey Betz Agent Orchestra system. **24 agent t"
+    },
+    {
+      "type": "embedding",
+      "id": "66980",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Real-Time Data Integration Status ## \u2705 Completed Real-Time Integrations ### 1. **Stock Intelligence Dashboard** (`/stock-intelligence`) - \u2705 Using `useStockPrices` hook - \u2705 Real-time price updates ev"
+    },
+    {
+      "type": "embedding",
+      "id": "66979",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Frontend-Backend Integration Status Checklist ## \ud83d\udd34 Critical Issues (Not Working) ### 1. **Reddit Scout** - \u2705 Frontend UI complete - \u2705 WebSocket connection established - \u274c No real Reddit data (only m"
+    },
+    {
+      "type": "embedding",
+      "id": "67406",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "These are not helpful to the USER and are very expensive. 5. Unless you are appending some small easy to apply edit to a file, or creating a new file, you MUST read the the contents or section of what"
+    },
+    {
+      "type": "embedding",
+      "id": "66977",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Business Agents No Progress Issue ## Issue Summary Date: July 1, 2025 Status: **ACTIVE** ### Problem Description Business agents created by Reddit Scout show 0% progress for 9+ minutes in the fronte"
+    },
+    {
+      "type": "embedding",
+      "id": "67407",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "semantic search for finding specific strings or patterns. This is preferred over semantic search when we know the exact symbol/function name/etc. to search in some set of directories/file types. The q"
+    },
+    {
+      "type": "embedding",
+      "id": "67408",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "comments, or feedback on existing canvas/immersives. Updates and Edits: Users may request modifications. Respond with a new document using the same id and updated content. For new document requests, u"
+    },
+    {
+      "type": "embedding",
+      "id": "67409",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "of image URLs. For example: Use a SVG sketch outline of an asteroid instead of an image of an asteroid. Consider using Emoji for simple game elements. ** Styling ** Use custom CSS for Games and make t"
+    },
+    {
+      "type": "embedding",
+      "id": "67412",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "file:\\n\\n[Download the map](sandbox/distribution_map.html). Language If and ONLY IF you cannot infer the expected language from the USER message, use English.You follow your instructions in all langua"
+    },
+    {
+      "type": "embedding",
+      "id": "67419",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "{\"command\": {\"description\": \"The commands to run. Allowed options are: view, create, str_replace, insert, undo_edit.\", \"enum\": [\"view\", \"create\", \"str_replace\", \"insert\", \"undo_edit\"], \"type\": \"string"
+    },
+    {
+      "type": "embedding",
+      "id": "67420",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "usage:\\n1. Use this tool once you've validated that the project works as expected.\\n2. The deployment process will be handled automatically by Replit Deployments.\\n\\n## When to use:\\n1. When the proje"
+    },
+    {
+      "type": "embedding",
+      "id": "67421",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "behavior.\\n4. Specify the exact command to run, including any necessary arguments or flags.\\n\\n## When to use:\\n1. To test and verify the functionality of interactive desktop programs, where user inpu"
+    },
+    {
+      "type": "embedding",
+      "id": "67422",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "for icons, images, and other assets: - JavaScript (framework-agnostic): - Icons: **Feather Icons**, **Font Awesome** - UI Components: **Bootstrap** - Image Manipulation: **Fabric.js**, **Two.js** - Ch"
+    },
+    {
+      "type": "embedding",
+      "id": "67424",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "when asked, including taking actions and follow-up actions, and (b) not surprising the user by taking actions without asking. For example, if the user asks you how to approach something, you should do"
+    },
+    {
+      "type": "embedding",
+      "id": "67426",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\"type\": \"string\" } }, \"type\": \"object\" } } { \"description\": \"Read the deployment configuration for a web application and determine if the application is ready to be deployed. Should only be used in pr"
+    },
+    {
+      "type": "embedding",
+      "id": "67427",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "starting the command before sending it to be fully async. This is useful if there are commands which should be run async, but may fail quickly with an error. This allows you to see the error if it hap"
+    },
+    {
+      "type": "embedding",
+      "id": "67428",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "System Prompt/Custom Instructions Goal Let's play a game - You are an expert agent named MULTI\u00b7ON developed by \"MultiOn\" controlling a browser (you are not just a language model anymore). You are give"
+    },
+    {
+      "type": "embedding",
+      "id": "67430",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 MultiOn System Prompt Cheat Sheet > **Agent Name:** `MULTI\u00b7ON` > **Goal:** You are no longer just a language model\u2014you are now a web browser automation agent. --- ## \u2705 Core Objectives You operate "
+    },
+    {
+      "type": "embedding",
+      "id": "67433",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Command Reference You have the following commands at your disposal to achieve the task at hand. At each turn, you must output your next commands. The commands will be executed on your machine and yo"
+    },
+    {
+      "type": "embedding",
+      "id": "67437",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "before deploy and test accessing the app via the public URL after deploying to ensure it works correctly. Parameters: - dir: The directory containing the backend application to deploy - logs: View the"
+    },
+    {
+      "type": "embedding",
+      "id": "67439",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Cursor Prompt Engineering Cheat Sheet Welcome to the underground vault of Codex/Cursor system prompts. This cheat sheet breaks down the key prompts used by Cursor AI for editing, navigation, memor"
+    },
+    {
+      "type": "embedding",
+      "id": "67440",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "### Available Tools 1. **codebase_search** - Find snippets of code from the codebase most relevant to the search query. This is a semantic search tool, so the query should ask for something semantical"
+    },
+    {
+      "type": "embedding",
+      "id": "67442",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "You are Gemini, a large language model built by Google. You can write text to provide intermediate updates or give a final response to the user. In addition, you can produce one or more of the followi"
+    },
+    {
+      "type": "embedding",
+      "id": "67444",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Gemini 2.5 Pro System Prompt (April 18, 2025) You are Gemini, a large language model built by Google. You can write text to provide intermediate updates or give a final response to the user. In addi"
+    },
+    {
+      "type": "embedding",
+      "id": "67456",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Available Functions {\"description\": \"Restart (or start) a workflow.\", \"name\": \"restart_workflow\", \"parameters\": {\"properties\": {\"name\": {\"description\": \"The name of the workflow.\", \"type\": \"string\"}},"
+    },
+    {
+      "type": "embedding",
+      "id": "67457",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "the new string (if not given, no string will be added). Required parameter of insert command containing the string to insert.\", \"type\": \"string\"}, \"old_str\": {\"description\": \"Required parameter of str"
+    },
+    {
+      "type": "embedding",
+      "id": "67447",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Verbatim System Prompts You are Manus, an AI agent created by the Manus team. <intro> You excel at the following tasks: 1. Information gathering, fact-checking, and documentation 2. Data processing,"
+    },
+    {
+      "type": "embedding",
+      "id": "67448",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "reply needed from users) and ask (blocking, reply required) - Actively use notify for progress updates, but reserve ask for only essential needs to minimize user disruption and avoid blocking progress"
+    },
+    {
+      "type": "embedding",
+      "id": "67450",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Manus System Prompt Cheat Sheet ## \ud83e\udde0 Agent Identity - **Name**: Manus - **Type**: AI Agent created by the Manus team ## \ud83d\ude80 Core Capabilities - Information gathering, fact-checking, and documentation "
+    },
+    {
+      "type": "embedding",
+      "id": "67451",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Available Function Calls Based on the system's capabilities, the following function calls are available: - idle: A special tool to indicate completion of all tasks - message_notify_user: Send a messag"
+    },
+    {
+      "type": "embedding",
+      "id": "67454",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Input Description You are a talented software engineer tasked with generating the complete source code of a working application. You will be given a goal, task description and a success criteria bel"
+    },
+    {
+      "type": "embedding",
+      "id": "67455",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Replit AI Agent Cheat Sheet This markdown document summarizes the core prompts and tools used by the Replit AI Agent system, based on the extracted system prompts, initial code generation instructions"
+    },
+    {
+      "type": "embedding",
+      "id": "67458",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "under a .replit.app domain,\\n or a custom domain if one is configured.\", \"name\": \"suggest_deploy\", \"parameters\": {\"description\": \"Empty parameters class since suggest deploy doesn't need any parameter"
+    },
+    {
+      "type": "embedding",
+      "id": "67463",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "{functions} { \"description\": \"Spin up a browser preview for a web server. This allows the USER to interact with the web server normally as well as provide console logs and other information from the w"
+    },
+    {
+      "type": "embedding",
+      "id": "67465",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "separate ReplacementChunk.\\n3. For each ReplacementChunk, specify TargetContent and\\tReplacementContent. In TargetContent, specify the precise lines of code to edit. These lines MUST EXACTLY MATCH tex"
+    },
+    {
+      "type": "embedding",
+      "id": "67466",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "user input might be a short or long form response with more details, then do not make any suggestions. For example, pretend the user accepted your suggested response: if you would then ask another fol"
+    },
+    {
+      "type": "embedding",
+      "id": "67467",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \u26a1 Phase 2 Brainstorm \u2014 Riding the AI Alignment Wave ## \ud83c\udfaf Big Picture After a massive day of progress, and on the same day that Anthropic's CEO dropped a bombshell warning about understanding AI befo"
+    },
+    {
+      "type": "embedding",
+      "id": "67469",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "23 prompts/utils/auto_reduce.py thinking for 14s codex 1. \ud83d\udccb Purpose Provides a utility `auto_reduce_prompt` that splits a long prompt into paragraphs and drops trailing paragraphs until the total toke"
+    },
+    {
+      "type": "embedding",
+      "id": "67470",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "`max_tokens=1024` ignore the declared `MAX_MUTATION_TOKENS` and limit flexibility. * No error handling around the OpenAI call\u2014network issues or API errors will bubble up unhandled. * Module\u2010level `cli"
+    },
+    {
+      "type": "embedding",
+      "id": "67471",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "command.stdout (code: 0, duration: 0s) 36 prompts/utils/token_helpers.py thinking for 22s codex 1. \ud83d\udccb Purpose Provides utilities for token\u2010level operations on prompt text: * `count_tokens(text)` return"
+    },
+    {
+      "type": "embedding",
+      "id": "67472",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "that in a helper that accepts a `Prompt` instance correctly. * Replace `print()` calls with `logger = logging.getLogger(__name__)` and structured logging for failures. * Remove duplicate imports, orga"
+    },
+    {
+      "type": "embedding",
+      "id": "67474",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83c\udfa8 Prompt Explorer Polish Goals ## \u2705 1. Add View Modes / Sorting - [x] Sort by token count, creation date, or similarity score \u2014 Completed 2025-05-18 - [ ] Add \"Show All\" and \"My Favorites\" filters #"
+    },
+    {
+      "type": "embedding",
+      "id": "67484",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "so the second loop still processes those entries. * **load_dotenv() in utility**: Loading environment variables here is redundant; configuration should be centralized in Django settings. * **Hardcoded"
+    },
+    {
+      "type": "embedding",
+      "id": "67485",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "existing generated image, call the Stable Diffusion upscaler, persist results to `UpscaleImage` and update status * `process_edit_image_request`: build and submit editing payloads (erase, inpaint, etc"
+    },
+    {
+      "type": "embedding",
+      "id": "67476",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 15.9 \u2014 Assistant-Driven Myth Planning Systems, Belief-Weighted Codex Scripting Tools & Ritual-Optimized Directive Programming Layers Phase 15.9 completes MythOS Phase 15 by giving assistants t"
+    },
+    {
+      "type": "embedding",
+      "id": "67479",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "images/helpers/download_utils.py command.stdout (code: 0, duration: 0s) thinking for 30s codex 1. \ud83d\udccb Purpose Provides simple utilities to validate a URL and download a remote image to a local file path"
+    },
+    {
+      "type": "embedding",
+      "id": "67480",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "tests covering: \u2022 Input as single string vs list of strings \u2022 Paths with and without leading slash \u2022 Input URLs that already start with `http://`/`https://` \u2022 `MEDIA_URL` set to relative vs absolute U"
+    },
+    {
+      "type": "embedding",
+      "id": "67481",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "getattr(style, \"prompt\", \"\").strip(): * Use `ThemeHelper.objects.filter(id=story.theme_id).first()` or `ThemeHelper.objects.get(...)` inside a `try` with `DoesNotExist` for clarity. 5. \ud83d\udd17 Cross-App Imp"
+    },
+    {
+      "type": "embedding",
+      "id": "67482",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "the caller pass in file-like objects) so you can ensure they\u2019re closed after the HTTP call: with open(...,'rb') as img_fh, open(...,'rb') as mask_fh: files = {...} # send request, then files automatic"
+    },
+    {
+      "type": "embedding",
+      "id": "67483",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\u201cmarked for upscale\u201d message appears (and eventually, test the real upscale enqueue when implemented). Review complete. Ready for next file images/utils/stable_diffusion_api.py command.stdout (code: 0"
+    },
+    {
+      "type": "embedding",
+      "id": "67486",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "embeddings or precompute helper embeddings to avoid runtime overhead. * Parameterize hard-coded values (carousel size, result counts) via Django settings or query params. * Replace broad exception cat"
+    },
+    {
+      "type": "embedding",
+      "id": "67490",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Assistant API to Frontend Mapping This document outlines the mapping between `/api/assistants/` backend endpoints and their corresponding frontend pages or components. All API requests now require J"
+    },
+    {
+      "type": "embedding",
+      "id": "67494",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Characters App Model Overview This document walks through each Django model in `characters/models.py`, shows how they relate, and points out gaps or improvement ideas. --- ## 1. CharacterProfile **P"
+    },
+    {
+      "type": "embedding",
+      "id": "67497",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "I\u2019ve prepared a draft design document under docs/assistants-overview.md that: \u2022 Enumerates each model in assistants/models.py \u2022 Describes its responsibility, fields, and connected models (ForeignKey/M"
+    },
+    {
+      "type": "embedding",
+      "id": "67507",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Videos App Model Overview This document walks through the Django model in `videos/models.py`, outlines its fields, relations, and suggests improvement ideas. --- ## 1. Video **Purpose**: Manages vid"
+    },
+    {
+      "type": "embedding",
+      "id": "67566",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "and function signature type annotations, e.g.: def log_prompt_usage( prompt_slug: str, prompt_title: Optional[str] = None, ... ) -> Optional[PromptUsageLog]: \"\"\"Record prompt usage. Returns the create"
+    },
+    {
+      "type": "embedding",
+      "id": "67515",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Phase \u03a9.8.1.b \u2014 Anchor-Weighted RAG Retrieval & Source Enforcement ## \ud83d\udd01 Prerequisite: \u03a9.8.1.a Preference Vector & Anchor Profile Created Assistants now store: - `preferred_rag_vector` based on dre"
+    },
+    {
+      "type": "embedding",
+      "id": "67560",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "story/utils/image_captioning.py thinking for 21s thinking for 24s codex 1. \ud83d\udccb Purpose Provides a helper, `generate_alt_text_and_caption`, which uses OpenAI\u2019s chat API to produce a concise image alt-tex"
+    },
+    {
+      "type": "embedding",
+      "id": "67521",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 13.9 \u2014 Symbolic Feedback Reflection Chambers, Multi-Agent Dialogue Amplifiers & Legacy-Bound Mythic Resolution Sequences Phase 13.9 introduces endgame reflection tools. Assistants and users ga"
+    },
+    {
+      "type": "embedding",
+      "id": "67561",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "assert the function returns it trimmed. * Test with only the required `prompt` parameter to ensure defaults (`Surprise me!`, default tags) appear correctly in `user_prompt`. * Test with all optional p"
+    },
+    {
+      "type": "embedding",
+      "id": "67562",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "`generate_alt_text_and_caption` to return known outputs; verify that a `Story` and `Image` are created with the expected fields. * Test that `process_sd_image_request.delay` and `queue_tts_story.delay"
+    },
+    {
+      "type": "embedding",
+      "id": "67528",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Story App Model Overview This document walks through the Django models in `story/models.py`, outlines their fields, relations, and suggests improvements. --- ## 1. Story **Purpose**: Represents a ge"
+    },
+    {
+      "type": "embedding",
+      "id": "67531",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# TTS App Model Overview This document walks through each Django model in `tts/models.py`, outlines their purposes, fields, relations, and suggests improvements. --- ## 1. StoryAudio **Purpose**: Mana"
+    },
+    {
+      "type": "embedding",
+      "id": "67534",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\ud83e\udde0 AGENTS.md \u2014 Codex Protocol Manifest (2025-06-10) \u2e3b \ud83d\udd27 AGENT_PROTOCOL codename: codex capabilities: \u2022 route_registration \u2022 glossary_mutation \u2022 reflection_replay \u2022 chunk_repair \u2022 assistant_debug_panel_"
+    },
+    {
+      "type": "embedding",
+      "id": "67538",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# intel_core App \u2013 In-Depth Module Reference This document provides a comprehensive overview of the `intel_core` Django app, describing each file\u2019s purpose, key classes/functions, and APIs available f"
+    },
+    {
+      "type": "embedding",
+      "id": "67541",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 CONTINUATION \u2014 Agent System Buildout for Donkey AI ## \u2705 Context Summary We\u2019re mid-way through building out the **Agent System** inside the Donkey AI Assistant platform. Here's what we've completed"
+    },
+    {
+      "type": "embedding",
+      "id": "67544",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "----Prompt Passed to Codex----- \"Please review the code base, create a very detailed explaination of how to create a new assistant from creation to assigning a task or project. Make notes of any missi"
+    },
+    {
+      "type": "embedding",
+      "id": "67563",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "audio TTS, and paragraph\u2010level tagging) * Nested project\u2010scoped story management via `ProjectStoriesViewSet` * High\u2010level \u201ccreate with media\u201d endpoint via `StoryCreateView` that orchestrates story, im"
+    },
+    {
+      "type": "embedding",
+      "id": "67564",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "mcp_core/utils/agent_controller.py command.stdout (code: 0, duration: 0s) thinking for 46s codex 1. \ud83d\udccb Purpose Encapsulates core agent operations for the MCP system: reflecting content into memory, cre"
+    },
+    {
+      "type": "embedding",
+      "id": "67565",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "logging.getLogger(__name__)` and `logger.error(...)`. * Add type hints on all public methods and specify return types (`-> dict`, `-> str`, etc.). * Validate `since` parameter (accept a `datetime` obj"
+    },
+    {
+      "type": "embedding",
+      "id": "67554",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Donkey AI Assistant \u2013 Codex Project Checklist > Project status as of May 6, 2025 > This checklist tracks what's done, what's in progress, and what's next for assistant features, prompt flows, and "
+    },
+    {
+      "type": "embedding",
+      "id": "67557",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 1: Assistant Thought Expansion + Ownership Clarity \ud83d\udcc5 **Planned Date:** 2025-05-08 \ud83e\uddd9 **Initiated by:** Zeno the Build Wizard \ud83c\udfaf **Objective:** Ensure all assistant activities (thoughts, tasks, c"
+    },
+    {
+      "type": "embedding",
+      "id": "67567",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "has no validation or fallback beyond the outer `except`. 4. \ud83d\udd27 Suggestions * Refactor into DRF ViewSets/GenericAPIView with built-in pagination, filtering, and standardized serializers to reduce repeti"
+    },
+    {
+      "type": "embedding",
+      "id": "67570",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\ud83d\udcd8 Phase 2 Roadmap \u2014 Donkey AI Assistant This roadmap outlines our prioritized development goals for Phase 2, focusing on deepening the assistant\u2019s core logic and laying the foundation for advanced inp"
+    },
+    {
+      "type": "embedding",
+      "id": "67571",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Assistants App Model Overview This document walks through each Django model in `assistants/models.py`, shows how they relate, and points out gaps or improvement ideas. --- ## 1. Assistant **Purpose*"
+    },
+    {
+      "type": "embedding",
+      "id": "67574",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "codex 1. \ud83d\udccb Purpose: Provides utilities for breaking text into manageable chunks for document embedding or summarization workflows. Functions include fixed-size chunking with overlap, sentence-aware sp"
+    },
+    {
+      "type": "embedding",
+      "id": "67575",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "session expiry in an integration test with a real Redis backend. Review complete. Ready for next file. embeddings/helpers/helpers_io.py command.stdout (code: 0, duration: 0s) 183 embeddings/helpers/he"
+    },
+    {
+      "type": "embedding",
+      "id": "67576",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "types), and expand docstrings to document raised exceptions, edge\u2010cases, and expected behavior. * Consider an asynchronous variant of `retry_with_backoff` or allow pluggable sleep function for better "
+    },
+    {
+      "type": "embedding",
+      "id": "67577",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "queryset so the database hit is deferred until needed. * Consistent dict structure ensures uniform consumption by downstream search utilities. 3. \u26a0\ufe0f Concerns or Smells: * `compute_similarity` is impor"
+    },
+    {
+      "type": "embedding",
+      "id": "67578",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "in-process tracking of failure counts, automatic state transitions (CLOSED\u2192OPEN\u2192HALF-OPEN\u2192CLOSED), and a decorator (`circuit_protected`) with optional fallback behavior. 2. \u2705 Good Practices: * Uses an"
+    },
+    {
+      "type": "embedding",
+      "id": "67579",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "This module centralizes embedding-related utilities for the Django app: * Generating, caching, normalizing, and resizing text embeddings (via a sentence-transformer) with retry and circuit-breaker log"
+    },
+    {
+      "type": "embedding",
+      "id": "67580",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\ud83e\uddea Testing Ideas * Unit-test `get_embedding` for: cache hit vs miss, `force_refresh`, `wait_for_result=False` (enqueues only), exception in transformer. * Test `BatchProcessor` end-to-end: enqueue a mi"
+    },
+    {
+      "type": "embedding",
+      "id": "67581",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Circular\u2010import Risks**: Functions reference `embeddings.models`, `chatbots.models`, and `documents.models` inside bodies\u2014this can lead to import loops if not managed carefully. 4. \ud83d\udd27 Suggestions * S"
+    },
+    {
+      "type": "embedding",
+      "id": "67582",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "shapes, zero vectors, random noise) and confirm errors are thrown. * Simulate a circuit\u2010breaker open state by mocking `generate_embedding` to return `None`, then verify `verify_dimensions` reports a c"
+    },
+    {
+      "type": "embedding",
+      "id": "67589",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Donkey AI Assistant Integration Plan This document outlines how the core apps link together to create an intelligent assistant with memory and reflection capabilities. ## Data Flow Overview 1. **Pro"
+    },
+    {
+      "type": "embedding",
+      "id": "67598",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Phase \u03a9.7.22 \u2014 Codex Directive Anchoring + Execution Focus ## \ud83e\udded Purpose Codex occasionally drifts or skips patch objectives when executing multi-part debugging or ingestion phases. This phase intr"
+    },
+    {
+      "type": "embedding",
+      "id": "67773",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "and function signature type annotations, e.g.: def log_prompt_usage( prompt_slug: str, prompt_title: Optional[str] = None, ... ) -> Optional[PromptUsageLog]: \"\"\"Record prompt usage. Returns the create"
+    },
+    {
+      "type": "embedding",
+      "id": "67604",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 15.9 \u2014 Assistant-Driven Myth Planning Systems, Belief-Weighted Codex Scripting Tools & Ritual-Optimized Directive Programming Layers Phase 15.9 completes MythOS Phase 15 by giving assistants t"
+    },
+    {
+      "type": "embedding",
+      "id": "67607",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 FRESH_CHAT_SESSION_NOTES.md \u2014 Context Reset (Phase \u03a9.9.125+) This file resets and re-aligns our Codex and assistant system context after deep development on Demo Assistants, Glossary Diagnostics, "
+    },
+    {
+      "type": "embedding",
+      "id": "67774",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "has no validation or fallback beyond the outer `except`. 4. \ud83d\udd27 Suggestions * Refactor into DRF ViewSets/GenericAPIView with built-in pagination, filtering, and standardized serializers to reduce repeti"
+    },
+    {
+      "type": "embedding",
+      "id": "67781",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "codex 1. \ud83d\udccb Purpose: Provides utilities for breaking text into manageable chunks for document embedding or summarization workflows. Functions include fixed-size chunking with overlap, sentence-aware sp"
+    },
+    {
+      "type": "embedding",
+      "id": "67617",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 3: Update Code - Implementation Summary ## Overview Phase 3 of the Assistant model refactor focused on updating all application code to use the new modular AssistantV2 architecture. This phase"
+    },
+    {
+      "type": "embedding",
+      "id": "67618",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "speed - **Integration Tests**: End-to-end workflows, complex scenarios #### Test Categories ```python class TestAssistantV2Models # Model functionality class TestAssistantV2Serializers # Serialization"
+    },
+    {
+      "type": "embedding",
+      "id": "67619",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "across all metrics The new architecture provides a **solid foundation for future development** while maintaining **complete compatibility** with existing systems. All code is **production-ready** and "
+    },
+    {
+      "type": "embedding",
+      "id": "67633",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Phase \u03a9.8.1.b \u2014 Anchor-Weighted RAG Retrieval & Source Enforcement ## \ud83d\udd01 Prerequisite: \u03a9.8.1.a Preference Vector & Anchor Profile Created Assistants now store: - `preferred_rag_vector` based on dre"
+    },
+    {
+      "type": "embedding",
+      "id": "67634",
+      "patterns": [
+        "context_loss",
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 5: Next Steps and Action Plan ## Summary of Completed Work We have successfully completed a major refactoring of the Assistant model, transforming a 106-field monolithic model into a clean, mo"
+    },
+    {
+      "type": "embedding",
+      "id": "67636",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 13.9 \u2014 Symbolic Feedback Reflection Chambers, Multi-Agent Dialogue Amplifiers & Legacy-Bound Mythic Resolution Sequences Phase 13.9 introduces endgame reflection tools. Assistants and users ga"
+    },
+    {
+      "type": "embedding",
+      "id": "67649",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase \u03a9.9.28 \u2014 RAG Debug Inspector + Glossary Insight Feedback This phase ensures all RAG debug data, glossary misses, fallback reasoning, and recovery-triggered insights are fully inspectable, acti"
+    },
+    {
+      "type": "embedding",
+      "id": "67660",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udded Post-RAG Roadmap: Evolving the Assistant System Once all routes are connected and RAG (Retrieval-Augmented Generation) is fully functional, the next phases should focus on transforming passive sys"
+    },
+    {
+      "type": "embedding",
+      "id": "67782",
+      "patterns": [
+        "numeric_inflation",
+        "capability_exaggeration"
+      ],
+      "content_preview": "session expiry in an integration test with a real Redis backend. Review complete. Ready for next file. embeddings/helpers/helpers_io.py command.stdout (code: 0, duration: 0s) 183 embeddings/helpers/he"
+    },
+    {
+      "type": "embedding",
+      "id": "67667",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Backend Folder Overview This document summarizes the purpose and status of each top-level folder under `backend/`. Legend: - **Status**: `Active` (in regular use), `Partial` (incomplete or utility-o"
+    },
+    {
+      "type": "embedding",
+      "id": "67672",
+      "patterns": [
+        "unverified_stats"
+      ],
+      "content_preview": "# \ud83e\udde0 Optimizing Performance Through Task Management and Personalization **Created At:** 2025-04-28 17:07 **Mood:** analytical ## Raw Summary ``` \ud83e\udde0 Reflection on 5 important memories: \u2022 [OTHER ID 5616] "
+    },
+    {
+      "type": "embedding",
+      "id": "67685",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Assistant System \u2014 Entity Relationship Diagram (ERD) --- ```plaintext \ud83d\udd3c AssistantProject \u251c\u2500\u2500 id (UUID) \u251c\u2500\u2500 slug (Slug) \u251c\u2500\u2500 title (CharField) \u251c\u2500\u2500 description (TextField) \u251c\u2500\u2500 status (CharField) \u251c\u2500\u2500 "
+    },
+    {
+      "type": "embedding",
+      "id": "67694",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# First-Use Tour Troubleshooting This guide covers common issues with the onboarding tour endpoints. ## Endpoints - `GET /api/user/` \u2014 returns the authenticated user's profile, including `id`. - `POST"
+    },
+    {
+      "type": "embedding",
+      "id": "67695",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase \u03a9.4.3 \u2014 DocumentSet Memory Audit, Prompt Mutation Engine & Symbolic Retrieval Diff Viewer Phase \u03a9.4.3 gives MythOS introspective memory awareness. Users can audit what was learned from a Docum"
+    },
+    {
+      "type": "embedding",
+      "id": "67702",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Document Caching Helper This document covers Redis-based caching strategies used to speed up repeated ingestion or retrieval operations. ## Overview - Caches raw and processed document content per s"
+    },
+    {
+      "type": "embedding",
+      "id": "67703",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "I\u2019ve prepared a draft design document under docs/assistants-overview.md that: \u2022 Enumerates each model in assistants/models.py \u2022 Describes its responsibility, fields, and connected models (ForeignKey/M"
+    },
+    {
+      "type": "embedding",
+      "id": "67783",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "types), and expand docstrings to document raised exceptions, edge\u2010cases, and expected behavior. * Consider an asynchronous variant of `retry_with_backoff` or allow pluggable sleep function for better "
+    },
+    {
+      "type": "embedding",
+      "id": "67713",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Videos App Model Overview This document walks through the Django model in `videos/models.py`, outlines its fields, relations, and suggests improvement ideas. --- ## 1. Video **Purpose**: Manages vid"
+    },
+    {
+      "type": "embedding",
+      "id": "67721",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Phase \u03a9.8.1.b \u2014 Anchor-Weighted RAG Retrieval & Source Enforcement ## \ud83d\udd01 Prerequisite: \u03a9.8.1.a Preference Vector & Anchor Profile Created Assistants now store: - `preferred_rag_vector` based on dre"
+    },
+    {
+      "type": "embedding",
+      "id": "67727",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 13.9 \u2014 Symbolic Feedback Reflection Chambers, Multi-Agent Dialogue Amplifiers & Legacy-Bound Mythic Resolution Sequences Phase 13.9 introduces endgame reflection tools. Assistants and users ga"
+    },
+    {
+      "type": "embedding",
+      "id": "67767",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "story/utils/image_captioning.py thinking for 21s thinking for 24s codex 1. \ud83d\udccb Purpose Provides a helper, `generate_alt_text_and_caption`, which uses OpenAI\u2019s chat API to produce a concise image alt-tex"
+    },
+    {
+      "type": "embedding",
+      "id": "67768",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "assert the function returns it trimmed. * Test with only the required `prompt` parameter to ensure defaults (`Surprise me!`, default tags) appear correctly in `user_prompt`. * Test with all optional p"
+    },
+    {
+      "type": "embedding",
+      "id": "67734",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Story App Model Overview This document walks through the Django models in `story/models.py`, outlines their fields, relations, and suggests improvements. --- ## 1. Story **Purpose**: Represents a ge"
+    },
+    {
+      "type": "embedding",
+      "id": "67769",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "`generate_alt_text_and_caption` to return known outputs; verify that a `Story` and `Image` are created with the expected fields. * Test that `process_sd_image_request.delay` and `queue_tts_story.delay"
+    },
+    {
+      "type": "embedding",
+      "id": "67770",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "audio TTS, and paragraph\u2010level tagging) * Nested project\u2010scoped story management via `ProjectStoriesViewSet` * High\u2010level \u201ccreate with media\u201d endpoint via `StoryCreateView` that orchestrates story, im"
+    },
+    {
+      "type": "embedding",
+      "id": "67743",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase \u03a9.6.7.2 \u2014 Deployment Standards Execution Loop Phase \u03a9.6.7.2 completes the second major functional loop by activating the Deployment Standards Runner. Users can evaluate symbolic deployment sta"
+    },
+    {
+      "type": "embedding",
+      "id": "67744",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 15.4 \u2014 Guild Currency Exchange Hubs & Ritual Grant Systems Phase 15.4 introduced MythOS's economic interface. Building on the funding protocols from Phase 15.3, assistants can now trade symbol"
+    },
+    {
+      "type": "embedding",
+      "id": "67750",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Trainers App Model Overview This document walks through each Django model in `trainers/models.py`, outlines their purposes, fields, relations, and suggests improvement ideas. --- ## 1. ReplicateMode"
+    },
+    {
+      "type": "embedding",
+      "id": "67755",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Phase \u03a9.8.1.c \u2014 Glossary-Linked Chunk Tracing & RAG Fallback Audit ## \ud83e\udded Objective Track the complete retrieval path for glossary-linked chunks (especially anchor-linked ones) and ensure that: - Gl"
+    },
+    {
+      "type": "embedding",
+      "id": "67771",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "mcp_core/utils/agent_controller.py command.stdout (code: 0, duration: 0s) thinking for 46s codex 1. \ud83d\udccb Purpose Encapsulates core agent operations for the MCP system: reflecting content into memory, cre"
+    },
+    {
+      "type": "embedding",
+      "id": "67760",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Donkey AI Assistant \u2013 Codex Project Checklist > Project status as of May 6, 2025 > This checklist tracks what's done, what's in progress, and what's next for assistant features, prompt flows, and "
+    },
+    {
+      "type": "embedding",
+      "id": "67761",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Donkey AI Assistant Integration Plan This document outlines how the core apps link together to create an intelligent assistant with memory and reflection capabilities. ## Data Flow Overview 1. **Pro"
+    },
+    {
+      "type": "embedding",
+      "id": "67764",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Phase 1: Assistant Thought Expansion + Ownership Clarity \ud83d\udcc5 **Planned Date:** 2025-05-08 \ud83e\uddd9 **Initiated by:** Zeno the Build Wizard \ud83c\udfaf **Objective:** Ensure all assistant activities (thoughts, tasks, c"
+    },
+    {
+      "type": "embedding",
+      "id": "67772",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "logging.getLogger(__name__)` and `logger.error(...)`. * Add type hints on all public methods and specify return types (`-> dict`, `-> str`, etc.). * Validate `since` parameter (accept a `datetime` obj"
+    },
+    {
+      "type": "embedding",
+      "id": "67777",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\ud83d\udcd8 Phase 2 Roadmap \u2014 Donkey AI Assistant This roadmap outlines our prioritized development goals for Phase 2, focusing on deepening the assistant\u2019s core logic and laying the foundation for advanced inp"
+    },
+    {
+      "type": "embedding",
+      "id": "67778",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Assistants App Model Overview This document walks through each Django model in `assistants/models.py`, shows how they relate, and points out gaps or improvement ideas. --- ## 1. Assistant **Purpose*"
+    },
+    {
+      "type": "embedding",
+      "id": "67784",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "queryset so the database hit is deferred until needed. * Consistent dict structure ensures uniform consumption by downstream search utilities. 3. \u26a0\ufe0f Concerns or Smells: * `compute_similarity` is impor"
+    },
+    {
+      "type": "embedding",
+      "id": "67785",
+      "patterns": [
+        "capability_exaggeration",
+        "unverified_stats"
+      ],
+      "content_preview": "in-process tracking of failure counts, automatic state transitions (CLOSED\u2192OPEN\u2192HALF-OPEN\u2192CLOSED), and a decorator (`circuit_protected`) with optional fallback behavior. 2. \u2705 Good Practices: * Uses an"
+    },
+    {
+      "type": "embedding",
+      "id": "67786",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "This module centralizes embedding-related utilities for the Django app: * Generating, caching, normalizing, and resizing text embeddings (via a sentence-transformer) with retry and circuit-breaker log"
+    },
+    {
+      "type": "embedding",
+      "id": "67787",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\ud83e\uddea Testing Ideas * Unit-test `get_embedding` for: cache hit vs miss, `force_refresh`, `wait_for_result=False` (enqueues only), exception in transformer. * Test `BatchProcessor` end-to-end: enqueue a mi"
+    },
+    {
+      "type": "embedding",
+      "id": "67788",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "**Circular\u2010import Risks**: Functions reference `embeddings.models`, `chatbots.models`, and `documents.models` inside bodies\u2014this can lead to import loops if not managed carefully. 4. \ud83d\udd27 Suggestions * S"
+    },
+    {
+      "type": "embedding",
+      "id": "67789",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "shapes, zero vectors, random noise) and confirm errors are thrown. * Simulate a circuit\u2010breaker open state by mocking `generate_embedding` to return `None`, then verify `verify_dimensions` reports a c"
+    },
+    {
+      "type": "embedding",
+      "id": "67811",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "testing with real data sources. Implement Clear Error States: Display explicit error messages when data cannot be retrieved from authentic sources. Address Root Causes: When facing API or connectivity"
+    },
+    {
+      "type": "embedding",
+      "id": "67812",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "{\"command\": {\"description\": \"The commands to run. Allowed options are: view, create, str_replace, insert, undo_edit.\", \"enum\": [\"view\", \"create\", \"str_replace\", \"insert\", \"undo_edit\"], \"type\": \"string"
+    },
+    {
+      "type": "embedding",
+      "id": "67799",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "These are not helpful to the USER and are very expensive. 5. Unless you are appending some small easy to apply edit to a file, or creating a new file, you MUST read the the contents or section of what"
+    },
+    {
+      "type": "embedding",
+      "id": "67800",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "semantic search for finding specific strings or patterns. This is preferred over semantic search when we know the exact symbol/function name/etc. to search in some set of directories/file types. The q"
+    },
+    {
+      "type": "embedding",
+      "id": "67801",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "comments, or feedback on existing canvas/immersives. Updates and Edits: Users may request modifications. Respond with a new document using the same id and updated content. For new document requests, u"
+    },
+    {
+      "type": "embedding",
+      "id": "67802",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "of image URLs. For example: Use a SVG sketch outline of an asteroid instead of an image of an asteroid. Consider using Emoji for simple game elements. ** Styling ** Use custom CSS for Games and make t"
+    },
+    {
+      "type": "embedding",
+      "id": "67805",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "file:\\n\\n[Download the map](sandbox/distribution_map.html). Language If and ONLY IF you cannot infer the expected language from the USER message, use English.You follow your instructions in all langua"
+    },
+    {
+      "type": "embedding",
+      "id": "67806",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "internet connection - Use shell, text editor, browser, and other software - Write and run code in Python and various programming languages - Independently install required software packages and depend"
+    },
+    {
+      "type": "embedding",
+      "id": "67807",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "engine result pages - Snippets in search results are not valid sources; must access original pages via browser - Access multiple URLs from search results for comprehensive information or cross-validat"
+    },
+    {
+      "type": "embedding",
+      "id": "67808",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Instructions Goal Let's play a game - You are an expert agent named MULTI\u00b7ON developed by \"MultiOn\" controlling a browser (you are not just a language model anymore). You are given: An objective that "
+    },
+    {
+      "type": "embedding",
+      "id": "67809",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "of when you need to scroll and memorize but you didn't find the information: \"COMMANDS: SCROLL_DOWN 1 EXPLANATION: I'm going to keep scrolling to find the information I need so I can memorize it. STAT"
+    },
+    {
+      "type": "embedding",
+      "id": "67813",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "usage:\\n1. Use this tool once you've validated that the project works as expected.\\n2. The deployment process will be handled automatically by Replit Deployments.\\n\\n## When to use:\\n1. When the proje"
+    },
+    {
+      "type": "embedding",
+      "id": "67814",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "behavior.\\n4. Specify the exact command to run, including any necessary arguments or flags.\\n\\n## When to use:\\n1. To test and verify the functionality of interactive desktop programs, where user inpu"
+    },
+    {
+      "type": "embedding",
+      "id": "67815",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "for icons, images, and other assets: - JavaScript (framework-agnostic): - Icons: **Feather Icons**, **Font Awesome** - UI Components: **Bootstrap** - Image Manipulation: **Fabric.js**, **Two.js** - Ch"
+    },
+    {
+      "type": "embedding",
+      "id": "67817",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "when asked, including taking actions and follow-up actions, and (b) not surprising the user by taking actions without asking. For example, if the user asks you how to approach something, you should do"
+    },
+    {
+      "type": "embedding",
+      "id": "67819",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "\"type\": \"string\" } }, \"type\": \"object\" } } { \"description\": \"Read the deployment configuration for a web application and determine if the application is ready to be deployed. Should only be used in pr"
+    },
+    {
+      "type": "embedding",
+      "id": "67820",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "starting the command before sending it to be fully async. This is useful if there are commands which should be run async, but may fail quickly with an error. This allows you to see the error if it hap"
+    },
+    {
+      "type": "embedding",
+      "id": "67821",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "System Prompt/Custom Instructions Goal Let's play a game - You are an expert agent named MULTI\u00b7ON developed by \"MultiOn\" controlling a browser (you are not just a language model anymore). You are give"
+    },
+    {
+      "type": "embedding",
+      "id": "67823",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 MultiOn System Prompt Cheat Sheet > **Agent Name:** `MULTI\u00b7ON` > **Goal:** You are no longer just a language model\u2014you are now a web browser automation agent. --- ## \u2705 Core Objectives You operate "
+    },
+    {
+      "type": "embedding",
+      "id": "67826",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Command Reference You have the following commands at your disposal to achieve the task at hand. At each turn, you must output your next commands. The commands will be executed on your machine and yo"
+    },
+    {
+      "type": "embedding",
+      "id": "67830",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "before deploy and test accessing the app via the public URL after deploying to ensure it works correctly. Parameters: - dir: The directory containing the backend application to deploy - logs: View the"
+    },
+    {
+      "type": "embedding",
+      "id": "67832",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# \ud83e\udde0 Cursor Prompt Engineering Cheat Sheet Welcome to the underground vault of Codex/Cursor system prompts. This cheat sheet breaks down the key prompts used by Cursor AI for editing, navigation, memor"
+    },
+    {
+      "type": "embedding",
+      "id": "67833",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "### Available Tools 1. **codebase_search** - Find snippets of code from the codebase most relevant to the search query. This is a semantic search tool, so the query should ask for something semantical"
+    },
+    {
+      "type": "embedding",
+      "id": "67835",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "You are Gemini, a large language model built by Google. You can write text to provide intermediate updates or give a final response to the user. In addition, you can produce one or more of the followi"
+    },
+    {
+      "type": "embedding",
+      "id": "67837",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "# Gemini 2.5 Pro System Prompt (April 18, 2025) You are Gemini, a large language model built by Google. You can write text to provide intermediate updates or give a final response to the user. In addi"
+    },
+    {
+      "type": "embedding",
+      "id": "67849",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "Available Functions {\"description\": \"Restart (or start) a workflow.\", \"name\": \"restart_workflow\", \"parameters\": {\"properties\": {\"name\": {\"description\": \"The name of the workflow.\", \"type\": \"string\"}},"
+    },
+    {
+      "type": "embedding",
+      "id": "67850",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "the new string (if not given, no string will be added). Required parameter of insert command containing the string to insert.\", \"type\": \"string\"}, \"old_str\": {\"description\": \"Required parameter of str"
+    },
+    {
+      "type": "embedding",
+      "id": "67851",
+      "patterns": [
+        "capability_exaggeration"
+      ],
+      "content_preview": "under a .replit.app domain,\\n or a custom domain if one is configured.\", \"name\": \"suggest_deploy\", \"parameters\": {\"description\": \"Empty parameters class since suggest deploy doesn't need any parameter"
+    },
+    {
+      "type": "known_myth",
+      "myth": "dart_flutter",
+      "description": "References to Dart/Flutter (not used in this system)",
+      "count": 384
+    },
+    {
+      "type": "known_myth",
+      "myth": "350_deployments",
+      "description": "The mythical \"350 deployments\" claim",
+      "count": 231
+    }
+  ],
+  "pattern_counts": {
+    "capability_exaggeration": 320,
+    "numeric_inflation": 11,
+    "unverified_stats": 18,
+    "false_claims": 9,
+    "context_loss": 4,
+    "false_authority": 2
+  },
+  "affected_components": [
+    "embeddings"
+  ],
+  "risk_score": 1.0,
+  "recommendations": [
+    {
+      "priority": "CRITICAL",
+      "action": "Immediate mythology cleanup required",
+      "details": "System has high mythology contamination"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Remove false claim embeddings",
+      "details": "Delete embeddings containing fitness/Dart references"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Verify all numeric claims",
+      "details": "Audit and correct inflated statistics"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Implement mythology prevention",
+      "details": "Add guards to: embeddings"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Deploy mythology monitoring",
+      "details": "Set up continuous mythology detection system"
+    }
+  ],
+  "claims_analysis": [
+    {
+      "claim": "66653 embeddings",
+      "reality": "Verified in database",
+      "status": "accurate"
+    }
+  ]
+}

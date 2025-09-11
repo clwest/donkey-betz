@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Style Memory API</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        button {
+            background: #333;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #444;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #333;
+            overflow: auto;
+        }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+    </style>
+</head>
+<body>
+    <h1>Style Memory API Test</h1>
+    
+    <button onclick="testWithFetch()">Test with Fetch</button>
+    <button onclick="testWithAxios()">Test with Axios</button>
+    <button onclick="testFromApp()">Test from App Context</button>
+    
+    <h2>Request:</h2>
+    <pre id="request"></pre>
+    
+    <h2>Response:</h2>
+    <pre id="response"></pre>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // Test with plain fetch
+        async function testWithFetch() {
+            const data = {
+                content_id: "test-" + Date.now(),
+                interaction_type: "like"
+            };
+            
+            document.getElementById('request').textContent = JSON.stringify(data, null, 2);
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/style-memory/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                document.getElementById('response').innerHTML = 
+                    `<span class="${response.ok ? 'success' : 'error'}">Status: ${response.status}</span>\n` +
+                    JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('response').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+        
+        // Test with axios (mimicking the app)
+        async function testWithAxios() {
+            const data = {
+                content_id: "test-" + Date.now(),
+                interaction_type: "like"
+            };
+            
+            document.getElementById('request').textContent = JSON.stringify(data, null, 2);
+            
+            try {
+                const response = await axios.post('http://localhost:8000/api/style-memory/', data, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                document.getElementById('response').innerHTML = 
+                    `<span class="success">Status: ${response.status}</span>\n` +
+                    JSON.stringify(response.data, null, 2);
+            } catch (error) {
+                document.getElementById('response').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>\n` +
+                    `Status: ${error.response?.status}\n` +
+                    JSON.stringify(error.response?.data, null, 2);
+            }
+        }
+        
+        // Test from app context (check what the app is sending)
+        async function testFromApp() {
+            // Open the React app and check localStorage for auth token
+            const token = localStorage.getItem('auth_token');
+            
+            const data = {
+                content_id: "test-" + Date.now(),
+                interaction_type: "like",
+                parent_content_id: null,
+                notes: ""
+            };
+            
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Token ${token}`;
+            }
+            
+            document.getElementById('request').textContent = 
+                `Headers:\n${JSON.stringify(headers, null, 2)}\n\nBody:\n${JSON.stringify(data, null, 2)}`;
+            
+            try {
+                const response = await axios.post('http://localhost:8000/api/style-memory/', data, { headers });
+                
+                document.getElementById('response').innerHTML = 
+                    `<span class="success">Status: ${response.status}</span>\n` +
+                    JSON.stringify(response.data, null, 2);
+            } catch (error) {
+                document.getElementById('response').innerHTML = 
+                    `<span class="error">Error: ${error.message}</span>\n` +
+                    `Status: ${error.response?.status}\n` +
+                    JSON.stringify(error.response?.data, null, 2);
+            }
+        }
+    </script>
+</body>
+</html>

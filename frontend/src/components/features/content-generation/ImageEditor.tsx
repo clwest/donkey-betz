@@ -191,7 +191,7 @@ export function ImageEditor() {
       
       // Fix URL if it's a relative path
       if (resultUrl.startsWith('/media/')) {
-        resultUrl = `http://localhost:8001${resultUrl}`;
+        resultUrl = `http://localhost:8000${resultUrl}`;
       }
       
       const editResult: EditResult = {
@@ -418,9 +418,9 @@ export function ImageEditor() {
       if (imageUrl.startsWith('http')) {
         // Already full URL
       } else if (imageUrl.startsWith('/media/')) {
-        imageUrl = `http://localhost:8001${imageUrl}`;
+        imageUrl = `http://localhost:8000${imageUrl}`;
       } else {
-        imageUrl = `http://localhost:8001/media/${imageUrl}`;
+        imageUrl = `http://localhost:8000/media/${imageUrl}`;
       }
       
       // Load the image as a File object
@@ -790,8 +790,8 @@ export function ImageEditor() {
                           console.log('Image URL:', url, 'for image:', image.id); // Debug log
                           if (!url) return '';
                           if (url.startsWith('http')) return url; // Already full URL
-                          if (url.startsWith('/media/')) return `http://localhost:8001${url}`;
-                          return `http://localhost:8001/media/${url}`; // Fallback
+                          if (url.startsWith('/media/')) return `http://localhost:8000${url}`;
+                          return `http://localhost:8000/media/${url}`; // Fallback
                         })()}
                         alt={image.title || image.prompt || 'Gallery image'}
                         className="w-full h-full object-cover"

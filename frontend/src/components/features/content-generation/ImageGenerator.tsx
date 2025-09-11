@@ -16,6 +16,7 @@ import {
 import { contentService } from '../../../services/content.service';
 import { stylesService, type VisualStyle } from '../../../services/styles.service';
 import { apiClient } from '../../../services/api.config';
+import { API_CONFIG, buildApiUrl } from '../../../config/api.config';
 import { useStyleMemoryStore } from '../../../store/styleMemoryStore';
 import { promptingService } from '../../../services/promptingService';
 import { toast } from 'sonner';
@@ -248,9 +249,9 @@ export function ImageGenerator() {
       
       if (!imageUrl.startsWith('http')) {
         if (imageUrl.startsWith('/media/')) {
-          imageUrl = `http://localhost:8001${imageUrl}`;
+          imageUrl = `${API_CONFIG.BASE_URL}${imageUrl}`;
         } else {
-          imageUrl = `http://localhost:8001/media/${imageUrl}`;
+          imageUrl = `${API_CONFIG.BASE_URL}/media/${imageUrl}`;
         }
       }
 
@@ -393,7 +394,7 @@ export function ImageGenerator() {
         
         // Add server prefix if URL starts with /media/
         if (imageUrl.startsWith('/media/')) {
-          imageUrl = `http://localhost:8001${imageUrl}`;
+          imageUrl = `${API_CONFIG.BASE_URL}${imageUrl}`;
         }
         
         return {
@@ -984,8 +985,8 @@ export function ImageGenerator() {
                           const url = image.result || image.result_url || image.image_url || image.url;
                           if (!url) return '';
                           if (url.startsWith('http')) return url; // Already full URL
-                          if (url.startsWith('/media/')) return `http://localhost:8001${url}`;
-                          return `http://localhost:8001/media/${url}`; // Fallback
+                          if (url.startsWith('/media/')) return `${API_CONFIG.BASE_URL}${url}`;
+                          return `${API_CONFIG.BASE_URL}/media/${url}`; // Fallback
                         })()}
                         alt={image.title || image.prompt || 'Gallery image'}
                         className="w-full h-full object-cover"

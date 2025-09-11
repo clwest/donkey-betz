@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mythology WebSocket Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+        }
+        .connected { background: #001100; }
+        .disconnected { background: #110000; color: #f00; border-color: #f00; }
+        .error { background: #220000; color: #ff0; border-color: #ff0; }
+        .log {
+            background: #000;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #0f0;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mythology WebSocket Connection Test</h1>
+    <div id="status" class="status disconnected">Disconnected</div>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <button onclick="clearLog()">Clear Log</button>
+    <div class="log" id="log"></div>
+
+    <script>
+        let ws = null;
+        let reconnectAttempts = 0;
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `[${timestamp}] <span style="color: ${type === 'error' ? '#f00' : type === 'success' ? '#0f0' : '#ff0'}">${message}</span>`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(status, className) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = status;
+            statusEl.className = 'status ' + className;
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Already connected', 'info');
+                return;
+            }
+
+            const wsUrl = 'ws://localhost:8000/ws/mythology/';
+            log(`Attempting to connect to ${wsUrl}`, 'info');
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = (event) => {
+                log('✓ WebSocket connection established!', 'success');
+                updateStatus('Connected', 'connected');
+                reconnectAttempts = 0;
+            };
+
+            ws.onmessage = (event) => {
+                log(`Message received: ${event.data}`, 'info');
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`Parsed message type: ${data.type}`, 'info');
+                } catch (e) {
+                    log(`Raw message: ${event.data}`, 'info');
+                }
+            };
+
+            ws.onerror = (error) => {
+                log(`WebSocket error occurred`, 'error');
+                updateStatus('Error', 'error');
+            };
+
+            ws.onclose = (event) => {
+                log(`Connection closed - Code: ${event.code}, Reason: ${event.reason || 'No reason provided'}`, event.code === 1000 ? 'info' : 'error');
+                updateStatus('Disconnected', 'disconnected');
+                
+                // Log close code meanings
+                switch(event.code) {
+                    case 1000:
+                        log('Normal closure', 'info');
+                        break;
+                    case 1001:
+                        log('Endpoint going away', 'error');
+                        break;
+                    case 1006:
+                        log('Abnormal closure - connection lost', 'error');
+                        break;
+                    case 403:
+                        log('Access denied - authentication required', 'error');
+                        break;
+                    default:
+                        log(`Unknown close code: ${event.code}`, 'error');
+                }
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                log('Closing connection...', 'info');
+                ws.close(1000, 'User requested disconnect');
+                ws = null;
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+
+        // Auto-connect on load
+        window.onload = () => {
+            log('Page loaded - Ready to test WebSocket connection', 'success');
+            // Don't auto-connect to avoid spam
+        };
+    </script>
+</body>
+</html>

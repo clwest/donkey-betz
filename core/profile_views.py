@@ -14,6 +14,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from .models import UserProfile, UserStatistics
 import hashlib
 
 
@@ -24,7 +25,7 @@ if not os.path.exists(AVATAR_DIR):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Using AllowAny for dev, should be IsAuthenticated in production
+@permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def upload_avatar_view(request):
     """
@@ -71,7 +72,7 @@ def upload_avatar_view(request):
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
         
         # Generate unique filename
-        user_id = request.user.id if request.user.is_authenticated else 'demo'
+        user_id = request.user.id
         file_ext = os.path.splitext(avatar_file.name)[1] or '.jpg'
         filename = f"avatar_{user_id}_{uuid.uuid4().hex[:8]}{file_ext}"
         filepath = os.path.join(AVATAR_DIR, filename)
@@ -91,12 +92,17 @@ def upload_avatar_view(request):
             # For development, return a direct path
             avatar_url = f"/media/{path}"
         
-        # In production, you would update the user's profile here
-        # For now, just return the URL
+        # Update the user's profile
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        # Store the full URL including domain for frontend compatibility
+        full_url = f"http://localhost:8000{avatar_url}" if not avatar_url.startswith('http') else avatar_url
+        profile.avatar = full_url
+        profile.avatar_file = f'avatars/{filename}'
+        profile.save()
         
         return Response({
             'message': 'Avatar uploaded successfully',
-            'avatar_url': avatar_url,
+            'avatar_url': full_url,
             'filename': filename
         })
         
@@ -108,18 +114,29 @@ def upload_avatar_view(request):
 
 
 @api_view(['DELETE'])
-@permission_classes([AllowAny])  # Should be IsAuthenticated in production
+@permission_classes([IsAuthenticated])
 def delete_avatar_view(request):
     """
     Delete the user's avatar and revert to default.
     """
     try:
-        # In production, you would delete the actual file here
-        # For now, just return success
+        # Get user profile
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        
+        # Delete the file if it exists
+        if profile.avatar_file:
+            try:
+                default_storage.delete(str(profile.avatar_file))
+            except:
+                pass  # File might not exist
+        
+        # Clear avatar fields
+        profile.avatar = None
+        profile.avatar_file = None
+        profile.save()
         
         # Generate default avatar URL (using dicebear or similar)
-        username = request.user.username if request.user.is_authenticated else 'demo'
-        default_avatar = f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
+        default_avatar = f"https://api.dicebear.com/7.x/avataaars/svg?seed={request.user.username}"
         
         return Response({
             'message': 'Avatar deleted successfully',
@@ -134,39 +151,73 @@ def delete_avatar_view(request):
 
 
 @api_view(['PUT'])
-@permission_classes([AllowAny])  # Should be IsAuthenticated in production
+@permission_classes([IsAuthenticated])
 def update_profile_view(request):
     """
     Update user profile information.
     """
     try:
+        # Get or create user profile
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        
         # Extract update data
         update_data = request.data
         
-        # In production, you would validate and update the actual user profile here
-        # For now, just acknowledge the update
+        # Fields that can be updated for User model
+        user_fields = ['first_name', 'last_name', 'email']
         
-        # Fields that can be updated
-        allowed_fields = [
-            'first_name', 'last_name', 'email', 'bio', 'display_name',
-            'occupation', 'location', 'preferred_ai_model', 
-            'default_content_tone', 'auto_save', 'dark_mode',
-            'email_notifications', 'default_citation_style',
+        # Fields that can be updated for Profile model
+        profile_fields = [
+            'bio', 'display_name', 'occupation', 'location', 
+            'preferred_ai_model', 'default_content_tone', 'auto_save', 
+            'dark_mode', 'email_notifications', 'default_citation_style',
             'preferred_book_length', 'research_topics'
         ]
         
-        # Filter to only allowed fields
-        filtered_data = {
-            key: value for key, value in update_data.items() 
-            if key in allowed_fields
-        }
+        # Update User model fields
+        user = request.user
+        user_updated = False
+        for field in user_fields:
+            if field in update_data:
+                setattr(user, field, update_data[field])
+                user_updated = True
         
-        # In production, save to database
-        # For now, just return success
+        if user_updated:
+            user.save()
+        
+        # Update Profile model fields
+        profile_updated = False
+        for field in profile_fields:
+            if field in update_data:
+                setattr(profile, field, update_data[field])
+                profile_updated = True
+        
+        if profile_updated:
+            profile.save()
+        
+        # Return success with updated fields
+        updated_fields = [f for f in user_fields + profile_fields if f in update_data]
         
         return Response({
             'message': 'Profile updated successfully',
-            'updated_fields': list(filtered_data.keys())
+            'updated_fields': updated_fields,
+            'profile': {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'bio': profile.bio,
+                'display_name': profile.display_name,
+                'occupation': profile.occupation,
+                'location': profile.location,
+                'preferred_ai_model': profile.preferred_ai_model,
+                'default_content_tone': profile.default_content_tone,
+                'auto_save': profile.auto_save,
+                'dark_mode': profile.dark_mode,
+                'email_notifications': profile.email_notifications,
+                'default_citation_style': profile.default_citation_style,
+                'preferred_book_length': profile.preferred_book_length,
+                'research_topics': profile.research_topics,
+            }
         })
         
     except Exception as e:
@@ -177,7 +228,7 @@ def update_profile_view(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Should be IsAuthenticated in production
+@permission_classes([IsAuthenticated])
 def generate_avatar_view(request):
     """
     Generate a new random avatar using an avatar service.
@@ -198,6 +249,12 @@ def generate_avatar_view(request):
         
         # Generate avatar URL
         avatar_url = f"https://api.dicebear.com/7.x/{style}/svg?seed={seed}"
+        
+        # Update user's profile with the generated avatar
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        profile.avatar = avatar_url
+        profile.avatar_file = None  # Clear file-based avatar
+        profile.save()
         
         return Response({
             'message': 'Avatar generated successfully',

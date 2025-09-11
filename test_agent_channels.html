@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agent Channels WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .channel {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+        }
+        .agent-message { border-left-color: #28a745; }
+        .user-message { border-left-color: #6f42c1; }
+        .system-message { border-left-color: #ffc107; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        input[type="text"] {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Agent Channels WebSocket Test</h1>
+        
+        <div id="status" class="status disconnected">
+            Status: Disconnected
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="getChannels()">Get Channels</button>
+            <button onclick="testPing()">Test Ping</button>
+        </div>
+        
+        <div>
+            <h3>Channels</h3>
+            <div id="channels">No channels loaded</div>
+        </div>
+        
+        <div>
+            <h3>Send Test Message</h3>
+            <input type="text" id="messageInput" placeholder="Enter message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        
+        <div>
+            <h3>Messages</h3>
+            <div id="messages"></div>
+        </div>
+        
+        <div>
+            <h3>Debug Log</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentChannel = null;
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = 'Status: Connected';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = 'Status: Disconnected';
+            }
+        }
+        
+        function connect() {
+            if (socket) {
+                socket.close();
+            }
+            
+            const wsUrl = 'ws://localhost:8001/ws/channels/';
+            log(`Connecting to ${wsUrl}...`);
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function(event) {
+                log('✅ WebSocket connected');
+                updateStatus(true);
+            };
+            
+            socket.onmessage = function(event) {
+                try {
+                    const message = JSON.parse(event.data);
+                    log(`📨 Received: ${JSON.stringify(message, null, 2)}`);
+                    handleMessage(message);
+                } catch (error) {
+                    log(`❌ Error parsing message: ${error}`);
+                }
+            };
+            
+            socket.onclose = function(event) {
+                log(`🔌 WebSocket closed (code: ${event.code})`);
+                updateStatus(false);
+            };
+            
+            socket.onerror = function(error) {
+                log(`❌ WebSocket error: ${error}`);
+                updateStatus(false);
+            };
+        }
+        
+        function disconnect() {
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+        }
+        
+        function handleMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            
+            switch (message.type) {
+                case 'connection_established':
+                    log(`🎉 Connection established for user: ${message.username}`);
+                    break;
+                    
+                case 'channels_list':
+                    displayChannels(message.channels);
+                    break;
+                    
+                case 'channel_messages':
+                    displayMessages(message.messages);
+                    break;
+                    
+                case 'channel_message':
+                case 'agent_message':
+                    addMessage(message);
+                    break;
+                    
+                case 'joined_channel':
+                    log(`✅ Joined channel: ${message.channel_name}`);
+                    currentChannel = message.channel_id;
+                    break;
+                    
+                case 'pong':
+                    log('🏓 Pong received');
+                    break;
+                    
+                case 'error':
+                    log(`❌ Error: ${message.message}`);
+                    break;
+                    
+                default:
+                    log(`🤷 Unknown message type: ${message.type}`);
+            }
+        }
+        
+        function displayChannels(channels) {
+            const channelsDiv = document.getElementById('channels');
+            if (!channels || channels.length === 0) {
+                channelsDiv.innerHTML = 'No channels available';
+                return;
+            }
+            
+            let html = '';
+            channels.forEach(channel => {
+                html += `
+                    <div class="channel">
+                        <strong>#${channel.display_name || channel.name}</strong>
+                        <span style="color: #666;">(${channel.channel_type})</span>
+                        <br>
+                        <small>${channel.description || 'No description'}</small>
+                        <br>
+                        <small>Messages: ${channel.message_count || 0} | Active: ${channel.is_active ? 'Yes' : 'No'}</small>
+                        <br>
+                        <button onclick="joinChannel('${channel.id}')">Join</button>
+                        <button onclick="getChannelMessages('${channel.id}')">Get Messages</button>
+                    </div>
+                `;
+            });
+            channelsDiv.innerHTML = html;
+        }
+        
+        function displayMessages(messages) {
+            const messagesDiv = document.getElementById('messages');
+            if (!messages || messages.length === 0) {
+                messagesDiv.innerHTML = 'No messages in this channel';
+                return;
+            }
+            
+            let html = '';
+            messages.forEach(message => {
+                const messageClass = `message ${message.message_type.replace('_', '-')}`;
+                const sender = message.agent_instance?.template?.name || message.user?.username || 'System';
+                const time = new Date(message.timestamp).toLocaleTimeString();
+                
+                html += `
+                    <div class="${messageClass}">
+                        <strong>${sender}</strong> <small>(${message.message_type})</small> <small>${time}</small>
+                        <br>
+                        ${message.content}
+                    </div>
+                `;
+            });
+            messagesDiv.innerHTML = html;
+        }
+        
+        function addMessage(messageData) {
+            const messagesDiv = document.getElementById('messages');
+            const message = messageData.data || messageData;
+            
+            const messageClass = `message ${message.message_type?.replace('_', '-') || 'unknown'}`;
+            const sender = message.agent_instance?.template?.name || message.user?.username || 'Agent';
+            const time = new Date(message.timestamp || Date.now()).toLocaleTimeString();
+            
+            const messageHtml = `
+                <div class="${messageClass}">
+                    <strong>${sender}</strong> <small>(${message.message_type || 'message'})</small> <small>${time}</small>
+                    <br>
+                    ${message.content || message.message || 'No content'}
+                </div>
+            `;
+            
+            messagesDiv.innerHTML += messageHtml;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function getChannels() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log('📡 Requesting channels...');
+                socket.send(JSON.stringify({ type: 'get_channels' }));
+            } else {
+                log('❌ Not connected');
+            }
+        }
+        
+        function joinChannel(channelId) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log(`🚪 Joining channel ${channelId}...`);
+                socket.send(JSON.stringify({ 
+                    type: 'join_channel', 
+                    channel_id: channelId 
+                }));
+            } else {
+                log('❌ Not connected');
+            }
+        }
+        
+        function getChannelMessages(channelId) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log(`📬 Getting messages for channel ${channelId}...`);
+                socket.send(JSON.stringify({ 
+                    type: 'get_channel_messages', 
+                    channel_id: channelId 
+                }));
+            } else {
+                log('❌ Not connected');
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content) {
+                log('❌ Please enter a message');
+                return;
+            }
+            
+            if (!currentChannel) {
+                log('❌ Please join a channel first');
+                return;
+            }
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log(`📤 Sending message to channel ${currentChannel}...`);
+                socket.send(JSON.stringify({
+                    type: 'send_message',
+                    channel_id: currentChannel,
+                    content: content,
+                    message_type: 'user_message'
+                }));
+                input.value = '';
+            } else {
+                log('❌ Not connected');
+            }
+        }
+        
+        function testPing() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log('🏓 Sending ping...');
+                socket.send(JSON.stringify({ type: 'ping' }));
+            } else {
+                log('❌ Not connected');
+            }
+        }
+        
+        // Auto-connect on page load
+        window.onload = function() {
+            log('🚀 Page loaded. Click Connect to start testing.');
+        };
+    </script>
+</body>
+</html>

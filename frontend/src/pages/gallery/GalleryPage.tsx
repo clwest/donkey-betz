@@ -246,7 +246,7 @@ export function GalleryPage() {
           title: img.prompt || 'Untitled Image',
           image_url: img.result?.startsWith('http') 
             ? img.result 
-            : `http://localhost:8001${img.result}`,
+            : `http://localhost:8000${img.result}`,
           saved_at: img.created_at || new Date().toISOString(),
           tags: img.metadata?.style ? [img.metadata.style] : [],
           category: 'Generated',

@@ -49,7 +49,7 @@ export function useWSProbe(): WSProbeControls {
       wsRef.current = null;
     }
 
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8001';
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
     const fullUrl = `${wsUrl}/ws/assistant/`;
 
     Logger.api('WS_PROBE', 'Attempting connection', { url: fullUrl });

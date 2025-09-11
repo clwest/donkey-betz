@@ -176,7 +176,7 @@ _start-infrastructure: ## Internal: Start Redis and PostgreSQL
 
 _start-backend: ## Internal: Start Django backend with WebSocket support
 	@echo "$(CYAN)Starting Django backend with WebSocket support...$(NC)"
-	@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) core.asgi:application
+	@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application
 
 _start-frontend: ## Internal: Start React frontend
 	@echo "$(CYAN)Starting React frontend...$(NC)"
@@ -248,7 +248,7 @@ run: ## Start development server
 
 run-daphne: ## Start server with Daphne (ASGI/WebSocket support)
 	@echo "$(GREEN)Starting platform with WebSocket support...$(NC)"
-	$(ACTIVATE) && daphne -b 0.0.0.0 -p 8000 core.asgi:application
+	$(ACTIVATE) && daphne -b 0.0.0.0 -p 8000 backend.asgi:application
 
 # Testing
 test: test-unit ## Run all tests (alias for test-unit)
@@ -261,9 +261,7 @@ test-integration: ## Run integration tests
 	@echo "$(GREEN)Running integration tests...$(NC)"
 	$(ACTIVATE) && $(PYTHON) -m pytest -v -m integration
 
-test-all: ## Run all tests including slow tests
-	@echo "$(GREEN)Running all tests...$(NC)"
-	$(ACTIVATE) && $(PYTHON) -m pytest -v --cov=. --cov-report=html
+# Removed duplicate test-all target - see line 563 for the main definition
 
 # Code Quality
 lint: ## Run code linting
