@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Debug Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        .endpoint { margin: 20px 0; padding: 15px; border: 1px solid #333; background: #222; }
+        .connected { border-color: #0f0; }
+        .error { border-color: #f00; color: #f00; }
+        .pending { border-color: #ff0; color: #ff0; }
+        .log { margin-top: 10px; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        button { margin: 5px; padding: 5px 10px; }
+        input { background: #333; color: #0f0; border: 1px solid #555; padding: 5px; }
+        h1 { color: #0f0; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Debugger</h1>
+    
+    <div>
+        <label>Auth Token: <input type="text" id="authToken" placeholder="Enter auth token" style="width: 300px;"/></label>
+        <button onclick="setToken()">Set Token</button>
+        <button onclick="testAll()">Test All Endpoints</button>
+        <button onclick="clearAll()">Clear</button>
+    </div>
+
+    <div id="endpoints"></div>
+
+    <script>
+        const WS_ENDPOINTS = [
+            '/ws/assistant/',
+            '/ws/agent-progress/',
+            '/ws/dashboard/',
+            '/ws/live-sports/',
+            '/ws/arbitrage/',
+            '/ws/orchestration/test/',
+            '/ws/channels/',
+            '/ws/notifications/',
+            '/ws/mythology/',
+        ];
+
+        let authToken = localStorage.getItem('authToken') || '';
+        document.getElementById('authToken').value = authToken;
+
+        function setToken() {
+            authToken = document.getElementById('authToken').value;
+            localStorage.setItem('authToken', authToken);
+            console.log('Token set:', authToken);
+        }
+
+        function createEndpointDiv(endpoint) {
+            const div = document.createElement('div');
+            div.className = 'endpoint pending';
+            div.id = 'ep-' + endpoint.replace(/\//g, '_');
+            div.innerHTML = `
+                <h3>${endpoint}</h3>
+                <div>Status: <span class="status">Not Connected</span></div>
+                <div>
+                    <button onclick="testEndpoint('${endpoint}')">Connect</button>
+                    <button onclick="sendMessage('${endpoint}')">Send Test</button>
+                    <button onclick="closeConnection('${endpoint}')">Close</button>
+                </div>
+                <div class="log"></div>
+            `;
+            return div;
+        }
+
+        const connections = {};
+
+        function log(endpoint, message, isError = false) {
+            const epId = 'ep-' + endpoint.replace(/\//g, '_');
+            const logDiv = document.querySelector(`#${epId} .log`);
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const color = isError ? '#f00' : '#0f0';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(endpoint, status, className) {
+            const epId = 'ep-' + endpoint.replace(/\//g, '_');
+            const epDiv = document.getElementById(epId);
+            epDiv.className = 'endpoint ' + className;
+            epDiv.querySelector('.status').textContent = status;
+        }
+
+        function testEndpoint(endpoint) {
+            log(endpoint, 'Attempting connection...');
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//localhost:8000${endpoint}`;
+            
+            try {
+                // Create WebSocket with auth token if available
+                let ws;
+                if (authToken) {
+                    // Try with token in URL first
+                    ws = new WebSocket(wsUrl + '?token=' + authToken);
+                } else {
+                    ws = new WebSocket(wsUrl);
+                }
+                
+                connections[endpoint] = ws;
+
+                ws.onopen = (event) => {
+                    log(endpoint, 'Connected successfully!');
+                    updateStatus(endpoint, 'Connected', 'connected');
+                    
+                    // Send auth if we have a token
+                    if (authToken) {
+                        ws.send(JSON.stringify({
+                            type: 'auth',
+                            token: authToken
+                        }));
+                        log(endpoint, 'Sent auth token');
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    log(endpoint, 'Received: ' + event.data);
+                };
+
+                ws.onerror = (event) => {
+                    log(endpoint, 'Error occurred', true);
+                    updateStatus(endpoint, 'Error', 'error');
+                    console.error(`WebSocket error for ${endpoint}:`, event);
+                };
+
+                ws.onclose = (event) => {
+                    log(endpoint, `Closed: code=${event.code}, reason=${event.reason || 'No reason'}`, true);
+                    updateStatus(endpoint, 'Disconnected', 'error');
+                    
+                    // Log close codes for debugging
+                    const closeCodes = {
+                        1000: 'Normal closure',
+                        1001: 'Going away',
+                        1002: 'Protocol error',
+                        1003: 'Unsupported data',
+                        1006: 'Abnormal closure (no close frame)',
+                        1007: 'Invalid frame payload',
+                        1008: 'Policy violation',
+                        1009: 'Message too big',
+                        1011: 'Internal server error',
+                        1015: 'TLS handshake failure'
+                    };
+                    
+                    const codeExplanation = closeCodes[event.code] || 'Unknown code';
+                    log(endpoint, `Close code explanation: ${codeExplanation}`, true);
+                };
+
+            } catch (error) {
+                log(endpoint, 'Failed to create WebSocket: ' + error.message, true);
+                updateStatus(endpoint, 'Failed', 'error');
+            }
+        }
+
+        function sendMessage(endpoint) {
+            const ws = connections[endpoint];
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const testMessage = JSON.stringify({
+                    type: 'test',
+                    message: 'Hello from test client',
+                    timestamp: new Date().toISOString()
+                });
+                ws.send(testMessage);
+                log(endpoint, 'Sent: ' + testMessage);
+            } else {
+                log(endpoint, 'Not connected', true);
+            }
+        }
+
+        function closeConnection(endpoint) {
+            const ws = connections[endpoint];
+            if (ws) {
+                ws.close();
+                delete connections[endpoint];
+                log(endpoint, 'Connection closed by user');
+            }
+        }
+
+        function testAll() {
+            WS_ENDPOINTS.forEach(endpoint => {
+                setTimeout(() => testEndpoint(endpoint), 100);
+            });
+        }
+
+        function clearAll() {
+            Object.keys(connections).forEach(endpoint => {
+                closeConnection(endpoint);
+            });
+            document.getElementById('endpoints').innerHTML = '';
+            init();
+        }
+
+        function init() {
+            const container = document.getElementById('endpoints');
+            WS_ENDPOINTS.forEach(endpoint => {
+                container.appendChild(createEndpointDiv(endpoint));
+            });
+        }
+
+        // Test CORS preflight
+        async function testCORS() {
+            console.log('Testing CORS preflight...');
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/health', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': 'http://localhost:8081',
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'authorization,x-orchestrator'
+                    }
+                });
+                console.log('CORS preflight response:', response.status);
+                console.log('CORS headers:', Object.fromEntries(response.headers.entries()));
+            } catch (error) {
+                console.error('CORS preflight failed:', error);
+            }
+        }
+
+        // Initialize on load
+        init();
+        testCORS();
+    </script>
+</body>
+</html>
