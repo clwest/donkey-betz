@@ -3,10 +3,7 @@ WebSocket routing configuration for unified-donkey-betz platform.
 Migrated from DBAO tools-manifest WebSocket capabilities.
 """
 
-from django.urls import re_path, path
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
-from channels.security.websocket import AllowedHostsOriginValidator
+from django.urls import re_path
 from . import consumers
 
 # Import sports routing if available
@@ -49,11 +46,3 @@ websocket_urlpatterns = [
 
 # Add sports WebSocket patterns if available
 websocket_urlpatterns.extend(sports_ws_patterns)
-
-application = ProtocolTypeRouter({
-    'websocket': AllowedHostsOriginValidator(
-        AuthMiddlewareStack(
-            URLRouter(websocket_urlpatterns)
-        )
-    ),
-})
