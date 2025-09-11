@@ -39,7 +39,7 @@ class ComprehensiveTestRunner:
         self.test_suite_results = {}
         self.unified_report = {}
         
-    def verify_system_readiness(self):
+    async def verify_system_readiness(self):
         """Verify system components are ready for testing"""
         print("🔍 Verifying system readiness...")
         
@@ -51,32 +51,39 @@ class ComprehensiveTestRunner:
         }
         
         try:
+            from asgiref.sync import sync_to_async
+            
             # Database connection
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-                readiness_checks["database_connection"] = True
+            def check_database():
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1")
+                    return True
+            readiness_checks["database_connection"] = await sync_to_async(check_database)()
             
             # Agent registry
-            registry = AgentRegistry.objects.filter(
-                registry_name="unified_agent_registry"
-            ).first()
-            if registry:
-                readiness_checks["agent_registry_exists"] = True
+            def check_registry():
+                return AgentRegistry.objects.filter(
+                    registry_name="unified_agent_registry"
+                ).exists()
+            readiness_checks["agent_registry_exists"] = await sync_to_async(check_registry)()
             
             # Sports agents
-            sports_agents = UnifiedAgentTemplate.objects.filter(
-                domain_tags__contains=["sports"],
-                is_active=True
-            ).count()
+            def check_sports_agents():
+                return UnifiedAgentTemplate.objects.filter(
+                    domain_tags__contains=["sports"],
+                    is_active=True
+                ).count()
+            sports_agents = await sync_to_async(check_sports_agents)()
             if sports_agents > 0:
                 readiness_checks["sports_agents_registered"] = True
                 print(f"   Found {sports_agents} active sports agents")
             
             # Test data accessibility
-            leagues = League.objects.count()
-            teams = Team.objects.count()
-            if leagues > 0 or teams > 0:
-                readiness_checks["test_data_accessible"] = True
+            def check_test_data():
+                leagues = League.objects.count()
+                teams = Team.objects.count()
+                return leagues > 0 or teams > 0
+            readiness_checks["test_data_accessible"] = await sync_to_async(check_test_data)()
             
         except Exception as e:
             print(f"   ⚠️  System readiness check error: {e}")
@@ -106,8 +113,10 @@ class ComprehensiveTestRunner:
         # Test Suite 1: Core Cross-System Workflows
         print("\n📋 Test Suite 1: Core Cross-System Workflows")
         try:
+            from asgiref.sync import sync_to_async
+            
             workflow_tester = CrossSystemWorkflowTester()
-            workflow_tester.setup_test_data()
+            await sync_to_async(workflow_tester.setup_test_data)()
             
             # Run all workflow tests
             await workflow_tester.test_agent_discovery_and_routing()
@@ -130,13 +139,15 @@ class ComprehensiveTestRunner:
         # Test Suite 2: Specific Workflow Scenarios
         print("\n🎯 Test Suite 2: Specific Workflow Scenarios")
         try:
+            from asgiref.sync import sync_to_async
+            
             scenario_tester = WorkflowScenarioTester()
             
             # Run scenario tests
-            scenario_tester.scenario_1_generate_article_best_opportunities()
-            scenario_tester.scenario_2_analyze_team_performance_predictive_content()
-            scenario_tester.scenario_3_generate_betting_strategy_guide()
-            scenario_tester.scenario_4_personal_assistant_orchestration()
+            await scenario_tester.scenario_1_generate_article_best_opportunities()
+            await scenario_tester.scenario_2_analyze_team_performance_predictive_content()
+            await scenario_tester.scenario_3_generate_betting_strategy_guide()
+            await scenario_tester.scenario_4_personal_assistant_orchestration()
             
             self.test_suite_results['workflow_scenarios'] = scenario_tester.generate_scenario_report()
             
@@ -284,26 +295,30 @@ class ComprehensiveTestRunner:
         """Generate recommendations based on test results"""
         recommendations = []
         
-        # Check overall success rate
-        if self.unified_report['overall_results']['success_rate_percentage'] >= 90:
+        # Check overall success rate - handle missing key gracefully
+        success_rate = self.unified_report.get('overall_results', {}).get('success_rate_percentage', 0)
+        if success_rate >= 90:
             recommendations.append("Excellent test results - system ready for production deployment")
-        elif self.unified_report['overall_results']['success_rate_percentage'] >= 75:
+        elif success_rate >= 75:
             recommendations.append("Good test results - address failed tests before production")
         else:
             recommendations.append("Multiple test failures - significant work needed before production")
         
         # Check for specific issues
-        if not self.unified_report['system_capabilities']['agent_discovery_and_routing']:
+        system_capabilities = self.unified_report.get('system_capabilities', {})
+        if not system_capabilities.get('agent_discovery_and_routing', False):
             recommendations.append("Agent discovery system needs attention - verify agent registration")
         
-        if not self.unified_report['system_capabilities']['websocket_real_time_updates']:
+        if not system_capabilities.get('websocket_real_time_updates', False):
             recommendations.append("WebSocket integration issues - check server configuration")
         
-        if len(self.unified_report['cross_domain_workflows']['integration_issues']) > 0:
+        cross_domain_workflows = self.unified_report.get('cross_domain_workflows', {})
+        if len(cross_domain_workflows.get('integration_issues', [])) > 0:
             recommendations.append("Cross-domain workflow issues detected - review agent orchestration")
         
         # Performance recommendations
-        avg_performance = sum(self.unified_report['performance_metrics'].values()) / len(self.unified_report['performance_metrics']) if self.unified_report['performance_metrics'] else 0
+        performance_metrics = self.unified_report.get('performance_metrics', {})
+        avg_performance = sum(performance_metrics.values()) / len(performance_metrics) if performance_metrics else 0
         if avg_performance > 10:
             recommendations.append("Performance optimization needed - workflows taking >10s average")
         
@@ -419,7 +434,7 @@ async def main():
     runner = ComprehensiveTestRunner()
     
     # Verify system readiness
-    readiness_checks, fully_ready = runner.verify_system_readiness()
+    readiness_checks, fully_ready = await runner.verify_system_readiness()
     
     if not fully_ready:
         print("\n⚠️  Continuing with limited system readiness...")

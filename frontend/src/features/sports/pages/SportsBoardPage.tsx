@@ -10,7 +10,7 @@
  * College Basketball, and more!
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { Badge } from '../../../components/common/Badge';
@@ -25,9 +25,18 @@ import {
   RefreshCw
 } from 'lucide-react';
 import MultiSportsDashboard from '../components/MultiSportsDashboard';
+import '../../../styles/gaming-theme.css';
 
 export function SportsBoardPage() {
   const [view, setView] = useState<'modern' | 'features'>('modern');
+
+  // Add gaming theme to body
+  useEffect(() => {
+    document.body.classList.add('gaming-theme');
+    return () => {
+      document.body.classList.remove('gaming-theme');
+    };
+  }, []);
 
   const renderFeaturesInfo = () => (
     <div className="space-y-6">
@@ -230,23 +239,60 @@ export function SportsBoardPage() {
           </>
         ) : (
           <>
-            {/* Header with Feature Info Button */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-white">Sports Betting Hub</h1>
-                <p className="text-gray-400 mt-1">
-                  Multi-sport betting data powered by free, open-source APIs
-                </p>
+            {/* Gaming Header */}
+            <div className="gaming-card relative overflow-hidden mb-8">
+              <div className="gaming-border-glow"></div>
+              
+              {/* Cyberpunk background pattern */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="w-full h-full" style={{backgroundImage: 'linear-gradient(45deg, transparent 40%, var(--gaming-neon-cyan) 50%, transparent 60%)', backgroundSize: '20px 20px'}}></div>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setView('features')}
-                >
-                  <Star className="w-4 h-4 mr-2" />
-                  Features & Info
-                </Button>
+              <div className="relative flex items-center justify-between p-8">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 gaming-card border-gaming-neon-cyan flex items-center justify-center">
+                      <Activity className="w-8 h-8 gaming-text-neon" />
+                    </div>
+                    <h1 className="text-5xl font-black gaming-text-primary text-shadow-lg">
+                      SPORTS <span className="gaming-text-neon">BETTING</span> HUB
+                    </h1>
+                  </div>
+                  
+                  <p className="gaming-text-secondary text-xl font-bold font-mono">
+                    [MULTI-SPORT ARENA] &gt;&gt; FREE OPEN-SOURCE APIs
+                  </p>
+                  
+                  {/* Gaming Data Sources Indicators */}
+                  <div className="flex items-center gap-4">
+                    <div className="gaming-status gaming-status-live">
+                      <Zap className="w-4 h-4" />
+                      ESPN API
+                      <div className="gaming-pulse-dot"></div>
+                    </div>
+                    
+                    <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
+                      <Star className="w-4 h-4" />
+                      THESPORTSDB
+                    </div>
+                    
+                    <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
+                      <TrendingUp className="w-4 h-4" />
+                      ODDS API
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setView('features')}
+                    className="gaming-btn-active px-6 py-3 text-lg"
+                  >
+                    <Star className="w-5 h-5 mr-3" />
+                    FEATURES & INFO
+                  </Button>
+                </div>
               </div>
             </div>
 

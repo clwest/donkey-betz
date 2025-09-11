@@ -1,0 +1,36 @@
+{
+  "test_execution": {
+    "timestamp": "2025-09-11T19:21:43.428148",
+    "status": "SUCCESS",
+    "user_id": "572c5740-ed3b-44a5-ad7f-c0e172a2665d",
+    "game_id": "40386dfa-4623-47f8-a65c-13f9e9799021",
+    "agent_id": "5dbf9ed7-1867-4e67-9524-e4870a775f8d",
+    "execution_id": "test-integration-agent_20250911_192143_c02fd143",
+    "content_id": "1658dff7-53dc-4351-9581-25d3e2c505e2",
+    "workflow_doc_id": "dfaf1e23-b904-4c2d-816d-b10b228d5405"
+  },
+  "verified_workflows": [
+    "Generate article about today's best betting opportunities",
+    "Analyze team performance and create predictive content",
+    "Agent discovery and intelligent routing",
+    "Sports data integration with content generation",
+    "Multi-agent orchestration and coordination"
+  ],
+  "integration_points": {
+    "sports_to_agents": true,
+    "agents_to_content": true,
+    "cross_domain_orchestration": true,
+    "real_time_coordination": true
+  },
+  "performance_metrics": {
+    "test_duration": "< 5 seconds",
+    "objects_created": {
+      "users": 1,
+      "leagues": 1,
+      "games": 1,
+      "agents": 1,
+      "executions": 1,
+      "documents": 2
+    }
+  }
+}

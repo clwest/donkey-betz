@@ -233,8 +233,8 @@ All integration points are functioning correctly. The unified platform successfu
         owner=test_user,
         category="integration_test",
         cross_references={
-            "game_id": game.id,
-            "league_id": game.league.id,
+            "game_id": str(game.id),
+            "league_id": str(game.league.id),
             "test_type": "cross_system_integration",
             "generated_at": datetime.now().isoformat()
         }
@@ -316,8 +316,8 @@ The unified platform successfully executed a complex cross-domain workflow that 
         category="workflow_report",
         cross_references={
             "workflow_type": "cross_domain_best_opportunities",
-            "game_id": game.id,
-            "agent_id": test_agent.id,
+            "game_id": str(game.id),
+            "agent_id": str(test_agent.id),
             "execution_data": workflow_result
         }
     )

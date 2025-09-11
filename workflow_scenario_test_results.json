@@ -1,0 +1,39 @@
+{
+  "total_scenarios": 4,
+  "passed": 4,
+  "failed": 0,
+  "success_rate": 100.0,
+  "detailed_results": [
+    {
+      "scenario": "generate_article_best_opportunities",
+      "status": "PASSED",
+      "orchestration_id": "ceaf949b-fed9-4530-9c86-0422cd603633",
+      "article_id": "f03ed108-adf2-470d-9d86-ddd30b707a35",
+      "opportunities_found": 3
+    },
+    {
+      "scenario": "analyze_team_performance_predictive_content",
+      "status": "PASSED",
+      "orchestration_id": "30a64ec4-3eac-4951-8929-f06f303c70d3",
+      "article_id": "d863c193-f396-424e-b4f1-19ae1fbfd207",
+      "prediction_confidence": 0.67
+    },
+    {
+      "scenario": "generate_betting_strategy_guide",
+      "status": "PASSED",
+      "orchestration_id": "2f5efad1-4a0d-4640-97ba-cf68472c6818",
+      "guide_id": "a4c23ca4-97c5-46ec-83d5-a55b44ad3ce4",
+      "rag_doc_id": "b80f3cc1-30d9-40b3-a85f-ed01e2adad44",
+      "strategies_analyzed": 3
+    },
+    {
+      "scenario": "personal_assistant_orchestration",
+      "status": "PASSED",
+      "orchestration_id": "8b077130-fbaa-4c1b-9628-70b43540a93b",
+      "content_id": "78101a84-a771-4afb-bacd-32591aded4cf",
+      "agents_coordinated": 7,
+      "parallel_streams": 3,
+      "coordination_decisions": 2
+    }
+  ]
+}

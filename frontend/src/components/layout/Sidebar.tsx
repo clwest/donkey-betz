@@ -82,20 +82,33 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <div
       className={clsx(
-        'relative flex flex-col glass-dark border-r border-white/5 transition-all duration-300',
+        'relative flex flex-col transition-all duration-300',
         collapsed ? 'w-20' : 'w-64'
       )}
+      style={{
+        background: 'var(--gaming-bg-secondary)',
+        borderRight: '1px solid var(--gaming-border)',
+        backdropFilter: 'blur(20px)'
+      }}
     >
-      {/* Logo */}
+      {/* Gaming Logo */}
       <div className="flex h-16 items-center justify-between px-6">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg" />
-            <span className="text-xl font-bold text-gradient">Donkey Betz</span>
+            <div className="w-8 h-8 rounded-lg relative overflow-hidden" 
+                 style={{ background: 'var(--gaming-gradient-primary)' }}>
+              <div className="absolute inset-0 animate-pulse" 
+                   style={{ boxShadow: 'var(--gaming-glow-primary)' }}></div>
+            </div>
+            <span className="text-xl font-bold text-gradient gaming-logo-text">Donkey Betz</span>
           </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg mx-auto" />
+          <div className="w-8 h-8 rounded-lg mx-auto relative overflow-hidden" 
+               style={{ background: 'var(--gaming-gradient-primary)' }}>
+            <div className="absolute inset-0 animate-pulse" 
+                 style={{ boxShadow: 'var(--gaming-glow-primary)' }}></div>
+          </div>
         )}
       </div>
 
@@ -107,12 +120,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             to={item.href}
             className={({ isActive }) =>
               clsx(
-                'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden',
                 isActive
-                  ? 'bg-primary-500/20 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  ? 'text-white gaming-nav-active'
+                  : 'hover:text-white gaming-nav-item'
               )
             }
+            style={({ isActive }) => ({
+              background: isActive 
+                ? 'rgba(0, 255, 255, 0.1)' 
+                : 'transparent',
+              borderLeft: isActive 
+                ? '3px solid var(--gaming-neon-cyan)' 
+                : '3px solid transparent',
+              color: isActive 
+                ? 'var(--gaming-text-primary)' 
+                : 'var(--gaming-text-secondary)'
+            })}
           >
             {({ isActive }) => (
               <>
@@ -125,7 +149,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   <>
                     <span className="flex-1">{item.name}</span>
                     {item.badge && (
-                      <span className="px-2 py-0.5 text-xs font-bold text-white bg-gradient-primary rounded-full">
+                      <span className="px-2 py-0.5 text-xs font-bold text-white rounded-full gaming-badge" 
+                            style={{ 
+                              background: 'var(--gaming-gradient-neon)',
+                              boxShadow: 'var(--gaming-glow-subtle)',
+                              animation: 'pulse 2s ease-in-out infinite'
+                            }}>
                         {item.badge}
                       </span>
                     )}
@@ -137,18 +166,29 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Profile and Logout */}
-      <div className="px-3 py-4 border-t border-white/5 space-y-2">
+      {/* Gaming Profile and Logout */}
+      <div className="px-3 py-4 space-y-2" style={{ borderTop: '1px solid var(--gaming-border)' }}>
         <NavLink
           to="/profile"
           className={({ isActive }) =>
             clsx(
               'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
               isActive
-                ? 'bg-primary-500/20 text-white'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                ? 'text-white'
+                : 'gaming-nav-item'
             )
           }
+          style={({ isActive }) => ({
+            background: isActive 
+              ? 'rgba(0, 255, 255, 0.1)' 
+              : 'transparent',
+            borderLeft: isActive 
+              ? '3px solid var(--gaming-neon-cyan)' 
+              : '3px solid transparent',
+            color: isActive 
+              ? 'var(--gaming-text-primary)' 
+              : 'var(--gaming-text-secondary)'
+          })}
         >
           {({ isActive }) => (
             <>
@@ -162,26 +202,55 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </NavLink>
 
-        {/* User info and logout */}
+        {/* Gaming User info and logout */}
         {!collapsed && (
-          <div className="px-3 py-2 text-xs text-gray-500">
-            Signed in as <span className="text-gray-300">{user?.username}</span>
+          <div className="px-3 py-2 text-xs" style={{ color: 'var(--gaming-text-muted)' }}>
+            Signed in as <span className="text-neon-cyan">{user?.username}</span>
           </div>
         )}
         
         <button
           onClick={handleLogout}
-          className="w-full group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-gray-400 hover:bg-red-500/10 hover:text-red-400"
+          className="w-full group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 gaming-logout-btn"
+          style={{
+            color: 'var(--gaming-text-muted)',
+            border: '1px solid transparent'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 20, 147, 0.1)';
+            e.currentTarget.style.borderColor = 'var(--gaming-neon-pink)';
+            e.currentTarget.style.color = 'var(--gaming-neon-pink)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = 'transparent';
+            e.currentTarget.style.color = 'var(--gaming-text-muted)';
+          }}
         >
           <ArrowRightOnRectangleIcon className="h-5 w-5 flex-shrink-0" />
           {!collapsed && <span className="flex-1 text-left">Sign Out</span>}
         </button>
       </div>
 
-      {/* Collapse toggle */}
+      {/* Gaming Collapse toggle */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-20 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-dark-800 border border-dark-700 text-gray-400 hover:text-white transition-colors"
+        className="absolute -right-3 top-20 z-10 flex h-6 w-6 items-center justify-center rounded-full transition-all duration-200"
+        style={{
+          background: 'var(--gaming-bg-elevated)',
+          border: '1px solid var(--gaming-border)',
+          color: 'var(--gaming-text-muted)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'var(--gaming-neon-cyan)';
+          e.currentTarget.style.color = 'var(--gaming-neon-cyan)';
+          e.currentTarget.style.boxShadow = 'var(--gaming-glow-subtle)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'var(--gaming-border)';
+          e.currentTarget.style.color = 'var(--gaming-text-muted)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
       >
         {collapsed ? (
           <ChevronRightIcon className="h-3 w-3" />

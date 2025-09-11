@@ -10,7 +10,18 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 
-class AgentProgressConsumer(AsyncWebsocketConsumer):
+
+class SafeWebSocketMixin:
+    """Mixin for safe WebSocket send operations"""
+    
+    async def safe_send(self, data):
+        """Safely send data, handling closed connections"""
+        try:
+            await self.send(text_data=json.dumps(data))
+        except Exception:
+            # Connection closed, ignore
+            pass
+class AgentProgressConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Real-time agent execution progress and status updates.
     Migrated from DBAO tools-manifest.
@@ -29,7 +40,7 @@ class AgentProgressConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         # Send connection established message
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'connection_established',
             'data': {
                 'message': 'Connected to agent progress updates',
@@ -37,7 +48,7 @@ class AgentProgressConsumer(AsyncWebsocketConsumer):
                 'timestamp': datetime.now().isoformat()
             },
             'channel_name': self.channel_name
-        }))
+        })
     
     async def disconnect(self, close_code):
         # Leave room group
@@ -53,49 +64,49 @@ class AgentProgressConsumer(AsyncWebsocketConsumer):
             message_type = text_data_json.get('type', 'ping')
             
             if message_type == 'ping':
-                await self.send(text_data=json.dumps({
+                await self.safe_send({
                     'type': 'pong',
                     'timestamp': datetime.now().isoformat()
-                }))
+                })
             elif message_type == 'subscribe_agent':
                 instance_id = text_data_json.get('instance_id')
                 # Handle agent subscription
-                await self.send(text_data=json.dumps({
+                await self.safe_send({
                     'type': 'subscribed',
                     'data': {
                         'instance_id': instance_id,
                         'status': 'subscribed'
                     }
-                }))
+                })
         except json.JSONDecodeError:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'data': {'message': 'Invalid JSON format'}
-            }))
+            })
     
     async def agent_progress(self, event):
         """Send agent progress update to WebSocket"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'agent_progress',
             'data': event['data']
-        }))
+        })
     
     async def agent_completed(self, event):
         """Send agent completion notification"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'agent_completed',
             'data': event['data']
-        }))
+        })
     
     async def agent_failed(self, event):
         """Send agent failure notification"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'agent_failed',
             'data': event['data']
-        }))
+        })
 
 
-class DashboardConsumer(AsyncWebsocketConsumer):
+class DashboardConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Real-time dashboard metrics and system-wide updates.
     Migrated from DBAO tools-manifest.
@@ -112,7 +123,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         # Send initial dashboard data
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'dashboard_data',
             'data': {
                 'stats': {
@@ -142,7 +153,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         
         if message_type == 'refresh_dashboard':
             # Send updated dashboard data
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'dashboard_update',
                 'data': {
                     'stats': {
@@ -157,20 +168,20 @@ class DashboardConsumer(AsyncWebsocketConsumer):
     
     async def dashboard_update(self, event):
         """Send dashboard update to WebSocket"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'dashboard_update',
             'data': event['data']
-        }))
+        })
     
     async def system_alert(self, event):
         """Send system alert to WebSocket"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'system_alert',
             'data': event['data']
-        }))
+        })
 
 
-class LiveSportsConsumer(AsyncWebsocketConsumer):
+class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Real-time sports data and betting opportunities.
     """
@@ -197,28 +208,28 @@ class LiveSportsConsumer(AsyncWebsocketConsumer):
         
         if message_type == 'subscribe_sport':
             sport = text_data_json.get('sport', 'all')
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'subscribed',
                 'sport': sport,
                 'timestamp': datetime.now().isoformat()
-            }))
+            })
     
     async def live_odds_update(self, event):
         """Send live odds update"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'live_odds_update',
             'data': event['data']
-        }))
+        })
     
     async def betting_opportunity(self, event):
         """Send new betting opportunity"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'betting_opportunity',
             'data': event['data']
-        }))
+        })
 
 
-class ArbitrageConsumer(AsyncWebsocketConsumer):
+class ArbitrageConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Real-time arbitrage opportunity notifications.
     """
@@ -241,13 +252,13 @@ class ArbitrageConsumer(AsyncWebsocketConsumer):
     
     async def arbitrage_opportunity(self, event):
         """Send arbitrage opportunity alert"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'arbitrage_opportunity',
             'data': event['data']
-        }))
+        })
 
 
-class AssistantChatConsumer(AsyncWebsocketConsumer):
+class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     AI Assistant chat WebSocket for real-time conversation.
     Migrated from ai-content-studio.
@@ -271,14 +282,14 @@ class AssistantChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         # Send authentication status
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'connection_established',
             'data': {
                 'authenticated': self.is_authenticated,
                 'user': self.user.username if self.is_authenticated else 'anonymous',
                 'timestamp': datetime.now().isoformat()
             }
-        }))
+        })
     
     async def disconnect(self, close_code):
         if hasattr(self, 'room_group_name'):
@@ -295,7 +306,7 @@ class AssistantChatConsumer(AsyncWebsocketConsumer):
             message = text_data_json.get('message', '')
             
             # Echo back for demo (in real implementation, this would process with AI)
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'assistant_response',
                 'data': {
                     'message': f'Assistant response to: {message}',
@@ -305,13 +316,13 @@ class AssistantChatConsumer(AsyncWebsocketConsumer):
     
     async def assistant_response(self, event):
         """Send assistant response to WebSocket"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'assistant_response',
             'data': event['data']
-        }))
+        })
 
 
-class OrchestrationConsumer(AsyncWebsocketConsumer):
+class OrchestrationConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Multi-agent orchestration updates.
     """
@@ -335,13 +346,13 @@ class OrchestrationConsumer(AsyncWebsocketConsumer):
     
     async def orchestration_update(self, event):
         """Send orchestration progress update"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'orchestration_update',
             'data': event['data']
-        }))
+        })
 
 
-class NotificationConsumer(AsyncWebsocketConsumer):
+class NotificationConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     System notifications and alerts.
     """
@@ -370,13 +381,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     
     async def notification(self, event):
         """Send notification to user"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'notification',
             'data': event['data']
-        }))
+        })
 
 
-class AgentChannelsConsumer(AsyncWebsocketConsumer):
+class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Agent Channels WebSocket Consumer - "Slack for AI Agents"
     
@@ -423,12 +434,12 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
             await self.join_channel(self.channel_id)
         
         # Send connection success
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'connection_established',
             'user_id': str(self.user.id) if hasattr(self.user, 'id') else None,
             'username': getattr(self.user, 'username', 'dev_user'),
             'timestamp': datetime.now().isoformat()
-        }))
+        })
         
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
@@ -477,26 +488,26 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
                 await self.handle_get_channel_messages(text_data_json)
             elif message_type == 'ping':
                 # Handle ping message with pong response
-                await self.send(text_data=json.dumps({'type': 'pong', 'timestamp': datetime.now().isoformat()}))
+                await self.safe_send({'type': 'pong', 'timestamp': datetime.now().isoformat()})
             else:
-                await self.send(text_data=json.dumps({
+                await self.safe_send({
                     'type': 'error',
                     'message': f'Unknown message type: {message_type}'
-                }))
+                })
         except json.JSONDecodeError:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'message': 'Invalid JSON format'
-            }))
+            })
     
     async def handle_join_channel(self, content):
         """Handle joining a channel"""
         channel_id = content.get('channel_id')
         if not channel_id:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'message': 'channel_id required'
-            }))
+            })
             return
         
         await self.join_channel(channel_id)
@@ -506,10 +517,10 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
         # Verify channel exists and user has access
         channel = await self.get_channel(channel_id)
         if not channel:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'message': f'Channel {channel_id} not found'
-            }))
+            })
             return
         
         # Add to channel group
@@ -522,11 +533,11 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
         self.active_channels.add(channel_id)
         
         # Send join confirmation
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'joined_channel',
             'channel_id': channel_id,
             'channel_name': channel['display_name']
-        }))
+        })
         
         # Notify others of user joining
         await self.channel_layer.group_send(
@@ -556,10 +567,10 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
         self.active_channels.remove(channel_id)
         
         # Send leave confirmation
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'left_channel',
             'channel_id': channel_id
-        }))
+        })
     
     async def handle_send_message(self, content):
         """Handle sending a message to a channel"""
@@ -568,10 +579,10 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
         message_type = content.get('message_type', 'user_message')
         
         if not channel_id or not message_content:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'message': 'channel_id and content required'
-            }))
+            })
             return
         
         # Create message in database
@@ -592,39 +603,39 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
     async def handle_get_channels(self):
         """Send list of available channels to client"""
         channels = await self.get_all_channels()
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'channels_list',
             'channels': channels
-        }))
+        })
     
     async def handle_get_channel_messages(self, content):
         """Send messages for a specific channel to client"""
         channel_id = content.get('channel_id')
         if not channel_id:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'message': 'channel_id required'
-            }))
+            })
             return
         
         messages = await self.get_channel_messages(channel_id)
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'channel_messages',
             'channel_id': channel_id,
             'messages': messages
-        }))
+        })
     
     # Channel layer message handlers
     async def channel_message(self, event):
         """Send message to WebSocket"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'channel_message',
             'data': event['message']
-        }))
+        })
     
     async def agent_message(self, event):
         """Handle agent messages from agents"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'agent_message',
             'channel_id': event.get('channel_id'),
             'agent_id': event.get('agent_id'),
@@ -633,17 +644,17 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
             'content': event.get('content'),
             'timestamp': event.get('timestamp'),
             'rich_content': event.get('rich_content', {})
-        }))
+        })
     
     async def user_presence(self, event):
         """Send user presence update"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'user_presence',
             'user_id': event['user_id'],
             'username': event['username'],
             'status': event['status'],
             'channel_id': event.get('channel_id')
-        }))
+        })
     
     # Database helper methods
     @database_sync_to_async
@@ -799,7 +810,220 @@ class AgentChannelsConsumer(AsyncWebsocketConsumer):
             return None
 
 
-class MythologyConsumer(AsyncWebsocketConsumer):
+class TestEchoConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Test echo consumer for WebSocket testing.
+    """
+    
+    async def connect(self):
+        await self.accept()
+        await self.safe_send({
+            'type': 'connection_established',
+            'message': 'Test echo WebSocket connected',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    async def disconnect(self, close_code):
+        pass
+    
+    async def receive(self, text_data):
+        # Echo back the received message
+        await self.safe_send({
+            'type': 'echo',
+            'data': text_data,
+            'timestamp': datetime.now().isoformat()
+        })
+
+
+class ContentProcessingConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Content processing WebSocket for real-time updates.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'content_processing'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        await self.safe_send({
+            'type': 'connection_established',
+            'message': 'Connected to content processing updates',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    
+    async def receive(self, text_data):
+        try:
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type', 'ping')
+            
+            if message_type == 'ping':
+                await self.safe_send({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                })
+        except Exception as e:
+            # Silently handle closed connection errors
+            pass
+    
+    async def processing_update(self, event):
+        """Send processing update to WebSocket"""
+        try:
+            await self.safe_send({
+                'type': 'processing_update',
+                'data': event['data']
+            })
+        except Exception as e:
+            # Silently handle closed connection errors
+            pass
+
+
+class ContentAnalyticsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Content analytics WebSocket for real-time metrics.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'content_analytics'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        await self.safe_send({
+            'type': 'connection_established',
+            'message': 'Connected to content analytics',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type', 'ping')
+        
+        if message_type == 'ping':
+            await self.safe_send({
+                'type': 'pong',
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def analytics_update(self, event):
+        """Send analytics update to WebSocket"""
+        await self.safe_send({
+            'type': 'analytics_update',
+            'data': event['data']
+        })
+
+
+class AgentExecutionConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Agent execution WebSocket for real-time execution updates.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'agent_execution'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        await self.safe_send({
+            'type': 'connection_established',
+            'message': 'Connected to agent execution updates',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type', 'ping')
+        
+        if message_type == 'ping':
+            await self.safe_send({
+                'type': 'pong',
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def execution_update(self, event):
+        """Send execution update to WebSocket"""
+        await self.safe_send({
+            'type': 'execution_update',
+            'data': event['data']
+        })
+
+
+class AgentOrchestrationConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Agent orchestration WebSocket for multi-agent coordination.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'agent_orchestration'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        await self.safe_send({
+            'type': 'connection_established',
+            'message': 'Connected to agent orchestration',
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type', 'ping')
+        
+        if message_type == 'ping':
+            await self.safe_send({
+                'type': 'pong',
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def orchestration_update(self, event):
+        """Send orchestration update to WebSocket"""
+        await self.safe_send({
+            'type': 'orchestration_update',
+            'data': event['data']
+        })
+
+
+class MythologyConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Mythology/Content Review WebSocket Consumer
     
@@ -826,13 +1050,13 @@ class MythologyConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         # Send connection established message
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'connection_established',
             'data': {
                 'message': 'Connected to mythology notifications',
                 'timestamp': datetime.now().isoformat()
             }
-        }))
+        })
     
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
@@ -849,20 +1073,160 @@ class MythologyConsumer(AsyncWebsocketConsumer):
             message_type = data.get('type')
             
             if message_type == 'ping':
-                await self.send(text_data=json.dumps({
+                await self.safe_send({
                     'type': 'pong',
                     'timestamp': datetime.now().isoformat()
-                }))
+                })
                 
         except json.JSONDecodeError:
-            await self.send(text_data=json.dumps({
+            await self.safe_send({
                 'type': 'error',
                 'data': {'message': 'Invalid JSON format'}
-            }))
+            })
     
     async def mythology_notification(self, event):
         """Send mythology notification to client"""
-        await self.send(text_data=json.dumps({
+        await self.safe_send({
             'type': 'mythology_notification',
             'notification': event['notification']
-        }))
+        })
+
+class SportsArbitrageConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Sports arbitrage WebSocket for real-time arbitrage opportunities.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'sports_arbitrage'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        # Log connection with user info
+        user = self.scope.get('user', AnonymousUser())
+        if not isinstance(user, AnonymousUser):
+            print(f"INFO WebSocket connected: {user.username}")
+        else:
+            print("INFO WebSocket connected: anonymous user")
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        print("INFO WebSocket disconnected: ")
+    
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type', 'ping')
+        
+        if message_type == 'ping':
+            await self.safe_send({
+                'type': 'pong',
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def arbitrage_update(self, event):
+        """Send arbitrage update to WebSocket"""
+        await self.safe_send({
+            'type': 'arbitrage_update',
+            'data': event['data']
+        })
+
+
+class SportsRecommendationConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Sports recommendation WebSocket for betting suggestions.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'sports_recommendations'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        # Log connection with user info
+        user = self.scope.get('user', AnonymousUser())
+        if not isinstance(user, AnonymousUser):
+            print(f"INFO WebSocket connected: {user.username}")
+        else:
+            print("INFO WebSocket connected: anonymous user")
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        print("INFO WebSocket disconnected: ")
+    
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type', 'ping')
+        
+        if message_type == 'ping':
+            await self.safe_send({
+                'type': 'pong',
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def recommendation_update(self, event):
+        """Send recommendation update to WebSocket"""
+        await self.safe_send({
+            'type': 'recommendation_update',
+            'data': event['data']
+        })
+
+
+class SportsDashboardConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Sports dashboard WebSocket for live dashboard updates.
+    """
+    
+    async def connect(self):
+        self.room_group_name = 'sports_dashboard'
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+        
+        # Log connection with user info
+        user = self.scope.get('user', AnonymousUser())
+        if not isinstance(user, AnonymousUser):
+            print(f"INFO WebSocket connected: {user.username}")
+        else:
+            print("INFO WebSocket connected: anonymous user")
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        print("INFO WebSocket disconnected: ")
+    
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        message_type = text_data_json.get('type', 'ping')
+        
+        if message_type == 'ping':
+            await self.safe_send({
+                'type': 'pong',
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def dashboard_update(self, event):
+        """Send dashboard update to WebSocket"""
+        await self.safe_send({
+            'type': 'dashboard_update',
+            'data': event['data']
+        })
