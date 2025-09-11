@@ -59,6 +59,15 @@ INSTALLED_APPS = [
     # Self-Awareness & Intelligence
     "self_awareness",
     
+    # Style Memory System
+    "style_memory",
+    
+    # Dashboard
+    "dashboard",
+    
+    # Mythology/Hallucination Detection
+    "mythology",
+    
     # Third-party packages
     "rest_framework",
     "rest_framework.authtoken",  # Add token authentication
@@ -262,11 +271,17 @@ except ImportError:
     }
 
 # CORS Configuration - SECURE IMPLEMENTATION
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:8081').split(',')
 CORS_ALLOW_CREDENTIALS = True
+# Allow null origin for file:// protocol during development
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in DEBUG mode
+
+# Custom headers configuration
+from corsheaders.defaults import default_headers
+
 CORS_ALLOWED_HEADERS = [
     'accept',
-    'accept-encoding',
+    'accept-encoding', 
     'authorization',
     'content-type',
     'dnt',
@@ -274,7 +289,13 @@ CORS_ALLOWED_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-orchestrator',
+    'x-orchestra-client',
 ]
+
+# Allow all headers in development (alternative method)
+if DEBUG:
+    CORS_ALLOW_HEADERS = ['*']  # Allow all headers in development
 
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')

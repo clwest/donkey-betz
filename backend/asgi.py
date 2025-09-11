@@ -20,14 +20,26 @@ django_asgi_app = get_asgi_application()
 # Now import WebSocket-related code
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from sports.routing import websocket_urlpatterns
+from core.routing import websocket_urlpatterns
+from core.websocket_auth import TokenAuthMiddlewareStack
+from django.urls import re_path
+
+# Import consumers directly to ensure MythologyConsumer is available
+from core import consumers
+
+# Make absolutely sure mythology route is included
+mythology_route = re_path(r'^ws/mythology/$', consumers.MythologyConsumer.as_asgi())
+if mythology_route not in websocket_urlpatterns:
+    websocket_urlpatterns.append(mythology_route)
 
 application = ProtocolTypeRouter({
     # Django's ASGI application to handle traditional HTTP requests
     "http": django_asgi_app,
 
-    # WebSocket chat handler
-    "websocket": AuthMiddlewareStack(
-        URLRouter(websocket_urlpatterns)
+    # WebSocket chat handler with token auth support
+    "websocket": TokenAuthMiddlewareStack(
+        AuthMiddlewareStack(
+            URLRouter(websocket_urlpatterns)
+        )
     ),
 })
