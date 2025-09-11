@@ -1104,3 +1104,339 @@ def update_registry_on_agent_delete(sender, instance, **kwargs):
         registry.rebuild_indexes()
     except AgentRegistry.DoesNotExist:
         pass  # Registry doesn't exist yet
+
+
+# =============================================================================
+# AGENT CHANNELS - "Slack for AI Agents" System
+# =============================================================================
+
+class AgentChannel(UnifiedBaseModel):
+    """
+    Communication channels for agents - "Slack for AI Agents"
+    Allows users to watch agents communicate and collaborate in real-time
+    """
+    
+    CHANNEL_TYPES = [
+        ('project', 'Project Channel'),
+        ('topic', 'Topic Channel'),
+        ('team', 'Team Channel'),
+        ('general', 'General Channel'),
+        ('system', 'System Channel'),
+        ('orchestration', 'Orchestration Channel'),
+    ]
+    
+    # Basic channel info
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique channel name (e.g., 'general', 'orchestration-123')"
+    )
+    
+    display_name = models.CharField(
+        max_length=200,
+        help_text="Human-friendly display name"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        help_text="Channel description and purpose"
+    )
+    
+    channel_type = models.CharField(
+        max_length=20,
+        choices=CHANNEL_TYPES,
+        default='project'
+    )
+    
+    # Channel settings
+    is_public = models.BooleanField(
+        default=True,
+        help_text="Whether channel is visible to all users"
+    )
+    
+    is_archived = models.BooleanField(
+        default=False,
+        help_text="Whether channel is archived"
+    )
+    
+    # Channel metadata
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional channel metadata (orchestration_id, etc.)"
+    )
+    
+    active_agents = models.JSONField(
+        default=list,
+        help_text="List of currently active agent IDs in this channel"
+    )
+    
+    # Metrics
+    message_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Total number of messages in channel"
+    )
+    
+    # Relations
+    orchestration = models.ForeignKey(
+        AgentOrchestration,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='channels',
+        help_text="Associated orchestration if this is an orchestration channel"
+    )
+    
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_channels'
+    )
+    
+    class Meta:
+        verbose_name = "Agent Channel"
+        verbose_name_plural = "Agent Channels"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['channel_type']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"#{self.display_name or self.name} ({self.channel_type})"
+
+
+class AgentChannelMessage(UnifiedBaseModel):
+    """
+    Individual messages within agent channels
+    """
+    
+    MESSAGE_TYPES = [
+        ('agent_message', 'Agent Message'),
+        ('system_message', 'System Message'),
+        ('user_message', 'User Message'),
+        ('status_update', 'Status Update'),
+        ('task_update', 'Task Update'),
+        ('tool_usage', 'Tool Usage'),
+        ('collaboration_request', 'Collaboration Request'),
+        ('result_share', 'Result Share'),
+        ('error_report', 'Error Report'),
+    ]
+    
+    # Message basics
+    channel = models.ForeignKey(
+        AgentChannel,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )
+    
+    message_type = models.CharField(
+        max_length=30,
+        choices=MESSAGE_TYPES,
+        default='agent_message'
+    )
+    
+    content = models.TextField(
+        help_text="Message content"
+    )
+    
+    rich_content = models.JSONField(
+        default=dict,
+        help_text="Rich content (code blocks, attachments, etc.)"
+    )
+    
+    # Message sender (either agent or user)
+    agent_instance = models.ForeignKey(
+        'AgentExecution',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='channel_messages',
+        help_text="Agent execution that sent this message"
+    )
+    
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='channel_messages',
+        help_text="User that sent this message"
+    )
+    
+    # Threading and organization
+    thread_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Thread ID for message threading"
+    )
+    
+    parent_message = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='replies'
+    )
+    
+    # Interactions
+    reactions = models.JSONField(
+        default=dict,
+        help_text="Emoji reactions to this message"
+    )
+    
+    is_pinned = models.BooleanField(
+        default=False,
+        help_text="Whether message is pinned in channel"
+    )
+    
+    # Metadata
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Message timestamp"
+    )
+    
+    edited_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last edit timestamp"
+    )
+    
+    class Meta:
+        verbose_name = "Agent Channel Message"
+        verbose_name_plural = "Agent Channel Messages"
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['channel', 'timestamp']),
+            models.Index(fields=['message_type']),
+            models.Index(fields=['thread_id']),
+        ]
+    
+    def __str__(self):
+        sender = self.agent_instance or self.user or 'System'
+        return f"{sender} in #{self.channel.name}: {self.content[:50]}..."
+
+
+class AgentChannelMembership(UnifiedBaseModel):
+    """
+    Track which agents/users are members of which channels
+    """
+    
+    NOTIFICATION_LEVELS = [
+        ('all', 'All Messages'),
+        ('mentions', 'Mentions Only'),
+        ('none', 'No Notifications'),
+    ]
+    
+    MEMBER_ROLES = [
+        ('member', 'Member'),
+        ('moderator', 'Moderator'),
+        ('admin', 'Admin'),
+        ('observer', 'Observer'),
+    ]
+    
+    channel = models.ForeignKey(
+        AgentChannel,
+        on_delete=models.CASCADE,
+        related_name='memberships'
+    )
+    
+    # Member can be either agent or user
+    agent_template = models.ForeignKey(
+        UnifiedAgentTemplate,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='channel_memberships'
+    )
+    
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='channel_memberships'
+    )
+    
+    # Membership settings
+    joined_at = models.DateTimeField(auto_now_add=True)
+    
+    role = models.CharField(
+        max_length=20,
+        choices=MEMBER_ROLES,
+        default='member'
+    )
+    
+    notification_level = models.CharField(
+        max_length=20,
+        choices=NOTIFICATION_LEVELS,
+        default='all'
+    )
+    
+    last_read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time member read messages in this channel"
+    )
+    
+    # Status tracking
+    is_watching = models.BooleanField(
+        default=True,
+        help_text="Whether member is actively watching this channel"
+    )
+    
+    class Meta:
+        verbose_name = "Agent Channel Membership"
+        verbose_name_plural = "Agent Channel Memberships"
+        unique_together = [
+            ('channel', 'agent_template'),
+            ('channel', 'user'),
+        ]
+        indexes = [
+            models.Index(fields=['channel', 'is_active']),
+            models.Index(fields=['last_read_at']),
+        ]
+    
+    def __str__(self):
+        member = self.agent_template or self.user or 'Unknown'
+        return f"{member} in #{self.channel.name} ({self.role})"
+    
+    def clean(self):
+        """Ensure either agent_template or user is set, but not both"""
+        if not self.agent_template and not self.user:
+            raise ValidationError("Either agent_template or user must be set")
+        
+        if self.agent_template and self.user:
+            raise ValidationError("Cannot set both agent_template and user")
+
+
+# Channel management signals
+@receiver(post_save, sender=AgentChannelMessage)
+def update_channel_message_count(sender, instance, created, **kwargs):
+    """Update channel message count when new messages are added"""
+    if created:
+        instance.channel.message_count += 1
+        instance.channel.save(update_fields=['message_count'])
+
+
+@receiver(post_save, sender=AgentOrchestration)
+def create_orchestration_channel(sender, instance, created, **kwargs):
+    """Automatically create a channel for new orchestrations"""
+    if created:
+        channel_name = f"orchestration-{instance.id}"
+        channel, channel_created = AgentChannel.objects.get_or_create(
+            name=channel_name,
+            defaults={
+                'display_name': f"Orchestration: {instance.name}",
+                'description': f"Real-time communication for orchestration: {instance.description}",
+                'channel_type': 'orchestration',
+                'orchestration': instance,
+                'created_by': instance.user,
+                'metadata': {
+                    'orchestration_id': instance.id,
+                    'auto_created': True,
+                }
+            }
+        )

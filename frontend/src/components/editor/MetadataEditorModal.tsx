@@ -106,7 +106,7 @@ export function MetadataEditorModal({
     try {
       setSaving(true);
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebook.id}/update/`,
+        `http://localhost:8000/api/ebooks/${ebook.id}/update/`,
         {
           method: 'PUT',
           headers: {
@@ -149,7 +149,7 @@ export function MetadataEditorModal({
     try {
       setLoadingVersions(true);
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebook.id}/versions/`,
+        `http://localhost:8000/api/ebooks/${ebook.id}/versions/`,
         {
           headers: {
             'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3'

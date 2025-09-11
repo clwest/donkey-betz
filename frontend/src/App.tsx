@@ -54,6 +54,9 @@ import { SportsBoardPage } from './features/sports/pages/SportsBoardPage';
 import AgentOrchestrationPage from './pages/AgentOrchestrationPage';
 import { OrchestraPage } from './features/agent-orchestra/pages/OrchestraPage';
 
+// Mythology
+import { MythologyDashboard } from './features/mythology/pages/MythologyDashboard';
+
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -147,6 +150,7 @@ function App() {
             <Route path="sports/board" element={<SportsBoardPage />} />
             <Route path="agent-orchestra" element={<AgentOrchestrationPage />} />
             <Route path="orchestra" element={<OrchestraPage />} />
+            <Route path="mythology" element={<MythologyDashboard />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>

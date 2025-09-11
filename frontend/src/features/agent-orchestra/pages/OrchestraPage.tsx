@@ -20,6 +20,7 @@ import { Card } from '../../../components/common/Card';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { PokerVloggerPanel } from '../../../components/agents/PokerVloggerPanel';
 import { OrchestraPanel } from '../components/OrchestraPanel';
+import { AgentChannels } from '../../../components/agents/AgentChannels';
 
 import { Logger } from '../../../utils/logger';
 import { toast } from 'sonner';
@@ -92,6 +93,8 @@ const OrchestraLoadingFallback: React.FC = () => (
 );
 
 export const OrchestraPage: React.FC = () => {
+  const [activeTab, setActiveTab] = React.useState<'orchestra' | 'channels'>('orchestra');
+
   const handleInstanceCreate = (instance: any) => {
     Logger.debug('Orchestra Page', `New instance created: ${instance?.id || 'unknown'}`);
     const displayName = instance?.template?.name || (instance?.id ? instance.id.slice(0, 8) : 'Task');
@@ -131,25 +134,72 @@ export const OrchestraPage: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Main Orchestra Interface */}
-      <OrchestraErrorBoundary>
-        <Suspense fallback={<OrchestraLoadingFallback />}>
-          <OrchestraPanel
-            onInstanceCreate={handleInstanceCreate}
-            onInstanceUpdate={handleInstanceUpdate}
-          />
-        </Suspense>
-      </OrchestraErrorBoundary>
-
-      {/* Poker Vlogger Agent Demo */}
+      {/* Tab Navigation */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="mt-8"
+        transition={{ delay: 0.1 }}
+        className="mb-6"
       >
-        <PokerVloggerPanel />
+        <div className="flex space-x-1 bg-muted/50 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('orchestra')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'orchestra'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <CpuChipIcon className="h-4 w-4 inline mr-2" />
+            Orchestra Panel
+          </button>
+          <button
+            onClick={() => setActiveTab('channels')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'channels'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <CpuChipIcon className="h-4 w-4 inline mr-2" />
+            Agent Channels
+          </button>
+        </div>
       </motion.div>
+
+      {/* Tab Content */}
+      {activeTab === 'orchestra' ? (
+        <>
+          {/* Main Orchestra Interface */}
+          <OrchestraErrorBoundary>
+            <Suspense fallback={<OrchestraLoadingFallback />}>
+              <OrchestraPanel
+                onInstanceCreate={handleInstanceCreate}
+                onInstanceUpdate={handleInstanceUpdate}
+              />
+            </Suspense>
+          </OrchestraErrorBoundary>
+
+          {/* Poker Vlogger Agent Demo */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8"
+          >
+            <PokerVloggerPanel />
+          </motion.div>
+        </>
+      ) : (
+        /* Agent Channels - "Slack for AI Agents" */
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <AgentChannels />
+        </motion.div>
+      )}
 
       {/* Connection Information */}
       <motion.div
@@ -167,13 +217,13 @@ export const OrchestraPage: React.FC = () => {
             <div>
               <span className="font-medium">REST API:</span>
               <span className="ml-2 font-mono">
-                {import.meta.env.VITE_API_URL || 'http://localhost:8001/api'}
+                {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
               </span>
             </div>
             <div>
               <span className="font-medium">WebSocket:</span>
               <span className="ml-2 font-mono">
-                {import.meta.env.VITE_WS_URL || 'ws://localhost:8001'}/ws/assistant/
+                {import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}/ws/assistant/
               </span>
             </div>
             <div>
@@ -183,7 +233,7 @@ export const OrchestraPage: React.FC = () => {
             <div>
               <span className="font-medium">DBAO API:</span>
               <span className="ml-2 font-mono">
-                {import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8001/api'}
+                {import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000/api'}
               </span>
             </div>
           </div>

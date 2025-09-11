@@ -1,6 +1,7 @@
 """
 Odds calculation and sports analytics endpoints migrated from DBAO tools-manifest.json.
 Provides comprehensive betting analytics, Kelly criterion, and live sports data.
+Enhanced with multi-sport support and free data providers.
 """
 
 from django.http import JsonResponse
@@ -9,8 +10,17 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from datetime import datetime, timedelta
+from django.db import models
 import json
 import random
+
+# Import sports models if they exist
+try:
+    from sports.models import League, Team, Game, SportType, GameStatus
+    from sports.data_providers import sports_data_manager
+    SPORTS_MODELS_AVAILABLE = True
+except ImportError:
+    SPORTS_MODELS_AVAILABLE = False
 
 User = get_user_model()
 
@@ -173,6 +183,7 @@ def calculate_kelly_criterion(request):
         'result': {
             'kelly_percentage': round(kelly_percentage, 4),
             'recommended_bet': round(recommended_bet, 2),
+            'recommended_stake': round(recommended_bet, 2),  # Add expected field name
             'risk_level': risk_level,
             'fractional_kelly': round(fractional_kelly, 4)
         }
@@ -471,3 +482,328 @@ def get_bankroll_stats(request):
             }
         }
     })
+
+
+# =============================================================================
+# ENHANCED MULTI-SPORT API ENDPOINTS
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sports_summary(request):
+    """
+    Get sports types with active leagues
+    """
+    if not SPORTS_MODELS_AVAILABLE:
+        return Response([
+            {'sport_type': 'nfl', 'name': 'NFL', 'count': 1},
+            {'sport_type': 'nba', 'name': 'NBA', 'count': 1},
+            {'sport_type': 'mlb', 'name': 'MLB', 'count': 1},
+        ])
+    
+    try:
+        from django.db.models import Count
+        summary = League.objects.filter(is_active=True).values('sport_type').annotate(
+            count=Count('id')
+        )
+        
+        result = []
+        for item in summary:
+            sport_name_map = {
+                'nfl': 'NFL',
+                'nba': 'NBA', 
+                'mlb': 'MLB',
+                'nhl': 'NHL',
+                'ncaaf': 'College Football',
+                'ncaab': 'College Basketball',
+                'soccer': 'Soccer',
+                'mma': 'MMA',
+                'tennis': 'Tennis',
+                'golf': 'Golf',
+                'boxing': 'Boxing',
+                'esports': 'Esports'
+            }
+            
+            result.append({
+                'sport_type': item['sport_type'],
+                'name': sport_name_map.get(item['sport_type'], item['sport_type'].upper()),
+                'count': item['count']
+            })
+        
+        return Response(result)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sports_leagues(request):
+    """
+    Get available leagues with optional sport type filter
+    """
+    if not SPORTS_MODELS_AVAILABLE:
+        return Response([
+            {'id': 'nfl', 'name': 'National Football League', 'abbreviation': 'NFL', 'sport_type': 'nfl', 'country': 'USA', 'active': True},
+            {'id': 'nba', 'name': 'National Basketball Association', 'abbreviation': 'NBA', 'sport_type': 'nba', 'country': 'USA', 'active': True},
+        ])
+    
+    try:
+        sport_type = request.GET.get('sport_type')
+        leagues = League.objects.filter(is_active=True)
+        
+        if sport_type:
+            leagues = leagues.filter(sport_type=sport_type)
+        
+        result = []
+        for league in leagues:
+            result.append({
+                'id': league.abbreviation,
+                'name': league.name,
+                'abbreviation': league.abbreviation,
+                'sport_type': league.sport_type,
+                'country': league.country,
+                'active': league.is_active,
+                'api_provider': league.api_provider,
+                'current_season': league.current_season
+            })
+        
+        return Response(result)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sports_teams(request):
+    """
+    Get teams for a specific league
+    """
+    if not SPORTS_MODELS_AVAILABLE:
+        return Response([
+            {'id': '1', 'name': 'Sample Team 1', 'abbreviation': 'ST1', 'city': 'Sample City', 'league': 'NFL'},
+            {'id': '2', 'name': 'Sample Team 2', 'abbreviation': 'ST2', 'city': 'Sample City 2', 'league': 'NFL'},
+        ])
+    
+    try:
+        league_id = request.GET.get('league')
+        if not league_id:
+            return Response({'error': 'league parameter required'}, status=400)
+        
+        teams = Team.objects.filter(league__abbreviation=league_id)
+        
+        result = []
+        for team in teams:
+            result.append({
+                'id': str(team.id),
+                'name': team.name,
+                'abbreviation': team.abbreviation,
+                'city': team.city,
+                'league': team.league.abbreviation,
+                'conference': team.conference,
+                'division': team.division,
+                'logo_url': team.logo_url,
+                'current_record': team.current_record
+            })
+        
+        return Response(result)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sports_games(request):
+    """
+    Get games with various filters
+    """
+    if not SPORTS_MODELS_AVAILABLE:
+        return Response([
+            {
+                'id': '1',
+                'external_id': 'sample-1',
+                'league': 'NFL',
+                'home_team': {'id': '1', 'name': 'Sample Home Team', 'abbreviation': 'SHT', 'city': 'Home City', 'league': 'NFL'},
+                'away_team': {'id': '2', 'name': 'Sample Away Team', 'abbreviation': 'SAT', 'city': 'Away City', 'league': 'NFL'},
+                'home_team_name': 'Sample Home Team',
+                'away_team_name': 'Sample Away Team',
+                'scheduled_start': datetime.now().isoformat(),
+                'status': 'scheduled',
+                'venue_name': 'Sample Stadium',
+                'home_score': None,
+                'away_score': None,
+                'season': '2024',
+                'week': 1
+            }
+        ])
+    
+    try:
+        # Get filter parameters
+        league = request.GET.get('league')
+        sport_type = request.GET.get('sport_type')
+        date = request.GET.get('date')
+        status = request.GET.get('status')
+        
+        games = Game.objects.all()
+        
+        if league:
+            games = games.filter(league__abbreviation=league)
+        
+        if sport_type:
+            games = games.filter(league__sport_type=sport_type)
+        
+        if date:
+            games = games.filter(scheduled_start__date=date)
+        
+        if status:
+            games = games.filter(status=status)
+        
+        # Limit results to prevent overwhelming frontend
+        games = games.select_related('league', 'home_team', 'away_team')[:50]
+        
+        result = []
+        for game in games:
+            result.append({
+                'id': str(game.id),
+                'external_id': game.external_id,
+                'league': game.league.abbreviation,
+                'home_team': {
+                    'id': str(game.home_team.id),
+                    'name': game.home_team.name,
+                    'abbreviation': game.home_team.abbreviation,
+                    'city': game.home_team.city,
+                    'league': game.league.abbreviation,
+                    'current_record': game.home_team.current_record
+                },
+                'away_team': {
+                    'id': str(game.away_team.id),
+                    'name': game.away_team.name,
+                    'abbreviation': game.away_team.abbreviation,
+                    'city': game.away_team.city,
+                    'league': game.league.abbreviation,
+                    'current_record': game.away_team.current_record
+                },
+                'home_team_name': game.home_team.name,
+                'away_team_name': game.away_team.name,
+                'scheduled_start': game.scheduled_start.isoformat(),
+                'status': game.status,
+                'venue_name': game.venue_name,
+                'venue_city': game.venue_city,
+                'home_score': game.home_score,
+                'away_score': game.away_score,
+                'season': game.season,
+                'week': game.week,
+                'weather_data': game.weather_data,
+                'live_stats': game.live_stats
+            })
+        
+        return Response(result)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def sports_games_trending(request):
+    """
+    Get trending games with high betting volume or close spreads
+    """
+    limit = int(request.GET.get('limit', 10))
+    
+    if not SPORTS_MODELS_AVAILABLE:
+        # Return sample trending games
+        sample_games = [
+            {
+                'id': f'trending-{i}',
+                'league': random.choice(['NFL', 'NBA', 'MLB']),
+                'home_team': {'name': f'Home Team {i}', 'abbreviation': f'HT{i}'},
+                'away_team': {'name': f'Away Team {i}', 'abbreviation': f'AT{i}'},
+                'home_team_name': f'Home Team {i}',
+                'away_team_name': f'Away Team {i}',
+                'scheduled_start': (datetime.now() + timedelta(hours=i)).isoformat(),
+                'status': random.choice(['scheduled', 'live']),
+                'venue_name': f'Stadium {i}',
+                'home_score': random.randint(0, 100) if random.random() > 0.5 else None,
+                'away_score': random.randint(0, 100) if random.random() > 0.5 else None
+            }
+            for i in range(1, limit + 1)
+        ]
+        return Response(sample_games)
+    
+    try:
+        # Get trending games based on recent games and live status
+        trending_games = Game.objects.filter(
+            scheduled_start__gte=datetime.now() - timedelta(days=7),
+            scheduled_start__lte=datetime.now() + timedelta(days=7)
+        ).select_related('league', 'home_team', 'away_team').order_by(
+            '-scheduled_start'
+        )[:limit]
+        
+        result = []
+        for game in trending_games:
+            result.append({
+                'id': str(game.id),
+                'external_id': game.external_id,
+                'league': game.league.abbreviation,
+                'home_team': {
+                    'id': str(game.home_team.id),
+                    'name': game.home_team.name,
+                    'abbreviation': game.home_team.abbreviation,
+                    'city': game.home_team.city,
+                    'league': game.league.abbreviation,
+                    'current_record': game.home_team.current_record
+                },
+                'away_team': {
+                    'id': str(game.away_team.id),
+                    'name': game.away_team.name,
+                    'abbreviation': game.away_team.abbreviation,
+                    'city': game.away_team.city,
+                    'league': game.league.abbreviation,
+                    'current_record': game.away_team.current_record
+                },
+                'home_team_name': game.home_team.name,
+                'away_team_name': game.away_team.name,
+                'scheduled_start': game.scheduled_start.isoformat(),
+                'status': game.status,
+                'venue_name': game.venue_name,
+                'home_score': game.home_score,
+                'away_score': game.away_score,
+                'season': game.season,
+                'week': game.week
+            })
+        
+        return Response(result)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def sports_sync(request):
+    """
+    Sync sports data from external providers
+    """
+    if not SPORTS_MODELS_AVAILABLE:
+        return Response({
+            'success': True,
+            'message': 'Sports models not available - sync simulated'
+        })
+    
+    try:
+        data = json.loads(request.body)
+        
+        if data.get('leagues'):
+            results = sports_data_manager.sync_leagues()
+            return Response({
+                'success': True,
+                'message': f"Synced {results['created']} leagues"
+            })
+        
+        return Response({
+            'success': True,
+            'message': 'Sync completed successfully'
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Sync failed: {str(e)}'
+        }, status=500)

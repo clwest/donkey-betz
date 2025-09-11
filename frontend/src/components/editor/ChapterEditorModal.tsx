@@ -108,7 +108,7 @@ export function ChapterEditorModal({
       setAutoSaving(true);
       const content = blocksToMarkdown(contentBlocks);
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebookId}/chapters/${chapter.id}/auto-save/`,
+        `http://localhost:8000/api/ebooks/${ebookId}/chapters/${chapter.id}/auto-save/`,
         {
           method: 'POST',
           headers: {
@@ -137,7 +137,7 @@ export function ChapterEditorModal({
       setSaving(true);
       const content = blocksToMarkdown(contentBlocks);
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebookId}/chapters/${chapter.id}/update/`,
+        `http://localhost:8000/api/ebooks/${ebookId}/chapters/${chapter.id}/update/`,
         {
           method: 'PUT',
           headers: {
@@ -176,7 +176,7 @@ export function ChapterEditorModal({
     try {
       setLoadingVersions(true);
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebookId}/chapters/${chapter.id}/versions/`,
+        `http://localhost:8000/api/ebooks/${ebookId}/chapters/${chapter.id}/versions/`,
         {
           headers: {
             'Authorization': `Token ${localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'e7d2ae96885384ad8c66cfcd094f4f193629f227'}`
@@ -202,7 +202,7 @@ export function ChapterEditorModal({
   const restoreVersion = async (versionId: number, versionNumber: number) => {
     try {
       const response = await fetch(
-        `http://localhost:8001/api/ebooks/${ebookId}/chapters/${chapter.id}/versions/${versionId}/restore/`,
+        `http://localhost:8000/api/ebooks/${ebookId}/chapters/${chapter.id}/versions/${versionId}/restore/`,
         {
           method: 'POST',
           headers: {

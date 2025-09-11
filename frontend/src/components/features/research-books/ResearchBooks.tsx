@@ -378,7 +378,7 @@ export function ResearchBooks() {
       };
 
       // Try to create eBook with chapters via a transfer-specific endpoint first
-      let response = await fetch('http://localhost:8001/api/ebooks/transfer/', {
+      let response = await fetch('http://localhost:8000/api/ebooks/transfer/', {
         method: 'POST',
         headers: {
           'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',
@@ -392,7 +392,7 @@ export function ResearchBooks() {
         Logger.component('ResearchBooks', 'Transfer endpoint not found, using fallback approach');
         
         // Create basic eBook first
-        response = await fetch('http://localhost:8001/api/ebooks/', {
+        response = await fetch('http://localhost:8000/api/ebooks/', {
           method: 'POST',
           headers: {
             'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',

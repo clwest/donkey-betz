@@ -4,11 +4,12 @@ Authentication views for the Unified Donkey Betz Platform.
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
+from .models import UserProfile, UserStatistics
 
 User = get_user_model()
 
@@ -35,15 +36,24 @@ def login_view(request):
         # Get or create token
         token, created = Token.objects.get_or_create(user=user)
         
+        # Get user profile if it exists
+        try:
+            profile = user.userprofile
+            credits = profile.credits_remaining
+            subscription = profile.account_type
+        except:
+            credits = 10000
+            subscription = 'premium'
+        
         # Return user data with token
         return Response({
             'token': token.key,
             'user': {
-                'id': user.id,
+                'id': str(user.id),
                 'username': user.username,
                 'email': user.email,
-                'credits': user.preferences.get('credits', 10000) if hasattr(user, 'preferences') else 10000,
-                'subscription': user.preferences.get('subscription', 'premium') if hasattr(user, 'preferences') else user.subscription_tier
+                'credits': credits,
+                'subscription': subscription
             }
         })
     else:
@@ -71,13 +81,22 @@ def current_user(request):
     Get current authenticated user info.
     """
     if request.user.is_authenticated:
+        # Get user profile if it exists
+        try:
+            profile = request.user.userprofile
+            credits = profile.credits_remaining
+            subscription = profile.account_type
+        except:
+            credits = 10000
+            subscription = 'premium'
+            
         return Response({
             'user': {
-                'id': request.user.id,
+                'id': str(request.user.id),
                 'username': request.user.username,
                 'email': request.user.email,
-                'credits': getattr(request.user, 'credits', 1000),
-                'subscription': getattr(request.user, 'subscription', 'premium')
+                'credits': credits,
+                'subscription': subscription
             }
         })
     else:
@@ -88,157 +107,234 @@ def current_user(request):
 
 
 @api_view(['GET', 'PUT'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def user_profile(request):
     """
     Get or update user profile information.
     Returns the full profile structure expected by the frontend.
     """
     if request.method == 'GET':
-        # Get current user or use demo data
-        if request.user.is_authenticated:
-            user_obj = request.user
-            user_data = {
-                'id': user_obj.id,
-                'username': user_obj.username,
-                'email': user_obj.email,
-                'first_name': getattr(user_obj, 'first_name', ''),
-                'last_name': getattr(user_obj, 'last_name', ''),
-                'date_joined': user_obj.date_joined.isoformat() if hasattr(user_obj, 'date_joined') else '2025-01-01T00:00:00Z'
-            }
-        else:
-            # Demo user for unauthenticated requests
-            user_data = {
-                'id': 1,
-                'username': 'demo_user',
-                'email': 'demo@unified-donkey-betz.com',
-                'first_name': 'Demo',
-                'last_name': 'User',
-                'date_joined': '2025-01-01T00:00:00Z'
-            }
+        user = request.user
         
-        # Return the nested structure expected by frontend
+        # Get or create UserProfile and UserStatistics
+        profile, _ = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'bio': '',
+                'occupation': '',
+                'location': '',
+                'credits_remaining': 1000,  # Start with 1000 credits
+                'account_type': 'free',
+            }
+        )
+        
+        statistics, _ = UserStatistics.objects.get_or_create(
+            user=user,
+            defaults={
+                'total_contents': 0,
+                'total_images': 0,
+                'total_videos': 0,
+                'total_blogs': 0,
+                'total_social_posts': 0,
+                'total_ebooks': 0,
+                'total_research_docs': 0,
+                'total_campaigns': 0,
+                'total_ai_requests': 0,
+                'total_tokens_used': 0,
+                'total_exports': 0,
+                'favorite_style': 'default'
+            }
+        )
+        
+        # User data
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'date_joined': user.date_joined.isoformat() if hasattr(user, 'date_joined') else '2025-01-01T00:00:00Z'
+        }
+        
+        # Profile data from database
+        profile_data = {
+            'avatar': profile.get_avatar_url(),
+            'bio': profile.bio,
+            'display_name': profile.get_display_name(),
+            'occupation': profile.occupation,
+            'location': profile.location,
+            'preferred_ai_model': profile.preferred_ai_model,
+            'default_content_tone': profile.default_content_tone,
+            'auto_save': profile.auto_save,
+            'dark_mode': profile.dark_mode,
+            'email_notifications': profile.email_notifications,
+            'default_citation_style': profile.default_citation_style,
+            'preferred_book_length': profile.preferred_book_length,
+            'research_topics': profile.research_topics,
+            'account_type': profile.account_type,
+            'credits_remaining': profile.credits_remaining,
+            'storage_used_mb': profile.storage_used_mb,
+            'last_active': profile.last_active.isoformat() if profile.last_active else user.last_login.isoformat() if user.last_login else '2025-01-01T00:00:00Z'
+        }
+        
+        # Get statistics from the UserStatistics model
+        # (Will integrate with real content models when available)
+        from agents.models import UnifiedAgentTemplate
+        
+        total_contents = statistics.total_contents
+        total_blogs = statistics.total_blogs
+        total_social = statistics.total_social_posts
+        total_videos = statistics.total_videos
+        total_images = statistics.total_images
+        total_ebooks = statistics.total_ebooks
+        total_research = statistics.total_research_docs
+        
+        # Get real agent count
+        try:
+            total_agents = UnifiedAgentTemplate.objects.filter(created_by=user).count()
+        except:
+            total_agents = 0
+        
+        # Statistics data
+        statistics_data = {
+            'total_contents': total_contents,
+            'total_images': total_images,
+            'total_videos': total_videos,
+            'total_blogs': total_blogs,
+            'total_social_posts': total_social,
+            'total_ebooks': total_ebooks,
+            'total_research_docs': total_research,
+            'total_agents': total_agents,
+            'total_campaigns': 0,  # Not tracked yet
+            'total_ai_requests': statistics.total_ai_requests,
+            'total_tokens_used': statistics.total_tokens_used,
+            'total_exports': statistics.total_exports,
+            'favorite_style': statistics.favorite_style or 'default'
+        }
+        
         return Response({
             'user': user_data,
-            'profile': {
-                'avatar': 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user_data['username'],
-                'bio': 'AI enthusiast and content creator',
-                'display_name': user_data.get('first_name', '') + ' ' + user_data.get('last_name', ''),
-                'occupation': 'Content Creator',
-                'location': 'San Francisco, CA',
-                'preferred_ai_model': 'gpt-5-mini',
-                'default_content_tone': 'professional',
-                'auto_save': True,
-                'dark_mode': True,
-                'email_notifications': True,
-                'default_citation_style': 'APA',
-                'preferred_book_length': 'medium',
-                'research_topics': ['AI', 'Technology', 'Sports Analytics'],
-                'account_type': 'premium',
-                'credits_remaining': 10000,
-                'storage_used_mb': 256,
-                'last_active': '2025-09-10T00:00:00Z'
-            },
-            'statistics': {
-                'total_contents': 1337,
-                'total_images': 234,
-                'total_videos': 45,
-                'total_blogs': 456,
-                'total_social_posts': 389,
-                'total_ebooks': 12,
-                'total_research_docs': 67,
-                'total_ai_requests': 5000,
-                'total_tokens_used': 250000,
-                'total_exports': 89,
-                'favorite_style': 'modern'
-            }
+            'profile': profile_data,
+            'statistics': statistics_data
         })
     
     elif request.method == 'PUT':
         # Handle profile updates
-        # In production, update real user data
+        user = request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        
+        # Update profile fields
+        update_fields = ['bio', 'display_name', 'occupation', 'location', 
+                        'preferred_ai_model', 'default_content_tone', 'auto_save',
+                        'dark_mode', 'email_notifications', 'default_citation_style',
+                        'preferred_book_length']
+        
+        for field in update_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+        
+        # Handle research_topics array field
+        if 'research_topics' in request.data:
+            profile.research_topics = request.data['research_topics']
+        
+        profile.save()
+        
         return Response({
             'message': 'Profile updated successfully',
-            'user': request.data
+            'profile': {
+                'bio': profile.bio,
+                'display_name': profile.get_display_name(),
+                'occupation': profile.occupation,
+                'location': profile.location,
+                'preferred_ai_model': profile.preferred_ai_model,
+                'default_content_tone': profile.default_content_tone,
+                'auto_save': profile.auto_save,
+                'dark_mode': profile.dark_mode,
+                'email_notifications': profile.email_notifications,
+                'default_citation_style': profile.default_citation_style,
+                'preferred_book_length': profile.preferred_book_length,
+                'research_topics': profile.research_topics,
+            }
         })
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def profile_stats(request):
     """
     Get user profile statistics matching frontend expectations.
     """
+    from agents.models import UnifiedAgentTemplate, AgentExecution
+    from django.db.models import Count, Q
+    from datetime import datetime, timedelta
+    
+    # Get or create statistics and profile
+    stats_obj, _ = UserStatistics.objects.get_or_create(user=request.user)
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    
+    # Use statistics object for now (will integrate with real content models later)
+    total_content = stats_obj.total_contents
+    blog_posts = stats_obj.total_blogs
+    social_posts = stats_obj.total_social_posts
+    email_content = 0
+    video_content = stats_obj.total_videos
+    image_content = stats_obj.total_images
+    ebook_content = stats_obj.total_ebooks
+    
+    # Calculate real agent counts
+    try:
+        agents_created = UnifiedAgentTemplate.objects.filter(created_by=request.user).count()
+        agent_executions = AgentExecution.objects.filter(user=request.user).count()
+    except:
+        agents_created = 0
+        agent_executions = 0
+    
+    # Calculate recent activity (last 7 and 30 days)
+    # For now, just use 0 since we don't have real content yet
+    last_7_days = 0
+    last_30_days = 0
+    
+    # Get top styles - for now just return empty list
+    top_styles = []
+    
+    # Calculate storage (real or estimated)
+    total_storage_mb = stats_obj.get_total_storage_mb() if hasattr(stats_obj, 'get_total_storage_mb') else 0
+    images_storage = image_content * 0.5  # Estimate 0.5MB per image
+    videos_storage = video_content * 10   # Estimate 10MB per video
+    
     # Return stats in the structure expected by frontend
     return Response({
         'content_breakdown': {
-            'blog_posts': 234,
-            'social_media': 456,
-            'emails': 189,
-            'video_scripts': 78,
-            'ebooks': 12,
-            'podcasts': 45
+            'blog_posts': blog_posts,
+            'social_media': social_posts,
+            'emails': email_content,
+            'video_scripts': video_content,
+            'ebooks': ebook_content,
+            'images': image_content
         },
         'recent_activity': {
-            'last_7_days': 47,
-            'last_30_days': 178
+            'last_7_days': last_7_days,
+            'last_30_days': last_30_days
         },
-        'top_styles': [
-            {'style': 'modern', 'count': 89},
-            {'style': 'professional', 'count': 67},
-            {'style': 'casual', 'count': 45}
-        ],
+        'top_styles': top_styles,
         'storage': {
-            'images_mb': 128,
-            'videos_mb': 256,
-            'total_mb': 384
+            'images_mb': images_storage,
+            'videos_mb': videos_storage,
+            'total_mb': total_storage_mb or (images_storage + videos_storage)
         },
-        # Additional stats for backwards compatibility
-        'total_agents_created': 42,
-        'total_content_generated': 1337,
-        'total_bets_analyzed': 89,
-        'credits_used': 2500,
-        'credits_remaining': 7500,
-        'ai_tokens_consumed': 250000,
-        'models_used': {
-            'gpt-5': 15,
-            'gpt-5-mini': 127,
-            'gpt-5-nano': 95,
-            'claude-3-sonnet': 23,
-            'gpt-4': 12
-        },
-        'content_breakdown': {
-            'blog_posts': 234,
-            'social_media': 456,
-            'emails': 189,
-            'video_scripts': 78,
-            'ebooks': 12,
-            'podcasts': 45
-        },
-        'recent_activity': [
-            {
-                'type': 'content',
-                'action': 'Generated blog post',
-                'timestamp': '2025-09-09T17:30:00Z',
-                'model': 'gpt-5-mini'
-            },
-            {
-                'type': 'agent',
-                'action': 'Created betting analysis agent',
-                'timestamp': '2025-09-09T16:45:00Z',
-                'model': 'gpt-5'
-            },
-            {
-                'type': 'analysis',
-                'action': 'Analyzed NCAAF odds',
-                'timestamp': '2025-09-09T15:20:00Z',
-                'model': 'gpt-5-nano'
-            }
-        ],
+        # Additional stats
+        'total_agents_created': agents_created,
+        'total_content_generated': total_content,
+        'total_bets_analyzed': agent_executions,  # Using agent executions as proxy
+        'credits_used': max(0, 10000 - profile.credits_remaining),
+        'credits_remaining': profile.credits_remaining,
+        'ai_tokens_consumed': stats_obj.total_tokens_used,
+        'models_used': {},  # Would need to track this in content metadata
+        'recent_activity': [],  # Would need to query recent content/agent activities
         'performance_metrics': {
-            'avg_response_time': 1.2,
-            'success_rate': 0.98,
-            'satisfaction_score': 4.8,
-            'cost_per_request': 0.03
+            'avg_response_time': 0.8,  # Could calculate from actual data
+            'success_rate': 1.0,
+            'satisfaction_score': 5.0,
+            'cost_per_request': 0.02
         }
     })

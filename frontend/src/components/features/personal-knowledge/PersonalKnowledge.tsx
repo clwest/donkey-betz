@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Search, Tag, Folder, Download, Trash2, Edit, Plus, X, CheckCircle, AlertCircle, BookOpen, Brain, Hash } from 'lucide-react';
+import { Upload, FileText, Search, Tag, Folder, Download, Trash2, Edit, Plus, X, CheckCircle, AlertCircle, BookOpen, Brain, Hash, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 interface KnowledgeEntry {
   id: string;
   title: string;
   description: string;
   content_preview: string;
+  full_content?: string;  // Added for full content display
   content_type: string;
   file_type: string;
   category: string;
@@ -41,6 +42,8 @@ const PersonalKnowledge: React.FC = () => {
   const [selectedEntry, setSelectedEntry] = useState<KnowledgeEntry | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadType, setUploadType] = useState<'file' | 'text'>('text');
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  const [detailEntry, setDetailEntry] = useState<KnowledgeEntry | null>(null);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -92,7 +95,7 @@ const PersonalKnowledge: React.FC = () => {
       params.append('page', currentPage.toString());
       params.append('per_page', itemsPerPage.toString());
       
-      const response = await fetch(`${API_BASE_URL}/api/personal-knowledge/list/?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/personal-knowledge/list/?${params}`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -108,8 +111,8 @@ const PersonalKnowledge: React.FC = () => {
         setTotalItems(total);
         setTotalPages(Math.ceil(total / itemsPerPage));
         
-        // Fetch embeddings count
-        fetchEmbeddingsCount();
+        // Embeddings count is already included in stats.total_embeddings
+        // fetchEmbeddingsCount();  // Not needed - data comes from personal-knowledge/list
       }
     } catch (error) {
       console.error('Error fetching knowledge:', error);
@@ -120,7 +123,7 @@ const PersonalKnowledge: React.FC = () => {
 
   const fetchEmbeddingsCount = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/dashboard/embeddings-stats/`, {
+      const response = await fetch(`${API_BASE_URL}/dashboard/embeddings-stats/`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -157,8 +160,8 @@ const PersonalKnowledge: React.FC = () => {
     formData.append('use_in_generation', String(newKnowledge.use_in_generation));
     
     try {
-      console.log('Uploading file to:', `${API_BASE_URL}/api/personal-knowledge/upload/`);
-      const response = await fetch(`${API_BASE_URL}/api/personal-knowledge/upload/`, {
+      console.log('Uploading file to:', `${API_BASE_URL}/personal-knowledge/upload/`);
+      const response = await fetch(`${API_BASE_URL}/personal-knowledge/upload/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`
@@ -200,7 +203,7 @@ const PersonalKnowledge: React.FC = () => {
     
     setUploading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/personal-knowledge/upload/`, {
+      const response = await fetch(`${API_BASE_URL}/personal-knowledge/upload/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,
@@ -274,6 +277,18 @@ const PersonalKnowledge: React.FC = () => {
   const showNotification = (message: string, type: 'success' | 'error') => {
     // This would integrate with your notification system
     console.log(`${type}: ${message}`);
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedEntries(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const formatFileSize = (bytes: number) => {
@@ -413,14 +428,23 @@ const PersonalKnowledge: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
+                        onClick={() => setDetailEntry(entry)}
+                        className="p-1 hover:bg-gray-700 rounded transition-colors"
+                        title="View full content"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => setSelectedEntry(entry)}
                         className="p-1 hover:bg-gray-700 rounded transition-colors"
+                        title="Edit"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(entry.id)}
                         className="p-1 hover:bg-gray-700 rounded transition-colors text-red-400"
+                        title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -431,9 +455,29 @@ const PersonalKnowledge: React.FC = () => {
                     <p className="text-sm text-gray-400 mb-2">{entry.description}</p>
                   )}
                   
-                  <p className="text-sm text-gray-300 mb-3 line-clamp-3">
-                    {entry.content_preview}
-                  </p>
+                  <div className="mb-3">
+                    <p className={`text-sm text-gray-300 ${!expandedEntries.has(entry.id) ? 'line-clamp-3' : ''}`}>
+                      {expandedEntries.has(entry.id) ? (entry.full_content || entry.content) : entry.content_preview}
+                    </p>
+                    {entry.word_count > 100 && (
+                      <button
+                        onClick={() => toggleExpanded(entry.id)}
+                        className="mt-2 text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
+                      >
+                        {expandedEntries.has(entry.id) ? (
+                          <>
+                            <ChevronUp className="w-4 h-4" />
+                            Show less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4" />
+                            Show more
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="flex flex-wrap gap-1 mb-3">
                     {/* Show important tags first, then others */}
@@ -716,6 +760,97 @@ const PersonalKnowledge: React.FC = () => {
                   className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? 'Processing...' : uploadType === 'text' ? 'Add Knowledge' : 'Upload File'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Detail Modal */}
+        {detailEntry && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold mb-2">{detailEntry.title}</h2>
+                  {detailEntry.description && (
+                    <p className="text-gray-400">{detailEntry.description}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setDetailEntry(null)}
+                  className="p-2 hover:bg-gray-800 rounded-lg transition-colors ml-4"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Metadata */}
+              <div className="flex flex-wrap gap-4 mb-6 text-sm text-gray-400">
+                <div className="flex items-center gap-1">
+                  <FileText className="w-4 h-4" />
+                  <span>{detailEntry.content_type}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Hash className="w-4 h-4" />
+                  <span>{detailEntry.word_count} words</span>
+                </div>
+                {detailEntry.times_used > 0 && (
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span>Used {detailEntry.times_used} times</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1">
+                  {detailEntry.use_in_generation ? (
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-gray-600" />
+                  )}
+                  <span>{detailEntry.use_in_generation ? 'Active in AI generation' : 'Not used in AI generation'}</span>
+                </div>
+              </div>
+              
+              {/* Tags */}
+              {detailEntry.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {detailEntry.tags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-blue-900/30 border border-blue-700/50 rounded-full text-sm text-blue-300"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {/* Content */}
+              <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                <div className="prose prose-invert max-w-none">
+                  <pre className="whitespace-pre-wrap text-gray-300 font-sans text-sm leading-relaxed">
+                    {detailEntry.full_content || detailEntry.content}
+                  </pre>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setSelectedEntry(detailEntry);
+                    setDetailEntry(null);
+                  }}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Edit className="w-4 h-4 inline mr-2" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => setDetailEntry(null)}
+                  className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Close
                 </button>
               </div>
             </div>

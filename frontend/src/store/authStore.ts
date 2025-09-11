@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Logger } from '../utils/logger';
+import { API_CONFIG, buildApiUrl } from '../config/api.config';
 
 interface User {
   id: string;
@@ -169,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
               console.log('🔐 AuthStore: Remember token is valid');
               
               // Validate with backend
-              const response = await fetch('http://localhost:8000/api/auth/validate-token/', {
+              const response = await fetch(buildApiUrl('/auth/validate-token/'), {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

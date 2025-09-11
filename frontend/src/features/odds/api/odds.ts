@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 
 // Use AI Content Studio API v1 for odds-specific endpoints
 // Using AI Content Studio backend on port 8001 which has the odds endpoints
-const BASE = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8001/api/v1').replace(/\/$/, '');
+const BASE = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
 
 // Circuit breaker to prevent spam of failed API calls
 let failureCount = 0;
@@ -315,4 +315,220 @@ export function formatPercentage(value: number, decimals = 1): string {
  */
 export function formatCurrency(value: number, decimals = 2): string {
   return `$${value.toFixed(decimals)}`;
+}
+
+// Sports API interfaces for real odds data
+export interface League {
+  id: string;
+  name: string;
+  display_name: string;
+}
+
+export interface Game {
+  id: string;
+  league: string;
+  home_team_name: string;
+  away_team_name: string;
+  start_time: string;
+  status: string;
+  venue?: string;
+  season?: number;
+  week?: number | null;
+  home_score?: number | null;
+  away_score?: number | null;
+}
+
+export interface Market {
+  id: string;
+  game_id: string;
+  kind: string;
+  name: string;
+  price_american: string;
+  implied_probability: number;
+}
+
+/**
+ * Fetch available sports leagues
+ */
+export async function fetchLeagues(): Promise<League[]> {
+  if (!shouldAttemptApiCall()) {
+    console.warn('[Sports API] Circuit breaker active, returning empty leagues');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${BASE}/sports/leagues/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-DBAO-Client': 'AI-Studio-Web',
+        'Authorization': `Token ${localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.results || [];
+  } catch (error) {
+    recordFailure();
+    console.warn('[Sports API] Failed to fetch leagues:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch games for a specific league and date
+ */
+export async function fetchGames(league: string, date?: string): Promise<Game[]> {
+  if (!shouldAttemptApiCall()) {
+    console.warn('[Sports API] Circuit breaker active, returning empty games');
+    return [];
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (league) params.append('league', league);
+    if (date) params.append('date', date);
+    
+    const response = await fetch(`${BASE}/sports/games/?${params}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-DBAO-Client': 'AI-Studio-Web',
+        'Authorization': `Token ${localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const games = Array.isArray(data) ? data : data.results || [];
+    
+    // Normalize field names
+    return games.map((game: any) => ({
+      id: game.id,
+      league: game.league,
+      home_team_name: game.home_team || game.home_team_name,
+      away_team_name: game.away_team || game.away_team_name,
+      start_time: game.game_time || game.start_time,
+      status: game.status,
+      venue: game.venue,
+      season: game.season,
+      week: game.week,
+      home_score: game.home_score,
+      away_score: game.away_score
+    }));
+  } catch (error) {
+    recordFailure();
+    console.warn('[Sports API] Failed to fetch games:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch betting markets for a specific game
+ */
+export async function fetchMarkets(gameId: string): Promise<Market[]> {
+  if (!shouldAttemptApiCall()) {
+    console.warn('[Sports API] Circuit breaker active, returning empty markets');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${BASE}/sports/markets/?game_id=${gameId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-DBAO-Client': 'AI-Studio-Web',
+        'Authorization': `Token ${localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502'}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const markets = Array.isArray(data) ? data : data.results || [];
+    
+    // Normalize market data
+    return markets.map((market: any) => ({
+      id: market.id,
+      game_id: market.game_id,
+      kind: market.market_type || market.kind,
+      name: `${market.selection === 'home' ? 'Home' : 'Away'} ${market.market_type || 'Moneyline'}`,
+      price_american: formatAmericanOdds(market.odds || market.price_american || '+100'),
+      implied_probability: market.implied_probability || 0.5
+    }));
+  } catch (error) {
+    recordFailure();
+    console.warn('[Sports API] Failed to fetch markets:', error);
+    return [];
+  }
+}
+
+/**
+ * Generate real odds rows from API data instead of fake defaults
+ */
+export async function generateRealOddsRows(): Promise<any[]> {
+  try {
+    // Fetch leagues first
+    const leagues = await fetchLeagues();
+    if (leagues.length === 0) {
+      console.warn('[Sports API] No leagues available, falling back to default rows');
+      return [];
+    }
+
+    // Get today's date for current games
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Try to get games from the first available league
+    const firstLeague = leagues[0];
+    const games = await fetchGames(firstLeague.name, today);
+    
+    if (games.length === 0) {
+      console.warn('[Sports API] No games available for today, trying without date filter');
+      const allGames = await fetchGames(firstLeague.name);
+      
+      if (allGames.length === 0) {
+        console.warn('[Sports API] No games available, falling back to default rows');
+        return [];
+      }
+      
+      // Use the first available game
+      const game = allGames[0];
+      const markets = await fetchMarkets(game.id);
+      
+      // Create real odds rows from markets
+      return markets.slice(0, 3).map((market, index) => ({
+        book: ['DraftKings', 'FanDuel', 'BetMGM'][index] || 'Sportsbook',
+        market: `${game.away_team_name} vs ${game.home_team_name} - ${market.name}`,
+        american: market.price_american
+      }));
+    }
+
+    // Use today's first game
+    const game = games[0];
+    const markets = await fetchMarkets(game.id);
+    
+    if (markets.length === 0) {
+      console.warn('[Sports API] No markets available for game, falling back to default rows');
+      return [];
+    }
+
+    // Create real odds rows from markets
+    return markets.slice(0, 3).map((market, index) => ({
+      book: ['DraftKings', 'FanDuel', 'BetMGM'][index] || 'Sportsbook',
+      market: `${game.away_team_name} vs ${game.home_team_name} - ${market.name}`,
+      american: market.price_american
+    }));
+  } catch (error) {
+    console.error('[Sports API] Failed to generate real odds rows:', error);
+    return [];
+  }
 }

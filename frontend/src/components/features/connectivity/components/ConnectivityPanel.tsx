@@ -251,13 +251,13 @@ export function ConnectivityPanel() {
           <div>
             <span className="text-gray-400">API URL:</span>
             <span className="ml-2 text-gray-300 font-mono">
-              {import.meta.env.VITE_API_URL || 'http://localhost:8001/api'}
+              {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
             </span>
           </div>
           <div>
             <span className="text-gray-400">WebSocket URL:</span>
             <span className="ml-2 text-gray-300 font-mono">
-              {import.meta.env.VITE_WS_URL || 'ws://localhost:8001'}
+              {import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}
             </span>
           </div>
           <div>

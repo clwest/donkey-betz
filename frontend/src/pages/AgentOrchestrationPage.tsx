@@ -273,9 +273,9 @@ export default function AgentOrchestrationPage() {
             Agent Orchestra - Built with comprehensive error handling and real-time updates
           </p>
           <div className="mt-2 flex items-center justify-center space-x-4 text-xs text-muted-foreground">
-            <span>API: {import.meta.env.VITE_API_URL || 'http://localhost:8001/api'}</span>
+            <span>API: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}</span>
             <span>•</span>
-            <span>WebSocket: {import.meta.env.VITE_WS_URL || 'ws://localhost:8001'}</span>
+            <span>WebSocket: {import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}</span>
             <span>•</span>
             <span>Environment: {import.meta.env.MODE}</span>
           </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import type { ToolbarParams } from '../types';
 import { FRACTIONAL_KELLY_OPTIONS, DEFAULT_TOOLBAR_PARAMS, STORAGE_KEYS } from '../types';
 
@@ -27,7 +27,9 @@ interface OddsToolbarProps {
   onParamsChange: (params: ToolbarParams) => void;
   onAddRow: () => void;
   onClearRows: () => void;
+  onRefreshRealData: () => void;
   rowCount: number;
+  isLoadingRealData?: boolean;
 }
 
 export function OddsToolbar({
@@ -35,7 +37,9 @@ export function OddsToolbar({
   onParamsChange,
   onAddRow,
   onClearRows,
+  onRefreshRealData,
   rowCount,
+  isLoadingRealData = false,
 }: OddsToolbarProps) {
   // Local state for string inputs to prevent cursor jumping
   const [bankrollStr, setBankrollStr] = useState(String(params.bankroll));
@@ -180,6 +184,16 @@ export function OddsToolbar({
             >
               <PlusIcon className="w-4 h-4" />
               Add Row
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefreshRealData}
+              disabled={isLoadingRealData}
+              className="flex items-center gap-2 text-blue-400 border-blue-500/50 hover:bg-blue-500/10"
+            >
+              <ArrowPathIcon className={`w-4 h-4 ${isLoadingRealData ? 'animate-spin' : ''}`} />
+              {isLoadingRealData ? 'Loading...' : 'Refresh Real Data'}
             </Button>
             <Button
               variant="outline"

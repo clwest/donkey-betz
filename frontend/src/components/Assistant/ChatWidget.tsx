@@ -5,7 +5,9 @@ import {
   XMarkIcon, 
   PaperAirplaneIcon,
   ChevronDownIcon,
-  SparklesIcon
+  SparklesIcon,
+  MicrophoneIcon,
+  StopIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 import { assistantService } from '../../services/assistant.service';
@@ -44,9 +46,59 @@ export function ChatWidget() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pageContext, setPageContext] = useState<PageContext | null>(null);
   const [userStats, setUserStats] = useState<any>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Check for speech recognition support
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setSpeechSupported(true);
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+      
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        if (finalTranscript) {
+          setMessage(prev => prev + finalTranscript);
+        } else if (interimTranscript) {
+          // Show interim results (optional)
+          const currentBase = message.substring(0, message.lastIndexOf(' ') + 1);
+          setMessage(currentBase + interimTranscript);
+        }
+      };
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'no-speech') {
+          // Restart recognition if no speech detected
+          setTimeout(() => startListening(), 100);
+        }
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
 
   // Get page context based on current route
   useEffect(() => {
@@ -229,6 +281,32 @@ export function ChatWidget() {
     });
   };
 
+  const startListening = () => {
+    if (recognitionRef.current && !isListening) {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
   // Always render the widget in development
   // if (!currentUser) return null;
 
@@ -386,16 +464,41 @@ export function ChatWidget() {
                       ref={inputRef}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Type your message here..."
+                      placeholder={isListening ? "Listening..." : "Type or speak your message..."}
                       disabled={loading}
                       className={clsx(
                         "flex-1 bg-dark-800/50 text-white text-base",
                         "px-5 py-3 rounded-xl",
                         "border border-white/10 focus:border-purple-500",
                         "focus:outline-none placeholder-gray-500",
-                        "transition-colors"
+                        "transition-colors",
+                        isListening && "border-red-500 animate-pulse"
                       )}
                     />
+                    {speechSupported && (
+                      <button
+                        type="button"
+                        onClick={toggleListening}
+                        disabled={loading}
+                        className={clsx(
+                          "px-4 py-3 rounded-xl",
+                          isListening 
+                            ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                            : "bg-dark-700 hover:bg-dark-600",
+                          "text-white",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                          "transition-all duration-200",
+                          "flex items-center justify-center"
+                        )}
+                        title={isListening ? "Stop recording" : "Start voice input"}
+                      >
+                        {isListening ? (
+                          <StopIcon className="h-5 w-5" />
+                        ) : (
+                          <MicrophoneIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    )}
                     <button
                       type="submit"
                       disabled={loading || !message.trim()}
@@ -413,6 +516,7 @@ export function ChatWidget() {
                   </div>
                   <p className="text-xs text-gray-400 mt-2 text-center">
                     Powered by GPT-5 • {pageContext?.page || 'AI Content Studio'}
+                    {speechSupported && ' • 🎤 Voice input enabled'}
                   </p>
                 </form>
               </>

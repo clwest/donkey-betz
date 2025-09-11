@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import numpy as np
+import psycopg2
 from typing import List, Dict, Any, Optional
 from django.db import connection
 from django.conf import settings
@@ -20,11 +21,11 @@ logger = logging.getLogger(__name__)
 def create_embedding(text: str, model: str = "text-embedding-3-small") -> Optional[List[float]]:
     """Create embedding for a text using OpenAI"""
     try:
-        # Get API key from environment or settings
-        api_key = os.environ.get('OPENAI_API_KEY') or getattr(settings, 'OPENAI_API_KEY', None)
+        # Get API key from Django settings (same as AIProviderManager)
+        api_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY')
         
         if not api_key:
-            logger.error("No OpenAI API key found in environment or settings")
+            logger.error("No OpenAI API key found in settings.AI_PROVIDERS")
             return None
             
         client = openai.OpenAI(api_key=api_key)
@@ -44,7 +45,7 @@ def search_embeddings(
     similarity_threshold: float = 0.7
 ) -> List[Dict[str, Any]]:
     """
-    Search unified_embeddings table for relevant context
+    Search unified_embeddings table in ai_unified_platform database for relevant context
     
     Args:
         query: The search query
@@ -63,7 +64,15 @@ def search_embeddings(
         return []
     
     try:
-        with connection.cursor() as cursor:
+        # Connect to ai_unified_platform database instead of default
+        conn = psycopg2.connect(
+            host='localhost',
+            database='ai_unified_platform',
+            user='ai_unified_user',
+            password='ai_unified_pass_2025'
+        )
+        
+        with conn.cursor() as cursor:
             # Build the SQL query with vector similarity search
             sql = """
                 SELECT 
@@ -116,20 +125,29 @@ def search_embeddings(
                 # Parse metadata
                 meta = metadata if isinstance(metadata, dict) else {}
                 
+                # Handle NaN values
+                import math
+                similarity_val = float(similarity) if similarity else 0.0
+                if math.isnan(similarity_val) or math.isinf(similarity_val):
+                    similarity_val = 0.0
+                    
                 documents.append({
                     'id': doc_id,
                     'content': decrypted_content[:1000],  # Limit content length
                     'content_type': content_type,
                     'metadata': meta,
                     'importance_score': float(importance) if importance else 0.5,
-                    'similarity_score': float(similarity) if similarity else 0.0
+                    'similarity_score': similarity_val
                 })
             
             logger.info(f"Found {len(documents)} relevant documents for query")
+            conn.close()  # Close the connection to ai_unified_platform
             return documents
             
     except Exception as e:
         logger.error(f"Error searching embeddings: {e}")
+        if 'conn' in locals():
+            conn.close()
         return []
 
 def get_rag_context(query: str, max_tokens: int = 2000) -> Dict[str, Any]:

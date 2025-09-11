@@ -8,6 +8,8 @@ including base classes that will be inherited by all other apps.
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
+from django.contrib.postgres.fields import ArrayField
 from django.core.serializers.json import DjangoJSONEncoder
 import json
 
@@ -327,3 +329,171 @@ class PlatformMetrics(UnifiedBaseModel):
             subsystem=subsystem,
             labels=labels or {}
         )
+
+
+class UserProfile(models.Model):
+    """
+    Extended user profile information for persistent storage.
+    """
+    ACCOUNT_TYPES = [
+        ('free', 'Free'),
+        ('pro', 'Professional'),
+        ('premium', 'Premium'),
+        ('enterprise', 'Enterprise'),
+    ]
+    
+    CONTENT_TONES = [
+        ('professional', 'Professional'),
+        ('casual', 'Casual'),
+        ('academic', 'Academic'),
+        ('creative', 'Creative'),
+        ('technical', 'Technical'),
+    ]
+    
+    AI_MODELS = [
+        ('gpt-5', 'GPT-5'),
+        ('gpt-5-mini', 'GPT-5 Mini'),
+        ('gpt-5-nano', 'GPT-5 Nano'),
+        ('gpt-4', 'GPT-4'),
+        ('claude-3-sonnet', 'Claude 3 Sonnet'),
+    ]
+    
+    # Link to user
+    user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='userprofile')
+    
+    # Profile information
+    avatar = models.URLField(max_length=500, blank=True, null=True)
+    avatar_file = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    bio = models.TextField(blank=True, default='')
+    display_name = models.CharField(max_length=100, blank=True, default='')
+    occupation = models.CharField(max_length=100, blank=True, default='')
+    location = models.CharField(max_length=100, blank=True, default='')
+    
+    # Preferences
+    preferred_ai_model = models.CharField(max_length=20, default='gpt-5-mini')
+    default_content_tone = models.CharField(max_length=20, default='professional')
+    auto_save = models.BooleanField(default=True)
+    dark_mode = models.BooleanField(default=True)
+    email_notifications = models.BooleanField(default=True)
+    default_citation_style = models.CharField(max_length=10, default='APA')
+    preferred_book_length = models.CharField(max_length=10, default='medium')
+    research_topics = ArrayField(
+        models.CharField(max_length=100), 
+        default=list, 
+        blank=True
+    )
+    
+    # Account information
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPES, default='premium')
+    credits_remaining = models.IntegerField(default=10000)
+    storage_used_mb = models.FloatField(default=0)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_active = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'core_userprofile'
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+    
+    def __str__(self):
+        return f"{self.user.username}'s profile"
+    
+    def get_avatar_url(self):
+        """Get the avatar URL, with fallback to default."""
+        if self.avatar_file:
+            # avatar_file is an ImageField, so use its url property if available
+            try:
+                url = self.avatar_file.url
+                # Ensure it's an absolute URL for frontend compatibility
+                if url and not url.startswith('http'):
+                    return f"http://localhost:8000{url}"
+                return url
+            except:
+                # Fallback if file doesn't exist
+                return f"http://localhost:8000/media/{self.avatar_file}"
+        elif self.avatar:
+            # If avatar is already set (could be external URL or local)
+            if self.avatar and not self.avatar.startswith('http'):
+                return f"http://localhost:8000{self.avatar}"
+            return self.avatar
+        else:
+            # Default avatar
+            return f"https://api.dicebear.com/7.x/avataaars/svg?seed={self.user.username}"
+    
+    def get_display_name(self):
+        """Get display name or fallback to full name or username."""
+        if self.display_name:
+            return self.display_name
+        elif self.user.first_name or self.user.last_name:
+            return f"{self.user.first_name} {self.user.last_name}".strip()
+        else:
+            return self.user.username
+
+
+class UserStatistics(models.Model):
+    """
+    User content generation statistics for tracking.
+    """
+    user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='userstatistics')
+    
+    # Content counts
+    total_contents = models.IntegerField(default=0)
+    total_images = models.IntegerField(default=0)
+    total_videos = models.IntegerField(default=0)
+    total_blogs = models.IntegerField(default=0)
+    total_social_posts = models.IntegerField(default=0)
+    total_ebooks = models.IntegerField(default=0)
+    total_research_docs = models.IntegerField(default=0)
+    total_campaigns = models.IntegerField(default=0)
+    
+    # Usage statistics
+    total_ai_requests = models.IntegerField(default=0)
+    total_tokens_used = models.BigIntegerField(default=0)
+    total_exports = models.IntegerField(default=0)
+    
+    # Preferences
+    favorite_style = models.CharField(max_length=50, blank=True, default='')
+    
+    # Activity tracking
+    last_7_days_activity = models.IntegerField(default=0)
+    last_30_days_activity = models.IntegerField(default=0)
+    
+    # Storage
+    images_storage_mb = models.FloatField(default=0)
+    videos_storage_mb = models.FloatField(default=0)
+    documents_storage_mb = models.FloatField(default=0)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'core_userstatistics'
+        verbose_name = 'User Statistics'
+        verbose_name_plural = 'User Statistics'
+    
+    def __str__(self):
+        return f"{self.user.username}'s statistics"
+    
+    def get_total_storage_mb(self):
+        """Calculate total storage used."""
+        return self.images_storage_mb + self.videos_storage_mb + self.documents_storage_mb
+
+
+# Signal handlers to create profile and statistics when user is created
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=get_user_model())
+def create_user_profile_and_stats(sender, instance, created, **kwargs):
+    """Create UserProfile and UserStatistics when a new user is created."""
+    if created:
+        UserProfile.objects.create(user=instance)
+        UserStatistics.objects.create(user=instance)
+    else:
+        # Ensure profile and stats exist for existing users
+        UserProfile.objects.get_or_create(user=instance)
+        UserStatistics.objects.get_or_create(user=instance)

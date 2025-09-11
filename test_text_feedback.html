@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Generation Feedback Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f7f9fc;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+        .test-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+        }
+        .success {
+            background: #f0fdf4;
+            border-color: #86efac;
+            color: #166534;
+        }
+        .error {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #991b1b;
+        }
+        .loading {
+            background: #fefce8;
+            border-color: #fde047;
+            color: #713f12;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status.ready { background: #86efac; color: #166534; }
+        .status.testing { background: #fde047; color: #713f12; }
+        .status.error { background: #fca5a5; color: #991b1b; }
+        
+        .stars {
+            display: inline-flex;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .star {
+            font-size: 24px;
+            cursor: pointer;
+            color: #ccc;
+            transition: color 0.2s;
+        }
+        .star:hover,
+        .star.active {
+            color: #fbbf24;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            font-family: inherit;
+            resize: vertical;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text Generation Feedback Test 📝</h1>
+        <p class="description">Test the feedback functionality for text generation</p>
+        
+        <div class="test-section">
+            <div class="test-title">Test Text Generation & Feedback <span class="status ready" id="status">Ready</span></div>
+            
+            <button onclick="generateText()">1. Generate Text Content</button>
+            <div id="generateResult" class="result" style="display:none;"></div>
+            
+            <div id="feedbackSection" style="display:none; margin-top: 20px;">
+                <h3>Provide Feedback:</h3>
+                
+                <div>
+                    <strong>Rating:</strong>
+                    <div class="stars">
+                        <span class="star" onclick="submitRating(1)">★</span>
+                        <span class="star" onclick="submitRating(2)">★</span>
+                        <span class="star" onclick="submitRating(3)">★</span>
+                        <span class="star" onclick="submitRating(4)">★</span>
+                        <span class="star" onclick="submitRating(5)">★</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <strong>Quick Feedback:</strong><br>
+                    <button onclick="submitQuickFeedback(true)" style="background: #10b981;">👍 Helpful</button>
+                    <button onclick="submitQuickFeedback(false)" style="background: #ef4444;">👎 Not Helpful</button>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <strong>Detailed Feedback:</strong>
+                    <textarea id="feedbackComments" rows="3" placeholder="What could be better about this content?"></textarea>
+                    <button onclick="submitDetailedFeedback()">Submit Detailed Feedback</button>
+                </div>
+                
+                <div id="feedbackResult" class="result" style="display:none; margin-top: 15px;"></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">Test Results Summary</div>
+            <div id="summary" class="result">
+                No tests run yet. Click the buttons above to start testing.
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let authToken = localStorage.getItem('authToken');
+        let generatedContentId = null;
+        let currentRating = 0;
+        
+        // Get auth token if not present
+        if (!authToken) {
+            fetch(`${API_BASE}/auth/token/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'chris', password: 'onetwo12' })
+            })
+            .then(r => r.json())
+            .then(data => {
+                authToken = data.access;
+                localStorage.setItem('authToken', authToken);
+                console.log('Auth token obtained');
+            });
+        }
+        
+        function setStatus(status, type = 'ready') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = status;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function showResult(elementId, content, type = '') {
+            const el = document.getElementById(elementId);
+            el.style.display = 'block';
+            el.className = `result ${type}`;
+            el.textContent = typeof content === 'object' ? JSON.stringify(content, null, 2) : content;
+        }
+        
+        async function generateText() {
+            setStatus('Generating...', 'testing');
+            const resultEl = document.getElementById('generateResult');
+            const feedbackSection = document.getElementById('feedbackSection');
+            
+            try {
+                const response = await fetch(`${API_BASE}/content/text/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        prompt: 'Write a short introduction to machine learning for beginners',
+                        model: 'gpt-5-mini',
+                        max_tokens: 500,
+                        temperature: 0.7,
+                        type: 'text',
+                        tone: 'professional'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Extract the content ID
+                    generatedContentId = data.id || data.content_id || Math.floor(Math.random() * 10000);
+                    
+                    showResult('generateResult', 
+                        `✅ Text Generated Successfully!\n\nContent ID: ${generatedContentId}\n\nGenerated Text:\n${data.result || data.content || data.text || 'Content generated'}`, 
+                        'success'
+                    );
+                    
+                    feedbackSection.style.display = 'block';
+                    setStatus('Ready for Feedback', 'ready');
+                    
+                    updateSummary('Text Generation', 'Success', `Content ID: ${generatedContentId}`);
+                } else {
+                    showResult('generateResult', `Error: ${JSON.stringify(data)}`, 'error');
+                    setStatus('Error', 'error');
+                    updateSummary('Text Generation', 'Failed', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('generateResult', `Error: ${error.message}`, 'error');
+                setStatus('Error', 'error');
+                updateSummary('Text Generation', 'Failed', error.message);
+            }
+        }
+        
+        async function submitRating(rating) {
+            if (!generatedContentId) {
+                alert('Please generate text first');
+                return;
+            }
+            
+            currentRating = rating;
+            
+            // Update star display
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                star.classList.toggle('active', index < rating);
+            });
+            
+            setStatus('Submitting Rating...', 'testing');
+            
+            try {
+                const response = await fetch(`${API_BASE}/feedback/submit/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_type: 'text',
+                        content_id: generatedContentId,
+                        overall_rating: rating,
+                        feedback_type: 'rating'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('feedbackResult', 
+                        `✅ Rating Submitted!\n\n${rating} star${rating > 1 ? 's' : ''} - Thank you for your feedback!`, 
+                        'success'
+                    );
+                    setStatus('Feedback Submitted', 'ready');
+                    updateSummary('Rating Feedback', 'Success', `${rating} stars`);
+                } else {
+                    showResult('feedbackResult', `Error: ${JSON.stringify(data)}`, 'error');
+                    setStatus('Error', 'error');
+                    updateSummary('Rating Feedback', 'Failed', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('feedbackResult', `Error: ${error.message}`, 'error');
+                setStatus('Error', 'error');
+                updateSummary('Rating Feedback', 'Failed', error.message);
+            }
+        }
+        
+        async function submitQuickFeedback(isPositive) {
+            if (!generatedContentId) {
+                alert('Please generate text first');
+                return;
+            }
+            
+            setStatus('Submitting Feedback...', 'testing');
+            
+            try {
+                const response = await fetch(`${API_BASE}/feedback/quick/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_type: 'text',
+                        content_id: generatedContentId,
+                        is_positive: isPositive
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('feedbackResult', 
+                        `✅ Quick Feedback Submitted!\n\n${isPositive ? '👍 Helpful' : '👎 Not Helpful'} - Thank you!`, 
+                        'success'
+                    );
+                    setStatus('Feedback Submitted', 'ready');
+                    updateSummary('Quick Feedback', 'Success', isPositive ? 'Positive' : 'Negative');
+                } else {
+                    showResult('feedbackResult', `Error: ${JSON.stringify(data)}`, 'error');
+                    setStatus('Error', 'error');
+                    updateSummary('Quick Feedback', 'Failed', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('feedbackResult', `Error: ${error.message}`, 'error');
+                setStatus('Error', 'error');
+                updateSummary('Quick Feedback', 'Failed', error.message);
+            }
+        }
+        
+        async function submitDetailedFeedback() {
+            if (!generatedContentId) {
+                alert('Please generate text first');
+                return;
+            }
+            
+            const comments = document.getElementById('feedbackComments').value;
+            if (!comments.trim()) {
+                alert('Please enter your feedback comments');
+                return;
+            }
+            
+            setStatus('Submitting Detailed Feedback...', 'testing');
+            
+            try {
+                const response = await fetch(`${API_BASE}/feedback/submit/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        content_type: 'text',
+                        content_id: generatedContentId,
+                        overall_rating: currentRating || 3,
+                        feedback_type: 'detailed',
+                        comments: comments,
+                        suggestions: '',
+                        quality_rating: currentRating || 3,
+                        accuracy_rating: currentRating || 3,
+                        usefulness_rating: currentRating || 3
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('feedbackResult', 
+                        `✅ Detailed Feedback Submitted!\n\nYour feedback:\n"${comments}"\n\nThank you for helping us improve!`, 
+                        'success'
+                    );
+                    setStatus('Feedback Submitted', 'ready');
+                    updateSummary('Detailed Feedback', 'Success', `${comments.substring(0, 50)}...`);
+                    
+                    // Clear the textarea
+                    document.getElementById('feedbackComments').value = '';
+                } else {
+                    showResult('feedbackResult', `Error: ${JSON.stringify(data)}`, 'error');
+                    setStatus('Error', 'error');
+                    updateSummary('Detailed Feedback', 'Failed', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('feedbackResult', `Error: ${error.message}`, 'error');
+                setStatus('Error', 'error');
+                updateSummary('Detailed Feedback', 'Failed', error.message);
+            }
+        }
+        
+        function updateSummary(test, status, details) {
+            const summaryEl = document.getElementById('summary');
+            const timestamp = new Date().toLocaleTimeString();
+            const statusSymbol = status === 'Success' ? '✅' : '❌';
+            
+            if (summaryEl.textContent.includes('No tests run yet')) {
+                summaryEl.textContent = '';
+            }
+            
+            summaryEl.textContent += `[${timestamp}] ${statusSymbol} ${test}: ${status}\n   Details: ${details}\n\n`;
+        }
+    </script>
+</body>
+</html>

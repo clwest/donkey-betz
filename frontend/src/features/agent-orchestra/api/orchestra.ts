@@ -8,13 +8,14 @@
  */
 
 import { toast } from 'sonner';
+import { API_CONFIG, buildApiUrl, buildWsUrl } from '../../../config/api.config';
 
 // Environment configuration
 // Use AI Content Studio API for Orchestra endpoints (agents, instances, etc.)
 // Agent/orchestra endpoints are under /api/v1/
-const ORCH_REST = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
-// Use AI Content Studio WebSocket URL (port 8001) for Agent Orchestra communication
-const ORCH_WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8001';
+const ORCH_REST = import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL + '/api/v1';
+// Use AI Content Studio WebSocket URL for Agent Orchestra communication
+const ORCH_WS_BASE = import.meta.env.VITE_WS_URL || API_CONFIG.WS_URL;
 console.log('[Orchestra API] WebSocket base URL:', ORCH_WS_BASE);
 
 // Types

@@ -1,38 +1,78 @@
 import { toast } from 'sonner';
+import { API_CONFIG } from '../../../config/api.config';
 
 // Get DBAO API URL from environment and strip trailing slash
-// Using AI Content Studio backend on port 8001 which has the sports endpoints
-const BASE = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8001/api/v1').replace(/\/$/, '');
+// Using AI Content Studio backend which has the sports endpoints  
+const BASE = (import.meta.env.VITE_DBAO_API_URL || API_CONFIG.BASE_URL + '/api/v1').replace(/\/$/, '');
 const DBAO_API_URL = BASE;
 
-// Types for sports API responses
+// Enhanced types for multi-sport support
 export interface League {
   id: string;
   name: string;
-  abbrev?: string;
+  abbreviation: string;
+  sport_type: SportType;
+  country: string;
   active: boolean;
-  sport?: string;
+  api_provider?: string;
+  current_season?: string;
+}
+
+export enum SportType {
+  NFL = 'nfl',
+  NCAAF = 'ncaaf', 
+  NBA = 'nba',
+  NCAAB = 'ncaab',
+  MLB = 'mlb',
+  NHL = 'nhl',
+  SOCCER = 'soccer',
+  MMA = 'mma',
+  TENNIS = 'tennis',
+  GOLF = 'golf',
+  BOXING = 'boxing',
+  ESPORTS = 'esports'
 }
 
 export interface Team {
   id: string;
   name: string;
-  abbrev: string;
-  location: string;
+  abbreviation: string;
+  city: string;
+  league: string;
+  conference?: string;
+  division?: string;
+  logo_url?: string;
+  current_record?: Record<string, any>;
 }
 
 export interface Game {
   id: string;
+  external_id?: string;
   league: string;
+  home_team: Team;
+  away_team: Team;
   home_team_name: string;
   away_team_name: string;
-  start_time: string; // ISO timestamp
-  status: 'scheduled' | 'live' | 'completed';
-  venue?: string;
+  scheduled_start: string; // ISO timestamp
+  status: GameStatus;
+  venue_name?: string;
+  venue_city?: string;
   week?: number;
-  season?: number;
+  season?: string;
   home_score?: number;
   away_score?: number;
+  weather_data?: Record<string, any>;
+  live_stats?: Record<string, any>;
+}
+
+export enum GameStatus {
+  SCHEDULED = 'scheduled',
+  LIVE = 'live', 
+  HALFTIME = 'halftime',
+  FINAL = 'final',
+  POSTPONED = 'postponed',
+  CANCELLED = 'cancelled',
+  SUSPENDED = 'suspended'
 }
 
 export interface Market {
@@ -129,45 +169,61 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 /**
- * Fetch available leagues from DBAO API
- * Returns active leagues that can be used for filtering
+ * Fetch available leagues with enhanced multi-sport support
+ * Now supports all major sports through ESPN, TheSportsDB, and other providers
  */
-export async function listLeagues(): Promise<League[]> {
-  const url = `${BASE}/sports/leagues/`;
-  // Get auth token from localStorage - using AI Content Studio testuser token
-  const token = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
-  
-  const r = await fetch(url, {
-    headers: {
-      'Authorization': `Token ${token}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  const t = await r.text();
-  
-  if (!r.ok) {
-    console.error(`[WEB SPORTS] GET ${url} failed:`, t);
-    throw new Error(`HTTP ${r.status}: ${t}`);
+export async function listLeagues(sportType?: SportType): Promise<League[]> {
+  const params = new URLSearchParams();
+  if (sportType) {
+    params.append('sport_type', sportType);
   }
   
-  const j = JSON.parse(t);
-  console.log('[WEB SPORTS] GET', url, '→', j?.length || 0);
-  
-  // Transform response to match our League interface
-  // DBAO returns {code: "NCAAF", name: "NCAA Football"} 
-  // We need {id: "NCAAF", name: "NCAA Football", active: true}
-  const leagues = Array.isArray(j) ? j : [];
-  return leagues.map(league => ({
-    id: league.code || league.id,
-    name: league.name,
-    active: league.active !== false, // Default to true if not specified
-    sport: league.sport,
-    abbrev: league.abbrev
-  }));
+  const url = `${BASE}/sports/leagues/?${params.toString()}`;
+  return fetchApi<League[]>(`/sports/leagues/?${params.toString()}`);
 }
 
 /**
- * Fetch available leagues (alias for backward compatibility)
+ * Get sports types with active leagues
+ */
+export async function getSportsTypes(): Promise<{ sport_type: SportType; name: string; count: number }[]> {
+  return fetchApi<{ sport_type: SportType; name: string; count: number }[]>('/sports/summary/');
+}
+
+/**
+ * Get teams for a specific league
+ */
+export async function getTeams(leagueId: string): Promise<Team[]> {
+  return fetchApi<Team[]>(`/sports/teams/?league=${leagueId}`);
+}
+
+/**
+ * Get live games across all sports
+ */
+export async function getLiveGames(): Promise<Game[]> {
+  return fetchApi<Game[]>('/sports/games/?status=live');
+}
+
+/**
+ * Get games by sport type
+ */
+export async function getGamesBySport(sportType: SportType, date?: string): Promise<Game[]> {
+  const params = new URLSearchParams({ sport_type: sportType });
+  if (date) {
+    params.append('date', date);
+  }
+  
+  return fetchApi<Game[]>(`/sports/games/?${params.toString()}`);
+}
+
+/**
+ * Get trending games with high betting volume
+ */
+export async function getTrendingGames(limit = 10): Promise<Game[]> {
+  return fetchApi<Game[]>(`/sports/games/trending/?limit=${limit}`);
+}
+
+/**
+ * Fetch available leagues (alias for backward compatibility)  
  */
 export async function leagues(): Promise<League[]> {
   return listLeagues();
@@ -293,5 +349,152 @@ export function formatGameTime(isoString: string): string {
     hour: 'numeric',
     minute: '2-digit',
     timeZoneName: 'short',
+  });
+}
+
+/**
+ * Get sport display name from SportType enum
+ */
+export function getSportDisplayName(sportType: SportType): string {
+  const sportNames: Record<SportType, string> = {
+    [SportType.NFL]: 'NFL',
+    [SportType.NCAAF]: 'College Football',
+    [SportType.NBA]: 'NBA',
+    [SportType.NCAAB]: 'College Basketball',
+    [SportType.MLB]: 'MLB',
+    [SportType.NHL]: 'NHL',
+    [SportType.SOCCER]: 'Soccer',
+    [SportType.MMA]: 'MMA',
+    [SportType.TENNIS]: 'Tennis',
+    [SportType.GOLF]: 'Golf',
+    [SportType.BOXING]: 'Boxing',
+    [SportType.ESPORTS]: 'Esports'
+  };
+  
+  return sportNames[sportType] || sportType;
+}
+
+/**
+ * Get sport emoji for display
+ */
+export function getSportEmoji(sportType: SportType): string {
+  const sportEmojis: Record<SportType, string> = {
+    [SportType.NFL]: '🏈',
+    [SportType.NCAAF]: '🏈',
+    [SportType.NBA]: '🏀',
+    [SportType.NCAAB]: '🏀',
+    [SportType.MLB]: '⚾',
+    [SportType.NHL]: '🏒',
+    [SportType.SOCCER]: '⚽',
+    [SportType.MMA]: '🥊',
+    [SportType.TENNIS]: '🎾',
+    [SportType.GOLF]: '⛳',
+    [SportType.BOXING]: '🥊',
+    [SportType.ESPORTS]: '🎮'
+  };
+  
+  return sportEmojis[sportType] || '🏆';
+}
+
+/**
+ * Check if a game is live
+ */
+export function isGameLive(game: Game): boolean {
+  return [GameStatus.LIVE, GameStatus.HALFTIME].includes(game.status);
+}
+
+/**
+ * Check if a game is finished
+ */
+export function isGameFinished(game: Game): boolean {
+  return game.status === GameStatus.FINAL;
+}
+
+/**
+ * Get game status display text
+ */
+export function getGameStatusDisplay(status: GameStatus): string {
+  const statusMap: Record<GameStatus, string> = {
+    [GameStatus.SCHEDULED]: 'Scheduled',
+    [GameStatus.LIVE]: 'Live',
+    [GameStatus.HALFTIME]: 'Halftime',
+    [GameStatus.FINAL]: 'Final',
+    [GameStatus.POSTPONED]: 'Postponed',
+    [GameStatus.CANCELLED]: 'Cancelled',
+    [GameStatus.SUSPENDED]: 'Suspended'
+  };
+  
+  return statusMap[status] || status;
+}
+
+/**
+ * Get color class for game status
+ */
+export function getGameStatusColor(status: GameStatus): string {
+  const colorMap: Record<GameStatus, string> = {
+    [GameStatus.SCHEDULED]: 'text-gray-600',
+    [GameStatus.LIVE]: 'text-red-600 animate-pulse',
+    [GameStatus.HALFTIME]: 'text-orange-600',
+    [GameStatus.FINAL]: 'text-green-600',
+    [GameStatus.POSTPONED]: 'text-yellow-600',
+    [GameStatus.CANCELLED]: 'text-red-400',
+    [GameStatus.SUSPENDED]: 'text-orange-400'
+  };
+  
+  return colorMap[status] || 'text-gray-500';
+}
+
+/**
+ * Format team record for display
+ */
+export function formatTeamRecord(record: Record<string, any>): string {
+  if (!record) return '';
+  
+  const { wins = 0, losses = 0, ties = 0 } = record;
+  
+  if (ties > 0) {
+    return `${wins}-${losses}-${ties}`;
+  }
+  
+  return `${wins}-${losses}`;
+}
+
+/**
+ * Get today's date in YYYY-MM-DD format
+ */
+export function getTodayDateString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Get date N days from today
+ */
+export function getDateString(daysFromToday: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromToday);
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Sync sports data from all providers
+ */
+export async function syncSportsData(options: {
+  leagues?: boolean;
+  teams?: boolean;
+  games?: boolean;
+  odds?: boolean;
+  sport?: SportType;
+}): Promise<{ success: boolean; message: string }> {
+  const params = new URLSearchParams();
+  
+  if (options.leagues) params.append('leagues', 'true');
+  if (options.teams) params.append('teams', 'true');
+  if (options.games) params.append('games', 'true');
+  if (options.odds) params.append('odds', 'true');
+  if (options.sport) params.append('sport', options.sport);
+  
+  return fetchApi<{ success: boolean; message: string }>('/sports/sync/', {
+    method: 'POST',
+    body: JSON.stringify(options),
   });
 }

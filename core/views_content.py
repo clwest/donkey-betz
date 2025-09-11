@@ -13,6 +13,9 @@ import json
 import uuid
 import logging
 
+# Import content models for database persistence
+from content.models import ContentGeneration, ContentStatus
+
 # Import image generation service
 try:
     from content.image_generation import image_generation_service
@@ -61,6 +64,23 @@ def create_content(request):
     }
     
     if content_type == 'image':
+        # Create ContentGeneration record for database persistence
+        generation_record = ContentGeneration.objects.create(
+            user=user,
+            prompt=prompt,
+            generation_config={
+                'content_type': content_type,
+                'style': style,
+                'size': size,
+                'negative_prompt': data.get('negative_prompt', ''),
+                'batch_size': data.get('batch_size', 1),
+                'quality': data.get('quality', 'standard'),
+                'cfg_scale': data.get('cfg_scale', 7.0),
+                'steps': data.get('steps', 30),
+            },
+            status=ContentStatus.PROCESSING
+        )
+        
         # Use real AI image generation if available
         if HAS_IMAGE_GENERATION:
             try:
@@ -84,11 +104,25 @@ def create_content(request):
                 )
                 
                 if result.success and result.images:
+                    # Save successful generation to database
+                    generation_record.generated_content = json.dumps({
+                        'images': result.images,
+                        'provider': result.provider_used,
+                        'model': result.model_used
+                    })
+                    generation_record.status = ContentStatus.PROCESSED
+                    generation_record.generation_time_ms = result.generation_time_ms
+                    generation_record.token_usage = {
+                        'images_generated': len(result.images),
+                        'provider': result.provider_used
+                    }
+                    generation_record.save()
+                    
                     # Format images for frontend
                     images = []
                     for i, image_url in enumerate(result.images):
                         images.append({
-                            'id': f"{content_id}_{i}",
+                            'id': f"{generation_record.id}_{i}",
                             'url': image_url,
                             'image_url': image_url,
                             'result': image_url,
@@ -98,32 +132,38 @@ def create_content(request):
                             'prompt': prompt,
                             'style': style,
                             'size': size,
-                            'created_at': datetime.now().isoformat()
+                            'created_at': generation_record.created_at.isoformat(),
+                            'generation_id': str(generation_record.id)
                         })
                     
                     response_data['content']['images'] = images
                     response_data['content']['result'] = images[0]['url'] if images else None
                     response_data['content']['results'] = images
+                    response_data['content']['generation_id'] = str(generation_record.id)
                     response_data['content']['metadata'] = {
                         'style_applied': style,
                         'size': size,
                         'variations': len(images),
                         'provider': result.provider_used,
                         'model': result.model_used,
-                        'generation_time_ms': result.generation_time_ms
+                        'generation_time_ms': result.generation_time_ms,
+                        'database_id': str(generation_record.id)
                     }
                 else:
                     # If AI generation fails, log error and use fallback
                     logger.error(f"AI image generation failed: {result.error_message}")
+                    generation_record.status = ContentStatus.FAILED
+                    generation_record.error_message = result.error_message
+                    
                     # Fall back to placeholder images
                     base_url = 'https://picsum.photos'
                     width, height = size.split('x')
                     images = []
                     for i in range(min(num_images, 4)):
-                        seed = content_id + i
+                        seed = int(str(generation_record.id)[-6:]) + i  # Use generation ID for seed
                         image_url = f"{base_url}/{width}/{height}?random={seed}"
                         images.append({
-                            'id': f"{content_id}_{i}",
+                            'id': f"{generation_record.id}_{i}",
                             'url': image_url,
                             'image_url': image_url,
                             'result': image_url,
@@ -133,30 +173,44 @@ def create_content(request):
                             'prompt': prompt,
                             'style': style,
                             'size': size,
-                            'created_at': datetime.now().isoformat()
+                            'created_at': generation_record.created_at.isoformat(),
+                            'generation_id': str(generation_record.id)
                         })
+                    
+                    # Save fallback images to database
+                    generation_record.generated_content = json.dumps({
+                        'images': [img['url'] for img in images],
+                        'provider': 'fallback',
+                        'model': 'placeholder'
+                    })
+                    generation_record.save()
                     
                     response_data['content']['images'] = images
                     response_data['content']['result'] = images[0]['url'] if images else None
                     response_data['content']['results'] = images
+                    response_data['content']['generation_id'] = str(generation_record.id)
                     response_data['content']['metadata'] = {
                         'style_applied': style,
                         'size': size,
                         'variations': len(images),
-                        'note': 'Using placeholder images - AI generation unavailable'
+                        'note': 'Using placeholder images - AI generation unavailable',
+                        'database_id': str(generation_record.id)
                     }
                     
             except Exception as e:
                 logger.error(f"Error in AI image generation: {str(e)}")
+                generation_record.status = ContentStatus.FAILED
+                generation_record.error_message = str(e)
+                
                 # Fall back to placeholder images
                 base_url = 'https://picsum.photos'
                 width, height = size.split('x')
                 images = []
                 for i in range(4):
-                    seed = content_id + i
+                    seed = int(str(generation_record.id)[-6:]) + i
                     image_url = f"{base_url}/{width}/{height}?random={seed}"
                     images.append({
-                        'id': f"{content_id}_{i}",
+                        'id': f"{generation_record.id}_{i}",
                         'url': image_url,
                         'image_url': image_url,
                         'result': image_url,
@@ -166,28 +220,43 @@ def create_content(request):
                         'prompt': prompt,
                         'style': style,
                         'size': size,
-                        'created_at': datetime.now().isoformat()
+                        'created_at': generation_record.created_at.isoformat(),
+                        'generation_id': str(generation_record.id)
                     })
+                
+                # Save exception fallback to database
+                generation_record.generated_content = json.dumps({
+                    'images': [img['url'] for img in images],
+                    'provider': 'exception_fallback',
+                    'model': 'placeholder',
+                    'error': str(e)
+                })
+                generation_record.save()
                 
                 response_data['content']['images'] = images
                 response_data['content']['result'] = images[0]['url'] if images else None
                 response_data['content']['results'] = images
+                response_data['content']['generation_id'] = str(generation_record.id)
                 response_data['content']['metadata'] = {
                     'style_applied': style,
                     'size': size,
                     'variations': len(images),
-                    'error': str(e)
+                    'error': str(e),
+                    'database_id': str(generation_record.id)
                 }
         else:
             # No AI service available, use placeholder images
+            generation_record.status = ContentStatus.PROCESSED
+            generation_record.error_message = "AI image generation service not configured"
+            
             base_url = 'https://picsum.photos'
             width, height = size.split('x')
             images = []
             for i in range(4):
-                seed = content_id + i
+                seed = int(str(generation_record.id)[-6:]) + i
                 image_url = f"{base_url}/{width}/{height}?random={seed}"
                 images.append({
-                    'id': f"{content_id}_{i}",
+                    'id': f"{generation_record.id}_{i}",
                     'url': image_url,
                     'image_url': image_url,
                     'result': image_url,
@@ -197,17 +266,28 @@ def create_content(request):
                     'prompt': prompt,
                     'style': style,
                     'size': size,
-                    'created_at': datetime.now().isoformat()
+                    'created_at': generation_record.created_at.isoformat(),
+                    'generation_id': str(generation_record.id)
                 })
+            
+            # Save no-service fallback to database
+            generation_record.generated_content = json.dumps({
+                'images': [img['url'] for img in images],
+                'provider': 'no_service',
+                'model': 'placeholder'
+            })
+            generation_record.save()
             
             response_data['content']['images'] = images
             response_data['content']['result'] = images[0]['url'] if images else None
             response_data['content']['results'] = images
+            response_data['content']['generation_id'] = str(generation_record.id)
             response_data['content']['metadata'] = {
                 'style_applied': style,
                 'size': size,
                 'variations': len(images),
-                'note': 'AI image generation service not configured'
+                'note': 'AI image generation service not configured',
+                'database_id': str(generation_record.id)
             }
     else:
         # For text content
@@ -225,39 +305,91 @@ def create_content(request):
 @permission_classes([IsAuthenticated])
 def list_content(request):
     """
-    List user's content library - migrated from ai-content-studio
+    List user's content library - now returns real data from ContentGeneration model
     """
     user = request.user
     content_type = request.GET.get('type', 'all')
     page = int(request.GET.get('page', 1))
     page_size = int(request.GET.get('page_size', 20))
     
-    # Mock content data
-    mock_content = [
-        {
-            'id': i,
-            'title': f'Content Item {i}',
-            'type': 'article',
-            'status': 'published',
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat(),
-            'word_count': 450 + (i * 50),
-            'is_starred': i % 3 == 0
-        }
-        for i in range(1, 51)
-    ]
+    # Query real ContentGeneration records
+    content_query = ContentGeneration.objects.filter(user=user).order_by('-created_at')
+    
+    # Filter by content type if specified
+    if content_type != 'all':
+        if content_type == 'image':
+            # Filter for image generations
+            content_query = content_query.filter(
+                generation_config__content_type='image'
+            )
+        elif content_type == 'text':
+            # Filter for text generations
+            content_query = content_query.exclude(
+                generation_config__content_type='image'
+            )
+    
+    # Get total count
+    total_count = content_query.count()
     
     # Apply pagination
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
-    paginated_content = mock_content[start_idx:end_idx]
+    paginated_content = content_query[start_idx:end_idx]
+    
+    # Format content for frontend
+    results = []
+    for content in paginated_content:
+        # Parse generated content
+        generated_data = {}
+        if content.generated_content:
+            try:
+                generated_data = json.loads(content.generated_content)
+            except json.JSONDecodeError:
+                generated_data = {}
+        
+        # Determine content type from generation config
+        gen_config = content.generation_config or {}
+        item_type = gen_config.get('content_type', 'text')
+        
+        # Create base item
+        item = {
+            'id': str(content.id),
+            'title': f"{content.prompt[:50]}..." if len(content.prompt) > 50 else content.prompt,
+            'type': item_type,
+            'status': content.status,
+            'created_at': content.created_at.isoformat(),
+            'updated_at': content.updated_at.isoformat(),
+            'is_starred': False,  # TODO: Implement starring system
+            'prompt': content.prompt,
+            'generation_id': str(content.id)
+        }
+        
+        # Add type-specific data
+        if item_type == 'image':
+            images = generated_data.get('images', [])
+            item.update({
+                'image_count': len(images),
+                'image_urls': images,
+                'result': images[0] if images else None,
+                'style': gen_config.get('style', 'default'),
+                'size': gen_config.get('size', '1024x1024'),
+                'provider': generated_data.get('provider', 'unknown')
+            })
+        else:
+            # For text content
+            item.update({
+                'word_count': len(content.generated_content.split()) if content.generated_content else 0,
+                'generated_content': content.generated_content
+            })
+        
+        results.append(item)
     
     return Response({
         'success': True,
-        'count': len(mock_content),
-        'next': f'/api/content/list/?page={page + 1}' if end_idx < len(mock_content) else None,
-        'previous': f'/api/content/list/?page={page - 1}' if page > 1 else None,
-        'results': paginated_content
+        'count': total_count,
+        'next': f'/api/content/list/?page={page + 1}&type={content_type}' if end_idx < total_count else None,
+        'previous': f'/api/content/list/?page={page - 1}&type={content_type}' if page > 1 else None,
+        'results': results
     })
 
 @api_view(['POST'])
@@ -274,35 +406,74 @@ def generate_blog_post(request):
     length = data.get('length', 'medium')
     include_outline = data.get('include_outline', True)
     
-    blog_id = int(datetime.now().timestamp())
+    # Generate blog content
+    title = f'Comprehensive Guide to {topic}'
+    outline = [
+        'Introduction',
+        f'Understanding {topic}',
+        'Best Practices and Strategies',
+        'Common Challenges and Solutions',
+        'Future Outlook',
+        'Conclusion'
+    ] if include_outline else None
     
-    return Response({
-        'success': True,
-        'blog_post': {
-            'id': blog_id,
-            'title': f'Comprehensive Guide to {topic}',
-            'topic': topic,
-            'tone': tone,
-            'length': length,
-            'status': 'draft',
-            'created_at': datetime.now().isoformat(),
-            'outline': [
-                'Introduction',
-                f'Understanding {topic}',
-                'Best Practices and Strategies',
-                'Common Challenges and Solutions',
-                'Future Outlook',
-                'Conclusion'
-            ] if include_outline else None,
-            'content': f'Generated comprehensive blog post about {topic} in {tone} tone...',
-            'metadata': {
-                'word_count': 1200 if length == 'long' else 800,
-                'reading_time': '6-8 minutes',
-                'seo_score': 85,
-                'readability': 'Good'
+    content_text = f'Generated comprehensive blog post about {topic} in {tone} tone...'
+    word_count = 1200 if length == 'long' else 800
+    
+    # Create ContentGeneration record in database
+    try:
+        content_generation = ContentGeneration.objects.create(
+            user=user,
+            prompt=f"Write a {length} {tone} blog post about {topic}",
+            generated_content=content_text,
+            status='completed',
+            generation_config={
+                'content_type': 'blog',
+                'tone': tone,
+                'length': length,
+                'include_outline': include_outline,
+                'topic': topic
+            },
+            metadata={
+                'title': title,
+                'content': content_text,
+                'outline': outline,
+                'blog_metadata': {
+                    'word_count': word_count,
+                    'reading_time': '6-8 minutes',
+                    'seo_score': 85,
+                    'readability': 'Good'
+                }
             }
-        }
-    })
+        )
+        
+        return Response({
+            'success': True,
+            'blog_post': {
+                'id': str(content_generation.id),
+                'title': title,
+                'topic': topic,
+                'tone': tone,
+                'length': length,
+                'status': 'completed',
+                'created_at': content_generation.created_at.isoformat(),
+                'outline': outline,
+                'content': content_text,
+                'metadata': {
+                    'word_count': word_count,
+                    'reading_time': '6-8 minutes',
+                    'seo_score': 85,
+                    'readability': 'Good'
+                }
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error creating blog content: {e}")
+        return Response({
+            'success': False,
+            'error': f'Failed to generate blog content: {str(e)}'
+        }, status=500)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -327,23 +498,56 @@ def generate_social_media_post(request):
     
     char_limit = platform_limits.get(platform, 280)
     
-    return Response({
-        'success': True,
-        'social_post': {
-            'id': int(datetime.now().timestamp()),
-            'platform': platform,
-            'topic': topic,
-            'tone': tone,
-            'character_limit': char_limit,
-            'content': f'Engaging {platform} post about {topic}... #trending #content',
-            'hashtags': [
-                '#trending', '#content', '#marketing', '#growth'
-            ] if include_hashtags else [],
-            'estimated_reach': 1500,
-            'engagement_score': 78,
-            'created_at': datetime.now().isoformat()
-        }
-    })
+    # Generate the social media content
+    content_text = f'Engaging {platform} post about {topic}... #trending #content'
+    hashtags = ['#trending', '#content', '#marketing', '#growth'] if include_hashtags else []
+    
+    # Create ContentGeneration record in database
+    try:
+        content_generation = ContentGeneration.objects.create(
+            user=user,
+            prompt=f"Create a {tone} {platform} post about {topic}",
+            generated_content=content_text,
+            status='completed',
+            generation_config={
+                'content_type': 'social',
+                'platform': platform,
+                'tone': tone,
+                'character_limit': char_limit,
+                'include_hashtags': include_hashtags
+            },
+            metadata={
+                'content': content_text,
+                'hashtags': hashtags,
+                'platform': platform,
+                'estimated_reach': 1500,
+                'engagement_score': 78,
+                'character_count': len(content_text)
+            }
+        )
+        
+        return Response({
+            'success': True,
+            'social_post': {
+                'id': str(content_generation.id),
+                'platform': platform,
+                'topic': topic,
+                'tone': tone,
+                'character_limit': char_limit,
+                'content': content_text,
+                'hashtags': hashtags,
+                'estimated_reach': 1500,
+                'engagement_score': 78,
+                'created_at': content_generation.created_at.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error creating social content: {e}")
+        return Response({
+            'success': False,
+            'error': f'Failed to generate social content: {str(e)}'
+        }, status=500)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

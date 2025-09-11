@@ -62,6 +62,7 @@ const navigation = [
   { name: 'eBooks', href: '/ebooks', icon: BookOpenIcon, iconActive: BookOpenIconSolid },
   { name: 'Voice', href: '/voice', icon: MicrophoneIcon, iconActive: MicrophoneIconSolid },
   { name: 'Research', href: '/research', icon: AcademicCapIcon, iconActive: AcademicCapIconSolid },
+  { name: 'Lore & Mythology', href: '/mythology', icon: BookOpenIcon, iconActive: BookOpenIconSolid, badge: 'NEW' },
   { name: 'My Knowledge', href: '/knowledge', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid, badge: 'NEW' },
   { name: 'Agent Registry', href: '/agent-registry', icon: CircleStackIcon, iconActive: CircleStackIconSolid, badge: 'NEW' },
   { name: 'Prompt Diagnostics', href: '/prompt-diagnostics', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },

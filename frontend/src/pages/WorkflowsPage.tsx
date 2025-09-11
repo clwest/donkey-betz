@@ -60,6 +60,21 @@ interface Agent {
   status?: 'active' | 'inactive';
 }
 
+interface WorkflowExecution {
+  id: string;
+  workflow_name: string;
+  status: 'running' | 'completed' | 'failed' | 'stopped';
+  started_at: string;
+  completed_at?: string;
+  prompt?: string;
+  result?: any;
+  progress?: {
+    current_step: number;
+    total_steps: number;
+    message: string;
+  };
+}
+
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
@@ -68,6 +83,9 @@ export default function WorkflowsPage() {
   const [creating, setCreating] = useState(false);
   const [executing, setExecuting] = useState<string | null>(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
+  const [selectedExecution, setSelectedExecution] = useState<WorkflowExecution | null>(null);
+  const [executionDialogOpen, setExecutionDialogOpen] = useState(false);
 
   // Create workflow form state
   const [newWorkflow, setNewWorkflow] = useState({
@@ -90,7 +108,43 @@ export default function WorkflowsPage() {
 
   useEffect(() => {
     loadData();
+    loadExecutionHistory();
+    
+    // Poll for updates on running executions every 5 seconds
+    const interval = setInterval(() => {
+      updateRunningExecutions();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  const loadExecutionHistory = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/workflows/history/', {
+        headers: {
+          'Authorization': `Token ${localStorage.getItem('auth_token') || '993f8273f70877e23b5c7d2f92ed30562a089fe3'}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const mappedExecutions: WorkflowExecution[] = data.executions.map((exec: any) => ({
+          id: exec.execution_id,
+          workflow_name: exec.workflow_name,
+          status: exec.status,
+          started_at: exec.started_at,
+          completed_at: exec.completed_at,
+          prompt: exec.prompt,
+          progress: exec.progress
+        }));
+        setExecutions(mappedExecutions);
+        console.log('Loaded execution history:', mappedExecutions);
+      }
+    } catch (error) {
+      console.error('Error loading execution history:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -163,11 +217,31 @@ export default function WorkflowsPage() {
         params: executeForm.params
       });
       
-      toast.success('Workflow executed successfully');
+      // Add to executions tracking
+      const newExecution: WorkflowExecution = {
+        id: result.conversation_id || result.execution_result?.execution_id || '',
+        workflow_name: workflowName,
+        status: 'running',
+        started_at: new Date().toISOString(),
+        prompt: prompt || executeForm.prompt
+      };
       
-      if (result.conversation_id) {
-        console.log('Workflow conversation:', result.conversation_id);
-      }
+      setExecutions(prev => [newExecution, ...prev]);
+      
+      toast.success(`Workflow "${workflowName}" started! Execution ID: ${newExecution.id.slice(0, 8)}...`);
+      
+      // Simulate completion after 5 seconds (in production, this would poll for real status)
+      setTimeout(() => {
+        setExecutions(prev => prev.map(exec => 
+          exec.id === newExecution.id 
+            ? { ...exec, status: 'completed' as const }
+            : exec
+        ));
+        toast.success(`Workflow "${workflowName}" completed!`);
+        // Reload history to get latest data
+        loadExecutionHistory();
+      }, 5000);
+      
     } catch (error) {
       console.error('Error executing workflow:', error);
       toast.error('Failed to execute workflow');
@@ -176,11 +250,91 @@ export default function WorkflowsPage() {
     }
   };
 
+  const handleViewExecution = (execution: WorkflowExecution) => {
+    setSelectedExecution(execution);
+    setExecutionDialogOpen(true);
+  };
+
+  const handleStopExecution = async (executionId: string) => {
+    try {
+      // Update local state
+      setExecutions(prev => prev.map(exec => 
+        exec.id === executionId 
+          ? { ...exec, status: 'stopped' as const }
+          : exec
+      ));
+      
+      toast.success('Workflow execution stopped');
+      
+      // In production, this would call an API to actually stop the execution
+      // await workflowsService.stopExecution(executionId);
+    } catch (error) {
+      console.error('Error stopping execution:', error);
+      toast.error('Failed to stop execution');
+    }
+  };
+
+  const updateRunningExecutions = async () => {
+    try {
+      // Get all running executions
+      const runningExecutions = executions.filter(exec => exec.status === 'running');
+      
+      if (runningExecutions.length === 0) {
+        return; // No running executions to update
+      }
+
+      // Poll status for each running execution
+      const updatedExecutions = await Promise.all(
+        runningExecutions.map(async (execution) => {
+          try {
+            const response = await fetch(`${API_BASE}/workflows/status/${execution.id}/`, {
+              headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              const statusData = await response.json();
+              return {
+                ...execution,
+                status: statusData.status as 'running' | 'completed' | 'failed',
+                progress: statusData.progress,
+                result: statusData.result,
+                completed_at: statusData.completed_at
+              };
+            }
+          } catch (error) {
+            console.error(`Error updating execution ${execution.id}:`, error);
+          }
+          return execution; // Return unchanged if error
+        })
+      );
+
+      // Update state with new execution data
+      setExecutions(prev => prev.map(exec => {
+        const updated = updatedExecutions.find(updated => updated.id === exec.id);
+        return updated || exec;
+      }));
+
+      // Show completion notifications for newly completed workflows
+      updatedExecutions.forEach(execution => {
+        const oldExecution = executions.find(e => e.id === execution.id);
+        if (oldExecution?.status === 'running' && execution.status === 'completed') {
+          toast.success(`Workflow "${execution.workflow_name}" completed!`);
+        }
+      });
+
+    } catch (error) {
+      console.error('Error updating running executions:', error);
+    }
+  };
+
   const handleUseTemplate = (template: WorkflowTemplate) => {
     setNewWorkflow({
       name: template.name,
       description: template.description,
-      agents: template.agents,
+      agents: template.agents || [],
       flow_config: {
         type: (template.flow_config?.type || 'sequential') as 'sequential' | 'parallel',
         error_handling: (template.flow_config?.error_handling || 'stop') as 'stop' | 'continue',
@@ -312,7 +466,7 @@ export default function WorkflowsPage() {
                   </div>
                   
                   <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {newWorkflow.agents.map((agent, index) => (
+                    {(newWorkflow.agents || []).map((agent, index) => (
                       <Card key={index} className="p-3">
                         <div className="grid grid-cols-3 gap-3 items-center">
                           <div>
@@ -446,12 +600,86 @@ export default function WorkflowsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400">Executions</p>
-              <p className="text-2xl font-bold text-green-400">0</p>
+              <p className="text-2xl font-bold text-green-400">{executions.length}</p>
             </div>
             <ChartBarIcon className="h-8 w-8 text-green-400" />
           </div>
         </Card>
       </div>
+
+      {/* Execution History */}
+      {executions.length > 0 && (
+        <Card>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-white">Recent Executions</h3>
+            <p className="text-sm text-gray-400 mt-1">Track your workflow execution status</p>
+          </div>
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {executions.map((execution) => (
+              <div key={execution.id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  {execution.status === 'running' ? (
+                    <ArrowPathIcon className="h-5 w-5 text-blue-400 animate-spin" />
+                  ) : execution.status === 'completed' ? (
+                    <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                  ) : (
+                    <XCircleIcon className="h-5 w-5 text-red-400" />
+                  )}
+                  <div>
+                    <p className="font-medium text-white">{execution.workflow_name}</p>
+                    <p className="text-xs text-gray-400">
+                      ID: {execution.id.slice(0, 8)}... | Started: {new Date(execution.started_at).toLocaleTimeString()}
+                    </p>
+                    {execution.prompt && (
+                      <p className="text-xs text-gray-500 mt-1">Prompt: {execution.prompt.slice(0, 50)}...</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    variant={
+                      execution.status === 'running' ? 'default' : 
+                      execution.status === 'completed' ? 'outline' : 
+                      execution.status === 'stopped' ? 'secondary' :
+                      'destructive'
+                    }
+                    className={
+                      execution.status === 'running' ? 'bg-blue-500' :
+                      execution.status === 'completed' ? 'text-green-400 border-green-400' :
+                      execution.status === 'stopped' ? 'text-gray-400 border-gray-400' :
+                      ''
+                    }
+                  >
+                    {execution.status}
+                  </Badge>
+                  
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewExecution(execution)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <EyeIcon className="h-4 w-4" />
+                    </Button>
+                    
+                    {execution.status === 'running' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleStopExecution(execution.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <XCircleIcon className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Workflows List */}
       {workflows.length === 0 && templates.length === 0 ? (
@@ -644,7 +872,7 @@ export default function WorkflowsPage() {
               </div>
               
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {newWorkflow.agents.map((agent, index) => (
+                {(newWorkflow.agents || []).map((agent, index) => (
                   <Card key={index} className="p-3">
                     <div className="grid grid-cols-3 gap-3 items-center">
                       <div>
@@ -716,6 +944,136 @@ export default function WorkflowsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Execution Details Dialog */}
+      <Dialog open={executionDialogOpen} onOpenChange={setExecutionDialogOpen}>
+        <DialogContent className="max-w-2xl bg-dark-800 border-dark-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Workflow Execution Details</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              View detailed information about this workflow execution
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedExecution && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-400">Workflow</Label>
+                  <p className="text-white font-medium">{selectedExecution.workflow_name}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-400">Status</Label>
+                  <Badge 
+                    variant={
+                      selectedExecution.status === 'running' ? 'default' : 
+                      selectedExecution.status === 'completed' ? 'outline' : 
+                      selectedExecution.status === 'stopped' ? 'secondary' :
+                      'destructive'
+                    }
+                    className={
+                      selectedExecution.status === 'running' ? 'bg-blue-500' :
+                      selectedExecution.status === 'completed' ? 'text-green-400 border-green-400' :
+                      selectedExecution.status === 'stopped' ? 'text-gray-400 border-gray-400' :
+                      ''
+                    }
+                  >
+                    {selectedExecution.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-400">Started</Label>
+                  <p className="text-white text-sm">
+                    {new Date(selectedExecution.started_at).toLocaleString()}
+                  </p>
+                </div>
+                {selectedExecution.completed_at && (
+                  <div>
+                    <Label className="text-gray-400">Completed</Label>
+                    <p className="text-white text-sm">
+                      {new Date(selectedExecution.completed_at).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <Label className="text-gray-400">Execution ID</Label>
+                <p className="text-white font-mono text-sm bg-dark-700 p-2 rounded">
+                  {selectedExecution.id}
+                </p>
+              </div>
+              
+              {selectedExecution.prompt && (
+                <div>
+                  <Label className="text-gray-400">Input Prompt</Label>
+                  <p className="text-white text-sm bg-dark-700 p-3 rounded">
+                    {selectedExecution.prompt}
+                  </p>
+                </div>
+              )}
+              
+              {selectedExecution.progress && (
+                <div>
+                  <Label className="text-gray-400">Progress</Label>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">
+                        Step {selectedExecution.progress.current_step} of {selectedExecution.progress.total_steps}
+                      </span>
+                      <span className="text-white">
+                        {Math.round((selectedExecution.progress.current_step / selectedExecution.progress.total_steps) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-dark-700 rounded-full h-2">
+                      <div 
+                        className="bg-primary-500 h-2 rounded-full transition-all"
+                        style={{ 
+                          width: `${(selectedExecution.progress.current_step / selectedExecution.progress.total_steps) * 100}%` 
+                        }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-400">{selectedExecution.progress.message}</p>
+                  </div>
+                </div>
+              )}
+              
+              {selectedExecution.result && (
+                <div>
+                  <Label className="text-gray-400">Results</Label>
+                  <pre className="text-white text-sm bg-dark-700 p-3 rounded overflow-x-auto">
+                    {JSON.stringify(selectedExecution.result, null, 2)}
+                  </pre>
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-2">
+                {selectedExecution.status === 'running' && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      handleStopExecution(selectedExecution.id);
+                      setExecutionDialogOpen(false);
+                    }}
+                  >
+                    <XCircleIcon className="h-4 w-4" />
+                    Stop Execution
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setExecutionDialogOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -100,7 +100,7 @@ export const ConnectivityMini: React.FC = () => {
         let resolved = false;
 
         const wsClient = connectWS({
-          base: import.meta.env.VITE_WS_URL || 'ws://localhost:8001',
+          base: import.meta.env.VITE_WS_URL || 'ws://localhost:8000',
           path: '/ws/assistant/',
           onOpen: () => {
             if (!resolved) {

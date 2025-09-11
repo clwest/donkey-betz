@@ -1,44 +1,27 @@
-import type { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import clsx from 'clsx';
 
 interface BadgeProps {
   children: ReactNode;
-  variant?: 'success' | 'error' | 'warning' | 'info' | 'secondary' | 'default' | 'outline' | 'destructive';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
   className?: string;
 }
 
-export function Badge({ 
-  children, 
-  variant = 'default', 
-  size = 'md', 
-  className 
-}: BadgeProps) {
-  const baseStyles = 'inline-flex items-center font-medium rounded-full transition-all duration-200';
-  
+export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variants = {
-    success: 'bg-green-500/20 text-green-400 border border-green-500/50',
-    error: 'bg-red-500/20 text-red-400 border border-red-500/50',
-    warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50',
-    info: 'bg-blue-500/20 text-blue-400 border border-blue-500/50',
-    secondary: 'bg-gray-700 text-gray-300 border border-gray-600',
-    default: 'bg-gray-500/20 text-gray-400 border border-gray-500/50',
-    outline: 'text-gray-300 border border-gray-600 hover:bg-gray-600/10',
-    destructive: 'bg-red-500/20 text-red-400 border border-red-500/50',
+    default: 'bg-primary-500/20 text-primary-400 border border-primary-500/30',
+    secondary: 'bg-dark-700 text-gray-300 border border-dark-600',
+    destructive: 'bg-red-500/20 text-red-400 border border-red-500/30',
+    outline: 'bg-transparent text-gray-400 border border-gray-600',
+    success: 'bg-green-500/20 text-green-400 border border-green-500/30',
+    warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
   };
-  
-  const sizes = {
-    sm: 'px-2 py-0.5 text-xs',
-    md: 'px-2.5 py-1 text-sm',
-    lg: 'px-3 py-1.5 text-base',
-  };
-  
+
   return (
     <span
       className={clsx(
-        baseStyles,
+        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
         variants[variant],
-        sizes[size],
         className
       )}
     >

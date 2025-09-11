@@ -193,19 +193,50 @@ class RAGAssistant:
         """
         Build context from available knowledge for the query
         """
-        # Always use keyword search since we don't have embeddings yet
-        sources = self.search_documents(query)
+        # Use proper vector similarity search from rag_integration module
+        from core.rag_integration import search_embeddings as vector_search
         
-        # Try semantic search if keyword search returns nothing
-        if not sources:
-            sources = self.search_embeddings(query)
+        # First try vector similarity search
+        logger.info(f"Searching knowledge base with vector similarity for: {query[:100]}")
+        sources = []
+        
+        try:
+            # Search with lower threshold to get more results including conversations AND code
+            vector_results = vector_search(
+                query=query,
+                limit=10,  # Get more results
+                similarity_threshold=0.2,  # Lower threshold to capture more context
+                content_types=None  # Search ALL content types including source_code
+            )
+            
+            if vector_results:
+                logger.info(f"Vector search found {len(vector_results)} results")
+                for result in vector_results:
+                    sources.append({
+                        'type': result['content_type'],
+                        'title': f"{result['content_type'].replace('_', ' ').title()} (similarity: {result['similarity_score']:.2f})",
+                        'content': result['content'],
+                        'relevance': result['similarity_score'],
+                        'metadata': result.get('metadata', {})
+                    })
+            else:
+                logger.info("Vector search returned no results, falling back to keyword search")
+                # Fall back to keyword search if vector search fails
+                sources = self.search_documents(query)
+                if not sources:
+                    sources = self.search_embeddings(query)
+        except Exception as e:
+            logger.error(f"Vector search failed: {e}, falling back to keyword search")
+            sources = self.search_documents(query)
+            if not sources:
+                sources = self.search_embeddings(query)
         
         # Build context string
         context_parts = []
         
         if sources:
             context_parts.append("Based on the knowledge base, here's relevant information:\n")
-            for source in sources:
+            for source in sources[:5]:  # Limit to top 5 sources for context
                 context_parts.append(f"\n[{source['type'].upper()}] {source['title']}:")
                 context_parts.append(source['content'])
         

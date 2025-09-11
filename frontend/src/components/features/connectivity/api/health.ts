@@ -19,7 +19,7 @@ export interface CORSProbeResult extends HealthProbeResult {
  */
 export async function probeAPIHealth(): Promise<HealthProbeResult> {
   const startTime = Date.now();
-  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1').replace(/\/v1$/, ''); // Root API for health/status endpoints
+  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/v1$/, ''); // Root API for health/status endpoints
   
   try {
     Logger.api('PROBE', 'API Health Check', { url: `${apiUrl}/health/` });
@@ -76,7 +76,7 @@ export async function probeAPIHealth(): Promise<HealthProbeResult> {
  */
 export async function probeCORSPreflight(): Promise<CORSProbeResult> {
   const startTime = Date.now();
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'; // Use versioned API for app-specific endpoints
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'; // Use versioned API for app-specific endpoints
   
   try {
     Logger.api('PROBE', 'CORS Preflight Check', { url: `${apiUrl}/content/` });

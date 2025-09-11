@@ -1344,3 +1344,161 @@ class ContentAnalytics(UnifiedBaseModel):
             template=template,
             knowledge_base=knowledge_base
         )
+
+
+class Feedback(UnifiedBaseModel):
+    """
+    User feedback on generated content
+    """
+    
+    # Content identification
+    content_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('text', 'Text Content'),
+            ('image', 'Image Content'),
+            ('video', 'Video Content'),
+            ('blog', 'Blog Post'),
+            ('social', 'Social Media Post'),
+            ('ebook', 'eBook Content'),
+            ('voice', 'Voice Content'),
+            ('research', 'Research Content'),
+        ],
+        help_text="Type of content being rated"
+    )
+    
+    content_id = models.PositiveIntegerField(
+        help_text="ID of the content item being rated"
+    )
+    
+    # User and rating
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='feedback_given'
+    )
+    
+    overall_rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Overall rating from 1-5 stars"
+    )
+    
+    # Detailed ratings (optional)
+    quality_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Quality rating from 1-5 stars"
+    )
+    
+    accuracy_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Accuracy rating from 1-5 stars"
+    )
+    
+    usefulness_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Usefulness rating from 1-5 stars"
+    )
+    
+    # Feedback details
+    feedback_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('quality', 'Quality Issue'),
+            ('accuracy', 'Accuracy Issue'),
+            ('usefulness', 'Usefulness Issue'),
+            ('general', 'General Feedback'),
+            ('suggestion', 'Improvement Suggestion'),
+        ],
+        default='general'
+    )
+    
+    comments = models.TextField(
+        blank=True,
+        help_text="Written feedback comments"
+    )
+    
+    suggestions = models.TextField(
+        blank=True,
+        help_text="Suggestions for improvement"
+    )
+    
+    # Quick answers
+    would_recommend = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Would recommend this content to others"
+    )
+    
+    met_expectations = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Content met user expectations"
+    )
+    
+    saved_time = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Content saved user time"
+    )
+    
+    # Metadata
+    tags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Tags associated with this feedback"
+    )
+    
+    generation_params = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Parameters used to generate the rated content"
+    )
+    
+    # Admin response
+    admin_response = models.TextField(
+        blank=True,
+        help_text="Admin response to user feedback"
+    )
+    
+    admin_response_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When admin responded to feedback"
+    )
+    
+    class Meta:
+        verbose_name = "User Feedback"
+        verbose_name_plural = "User Feedback"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['content_type', 'content_id']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['overall_rating']),
+            models.Index(fields=['feedback_type']),
+        ]
+        # Ensure one feedback per user per content item
+        unique_together = ['user', 'content_type', 'content_id']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.content_type} {self.content_id} - {self.overall_rating}★"
+    
+    @property
+    def is_positive(self):
+        """Check if feedback is positive (4-5 stars)"""
+        return self.overall_rating >= 4
+    
+    @property
+    def is_negative(self):
+        """Check if feedback is negative (1-2 stars)"""
+        return self.overall_rating <= 2
+    
+    @property
+    def is_neutral(self):
+        """Check if feedback is neutral (3 stars)"""
+        return self.overall_rating == 3

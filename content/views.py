@@ -20,6 +20,9 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
@@ -654,13 +657,63 @@ class ContentAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
                 recent_generations, many=True, context={'request': request}
             ).data
         })
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def blog_list(request):
-    """Placeholder blog list endpoint"""
-    return Response([])
+    """List blog content from ContentGeneration model"""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    user = request.user
+    
+    # Get the content_type from the URL to determine what type of content to return
+    # Check if this is being called from /content/social/list/ or /content/blog/list/
+    path = request.get_full_path()
+    if '/social/' in path:
+        content_type = 'social'
+    else:
+        content_type = 'blog'
+    
+    # Get ContentGeneration records for this content type
+    queryset = ContentGeneration.objects.filter(
+        user=user,
+        generation_config__content_type=content_type
+    ).order_by('-created_at')
+    
+    # Convert to response format
+    results = []
+    for content in queryset:
+        metadata = content.metadata or {}
+        gen_config = content.generation_config or {}
+        
+        if content_type == 'social':
+            item = {
+                'id': str(content.id),
+                'platform': gen_config.get('platform', 'unknown'),
+                'content': metadata.get('content', content.generated_content),
+                'hashtags': metadata.get('hashtags', []),
+                'tone': gen_config.get('tone', 'engaging'),
+                'character_limit': gen_config.get('character_limit', 280),
+                'estimated_reach': metadata.get('estimated_reach', 0),
+                'engagement_score': metadata.get('engagement_score', 0),
+                'created_at': content.created_at.isoformat(),
+                'status': content.status
+            }
+        else:  # blog
+            item = {
+                'id': str(content.id),
+                'title': metadata.get('title', f"Blog post about {gen_config.get('topic', 'topic')}"),
+                'content': metadata.get('content', content.generated_content),
+                'topic': gen_config.get('topic', ''),
+                'tone': gen_config.get('tone', 'professional'),
+                'length': gen_config.get('length', 'medium'),
+                'outline': metadata.get('outline', []),
+                'metadata': metadata.get('blog_metadata', {}),
+                'created_at': content.created_at.isoformat(),
+                'status': content.status
+            }
+        
+        results.append(item)
+    
+    return Response(results)
 

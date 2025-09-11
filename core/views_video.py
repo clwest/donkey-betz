@@ -14,7 +14,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from content.models import ContentGeneration
 from content.video_provider import runway_provider
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])  # Set to IsAuthenticated in production
 def text_to_video(request):
     """
     Generate video from text prompt using RunwayML.
@@ -474,3 +474,54 @@ def save_video_to_gallery(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def test_runway_connection(request):
+    """
+    Test endpoint to verify RunwayML connection without authentication.
+    GET: Check if API key is configured
+    POST: Test a simple text-to-video generation
+    """
+    if request.method == 'GET':
+        # Check if API key is configured
+        from django.conf import settings
+        has_key = bool(getattr(settings, 'RUNWAY_API_KEY', ''))
+        
+        return JsonResponse({
+            'success': True,
+            'runway_configured': has_key,
+            'api_base': runway_provider.api_base if has_key else None,
+            'message': 'RunwayML is configured and ready' if has_key else 'RunwayML API key not configured'
+        })
+    
+    elif request.method == 'POST':
+        # Test text-to-video generation
+        try:
+            data = request.data if hasattr(request, 'data') else json.loads(request.body)
+            prompt = data.get('prompt', 'A beautiful sunset over the ocean, cinematic')
+            
+            # Test with minimal parameters
+            result = runway_provider.text_to_video(
+                prompt=prompt,
+                duration=5,
+                quality='gen3a_turbo',
+                enhance_prompt=False
+            )
+            
+            return JsonResponse({
+                'success': result.success,
+                'task_id': result.task_id if result.success else None,
+                'status': result.status,
+                'error': result.error_message if not result.success else None,
+                'estimated_time': result.estimated_time,
+                'message': 'Video generation started successfully' if result.success else 'Failed to start generation'
+            })
+            
+        except Exception as e:
+            logger.error(f"Test RunwayML error: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)

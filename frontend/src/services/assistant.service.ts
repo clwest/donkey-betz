@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_CONFIG } from '../config/api.config';
 
-// Create a dedicated API client for AI Content Studio on port 8000
+// Create a dedicated API client for AI Content Studio with dynamic URL
 const aiStudioClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL + '/api',
   headers: {
     'Content-Type': 'application/json'
   }

@@ -5,11 +5,28 @@
 // Environment-specific configuration
 const isDevelopment = __DEV__;
 
+// Dynamic production URL detection (for deployment)
+const getProductionUrl = () => {
+  // In production, use the same host as the web app
+  if (typeof window !== 'undefined' && window.location) {
+    return window.location.origin;
+  }
+  // Fallback for React Native or server-side
+  return 'https://api.donkeybetz.com';
+};
+
+const getWsProtocol = () => {
+  if (!isDevelopment && typeof window !== 'undefined' && window.location) {
+    return window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  }
+  return isDevelopment ? 'ws:' : 'wss:';
+};
+
 export const DBAO_CONFIG = {
-  // Base URLs  
-  API_BASE_URL: isDevelopment ? 'http://localhost:8001/api/v1' : 'https://api.donkeybetz.com/api/v1',
-  MEDIA_BASE_URL: isDevelopment ? 'http://localhost:8001' : 'https://api.donkeybetz.com',
-  WS_BASE_URL: isDevelopment ? 'ws://localhost:8001' : 'wss://api.donkeybetz.com',
+  // Base URLs - Now dynamic for production
+  API_BASE_URL: isDevelopment ? 'http://localhost:8000/api/v1' : `${getProductionUrl()}/api/v1`,
+  MEDIA_BASE_URL: isDevelopment ? 'http://localhost:8000' : getProductionUrl(),
+  WS_BASE_URL: isDevelopment ? 'ws://localhost:8000' : `${getWsProtocol()}//${typeof window !== 'undefined' ? window.location.host : 'api.donkeybetz.com'}`,
 
   // Authentication
   DEFAULT_AUTH_TOKEN: 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502', // Updated to match working token
