@@ -13,6 +13,7 @@ import { WorkflowsPage } from './pages/workflows/WorkflowsPage';
 import { WorkflowBuilderPage } from './pages/workflows/WorkflowBuilderPage';
 import { AgentsPage } from './pages/agents/AgentsPage';
 import { BettingPage } from './pages/betting/BettingPage';
+import { GameBettingPage } from './pages/betting/GameBettingPage';
 import { StudioPage } from './pages/studio/StudioPage';
 import { GalleryPage } from './pages/gallery/GalleryPage';
 import { CampaignsPage } from './pages/campaigns/CampaignsPage';
@@ -76,6 +77,7 @@ import { AuthGuard } from './components/auth/AuthGuard';
 // Features
 import PersonalKnowledge from './components/features/personal-knowledge/PersonalKnowledge';
 import { ChatWidget } from './components/Assistant';
+import { LifeConvictionsPage } from './pages/life-convictions/LifeConvictionsPage';
 
 
 // Stores
@@ -149,6 +151,7 @@ function App() {
             </Route>
             <Route path="agents" element={<AgentsPage />} />
             <Route path="betting" element={<BettingPage />} />
+            <Route path="betting/game/:gameId" element={<GameBettingPage />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
             <Route path="campaigns">
@@ -172,6 +175,7 @@ function App() {
             <Route path="agent-orchestra" element={<AgentOrchestrationPage />} />
             <Route path="orchestra" element={<OrchestraPage />} />
             <Route path="mythology" element={<MythologyDashboard />} />
+            <Route path="life-convictions" element={<LifeConvictionsPage />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>
