@@ -42,7 +42,7 @@ interface TeamWorkflow {
 
 export default function MultiAgentWorkflowsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
+  const [selectedAgents, setSelectedAgents] = useState<Map<string, string>>(new Map()); // Map of agent name to agent id
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [executing, setExecuting] = useState(false);
@@ -81,29 +81,32 @@ export default function MultiAgentWorkflowsPage() {
     }
   };
 
-  const toggleAgentSelection = (agentName: string) => {
-    const newSelection = new Set(selectedAgents);
-    if (newSelection.has(agentName)) {
-      newSelection.delete(agentName);
+  const toggleAgentSelection = (agent: Agent) => {
+    const newSelection = new Map(selectedAgents);
+    if (newSelection.has(agent.name)) {
+      newSelection.delete(agent.name);
     } else {
-      newSelection.add(agentName);
+      newSelection.set(agent.name, agent.id);
     }
     setSelectedAgents(newSelection);
   };
 
   const selectAllAgents = () => {
     if (selectedAgents.size === agents.length) {
-      setSelectedAgents(new Set());
+      setSelectedAgents(new Map());
     } else {
-      setSelectedAgents(new Set(agents.map(a => a.name)));
+      const allAgentsMap = new Map();
+      agents.forEach(a => allAgentsMap.set(a.name, a.id));
+      setSelectedAgents(allAgentsMap);
     }
   };
 
   const selectAgentsBySpecialization = (specialization: string) => {
-    const specializationAgents = agents
+    const specializationAgentsMap = new Map();
+    agents
       .filter(a => a.specialization === specialization)
-      .map(a => a.name);
-    setSelectedAgents(new Set(specializationAgents));
+      .forEach(a => specializationAgentsMap.set(a.name, a.id));
+    setSelectedAgents(specializationAgentsMap);
   };
 
   const handleCreateTeam = () => {
@@ -114,7 +117,7 @@ export default function MultiAgentWorkflowsPage() {
     
     setTeamWorkflow(prev => ({
       ...prev,
-      agents: Array.from(selectedAgents)
+      agents: Array.from(selectedAgents.keys())
     }));
     setDialogOpen(true);
   };
@@ -127,12 +130,14 @@ export default function MultiAgentWorkflowsPage() {
 
     setExecuting(true);
     try {
-      // Create the multi-agent workflow
+      // Create the multi-agent workflow with agent IDs
+      const agentEntries = Array.from(selectedAgents.entries());
       const workflowData = {
         name: teamWorkflow.name,
         description: teamWorkflow.description,
-        agents: teamWorkflow.agents.map((name, index) => ({
+        agents: agentEntries.map(([name, id], index) => ({
           name,
+          agent_id: id,  // Include the agent ID
           order: index + 1,
           params: {
             coordination_strategy: teamWorkflow.coordination_strategy,
@@ -159,7 +164,7 @@ export default function MultiAgentWorkflowsPage() {
 
       toast.success(`Team workflow "${teamWorkflow.name}" created and executed successfully`);
       setDialogOpen(false);
-      setSelectedAgents(new Set());
+      setSelectedAgents(new Map());
       setTaskPrompt('');
       setTeamWorkflow({
         name: '',
@@ -284,7 +289,7 @@ export default function MultiAgentWorkflowsPage() {
             {specAgents.map((agent) => (
               <div 
                 key={agent.name}
-                onClick={() => toggleAgentSelection(agent.name)}
+                onClick={() => toggleAgentSelection(agent)}
                 className={`gaming-card p-4 cursor-pointer transition-all gaming-hover-lift ${
                   selectedAgents.has(agent.name) 
                     ? 'border-gaming-neon-purple bg-gaming-neon-purple/10' 
@@ -293,7 +298,7 @@ export default function MultiAgentWorkflowsPage() {
                 <div className="flex items-start gap-3">
                   <Checkbox
                     checked={selectedAgents.has(agent.name)}
-                    onCheckedChange={() => toggleAgentSelection(agent.name)}
+                    onCheckedChange={() => toggleAgentSelection(agent)}
                     className="mt-1"
                   />
                   <div className="flex-1">
@@ -334,7 +339,7 @@ export default function MultiAgentWorkflowsPage() {
               CONFIGURE AGENT TEAM
             </DialogTitle>
             <DialogDescription className="gaming-text-secondary font-mono">
-              &gt;&gt; SELECTED AGENTS: {Array.from(selectedAgents).join(', ')}
+              &gt;&gt; SELECTED AGENTS: {Array.from(selectedAgents.keys()).join(', ')}
             </DialogDescription>
           </DialogHeader>
           
