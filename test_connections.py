@@ -8,10 +8,19 @@ import aiohttp
 import websockets
 from datetime import datetime
 
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 # Configuration
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
 WS_BASE_URL = "ws://localhost:8000"
-AUTH_TOKEN = "993f8273f70877e23b5c7d2f92ed30562a089fe3"  # chris user token
+AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)  # chris user token
 
 # WebSocket endpoints to test
 WS_ENDPOINTS = [

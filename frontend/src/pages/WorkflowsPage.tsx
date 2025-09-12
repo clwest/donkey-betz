@@ -19,6 +19,7 @@ import {
   ChartBarIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
+import '../styles/gaming-theme.css';
 import { workflowsService } from '@/services/workflows.service';
 import { agentDiscoveryService } from '@/services/agentDiscovery.service';
 import { toast } from 'sonner';
@@ -107,6 +108,9 @@ export default function WorkflowsPage() {
   });
 
   useEffect(() => {
+    // Add gaming theme to body
+    document.body.classList.add('gaming-theme');
+    
     loadData();
     loadExecutionHistory();
     
@@ -115,7 +119,10 @@ export default function WorkflowsPage() {
       updateRunningExecutions();
     }, 5000);
     
-    return () => clearInterval(interval);
+    return () => {
+      document.body.classList.remove('gaming-theme');
+      clearInterval(interval);
+    };
   }, []);
 
   const loadExecutionHistory = async () => {
@@ -384,24 +391,75 @@ export default function WorkflowsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Multi-Agent Workflows</h1>
-          <p className="text-gray-400 mt-1">Orchestrate multiple agents for complex tasks</p>
+      {/* Gaming Header */}
+      <div className="gaming-card relative overflow-hidden mb-8">
+        <div className="gaming-border-glow"></div>
+        
+        {/* Cyberpunk background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="w-full h-full" style={{backgroundImage: 'linear-gradient(45deg, transparent 40%, var(--gaming-neon-cyan) 50%, transparent 60%)', backgroundSize: '20px 20px'}}></div>
         </div>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusIcon className="h-4 w-4" />
-              Create Workflow
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-dark-800 border-dark-700">
+        <div className="relative flex items-center justify-between p-8">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 gaming-card border-gaming-neon-cyan flex items-center justify-center">
+                <CpuChipIcon className="w-8 h-8 gaming-text-neon" />
+              </div>
+              <h1 className="text-5xl font-black gaming-text-primary text-shadow-lg">
+                MULTI-AGENT <span className="gaming-text-neon">NEURAL</span> MATRIX
+              </h1>
+            </div>
+            
+            <p className="gaming-text-secondary text-xl font-bold font-mono">
+              [ORCHESTRATING PARALLEL AGENT PROTOCOLS] &gt;&gt; NEURAL WORKFLOW MATRIX
+            </p>
+            
+            {/* Gaming Status Indicators */}
+            <div className="flex items-center gap-4">
+              <div className="gaming-status gaming-status-live">
+                <div className="gaming-pulse-dot"></div>
+                <ArrowPathIcon className="w-4 h-4" />
+                AGENTS ONLINE
+              </div>
+              
+              <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
+                <CpuChipIcon className="w-4 h-4" />
+                NEURAL SYNC
+              </div>
+              
+              <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
+                <ChartBarIcon className="w-4 h-4" />
+                WORKFLOW MATRIX
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="gaming-btn-active px-8 py-4 text-lg">
+                  <PlusIcon className="h-5 w-5 mr-3" />
+                  INITIATE NEURAL MATRIX
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <div style={{display: 'none'}} />
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto gaming-card border-gaming-neon-cyan">
             <DialogHeader>
-              <DialogTitle className="text-white">Create New Workflow</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Design a multi-agent workflow to handle complex tasks
+              <DialogTitle className="text-white text-2xl font-bold gaming-text-primary">
+                <CpuChipIcon className="w-6 h-6 mr-2 gaming-text-neon inline" />
+                NEURAL MATRIX ARCHITECT
+              </DialogTitle>
+              <DialogDescription className="gaming-text-secondary font-mono">
+                &gt;&gt; DESIGN MULTI-AGENT WORKFLOW PROTOCOLS FOR NEURAL COORDINATION
               </DialogDescription>
             </DialogHeader>
             
@@ -562,105 +620,119 @@ export default function WorkflowsPage() {
             </Tabs>
           </DialogContent>
         </Dialog>
-      </div>
+      
 
-      {/* Stats */}
+      {/* Neural Matrix Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <div className="gaming-card gaming-hover-lift">
+          <div className="gaming-border-glow"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Total Workflows</p>
-              <p className="text-2xl font-bold text-white">{workflows.length}</p>
+              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">ACTIVE NEURAL MATRICES</p>
+              <p className="text-3xl font-black gaming-text-neon font-mono">{workflows.length}</p>
             </div>
-            <CpuChipIcon className="h-8 w-8 text-primary-400" />
+            <div className="w-12 h-12 gaming-card border-gaming-neon-cyan flex items-center justify-center">
+              <CpuChipIcon className="h-6 w-6 gaming-text-neon" />
+            </div>
           </div>
-        </Card>
+        </div>
         
-        <Card>
+        <div className="gaming-card gaming-hover-lift">
+          <div className="gaming-border-glow"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Templates</p>
-              <p className="text-2xl font-bold text-purple-400">{templates.length}</p>
+              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">PROTOCOL TEMPLATES</p>
+              <p className="text-3xl font-black text-gaming-neon-purple font-mono">{templates.length}</p>
             </div>
-            <DocumentTextIcon className="h-8 w-8 text-purple-400" />
+            <div className="w-12 h-12 gaming-card border-gaming-neon-purple flex items-center justify-center">
+              <DocumentTextIcon className="h-6 w-6 text-gaming-neon-purple" />
+            </div>
           </div>
-        </Card>
+        </div>
         
-        <Card>
+        <div className="gaming-card gaming-hover-lift">
+          <div className="gaming-border-glow"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Agents Available</p>
-              <p className="text-2xl font-bold text-blue-400">{agents.length}</p>
+              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">NEURAL AGENTS</p>
+              <p className="text-3xl font-black gaming-text-neon font-mono">{agents.length}</p>
             </div>
-            <SparklesIcon className="h-8 w-8 text-blue-400" />
+            <div className="w-12 h-12 gaming-card border-gaming-neon-cyan flex items-center justify-center">
+              <SparklesIcon className="h-6 w-6 gaming-text-neon" />
+            </div>
           </div>
-        </Card>
+        </div>
         
-        <Card>
+        <div className="gaming-card gaming-hover-lift">
+          <div className="gaming-border-glow"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Executions</p>
-              <p className="text-2xl font-bold text-green-400">{executions.length}</p>
+              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">MATRIX EXECUTIONS</p>
+              <p className="text-3xl font-black gaming-text-matrix font-mono">{executions.length}</p>
             </div>
-            <ChartBarIcon className="h-8 w-8 text-green-400" />
+            <div className="w-12 h-12 gaming-card border-gaming-neon-green flex items-center justify-center">
+              <ChartBarIcon className="h-6 w-6 gaming-text-matrix" />
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Execution History */}
+      {/* Matrix Execution History */}
       {executions.length > 0 && (
-        <Card>
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-white">Recent Executions</h3>
-            <p className="text-sm text-gray-400 mt-1">Track your workflow execution status</p>
+        <div className="gaming-card">
+          <div className="gaming-border-glow"></div>
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <ChartBarIcon className="w-6 h-6 gaming-text-neon" />
+              <h3 className="text-2xl font-black gaming-text-primary">NEURAL MATRIX EXECUTIONS</h3>
+            </div>
+            <p className="gaming-text-secondary font-mono">&gt;&gt; REAL-TIME EXECUTION STATUS MONITORING</p>
           </div>
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {executions.map((execution) => (
-              <div key={execution.id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                <div className="flex items-center gap-3">
+              <div key={execution.id} className="gaming-card flex items-center justify-between p-4 gaming-hover-lift">
+                <div className="flex items-center gap-4">
                   {execution.status === 'running' ? (
-                    <ArrowPathIcon className="h-5 w-5 text-blue-400 animate-spin" />
+                    <div className="gaming-status gaming-status-live">
+                      <div className="gaming-pulse-dot"></div>
+                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                    </div>
                   ) : execution.status === 'completed' ? (
-                    <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                    <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green">
+                      <CheckCircleIcon className="h-4 w-4" />
+                    </div>
+                  ) : execution.status === 'failed' ? (
+                    <div className="gaming-status bg-gaming-neon-pink/20 border-gaming-neon-pink text-gaming-neon-pink">
+                      <XCircleIcon className="h-4 w-4" />
+                    </div>
                   ) : (
-                    <XCircleIcon className="h-5 w-5 text-red-400" />
+                    <div className="gaming-status">
+                      <ClockIcon className="h-4 w-4" />
+                    </div>
                   )}
                   <div>
-                    <p className="font-medium text-white">{execution.workflow_name}</p>
-                    <p className="text-xs text-gray-400">
-                      ID: {execution.id.slice(0, 8)}... | Started: {new Date(execution.started_at).toLocaleTimeString()}
+                    <p className="font-bold gaming-text-primary text-sm uppercase tracking-wide">{execution.workflow_name}</p>
+                    <p className="text-xs gaming-text-secondary font-mono">
+                      MATRIX_ID: {execution.id.slice(0, 8)}... | INITIATED: {new Date(execution.started_at).toLocaleTimeString()}
                     </p>
                     {execution.prompt && (
-                      <p className="text-xs text-gray-500 mt-1">Prompt: {execution.prompt.slice(0, 50)}...</p>
+                      <p className="text-xs gaming-text-muted mt-1 font-mono">INPUT: {execution.prompt.slice(0, 50)}...</p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge 
-                    variant={
-                      execution.status === 'running' ? 'default' : 
-                      execution.status === 'completed' ? 'outline' : 
-                      execution.status === 'stopped' ? 'secondary' :
-                      'destructive'
-                    }
-                    className={
-                      execution.status === 'running' ? 'bg-blue-500' :
-                      execution.status === 'completed' ? 'text-green-400 border-green-400' :
-                      execution.status === 'stopped' ? 'text-gray-400 border-gray-400' :
-                      ''
-                    }
-                  >
-                    {execution.status}
-                  </Badge>
+                  <div className="gaming-status font-mono text-xs">
+                    {execution.status.toUpperCase()}
+                  </div>
                   
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewExecution(execution)}
-                      className="text-gray-400 hover:text-white"
+                      className="gaming-hover-glow p-2"
                     >
-                      <EyeIcon className="h-4 w-4" />
+                      <EyeIcon className="h-4 w-4 gaming-text-neon" />
                     </Button>
                     
                     {execution.status === 'running' && (
@@ -668,9 +740,9 @@ export default function WorkflowsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleStopExecution(execution.id)}
-                        className="text-red-400 hover:text-red-300"
+                        className="gaming-hover-glow p-2"
                       >
-                        <XCircleIcon className="h-4 w-4" />
+                        <XCircleIcon className="h-4 w-4 gaming-text-danger" />
                       </Button>
                     )}
                   </div>
@@ -678,76 +750,91 @@ export default function WorkflowsPage() {
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* Workflows List */}
+      {/* Neural Matrix Roster */}
       {workflows.length === 0 && templates.length === 0 ? (
-        <Card>
-          <div className="text-center py-12">
-            <CpuChipIcon className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400 mb-4">No Workflows or Templates</p>
-            <p className="text-sm text-gray-500">Loading workflow templates...</p>
+        <div className="gaming-card text-center py-16">
+          <div className="gaming-border-glow"></div>
+          <div className="w-16 h-16 gaming-card border-gaming-neon-cyan mx-auto mb-6 flex items-center justify-center">
+            <CpuChipIcon className="h-8 w-8 gaming-text-neon" />
           </div>
-        </Card>
+          <h3 className="gaming-text-primary text-xl font-bold mb-2">NEURAL MATRIX OFFLINE</h3>
+          <p className="gaming-text-secondary font-mono mb-4">&gt;&gt; NO ACTIVE WORKFLOW PROTOCOLS DETECTED</p>
+          <p className="gaming-text-muted text-sm font-mono">SCANNING FOR NEURAL TEMPLATES...</p>
+        </div>
       ) : workflows.length === 0 && templates.length > 0 ? (
         <div className="space-y-6">
-          <Card>
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-white">Available Templates</h3>
-              <p className="text-sm text-gray-400 mt-1">Start with a pre-configured workflow template</p>
+          <div className="gaming-card">
+            <div className="gaming-border-glow"></div>
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <DocumentTextIcon className="w-6 h-6 text-gaming-neon-purple" />
+                <h3 className="text-2xl font-black gaming-text-primary">NEURAL PROTOCOL TEMPLATES</h3>
+              </div>
+              <p className="gaming-text-secondary font-mono">&gt;&gt; PRE-CONFIGURED MISSION PROTOCOLS FOR INSTANT DEPLOYMENT</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {templates.map((template, index) => (
-                <Card key={index} className="p-4">
+                <div key={index} className="gaming-card gaming-hover-lift">
+                  <div className="gaming-border-glow"></div>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-white">{template.name}</h3>
-                      <p className="text-sm text-gray-400 mt-1">{template.description}</p>
+                      <h3 className="font-bold gaming-text-primary text-sm uppercase tracking-wide mb-2">{template.name}</h3>
+                      <p className="gaming-text-secondary text-xs font-mono mb-3">{template.description}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-gray-300 border-gray-600">
-                          {template.agents?.length || 0} agents
-                        </Badge>
-                        <Badge variant="outline" className="text-gray-300 border-gray-600">
-                          {template.flow_config?.type || 'sequential'}
-                        </Badge>
+                        <div className="gaming-status text-xs">
+                          <SparklesIcon className="w-3 h-3" />
+                          {template.agents?.length || 0} AGENTS
+                        </div>
+                        <div className="gaming-status text-xs">
+                          <CpuChipIcon className="w-3 h-3" />
+                          {(template.flow_config?.type || 'sequential').toUpperCase()}
+                        </div>
                       </div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleUseTemplate(template)}
+                      className="gaming-btn-active"
                     >
-                      Use Template
+                      DEPLOY
                     </Button>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
-          </Card>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workflows.map((workflow) => (
-            <Card key={workflow.id} hover className="flex flex-col">
+            <div key={workflow.id} className="gaming-card gaming-hover-lift flex flex-col">
+              <div className="gaming-border-glow"></div>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white">{workflow.name}</h3>
-                  <p className="text-sm text-gray-400 mt-1">{workflow.description}</p>
+                  <h3 className="font-bold gaming-text-primary text-sm uppercase tracking-wide">{workflow.name}</h3>
+                  <p className="gaming-text-secondary text-xs font-mono mt-1">{workflow.description}</p>
                 </div>
-                <CpuChipIcon className="h-6 w-6 text-primary-400" />
+                <div className="w-10 h-10 gaming-card border-gaming-neon-cyan flex items-center justify-center">
+                  <CpuChipIcon className="h-5 w-5 gaming-text-neon" />
+                </div>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-gray-300 border-gray-600">
-                      {workflow.agent_count} agents
-                    </Badge>
-                    <Badge variant="outline" className="text-gray-300 border-gray-600">
+                    <div className="gaming-status text-xs">
+                      <SparklesIcon className="w-3 h-3" />
+                      {workflow.agent_count} AGENTS
+                    </div>
+                    <div className="gaming-status text-xs">
+                      <DocumentTextIcon className="w-3 h-3" />
                       v{workflow.version}
-                    </Badge>
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs gaming-text-muted font-mono">
                     {new Date(workflow.created_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -755,54 +842,57 @@ export default function WorkflowsPage() {
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="secondary" size="sm" className="flex-1">
-                        <PlayIcon className="h-4 w-4" />
-                        Execute
+                      <Button variant="secondary" size="sm" className="flex-1 gaming-btn-active">
+                        <PlayIcon className="h-4 w-4 mr-2" />
+                        EXECUTE MATRIX
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-dark-800 border-dark-700">
+                    <DialogContent className="gaming-card border-gaming-neon-cyan">
                       <DialogHeader>
-                        <DialogTitle className="text-white">Execute Workflow</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                          Provide initial input for {workflow.name}
+                        <DialogTitle className="gaming-text-primary text-xl font-bold">
+                          <PlayIcon className="w-5 h-5 mr-2 gaming-text-neon inline" />
+                          EXECUTE NEURAL MATRIX
+                        </DialogTitle>
+                        <DialogDescription className="gaming-text-secondary font-mono">
+                          &gt;&gt; INITIATE NEURAL PROTOCOL: {workflow.name.toUpperCase()}
                         </DialogDescription>
                       </DialogHeader>
                       
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div>
-                          <Label htmlFor="execute-prompt" className="text-gray-300">Initial Prompt</Label>
+                          <Label htmlFor="execute-prompt" className="gaming-text-secondary font-mono text-sm">NEURAL INPUT PROMPT</Label>
                           <textarea
                             id="execute-prompt"
                             value={executeForm.prompt}
                             onChange={(e) => setExecuteForm(prev => ({...prev, prompt: e.target.value}))}
-                            placeholder="Enter your task description..."
+                            placeholder=">> ENTER MISSION PARAMETERS AND OBJECTIVES..."
                             rows={4}
-                            className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            className="w-full px-4 py-3 mt-2 gaming-card border-gaming-neon-cyan gaming-text-primary font-mono text-sm focus:outline-none focus:border-gaming-neon-cyan focus:shadow-gaming-glow-primary"
                           />
                         </div>
                         
                         <Button
                           onClick={() => handleExecuteWorkflow(workflow.name, executeForm.prompt)}
                           disabled={executing === workflow.name}
-                          className="w-full"
+                          className="w-full gaming-btn-active py-3 text-lg"
                         >
                           {executing === workflow.name ? (
-                            <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                            <ArrowPathIcon className="h-5 w-5 animate-spin mr-3" />
                           ) : (
-                            <PlayIcon className="h-4 w-4" />
+                            <PlayIcon className="h-5 w-5 mr-3" />
                           )}
-                          Execute Workflow
+                          INITIATE NEURAL EXECUTION
                         </Button>
                       </div>
                     </DialogContent>
                   </Dialog>
                   
-                  <Button variant="ghost" size="sm">
-                    <EyeIcon className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="gaming-hover-glow p-2">
+                    <EyeIcon className="h-4 w-4 gaming-text-neon" />
                   </Button>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}

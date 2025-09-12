@@ -12,12 +12,19 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(
       ref={ref}
       role="alert"
       className={clsx(
-        'relative w-full rounded-lg border p-4',
+        'relative w-full rounded-lg border-2 p-4',
         {
-          'border-dark-700 bg-dark-800 text-gray-300': variant === 'default',
-          'border-red-500/50 bg-red-500/10 text-red-400': variant === 'destructive',
-          'border-yellow-500/50 bg-yellow-500/10 text-yellow-400': variant === 'warning',
-          'border-green-500/50 bg-green-500/10 text-green-400': variant === 'success',
+          'border-cyan-500/50 bg-black text-gray-300 shadow-[0_0_10px_rgba(0,255,255,0.2)]': variant === 'default',
+          'border-red-500/50 bg-red-500/10 text-red-400 shadow-[0_0_10px_rgba(255,0,0,0.2)]': variant === 'destructive',
+          'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.2)]': variant === 'warning',
+          'border-green-500/50 bg-green-500/10 text-green-400 shadow-[0_0_10px_rgba(0,255,0,0.2)]': variant === 'success',
+        },
+        'before:absolute before:inset-0 before:border-2 before:border-opacity-30 before:rounded-lg before:animate-pulse',
+        {
+          'before:border-cyan-500': variant === 'default',
+          'before:border-red-500': variant === 'destructive',
+          'before:border-yellow-500': variant === 'warning',
+          'before:border-green-500': variant === 'success',
         },
         className
       )}
@@ -31,7 +38,7 @@ const AlertTitle = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLHeadingEl
   ({ className, ...props }, ref) => (
     <h5
       ref={ref}
-      className={clsx('mb-1 font-medium leading-none tracking-tight', className)}
+      className={clsx('mb-1 font-bold leading-none tracking-wider uppercase font-mono', className)}
       {...props}
     />
   )
@@ -42,7 +49,7 @@ const AlertDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPar
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('text-sm [&_p]:leading-relaxed', className)}
+      className={clsx('text-sm [&_p]:leading-relaxed font-mono', className)}
       {...props}
     />
   )

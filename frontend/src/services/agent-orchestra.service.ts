@@ -3,8 +3,10 @@ import { Logger } from '../utils/logger';
 import { toast } from 'sonner';
 
 // DBAO API Configuration - unified on port 8000
-const DBAO_BASE_URL = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000').replace(/\/$/,'');
-const AUTH_TOKEN = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN;
+const DBAO_BASE_URL = (import.meta.env.VITE_DBAO_API_URL || 'http://localhost:8000/api').replace(/\/$/,'');
+
+// Helper to get current auth token dynamically
+const getAuthToken = () => localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || '';
 
 // Agent Orchestra Types
 export interface Agent {
@@ -24,17 +26,24 @@ export interface Agent {
 
 export interface AgentInstance {
   id: string;
+  execution_id: string;
   template: Agent;
+  template_name?: string;
   task_description: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed';
   result: any;
   error_message: string | null;
-  tokens_used: number;
-  cost_estimate: number;
-  execution_time: number;
+  error_details?: any;
+  token_usage: any;
+  total_cost: number;
+  execution_time_seconds: number;
   user: number;
   created_at: string;
   updated_at: string;
+  current_step?: string;
+  progress_percentage?: number;
+  started_at?: string;
+  completed_at?: string;
 }
 
 export interface AgentOrchestration {
@@ -109,17 +118,17 @@ export interface OddsCalculationResponse {
  */
 export class AgentOrchestraService {
   private static readonly BASE_ENDPOINTS = {
-    AGENTS: '/api/v1/agents/templates/',  // Fixed to use correct endpoint
-    EXECUTE: '/api/v1/agents/execute/',  // Fixed to use correct endpoint path
-    SUGGEST: '/api/v1/agents/suggest/',  // Fixed to use correct endpoint path
-    ROUTE: '/api/v1/agents/route/',  // Fixed to use correct endpoint path
-    INSTANCES: '/api/v1/instances/',
-    STATUS: '/api/v1/agents/status/',  // Fixed to use correct endpoint path
-    ORCHESTRATE: '/api/v1/agents/orchestrate/',  // Fixed to use correct endpoint path
-    ORCHESTRATIONS: '/api/v1/orchestrations/',
-    BETTING: '/api/v1/betting/',
+    AGENTS: '/v1/agents/list/',  // Fixed to use correct endpoint
+    EXECUTE: '/v1/agents/execute/',  // Fixed to use correct endpoint path
+    SUGGEST: '/v1/agents/suggest/',  // Fixed to use correct endpoint path
+    ROUTE: '/v1/agents/route/',  // Fixed to use correct endpoint path
+    INSTANCES: '/v1/instances/',  // Fixed: Use the correct instances endpoint
+    STATUS: '/v1/agents/status/',  // Fixed to use correct endpoint path
+    ORCHESTRATE: '/v1/agents/orchestrate/',  // Fixed to use correct endpoint path
+    ORCHESTRATIONS: '/v1/orchestrations/',
+    BETTING: '/v1/betting/',
     ODDS: '/v1/odds/',  // Sports odds uses v1
-    HEALTH: '/agents/health/'  // Fixed to use correct endpoint path
+    HEALTH: '/v1/agents/health/'  // Fixed to use correct endpoint path
   } as const;
 
   // Mock data for development when DBAO backend is not available
@@ -256,7 +265,7 @@ Always include mathematical backing for your analysis and make content both educ
           headers: {
             'Content-Type': 'application/json',
             'X-Orchestrator': 'DBAO-Frontend',
-            'Authorization': `Token ${AUTH_TOKEN}`
+            'Authorization': `Token ${getAuthToken()}`
           }
         };
 
@@ -378,31 +387,55 @@ Always include mathematical backing for your analysis and make content both educ
     
     // Transform the response to match AgentInstance interface
     if (response && response.success) {
-      return {
-        id: response.instance_id,
-        template: {
-          id: request.agent_type || 'unknown',
-          name: response.agent_type || 'Unknown Agent',
-          display_name: response.agent_type || 'Unknown Agent',
-          description: request.task_description,
-          specialization: 'general',
+      // Get the template info from the backend response or fetch the agent template
+      let template = null;
+      
+      if (response.template_id) {
+        // Try to get the full template from the agents endpoint
+        try {
+          template = await this.getAgent(response.template_id);
+        } catch (error) {
+          console.warn('Failed to fetch template details:', error);
+        }
+      }
+      
+      // Fallback template if we couldn't fetch the full one
+      if (!template) {
+        template = {
+          id: response.template_id || request.agent_type || 'unknown',
+          name: response.template_name || response.agent_type || 'Unknown Agent',
+          description: response.agent_description || request.task_description || 'Agent execution',
+          specialization: response.agent_specialization || request.agent_type || 'general',
           capabilities: [],
-          usage_count: 0,
+          required_tools: [],
+          system_prompt: '',
+          personality_traits: {},
           llm_provider: 'openai',
           llm_model: 'gpt-5-mini',
-          created_at: response.task_details?.started_at || new Date().toISOString(),
-          updated_at: response.task_details?.started_at || new Date().toISOString()
-        },
-        task_description: response.task_details?.description || request.task_description,
+          created_at: response.created_at || new Date().toISOString(),
+          updated_at: response.updated_at || new Date().toISOString()
+        };
+      }
+
+      return {
+        id: response.instance_id || response.id,
+        execution_id: response.execution_id || response.instance_id,
+        template,
+        task_description: request.task_description,
         status: response.status === 'running' ? 'processing' : response.status,
-        result: null,
-        error_message: null,
-        tokens_used: 0,
-        cost_estimate: 0,
-        execution_time: 0,
-        user: 1,
-        created_at: response.task_details?.started_at || new Date().toISOString(),
-        updated_at: response.task_details?.started_at || new Date().toISOString()
+        result: response.result || null,
+        error_message: response.error_message || null,
+        error_details: response.error_details || null,
+        token_usage: response.token_usage || {},
+        total_cost: parseFloat(response.total_cost || '0'),
+        execution_time_seconds: response.execution_time_seconds || response.execution_time || 0,
+        user: response.user || 1,
+        created_at: response.created_at || new Date().toISOString(),
+        updated_at: response.updated_at || new Date().toISOString(),
+        current_step: response.current_step,
+        progress_percentage: response.progress_percentage || 0,
+        started_at: response.started_at,
+        completed_at: response.completed_at
       };
     }
     
@@ -445,15 +478,53 @@ Always include mathematical backing for your analysis and make content both educ
   // Agent Instances
   static async getInstances(): Promise<AgentInstance[]> {
     try {
-      const data = await this.makeRequest<{ results?: AgentInstance[]; data?: AgentInstance[] } | AgentInstance[]>(
+      const data = await this.makeRequest<{ results?: any[]; data?: any[] } | any[]>(
         'GET', 
         this.BASE_ENDPOINTS.INSTANCES
       );
       
+      let instances: any[] = [];
       if (Array.isArray(data)) {
-        return data;
+        instances = data;
+      } else {
+        instances = data?.results || data?.data || [];
       }
-      return data?.results || data?.data || [];
+      
+      // Transform backend instances to match our interface
+      return instances.map((instance): AgentInstance => ({
+        id: instance.id,
+        execution_id: instance.execution_id,
+        template: {
+          id: instance.template || 'unknown',
+          name: instance.template_name || 'Unknown Agent',
+          description: instance.task_description || 'Agent execution',
+          specialization: instance.task_type || 'general',
+          capabilities: [],
+          required_tools: [],
+          system_prompt: '',
+          personality_traits: {},
+          llm_provider: 'openai',
+          llm_model: 'gpt-5-mini',
+          created_at: instance.created_at,
+          updated_at: instance.updated_at
+        },
+        template_name: instance.template_name,
+        task_description: instance.task_description,
+        status: instance.status as 'pending' | 'running' | 'completed' | 'failed',
+        result: instance.result,
+        error_message: instance.error_message,
+        error_details: instance.error_details,
+        token_usage: instance.token_usage || {},
+        total_cost: parseFloat(instance.total_cost || '0'),
+        execution_time_seconds: instance.execution_time_seconds || 0,
+        user: instance.user || 1,
+        created_at: instance.created_at,
+        updated_at: instance.updated_at,
+        current_step: instance.current_step,
+        progress_percentage: instance.progress_percentage || 0,
+        started_at: instance.started_at,
+        completed_at: instance.completed_at
+      }));
     } catch (error) {
       Logger.error('DBAO', error);
       return [];
@@ -467,6 +538,49 @@ Always include mathematical backing for your analysis and make content both educ
       undefined,
       { throwOnError: false }
     );
+  }
+
+  static async deleteInstance(id: string): Promise<boolean> {
+    try {
+      await this.makeRequest<any>(
+        'DELETE',
+        `${this.BASE_ENDPOINTS.INSTANCES}${id}/`
+      );
+      return true;
+    } catch (error: any) {
+      Logger.warn('DBAO', { message: 'Delete endpoint not available, simulating local delete', error, instanceId: id });
+      
+      // If backend doesn't support delete yet, we can simulate it by just removing from frontend
+      // This provides the UI functionality while we wait for backend implementation
+      if (error.message?.includes('403') || error.message?.includes('404') || error.message?.includes('Method not allowed')) {
+        Logger.info('DBAO', `Simulating delete for instance ${id} (backend delete not yet implemented)`);
+        return true; // Return true to allow frontend deletion
+      }
+      return false;
+    }
+  }
+
+  static async deleteMultipleInstances(ids: string[]): Promise<{ successful: string[], failed: string[] }> {
+    const successful: string[] = [];
+    const failed: string[] = [];
+    
+    // Delete instances in parallel but with a limit to avoid overwhelming the server
+    const batchSize = 5;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      const promises = batch.map(async (id) => {
+        const success = await this.deleteInstance(id);
+        if (success) {
+          successful.push(id);
+        } else {
+          failed.push(id);
+        }
+      });
+      
+      await Promise.all(promises);
+    }
+    
+    return { successful, failed };
   }
 
   static async getInstanceStatus(id: string): Promise<AgentInstance | null> {
@@ -511,6 +625,27 @@ Always include mathematical backing for your analysis and make content both educ
       undefined,
       { throwOnError: false }
     );
+  }
+
+  // Sports Betting Live Opportunities
+  static async getLiveOpportunities(): Promise<BettingOpportunity[]> {
+    try {
+      console.log('[DBAO] Fetching live betting opportunities');
+      const data = await this.makeRequest<{ opportunities?: BettingOpportunity[]; success?: boolean } | BettingOpportunity[]>(
+        'GET', 
+        '/v1/sports/live-opportunities/'
+      );
+      
+      if (Array.isArray(data)) {
+        return data;
+      }
+      return data?.opportunities || [];
+    } catch (error) {
+      console.warn('[DBAO] Live opportunities unavailable, providing fallback');
+      
+      // Return empty array when endpoint is unavailable
+      return [];
+    }
   }
 
   // Agent Orchestra Tools - Odds Calculation & Sports Betting
@@ -609,7 +744,7 @@ Always include mathematical backing for your analysis and make content both educ
       try {
         const response = await fetch(`${DBAO_BASE_URL}/health/`, {
           headers: {
-            'Authorization': `Token ${AUTH_TOKEN}`,
+            'Authorization': `Token ${getAuthToken()}`,
             'Content-Type': 'application/json'
           }
         });
@@ -678,11 +813,11 @@ export class AgentWebSocketManager {
 
     return new Promise((resolve, reject) => {
       try {
-        // Construct WebSocket URL for DBAO (port 8001)
+        // Construct WebSocket URL for DBAO
         const dbaoWsUrl = import.meta.env.VITE_DBAO_WS_URL || 'ws://localhost:8000';
-        // Use the correct DBAO testuser token
-        const dbaoToken = 'cff3e8441c4e2490e970de2f921f0064e7cc88a7';
-        const wsUrl = `${dbaoWsUrl}/ws/${endpoint}/?token=${dbaoToken}`;
+        // Use the current authentication token
+        const currentToken = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || '';
+        const wsUrl = `${dbaoWsUrl}/ws/${endpoint}/?token=${currentToken}`;
         Logger.debug('DBAO WebSocket', `Connecting to ${wsUrl}`);
         
         this.ws = new WebSocket(wsUrl);
@@ -939,7 +1074,7 @@ export const resetWebSocketManager = () => {
 
 export const getWebSocketManager = (): AgentWebSocketManager => {
   if (!wsManager) {
-    const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || 'cff3e8441c4e2490e970de2f921f0064e7cc88a7';
+    const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN || '';
     // Use DBAO WebSocket URL or fall back to main WebSocket URL
     const wsBaseUrl = import.meta.env.VITE_DBAO_WS_URL || import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
     console.log('[DBAO] Creating WebSocket manager with URL:', wsBaseUrl);

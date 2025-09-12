@@ -15,15 +15,21 @@ from .models import UserProfile, UserStatistics
 User = get_user_model()
 
 
-@csrf_exempt
 @api_view(['POST', 'OPTIONS'])
 @permission_classes([AllowAny])
+@csrf_exempt
 def login_view(request):
     """
     Authenticate user and return token.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Login attempt - Request data: {request.data}")
+    
     username = request.data.get('username')
     password = request.data.get('password')
+    
+    logger.info(f"Login attempt - Username: {username}, Password: {'*' * len(password) if password else 'None'}")
     
     if not username or not password:
         return Response(
@@ -33,6 +39,8 @@ def login_view(request):
     
     # Authenticate user
     user = authenticate(username=username, password=password)
+    
+    logger.info(f"Authentication result: {user}")
     
     if user is not None:
         # Get or create token
@@ -59,8 +67,9 @@ def login_view(request):
             }
         })
     else:
+        logger.error(f"Authentication failed for username: {username}")
         return Response(
-            {'detail': 'Invalid username or password'},
+            {'detail': f'Invalid credentials for user: {username}'},
             status=status.HTTP_401_UNAUTHORIZED
         )
 

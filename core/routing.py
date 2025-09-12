@@ -27,6 +27,9 @@ websocket_urlpatterns = [
     re_path(r'^ws/agent-progress/$', consumers.AgentProgressConsumer.as_asgi()),
     re_path(r'^ws/agent-progress/(?P<instance_id>[^/]+)/$', consumers.AgentProgressConsumer.as_asgi()),
     
+    # Agent updates WebSocket
+    re_path(r'^ws/agent-updates/$', consumers.AgentProgressConsumer.as_asgi()),
+    
     # Content processing and analytics
     re_path(r'^ws/content/processing/$', consumers.ContentProcessingConsumer.as_asgi()),
     re_path(r'^ws/content/analytics/$', consumers.ContentAnalyticsConsumer.as_asgi()),

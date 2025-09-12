@@ -1,25 +1,26 @@
 /**
- * Professional Sports Betting Hub Dashboard
+ * 🎯 DONKEY BETZ COMMAND CENTER 🎯
  * 
- * Real-time sports data across 12+ leagues with professional betting interface
- * Featuring live games, trending matches, and comprehensive sports coverage
+ * Professional betting command center with real-time data streams
+ * Ultra-wide betting tickets with advanced Kelly Criterion analytics
+ * Complete mission control for serious sports bettors
  * 
- * LIVE DATA SOURCES:
- * ✅ ESPN API - Live scores, schedules, team stats
- * ✅ TheSportsDB - Team info, venues, historical data  
- * ✅ The Odds API - Betting lines and market data
- * ✅ Real-time WebSocket updates for live games
+ * LIVE DATA STREAMS:
+ * ⚡ ESPN API - Real-time scores, schedules, team analytics
+ * 🏟️ TheSportsDB - Venue data, weather, team intelligence  
+ * 💰 The Odds API - Live betting lines and market movements
+ * 📡 WebSocket feeds - Instant game updates and notifications
  */
 
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { Badge } from '../../../components/common/Badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/common/Tabs';
 import { Select, SelectItem } from '../../../components/common/Select';
 import { toast } from 'sonner';
 // import { GameOddsCard } from './GameOddsCard';
 import { GamingGameCard } from './GamingGameCard';
+import { BettingTicketModal } from './BettingTicketModal';
 import '../../../styles/gaming-theme.css';
 import { 
   RefreshCw, 
@@ -71,10 +72,11 @@ interface SportsType {
 export default function MultiSportsDashboard() {
   const [selectedSport, setSelectedSport] = useState<SportType>(SportType.NCAAF);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
-  const [activeTab, setActiveTab] = useState<string>('live');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [gamingTheme, setGamingTheme] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [showBettingTicket, setShowBettingTicket] = useState(false);
   
   // Data state
   const [sportsTypes, setSportsTypes] = useState<SportsType[]>([]);
@@ -225,15 +227,24 @@ export default function MultiSportsDashboard() {
     const isScheduled = game.status === 'scheduled';
     const sportType = contextSport || getSportTypeFromLeague(game.league);
     
+    const handleGameClick = () => {
+      console.log('🎯 Game clicked:', { game: game.id, teams: `${game.away_team_name} vs ${game.home_team_name}` });
+      setSelectedGame(game);
+      setShowBettingTicket(true);
+      toast.success(`🎮 Opening betting ticket for ${game.away_team_name} vs ${game.home_team_name}`);
+    };
+    
     return (
       <div 
         key={game.id} 
         className={`
-          gaming-card gaming-hover-lift gaming-fade-in
+          gaming-card gaming-hover-lift gaming-fade-in cursor-pointer
           ${isLive ? 'gaming-bet-hot' : ''}
           ${isFinished ? 'border-gaming-neon-green' : ''}
           ${isScheduled ? 'border-gaming-border-bright' : ''}
+          hover:scale-105 transition-all duration-300
         `}
+        onClick={handleGameClick}
       >
         {/* Gaming Border Glow Effect */}
         <div className="gaming-border-glow"></div>
@@ -353,6 +364,26 @@ export default function MultiSportsDashboard() {
                     {game.season}
                   </div>
                 )}
+              </div>
+            </div>
+            
+            {/* Betting Actions */}
+            <div className="mt-4 pt-4 border-t border-gaming-border/50">
+              <div className="flex items-center justify-between text-sm">
+                <div className="gaming-text-accent">
+                  💰 Betting Available
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="gaming-status text-xs px-2 py-1 bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
+                    MONEYLINE
+                  </div>
+                  <div className="gaming-status text-xs px-2 py-1 bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
+                    SPREAD
+                  </div>
+                  <div className="gaming-status text-xs px-2 py-1 bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green">
+                    TOTAL
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -507,27 +538,37 @@ export default function MultiSportsDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Betting Ticket Modal */}
+      <BettingTicketModal 
+        game={selectedGame}
+        isOpen={showBettingTicket}
+        onClose={() => {
+          setShowBettingTicket(false);
+          setSelectedGame(null);
+        }}
+      />
 
       <div className="space-y-8">
 
-        {/* Gaming Sports Overview */}
+        {/* Gaming Random Games Dashboard */}
         <div className="gaming-card">
           <div className="gaming-border-glow"></div>
           <div className="p-6 border-b border-gaming-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Star className="w-6 h-6 gaming-text-neon" />
-                <span className="text-2xl gaming-text-primary font-bold">SPORTS COVERAGE</span>
-                <div className="gaming-status">
-                  {sportsTypes.length} SPORTS ONLINE
+                <Gamepad2 className="w-6 h-6 gaming-text-neon animate-pulse" />
+                <span className="text-2xl gaming-text-primary font-bold">DONKEY BETZ LIVE FEED</span>
+                <div className="gaming-status gaming-status-live">
+                  <div className="gaming-pulse-dot"></div>
+                  LIVE FEED
                 </div>
               </div>
               
-              {/* Gaming Coverage Stats and Sync */}
+              {/* Gaming Dashboard Stats and Sync */}
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2 gaming-text-accent">
-                  <Trophy className="w-4 h-4" />
-                  <span className="font-bold font-mono">{sportsTypes.reduce((sum, sport) => sum + sport.count, 0)} TOTAL LEAGUES</span>
+                  <Activity className="w-4 h-4" />
+                  <span className="font-bold font-mono">{liveGames.length + trendingGames.slice(0, 8).length} ACTIVE GAMES</span>
                 </div>
                 
                 <Button
@@ -541,155 +582,156 @@ export default function MultiSportsDashboard() {
                   ) : (
                     <RefreshCw className="w-4 h-4 mr-2" />
                   )}
-                  SYNC DATA
+                  REFRESH FEED
                 </Button>
               </div>
             </div>
           </div>
           <div className="p-6">
-            {renderSportsOverview()}
+            <div className="space-y-8">
+              {/* Mix of Live Games and Trending Games */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {/* Show live games first */}
+                {liveGames.slice(0, 4).map(renderGameCard)}
+                {/* Fill remaining slots with trending games */}
+                {trendingGames.slice(0, 8 - liveGames.slice(0, 4).length).map(renderGameCard)}
+              </div>
+              
+              {liveGames.length === 0 && trendingGames.length === 0 && (
+                <div className="text-center py-8">
+                  <Activity className="w-12 h-12 gaming-text-muted mx-auto mb-4" />
+                  <p className="gaming-text-secondary text-lg">[STANDBY] &gt;&gt; No active games. Try syncing data.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Theme Comparison Demo */}
 
-        {/* Gaming Main Content */}
+        {/* Gaming Sports Filter Cards */}
         <div className="gaming-card">
           <div className="gaming-border-glow"></div>
-          <div className="p-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-4 py-2 cursor-pointer hover:bg-gaming-neon-cyan/30 transition-all" data-tab="live">
-                    <Zap className="w-4 h-4 mr-2" />
-                    LIVE GAMES
-                  </div>
-                  <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple px-4 py-2 cursor-pointer hover:bg-gaming-neon-purple/30 transition-all" data-tab="trending">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    TRENDING
-                  </div>
-                  <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green px-4 py-2 cursor-pointer hover:bg-gaming-neon-green/30 transition-all" data-tab="sport">
-                    <Trophy className="w-4 h-4 mr-2" />
-                    BY SPORT
-                  </div>
-                </div>
-
-                {/* Gaming Date Selector */}
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 gaming-text-accent" />
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="gaming-card px-4 py-2 border border-gaming-border rounded-lg gaming-text-primary font-mono text-sm focus:border-gaming-neon-cyan focus:outline-none transition-colors"
-                  />
+          <div className="p-6 border-b border-gaming-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Trophy className="w-6 h-6 gaming-text-neon" />
+                <span className="text-2xl gaming-text-primary font-bold">DONKEY BETZ SPORT FILTERS</span>
+                <div className="gaming-status">
+                  {sportsTypes.length} SPORTS AVAILABLE
                 </div>
               </div>
-
-        <TabsContent value="live">
-          {renderLiveGames()}
-        </TabsContent>
-
-        <TabsContent value="trending">
-          {renderTrendingGames()}
-        </TabsContent>
-
-              <TabsContent value="sport">
-                <div className="space-y-8">
-                  {/* Gaming Sport Selector */}
-                  <div className="gaming-card">
+              
+              {/* Gaming Date Selector */}
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 gaming-text-accent" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="gaming-card px-4 py-2 border border-gaming-border rounded-lg gaming-text-primary font-mono text-sm focus:border-gaming-neon-cyan focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="space-y-6">
+              {/* Sport Filter Cards Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                {sportsTypes.map((sport) => (
+                  <div 
+                    key={sport.sport_type}
+                    className={`
+                      gaming-card gaming-hover-lift cursor-pointer gaming-fade-in
+                      ${selectedSport === sport.sport_type 
+                        ? 'gaming-bet-hot border-gaming-neon-cyan' 
+                        : ''
+                      }
+                    `}
+                    onClick={() => {
+                      setSelectedSport(sport.sport_type);
+                      console.log(`🏀 Selected sport filter: ${sport.sport_type} with ${sport.count} leagues`);
+                      toast.success(`🎮 Filtering by ${getSportDisplayName(sport.sport_type)}! Loading games...`);
+                    }}
+                  >
+                    {/* Gaming Border Glow */}
                     <div className="gaming-border-glow"></div>
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-2xl font-bold gaming-text-primary">SPORT SELECTION</h3>
-                      <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
-                        <Database className="w-4 h-4 mr-2" />
-                        REAL-TIME DATA STREAM
-                      </div>
-                    </div>
+                    {selectedSport === sport.sport_type && <div className="gaming-bet-glow"></div>}
                     
-                    <div className="flex items-center gap-6">
-                      <div className="relative">
-                        <Select 
-                          value={selectedSport} 
-                          onValueChange={(value) => setSelectedSport(value as SportType)}
-                          className="gaming-card border-gaming-border focus:border-gaming-neon-cyan"
-                        >
-                          {sportsTypes.map((sport) => (
-                            <SelectItem key={sport.sport_type} value={sport.sport_type}>
-                              <div className="flex items-center gap-4 py-2">
-                                <span className="text-2xl">{getSportEmoji(sport.sport_type)}</span>
-                                <span className="font-bold gaming-text-primary">{getSportDisplayName(sport.sport_type)}</span>
-                                <div className="gaming-status text-xs ml-auto">
-                                  {sport.count} LEAGUES
-                                </div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </Select>
+                    <div className="text-center space-y-3 p-4">
+                      <div className="text-4xl transform transition-all duration-300 hover:scale-125 hover:text-shadow-lg">
+                        {getSportEmoji(sport.sport_type)}
                       </div>
-
-                      {leagues.length > 0 && (
-                        <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green px-6 py-3">
-                          <Users className="w-4 h-4 mr-2" />
-                          {leagues.length} LEAGUE{leagues.length !== 1 ? 'S' : ''} ACTIVE
+                      <div className="gaming-team-name text-xs">
+                        {getSportDisplayName(sport.sport_type)}
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <div className="gaming-status text-xs px-2 py-1">
+                          {sport.count} LEAGUE{sport.count !== 1 ? 'S' : ''}
+                        </div>
+                      </div>
+                      {selectedSport === sport.sport_type && (
+                        <div className="flex justify-center">
+                          <div className="gaming-pulse-dot bg-gaming-neon-cyan"></div>
                         </div>
                       )}
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  {/* Gaming Selected Sport Games */}
-                  <div className="space-y-8">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span className="text-5xl transform hover:scale-110 transition-transform">{getSportEmoji(selectedSport)}</span>
-                        <div>
-                          <h3 className="text-3xl font-black gaming-text-primary">
-                            {getSportDisplayName(selectedSport)} ARENA
-                          </h3>
-                          <p className="gaming-text-accent text-lg font-bold font-mono">[DATA STREAM] &gt;&gt; ESPN + PARTNER APIs</p>
-                        </div>
-                        <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-4 py-2">
-                          {games.length} GAMES LOADED
-                        </div>
+              {/* Selected Sport Games Display */}
+              {selectedSport && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-4xl transform hover:scale-110 transition-transform">{getSportEmoji(selectedSport)}</span>
+                      <div>
+                        <h3 className="text-2xl font-black gaming-text-primary">
+                          {getSportDisplayName(selectedSport)} GAMES
+                        </h3>
+                        <p className="gaming-text-accent font-bold font-mono">[FILTERED RESULTS] &gt;&gt; {selectedDate}</p>
+                      </div>
+                      <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-3 py-2">
+                        {games.length} GAMES LOADED
                       </div>
                     </div>
-
-                    {console.log(`🎯 [Dashboard] Rendering ${games.length} games for ${selectedSport}`)}
-                    {games.length === 0 ? (
-                      <div className="gaming-card text-center py-16">
-                        <div className="gaming-border-glow"></div>
-                        <div className="text-8xl gaming-text-muted mb-8">{getSportEmoji(selectedSport)}</div>
-                        <div className="space-y-4">
-                          <h4 className="text-3xl font-bold gaming-text-primary mb-4">
-                            NO GAMES IN {getSportDisplayName(selectedSport)} ARENA
-                          </h4>
-                          <p className="gaming-text-secondary text-xl">
-                            [EMPTY QUEUE] &gt;&gt; Try different date or sync latest data
-                          </p>
-                        </div>
-                        <Button 
-                          onClick={handleSyncData} 
-                          variant="outline" 
-                          className="gaming-btn-active mt-8 px-8 py-4 text-lg"
-                          disabled={syncing}
-                        >
-                          {syncing ? (
-                            <RefreshCw className="w-5 h-5 mr-3 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-5 h-5 mr-3" />
-                          )}
-                          SYNC LATEST DATA
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {games.map(renderGameCard)}
-                      </div>
-                    )}
                   </div>
+
+                  {games.length === 0 ? (
+                    <div className="gaming-card text-center py-12">
+                      <div className="gaming-border-glow"></div>
+                      <div className="text-6xl gaming-text-muted mb-6">{getSportEmoji(selectedSport)}</div>
+                      <div className="space-y-4">
+                        <h4 className="text-xl font-bold gaming-text-primary">
+                          NO GAMES FOUND
+                        </h4>
+                        <p className="gaming-text-secondary">
+                          [EMPTY QUEUE] &gt;&gt; Try different date or sync data
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={handleSyncData} 
+                        variant="outline" 
+                        className="gaming-btn-active mt-6 px-6 py-3"
+                        disabled={syncing}
+                      >
+                        {syncing ? (
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                        )}
+                        SYNC DATA
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {games.map(renderGameCard)}
+                    </div>
+                  )}
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           </div>
         </div>
       </div>

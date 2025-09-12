@@ -93,106 +93,171 @@ export function CampaignsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Campaigns</h1>
-          <p className="text-gray-400 mt-1">Manage your multi-channel marketing campaigns</p>
+    <div className="space-y-6" style={{ backgroundColor: 'var(--gaming-bg-primary)', minHeight: '100vh' }}>
+      {/* Header - Gaming Style */}
+      <div className="gaming-neural-card p-6">
+        <div className="gaming-border-glow"></div>
+        <div className="relative z-10 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-black font-mono uppercase tracking-wider" 
+                style={{ 
+                  color: 'var(--gaming-neon-cyan)',
+                  textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
+                }}>CAMPAIGN MATRIX</h1>
+            <p className="mt-3 font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+              MANAGE YOUR MULTI-CHANNEL NEURAL CAMPAIGNS
+            </p>
+          </div>
+          <button
+            onClick={handleCreateCampaign}
+            className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-3 transition-all duration-300 hover:scale-105"
+            style={{
+              background: 'var(--gaming-gradient-primary)',
+              border: '1px solid var(--gaming-neon-cyan)',
+              boxShadow: 'var(--gaming-glow-primary)'
+            }}
+          >
+            <PlusIcon className="h-5 w-5" />
+            NEW CAMPAIGN
+          </button>
         </div>
-        <Button onClick={handleCreateCampaign}>
-          <PlusIcon className="h-4 w-4" />
-          New Campaign
-        </Button>
       </div>
 
-      {/* Stats */}
+      {/* Neural Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card 
-          className={`cursor-pointer transition-all ${filter === 'all' ? 'ring-2 ring-primary-500' : ''}`}
+        <div 
+          className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+            filter === 'all' ? 'ring-2' : ''
+          }`}
+          style={{
+            borderColor: filter === 'all' ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
+            boxShadow: filter === 'all' ? 'var(--gaming-glow-primary)' : undefined
+          }}
           onClick={() => setFilter('all')}
         >
-          <div className="flex items-center justify-between">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Total</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
+              <p className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>TOTAL</p>
+              <p className="text-2xl font-bold font-mono" style={{ color: 'var(--gaming-neon-cyan)' }}>{stats.total}</p>
             </div>
-            <ChartBarIcon className="h-8 w-8 text-gray-400" />
+            <ChartBarIcon className="h-8 w-8" style={{ color: 'var(--gaming-neon-cyan)' }} />
           </div>
-        </Card>
+        </div>
         
-        <Card 
-          className={`cursor-pointer transition-all ${filter === 'active' ? 'ring-2 ring-green-500' : ''}`}
+        <div 
+          className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+            filter === 'active' ? 'ring-2' : ''
+          }`}
+          style={{
+            borderColor: filter === 'active' ? 'var(--gaming-neon-green)' : 'var(--gaming-border)',
+            boxShadow: filter === 'active' ? '0 0 20px rgba(57, 255, 20, 0.3)' : undefined
+          }}
           onClick={() => setFilter('active')}
         >
-          <div className="flex items-center justify-between">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Active</p>
-              <p className="text-2xl font-bold text-green-400">{stats.active}</p>
+              <p className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>ACTIVE</p>
+              <p className="text-2xl font-bold font-mono" style={{ color: 'var(--gaming-neon-green)' }}>{stats.active}</p>
             </div>
-            <PlayIcon className="h-8 w-8 text-green-400" />
+            <PlayIcon className="h-8 w-8" style={{ color: 'var(--gaming-neon-green)' }} />
           </div>
-        </Card>
+        </div>
 
-        <Card 
-          className={`cursor-pointer transition-all ${filter === 'draft' ? 'ring-2 ring-gray-500' : ''}`}
+        <div 
+          className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+            filter === 'draft' ? 'ring-2' : ''
+          }`}
+          style={{
+            borderColor: filter === 'draft' ? 'var(--gaming-text-secondary)' : 'var(--gaming-border)',
+            boxShadow: filter === 'draft' ? '0 0 20px rgba(128, 128, 128, 0.3)' : undefined
+          }}
           onClick={() => setFilter('draft')}
         >
-          <div className="flex items-center justify-between">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Draft</p>
-              <p className="text-2xl font-bold text-gray-400">{stats.draft}</p>
+              <p className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>DRAFT</p>
+              <p className="text-2xl font-bold font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>{stats.draft}</p>
             </div>
-            <ClockIcon className="h-8 w-8 text-gray-400" />
+            <ClockIcon className="h-8 w-8" style={{ color: 'var(--gaming-text-secondary)' }} />
           </div>
-        </Card>
+        </div>
 
-        <Card 
-          className={`cursor-pointer transition-all ${filter === 'paused' ? 'ring-2 ring-yellow-500' : ''}`}
+        <div 
+          className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+            filter === 'paused' ? 'ring-2' : ''
+          }`}
+          style={{
+            borderColor: filter === 'paused' ? '#FFD700' : 'var(--gaming-border)',
+            boxShadow: filter === 'paused' ? '0 0 20px rgba(255, 215, 0, 0.3)' : undefined
+          }}
           onClick={() => setFilter('paused')}
         >
-          <div className="flex items-center justify-between">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Paused</p>
-              <p className="text-2xl font-bold text-yellow-400">{stats.paused}</p>
+              <p className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>PAUSED</p>
+              <p className="text-2xl font-bold font-mono" style={{ color: '#FFD700' }}>{stats.paused}</p>
             </div>
-            <PauseIcon className="h-8 w-8 text-yellow-400" />
+            <PauseIcon className="h-8 w-8" style={{ color: '#FFD700' }} />
           </div>
-        </Card>
+        </div>
 
-        <Card 
-          className={`cursor-pointer transition-all ${filter === 'completed' ? 'ring-2 ring-blue-500' : ''}`}
+        <div 
+          className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+            filter === 'completed' ? 'ring-2' : ''
+          }`}
+          style={{
+            borderColor: filter === 'completed' ? 'var(--gaming-neon-purple)' : 'var(--gaming-border)',
+            boxShadow: filter === 'completed' ? '0 0 20px rgba(157, 78, 221, 0.3)' : undefined
+          }}
           onClick={() => setFilter('completed')}
         >
-          <div className="flex items-center justify-between">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Completed</p>
-              <p className="text-2xl font-bold text-blue-400">{stats.completed}</p>
+              <p className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>COMPLETED</p>
+              <p className="text-2xl font-bold font-mono" style={{ color: 'var(--gaming-neon-purple)' }}>{stats.completed}</p>
             </div>
-            <CheckCircleIcon className="h-8 w-8 text-blue-400" />
+            <CheckCircleIcon className="h-8 w-8" style={{ color: 'var(--gaming-neon-purple)' }} />
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Campaign List */}
+      {/* Neural Campaign Registry */}
       <div>
-        <h2 className="text-xl font-semibold text-white mb-4">
-          {filter === 'all' ? 'All Campaigns' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Campaigns`}
+        <h2 className="text-2xl font-bold font-mono uppercase tracking-wider mb-6" 
+            style={{ color: 'var(--gaming-neon-cyan)' }}>
+          {filter === 'all' ? 'ALL CAMPAIGNS' : `${filter.toUpperCase()} CAMPAIGNS`}
         </h2>
         
         {filteredCampaigns.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-gray-400 mb-4">
-              {filter === 'all' 
-                ? 'No campaigns yet. Create your first campaign to get started.'
-                : `No ${filter} campaigns found.`}
-            </p>
-            {filter === 'all' && (
-              <Button onClick={handleCreateCampaign}>
-                Create Your First Campaign
-              </Button>
-            )}
-          </Card>
+          <div className="gaming-neural-card p-12 text-center">
+            <div className="gaming-border-glow"></div>
+            <div className="relative z-10">
+              <div className="gaming-loading-matrix mb-6 mx-auto"></div>
+              <p className="font-mono mb-6" style={{ color: 'var(--gaming-text-secondary)' }}>
+                {filter === 'all' 
+                  ? 'NO CAMPAIGNS IN THE MATRIX YET. INITIALIZE YOUR FIRST CAMPAIGN TO BEGIN.'
+                  : `NO ${filter.toUpperCase()} CAMPAIGNS DETECTED.`}
+              </p>
+              {filter === 'all' && (
+                <button
+                  onClick={handleCreateCampaign}
+                  className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                  style={{
+                    background: 'var(--gaming-gradient-primary)',
+                    border: '1px solid var(--gaming-neon-cyan)',
+                    boxShadow: 'var(--gaming-glow-primary)'
+                  }}
+                >
+                  CREATE FIRST CAMPAIGN
+                </button>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredCampaigns.map((campaign) => (

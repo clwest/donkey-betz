@@ -199,6 +199,71 @@ class AgentRegistryViewSet(viewsets.ReadOnlyModelViewSet):
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
+def health_check(request):
+    """
+    Health check endpoint for the agent system.
+    Returns system status and basic statistics.
+    """
+    try:
+        # Check database connectivity
+        agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
+        active_executions = AgentExecution.objects.filter(
+            status__in=['pending', 'running', 'initializing']
+        ).count()
+        
+        # Check cache connectivity
+        cache_key = 'agent_health_check'
+        cache.set(cache_key, timezone.now().isoformat(), 60)
+        cache_value = cache.get(cache_key)
+        cache_status = 'healthy' if cache_value else 'unhealthy'
+        
+        # Get registry stats
+        try:
+            registry = AgentRegistry.objects.get(registry_name='unified_agent_registry')
+            registry_stats = {
+                'total_agents': registry.total_agents,
+                'active_agents': registry.active_agents,
+                'total_executions': registry.total_executions,
+                'last_updated': registry.last_updated.isoformat() if registry.last_updated else None
+            }
+        except AgentRegistry.DoesNotExist:
+            registry_stats = {
+                'total_agents': agent_count,
+                'active_agents': agent_count,
+                'total_executions': 0,
+                'last_updated': None
+            }
+        
+        # Get tool registry stats
+        from core.tools import ToolRegistry
+        available_tools = ToolRegistry.list_tools()
+        
+        return Response({
+            'status': 'healthy',
+            'timestamp': timezone.now().isoformat(),
+            'database': 'connected',
+            'cache': cache_status,
+            'statistics': {
+                'total_agents': agent_count,
+                'active_executions': active_executions,
+                'available_tools': len(available_tools),
+                'tools': available_tools
+            },
+            'registry': registry_stats,
+            'version': '1.0.0'
+        })
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return Response({
+            'status': 'unhealthy',
+            'timestamp': timezone.now().isoformat(),
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
 def discover_agents(request):
     """
     Discover available agents.

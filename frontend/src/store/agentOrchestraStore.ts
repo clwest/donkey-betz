@@ -26,6 +26,10 @@ interface AgentOrchestraState {
   selectedInstance: AgentInstance | null;
   instancesLoading: boolean;
   instancesError: string | null;
+  
+  // Toast management - prevent spam on reload
+  notifiedInstanceIds: Set<string>;
+  lastInstancesUpdate: number;
 
   // Orchestrations
   orchestrations: AgentOrchestration[];
@@ -38,6 +42,11 @@ interface AgentOrchestraState {
   bettingOpportunities: BettingOpportunity[];
   toolsLoading: boolean;
   toolsError: string | null;
+
+  // System Health
+  healthStatus: { status: string; version: string } | null;
+  healthLoading: boolean;
+  healthError: string | null;
 
   // WebSocket
   wsConnected: boolean;
@@ -52,6 +61,8 @@ interface AgentOrchestraState {
   fetchInstances: () => Promise<void>;
   selectInstance: (instance: AgentInstance | null) => void;
   updateInstanceStatus: (instanceId: string) => Promise<void>;
+  deleteInstance: (instanceId: string) => Promise<void>;
+  deleteMultipleInstances: (instanceIds: string[]) => Promise<void>;
 
   fetchOrchestrations: () => Promise<void>;
   selectOrchestration: (orchestration: AgentOrchestration | null) => void;
@@ -64,6 +75,9 @@ interface AgentOrchestraState {
   connectWebSocket: () => Promise<void>;
   disconnectWebSocket: () => void;
   setupWebSocketListeners: () => void;
+
+  // Health check actions
+  fetchHealthStatus: () => Promise<void>;
 
   // Utility actions
   clearErrors: () => void;
@@ -80,6 +94,10 @@ const initialState = {
   selectedInstance: null,
   instancesLoading: false,
   instancesError: null,
+  
+  // Toast management
+  notifiedInstanceIds: new Set<string>(),
+  lastInstancesUpdate: 0,
 
   orchestrations: [],
   selectedOrchestration: null,
@@ -91,6 +109,11 @@ const initialState = {
   bettingOpportunities: [],
   toolsLoading: false,
   toolsError: null,
+
+  // System Health
+  healthStatus: null,
+  healthLoading: false,
+  healthError: null,
 
   wsConnected: false,
   wsConnecting: false,
@@ -164,7 +187,35 @@ export const useAgentOrchestraStore = create<AgentOrchestraState>()(
         const instances = await AgentOrchestraService.getInstances();
         // Ensure instances is always an array
         const instancesArray = Array.isArray(instances) ? instances : [];
-        set({ instances: instancesArray, instancesLoading: false });
+        
+        const currentState = get();
+        const currentTime = Date.now();
+        
+        // Only show toasts for new completions, not on initial load or reload
+        const isInitialLoad = currentState.instances.length === 0;
+        const timeSinceLastUpdate = currentTime - currentState.lastInstancesUpdate;
+        
+        if (!isInitialLoad && timeSinceLastUpdate > 5000) { // Only if more than 5 seconds since last update
+          // Check for newly completed instances
+          instancesArray.forEach(instance => {
+            const wasNotified = currentState.notifiedInstanceIds.has(instance.id);
+            const previousInstance = currentState.instances.find(prev => prev.id === instance.id);
+            
+            if (!wasNotified && instance.status === 'completed' && previousInstance?.status !== 'completed') {
+              toast.success(`Task completed: ${instance.template?.name || 'Agent'}`);
+              currentState.notifiedInstanceIds.add(instance.id);
+            } else if (!wasNotified && instance.status === 'failed' && previousInstance?.status !== 'failed') {
+              toast.error(`Task failed: ${instance.template?.name || 'Agent'}`);
+              currentState.notifiedInstanceIds.add(instance.id);
+            }
+          });
+        }
+        
+        set({ 
+          instances: instancesArray, 
+          instancesLoading: false, 
+          lastInstancesUpdate: currentTime 
+        });
       } catch (error: any) {
         set({ 
           instancesError: error.userMessage || 'Failed to fetch instances', 
@@ -194,6 +245,80 @@ export const useAgentOrchestraStore = create<AgentOrchestraState>()(
         }
       } catch (error: any) {
         console.error('Failed to update instance status:', error);
+      }
+    },
+
+    deleteInstance: async (instanceId: string) => {
+      try {
+        const success = await AgentOrchestraService.deleteInstance(instanceId);
+        if (success) {
+          const { instances, selectedInstance, notifiedInstanceIds } = get();
+          
+          // Remove from instances list
+          const updatedInstances = instances.filter(instance => instance.id !== instanceId);
+          
+          // Clear from notifications tracking
+          notifiedInstanceIds.delete(instanceId);
+          
+          // Clear selected if it was the deleted instance
+          const updatedSelected = selectedInstance?.id === instanceId ? null : selectedInstance;
+          
+          set({ 
+            instances: updatedInstances, 
+            selectedInstance: updatedSelected
+          });
+          
+          toast.success('Task deleted successfully');
+          return true;
+        } else {
+          toast.error('Failed to delete task');
+          return false;
+        }
+      } catch (error: any) {
+        toast.error('Failed to delete task');
+        console.error('Delete instance error:', error);
+        return false;
+      }
+    },
+
+    deleteMultipleInstances: async (instanceIds: string[]) => {
+      try {
+        const result = await AgentOrchestraService.deleteMultipleInstances(instanceIds);
+        
+        if (result.successful.length > 0) {
+          const { instances, selectedInstance, notifiedInstanceIds } = get();
+          
+          // Remove successful deletions from instances list
+          const updatedInstances = instances.filter(
+            instance => !result.successful.includes(instance.id)
+          );
+          
+          // Clear from notifications tracking
+          result.successful.forEach(id => notifiedInstanceIds.delete(id));
+          
+          // Clear selected if it was one of the deleted instances
+          const updatedSelected = result.successful.includes(selectedInstance?.id || '') 
+            ? null : selectedInstance;
+          
+          set({ 
+            instances: updatedInstances, 
+            selectedInstance: updatedSelected
+          });
+          
+          if (result.failed.length === 0) {
+            toast.success(`Successfully deleted ${result.successful.length} task${result.successful.length === 1 ? '' : 's'}`);
+          } else {
+            toast.warning(`Deleted ${result.successful.length} tasks, ${result.failed.length} failed`);
+          }
+        } else {
+          toast.error('Failed to delete tasks');
+        }
+        
+        return result;
+      } catch (error: any) {
+        toast.error('Failed to delete tasks');
+        console.error('Delete multiple instances error:', error);
+        return { successful: [], failed: instanceIds };
       }
     },
 
@@ -391,13 +516,29 @@ export const useAgentOrchestraStore = create<AgentOrchestraState>()(
       });
     },
 
+    // Health Check Actions
+    fetchHealthStatus: async () => {
+      set({ healthLoading: true, healthError: null });
+      try {
+        const healthStatus = await AgentOrchestraService.healthCheck();
+        set({ healthStatus, healthLoading: false });
+      } catch (error: any) {
+        set({ 
+          healthError: error.userMessage || 'Failed to fetch health status', 
+          healthLoading: false 
+        });
+        console.error('Failed to fetch health status:', error);
+      }
+    },
+
     // Utility Actions
     clearErrors: () => {
       set({
         agentsError: null,
         instancesError: null,
         orchestrationsError: null,
-        toolsError: null
+        toolsError: null,
+        healthError: null
       });
     },
 
@@ -418,7 +559,7 @@ export const useAgentOrchestraSelectors = () => {
     agentsLoading: store.agentsLoading,
     
     // Instance selectors
-    runningInstances: store.instances.filter(i => i.status === 'processing'),
+    runningInstances: store.instances.filter(i => i.status === 'processing' || i.status === 'running'),
     completedInstances: store.instances.filter(i => i.status === 'completed'),
     failedInstances: store.instances.filter(i => i.status === 'failed'),
     recentInstances: store.instances.slice(0, 10),

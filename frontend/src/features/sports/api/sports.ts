@@ -225,7 +225,7 @@ export async function listLeagues(sportType?: SportType): Promise<League[]> {
   }
   
   console.log('🏆 [listLeagues] Fetching leagues:', { sportType, params: params.toString() });
-  const result = await fetchApi<League[]>(`/api/v1/sports/leagues/?${params.toString()}`);
+  const result = await fetchApi<League[]>(`/v1/sports/leagues/?${params.toString()}`);
   console.log('🏆 [listLeagues] Got leagues:', result);
   return result;
 }
@@ -235,7 +235,7 @@ export async function listLeagues(sportType?: SportType): Promise<League[]> {
  */
 export async function getSportsTypes(): Promise<{ sport_type: SportType; name: string; count: number }[]> {
   console.log('📊 [getSportsTypes] Fetching sports summary');
-  const result = await fetchApi<{ sport_type: SportType; name: string; count: number }[]>('/api/v1/sports/summary/');
+  const result = await fetchApi<{ sport_type: SportType; name: string; count: number }[]>('/v1/sports/summary/');
   console.log('📊 [getSportsTypes] Got sports types:', result);
   return result;
 }
@@ -244,7 +244,7 @@ export async function getSportsTypes(): Promise<{ sport_type: SportType; name: s
  * Get teams for a specific league
  */
 export async function getTeams(leagueId: string): Promise<Team[]> {
-  return fetchApi<Team[]>(`/api/v1/sports/teams/?league=${leagueId}`);
+  return fetchApi<Team[]>(`/v1/sports/teams/?league=${leagueId}`);
 }
 
 /**
@@ -252,7 +252,7 @@ export async function getTeams(leagueId: string): Promise<Team[]> {
  */
 export async function getLiveGames(): Promise<Game[]> {
   console.log('🔴 [getLiveGames] Fetching live games');
-  const result = await fetchApi<Game[]>('/api/v1/sports/games/?status=live');
+  const result = await fetchApi<Game[]>('/v1/sports/games/?status=live');
   console.log('🔴 [getLiveGames] Got live games:', result);
   return result;
 }
@@ -267,7 +267,7 @@ export async function getGamesBySport(sportType: SportType, date?: string): Prom
   }
   
   console.log('🎮 [getGamesBySport] Fetching games:', { sportType, date, params: params.toString() });
-  const result = await fetchApi<Game[]>(`/api/v1/sports/games/?${params.toString()}`);
+  const result = await fetchApi<Game[]>(`/v1/sports/games/?${params.toString()}`);
   console.log('🎮 [getGamesBySport] Got games:', result);
   return result;
 }
@@ -282,7 +282,7 @@ export async function getMarkets(params?: { game_id?: string; market_type?: stri
   
   const query = queryParams.toString();
   console.log('📊 [getMarkets] Fetching markets:', { params, query });
-  const result = await fetchApi<BettingMarket[]>(`/api/v1/sports/markets/${query ? `?${query}` : ''}`);
+  const result = await fetchApi<BettingMarket[]>(`/v1/sports/markets/${query ? `?${query}` : ''}`);
   console.log('📊 [getMarkets] Got markets:', result);
   return result;
 }
@@ -292,7 +292,7 @@ export async function getMarkets(params?: { game_id?: string; market_type?: stri
  */
 export async function getGameOdds(gameId: string): Promise<any> {
   console.log('💰 [getGameOdds] Fetching odds for game:', gameId);
-  const result = await fetchApi<any>(`/api/v1/sports/games/${gameId}/odds/`);
+  const result = await fetchApi<any>(`/v1/sports/games/${gameId}/odds/`);
   console.log('💰 [getGameOdds] Got odds:', result);
   return result;
 }
@@ -302,7 +302,7 @@ export async function getGameOdds(gameId: string): Promise<any> {
  */
 export async function getTrendingGames(limit = 10): Promise<Game[]> {
   console.log('🔥 [getTrendingGames] Fetching trending games:', { limit });
-  const result = await fetchApi<Game[]>(`/api/v1/sports/games/trending/?limit=${limit}`);
+  const result = await fetchApi<Game[]>(`/v1/sports/games/trending/?limit=${limit}`);
   console.log('🔥 [getTrendingGames] Got trending games:', result);
   return result;
 }
@@ -334,7 +334,7 @@ export async function games(params: {
   const url = `${BASE}/sports/games/?${searchParams.toString()}`;
   console.log('[WEB SPORTS] GET', url);
   
-  return fetchApi(`/api/v1/sports/games/?${searchParams.toString()}`);
+  return fetchApi(`/v1/sports/games/?${searchParams.toString()}`);
 }
 
 /**
@@ -358,7 +358,7 @@ export async function markets(params: {
   const url = `${BASE}/sports/markets/?${searchParams.toString()}`;
   console.log('[WEB SPORTS] GET', url);
   
-  return fetchApi<Market[]>(`/api/v1/sports/markets/?${searchParams.toString()}`);
+  return fetchApi<Market[]>(`/v1/sports/markets/?${searchParams.toString()}`);
 }
 
 /**
@@ -579,7 +579,7 @@ export async function syncSportsData(options: {
   if (options.sport) params.append('sport', options.sport);
   
   console.log('🔄 [syncSportsData] Syncing sports data:', options);
-  const result = await fetchApi<{ success: boolean; message: string }>('/api/v1/sports/sync/', {
+  const result = await fetchApi<{ success: boolean; message: string }>('/v1/sports/sync/', {
     method: 'POST',
     body: JSON.stringify(options),
   });

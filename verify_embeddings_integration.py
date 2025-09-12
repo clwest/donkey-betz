@@ -10,6 +10,11 @@ import django
 import json
 from collections import Counter, defaultdict
 
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
@@ -180,8 +185,12 @@ Test the RAG-Enhanced Assistant
 import requests
 import json
 
-BASE_URL = "http://localhost:8000"
-TOKEN = "4b9facbb8006ac4dd7408fd45a6747105a6719fb"  # Your token
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
+TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)  # Your token
 
 headers = {
     "Authorization": f"Token {TOKEN}",

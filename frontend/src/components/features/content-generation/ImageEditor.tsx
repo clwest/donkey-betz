@@ -342,7 +342,7 @@ export function ImageEditor() {
     setLoadingGallery(true);
     try {
       // Use the same API call that GalleryPage uses successfully
-      const response = await apiClient.get('/content/list/', {
+      const response = await apiClient.get('/api/v1/content/list/', {
         params: {
           type: 'image',
           limit: 50

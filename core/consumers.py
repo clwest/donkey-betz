@@ -139,7 +139,7 @@ class DashboardConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                 ],
                 'timestamp': datetime.now().isoformat()
             }
-        }))
+        })
     
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -164,7 +164,7 @@ class DashboardConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                     },
                     'timestamp': datetime.now().isoformat()
                 }
-            }))
+            })
     
     async def dashboard_update(self, event):
         """Send dashboard update to WebSocket"""
@@ -312,7 +312,7 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                     'message': f'Assistant response to: {message}',
                     'timestamp': datetime.now().isoformat()
                 }
-            }))
+            })
     
     async def assistant_response(self, event):
         """Send assistant response to WebSocket"""

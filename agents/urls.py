@@ -19,4 +19,5 @@ urlpatterns = [
     path('', include(router.urls)),
     # Additional endpoints
     path('discover/', views.discover_agents, name='agent-discover'),
+    path('health/', views.health_check, name='agent-health'),
 ]

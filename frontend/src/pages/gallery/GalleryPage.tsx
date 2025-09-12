@@ -232,7 +232,7 @@ export function GalleryPage() {
       
       // Load images from content list API with type filter
       try {
-        const response = await apiClient.get('/content/list/', {
+        const response = await apiClient.get('/v1/content/list/', {
           params: {
             type: 'image',
             limit: 200  // Get up to 200 images
@@ -267,7 +267,7 @@ export function GalleryPage() {
       
       // Load voice transcripts
       try {
-        const response = await apiClient.get('/voice/history/');
+        const response = await apiClient.get('/v1/voice/history/');
         const rawTranscripts = response.data.history || [];
         
         // Map the API response to match our VoiceTranscript interface
@@ -300,7 +300,7 @@ export function GalleryPage() {
       // Load podcasts from Content Library
       try {
         // First try to get podcasts from the GeneratedContent library
-        const libraryResponse = await apiClient.get('/content/library/?type=podcast');
+        const libraryResponse = await apiClient.get('/v1/content/library/?type=podcast');
         const podcastItems = libraryResponse.data.results || [];
         
         // Map the GeneratedContent items to PodcastEpisode format
@@ -387,7 +387,7 @@ export function GalleryPage() {
       } else {
         // Try to fetch from library API if content not available
         try {
-          const response = await apiClient.get(`/content/library/${podcastId}/`);
+          const response = await apiClient.get(`/v1/content/library/${podcastId}/`);
           if (response.data.content?.script) {
             scriptContent = response.data.content.script;
           } else if (response.data.content?.content) {
@@ -477,7 +477,7 @@ export function GalleryPage() {
       Logger.component('GalleryPage', 'Deleting video', { videoId });
       
       // Call the delete API endpoint
-      await apiClient.delete(`/gallery/videos/${videoId}/`);
+      await apiClient.delete(`/v1/gallery/videos/${videoId}/`);
       
       // Remove from local state
       setVideos(prev => prev.filter(v => v.id !== videoId));
@@ -761,7 +761,7 @@ export function GalleryPage() {
       } else if (activeTab === 'videos') {
         // For videos, use individual delete calls
         const deletePromises = itemsArray.map(id => 
-          apiClient.delete(`/gallery/videos/${id}/`)
+          apiClient.delete(`/v1/gallery/videos/${id}/`)
             .catch(err => {
               Logger.error(`Failed to delete video ${id}`, err);
               return { error: true, id };
@@ -902,44 +902,71 @@ export function GalleryPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Content Library</h1>
-          <p className="text-gray-400 mt-1">Your saved blogs and generated content</p>
+    <div className="space-y-8" style={{ backgroundColor: 'var(--gaming-bg-primary)', minHeight: '100vh' }}>
+      {/* Header - Gaming Style */}
+      <div className="gaming-neural-card p-6">
+        <div className="gaming-border-glow"></div>
+        <div className="relative z-10 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-black font-mono uppercase tracking-wider" 
+                style={{ 
+                  color: 'var(--gaming-neon-cyan)',
+                  textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
+                }}>NEURAL CONTENT MATRIX</h1>
+            <p className="mt-3 font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+              NEURAL ARCHIVE • AI-GENERATED CONTENT REPOSITORY
+            </p>
+          </div>
+          {!bulkDeleteMode && (
+            <button
+              onClick={() => setBulkDeleteMode(true)}
+              className="gaming-btn-secondary px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'var(--gaming-bg-elevated)',
+                border: '1px solid var(--gaming-neon-purple)',
+                color: 'var(--gaming-neon-purple)'
+              }}
+            >
+              <TrashIcon className="h-4 w-4" />
+              BULK DELETE
+            </button>
+          )}
         </div>
-        {!bulkDeleteMode && (
-          <button
-            onClick={() => setBulkDeleteMode(true)}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            <TrashIcon className="h-4 w-4" />
-            Bulk Delete
-          </button>
-        )}
       </div>
 
       {/* Bulk Actions Bar */}
       {bulkDeleteMode && (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-300">
-                {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
-              </span>
-              <button
-                onClick={selectAll}
-                className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
-              >
-                Select All
-              </button>
-              <button
-                onClick={clearSelection}
-                className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
-              >
-                Clear Selection
-              </button>
-            </div>
+        <div className="gaming-neural-card p-4">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-primary)' }}>
+                  {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+                </span>
+                <button
+                  onClick={selectAll}
+                  className="px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider gaming-btn-secondary rounded transition-all duration-200 hover:scale-105"
+                  style={{ 
+                    background: 'var(--gaming-bg-elevated)',
+                    border: '1px solid var(--gaming-neon-cyan)',
+                    color: 'var(--gaming-neon-cyan)'
+                  }}
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider gaming-btn-secondary rounded transition-all duration-200 hover:scale-105"
+                  style={{ 
+                    background: 'var(--gaming-bg-elevated)',
+                    border: '1px solid var(--gaming-text-secondary)',
+                    color: 'var(--gaming-text-secondary)'
+                  }}
+                >
+                  Clear Selection
+                </button>
+              </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -951,111 +978,223 @@ export function GalleryPage() {
                   handleBulkDelete();
                 }}
                 disabled={selectedItems.size === 0}
-                className={`px-4 py-1.5 text-sm rounded transition-colors flex items-center gap-2 ${
+                className={`px-6 py-2 text-sm font-mono font-bold uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center gap-2 ${
                   selectedItems.size > 0
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    ? 'gaming-btn-danger hover:scale-105'
+                    : 'opacity-50 cursor-not-allowed'
                 }`}
+                style={selectedItems.size > 0 ? {
+                  background: 'linear-gradient(135deg, #dc2626, #991b1b)',
+                  border: '1px solid #dc2626',
+                  color: 'white',
+                  boxShadow: '0 0 20px rgba(220, 38, 38, 0.3)'
+                } : {}}
               >
                 <TrashIcon className="h-4 w-4" />
-                Delete Selected
+                DELETE SELECTED
               </button>
               <button
                 onClick={() => {
                   setBulkDeleteMode(false);
                   clearSelection();
                 }}
-                className="px-4 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+                className="px-6 py-2 text-sm font-mono font-bold uppercase tracking-wider gaming-btn-secondary rounded-xl transition-all duration-200 hover:scale-105"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-text-secondary)',
+                  color: 'var(--gaming-text-secondary)'
+                }}
               >
-                Cancel
+                CANCEL
               </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex justify-between items-end border-b border-dark-700">
-        <div className="flex space-x-1">
-          <button
-            onClick={() => setActiveTab('blogs')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'blogs'
-                ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <DocumentTextIcon className="inline h-4 w-4 mr-2" />
-            Blog Posts ({blogs.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('social')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'social'
-                ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <HashtagIcon className="inline h-4 w-4 mr-2" />
-            Social Posts ({socialPosts.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('videos')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'videos'
-                ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <PlayIcon className="inline h-4 w-4 mr-2" />
-            Videos ({videos.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('images')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'images'
-                ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <PhotoIcon className="inline h-4 w-4 mr-2" />
-            Images ({images.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('voice')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'voice'
-                ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <MicrophoneIcon className="inline h-4 w-4 mr-2" />
-            Voice ({voiceTranscripts.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('podcasts')}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'podcasts'
-                ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <SpeakerWaveIcon className="inline h-4 w-4 mr-2" />
-            Podcasts ({podcasts.length})
-          </button>
-        </div>
+      {/* Neural Tab Matrix */}
+      <div className="gaming-neural-card p-6">
+        <div className="gaming-border-glow"></div>
+        <div className="relative z-10">
+          <h2 className="text-xl font-bold font-mono uppercase tracking-wider mb-4" 
+              style={{ color: 'var(--gaming-neon-cyan)' }}>
+            CONTENT TYPE SELECTOR
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <div
+              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                activeTab === 'blogs' ? 'ring-2' : ''
+              }`}
+              style={{
+                borderColor: activeTab === 'blogs' ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
+                boxShadow: activeTab === 'blogs' ? 'var(--gaming-glow-primary)' : undefined,
+                background: activeTab === 'blogs' ? 'var(--gaming-gradient-primary)' : undefined
+              }}
+              onClick={() => setActiveTab('blogs')}
+            >
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <DocumentTextIcon className="h-6 w-6 mx-auto mb-2" 
+                  style={{ 
+                    color: activeTab === 'blogs' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: activeTab === 'blogs' ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))' : undefined
+                  }} />
+                <p className="font-bold font-mono uppercase tracking-wider text-xs" 
+                   style={{ color: activeTab === 'blogs' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                  BLOGS
+                </p>
+                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({blogs.length})</p>
+              </div>
+            </div>
+            <div
+              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                activeTab === 'social' ? 'ring-2' : ''
+              }`}
+              style={{
+                borderColor: activeTab === 'social' ? 'var(--gaming-neon-purple)' : 'var(--gaming-border)',
+                boxShadow: activeTab === 'social' ? '0 0 20px rgba(157, 78, 221, 0.3)' : undefined,
+                background: activeTab === 'social' ? 'var(--gaming-gradient-secondary)' : undefined
+              }}
+              onClick={() => setActiveTab('social')}
+            >
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <HashtagIcon className="h-6 w-6 mx-auto mb-2" 
+                  style={{ 
+                    color: activeTab === 'social' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: activeTab === 'social' ? 'drop-shadow(0 0 8px rgba(157, 78, 221, 0.6))' : undefined
+                  }} />
+                <p className="font-bold font-mono uppercase tracking-wider text-xs" 
+                   style={{ color: activeTab === 'social' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                  SOCIAL
+                </p>
+                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({socialPosts.length})</p>
+              </div>
+            </div>
 
-        {/* Bulk Actions - Only show when on blogs tab and there are draft blogs */}
-        {activeTab === 'blogs' && blogs.some(blog => !blog.is_live) && (
-          <button
-            onClick={publishAllBlogs}
-            className="mb-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-            disabled={loading}
-          >
-            <GlobeAltIcon className="h-4 w-4" />
-            Publish All Drafts ({blogs.filter(b => !b.is_live).length})
-          </button>
-        )}
+            <div
+              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                activeTab === 'videos' ? 'ring-2' : ''
+              }`}
+              style={{
+                borderColor: activeTab === 'videos' ? 'var(--gaming-neon-green)' : 'var(--gaming-border)',
+                boxShadow: activeTab === 'videos' ? '0 0 20px rgba(57, 255, 20, 0.3)' : undefined,
+                background: activeTab === 'videos' ? 'var(--gaming-gradient-tertiary)' : undefined
+              }}
+              onClick={() => setActiveTab('videos')}
+            >
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <PlayIcon className="h-6 w-6 mx-auto mb-2" 
+                  style={{ 
+                    color: activeTab === 'videos' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: activeTab === 'videos' ? 'drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))' : undefined
+                  }} />
+                <p className="font-bold font-mono uppercase tracking-wider text-xs" 
+                   style={{ color: activeTab === 'videos' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                  VIDEOS
+                </p>
+                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({videos.length})</p>
+              </div>
+            </div>
+
+            <div
+              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                activeTab === 'images' ? 'ring-2' : ''
+              }`}
+              style={{
+                borderColor: activeTab === 'images' ? 'var(--gaming-neon-orange)' : 'var(--gaming-border)',
+                boxShadow: activeTab === 'images' ? '0 0 20px rgba(255, 165, 0, 0.3)' : undefined,
+                background: activeTab === 'images' ? 'var(--gaming-gradient-quaternary)' : undefined
+              }}
+              onClick={() => setActiveTab('images')}
+            >
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <PhotoIcon className="h-6 w-6 mx-auto mb-2" 
+                  style={{ 
+                    color: activeTab === 'images' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: activeTab === 'images' ? 'drop-shadow(0 0 8px rgba(255, 165, 0, 0.6))' : undefined
+                  }} />
+                <p className="font-bold font-mono uppercase tracking-wider text-xs" 
+                   style={{ color: activeTab === 'images' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                  IMAGES
+                </p>
+                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({images.length})</p>
+              </div>
+            </div>
+
+            <div
+              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                activeTab === 'voice' ? 'ring-2' : ''
+              }`}
+              style={{
+                borderColor: activeTab === 'voice' ? 'var(--gaming-neon-purple)' : 'var(--gaming-border)',
+                boxShadow: activeTab === 'voice' ? '0 0 20px rgba(157, 78, 221, 0.3)' : undefined,
+                background: activeTab === 'voice' ? 'var(--gaming-gradient-secondary)' : undefined
+              }}
+              onClick={() => setActiveTab('voice')}
+            >
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <MicrophoneIcon className="h-6 w-6 mx-auto mb-2" 
+                  style={{ 
+                    color: activeTab === 'voice' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: activeTab === 'voice' ? 'drop-shadow(0 0 8px rgba(157, 78, 221, 0.6))' : undefined
+                  }} />
+                <p className="font-bold font-mono uppercase tracking-wider text-xs" 
+                   style={{ color: activeTab === 'voice' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                  VOICE
+                </p>
+                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({voiceTranscripts.length})</p>
+              </div>
+            </div>
+
+            <div
+              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                activeTab === 'podcasts' ? 'ring-2' : ''
+              }`}
+              style={{
+                borderColor: activeTab === 'podcasts' ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
+                boxShadow: activeTab === 'podcasts' ? 'var(--gaming-glow-primary)' : undefined,
+                background: activeTab === 'podcasts' ? 'var(--gaming-gradient-primary)' : undefined
+              }}
+              onClick={() => setActiveTab('podcasts')}
+            >
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <SpeakerWaveIcon className="h-6 w-6 mx-auto mb-2" 
+                  style={{ 
+                    color: activeTab === 'podcasts' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: activeTab === 'podcasts' ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))' : undefined
+                  }} />
+                <p className="font-bold font-mono uppercase tracking-wider text-xs" 
+                   style={{ color: activeTab === 'podcasts' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                  PODCASTS
+                </p>
+                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({podcasts.length})</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bulk Actions - Only show when on blogs tab and there are draft blogs */}
+          {activeTab === 'blogs' && blogs.some(blog => !blog.is_live) && (
+            <button
+              onClick={publishAllBlogs}
+              className="px-6 py-3 font-mono font-bold text-sm uppercase tracking-wider rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                border: '1px solid var(--gaming-neon-green)',
+                color: 'white',
+                boxShadow: '0 0 20px rgba(57, 255, 20, 0.3)'
+              }}
+            >
+              <GlobeAltIcon className="h-4 w-4" />
+              PUBLISH ALL DRAFTS ({blogs.filter(b => !b.is_live).length})
+            </button>
+          )}
 
         {/* Voice Actions - Clear all transcripts */}
         {activeTab === 'voice' && voiceTranscripts.length > 0 && (
@@ -1092,13 +1231,20 @@ export function GalleryPage() {
                 }
               }
             }}
-            className="mb-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+            className="px-6 py-3 font-mono font-bold text-sm uppercase tracking-wider rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
             disabled={loading}
+            style={{
+              background: 'linear-gradient(135deg, #dc2626, #991b1b)',
+              border: '1px solid #dc2626',
+              color: 'white',
+              boxShadow: '0 0 20px rgba(220, 38, 38, 0.3)'
+            }}
           >
             <TrashIcon className="h-4 w-4" />
-            Clear All ({voiceTranscripts.length})
+            CLEAR ALL ({voiceTranscripts.length})
           </button>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -1666,7 +1812,7 @@ export function GalleryPage() {
                           } else {
                             // Try to fetch from library API if content not available
                             try {
-                              const response = await apiClient.get(`/content/library/${currentPodcast.id}/`);
+                              const response = await apiClient.get(`/v1/content/library/${currentPodcast.id}/`);
                               if (response.data.content?.script) {
                                 scriptContent = response.data.content.script;
                               } else if (response.data.content?.content) {

@@ -83,14 +83,14 @@ export interface ABTest {
 export const campaignService = {
   // Get all campaigns
   async getCampaigns(): Promise<Campaign[]> {
-    const { data } = await apiClient.get('/api/v1/campaigns/');
+    const { data } = await apiClient.get('/v1/campaigns/');
     // API returns { success: true, campaigns: [...] }
     return data.campaigns || data;
   },
 
   // Get single campaign
   async getCampaign(id: string): Promise<Campaign> {
-    const { data } = await apiClient.get(`/api/v1/campaigns/${id}/`);
+    const { data } = await apiClient.get(`/v1/campaigns/${id}/`);
     // API returns { success: true, campaign: {...} }
     return data.campaign || data;
   },
@@ -111,26 +111,26 @@ export const campaignService = {
       target_audience: campaign.target_audience,
       budget: campaign.budget,
     };
-    const { data } = await apiClient.post('/api/v1/campaigns/', payload);
+    const { data } = await apiClient.post('/v1/campaigns/', payload);
     // API returns { success: true, campaign: {...} }
     return data.campaign || data;
   },
 
   // Update campaign
   async updateCampaign(id: string, updates: Partial<Campaign>): Promise<Campaign> {
-    const { data } = await apiClient.put(`/api/v1/campaigns/${id}/`, updates);
+    const { data } = await apiClient.put(`/v1/campaigns/${id}/`, updates);
     return data;
   },
 
   // Delete campaign
   async deleteCampaign(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1/campaigns/${id}/`);
+    await apiClient.delete(`/v1/campaigns/${id}/`);
   },
 
   // Generate campaign content
   async generateCampaignContent(campaignId: string, contentType: CampaignContent['content_type'], prompt?: string): Promise<any> {
     // Use simple generator for now as it's more reliable
-    const { data } = await apiClient.post(`/api/v1/campaigns/${campaignId}/simple-generate/`, {
+    const { data } = await apiClient.post(`/v1/campaigns/${campaignId}/simple-generate/`, {
       content_type: contentType,
       prompt,
     });
@@ -139,7 +139,7 @@ export const campaignService = {
 
   // Batch generate campaign content
   async batchGenerateContent(campaignId: string, contentTypes: CampaignContent['content_type'][], prompt: string): Promise<CampaignContent[]> {
-    const { data } = await apiClient.post(`/api/v1/campaigns/${campaignId}/batch-generate/`, {
+    const { data } = await apiClient.post(`/v1/campaigns/${campaignId}/batch-generate/`, {
       content_types: contentTypes,
       prompt,
     });
@@ -148,7 +148,7 @@ export const campaignService = {
 
   // Get campaign templates
   async getTemplates(): Promise<CampaignTemplate[]> {
-    const { data } = await apiClient.get('/api/v1/campaigns/templates/');
+    const { data } = await apiClient.get('/v1/campaigns/templates/');
     // API returns { success: true, templates: [...] }
     return data.templates || data;
   },
@@ -159,7 +159,7 @@ export const campaignService = {
     target_audience: string;
     budget?: number;
   }): Promise<Campaign> {
-    const { data } = await apiClient.post('/api/v1/campaigns/from-template/', {
+    const { data } = await apiClient.post('/v1/campaigns/from-template/', {
       template_name: templateId, // API expects template_name, not template_id
       customizations: {
         name: customizations.title,
@@ -174,7 +174,7 @@ export const campaignService = {
 
   // Get campaign analytics
   async getCampaignAnalytics(id: string): Promise<CampaignAnalytics> {
-    const { data } = await apiClient.get(`/api/v1/campaigns/${id}/analytics/`);
+    const { data } = await apiClient.get(`/v1/campaigns/${id}/analytics/`);
     return data;
   },
 
@@ -194,7 +194,7 @@ export const campaignService = {
       details: string;
     }>;
   }> {
-    const { data } = await apiClient.get('/api/v1/campaigns/dashboard/');
+    const { data } = await apiClient.get('/v1/campaigns/dashboard/');
     return data;
   },
 
@@ -206,17 +206,17 @@ export const campaignService = {
     variant_b: Partial<CampaignContent>;
     traffic_split: number;
   }): Promise<ABTest> {
-    const { data } = await apiClient.post('/api/v1/campaigns/ab-tests/', test);
+    const { data } = await apiClient.post('/v1/campaigns/ab-tests/', test);
     return data;
   },
 
   async getABTests(campaignId: string): Promise<ABTest[]> {
-    const { data } = await apiClient.get(`/api/v1/campaigns/${campaignId}/ab-tests/`);
+    const { data } = await apiClient.get(`/v1/campaigns/${campaignId}/ab-tests/`);
     return data;
   },
 
   async getABTestResults(testId: string): Promise<ABTest> {
-    const { data } = await apiClient.get(`/api/v1/campaigns/ab-tests/${testId}/results/`);
+    const { data } = await apiClient.get(`/v1/campaigns/ab-tests/${testId}/results/`);
     return data;
   },
 
@@ -230,7 +230,7 @@ export const campaignService = {
       effort: 'low' | 'medium' | 'high';
     }>;
   }> {
-    const { data } = await apiClient.get(`/api/v1/campaigns/${campaignId}/optimize/`);
+    const { data } = await apiClient.get(`/v1/campaigns/${campaignId}/optimize/`);
     return data;
   },
 
@@ -240,13 +240,13 @@ export const campaignService = {
     underperforming: CampaignContent[];
     recommendations: string[];
   }> {
-    const { data } = await apiClient.get(`/api/v1/campaigns/${campaignId}/content-performance/`);
+    const { data } = await apiClient.get(`/v1/campaigns/${campaignId}/content-performance/`);
     return data;
   },
 
   // Export campaign data
   async exportCampaign(campaignId: string, format: 'csv' | 'xlsx' | 'pdf'): Promise<Blob> {
-    const { data } = await apiClient.post(`/api/v1/campaigns/${campaignId}/export/`, {
+    const { data } = await apiClient.post(`/v1/campaigns/${campaignId}/export/`, {
       format,
     }, {
       responseType: 'blob',
@@ -256,18 +256,18 @@ export const campaignService = {
 
   // Launch campaign
   async launchCampaign(campaignId: string): Promise<Campaign> {
-    const { data } = await apiClient.post(`/api/v1/campaigns/${campaignId}/launch/`);
+    const { data } = await apiClient.post(`/v1/campaigns/${campaignId}/launch/`);
     return data;
   },
 
   // Pause/Resume campaign
   async pauseCampaign(campaignId: string): Promise<Campaign> {
-    const { data } = await apiClient.post(`/api/v1/campaigns/${campaignId}/pause/`);
+    const { data } = await apiClient.post(`/v1/campaigns/${campaignId}/pause/`);
     return data;
   },
 
   async resumeCampaign(campaignId: string): Promise<Campaign> {
-    const { data } = await apiClient.post(`/api/v1/campaigns/${campaignId}/resume/`);
+    const { data } = await apiClient.post(`/v1/campaigns/${campaignId}/resume/`);
     return data;
   },
 };

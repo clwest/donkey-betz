@@ -102,7 +102,7 @@ export const galleryService = {
       params.append('date_end', filters.date_range.end);
     }
 
-    const { data } = await apiClient.get(`/api/v1/gallery/list/?${params}`);
+    const { data } = await apiClient.get(`/v1/gallery/list/?${params}`);
     return {
       items: data.images || data.items || [],
       total: data.pagination?.total || 0,
@@ -113,7 +113,7 @@ export const galleryService = {
 
   // Get single gallery item
   async getItem(id: string): Promise<GalleryItem> {
-    const { data } = await apiClient.get(`/api/v1/gallery/${id}/`);
+    const { data } = await apiClient.get(`/v1/gallery/${id}/`);
     return data;
   },
 
@@ -129,35 +129,35 @@ export const galleryService = {
     category?: string;
     metadata?: GalleryItem['metadata'];
   }): Promise<GalleryItem> {
-    const { data } = await apiClient.post('/api/v1/gallery/', item);
+    const { data } = await apiClient.post('/v1/gallery/', item);
     return data;
   },
 
   // Update gallery item
   async updateItem(id: string, updates: Partial<GalleryItem>): Promise<GalleryItem> {
-    const { data } = await apiClient.put(`/api/v1/gallery/${id}/`, updates);
+    const { data } = await apiClient.put(`/v1/gallery/${id}/`, updates);
     return data;
   },
 
   // Delete gallery item
   async deleteItem(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1/gallery/${id}/`);
+    await apiClient.delete(`/v1/gallery/${id}/`);
   },
 
   // Batch delete items
   async deleteItems(ids: string[]): Promise<void> {
-    await apiClient.post('/api/v1/gallery/bulk-delete/', { ids });
+    await apiClient.post('/v1/gallery/bulk-delete/', { ids });
   },
 
   // Toggle favorite status
   async toggleFavorite(id: string): Promise<GalleryItem> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/toggle-favorite/`);
+    const { data } = await apiClient.post(`/v1/gallery/${id}/toggle-favorite/`);
     return data;
   },
 
   // Add/remove tags
   async updateTags(id: string, tags: string[]): Promise<GalleryItem> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/tags/`, { tags });
+    const { data } = await apiClient.post(`/v1/gallery/${id}/tags/`, { tags });
     return data;
   },
 
@@ -167,13 +167,13 @@ export const galleryService = {
     tags: string[];
     content_types: Array<{ type: string; count: number }>;
   }> {
-    const { data } = await apiClient.get('/api/v1/gallery/metadata/');
+    const { data } = await apiClient.get('/v1/gallery/metadata/');
     return data;
   },
 
   // Get gallery statistics
   async getStats(): Promise<GalleryStats> {
-    const { data } = await apiClient.get('/api/v1/gallery/stats/');
+    const { data } = await apiClient.get('/v1/gallery/stats/');
     return data;
   },
 
@@ -183,7 +183,7 @@ export const galleryService = {
     total: number;
     suggestions: string[];
   }> {
-    const { data } = await apiClient.get('/api/v1/gallery/search/', {
+    const { data } = await apiClient.get('/v1/gallery/search/', {
       params: { q: query, ...filters },
     });
     return data;
@@ -191,7 +191,7 @@ export const galleryService = {
 
   // Collections
   async getCollections(): Promise<GalleryCollection[]> {
-    const { data } = await apiClient.get('/api/v1/gallery/collections/');
+    const { data } = await apiClient.get('/v1/gallery/collections/');
     return data;
   },
 
@@ -200,28 +200,28 @@ export const galleryService = {
     description: string;
     item_ids?: string[];
   }): Promise<GalleryCollection> {
-    const { data } = await apiClient.post('/api/v1/gallery/collections/', collection);
+    const { data } = await apiClient.post('/v1/gallery/collections/', collection);
     return data;
   },
 
   async updateCollection(id: string, updates: Partial<GalleryCollection>): Promise<GalleryCollection> {
-    const { data } = await apiClient.put(`/api/v1/gallery/collections/${id}/`, updates);
+    const { data } = await apiClient.put(`/v1/gallery/collections/${id}/`, updates);
     return data;
   },
 
   async deleteCollection(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1/gallery/collections/${id}/`);
+    await apiClient.delete(`/v1/gallery/collections/${id}/`);
   },
 
   async addToCollection(collectionId: string, itemIds: string[]): Promise<GalleryCollection> {
-    const { data } = await apiClient.post(`/api/v1/gallery/collections/${collectionId}/add/`, {
+    const { data } = await apiClient.post(`/v1/gallery/collections/${collectionId}/add/`, {
       item_ids: itemIds,
     });
     return data;
   },
 
   async removeFromCollection(collectionId: string, itemIds: string[]): Promise<GalleryCollection> {
-    const { data } = await apiClient.post(`/api/v1/gallery/collections/${collectionId}/remove/`, {
+    const { data } = await apiClient.post(`/v1/gallery/collections/${collectionId}/remove/`, {
       item_ids: itemIds,
     });
     return data;
@@ -229,7 +229,7 @@ export const galleryService = {
 
   // Export functionality
   async exportItems(itemIds: string[], format: 'zip' | 'pdf'): Promise<Blob> {
-    const { data } = await apiClient.post('/api/v1/gallery/export/', {
+    const { data } = await apiClient.post('/v1/gallery/export/', {
       item_ids: itemIds,
       format,
     }, {
@@ -248,7 +248,7 @@ export const galleryService = {
     share_code: string;
     expires_at: string;
   }> {
-    const { data } = await apiClient.post('/api/v1/gallery/share/', {
+    const { data } = await apiClient.post('/v1/gallery/share/', {
       item_ids: itemIds,
       ...options,
     });
@@ -262,7 +262,7 @@ export const galleryService = {
     expires_at: string;
     allow_download: boolean;
   }> {
-    const { data } = await apiClient.get(`/api/v1/gallery/shared/${shareCode}/`, {
+    const { data } = await apiClient.get(`/v1/gallery/shared/${shareCode}/`, {
       params: { password },
     });
     return data;
@@ -270,13 +270,13 @@ export const galleryService = {
 
   // Duplicate item
   async duplicateItem(id: string, title?: string): Promise<GalleryItem> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/duplicate/`, { title });
+    const { data } = await apiClient.post(`/v1/gallery/${id}/duplicate/`, { title });
     return data;
   },
 
   // Generate variations
   async generateVariations(id: string, count = 3): Promise<GalleryItem[]> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/variations/`, { count });
+    const { data } = await apiClient.post(`/v1/gallery/${id}/variations/`, { count });
     return data;
   },
 
@@ -287,7 +287,7 @@ export const galleryService = {
     width: number;
     height: number;
   }): Promise<GalleryItem> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/crop/`, cropData);
+    const { data } = await apiClient.post(`/v1/gallery/${id}/crop/`, cropData);
     return data;
   },
 
@@ -296,7 +296,7 @@ export const galleryService = {
     height: number;
     maintain_aspect_ratio?: boolean;
   }): Promise<GalleryItem> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/resize/`, dimensions);
+    const { data } = await apiClient.post(`/v1/gallery/${id}/resize/`, dimensions);
     return data;
   },
 
@@ -306,7 +306,7 @@ export const galleryService = {
     suggested_category: string;
     confidence: number;
   }> {
-    const { data } = await apiClient.post(`/api/v1/gallery/${id}/auto-tag/`);
+    const { data } = await apiClient.post(`/v1/gallery/${id}/auto-tag/`);
     return data;
   },
 };

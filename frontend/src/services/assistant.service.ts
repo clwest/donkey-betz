@@ -3,7 +3,7 @@ import { API_CONFIG } from '../config/api.config';
 
 // Create a dedicated API client for AI Content Studio with dynamic URL
 const aiStudioClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || API_CONFIG.BASE_URL + '/api',
+  baseURL: import.meta.env.VITE_API_URL || `${API_CONFIG.BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -62,7 +62,7 @@ export interface AssistantStats {
 }
 
 class AssistantService {
-  private baseURL = '/assistant';
+  private baseURL = '/v1/assistant';
 
   async sendMessage(message: string, sessionId?: string) {
     console.log('AssistantService.sendMessage - sessionId:', sessionId, 'type:', typeof sessionId);

@@ -28,6 +28,17 @@ import { AISettingsPage } from './pages/ai-settings/AISettingsPage';
 // Public Pages
 import { PublicBlogListPage } from './pages/public/PublicBlogListPage';
 import { PublicBlogPage } from './pages/public/PublicBlogPage';
+import LandingPage from './pages/public/LandingPage';
+import BlogsPage from './pages/public/BlogsPage';
+
+// User Pages
+// import UserDashboard from './pages/user/UserDashboard'; // Removed to avoid dashboard conflict
+
+// Sports Pages
+import SportsAnalysisPage from './pages/sports/SportsAnalysisPage';
+
+// Assistant Pages
+import AssistantChatPage from './pages/assistant/AssistantChatPage';
 
 // Prompt Diagnostics
 import PromptDiagnosticsPage from './pages/prompt-diagnostics/PromptDiagnosticsPage';
@@ -44,8 +55,6 @@ import DebugPage from './pages/DebugPage';
 // Connectivity
 import { ConnectivityPage } from './pages/connectivity/ConnectivityPage';
 
-// Odds
-import { OddsPage } from './features/odds/pages/OddsPage';
 
 // Sports
 import { SportsBoardPage } from './features/sports/pages/SportsBoardPage';
@@ -106,13 +115,26 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/blogs" element={<BlogsPage />} />
+          <Route path="/blog/:slug" element={<PublicBlogPage />} />
+          
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/signup" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           
-          {/* Public Blog Routes (no auth required) */}
+          {/* User Dashboard - Removed to avoid conflict with main dashboard */}
+          
+          {/* Sports Analysis */}
+          <Route path="/sports/analyze" element={<SportsAnalysisPage />} />
+          
+          {/* AI Assistant */}
+          <Route path="/assistant/chat" element={<AssistantChatPage />} />
+          
+          {/* Legacy Public Blog Routes */}
           <Route path="/blog" element={<PublicBlogListPage />} />
           <Route path="/blog/:id" element={<PublicBlogPage />} />
           
@@ -146,7 +168,6 @@ function App() {
             <Route path="agent-registry" element={<AgentRegistryPage />} />
             <Route path="workflows-multi" element={<MultiAgentWorkflowsPage />} />
             <Route path="connectivity" element={<ConnectivityPage />} />
-            <Route path="odds" element={<OddsPage />} />
             <Route path="sports/board" element={<SportsBoardPage />} />
             <Route path="agent-orchestra" element={<AgentOrchestrationPage />} />
             <Route path="orchestra" element={<OrchestraPage />} />

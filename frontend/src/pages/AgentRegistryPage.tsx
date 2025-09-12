@@ -237,85 +237,90 @@ export default function AgentRegistryPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="min-h-screen bg-black space-y-6 p-4">
+      {/* Gaming Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white">Agent Registry</h1>
-          <p className="text-gray-400 mt-1">Discover and manage all AI agents in your ecosystem</p>
+          <h1 className="text-4xl font-bold text-cyan-400 font-mono uppercase tracking-wider glow-text-sm animate-pulse-glow">
+            AGENT NEURAL REGISTRY
+          </h1>
+          <p className="text-purple-400 mt-1 text-lg font-mono">
+            {'>>>'} NEURAL NETWORK AGENTS • STATUS MONITORING ACTIVE
+          </p>
         </div>
         <Button
           onClick={refreshDiscovery}
           disabled={refreshing}
+          className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 text-cyan-400 font-mono uppercase tracking-wider transition-all duration-300"
         >
-          <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh Discovery'}
+          <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''} text-cyan-400`} />
+          {refreshing ? 'SCANNING...' : 'NEURAL SCAN'}
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Gaming Stats Cards */}
       {discoveryStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Agents</p>
-                <p className="text-2xl font-bold text-white">{discoveryStats?.total_agents || 0}</p>
+                <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">TOTAL AGENTS</p>
+                <p className="text-3xl font-bold text-cyan-400 font-mono glow-text-sm">{discoveryStats?.total_agents || 0}</p>
               </div>
-              <CpuChipIcon className="h-8 w-8 text-primary-400" />
+              <CpuChipIcon className="h-8 w-8 text-cyan-400 animate-pulse" />
             </div>
           </Card>
           
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Built-in Agents</p>
-                <p className="text-2xl font-bold text-purple-400">
+                <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">CORE AGENTS</p>
+                <p className="text-3xl font-bold text-purple-400 font-mono glow-text-sm">
                   {discoveryStats?.by_source?.builtin || 0}
                 </p>
               </div>
-              <SparklesIcon className="h-8 w-8 text-purple-400" />
+              <SparklesIcon className="h-8 w-8 text-purple-400 animate-pulse" />
             </div>
           </Card>
           
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-blue-800/50 hover:border-blue-400/80 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Claude Agents</p>
-                <p className="text-2xl font-bold text-blue-400">
+                <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">NEURAL FILES</p>
+                <p className="text-3xl font-bold text-blue-400 font-mono glow-text-sm">
                   {discoveryStats?.by_source?.claude_files || 0}
                 </p>
               </div>
-              <DocumentTextIcon className="h-8 w-8 text-blue-400" />
+              <DocumentTextIcon className="h-8 w-8 text-blue-400 animate-pulse" />
             </div>
           </Card>
           
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-orange-800/50 hover:border-orange-400/80 hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Capabilities</p>
-                <p className="text-2xl font-bold text-orange-400">
+                <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">CAPABILITIES</p>
+                <p className="text-3xl font-bold text-orange-400 font-mono glow-text-sm">
                   {discoveryStats?.total_capabilities || 0}
                 </p>
               </div>
-              <CircleStackIcon className="h-8 w-8 text-orange-400" />
+              <CircleStackIcon className="h-8 w-8 text-orange-400 animate-pulse" />
             </div>
           </Card>
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
+      {/* Gaming Search & Filters */}
+      <Card className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-cyan-400 animate-pulse" />
               <input
                 type="text"
-                placeholder="Search agents by name, description, or capabilities..."
+                placeholder=">>> Neural search: agent name, description, capabilities..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pl-10 pr-4 py-3 bg-black/50 border-2 border-gray-800/50 rounded-lg text-cyan-400 font-mono placeholder-purple-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-400 transition-all duration-300"
               />
             </div>
           </div>
@@ -323,11 +328,11 @@ export default function AgentRegistryPage() {
             <select
               value={selectedSpecialization}
               onChange={(e) => setSelectedSpecialization(e.target.value)}
-              className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 bg-black/50 border-2 border-gray-800/50 rounded-lg text-cyan-400 font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-400 transition-all duration-300"
             >
-              <option value="all">All Specializations</option>
+              <option value="all" className="bg-black text-cyan-400">ALL SPECIALIZATIONS</option>
               {specializations.map(spec => (
-                <option key={spec} value={spec}>
+                <option key={spec} value={spec} className="bg-black text-cyan-400">
                   {spec.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </option>
               ))}
@@ -336,86 +341,86 @@ export default function AgentRegistryPage() {
         </div>
       </Card>
 
-      {/* Agents Grid */}
+      {/* Gaming Agents Grid */}
       {filteredAgents.length === 0 ? (
-        <Card>
+        <Card className="bg-gray-900/80 border-2 border-red-800/50 hover:border-red-400/80 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300">
           <div className="text-center py-12">
-            <MagnifyingGlassIcon className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400 mb-4">No agents found</p>
-            <p className="text-sm text-gray-500 mb-4">
-              Try adjusting your search criteria or refresh the discovery.
+            <MagnifyingGlassIcon className="h-12 w-12 text-red-400 mx-auto mb-3 animate-pulse" />
+            <p className="text-red-400 mb-4 font-mono uppercase tracking-wider">NO NEURAL AGENTS DETECTED</p>
+            <p className="text-sm text-purple-400 mb-4 font-mono">
+              {'>>>'} Adjust neural scan parameters or reinitialize discovery protocols
             </p>
           </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAgents.map((agent) => (
-            <Card key={agent.id} hover className="flex flex-col">
+            <Card key={agent.id} className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 flex flex-col">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="text-primary-400">
+                  <div className="text-cyan-400 animate-pulse">
                     {getSpecializationIcon(agent.specialization)}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-white">{agent.name}</h3>
-                    <p className="text-sm text-gray-400 line-clamp-2">
+                    <h3 className="font-mono font-bold text-cyan-400 uppercase tracking-wider">{agent.name}</h3>
+                    <p className="text-sm text-purple-300 line-clamp-2 font-mono">
                       {agent.description}
                     </p>
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(agent.priority)}`}>
+                <span className={`px-2 py-1 rounded text-xs font-mono font-bold border ${getPriorityColor(agent.priority)}`}>
                   P{agent.priority}
                 </span>
               </div>
 
-              {/* Info Section */}
+              {/* Gaming Info Section */}
               <div className="flex-1 space-y-3">
                 <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-gray-300 border-gray-600">
-                    {agent.specialization?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'General'}
+                  <Badge className="bg-purple-900/50 text-purple-400 border border-purple-400/50 font-mono uppercase tracking-wider">
+                    {agent.specialization?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'GENERAL'}
                   </Badge>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getProviderColor(agent.llm_provider)}`}>
+                  <span className={`px-2 py-1 rounded text-xs font-mono font-bold border ${getProviderColor(agent.llm_provider)}`}>
                     {agent.llm_provider?.toUpperCase() || 'UNKNOWN'}
                   </span>
                 </div>
 
-                {/* Capabilities */}
+                {/* Neural Capabilities */}
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {agent.capabilities?.length || 0} Capabilities
+                  <p className="text-xs text-cyan-400 mb-2 font-mono uppercase tracking-wider">
+                    {agent.capabilities?.length || 0} NEURAL PROTOCOLS
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {agent.capabilities?.slice(0, 3).map((cap, index) => (
                       <span
                         key={cap.name || `cap-${index}`}
-                        className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded"
+                        className="inline-block px-2 py-1 text-xs bg-black/50 text-green-400 border border-green-400/30 rounded font-mono"
                       >
                         {cap.name?.replace('_', ' ') || cap.name}
                       </span>
                     ))}
                     {(agent.capabilities?.length || 0) > 3 && (
-                      <span className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded">
-                        +{agent.capabilities.length - 3} more
+                      <span className="inline-block px-2 py-1 text-xs bg-black/50 text-green-400 border border-green-400/30 rounded font-mono">
+                        +{agent.capabilities.length - 3} MORE
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Trigger Keywords */}
+                {/* Activation Keywords */}
                 {agent.trigger_keywords?.length > 0 && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-2">Trigger Keywords</p>
+                    <p className="text-xs text-cyan-400 mb-2 font-mono uppercase tracking-wider">ACTIVATION KEYS</p>
                     <div className="flex flex-wrap gap-1">
                       {agent.trigger_keywords?.slice(0, 3).map((keyword) => (
                         <span
                           key={keyword}
-                          className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded"
+                          className="inline-block px-2 py-1 text-xs bg-black/50 text-yellow-400 border border-yellow-400/30 rounded font-mono"
                         >
                           {keyword}
                         </span>
                       ))}
                       {agent.trigger_keywords?.length > 3 && (
-                        <span className="inline-block px-2 py-1 text-xs bg-dark-700 text-gray-400 rounded">
+                        <span className="inline-block px-2 py-1 text-xs bg-black/50 text-yellow-400 border border-yellow-400/30 rounded font-mono">
                           +{agent.trigger_keywords.length - 3}
                         </span>
                       )}
@@ -424,24 +429,24 @@ export default function AgentRegistryPage() {
                 )}
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-between items-center pt-3 mt-3 border-t border-dark-700">
-                <div className="text-xs text-gray-500">
+              {/* Gaming Actions */}
+              <div className="flex justify-between items-center pt-3 mt-3 border-t border-purple-800/50">
+                <div className="text-xs text-purple-400 font-mono">
                   {agent.source_file ? (
-                    <span>📄 File-based</span>
+                    <span>📄 FILE-BASED</span>
                   ) : agent.id.startsWith('db_') ? (
-                    <span>💾 Database</span>
+                    <span>💾 DATABASE</span>
                   ) : (
-                    <span>⚡ Built-in</span>
+                    <span>⚡ CORE</span>
                   )}
                 </div>
                 <Button
                   size="sm"
-                  variant="secondary"
                   onClick={() => viewAgentDetails(agent)}
+                  className="bg-cyan-900/50 border border-cyan-400/50 text-cyan-400 hover:bg-cyan-900/80 hover:shadow-lg hover:shadow-cyan-500/30 font-mono uppercase tracking-wider transition-all duration-300"
                 >
                   <EyeIcon className="h-4 w-4" />
-                  View
+                  ANALYZE
                 </Button>
               </div>
             </Card>

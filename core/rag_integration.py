@@ -42,7 +42,9 @@ def search_embeddings(
     query: str,
     limit: int = 5,
     content_types: Optional[List[str]] = None,
-    similarity_threshold: float = 0.7
+    similarity_threshold: float = 0.7,
+    namespace: Optional[str] = 'system',
+    exclude_personal: bool = True
 ) -> List[Dict[str, Any]]:
     """
     Search unified_embeddings table in ai_unified_platform database for relevant context
@@ -52,6 +54,8 @@ def search_embeddings(
         limit: Maximum number of results to return
         content_types: Optional list of content types to filter
         similarity_threshold: Minimum similarity score (0-1)
+        namespace: Specific namespace to search ('system', 'personal', 'agent_memory', 'public')
+        exclude_personal: Whether to exclude personal memories (default: True for privacy)
     
     Returns:
         List of relevant documents with similarity scores
@@ -94,9 +98,15 @@ def search_embeddings(
                 sql += f" AND content_type = ANY(%s)"
                 params.append(content_types)
             
-            # Remove the filter for encrypted content - we can now decrypt everything
-            # sql += " AND content_text NOT LIKE %s"
-            # params.append('gAAAAA%')
+            # Add namespace filtering for memory isolation
+            if exclude_personal:
+                # CRITICAL: Exclude personal memories for privacy
+                sql += " AND (metadata->>'namespace' IS NULL OR metadata->>'namespace' != 'personal')"
+                sql += " AND (metadata->>'searchable_by_agents' IS NULL OR metadata->>'searchable_by_agents' = 'true')"
+            elif namespace:
+                # Search specific namespace if provided
+                sql += " AND metadata->>'namespace' = %s"
+                params.append(namespace)
             
             sql += " AND 1 - (embedding <=> %s::vector) >= %s"
             params.extend([query_embedding, similarity_threshold])
@@ -150,13 +160,14 @@ def search_embeddings(
             conn.close()
         return []
 
-def get_rag_context(query: str, max_tokens: int = 2000) -> Dict[str, Any]:
+def get_rag_context(query: str, max_tokens: int = 2000, include_personal: bool = False) -> Dict[str, Any]:
     """
     Get RAG context for a query
     
     Args:
         query: The user's query
         max_tokens: Maximum tokens to include in context
+        include_personal: Whether to include personal memories (default: False)
         
     Returns:
         Dictionary with context and metadata
@@ -166,7 +177,8 @@ def get_rag_context(query: str, max_tokens: int = 2000) -> Dict[str, Any]:
     documents = search_embeddings(
         query=query,
         limit=10,  # Get more initially, then filter
-        similarity_threshold=0.6  # Lower threshold to get more results
+        similarity_threshold=0.6,  # Lower threshold to get more results
+        exclude_personal=not include_personal  # Respect privacy by default
     )
     
     if not documents:
@@ -206,6 +218,116 @@ def get_rag_context(query: str, max_tokens: int = 2000) -> Dict[str, Any]:
         'total_documents': len(documents),
         'used_documents': len(used_documents)
     }
+
+def search_personal_memories(
+    query: str,
+    user_id: Optional[int] = None,
+    limit: int = 5,
+    similarity_threshold: float = 0.7
+) -> List[Dict[str, Any]]:
+    """
+    Search personal memories with strict access control
+    
+    Args:
+        query: The search query
+        user_id: ID of the user whose memories to search
+        limit: Maximum number of results to return
+        similarity_threshold: Minimum similarity score (0-1)
+    
+    Returns:
+        List of relevant personal documents with similarity scores
+    """
+    
+    if not user_id:
+        logger.warning("Attempted to search personal memories without user_id")
+        return []  # No user, no personal memories
+    
+    # Create embedding for the query
+    query_embedding = create_embedding(query)
+    if not query_embedding:
+        logger.error("Failed to create query embedding for personal search")
+        return []
+    
+    try:
+        # Connect to ai_unified_platform database
+        conn = psycopg2.connect(
+            host='localhost',
+            database='ai_unified_platform',
+            user='ai_unified_user',
+            password='ai_unified_pass_2025'
+        )
+        
+        with conn.cursor() as cursor:
+            # Search ONLY personal namespace with user verification
+            sql = """
+                SELECT 
+                    id,
+                    content_text,
+                    content_type,
+                    metadata,
+                    importance_score,
+                    1 - (embedding <=> %s::vector) as similarity
+                FROM unified_embeddings
+                WHERE embedding IS NOT NULL
+                AND metadata->>'namespace' = 'personal'
+                AND (metadata->>'owner_id' = %s OR metadata->>'owner_id' IS NULL)
+                AND 1 - (embedding <=> %s::vector) >= %s
+                ORDER BY 
+                    (1 - (embedding <=> %s::vector)) * importance_score DESC
+                LIMIT %s
+            """
+            
+            params = [
+                query_embedding,
+                str(user_id),
+                query_embedding,
+                similarity_threshold,
+                query_embedding,
+                limit
+            ]
+            
+            cursor.execute(sql, params)
+            results = cursor.fetchall()
+            
+            # Format results
+            documents = []
+            encryption_service = get_encryption_service()
+            
+            for row in results:
+                doc_id, content_text, content_type, metadata, importance, similarity = row
+                
+                # Decrypt content if encrypted
+                decrypted_content = encryption_service.decrypt(content_text) if content_text else ""
+                
+                # Parse metadata
+                meta = metadata if isinstance(metadata, dict) else {}
+                
+                # Handle NaN values
+                import math
+                similarity_val = float(similarity) if similarity else 0.0
+                if math.isnan(similarity_val) or math.isinf(similarity_val):
+                    similarity_val = 0.0
+                    
+                documents.append({
+                    'id': doc_id,
+                    'content': decrypted_content[:1000],
+                    'content_type': content_type,
+                    'metadata': meta,
+                    'importance_score': float(importance) if importance else 0.5,
+                    'similarity_score': similarity_val,
+                    'is_personal': True  # Mark as personal for UI
+                })
+            
+            logger.info(f"Found {len(documents)} personal documents for user {user_id}")
+            conn.close()
+            return documents
+            
+    except Exception as e:
+        logger.error(f"Error searching personal memories: {e}")
+        if 'conn' in locals():
+            conn.close()
+        return []
+
 
 def enhance_prompt_with_rag(user_message: str, rag_context: Dict[str, Any]) -> str:
     """

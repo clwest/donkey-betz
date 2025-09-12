@@ -94,8 +94,8 @@ export const mythologyKeys = {
 const mythologyAPI = {
   // Get mythology dashboard stats
   getStats: async (): Promise<MythologyStats> => {
-    Logger.api('GET', '/api/v1/mythology/stats/', {});
-    const response = await apiClient.get('/api/v1/mythology/stats/');
+    Logger.api('GET', '/v1/mythology/stats/', {});
+    const response = await apiClient.get('/v1/mythology/stats/');
     return response.data;
   },
 
@@ -114,29 +114,29 @@ const mythologyAPI = {
     next?: string;
     previous?: string;
   }> => {
-    Logger.api('GET', '/api/v1/mythology/flagged-content/', { params });
-    const response = await apiClient.get('/api/v1/mythology/flagged-content/', { params });
+    Logger.api('GET', '/v1/mythology/flagged-content/', { params });
+    const response = await apiClient.get('/v1/mythology/flagged-content/', { params });
     return response.data;
   },
 
   // Get specific flagged content details
   getFlaggedContentDetail: async (id: number): Promise<FlaggedContent> => {
-    Logger.api('GET', `/api/v1/mythology/flagged-content/${id}/`, {});
-    const response = await apiClient.get(`/api/v1/mythology/flagged-content/${id}/`);
+    Logger.api('GET', `/v1/mythology/flagged-content/${id}/`, {});
+    const response = await apiClient.get(`/v1/mythology/flagged-content/${id}/`);
     return response.data;
   },
 
   // Submit review action
   submitReview: async (data: ReviewAction): Promise<{ success: boolean; message: string }> => {
-    Logger.api('POST', '/api/v1/mythology/review/', { data });
-    const response = await apiClient.post('/api/v1/mythology/review/', data);
+    Logger.api('POST', '/v1/mythology/review/', { data });
+    const response = await apiClient.post('/v1/mythology/review/', data);
     return response.data;
   },
 
   // Report content for review
   reportContent: async (data: ReportContent): Promise<{ success: boolean; message: string; flag_id: number }> => {
-    Logger.api('POST', '/api/v1/mythology/report/', { data });
-    const response = await apiClient.post('/api/v1/mythology/report/', data);
+    Logger.api('POST', '/v1/mythology/report/', { data });
+    const response = await apiClient.post('/v1/mythology/report/', data);
     return response.data;
   },
 
@@ -145,22 +145,22 @@ const mythologyAPI = {
     unread_only?: boolean;
     limit?: number;
   }): Promise<AlertNotification[]> => {
-    Logger.api('GET', '/api/v1/mythology/notifications/', { params });
-    const response = await apiClient.get('/api/v1/mythology/notifications/', { params });
+    Logger.api('GET', '/v1/mythology/notifications/', { params });
+    const response = await apiClient.get('/v1/mythology/notifications/', { params });
     return response.data;
   },
 
   // Mark notification as read
   markNotificationRead: async (id: number): Promise<{ success: boolean }> => {
-    Logger.api('PATCH', `/api/v1/mythology/notifications/${id}/read/`, {});
-    const response = await apiClient.patch(`/api/v1/mythology/notifications/${id}/read/`);
+    Logger.api('PATCH', `/v1/mythology/notifications/${id}/read/`, {});
+    const response = await apiClient.patch(`/v1/mythology/notifications/${id}/read/`);
     return response.data;
   },
 
   // Mark all notifications as read
   markAllNotificationsRead: async (): Promise<{ success: boolean }> => {
-    Logger.api('POST', '/api/v1/mythology/notifications/mark-all-read/', {});
-    const response = await apiClient.post('/api/v1/mythology/notifications/mark-all-read/');
+    Logger.api('POST', '/v1/mythology/notifications/mark-all-read/', {});
+    const response = await apiClient.post('/v1/mythology/notifications/mark-all-read/');
     return response.data;
   },
 
@@ -169,8 +169,8 @@ const mythologyAPI = {
     limit?: number;
     risk_level_min?: number;
   }): Promise<MythologyEvent[]> => {
-    Logger.api('GET', '/api/v1/mythology/recent-events/', { params });
-    const response = await apiClient.get('/api/v1/mythology/recent-events/', { params });
+    Logger.api('GET', '/v1/mythology/recent-events/', { params });
+    const response = await apiClient.get('/v1/mythology/recent-events/', { params });
     return response.data.events || [];
   },
 };

@@ -86,7 +86,7 @@ export interface WorkflowStatus {
 class WorkflowsService {
   async createWorkflow(workflowData: CreateWorkflowRequest): Promise<{success: boolean; workflow: any}> {
     try {
-      const response = await apiClient.post('/api/v1/workflows/create/', workflowData);
+      const response = await apiClient.post('/v1/workflows/create/', workflowData);
       return response.data;
     } catch (error) {
       console.error('Error creating workflow:', error);
@@ -96,7 +96,7 @@ class WorkflowsService {
 
   async executeWorkflow(executeData: ExecuteWorkflowRequest): Promise<WorkflowExecutionResult> {
     try {
-      const response = await apiClient.post('/api/v1/workflows/execute/', executeData);
+      const response = await apiClient.post('/v1/workflows/execute/', executeData);
       return response.data;
     } catch (error) {
       console.error('Error executing workflow:', error);
@@ -106,7 +106,7 @@ class WorkflowsService {
 
   async listWorkflows(): Promise<{workflows: Workflow[]}> {
     try {
-      const response = await apiClient.get('/api/v1/workflows/list/');
+      const response = await apiClient.get('/v1/workflows/list/');
       return response.data;
     } catch (error) {
       console.error('Error listing workflows:', error);
@@ -116,7 +116,7 @@ class WorkflowsService {
 
   async getWorkflowTemplates(): Promise<{templates: WorkflowTemplate[]}> {
     try {
-      const response = await apiClient.get('/api/v1/workflows/templates/');
+      const response = await apiClient.get('/v1/workflows/templates/');
       return response.data;
     } catch (error) {
       console.error('Error getting workflow templates:', error);
@@ -126,7 +126,7 @@ class WorkflowsService {
 
   async getWorkflowStatus(workflowId: string): Promise<WorkflowStatus> {
     try {
-      const response = await apiClient.get(`/api/v1/workflows/status/${workflowId}/`);
+      const response = await apiClient.get(`/v1/workflows/status/${workflowId}/`);
       return response.data;
     } catch (error) {
       console.error('Error getting workflow status:', error);

@@ -90,8 +90,9 @@ export const DropdownMenuContent = forwardRef<HTMLDivElement, DropdownMenuConten
       <div
         ref={contentRef}
         className={clsx(
-          'absolute z-50 min-w-32 overflow-hidden rounded-md border border-dark-700 bg-dark-800 p-1 shadow-md',
+          'absolute z-50 min-w-32 overflow-hidden rounded-lg border-2 border-cyan-500/50 bg-black p-1 shadow-[0_0_20px_rgba(0,255,255,0.3)]',
           'animate-in fade-in-0 zoom-in-95',
+          'before:absolute before:inset-0 before:border-2 before:border-cyan-500/30 before:rounded-lg before:animate-pulse',
           {
             'left-0': align === 'start',
             'left-1/2 -translate-x-1/2': align === 'center',
@@ -130,9 +131,9 @@ export const DropdownMenuItem = forwardRef<HTMLDivElement, DropdownMenuItemProps
       <div
         ref={ref}
         className={clsx(
-          'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm text-gray-300',
-          'outline-none transition-colors hover:bg-dark-700 hover:text-white',
-          'focus:bg-dark-700 focus:text-white',
+          'relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-sm text-gray-300 font-mono',
+          'outline-none transition-all duration-200 hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50',
+          'focus:bg-cyan-500/20 focus:text-cyan-400 hover:shadow-[0_0_8px_rgba(0,255,255,0.3)]',
           disabled && 'pointer-events-none opacity-50',
           className
         )}
@@ -148,7 +149,7 @@ export const DropdownMenuSeparator = forwardRef<HTMLDivElement, HTMLAttributes<H
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('-mx-1 my-1 h-px bg-dark-700', className)}
+      className={clsx('-mx-1 my-1 h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent', className)}
       {...props}
     />
   )
@@ -159,7 +160,7 @@ export const DropdownMenuLabel = forwardRef<HTMLDivElement, HTMLAttributes<HTMLD
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('px-2 py-1.5 text-sm font-semibold text-gray-400', className)}
+      className={clsx('px-2 py-1.5 text-sm font-bold text-cyan-400 uppercase font-mono tracking-wider', className)}
       {...props}
     />
   )

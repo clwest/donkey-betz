@@ -11,10 +11,19 @@ import websockets
 from datetime import datetime
 from typing import Dict, Any
 
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 # Configuration
 API_BASE_URL = "http://localhost:8000/api"
 WS_BASE_URL = "ws://localhost:8000"
-AUTH_TOKEN = "fc58364ffbca4e77b732d03711d44965cf40acb6"  # chris token
+AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not AUTH_TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)  # chris token
 
 # ANSI color codes for terminal output
 GREEN = "\033[92m"
@@ -114,10 +123,10 @@ def main():
     # Test Core APIs
     log("\n📋 Testing Core APIs...", "INFO")
     core_endpoints = [
-        ("/health/", "GET", None),
-        ("/status/", "GET", None),
-        ("/info/", "GET", None),
-        ("/auth/user/", "GET", None),
+        ("/v1/health/", "GET", None),
+        ("/v1/status/", "GET", None),
+        ("/v1/info/", "GET", None),
+        ("/v1/auth/user/", "GET", None),
     ]
     
     for endpoint, method, data in core_endpoints:
@@ -129,8 +138,8 @@ def main():
     # Test Assistant APIs
     log("\n🤖 Testing Assistant APIs...", "INFO")
     assistant_endpoints = [
-        ("/assistant/context/", "GET", None),
-        ("/assistant/chat/", "POST", {
+        ("/v1/assistant/context/", "GET", None),
+        ("/v1/assistant/chat/", "POST", {
             "message": "Hello, this is an integration test!",
             "use_personal_assistant": True
         }),
@@ -145,9 +154,9 @@ def main():
     # Test Agent Orchestra APIs
     log("\n🎭 Testing Agent Orchestra APIs...", "INFO")
     agent_endpoints = [
-        ("/agents/list/", "GET", None),
-        ("/agents/health/", "GET", None),
-        ("/agents/discovery/stats/", "GET", None),
+        ("/v1/agents/list/", "GET", None),
+        ("/v1/agents/health/", "GET", None),
+        ("/v1/agents/discovery/stats/", "GET", None),
     ]
     
     for endpoint, method, data in agent_endpoints:

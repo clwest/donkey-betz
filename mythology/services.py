@@ -307,15 +307,17 @@ class MythologyPreventionService:
         # Check for context loss
         context_loss = self._check_context_loss(original_prompt, response)
         
-        # Suggest corrections if needed
-        corrections = []
-        if detection_result['risk_score'] > 0.5:
-            corrections = self._suggest_corrections(response, detection_result)
-            
+        # Record mythology events for risk > 0.3 (matches detection threshold)
+        if detection_result['risk_score'] > 0.3:
             # Record the mythology event
             self.detection_service.record_mythology_event(
                 response, detection_result, user=user, was_prevented=False
             )
+        
+        # Suggest corrections if needed for higher risk
+        corrections = []
+        if detection_result['risk_score'] > 0.5:
+            corrections = self._suggest_corrections(response, detection_result)
         
         return {
             'valid': detection_result['risk_score'] < 0.3,

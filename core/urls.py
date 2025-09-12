@@ -14,7 +14,7 @@ from rest_framework.routers import DefaultRouter
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
-    agent_instances, prompt_diagnostics_dashboard, prompt_diagnostics_analyses,
+    agent_instances, agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
     feedback_analytics, feedback_history, feedback_submit, prompting_stats,
     assistant_context, research_books, research_documents, prompting_test,
     personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
@@ -40,6 +40,13 @@ from agents.views import orchestrations_list
 from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
     update_budget, model_performance_analytics
+)
+from core.views_personal_memories import (
+    search_personal_memories_api, personal_memory_stats, delete_personal_memory
+)
+from core.views_isolation_control import (
+    start_document_isolation, isolation_task_status, stop_isolation_task,
+    isolation_progress, list_active_tasks, cleanup_isolation
 )
 from core.views_content import (
     create_content, list_content, generate_blog_post, generate_social_media_post,
@@ -85,6 +92,7 @@ urlpatterns = [
     
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
+    path('api/auth/login/', login_view, name='auth-login-compat'),  # Backward compatibility
     path('api/v1/auth/logout/', logout_view, name='auth-logout'),
     path('api/v1/auth/user/', current_user, name='auth-current-user'),
     
@@ -107,6 +115,7 @@ urlpatterns = [
     path('api/v1/health/', health_check, name='health-check'),
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     path('api/v1/instances/', agent_instances, name='agent-instances'),
+    path('api/v1/executions/', agent_executions_list, name='agent-executions'),
     
     # Placeholder endpoints for missing APIs
     path('api/v1/content/blog/list/', blog_list, name='blog-list'),
@@ -120,6 +129,7 @@ urlpatterns = [
     # Prompt diagnostics endpoints
     path('api/v1/prompt-diagnostics/dashboard/', prompt_diagnostics_dashboard, name='prompt-diagnostics-dashboard'),
     path('api/v1/prompt-diagnostics/analyses/', prompt_diagnostics_analyses, name='prompt-diagnostics-analyses'),
+    path('api/v1/prompt-diagnostics/templates/', prompt_diagnostics_templates, name='prompt-diagnostics-templates'),
     
     # Feedback endpoints
     path('api/v1/feedback/submit/', feedback_submit, name='feedback-submit'),
@@ -139,6 +149,19 @@ urlpatterns = [
     path('api/v1/personal-knowledge/upload/', personal_knowledge_upload, name='personal-knowledge-upload'),
     path('api/v1/personal-knowledge/<str:knowledge_id>/delete/', personal_knowledge_delete, name='personal-knowledge-delete'),
     path('api/v1/personal-knowledge/stats/', personal_knowledge_stats, name='personal-knowledge-stats'),
+    
+    # Personal memory endpoints (secure access)
+    path('api/v1/personal-memories/search/', search_personal_memories_api, name='personal-memories-search'),
+    path('api/v1/personal-memories/stats/', personal_memory_stats, name='personal-memories-stats'),
+    path('api/v1/personal-memories/delete/', delete_personal_memory, name='personal-memories-delete'),
+    
+    # Document isolation control endpoints
+    path('api/v1/isolation/start/', start_document_isolation, name='isolation-start'),
+    path('api/v1/isolation/task/<str:task_id>/status/', isolation_task_status, name='isolation-task-status'),
+    path('api/v1/isolation/task/<str:task_id>/stop/', stop_isolation_task, name='isolation-task-stop'),
+    path('api/v1/isolation/progress/', isolation_progress, name='isolation-progress'),
+    path('api/v1/isolation/tasks/', list_active_tasks, name='isolation-active-tasks'),
+    path('api/v1/isolation/cleanup/', cleanup_isolation, name='isolation-cleanup'),
     
     # Agent discovery stats
     path('api/v1/agents/discovery/stats/', agents_discovery_stats, name='agents-discovery-stats'),

@@ -105,75 +105,133 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.03, y: -4 }}
       whileTap={{ scale: 0.98 }}
-      className={`
-        relative p-4 border rounded-lg cursor-pointer transition-all duration-200
-        ${isSelected 
-          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
-          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-        }
-        ${isSuggested ? 'ring-2 ring-purple-200 border-purple-300' : ''}
-        ${compact ? 'p-3' : 'p-4'}
-      `}
+      className={`gaming-card relative overflow-hidden cursor-pointer group ${compact ? 'p-4' : 'p-5'}`}
+      style={{
+        border: `2px solid ${
+          isSelected ? 'var(--gaming-neon-cyan)' :
+          isSuggested ? 'var(--gaming-neon-purple)' :
+          'var(--gaming-border)'
+        }`,
+        boxShadow: isSelected ? '0 0 25px rgba(0, 255, 255, 0.4)' :
+                   isSuggested ? '0 0 20px rgba(157, 78, 221, 0.3)' :
+                   '0 0 10px rgba(0, 0, 0, 0.1)'
+      }}
       onClick={() => onAgentSelect(isSelected ? null : agent)}
     >
+      {/* Gaming border glow effect */}
+      <div className="gaming-border-glow"></div>
+      
+      {/* Status indicators */}
+      <div className={`absolute top-0 left-0 w-full h-1 ${
+        isSelected ? 'bg-gradient-to-r from-cyan-400 to-blue-400 animate-pulse' :
+        isSuggested ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
+        'bg-gradient-to-r from-gray-400 to-gray-600'
+      } opacity-70`}></div>
+
       {isSelected && (
-        <div className="absolute -top-2 -right-2">
-          <div className="bg-blue-500 text-white rounded-full p-1">
-            <CheckIcon className="h-3 w-3" />
+        <div className="absolute -top-2 -right-2 z-10">
+          <div className="rounded-full p-2 animate-pulse" style={{
+            background: 'var(--gaming-neon-cyan)',
+            boxShadow: '0 0 15px rgba(0, 255, 255, 0.8)'
+          }}>
+            <CheckIcon className="h-3 w-3" style={{ color: 'var(--gaming-bg-primary)' }} />
           </div>
         </div>
       )}
 
       {isSuggested && (
-        <div className="absolute -top-2 -left-2">
-          <div className="bg-purple-500 text-white rounded-full p-1">
-            <SparklesIcon className="h-3 w-3" />
+        <div className="absolute -top-2 -left-2 z-10">
+          <div className="rounded-full p-2 animate-pulse" style={{
+            background: 'var(--gaming-neon-purple)',
+            boxShadow: '0 0 15px rgba(157, 78, 221, 0.8)'
+          }}>
+            <SparklesIcon className="h-3 w-3" style={{ color: 'var(--gaming-bg-primary)' }} />
           </div>
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h4 className={`font-semibold text-gray-900 ${compact ? 'text-sm' : 'text-base'}`}>
+            <h4 className={`font-black uppercase tracking-wider ${compact ? 'text-sm' : 'text-base'}`} style={{
+              color: 'var(--gaming-text-primary)',
+              fontFamily: 'var(--font-mono)',
+              textShadow: isSelected ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none'
+            }}>
               {agent.name}
             </h4>
-            <div className="flex items-center mt-1">
-              <TagIcon className="h-3 w-3 text-gray-400 mr-1" />
-              <span className="text-xs text-gray-500 capitalize">
+            <div className="flex items-center mt-2 gap-2">
+              <TagIcon className="h-3 w-3" style={{ 
+                color: 'var(--gaming-neon-purple)',
+                filter: 'drop-shadow(0 0 5px rgba(157, 78, 221, 0.6))'
+              }} />
+              <span className="text-xs font-bold uppercase tracking-wider" style={{
+                color: 'var(--gaming-neon-purple)',
+                fontFamily: 'var(--font-mono)'
+              }}>
                 {agent.specialization}
               </span>
             </div>
           </div>
-          <CpuChipIcon className={`text-gray-400 ${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+          <div className="relative">
+            <CpuChipIcon className={`${compact ? 'h-5 w-5' : 'h-6 w-6'}`} style={{ 
+              color: isSelected ? 'var(--gaming-neon-cyan)' : 'var(--gaming-text-muted)',
+              filter: isSelected ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.8))' : 'none'
+            }} />
+            {isSelected && (
+              <div className="absolute inset-0 rounded-full bg-cyan-400/20 animate-ping"></div>
+            )}
+          </div>
         </div>
 
         {!compact && (
           <>
-            <p className="text-sm text-gray-600 line-clamp-2">
+            <p className="text-sm line-clamp-2" style={{ 
+              color: 'var(--gaming-text-secondary)',
+              fontFamily: 'var(--font-mono)'
+            }}>
               {agent.description}
             </p>
 
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2">
               {agent.capabilities.slice(0, 3).map((capability) => (
                 <span
                   key={capability}
-                  className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
+                  className="inline-block px-2 py-1 text-xs font-semibold rounded border transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: 'rgba(0, 255, 255, 0.1)',
+                    border: '1px solid var(--gaming-neon-cyan)',
+                    color: 'var(--gaming-neon-cyan)',
+                    fontFamily: 'var(--font-mono)',
+                    textTransform: 'uppercase',
+                    boxShadow: '0 0 5px rgba(0, 255, 255, 0.2)'
+                  }}
                 >
                   {capability}
                 </span>
               ))}
               {agent.capabilities.length > 3 && (
-                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded">
-                  +{agent.capabilities.length - 3} more
+                <span className="inline-block px-2 py-1 text-xs font-semibold rounded border" style={{
+                  background: 'rgba(124, 124, 138, 0.1)',
+                  border: '1px solid var(--gaming-neutral)',
+                  color: 'var(--gaming-neutral)',
+                  fontFamily: 'var(--font-mono)',
+                  textTransform: 'uppercase'
+                }}>
+                  +{agent.capabilities.length - 3} MORE
                 </span>
               )}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{agent.llm_provider} · {agent.llm_model}</span>
+            <div className="flex items-center justify-between text-xs font-semibold" style={{
+              color: 'var(--gaming-text-muted)',
+              fontFamily: 'var(--font-mono)'
+            }}>
+              <span className="uppercase tracking-wider">
+                {agent.llm_provider} · {agent.llm_model}
+              </span>
             </div>
           </>
         )}
@@ -218,74 +276,176 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Header and Controls */}
-      <div className="space-y-3">
+    <div className={`space-y-6 ${className}`}>
+      {/* Header and Controls - Cyberpunk Style */}
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Select an Agent
-          </h3>
+          <div className="flex items-center gap-3">
+            <CpuChipIcon className="h-6 w-6" style={{ 
+              color: 'var(--gaming-neon-cyan)',
+              filter: 'drop-shadow(0 0 10px rgba(0, 255, 255, 0.7))'
+            }} />
+            <h3 className="text-lg font-black uppercase tracking-wider" style={{
+              color: 'var(--gaming-neon-cyan)',
+              fontFamily: 'var(--font-mono)',
+              textShadow: '0 0 15px rgba(0, 255, 255, 0.5)'
+            }}>
+              Select Neural Agent
+            </h3>
+          </div>
+          
           {onSuggestAgents && taskDescription.trim() && (
-            <button
-              onClick={handleSuggestAgents}
-              disabled={suggestionLoading}
-              className="inline-flex items-center px-3 py-2 border border-purple-300 rounded-lg text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {suggestionLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-700 mr-2" />
-              ) : (
-                <SparklesIcon className="h-4 w-4 mr-2" />
-              )}
-              Get Suggestions
-            </button>
+            <div className="relative">
+              <div className={`absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 opacity-30 blur-sm ${
+                suggestionLoading ? 'animate-pulse' : ''
+              }`}></div>
+              <button
+                onClick={handleSuggestAgents}
+                disabled={suggestionLoading}
+                className="relative px-4 py-2 rounded-lg font-bold uppercase tracking-wider text-sm transition-all duration-300 hover:transform hover:scale-105"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '2px solid var(--gaming-neon-purple)',
+                  color: 'var(--gaming-neon-purple)',
+                  boxShadow: '0 0 15px rgba(157, 78, 221, 0.3)',
+                  textShadow: '0 0 10px rgba(157, 78, 221, 0.5)'
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  {suggestionLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: 'var(--gaming-neon-purple)' }} />
+                  ) : (
+                    <SparklesIcon className="h-4 w-4" style={{ 
+                      filter: 'drop-shadow(0 0 8px rgba(157, 78, 221, 0.8))'
+                    }} />
+                  )}
+                  AI SUGGEST
+                </div>
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search and Filter - Cyberpunk Interface */}
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ 
+              color: 'var(--gaming-neon-cyan)',
+              filter: 'drop-shadow(0 0 5px rgba(0, 255, 255, 0.6))'
+            }} />
             <input
               type="text"
-              placeholder="Search agents by name, description, or capabilities..."
+              placeholder="SCAN NEURAL NETWORK FOR AGENTS..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 rounded-lg transition-all duration-300 focus:outline-none"
+              style={{
+                background: 'var(--gaming-bg-elevated)',
+                border: `2px solid ${searchTerm ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)'}`,
+                color: 'var(--gaming-text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '14px',
+                boxShadow: searchTerm ? '0 0 15px rgba(0, 255, 255, 0.2)' : 'none',
+                textTransform: 'uppercase'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'var(--gaming-neon-cyan)';
+                e.target.style.boxShadow = '0 0 20px rgba(0, 255, 255, 0.3)';
+              }}
+              onBlur={(e) => {
+                if (!searchTerm) {
+                  e.target.style.borderColor = 'var(--gaming-border)';
+                  e.target.style.boxShadow = 'none';
+                }
+              }}
             />
           </div>
 
-          <select
-            value={selectedSpecialization}
-            onChange={(e) => setSelectedSpecialization(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
-          >
-            <option value="">All Specializations</option>
-            {specializations.map((spec) => (
-              <option key={spec} value={spec}>
-                {spec.charAt(0).toUpperCase() + spec.slice(1)}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={selectedSpecialization}
+              onChange={(e) => setSelectedSpecialization(e.target.value)}
+              className="px-4 py-3 rounded-lg min-w-[180px] transition-all duration-300 focus:outline-none appearance-none cursor-pointer"
+              style={{
+                background: 'var(--gaming-bg-elevated)',
+                border: `2px solid ${selectedSpecialization ? 'var(--gaming-neon-purple)' : 'var(--gaming-border)'}`,
+                color: 'var(--gaming-text-primary)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                boxShadow: selectedSpecialization ? '0 0 15px rgba(157, 78, 221, 0.2)' : 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'var(--gaming-neon-purple)';
+                e.target.style.boxShadow = '0 0 20px rgba(157, 78, 221, 0.3)';
+              }}
+              onBlur={(e) => {
+                if (!selectedSpecialization) {
+                  e.target.style.borderColor = 'var(--gaming-border)';
+                  e.target.style.boxShadow = 'none';
+                }
+              }}
+            >
+              <option value="">ALL SPECIALIZATIONS</option>
+              {specializations.map((spec) => (
+                <option key={spec} value={spec}>
+                  {spec.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            {/* Custom dropdown arrow */}
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+              <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" style={{
+                borderTopColor: 'var(--gaming-neon-purple)'
+              }}></div>
+            </div>
+          </div>
         </div>
 
-        {/* Selection Summary */}
+        {/* Selection Summary - Cyberpunk Style */}
         {selectedAgent && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Selected:</strong> {selectedAgent.name} ({selectedAgent.specialization})
+          <div className="relative p-4 rounded-lg border-2 border-cyan-400 transition-all duration-300" style={{
+            background: 'rgba(0, 255, 255, 0.1)',
+            boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)'
+          }}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-70 animate-pulse"></div>
+            <p className="text-sm font-bold uppercase tracking-wider" style={{
+              color: 'var(--gaming-neon-cyan)',
+              fontFamily: 'var(--font-mono)',
+              textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
+            }}>
+              <span style={{ color: 'var(--gaming-text-secondary)' }}>AGENT SELECTED:</span> {selectedAgent.name} 
+              <span style={{ color: 'var(--gaming-neon-purple)' }}> [{selectedAgent.specialization}]</span>
             </p>
           </div>
         )}
       </div>
 
-      {/* Suggestions */}
+      {/* Suggestions - AI Recommendation Section */}
       {suggestions.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-purple-700 flex items-center">
-            <SparklesIcon className="h-4 w-4 mr-1" />
-            Suggested Agents
-          </h4>
-          <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <SparklesIcon className="h-5 w-5" style={{ 
+              color: 'var(--gaming-neon-purple)',
+              filter: 'drop-shadow(0 0 10px rgba(157, 78, 221, 0.8))'
+            }} />
+            <h4 className="text-base font-black uppercase tracking-wider" style={{
+              color: 'var(--gaming-neon-purple)',
+              fontFamily: 'var(--font-mono)',
+              textShadow: '0 0 15px rgba(157, 78, 221, 0.5)'
+            }}>
+              AI Recommendations
+            </h4>
+            <div className="px-2 py-1 rounded text-xs font-bold" style={{
+              background: 'rgba(157, 78, 221, 0.2)',
+              color: 'var(--gaming-neon-purple)',
+              fontFamily: 'var(--font-mono)'
+            }}>
+              {suggestions.length} FOUND
+            </div>
+          </div>
+          <div className={`grid gap-4 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
             {suggestions.map((agent) => (
               <AgentCard
                 key={`suggestion-${agent.id}`}
@@ -298,26 +458,64 @@ export const AgentSelector: React.FC<AgentSelectorProps> = ({
         </div>
       )}
 
-      {/* Agents Grid */}
-      <div className="space-y-3">
+      {/* Agents Grid - Neural Network Display */}
+      <div className="space-y-4">
         {filteredAgents.length === 0 ? (
-          <div className="text-center py-8">
-            <CpuChipIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
+          <div className="text-center py-12">
+            <div className="relative mb-6">
+              <CpuChipIcon className="h-16 w-16 mx-auto" style={{ 
+                color: 'var(--gaming-text-muted)',
+                filter: 'drop-shadow(0 0 10px rgba(124, 124, 138, 0.3))'
+              }} />
+              <div className="absolute inset-0 rounded-full bg-gray-400/20 animate-ping"></div>
+            </div>
+            <p className="text-lg font-bold uppercase tracking-wider mb-2" style={{
+              color: 'var(--gaming-text-secondary)',
+              fontFamily: 'var(--font-mono)'
+            }}>
               {searchTerm || selectedSpecialization 
-                ? 'No agents match your criteria. Try adjusting your search or filters.' 
-                : 'No agents available'
+                ? 'NO NEURAL MATCHES FOUND'
+                : 'NEURAL NETWORK OFFLINE'
+              }
+            </p>
+            <p className="text-sm" style={{
+              color: 'var(--gaming-text-muted)',
+              fontFamily: 'var(--font-mono)'
+            }}>
+              {searchTerm || selectedSpecialization 
+                ? 'ADJUST SCAN PARAMETERS AND RETRY'
+                : 'NO AGENTS AVAILABLE IN NETWORK'
               }
             </p>
           </div>
         ) : (
           <>
-            <h4 className="text-sm font-medium text-gray-700">
-              Available Agents ({filteredAgents.length})
-            </h4>
+            <div className="flex items-center gap-3">
+              <CpuChipIcon className="h-5 w-5" style={{ 
+                color: 'var(--gaming-neon-green)',
+                filter: 'drop-shadow(0 0 10px rgba(57, 255, 20, 0.7))'
+              }} />
+              <h4 className="text-base font-black uppercase tracking-wider" style={{
+                color: 'var(--gaming-neon-green)',
+                fontFamily: 'var(--font-mono)',
+                textShadow: '0 0 15px rgba(57, 255, 20, 0.5)'
+              }}>
+                Available Neural Agents
+              </h4>
+              <div className="px-3 py-1 rounded-lg border" style={{
+                background: 'rgba(57, 255, 20, 0.1)',
+                border: '1px solid var(--gaming-neon-green)',
+                color: 'var(--gaming-neon-green)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {filteredAgents.length.toString().padStart(2, '0')} ONLINE
+              </div>
+            </div>
             <motion.div 
               layout
-              className={`grid gap-3 ${
+              className={`grid gap-4 ${
                 compact 
                   ? 'grid-cols-1 sm:grid-cols-2' 
                   : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'

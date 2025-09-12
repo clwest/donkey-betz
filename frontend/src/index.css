@@ -270,6 +270,43 @@
     text-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
   }
 
+  /* Gaming Navigation Effects */
+  .gaming-nav-item:hover {
+    background: rgba(0, 255, 255, 0.05) !important;
+    border-left-color: var(--gaming-neon-cyan) !important;
+    color: var(--gaming-text-primary) !important;
+  }
+
+  .gaming-nav-active {
+    background: rgba(0, 255, 255, 0.1) !important;
+    border-left: 3px solid var(--gaming-neon-cyan) !important;
+    color: var(--gaming-text-primary) !important;
+    box-shadow: var(--gaming-glow-subtle);
+  }
+
+  .gaming-logo-text {
+    background: var(--gaming-gradient-primary);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+  }
+
+  .gaming-badge {
+    animation: gaming-badge-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes gaming-badge-pulse {
+    0%, 100% { 
+      opacity: 1; 
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 0.8; 
+      transform: scale(1.05);
+    }
+  }
+
   /* Animations */
   .animate-in {
     animation: animateIn 0.3s ease-out;
@@ -334,7 +371,7 @@
 }
 
 [cmdk-item][aria-selected="true"] {
-  background-color: rgba(var(--primary-500-rgb), 0.2);
+  background-color: rgba(0, 255, 255, 0.2);
   @apply text-white;
 }
 

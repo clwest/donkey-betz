@@ -8,9 +8,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator
 from datetime import datetime, timedelta
 import json
 import uuid
+from agents.models import UnifiedAgentTemplate
 
 User = get_user_model()
 
@@ -18,86 +20,64 @@ User = get_user_model()
 @permission_classes([IsAuthenticated])
 def list_agents(request):
     """
-    List all available AI agent templates - migrated from DBAO
+    List all available AI agent templates from the database
     """
     user = request.user
     page = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('page_size', 20))
+    page_size = int(request.GET.get('page_size', 100))  # Increased default to 100
     specialization = request.GET.get('specialization', None)
     
-    # Mock agent data based on DBAO tools-manifest
-    mock_agents = [
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Business Strategy Agent',
-            'description': 'Comprehensive business planning and strategy development',
-            'specialization': 'business',
-            'capabilities': ['strategy', 'planning', 'market-analysis', 'financial-modeling'],
-            'routing_keywords': ['business', 'strategy', 'plan', 'market', 'revenue'],
-            'success_rate': 0.94,
-            'avg_completion_time': 145.3,
-            'created_at': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Sports Analytics Agent',
-            'description': 'Advanced sports betting analytics and predictions',
-            'specialization': 'sports-analytics',
-            'capabilities': ['game-analysis', 'player-props', 'live-opportunities', 'weather-impact'],
-            'routing_keywords': ['sports', 'betting', 'odds', 'game', 'prediction'],
-            'success_rate': 0.91,
-            'avg_completion_time': 89.7,
-            'created_at': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Research Assistant Agent',
-            'description': 'Comprehensive research and data analysis',
-            'specialization': 'research',
-            'capabilities': ['web-research', 'data-synthesis', 'fact-checking', 'report-generation'],
-            'routing_keywords': ['research', 'analyze', 'investigate', 'data', 'report'],
-            'success_rate': 0.96,
-            'avg_completion_time': 203.1,
-            'created_at': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Content Creation Agent',
-            'description': 'Multi-format content generation and optimization',
-            'specialization': 'content',
-            'capabilities': ['blog-writing', 'social-media', 'copywriting', 'seo-optimization'],
-            'routing_keywords': ['content', 'write', 'blog', 'social', 'copy', 'seo'],
-            'success_rate': 0.92,
-            'avg_completion_time': 67.8,
-            'created_at': datetime.now().isoformat()
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'name': 'Financial Analysis Agent',
-            'description': 'Financial modeling and investment analysis',
-            'specialization': 'financial',
-            'capabilities': ['financial-modeling', 'investment-analysis', 'risk-assessment', 'portfolio-optimization'],
-            'routing_keywords': ['financial', 'investment', 'money', 'portfolio', 'analysis'],
-            'success_rate': 0.89,
-            'avg_completion_time': 178.9,
-            'created_at': datetime.now().isoformat()
-        }
-    ]
+    # Get all agents from database
+    queryset = UnifiedAgentTemplate.objects.all()
     
     # Filter by specialization if provided
     if specialization:
-        mock_agents = [agent for agent in mock_agents if agent['specialization'] == specialization]
+        queryset = queryset.filter(specialization=specialization)
+    
+    # Order by name for consistency
+    queryset = queryset.order_by('name')
     
     # Apply pagination
-    start_idx = (page - 1) * page_size
-    end_idx = start_idx + page_size
-    paginated_agents = mock_agents[start_idx:end_idx]
+    paginator = Paginator(queryset, page_size)
+    page_obj = paginator.get_page(page)
+    
+    # Serialize the agents
+    agents_data = []
+    for agent in page_obj:
+        agent_dict = {
+            'id': str(agent.id),
+            'name': agent.name,
+            'description': agent.description or '',
+            'specialization': agent.specialization or 'general',
+            'capabilities': agent.capabilities or [],
+            'routing_keywords': agent.routing_keywords or [],
+            'success_rate': 0.9,  # Default values for now
+            'avg_completion_time': 100.0,
+            'created_at': agent.created_at.isoformat() if agent.created_at else datetime.now().isoformat(),
+            'system_prompt': agent.system_prompt or '',
+            'required_tools': agent.required_tools or [],
+            'is_active': agent.is_active
+        }
+        agents_data.append(agent_dict)
+    
+    # Build next/previous URLs
+    next_url = None
+    if page_obj.has_next():
+        next_url = f'/api/v1/agents/list/?page={page_obj.next_page_number()}&page_size={page_size}'
+        if specialization:
+            next_url += f'&specialization={specialization}'
+    
+    previous_url = None
+    if page_obj.has_previous():
+        previous_url = f'/api/v1/agents/list/?page={page_obj.previous_page_number()}&page_size={page_size}'
+        if specialization:
+            previous_url += f'&specialization={specialization}'
     
     return Response({
-        'count': len(mock_agents),
-        'next': f'/api/agents/?page={page + 1}' if end_idx < len(mock_agents) else None,
-        'previous': f'/api/agents/?page={page - 1}' if page > 1 else None,
-        'results': paginated_agents
+        'count': paginator.count,
+        'next': next_url,
+        'previous': previous_url,
+        'results': agents_data
     })
 
 @api_view(['GET'])
@@ -147,12 +127,23 @@ def execute_agent(request):
     """
     Execute AI agent task with intelligent routing - migrated from DBAO
     """
+    from agents.models import UnifiedAgentTemplate, AgentExecution
+    from agents.tasks import execute_agent as execute_agent_task
+    
+    # DEBUG: This should help identify if this function is being called
+    print("🔥 FIXED EXECUTE_AGENT FUNCTION CALLED!")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error("🔥 FIXED EXECUTE_AGENT FUNCTION CALLED!")
+    
     user = request.user
     data = json.loads(request.body)
     
     task_description = data.get('task_description', '')
     context = data.get('context', {})
     agent_type = data.get('agent_type', None)
+    agent_name = data.get('agent_name', None)
+    input_data = data.get('input_data', {})
     
     if len(task_description) < 10:
         return Response({
@@ -163,35 +154,113 @@ def execute_agent(request):
     # Create instance ID and determine agent type if not specified
     instance_id = str(uuid.uuid4())
     
-    if not agent_type:
-        # Simple keyword-based routing
-        if any(keyword in task_description.lower() for keyword in ['business', 'strategy', 'plan']):
-            agent_type = 'business'
-        elif any(keyword in task_description.lower() for keyword in ['sports', 'betting', 'odds']):
-            agent_type = 'sports-analytics'
-        elif any(keyword in task_description.lower() for keyword in ['research', 'analyze', 'data']):
-            agent_type = 'research'
-        elif any(keyword in task_description.lower() for keyword in ['content', 'write', 'blog']):
-            agent_type = 'content'
-        else:
-            agent_type = 'business'  # default
+    # Find or create appropriate agent template
+    agent_template = None
     
-    # Generate WebSocket channel for real-time updates
-    websocket_channel = f'agent_{instance_id}'
+    if agent_name:
+        # Try to find by name first
+        try:
+            agent_template = UnifiedAgentTemplate.objects.get(name=agent_name, is_active=True)
+        except UnifiedAgentTemplate.DoesNotExist:
+            # Try display_name
+            try:
+                agent_template = UnifiedAgentTemplate.objects.get(display_name=agent_name, is_active=True)
+            except UnifiedAgentTemplate.DoesNotExist:
+                pass
     
-    return Response({
-        'success': True,
-        'instance_id': instance_id,
-        'agent_type': agent_type,
-        'status': 'running',
-        'estimated_completion': '2-3 minutes',
-        'websocket_channel': websocket_channel,
-        'task_details': {
-            'description': task_description,
-            'context': context,
-            'started_at': datetime.now().isoformat()
-        }
-    })
+    if not agent_template and agent_type:
+        # Find by specialization
+        try:
+            agent_template = UnifiedAgentTemplate.objects.filter(
+                specialization=agent_type, 
+                is_active=True
+            ).first()
+        except:
+            pass
+    
+    if not agent_template:
+        # Determine agent type from task description if not specified
+        if not agent_type:
+            if any(keyword in task_description.lower() for keyword in ['business', 'strategy', 'plan']):
+                agent_type = 'business'
+            elif any(keyword in task_description.lower() for keyword in ['sports', 'betting', 'odds']):
+                agent_type = 'sports-analytics'
+            elif any(keyword in task_description.lower() for keyword in ['research', 'analyze', 'data']):
+                agent_type = 'research'
+            elif any(keyword in task_description.lower() for keyword in ['content', 'write', 'blog']):
+                agent_type = 'content'
+            elif any(keyword in task_description.lower() for keyword in ['technical', 'code', 'programming']):
+                agent_type = 'technical'
+            else:
+                agent_type = 'business'  # default
+        
+        # Try to find agent by specialization
+        agent_template = UnifiedAgentTemplate.objects.filter(
+            specialization=agent_type,
+            is_active=True
+        ).first()
+    
+    if not agent_template:
+        return Response({
+            'success': False,
+            'error': f'No active agent found for type "{agent_type}" or name "{agent_name}"'
+        }, status=404)
+    
+    try:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Creating agent execution for template: {agent_template.name}")
+        
+        # Create execution instance
+        execution = AgentExecution.objects.create(
+            template=agent_template,
+            user=user,
+            execution_id=f"exec_{agent_template.name}_{uuid.uuid4().hex[:8]}",
+            task_description=task_description,
+            task_type=agent_type or 'general',
+            context=context,
+            input_data=input_data,
+            priority='normal',
+            websocket_channel=f'agent_{instance_id}'
+        )
+        
+        logger.info(f"Created execution: {execution.execution_id}")
+        
+        # Dispatch the Celery task
+        task_result = execute_agent_task.delay(execution_id=execution.execution_id)
+        logger.info(f"Dispatched Celery task: {task_result.task_id}")
+        
+        # Generate WebSocket channel for real-time updates
+        websocket_channel = f'agent_{instance_id}'
+        
+        return Response({
+            'success': True,
+            'instance_id': instance_id,
+            'execution_id': execution.execution_id,
+            'agent_type': agent_template.specialization,
+            'agent_name': agent_template.name,
+            'status': 'running',
+            'estimated_completion': '2-3 minutes',
+            'websocket_channel': websocket_channel,
+            'celery_task_id': task_result.task_id,
+            'task_details': {
+                'description': task_description,
+                'context': context,
+                'started_at': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating agent execution: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        return Response({
+            'success': False,
+            'error': f'Failed to create agent execution: {str(e)}'
+        }, status=500)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

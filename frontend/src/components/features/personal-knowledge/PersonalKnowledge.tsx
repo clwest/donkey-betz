@@ -300,216 +300,350 @@ const PersonalKnowledge: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
+    <div className="min-h-screen p-6" style={{ background: 'var(--gaming-bg-primary)', color: 'var(--gaming-text-primary)' }}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Personal Knowledge Base
-          </h1>
-          <p className="text-gray-400">Upload and manage your personal content for AI learning</p>
+        {/* Gaming Neural Header */}
+        <div className="mb-8 relative">
+          <div className="gaming-matrix-header p-8 text-center relative overflow-hidden">
+            <div className="relative z-10">
+              <h1 className="text-5xl font-bold mb-3 gaming-text-gradient font-mono uppercase tracking-widest">
+                NEURAL KNOWLEDGE BASE
+              </h1>
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent flex-1"></div>
+                <span className="text-sm font-mono tracking-[0.3em] px-4" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                  &gt;&gt;&gt; ACCESSING MEMORY CORES
+                </span>
+                <div className="h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent flex-1"></div>
+              </div>
+              <p className="text-lg font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+                KNOWLEDGE MATRIX ONLINE • NEURAL PATHWAYS SYNCHRONIZED
+              </p>
+            </div>
+            {/* Animated background grid */}
+            <div className="absolute inset-0 gaming-matrix-grid opacity-30"></div>
+          </div>
         </div>
 
-        {/* Stats Bar */}
+        {/* Neural Stats Grid */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {/* Total Entries - Cyan Theme */}
+            <div className="gaming-neural-card p-6 group">
+              <div className="gaming-border-glow"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-gray-400 text-sm">Total Entries</p>
-                  <p className="text-2xl font-bold">{stats.total_entries}</p>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                    NEURAL ENTRIES
+                  </p>
+                  <p className="text-3xl font-bold font-mono gaming-text-neon">{stats.total_entries}</p>
                 </div>
-                <FileText className="w-8 h-8 text-blue-400" />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(0, 255, 255, 0.1)', border: '1px solid var(--gaming-neon-cyan)' }}>
+                  <FileText className="w-8 h-8" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                </div>
               </div>
             </div>
             
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
+            {/* Total Words - Matrix Green */}
+            <div className="gaming-neural-card p-6 group">
+              <div className="gaming-border-glow"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-gray-400 text-sm">Total Words</p>
-                  <p className="text-2xl font-bold">{stats.total_words.toLocaleString()}</p>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                    DATA VOLUME
+                  </p>
+                  <p className="text-3xl font-bold font-mono gaming-text-matrix">{stats.total_words.toLocaleString()}</p>
                 </div>
-                <Hash className="w-8 h-8 text-green-400" />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(57, 255, 20, 0.1)', border: '1px solid var(--gaming-neon-green)' }}>
+                  <Hash className="w-8 h-8" style={{ color: 'var(--gaming-neon-green)' }} />
+                </div>
               </div>
             </div>
             
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
+            {/* Categories - Purple Theme */}
+            <div className="gaming-neural-card p-6 group">
+              <div className="gaming-border-glow"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-gray-400 text-sm">Categories</p>
-                  <p className="text-2xl font-bold">{stats.categories.length}</p>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                    CATEGORIES
+                  </p>
+                  <p className="text-3xl font-bold font-mono" style={{ color: 'var(--gaming-neon-purple)' }}>{stats.categories.length}</p>
                 </div>
-                <Folder className="w-8 h-8 text-purple-400" />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(157, 78, 221, 0.1)', border: '1px solid var(--gaming-neon-purple)' }}>
+                  <Folder className="w-8 h-8" style={{ color: 'var(--gaming-neon-purple)' }} />
+                </div>
               </div>
             </div>
             
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
+            {/* Embeddings - Orange Theme */}
+            <div className="gaming-neural-card p-6 group">
+              <div className="gaming-border-glow"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-gray-400 text-sm">Embeddings</p>
-                  <p className="text-2xl font-bold">{stats.total_embeddings || 0}</p>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                    NEURAL LINKS
+                  </p>
+                  <p className="text-3xl font-bold font-mono" style={{ color: 'var(--gaming-neon-orange)' }}>{stats.total_embeddings || 0}</p>
                 </div>
-                <Brain className="w-8 h-8 text-orange-400" />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(255, 107, 0, 0.1)', border: '1px solid var(--gaming-neon-orange)' }}>
+                  <Brain className="w-8 h-8" style={{ color: 'var(--gaming-neon-orange)' }} />
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Action Bar */}
-        <div className="flex flex-wrap gap-4 mb-8">
+        {/* Neural Command Interface */}
+        <div className="flex flex-wrap gap-6 mb-8">
+          {/* Add Neural Data Button */}
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-all flex items-center gap-2"
+            className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-3 transition-all duration-300 hover:scale-105"
+            style={{
+              background: 'var(--gaming-gradient-primary)',
+              border: '1px solid var(--gaming-neon-cyan)',
+              boxShadow: 'var(--gaming-glow-primary)'
+            }}
           >
             <Plus className="w-5 h-5" />
-            Add Knowledge
+            UPLOAD TO MATRIX
           </button>
           
-          <div className="flex-1 min-w-[300px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search your knowledge base..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
-              />
+          {/* Neural Search Interface */}
+          <div className="flex-1 min-w-[350px]">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 via-purple-400/20 to-cyan-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                <input
+                  type="text"
+                  placeholder=">>> SEARCH NEURAL DATABASE..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="gaming-neural-input w-full pl-12 pr-4 py-4 text-sm font-mono placeholder:font-mono"
+                  style={{
+                    background: 'var(--gaming-bg-elevated)',
+                    border: '1px solid var(--gaming-border)',
+                    borderRadius: '12px',
+                    color: 'var(--gaming-text-primary)'
+                  }}
+                />
+              </div>
             </div>
           </div>
           
+          {/* Category Neural Filter */}
           {stats && stats.categories.length > 0 && (
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
-            >
-              <option value="">All Categories</option>
-              {stats.categories.map((cat, index) => (
-                <option key={`${cat}-${index}`} value={cat}>{cat || 'Uncategorized'}</option>
-              ))}
-            </select>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="gaming-neural-input relative px-4 py-4 font-mono text-sm min-w-[200px] cursor-pointer"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  borderRadius: '12px',
+                  color: 'var(--gaming-text-primary)'
+                }}
+              >
+                <option value="" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>ALL CATEGORIES</option>
+                {stats.categories.map((cat, index) => (
+                  <option key={`${cat}-${index}`} value={cat} style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>
+                    {(cat || 'UNCATEGORIZED').toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
 
-        {/* Knowledge Grid */}
+        {/* Neural Knowledge Grid */}
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+          <div className="flex flex-col items-center justify-center h-64">
+            <div className="gaming-loading-matrix mb-4"></div>
+            <p className="font-mono text-sm" style={{ color: 'var(--gaming-neon-cyan)' }}>ACCESSING NEURAL NETWORK...</p>
           </div>
         ) : knowledge.length === 0 ? (
-          <div className="text-center py-16 bg-gray-800/30 rounded-lg border border-gray-700">
-            <Brain className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            <h3 className="text-xl font-semibold mb-2">No knowledge entries yet</h3>
-            <p className="text-gray-400 mb-4">Start building your personal knowledge base</p>
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Add Your First Entry
-            </button>
+          <div className="text-center py-20 gaming-neural-card relative">
+            <div className="gaming-border-glow"></div>
+            <div className="relative z-10">
+              <Brain className="w-20 h-20 mx-auto mb-6" style={{ color: 'var(--gaming-text-muted)' }} />
+              <h3 className="text-2xl font-bold font-mono mb-3 uppercase tracking-wider" style={{ color: 'var(--gaming-text-primary)' }}>
+                NO NEURAL DATA DETECTED
+              </h3>
+              <p className="font-mono mb-6" style={{ color: 'var(--gaming-text-secondary)' }}>
+                INITIALIZE KNOWLEDGE MATRIX TO BEGIN
+              </p>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                style={{
+                  background: 'var(--gaming-gradient-primary)',
+                  border: '1px solid var(--gaming-neon-cyan)',
+                  boxShadow: 'var(--gaming-glow-primary)'
+                }}
+              >
+                UPLOAD FIRST ENTRY
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {knowledge.map((entry) => {
               const Icon = contentTypes.find(t => t.value === entry.content_type)?.icon || FileText;
+              const isActive = entry.use_in_generation;
               
               return (
                 <div
                   key={entry.id}
-                  className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-5 border border-gray-700 hover:border-gray-600 transition-all group"
+                  className="gaming-neural-card p-6 group relative overflow-hidden"
+                  style={{
+                    borderColor: isActive ? 'var(--gaming-neon-green)' : 'var(--gaming-border)'
+                  }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Icon className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                      <h3 className="font-semibold truncate flex-1" title={entry.title}>
+                  <div className="gaming-border-glow"></div>
+                  
+                  {/* Neural Header */}
+                  <div className="flex items-start justify-between mb-4 relative z-10">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="p-2 rounded-lg" style={{ 
+                        background: isActive ? 'rgba(57, 255, 20, 0.1)' : 'rgba(0, 255, 255, 0.1)', 
+                        border: `1px solid ${isActive ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-cyan)'}` 
+                      }}>
+                        <Icon className="w-5 h-5" style={{ 
+                          color: isActive ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-cyan)' 
+                        }} />
+                      </div>
+                      <h3 className="font-bold font-mono text-sm uppercase tracking-wide truncate flex-1" 
+                          title={entry.title}
+                          style={{ color: 'var(--gaming-text-primary)' }}>
                         {entry.title}
                       </h3>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    
+                    {/* Action Controls */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <button
                         onClick={() => setDetailEntry(entry)}
-                        className="p-1 hover:bg-gray-700 rounded transition-colors"
-                        title="View full content"
+                        className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                        style={{ 
+                          background: 'rgba(0, 255, 255, 0.1)', 
+                          border: '1px solid var(--gaming-neon-cyan)',
+                          color: 'var(--gaming-neon-cyan)'
+                        }}
+                        title="View Neural Data"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setSelectedEntry(entry)}
-                        className="p-1 hover:bg-gray-700 rounded transition-colors"
-                        title="Edit"
+                        className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                        style={{ 
+                          background: 'rgba(157, 78, 221, 0.1)', 
+                          border: '1px solid var(--gaming-neon-purple)',
+                          color: 'var(--gaming-neon-purple)'
+                        }}
+                        title="Modify Data"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(entry.id)}
-                        className="p-1 hover:bg-gray-700 rounded transition-colors text-red-400"
-                        title="Delete"
+                        className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                        style={{ 
+                          background: 'rgba(255, 20, 147, 0.1)', 
+                          border: '1px solid var(--gaming-neon-pink)',
+                          color: 'var(--gaming-neon-pink)'
+                        }}
+                        title="Delete Entry"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                   
+                  {/* Description */}
                   {entry.description && (
-                    <p className="text-sm text-gray-400 mb-2">{entry.description}</p>
+                    <p className="text-sm font-mono mb-3" style={{ color: 'var(--gaming-text-secondary)' }}>
+                      {entry.description}
+                    </p>
                   )}
                   
-                  <div className="mb-3">
-                    <p className={`text-sm text-gray-300 ${!expandedEntries.has(entry.id) ? 'line-clamp-3' : ''}`}>
+                  {/* Content Preview */}
+                  <div className="mb-4">
+                    <p className={`text-sm font-mono leading-relaxed ${!expandedEntries.has(entry.id) ? 'line-clamp-3' : ''}`}
+                       style={{ color: 'var(--gaming-text-secondary)' }}>
                       {expandedEntries.has(entry.id) ? (entry.full_content || entry.content) : entry.content_preview}
                     </p>
                     {entry.word_count > 100 && (
                       <button
                         onClick={() => toggleExpanded(entry.id)}
-                        className="mt-2 text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
+                        className="mt-2 text-sm flex items-center gap-1 transition-all duration-200 hover:scale-105 font-mono"
+                        style={{ color: 'var(--gaming-neon-cyan)' }}
                       >
                         {expandedEntries.has(entry.id) ? (
                           <>
                             <ChevronUp className="w-4 h-4" />
-                            Show less
+                            COLLAPSE DATA
                           </>
                         ) : (
                           <>
                             <ChevronDown className="w-4 h-4" />
-                            Show more
+                            EXPAND DATA
                           </>
                         )}
                       </button>
                     )}
                   </div>
                   
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {/* Show important tags first, then others */}
+                  {/* Neural Tags */}
+                  <div className="flex flex-wrap gap-2 mb-4">
                     {entry.tags
                       .filter(tag => !['documentation', 'ai-content-studio', 'reference'].includes(tag))
                       .slice(0, 3)
                       .map((tag, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-1 bg-blue-900/30 border border-blue-700/50 rounded text-xs text-blue-300"
+                          className="px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider"
+                          style={{
+                            background: 'rgba(0, 255, 255, 0.1)',
+                            border: '1px solid var(--gaming-neon-cyan)',
+                            color: 'var(--gaming-neon-cyan)'
+                          }}
                           title={tag}
                         >
                           #{tag}
                         </span>
                       ))}
                     {entry.tags.filter(tag => !['documentation', 'ai-content-studio', 'reference'].includes(tag)).length > 3 && (
-                      <span className="px-2 py-1 text-xs text-gray-500">
-                        +{entry.tags.filter(tag => !['documentation', 'ai-content-studio', 'reference'].includes(tag)).length - 3} more
+                      <span className="px-3 py-1 text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>
+                        +{entry.tags.filter(tag => !['documentation', 'ai-content-studio', 'reference'].includes(tag)).length - 3} MORE
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{entry.word_count} words</span>
-                    <div className="flex items-center gap-2">
+                  {/* Neural Status */}
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span style={{ color: 'var(--gaming-text-muted)' }}>
+                      {entry.word_count} WORDS
+                    </span>
+                    <div className="flex items-center gap-3">
                       {entry.use_in_generation ? (
-                        <CheckCircle className="w-4 h-4 text-green-400" title="Active in AI generation" />
+                        <div className="gaming-status gaming-status-running px-2 py-1 rounded-full">
+                          <div className="gaming-pulse-dot"></div>
+                          ACTIVE
+                        </div>
                       ) : (
-                        <AlertCircle className="w-4 h-4 text-gray-600" title="Not used in AI generation" />
+                        <div className="gaming-status px-2 py-1 rounded-full">
+                          INACTIVE
+                        </div>
                       )}
                       {entry.times_used > 0 && (
-                        <span className="text-blue-400">Used {entry.times_used}x</span>
+                        <span style={{ color: 'var(--gaming-neon-green)' }}>
+                          USED {entry.times_used}X
+                        </span>
                       )}
                     </div>
                   </div>
@@ -519,19 +653,25 @@ const PersonalKnowledge: React.FC = () => {
           </div>
         )}
         
-        {/* Pagination */}
+        {/* Neural Pagination */}
         {!loading && knowledge.length > 0 && totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-8">
+          <div className="flex justify-center items-center gap-4 mt-12">
+            {/* Previous Page */}
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{
+                background: currentPage === 1 ? 'var(--gaming-bg-elevated)' : 'var(--gaming-bg-elevated)',
+                border: currentPage === 1 ? '1px solid var(--gaming-border)' : '1px solid var(--gaming-neon-cyan)',
+                color: currentPage === 1 ? 'var(--gaming-text-muted)' : 'var(--gaming-neon-cyan)'
+              }}
             >
-              Previous
+              &lt;&lt; PREV
             </button>
             
-            <div className="flex items-center gap-2">
-              {/* Show page numbers */}
+            {/* Page Numbers */}
+            <div className="flex items-center gap-3">
               {[...Array(Math.min(5, totalPages))].map((_, idx) => {
                 let pageNum;
                 if (totalPages <= 5) {
@@ -544,27 +684,47 @@ const PersonalKnowledge: React.FC = () => {
                   pageNum = currentPage - 2 + idx;
                 }
                 
+                const isActive = currentPage === pageNum;
+                
                 return (
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-2 rounded-lg transition-colors ${
-                      currentPage === pageNum
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-800/50 border border-gray-700 hover:bg-gray-700/50'
+                    className={`w-12 h-12 rounded-xl font-mono font-bold text-sm transition-all duration-300 hover:scale-110 ${
+                      isActive ? 'gaming-btn-active' : ''
                     }`}
+                    style={{
+                      background: isActive 
+                        ? 'var(--gaming-gradient-primary)' 
+                        : 'var(--gaming-bg-elevated)',
+                      border: isActive 
+                        ? '1px solid var(--gaming-neon-cyan)' 
+                        : '1px solid var(--gaming-border)',
+                      color: isActive 
+                        ? 'var(--gaming-text-primary)' 
+                        : 'var(--gaming-text-secondary)',
+                      boxShadow: isActive 
+                        ? 'var(--gaming-glow-primary)' 
+                        : 'none'
+                    }}
                   >
                     {pageNum}
                   </button>
                 );
               })}
               
+              {/* Ellipsis and Last Page */}
               {totalPages > 5 && currentPage < totalPages - 2 && (
                 <>
-                  <span className="text-gray-500">...</span>
+                  <span className="font-mono text-lg" style={{ color: 'var(--gaming-text-muted)' }}>...</span>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
-                    className="px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg hover:bg-gray-700/50 transition-colors"
+                    className="w-12 h-12 rounded-xl font-mono font-bold text-sm transition-all duration-300 hover:scale-110"
+                    style={{
+                      background: 'var(--gaming-bg-elevated)',
+                      border: '1px solid var(--gaming-border)',
+                      color: 'var(--gaming-text-secondary)'
+                    }}
                   >
                     {totalPages}
                   </button>
@@ -572,286 +732,506 @@ const PersonalKnowledge: React.FC = () => {
               )}
             </div>
             
+            {/* Next Page */}
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              style={{
+                background: currentPage === totalPages ? 'var(--gaming-bg-elevated)' : 'var(--gaming-bg-elevated)',
+                border: currentPage === totalPages ? '1px solid var(--gaming-border)' : '1px solid var(--gaming-neon-cyan)',
+                color: currentPage === totalPages ? 'var(--gaming-text-muted)' : 'var(--gaming-neon-cyan)'
+              }}
             >
-              Next
+              NEXT &gt;&gt;
             </button>
           </div>
         )}
         
-        {/* Page info */}
+        {/* Neural Data Statistics */}
         {!loading && knowledge.length > 0 && (
-          <div className="text-center mt-4 text-sm text-gray-400">
-            Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+          <div className="text-center mt-6">
+            <p className="font-mono text-sm uppercase tracking-wider" style={{ color: 'var(--gaming-text-muted)' }}>
+              NEURAL DISPLAY: {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} OF {totalItems} ENTRIES
+            </p>
           </div>
         )}
 
-        {/* Upload Modal */}
+        {/* Neural Upload Interface */}
         {showUploadModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Add to Knowledge Base</h2>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" 
+               style={{ background: 'var(--gaming-bg-overlay)', backdropFilter: 'blur(20px)' }}>
+            <div className="gaming-neural-card max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+              <div className="gaming-border-glow"></div>
+              
+              {/* Neural Header */}
+              <div className="flex items-center justify-between mb-8 relative z-10 p-6 pb-0">
+                <div>
+                  <h2 className="text-3xl font-bold font-mono uppercase tracking-wider gaming-text-gradient mb-2">
+                    NEURAL DATA UPLOAD
+                  </h2>
+                  <p className="font-mono text-sm" style={{ color: 'var(--gaming-text-secondary)' }}>
+                    &gt;&gt;&gt; INITIALIZING KNOWLEDGE MATRIX PROTOCOL
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     setShowUploadModal(false);
                     resetForm();
                   }}
-                  className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-3 rounded-lg transition-all duration-200 hover:scale-110"
+                  style={{ 
+                    background: 'rgba(255, 20, 147, 0.1)', 
+                    border: '1px solid var(--gaming-neon-pink)',
+                    color: 'var(--gaming-neon-pink)'
+                  }}
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
               
-              {/* Upload Type Selector */}
-              <div className="flex gap-2 mb-6">
-                <button
-                  onClick={() => setUploadType('text')}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                    uploadType === 'text'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  <FileText className="w-5 h-5 inline mr-2" />
-                  Text/Note
-                </button>
-                <button
-                  onClick={() => setUploadType('file')}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                    uploadType === 'file'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  <Upload className="w-5 h-5 inline mr-2" />
-                  Upload File
-                </button>
-              </div>
+              <div className="p-6 pt-0 relative z-10">
               
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Title *</label>
-                  <input
-                    type="text"
-                    value={newKnowledge.title}
-                    onChange={(e) => setNewKnowledge({...newKnowledge, title: e.target.value})}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
-                    placeholder="Give your knowledge a title..."
-                  />
+                {/* Neural Data Type Selector */}
+                <div className="flex gap-4 mb-8">
+                  <button
+                    onClick={() => setUploadType('text')}
+                    className={`flex-1 py-4 px-6 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 ${
+                      uploadType === 'text'
+                        ? 'gaming-btn-active'
+                        : ''
+                    }`}
+                    style={{
+                      background: uploadType === 'text' 
+                        ? 'var(--gaming-gradient-primary)' 
+                        : 'var(--gaming-bg-elevated)',
+                      border: uploadType === 'text' 
+                        ? '1px solid var(--gaming-neon-cyan)' 
+                        : '1px solid var(--gaming-border)',
+                      color: uploadType === 'text' 
+                        ? 'var(--gaming-text-primary)' 
+                        : 'var(--gaming-text-muted)',
+                      boxShadow: uploadType === 'text' 
+                        ? 'var(--gaming-glow-primary)' 
+                        : 'none'
+                    }}
+                  >
+                    <FileText className="w-5 h-5" />
+                    NEURAL TEXT
+                  </button>
+                  <button
+                    onClick={() => setUploadType('file')}
+                    className={`flex-1 py-4 px-6 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 ${
+                      uploadType === 'file'
+                        ? 'gaming-btn-active'
+                        : ''
+                    }`}
+                    style={{
+                      background: uploadType === 'file' 
+                        ? 'var(--gaming-gradient-primary)' 
+                        : 'var(--gaming-bg-elevated)',
+                      border: uploadType === 'file' 
+                        ? '1px solid var(--gaming-neon-cyan)' 
+                        : '1px solid var(--gaming-border)',
+                      color: uploadType === 'file' 
+                        ? 'var(--gaming-text-primary)' 
+                        : 'var(--gaming-text-muted)',
+                      boxShadow: uploadType === 'file' 
+                        ? 'var(--gaming-glow-primary)' 
+                        : 'none'
+                    }}
+                  >
+                    <Upload className="w-5 h-5" />
+                    DATA FILE
+                  </button>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
-                  <input
-                    type="text"
-                    value={newKnowledge.description}
-                    onChange={(e) => setNewKnowledge({...newKnowledge, description: e.target.value})}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
-                    placeholder="Brief description..."
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+              
+                {/* Neural Form Fields */}
+                <div className="space-y-6">
+                  {/* Neural Title */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Content Type</label>
-                    <select
-                      value={newKnowledge.content_type}
-                      onChange={(e) => setNewKnowledge({...newKnowledge, content_type: e.target.value})}
-                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
-                    >
-                      {contentTypes.map(type => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Category</label>
+                    <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                           style={{ color: 'var(--gaming-text-primary)' }}>
+                      NEURAL IDENTIFIER *
+                    </label>
                     <input
                       type="text"
-                      value={newKnowledge.category}
-                      onChange={(e) => setNewKnowledge({...newKnowledge, category: e.target.value})}
-                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
-                      placeholder="e.g., Marketing, Development"
+                      value={newKnowledge.title}
+                      onChange={(e) => setNewKnowledge({...newKnowledge, title: e.target.value})}
+                      className="gaming-neural-input w-full px-4 py-3 font-mono"
+                      placeholder=">>> ENTER DATA IDENTIFIER..."
                     />
                   </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
-                  <input
-                    type="text"
-                    value={newKnowledge.tags}
-                    onChange={(e) => setNewKnowledge({...newKnowledge, tags: e.target.value})}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
-                    placeholder="tag1, tag2, tag3"
-                  />
-                </div>
-                
-                {uploadType === 'text' ? (
+                  
+                  {/* Neural Description */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">Content *</label>
-                    <textarea
-                      value={newKnowledge.content}
-                      onChange={(e) => setNewKnowledge({...newKnowledge, content: e.target.value})}
-                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 min-h-[200px]"
-                      placeholder="Enter your content here..."
+                    <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                           style={{ color: 'var(--gaming-text-primary)' }}>
+                      DATA DESCRIPTION
+                    </label>
+                    <input
+                      type="text"
+                      value={newKnowledge.description}
+                      onChange={(e) => setNewKnowledge({...newKnowledge, description: e.target.value})}
+                      className="gaming-neural-input w-full px-4 py-3 font-mono"
+                      placeholder=">>> BRIEF NEURAL SUMMARY..."
                     />
                   </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Upload File</label>
-                    <div className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center hover:border-gray-600 transition-colors">
-                      <Upload className="w-12 h-12 mx-auto mb-3 text-gray-500" />
-                      <p className="text-gray-400 mb-2">Click to upload or drag and drop</p>
-                      <p className="text-xs text-gray-500">
-                        Supports: PDF, DOCX, TXT, MD, CSV, XLSX, JSON, HTML, RTF
-                      </p>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        onChange={handleFileUpload}
-                        accept=".pdf,.docx,.doc,.txt,.md,.csv,.xlsx,.xls,.json,.html,.htm,.rtf"
-                        className="hidden"
-                      />
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mt-4 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                
+                  {/* Neural Classification Grid */}
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                             style={{ color: 'var(--gaming-text-primary)' }}>
+                        DATA TYPE
+                      </label>
+                      <select
+                        value={newKnowledge.content_type}
+                        onChange={(e) => setNewKnowledge({...newKnowledge, content_type: e.target.value})}
+                        className="gaming-neural-input w-full px-4 py-3 font-mono cursor-pointer"
                       >
-                        Choose File
-                      </button>
+                        {contentTypes.map(type => (
+                          <option key={type.value} value={type.value} 
+                                  style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>
+                            {type.label.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                             style={{ color: 'var(--gaming-text-primary)' }}>
+                        NEURAL CATEGORY
+                      </label>
+                      <input
+                        type="text"
+                        value={newKnowledge.category}
+                        onChange={(e) => setNewKnowledge({...newKnowledge, category: e.target.value})}
+                        className="gaming-neural-input w-full px-4 py-3 font-mono"
+                        placeholder=">>> CLASSIFICATION..."
+                      />
+                    </div>
+                  </div>
+                
+                  {/* Neural Tags */}
+                  <div>
+                    <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                           style={{ color: 'var(--gaming-text-primary)' }}>
+                      NEURAL TAGS
+                    </label>
+                    <input
+                      type="text"
+                      value={newKnowledge.tags}
+                      onChange={(e) => setNewKnowledge({...newKnowledge, tags: e.target.value})}
+                      className="gaming-neural-input w-full px-4 py-3 font-mono"
+                      placeholder=">>> tag1, tag2, tag3"
+                    />
+                  </div>
+                
+                  {/* Neural Content Input */}
+                  {uploadType === 'text' ? (
+                    <div>
+                      <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                             style={{ color: 'var(--gaming-text-primary)' }}>
+                        NEURAL CONTENT *
+                      </label>
+                      <textarea
+                        value={newKnowledge.content}
+                        onChange={(e) => setNewKnowledge({...newKnowledge, content: e.target.value})}
+                        className="gaming-neural-input w-full px-4 py-4 font-mono min-h-[200px] resize-none"
+                        placeholder=">>> ENTER NEURAL DATA CONTENT..."
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
+                             style={{ color: 'var(--gaming-text-primary)' }}>
+                        DATA FILE UPLOAD
+                      </label>
+                      <div className="gaming-neural-card p-8 text-center group cursor-pointer" 
+                           onClick={() => fileInputRef.current?.click()}
+                           style={{ border: '2px dashed var(--gaming-border)' }}>
+                        <div className="gaming-border-glow"></div>
+                        <div className="relative z-10">
+                          <div className="p-4 rounded-xl mx-auto mb-4 w-fit" 
+                               style={{ background: 'rgba(0, 255, 255, 0.1)', border: '1px solid var(--gaming-neon-cyan)' }}>
+                            <Upload className="w-12 h-12" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                          </div>
+                          <p className="font-mono font-bold uppercase tracking-wider mb-2" 
+                             style={{ color: 'var(--gaming-text-primary)' }}>
+                            NEURAL FILE INTERFACE
+                          </p>
+                          <p className="text-sm font-mono mb-4" style={{ color: 'var(--gaming-text-secondary)' }}>
+                            CLICK TO UPLOAD OR DRAG AND DROP
+                          </p>
+                          <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>
+                            SUPPORTED: PDF, DOCX, TXT, MD, CSV, XLSX, JSON, HTML, RTF
+                          </p>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            onChange={handleFileUpload}
+                            accept=".pdf,.docx,.doc,.txt,.md,.csv,.xlsx,.xls,.json,.html,.htm,.rtf"
+                            className="hidden"
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              fileInputRef.current?.click();
+                            }}
+                            className="mt-6 px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                            style={{
+                              background: 'var(--gaming-bg-elevated)',
+                              border: '1px solid var(--gaming-neon-cyan)',
+                              color: 'var(--gaming-neon-cyan)'
+                            }}
+                          >
+                            SELECT FILE
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                
+                  {/* Neural AI Integration Toggle */}
+                  <div className="flex items-center gap-4 p-4 rounded-xl" 
+                       style={{ background: 'rgba(0, 255, 255, 0.05)', border: '1px solid var(--gaming-border)' }}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="use_in_generation"
+                        checked={newKnowledge.use_in_generation}
+                        onChange={(e) => setNewKnowledge({...newKnowledge, use_in_generation: e.target.checked})}
+                        className="w-5 h-5 rounded" 
+                        style={{
+                          accentColor: 'var(--gaming-neon-cyan)',
+                          backgroundColor: newKnowledge.use_in_generation ? 'var(--gaming-neon-cyan)' : 'var(--gaming-bg-elevated)'
+                        }}
+                      />
+                      <label htmlFor="use_in_generation" className="font-mono font-bold text-sm uppercase tracking-wider" 
+                             style={{ color: 'var(--gaming-text-primary)' }}>
+                        ENABLE AI NEURAL INTEGRATION
+                      </label>
+                    </div>
+                    <div className={`gaming-status px-3 py-1 rounded-full ${
+                      newKnowledge.use_in_generation ? 'gaming-status-running' : ''
+                    }`}>
+                      {newKnowledge.use_in_generation ? (
+                        <><div className="gaming-pulse-dot"></div>ACTIVE</>
+                      ) : (
+                        'INACTIVE'
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+                {/* Neural Command Buttons */}
+                <div className="flex justify-end gap-4 mt-8">
+                  <button
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      resetForm();
+                    }}
+                    className="px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                    style={{
+                      background: 'var(--gaming-bg-elevated)',
+                      border: '1px solid var(--gaming-border)',
+                      color: 'var(--gaming-text-muted)'
+                    }}
+                  >
+                    ABORT UPLOAD
+                  </button>
+                  <button
+                    onClick={uploadType === 'text' ? handleTextSubmit : () => fileInputRef.current?.click()}
+                    disabled={uploading || (uploadType === 'text' && (!newKnowledge.title || !newKnowledge.content))}
+                    className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                    style={{
+                      background: uploading ? 'var(--gaming-bg-elevated)' : 'var(--gaming-gradient-primary)',
+                      border: '1px solid var(--gaming-neon-cyan)',
+                      boxShadow: uploading ? 'none' : 'var(--gaming-glow-primary)'
+                    }}
+                  >
+                    {uploading && <div className="gaming-loading-matrix w-4 h-4"></div>}
+                    {uploading 
+                      ? 'PROCESSING...' 
+                      : uploadType === 'text' 
+                        ? 'UPLOAD TO MATRIX' 
+                        : 'SELECT DATA FILE'
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+        )}
+
+        {/* Neural Data Viewer */}
+        {detailEntry && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" 
+               style={{ background: 'var(--gaming-bg-overlay)', backdropFilter: 'blur(20px)' }}>
+            <div className="gaming-neural-card max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
+              <div className="gaming-border-glow"></div>
+              
+              {/* Neural Header */}
+              <div className="flex items-start justify-between mb-8 relative z-10 p-8 pb-0">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-3xl font-bold font-mono uppercase tracking-wider gaming-text-gradient mb-3">
+                    {detailEntry.title}
+                  </h2>
+                  {detailEntry.description && (
+                    <p className="font-mono text-lg" style={{ color: 'var(--gaming-text-secondary)' }}>
+                      {detailEntry.description}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setDetailEntry(null)}
+                  className="p-3 rounded-lg transition-all duration-200 hover:scale-110 ml-6"
+                  style={{ 
+                    background: 'rgba(255, 20, 147, 0.1)', 
+                    border: '1px solid var(--gaming-neon-pink)',
+                    color: 'var(--gaming-neon-pink)'
+                  }}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-8 pt-0 relative z-10">
+              
+                {/* Neural Metadata Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                  <div className="gaming-neural-card p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-5 h-5" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                      <span className="font-mono text-xs uppercase tracking-wider" 
+                            style={{ color: 'var(--gaming-text-muted)' }}>TYPE</span>
+                    </div>
+                    <p className="font-mono font-bold" style={{ color: 'var(--gaming-text-primary)' }}>
+                      {detailEntry.content_type.toUpperCase()}
+                    </p>
+                  </div>
+                  
+                  <div className="gaming-neural-card p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Hash className="w-5 h-5" style={{ color: 'var(--gaming-neon-green)' }} />
+                      <span className="font-mono text-xs uppercase tracking-wider" 
+                            style={{ color: 'var(--gaming-text-muted)' }}>WORDS</span>
+                    </div>
+                    <p className="font-mono font-bold" style={{ color: 'var(--gaming-text-primary)' }}>
+                      {detailEntry.word_count.toLocaleString()}
+                    </p>
+                  </div>
+                  
+                  {detailEntry.times_used > 0 && (
+                    <div className="gaming-neural-card p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-5 h-5" style={{ color: 'var(--gaming-neon-green)' }} />
+                        <span className="font-mono text-xs uppercase tracking-wider" 
+                              style={{ color: 'var(--gaming-text-muted)' }}>USAGE</span>
+                      </div>
+                      <p className="font-mono font-bold" style={{ color: 'var(--gaming-text-primary)' }}>
+                        {detailEntry.times_used} TIMES
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="gaming-neural-card p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {detailEntry.use_in_generation ? (
+                        <CheckCircle className="w-5 h-5" style={{ color: 'var(--gaming-neon-green)' }} />
+                      ) : (
+                        <AlertCircle className="w-5 h-5" style={{ color: 'var(--gaming-text-muted)' }} />
+                      )}
+                      <span className="font-mono text-xs uppercase tracking-wider" 
+                            style={{ color: 'var(--gaming-text-muted)' }}>AI STATUS</span>
+                    </div>
+                    <div className={`gaming-status px-2 py-1 rounded-full ${
+                      detailEntry.use_in_generation ? 'gaming-status-running' : ''
+                    }`}>
+                      {detailEntry.use_in_generation ? (
+                        <><div className="gaming-pulse-dot"></div>ACTIVE</>
+                      ) : (
+                        'INACTIVE'
+                      )}
+                    </div>
+                  </div>
+                </div>
+              
+                {/* Neural Tags */}
+                {detailEntry.tags.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="font-mono font-bold text-sm uppercase tracking-wider mb-4" 
+                        style={{ color: 'var(--gaming-text-primary)' }}>
+                      NEURAL TAGS
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {detailEntry.tags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="px-4 py-2 rounded-full font-mono font-bold text-sm uppercase tracking-wider"
+                          style={{
+                            background: 'rgba(0, 255, 255, 0.1)',
+                            border: '1px solid var(--gaming-neon-cyan)',
+                            color: 'var(--gaming-neon-cyan)'
+                          }}
+                        >
+                          #{tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
-                
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="use_in_generation"
-                    checked={newKnowledge.use_in_generation}
-                    onChange={(e) => setNewKnowledge({...newKnowledge, use_in_generation: e.target.checked})}
-                    className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-500 focus:ring-blue-500"
-                  />
-                  <label htmlFor="use_in_generation" className="text-sm">
-                    Use this knowledge in AI content generation
-                  </label>
-                </div>
-              </div>
               
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowUploadModal(false);
-                    resetForm();
-                  }}
-                  className="px-6 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={uploadType === 'text' ? handleTextSubmit : () => fileInputRef.current?.click()}
-                  disabled={uploading || (uploadType === 'text' && (!newKnowledge.title || !newKnowledge.content))}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploading ? 'Processing...' : uploadType === 'text' ? 'Add Knowledge' : 'Upload File'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Detail Modal */}
-        {detailEntry && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold mb-2">{detailEntry.title}</h2>
-                  {detailEntry.description && (
-                    <p className="text-gray-400">{detailEntry.description}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setDetailEntry(null)}
-                  className="p-2 hover:bg-gray-800 rounded-lg transition-colors ml-4"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              {/* Metadata */}
-              <div className="flex flex-wrap gap-4 mb-6 text-sm text-gray-400">
-                <div className="flex items-center gap-1">
-                  <FileText className="w-4 h-4" />
-                  <span>{detailEntry.content_type}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Hash className="w-4 h-4" />
-                  <span>{detailEntry.word_count} words</span>
-                </div>
-                {detailEntry.times_used > 0 && (
-                  <div className="flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4 text-green-400" />
-                    <span>Used {detailEntry.times_used} times</span>
+                {/* Neural Content Display */}
+                <div className="mb-8">
+                  <h3 className="font-mono font-bold text-sm uppercase tracking-wider mb-4" 
+                      style={{ color: 'var(--gaming-text-primary)' }}>
+                    NEURAL CONTENT DATA
+                  </h3>
+                  <div className="gaming-neural-card p-6 relative">
+                    <div className="gaming-border-glow"></div>
+                    <div className="relative z-10">
+                      <div className="max-w-none">
+                        <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed" 
+                             style={{ color: 'var(--gaming-text-secondary)' }}>
+                          {detailEntry.full_content || detailEntry.content}
+                        </pre>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-1">
-                  {detailEntry.use_in_generation ? (
-                    <CheckCircle className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-gray-600" />
-                  )}
-                  <span>{detailEntry.use_in_generation ? 'Active in AI generation' : 'Not used in AI generation'}</span>
                 </div>
-              </div>
               
-              {/* Tags */}
-              {detailEntry.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {detailEntry.tags.map((tag, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 bg-blue-900/30 border border-blue-700/50 rounded-full text-sm text-blue-300"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
+                {/* Neural Command Actions */}
+                <div className="flex justify-end gap-4">
+                  <button
+                    onClick={() => {
+                      setSelectedEntry(detailEntry);
+                      setDetailEntry(null);
+                    }}
+                    className="px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 flex items-center gap-3"
+                    style={{
+                      background: 'var(--gaming-bg-elevated)',
+                      border: '1px solid var(--gaming-neon-purple)',
+                      color: 'var(--gaming-neon-purple)'
+                    }}
+                  >
+                    <Edit className="w-5 h-5" />
+                    MODIFY DATA
+                  </button>
+                  <button
+                    onClick={() => setDetailEntry(null)}
+                    className="gaming-btn-active px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                    style={{
+                      background: 'var(--gaming-gradient-primary)',
+                      border: '1px solid var(--gaming-neon-cyan)',
+                      boxShadow: 'var(--gaming-glow-primary)'
+                    }}
+                  >
+                    CLOSE VIEWER
+                  </button>
                 </div>
-              )}
-              
-              {/* Content */}
-              <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-                <div className="prose prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-gray-300 font-sans text-sm leading-relaxed">
-                    {detailEntry.full_content || detailEntry.content}
-                  </pre>
-                </div>
-              </div>
-              
-              {/* Actions */}
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setSelectedEntry(detailEntry);
-                    setDetailEntry(null);
-                  }}
-                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  <Edit className="w-4 h-4 inline mr-2" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => setDetailEntry(null)}
-                  className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>

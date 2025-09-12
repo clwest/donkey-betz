@@ -15,15 +15,18 @@ export const Progress = forwardRef<HTMLDivElement, ProgressProps>(
       <div
         ref={ref}
         className={clsx(
-          'relative h-4 w-full overflow-hidden rounded-full bg-dark-800',
+          'relative h-4 w-full overflow-hidden rounded-lg bg-gray-900 border border-cyan-500/30',
           className
         )}
         {...props}
       >
         <div
-          className="h-full w-full flex-1 bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300"
+          className="h-full w-full flex-1 bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-300 relative"
           style={{ transform: `translateX(-${100 - percentage}%)` }}
-        />
+        >
+          {/* Gaming progress glow effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/50 to-purple-400/50 animate-pulse" />
+        </div>
       </div>
     );
   }
