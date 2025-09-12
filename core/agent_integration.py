@@ -518,10 +518,17 @@ Please complete this task using your specialized capabilities.
             # Store learning outcome for future analysis
             from self_awareness.models import SystemEvolution
             SystemEvolution.objects.create(
-                change_type='agent_learning',
+                evolution_type='optimization',  # Using valid choice from EVOLUTION_TYPES
+                title=f"Agent {agent.name} Learning Update",
                 description=f"Agent {agent.name} execution: {'success' if success else 'failure'}",
-                impact_score=0.7 if success else 0.3,
-                metadata={
+                rationale=f"Tracking agent performance for continuous improvement",
+                expected_benefit=f"Improved agent performance based on execution feedback",
+                risk_assessment="Low risk - tracking only",
+                rollback_plan="N/A - tracking only",
+                confidence_score=0.7 if success else 0.3,
+                priority=5,
+                status='completed',
+                success_metrics={
                     'agent_id': str(agent.id),
                     'agent_name': agent.name,
                     'success': success,

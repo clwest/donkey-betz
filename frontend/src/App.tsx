@@ -48,7 +48,7 @@ import PromptDiagnosticsPage from './pages/prompt-diagnostics/PromptDiagnosticsP
 import AgentRegistryPage from './pages/AgentRegistryPage';
 
 // Multi-Agent Workflows
-import MultiAgentWorkflowsPage from './pages/WorkflowsPage';
+import MultiAgentWorkflowsPage from './pages/MultiAgentWorkflowsPage';
 
 // Debug Page
 import DebugPage from './pages/DebugPage';

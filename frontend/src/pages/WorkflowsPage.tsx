@@ -436,22 +436,17 @@ export default function WorkflowsPage() {
           </div>
           
           <div className="flex items-center gap-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="gaming-btn-active px-8 py-4 text-lg">
-                  <PlusIcon className="h-5 w-5 mr-3" />
-                  INITIATE NEURAL MATRIX
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+            <Button 
+              onClick={() => setTemplateDialogOpen(true)}
+              className="gaming-btn-active px-8 py-4 text-lg">
+              <PlusIcon className="h-5 w-5 mr-3" />
+              INITIATE NEURAL MATRIX
+            </Button>
           </div>
         </div>
       </div>
 
-      <Dialog>
-        <DialogTrigger asChild>
-          <div style={{display: 'none'}} />
-        </DialogTrigger>
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto gaming-card border-gaming-neon-cyan">
             <DialogHeader>
               <DialogTitle className="text-white text-2xl font-bold gaming-text-primary">
