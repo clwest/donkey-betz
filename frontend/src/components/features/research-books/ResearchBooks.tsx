@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '../../common/Card';
 import { Button } from '../../common/Button';
+import { getAuthHeaderWithDevFallback } from '../../../utils/auth';
 import { 
   BookOpenIcon,
   DocumentArrowUpIcon,
@@ -381,7 +382,7 @@ export function ResearchBooks() {
       let response = await fetch('http://localhost:8000/api/ebooks/transfer/', {
         method: 'POST',
         headers: {
-          'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',
+          ...getAuthHeaderWithDevFallback(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(ebookData)
@@ -395,7 +396,7 @@ export function ResearchBooks() {
         response = await fetch('http://localhost:8000/api/ebooks/', {
           method: 'POST',
           headers: {
-            'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',
+            ...getAuthHeaderWithDevFallback(),
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -530,7 +531,7 @@ export function ResearchBooks() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
+          ...getAuthHeaderWithDevFallback(),
         },
         body: JSON.stringify({
           prompt: imagePrompt,

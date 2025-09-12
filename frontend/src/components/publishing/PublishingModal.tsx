@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { toast } from 'react-hot-toast';
+import { getAuthHeaderWithDevFallback } from '../../utils/auth';
 import {
   BookOpenIcon,
   DocumentArrowDownIcon,
@@ -125,7 +126,7 @@ export function PublishingModal({
         {
           method: 'POST',
           headers: {
-            'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',
+            ...getAuthHeaderWithDevFallback(),
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -173,7 +174,7 @@ export function PublishingModal({
         {
           method: 'POST',
           headers: {
-            'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',
+            ...getAuthHeaderWithDevFallback(),
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ isbn })
@@ -202,7 +203,7 @@ export function PublishingModal({
         {
           method: 'POST',
           headers: {
-            'Authorization': 'Token 993f8273f70877e23b5c7d2f92ed30562a089fe3',
+            ...getAuthHeaderWithDevFallback(),
             'Content-Type': 'application/json'
           }
         }

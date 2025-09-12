@@ -89,13 +89,14 @@ const PersonalKnowledge: React.FC = () => {
   const fetchKnowledge = async () => {
     setLoading(true);
     try {
+      // Fetch documents from content API
       const params = new URLSearchParams();
       if (selectedCategory) params.append('category', selectedCategory);
       if (searchQuery) params.append('search', searchQuery);
       params.append('page', currentPage.toString());
-      params.append('per_page', itemsPerPage.toString());
+      params.append('page_size', itemsPerPage.toString());
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/list/?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/content/documents/?${params}`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -103,16 +104,39 @@ const PersonalKnowledge: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setKnowledge(data.knowledge || []);
-        setStats(data.stats);
+        
+        // Transform API response to match our interface
+        const transformedKnowledge = (data.results || []).map((doc: any) => ({
+          id: doc.id,
+          title: doc.title,
+          description: doc.description || '',
+          content_preview: (doc.processed_content || doc.raw_content || '').substring(0, 200),
+          full_content: doc.processed_content || doc.raw_content || '',
+          content_type: doc.document_type || 'note',
+          file_type: doc.mime_type || 'text',
+          category: doc.category || 'general',
+          tags: doc.tags || [],
+          word_count: doc.word_count || 0,
+          use_in_generation: doc.is_public !== false,
+          times_used: doc.view_count || 0,
+          last_used: doc.last_accessed,
+          created_at: doc.created_at
+        }));
+        
+        setKnowledge(transformedKnowledge);
+        
+        // Set stats from API response
+        setStats({
+          total_entries: data.count || 0,
+          total_words: transformedKnowledge.reduce((sum: number, k: any) => sum + k.word_count, 0),
+          categories: [...new Set(transformedKnowledge.map((k: any) => k.category))],
+          most_used_title: transformedKnowledge.length > 0 ? transformedKnowledge[0].title : null,
+          total_embeddings: data.count || 0
+        });
         
         // Calculate pagination
-        const total = data.stats?.total_entries || data.knowledge?.length || 0;
-        setTotalItems(total);
-        setTotalPages(Math.ceil(total / itemsPerPage));
-        
-        // Embeddings count is already included in stats.total_embeddings
-        // fetchEmbeddingsCount();  // Not needed - data comes from personal-knowledge/list
+        setTotalItems(data.count || 0);
+        setTotalPages(Math.ceil((data.count || 0) / itemsPerPage));
       }
     } catch (error) {
       console.error('Error fetching knowledge:', error);
@@ -160,13 +184,31 @@ const PersonalKnowledge: React.FC = () => {
     formData.append('use_in_generation', String(newKnowledge.use_in_generation));
     
     try {
-      console.log('Uploading file to:', `${API_BASE_URL}/api/v1/personal-knowledge/upload/`);
-      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/upload/`, {
+      console.log('Uploading file to:', `${API_BASE_URL}/api/v1/content/documents/upload/`);
+      // Note: The documents endpoint might need multipart/form-data
+      // For now, we'll read the file content and send as JSON
+      const fileContent = await file.text();
+      
+      const documentData = {
+        title: newKnowledge.title || file.name,
+        description: newKnowledge.description,
+        raw_content: fileContent,
+        document_type: newKnowledge.content_type || 'documentation',
+        category: newKnowledge.category || 'general',
+        tags: newKnowledge.tags.split(',').map(t => t.trim()).filter(t => t),
+        is_public: newKnowledge.use_in_generation,
+        source: 'upload',
+        original_filename: file.name,
+        mime_type: file.type
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/content/documents/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${token}`
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: formData
+        body: JSON.stringify(documentData)
       });
       
       console.log('Upload response status:', response.status);
@@ -203,16 +245,25 @@ const PersonalKnowledge: React.FC = () => {
     
     setUploading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/upload/`, {
+      // Create document in content API
+      const documentData = {
+        title: newKnowledge.title,
+        description: newKnowledge.description,
+        raw_content: newKnowledge.content,
+        document_type: newKnowledge.content_type || 'documentation',
+        category: newKnowledge.category || 'general',
+        tags: newKnowledge.tags.split(',').map(t => t.trim()).filter(t => t),
+        is_public: newKnowledge.use_in_generation,
+        source: 'manual'
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/content/documents/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ...newKnowledge,
-          tags: newKnowledge.tags.split(',').map(t => t.trim()).filter(t => t)
-        })
+        body: JSON.stringify(documentData)
       });
       
       if (response.ok) {
@@ -242,7 +293,7 @@ const PersonalKnowledge: React.FC = () => {
     if (!confirm('Are you sure you want to delete this knowledge entry?')) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/personal-knowledge/${id}/delete/`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/content/documents/${id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Token ${token}`

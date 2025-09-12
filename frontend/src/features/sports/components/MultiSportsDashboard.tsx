@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../../components/common/Card';
 import { Button } from '../../../components/common/Button';
 import { Badge } from '../../../components/common/Badge';
@@ -20,7 +21,6 @@ import { Select, SelectItem } from '../../../components/common/Select';
 import { toast } from 'sonner';
 // import { GameOddsCard } from './GameOddsCard';
 import { GamingGameCard } from './GamingGameCard';
-import { BettingTicketModal } from './BettingTicketModal';
 import '../../../styles/gaming-theme.css';
 import { 
   RefreshCw, 
@@ -70,13 +70,12 @@ interface SportsType {
 }
 
 export default function MultiSportsDashboard() {
+  const navigate = useNavigate();
   const [selectedSport, setSelectedSport] = useState<SportType>(SportType.NCAAF);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [gamingTheme, setGamingTheme] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  const [showBettingTicket, setShowBettingTicket] = useState(false);
   
   // Data state
   const [sportsTypes, setSportsTypes] = useState<SportsType[]>([]);
@@ -229,9 +228,8 @@ export default function MultiSportsDashboard() {
     
     const handleGameClick = () => {
       console.log('🎯 Game clicked:', { game: game.id, teams: `${game.away_team_name} vs ${game.home_team_name}` });
-      setSelectedGame(game);
-      setShowBettingTicket(true);
-      toast.success(`🎮 Opening betting ticket for ${game.away_team_name} vs ${game.home_team_name}`);
+      navigate(`/betting/game/${game.id}`);
+      toast.success(`🎮 Opening betting page for ${game.away_team_name} vs ${game.home_team_name}`);
     };
     
     return (
@@ -408,7 +406,6 @@ export default function MultiSportsDashboard() {
           `}
           onClick={() => {
             setSelectedSport(sport.sport_type);
-            setActiveTab('sport'); // Auto-switch to sport tab
             console.log(`🏀 Selected sport: ${sport.sport_type} with ${sport.count} leagues`);
             toast.success(`🎮 Switched to ${getSportDisplayName(sport.sport_type)} Arena! Check the games below.`);
           }}
@@ -538,16 +535,6 @@ export default function MultiSportsDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Betting Ticket Modal */}
-      <BettingTicketModal 
-        game={selectedGame}
-        isOpen={showBettingTicket}
-        onClose={() => {
-          setShowBettingTicket(false);
-          setSelectedGame(null);
-        }}
-      />
-
       <div className="space-y-8">
 
         {/* Gaming Random Games Dashboard */}

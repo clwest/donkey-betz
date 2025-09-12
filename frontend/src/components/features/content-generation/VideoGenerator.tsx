@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '../../common/Card';
 import { Button } from '../../common/Button';
+import { getAuthHeaderWithDevFallback } from '../../../utils/auth';
 import { 
   VideoCameraIcon, 
   PlayIcon, 
@@ -388,13 +389,13 @@ export function VideoGenerator() {
       const [galleryResponse, oldContentResponse] = await Promise.all([
         fetch(buildApiUrl('/v1/gallery/list/?limit=200'), {
           headers: {
-            'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
+            ...getAuthHeaderWithDevFallback(),
             'Content-Type': 'application/json',
           },
         }),
         fetch(buildApiUrl('/v1/content/list/?type=image&limit=200'), {
           headers: {
-            'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
+            ...getAuthHeaderWithDevFallback(),
             'Content-Type': 'application/json',
           },
         })
