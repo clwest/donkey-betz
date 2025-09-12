@@ -33,21 +33,86 @@ def dashboard_stats(request):
     Returns stats in the format expected by the frontend.
     """
     try:
-        # Mock data for now - replace with actual model queries
+        # Get real data from the models
+        from django.utils import timezone
+        from django.db.models import Q, Avg
+        
+        today = timezone.now().date()
+        
+        # Real statistics from database
+        total_flagged = FlaggedHallucination.objects.count()
+        pending_review = FlaggedHallucination.objects.filter(
+            verification_status='pending'
+        ).count()
+        
+        high_priority = FlaggedHallucination.objects.filter(
+            priority__in=['high', 'critical']
+        ).count()
+        
+        resolved_today = FlaggedHallucination.objects.filter(
+            reviewed_at__date=today,
+            verification_status__in=['verified_safe', 'verified_hallucination', 'false_positive']
+        ).count()
+        
+        # Calculate false positive rate
+        total_reviewed = FlaggedHallucination.objects.exclude(
+            verification_status='pending'
+        ).count()
+        false_positives = FlaggedHallucination.objects.filter(
+            verification_status='false_positive'
+        ).count()
+        false_positive_rate = (false_positives / total_reviewed * 100) if total_reviewed > 0 else 0.0
+        
+        # Get average review time
+        avg_review_time = HallucinationReview.objects.aggregate(
+            avg_time=Avg('review_time_seconds')
+        )['avg_time'] or 0.0
+        
+        # Get recent mythology events
+        recent_events = MythologyEvent.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24)
+        ).count()
+        
+        # Get unacknowledged alerts
+        unacknowledged_alerts = MythologyAlert.objects.filter(acknowledged=False).count()
+        
+        # Calculate processing rates and neural stats
+        total_processed = MythologyEvent.objects.count()
+        events_last_hour = MythologyEvent.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=1)
+        ).count()
+        
+        # Calculate prevention success rate
+        prevented_events = MythologyEvent.objects.filter(was_prevented=True).count()
+        prevention_rate = (prevented_events / total_processed * 100) if total_processed > 0 else 0.0
+        
+        # Calculate average risk score
+        avg_risk = MythologyEvent.objects.aggregate(
+            avg_risk=Avg('risk_level')
+        )['avg_risk'] or 0.0
+        
         stats = {
-            'total_flagged': 0,
-            'pending_review': 0,
-            'high_priority': 0,
-            'resolved_today': 0,
-            'false_positive_rate': 0.0,
-            'avg_review_time': 0.0
+            # Main dashboard stats
+            'total_flagged': total_flagged,
+            'pending_review': pending_review,
+            'high_priority': high_priority,
+            'resolved_today': resolved_today,
+            'false_positive_rate': round(false_positive_rate, 1),
+            'avg_review_time': round(avg_review_time, 1),
+            'recent_events_24h': recent_events,
+            'unacknowledged_alerts': unacknowledged_alerts,
+            
+            # Neural Processing Stats (to replace N/A values)
+            'total_processed': total_processed,
+            'events_last_hour': events_last_hour,
+            'prevention_success_rate': round(prevention_rate, 1),
+            'avg_risk_score': round(avg_risk, 2),
+            'processing_rate_per_hour': events_last_hour,  # Events processed in last hour
+            'system_efficiency': round(prevention_rate, 1),  # Same as prevention rate
         }
         
-        # Try to get real stats if models exist
+        # Add additional stats
         try:
-            unacknowledged_alerts = MythologyAlert.objects.filter(acknowledged=False).count()
-            stats['unacknowledged_alerts'] = unacknowledged_alerts
-            
             active_patterns = MythPattern.objects.filter(is_active=True).count()
             stats['active_patterns'] = active_patterns
         except:
@@ -450,18 +515,140 @@ def _learn_from_hallucination(flagged: FlaggedHallucination, review: Hallucinati
 
 # New API endpoints for frontend
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def flagged_content_list(request):
     """Get flagged content with filtering and pagination"""
     try:
-        # Mock data for now - replace with actual model queries
-        mock_data = {
-            'results': [],
-            'count': 0,
-            'next': None,
-            'previous': None
-        }
-        return Response(mock_data, status=200)
+        from django.core.paginator import Paginator
+        from django.utils import timezone
+        
+        # Get query parameters
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        status_filter = request.GET.get('status', None)
+        priority_filter = request.GET.get('priority', None)
+        
+        # Build queryset
+        queryset = FlaggedHallucination.objects.all().order_by('-flagged_at')
+        
+        if status_filter:
+            queryset = queryset.filter(verification_status=status_filter)
+        if priority_filter:
+            queryset = queryset.filter(priority=priority_filter)
+        
+        # Paginate
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+        
+        # Serialize results to match frontend FlaggedContent interface
+        results = []
+        for item in page_obj.object_list:
+            # Map verification_status to frontend status values
+            status_mapping = {
+                'pending': 'pending',
+                'needs_human_review': 'reviewing',
+                'verified_safe': 'resolved',
+                'verified_hallucination': 'resolved',
+                'false_positive': 'dismissed',
+            }
+            
+            # Map flagged_type to frontend flag_type values
+            flag_type_mapping = {
+                'hallucination': 'misinformation',
+                'factual_error': 'misinformation', 
+                'inconsistent_knowledge': 'misinformation',
+                'temporal_confusion': 'misinformation',
+                'harmful_content': 'harmful',
+                'inappropriate_content': 'inappropriate',
+                'spam_content': 'spam',
+                'other': 'other',
+            }
+            
+            results.append({
+                'id': item.id,  # Keep as int, not string
+                'content_type': 'text',  # Default content type
+                'content_id': item.id,  # Use flagged item ID as content ID
+                'flag_type': flag_type_mapping.get(item.flagged_type, 'other'),
+                'priority': item.priority,
+                'status': status_mapping.get(item.verification_status, 'pending'),
+                'content_preview': item.flagged_content[:150] + '...' if len(item.flagged_content) > 150 else item.flagged_content,
+                'reason': item.patterns_detected[0] if item.patterns_detected else 'Automated detection',
+                'flagged_by': {
+                    'id': item.user.id if item.user else 1,
+                    'username': item.user.username if item.user else 'System',
+                    'email': item.user.email if item.user else 'system@donkeybetz.ai'
+                },
+                'flagged_at': item.flagged_at.isoformat(),
+                'reviewed_by': {
+                    'id': item.verified_by.id,
+                    'username': item.verified_by.username,
+                    'email': item.verified_by.email
+                } if item.verified_by else None,
+                'reviewed_at': item.reviewed_at.isoformat() if item.reviewed_at else None,
+                'review_notes': item.verification_notes,
+                'metadata': {
+                    'risk_score': item.risk_score,
+                    'patterns_detected': item.patterns_detected,
+                    'priority_color': item.get_severity_color(),
+                    'requires_immediate_attention': item.requires_immediate_attention,
+                    'original_prompt': item.original_prompt[:100] + '...' if len(item.original_prompt) > 100 else item.original_prompt,
+                }
+            })
+        
+        return Response({
+            'results': results,
+            'count': paginator.count,
+            'next': f"/api/v1/mythology/flagged-content/?page={page + 1}" if page_obj.has_next() else None,
+            'previous': f"/api/v1/mythology/flagged-content/?page={page - 1}" if page_obj.has_previous() else None,
+        }, status=200)
+        
     except Exception as e:
+        logger.error(f"Flagged content list error: {e}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recent_events(request):
+    """Get recent mythology events for Neural Scan section"""
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get query parameters
+        limit = int(request.GET.get('limit', 10))
+        hours = int(request.GET.get('hours', 24))
+        
+        # Get recent mythology events
+        cutoff_time = timezone.now() - timedelta(hours=hours)
+        events = MythologyEvent.objects.filter(
+            created_at__gte=cutoff_time
+        ).order_by('-created_at')[:limit]
+        
+        # Serialize events
+        events_data = []
+        for event in events:
+            events_data.append({
+                'id': str(event.id),
+                'event_type': event.get_event_type_display(),
+                'mutation_type': event.get_mutation_type_display() if event.mutation_type else None,
+                'patterns_detected': event.patterns_detected,
+                'risk_level': event.risk_level,
+                'confidence_score': event.confidence_score,
+                'was_prevented': event.was_prevented,
+                'prevention_method': event.prevention_method,
+                'created_at': event.created_at.isoformat(),
+                'content_preview': event.original_content[:100] + '...' if len(event.original_content) > 100 else event.original_content,
+            })
+        
+        return Response({
+            'events': events_data,
+            'count': len(events_data),
+            'timeframe_hours': hours,
+        }, status=200)
+        
+    except Exception as e:
+        logger.error(f"Recent events error: {e}")
         return Response({'error': str(e)}, status=500)
 
 

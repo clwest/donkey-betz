@@ -14,9 +14,11 @@ import { toast } from 'sonner';
 import { 
   useMythologyStats, 
   useNotifications, 
+  useRecentEvents,
   useMythologyWebSocket,
   useMarkAllNotificationsRead,
-  type AlertNotification 
+  type AlertNotification,
+  type MythologyEvent 
 } from '../api/mythology';
 import { FlaggedContentTable } from '../components/FlaggedContentTable';
 import { ReviewModal } from '../components/ReviewModal';
@@ -30,6 +32,7 @@ export const MythologyDashboard: React.FC = () => {
   // API hooks
   const { data: stats, isLoading: statsLoading, error: statsError } = useMythologyStats();
   const { data: notifications, isLoading: notificationsLoading } = useNotifications({ unread_only: true });
+  const { data: recentEvents, isLoading: eventsLoading } = useRecentEvents({ limit: 20 });
   const markAllReadMutation = useMarkAllNotificationsRead();
 
   // WebSocket for real-time notifications
@@ -75,35 +78,39 @@ export const MythologyDashboard: React.FC = () => {
     }
   };
 
-  // Stats cards data
+  // Gaming-themed stats cards data
   const statsCards = [
     {
-      title: 'Total Flagged Content',
+      title: 'FLAGGED CONTENT ITEMS',
       value: stats?.total_flagged || 0,
       icon: Flag,
-      description: 'Content items flagged for review',
-      color: 'text-blue-600',
+      description: 'Content items flagged for verification',
+      color: 'text-cyan-400',
+      bgGlow: 'shadow-cyan-500/50',
     },
     {
-      title: 'Pending Reviews',
-      value: stats?.pending_review || 0,
+      title: 'VERIFICATION QUEUE',
+      value: (recentEvents && Array.isArray(recentEvents)) ? recentEvents.length : 0,
       icon: Clock,
-      description: 'Items awaiting moderation',
-      color: 'text-yellow-600',
+      description: 'Content pending verification review',
+      color: 'text-yellow-400',
+      bgGlow: 'shadow-yellow-500/50',
     },
     {
-      title: 'High Priority',
+      title: 'HIGH-PRIORITY ITEMS',
       value: stats?.high_priority || 0,
       icon: AlertTriangle,
-      description: 'Critical items requiring immediate attention',
-      color: 'text-red-600',
+      description: 'Critical content requiring immediate review',
+      color: 'text-red-400',
+      bgGlow: 'shadow-red-500/50',
     },
     {
-      title: 'Resolved Today',
+      title: 'VERIFIED TODAY',
       value: stats?.resolved_today || 0,
       icon: CheckCircle,
-      description: 'Items resolved in the last 24 hours',
-      color: 'text-green-600',
+      description: 'Content items verified and processed',
+      color: 'text-green-400',
+      bgGlow: 'shadow-green-500/50',
     },
   ];
 
@@ -121,13 +128,15 @@ export const MythologyDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-black p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mythology Review Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor and manage content flagged for review
+          <h1 className="text-4xl font-bold tracking-tight uppercase text-cyan-400 glow-text-sm animate-pulse-glow">
+            RAG CONTENT VERIFICATION
+          </h1>
+          <p className="text-purple-400 text-lg font-mono">
+            {'>>>'} HALLUCINATION PREVENTION SYSTEM • CONTENT INTEGRITY MONITOR ACTIVE
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -148,25 +157,25 @@ export const MythologyDashboard: React.FC = () => {
       {/* Real-time Notifications */}
       <AlertNotifications />
 
-      {/* Stats Cards */}
+      {/* Gaming Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((card, index) => (
-          <Card key={index}>
+          <Card key={index} className={`bg-gray-900/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg transition-all duration-300 ${card.bgGlow}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className={`text-sm font-mono uppercase tracking-wider ${card.color}`}>
                 {card.title}
               </CardTitle>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
+              <card.icon className={`h-5 w-5 ${card.color} animate-pulse`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className={`text-3xl font-bold font-mono ${card.color} glow-text-sm`}>
                 {statsLoading ? (
-                  <div className="h-8 w-16 bg-gray-200 animate-pulse rounded" />
+                  <div className="h-8 w-16 bg-gray-800/50 animate-pulse rounded border border-purple-700/50" />
                 ) : (
                   card.value.toLocaleString()
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-purple-300 font-mono mt-2">
                 {card.description}
               </p>
             </CardContent>
@@ -174,27 +183,27 @@ export const MythologyDashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Performance Metrics */}
+      {/* Neural Performance Analytics */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-green-800/50 hover:border-green-400/80 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <span>Review Performance</span>
+                <TrendingUp className="h-5 w-5 text-green-400 animate-pulse" />
+                <span className="text-green-400 font-mono uppercase tracking-wider">VERIFICATION PROCESSING STATS</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Average Review Time</span>
-                <Badge variant="outline">
+                <span className="text-sm text-purple-300 font-mono">AVG REVIEW TIME</span>
+                <Badge className="bg-green-900/50 text-green-400 border border-green-400/50 font-mono">
                   {stats.avg_review_time ? `${stats.avg_review_time.toFixed(1)}h` : 'N/A'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">False Positive Rate</span>
+                <span className="text-sm text-purple-300 font-mono">FALSE POSITIVE RATE</span>
                 <Badge 
-                  variant={stats.false_positive_rate < 0.1 ? "default" : "destructive"}
+                  className={`font-mono border ${stats.false_positive_rate < 0.1 ? "bg-green-900/50 text-green-400 border-green-400/50" : "bg-red-900/50 text-red-400 border-red-400/50"}`}
                 >
                   {stats.false_positive_rate ? `${(stats.false_positive_rate * 100).toFixed(1)}%` : 'N/A'}
                 </Badge>
@@ -202,26 +211,26 @@ export const MythologyDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-blue-600" />
-                <span>System Health</span>
+                <Users className="h-5 w-5 text-cyan-400 animate-pulse" />
+                <span className="text-cyan-400 font-mono uppercase tracking-wider">CONTENT INTEGRITY</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Review Queue Status</span>
+                <span className="text-sm text-purple-300 font-mono">QUEUE STATUS</span>
                 <Badge 
-                  variant={stats.pending_review < 50 ? "default" : stats.pending_review < 100 ? "secondary" : "destructive"}
+                  className={`font-mono border ${stats.pending_review < 50 ? "bg-green-900/50 text-green-400 border-green-400/50" : stats.pending_review < 100 ? "bg-yellow-900/50 text-yellow-400 border-yellow-400/50" : "bg-red-900/50 text-red-400 border-red-400/50"}`}
                 >
-                  {stats.pending_review < 50 ? 'Healthy' : stats.pending_review < 100 ? 'Moderate' : 'High Load'}
+                  {stats.pending_review < 50 ? 'OPTIMAL' : stats.pending_review < 100 ? 'MODERATE' : 'CRITICAL'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Critical Items</span>
-                <Badge variant={stats.high_priority === 0 ? "default" : "destructive"}>
-                  {stats.high_priority === 0 ? 'None' : `${stats.high_priority} Pending`}
+                <span className="text-sm text-purple-300 font-mono">HIGH-PRIORITY ITEMS</span>
+                <Badge className={`font-mono border ${stats.high_priority === 0 ? "bg-green-900/50 text-green-400 border-green-400/50" : "bg-red-900/50 text-red-400 border-red-400/50"}`}>
+                  {stats.high_priority === 0 ? 'NONE' : `${stats.high_priority} PENDING`}
                 </Badge>
               </div>
             </CardContent>
@@ -229,70 +238,140 @@ export const MythologyDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Main Content Tabs */}
+      {/* Gaming Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="pending">
-            Pending Review
-            {stats?.pending_review ? (
-              <Badge variant="secondary" className="ml-2">
-                {stats.pending_review}
+        <TabsList className="bg-gray-900/80 border border-purple-800/50">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-cyan-900/50 data-[state=active]:text-cyan-400 text-purple-300 font-mono uppercase tracking-wider">OVERVIEW</TabsTrigger>
+          <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-900/50 data-[state=active]:text-yellow-400 text-purple-300 font-mono uppercase tracking-wider">
+            VERIFICATION QUEUE
+            {recentEvents && Array.isArray(recentEvents) && recentEvents.length > 0 ? (
+              <Badge className="ml-2 bg-yellow-900/50 text-yellow-400 border border-yellow-400/50 font-mono animate-pulse">
+                {recentEvents.length}
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="high-priority">
-            High Priority
+          <TabsTrigger value="high-priority" className="data-[state=active]:bg-red-900/50 data-[state=active]:text-red-400 text-purple-300 font-mono uppercase tracking-wider">
+            HIGH-PRIORITY
             {stats?.high_priority ? (
-              <Badge variant="destructive" className="ml-2">
+              <Badge className="ml-2 bg-red-900/50 text-red-400 border border-red-400/50 font-mono animate-pulse glow-sm">
                 {stats.high_priority}
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="resolved">Resolved</TabsTrigger>
+          <TabsTrigger value="resolved" className="data-[state=active]:bg-green-900/50 data-[state=active]:text-green-400 text-purple-300 font-mono uppercase tracking-wider">VERIFIED</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>
-                Latest flagged content requiring attention
+              <CardTitle className="text-cyan-400 font-mono uppercase tracking-wider">RECENT VERIFICATION ACTIVITY</CardTitle>
+              <CardDescription className="text-purple-300 font-mono">
+                {'>>>'} Latest content verification and review activity
               </CardDescription>
             </CardHeader>
             <CardContent>
               <FlaggedContentTable 
-                filters={{ limit: 10 }}
+                filters={{}}
                 onReviewClick={setSelectedContentId}
-                compact={true}
+                compact={false}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="pending">
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-yellow-800/50 hover:border-yellow-400/80 hover:shadow-lg hover:shadow-yellow-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle>Pending Reviews</CardTitle>
-              <CardDescription>
-                Content items awaiting moderation review
+              <CardTitle className="text-yellow-400 font-mono uppercase tracking-wider">CONTENT VERIFICATION QUEUE</CardTitle>
+              <CardDescription className="text-purple-300 font-mono">
+                {'>>>'} Content items awaiting verification review
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FlaggedContentTable 
-                filters={{ status: 'pending' }}
-                onReviewClick={setSelectedContentId}
-              />
+              {eventsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-800/50 animate-pulse rounded border border-purple-700/50" />
+                  ))}
+                </div>
+              ) : !recentEvents || !Array.isArray(recentEvents) || recentEvents.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-purple-400 font-mono text-lg">NO PENDING REVIEWS</div>
+                  <div className="text-purple-300/60 font-mono text-sm mt-2">Content verification queue is clear</div>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {(recentEvents || []).map((event: MythologyEvent) => (
+                    <div 
+                      key={event.id} 
+                      className="bg-gray-800/50 border border-purple-700/50 rounded p-4 hover:border-yellow-400/50 transition-all duration-200"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <Badge 
+                            className={`font-mono text-xs ${
+                              event.risk_level >= 0.8 ? 'bg-red-900/50 text-red-400 border-red-400/50' :
+                              event.risk_level >= 0.5 ? 'bg-yellow-900/50 text-yellow-400 border-yellow-400/50' :
+                              'bg-green-900/50 text-green-400 border-green-400/50'
+                            }`}
+                          >
+                            RISK: {(event.risk_level * 100).toFixed(0)}%
+                          </Badge>
+                          <Badge className="bg-cyan-900/50 text-cyan-400 border-cyan-400/50 font-mono text-xs">
+                            {event.event_type.toUpperCase()}
+                          </Badge>
+                          {event.was_prevented && (
+                            <Badge className="bg-green-900/50 text-green-400 border-green-400/50 font-mono text-xs animate-pulse">
+                              PREVENTED
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-purple-400 font-mono">
+                          {new Date(event.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-purple-200 font-mono mb-2">
+                        {event.content_preview}
+                      </div>
+                      
+                      {event.patterns_detected.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {event.patterns_detected.map((pattern, idx) => (
+                            <Badge 
+                              key={idx} 
+                              className="bg-purple-900/50 text-purple-300 border-purple-400/30 font-mono text-xs"
+                            >
+                              {pattern}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-purple-700/30">
+                        <div className="text-xs text-purple-400 font-mono">
+                          Confidence: {(event.confidence_score * 100).toFixed(1)}%
+                        </div>
+                        {event.prevention_method && (
+                          <div className="text-xs text-green-400 font-mono">
+                            Method: {event.prevention_method}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="high-priority">
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-red-800/50 hover:border-red-400/80 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle>High Priority Items</CardTitle>
-              <CardDescription>
-                Critical content requiring immediate attention
+              <CardTitle className="text-red-400 font-mono uppercase tracking-wider animate-pulse">HIGH-PRIORITY CONTENT</CardTitle>
+              <CardDescription className="text-purple-300 font-mono">
+                {'>>>'} Critical content items requiring immediate verification
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -305,11 +384,11 @@ export const MythologyDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="resolved">
-          <Card>
+          <Card className="bg-gray-900/80 border-2 border-green-800/50 hover:border-green-400/80 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle>Resolved Items</CardTitle>
-              <CardDescription>
-                Recently reviewed and resolved content
+              <CardTitle className="text-green-400 font-mono uppercase tracking-wider">VERIFIED CONTENT</CardTitle>
+              <CardDescription className="text-purple-300 font-mono">
+                {'>>>'} Successfully verified and processed content items
               </CardDescription>
             </CardHeader>
             <CardContent>

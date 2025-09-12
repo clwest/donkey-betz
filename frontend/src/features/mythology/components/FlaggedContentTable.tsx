@@ -104,7 +104,7 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
     return data.results.filter(item => 
       item.content_preview.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.flagged_by.username.toLowerCase().includes(searchTerm.toLowerCase())
+      (item.flagged_by?.username || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [data?.results, searchTerm]);
 
@@ -368,10 +368,10 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {item.flagged_by.username}
+                      {item.flagged_by?.username || 'Unknown User'}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {item.flagged_by.email}
+                      {item.flagged_by?.email || 'No email provided'}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -386,7 +386,7 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
                     <TableCell>
                       {item.reviewed_by ? (
                         <div>
-                          <div className="text-sm">{item.reviewed_by.username}</div>
+                          <div className="text-sm">{item.reviewed_by?.username || 'Unknown Reviewer'}</div>
                           {item.reviewed_at && (
                             <div className="text-xs text-muted-foreground">
                               {format(new Date(item.reviewed_at), 'MMM d, yyyy')}

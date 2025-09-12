@@ -16,6 +16,9 @@ urlpatterns = [
     path('flagged-content/<int:content_id>/', views.flagged_content_detail, name='flagged_content_detail'),
     path('review/', views.submit_review, name='submit_review'),
     
+    # Recent events for Neural Scan section
+    path('recent-events/', views.recent_events, name='recent_events'),
+    
     # User reporting
     path('report/', views.report_content, name='report_content'),
     
