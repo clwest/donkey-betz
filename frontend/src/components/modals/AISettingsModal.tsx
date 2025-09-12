@@ -107,7 +107,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={onClose}
         >
           <motion.div
@@ -115,44 +115,52 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-dark-800 rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
+            className="bg-black border-2 border-cyan-500/50 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden relative shadow-[0_0_20px_rgba(0,255,255,0.3)] shadow-cyan-500/30 before:absolute before:inset-0 before:border-2 before:border-cyan-500/30 before:rounded-lg before:animate-pulse"
           >
-          {/* Header */}
-          <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6 border-b border-gray-800">
+          {/* Gaming corner decorations */}
+          <div className="absolute top-2 left-2 w-3 h-3 border-l-2 border-t-2 border-cyan-500 z-10" />
+          <div className="absolute top-2 right-2 w-3 h-3 border-r-2 border-t-2 border-cyan-500 z-10" />
+          <div className="absolute bottom-2 left-2 w-3 h-3 border-l-2 border-b-2 border-cyan-500 z-10" />
+          <div className="absolute bottom-2 right-2 w-3 h-3 border-r-2 border-b-2 border-cyan-500 z-10" />
+          
+          {/* Gaming Header */}
+          <div className="bg-gradient-to-r from-black to-gray-900 p-6 border-b border-cyan-500/30 relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-600/20 rounded-lg">
-                  <Brain className="w-6 h-6 text-purple-400" />
+                <div className="p-2 bg-cyan-500/20 rounded-lg border border-cyan-500/50">
+                  <Brain className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">AI Intelligence Settings</h2>
-                  <p className="text-gray-400 text-sm mt-1">
+                  <h2 className="text-2xl font-bold text-cyan-400 uppercase font-mono tracking-wider drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">NEURAL AI SETTINGS</h2>
+                  <p className="text-gray-300 text-sm mt-1 font-mono">
                     Configure how AI enhances your content generation
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-cyan-500/20 rounded-lg transition-all duration-200 hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(0,255,255,0.5)] hover:scale-110 border border-transparent hover:border-cyan-500/50"
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 mt-6">
+            {/* Gaming Tabs */}
+            <div className="flex gap-2 mt-6 relative">
+              {/* Subtle glow line */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
               {[
-                { id: 'settings', label: 'Settings', icon: Settings },
-                { id: 'stats', label: 'Statistics', icon: BarChart3 },
-                { id: 'test', label: 'Test Lab', icon: Sparkles }
+                { id: 'settings', label: 'SETTINGS', icon: Settings },
+                { id: 'stats', label: 'STATISTICS', icon: BarChart3 },
+                { id: 'test', label: 'TEST LAB', icon: Sparkles }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-mono uppercase tracking-wider ${
                     activeTab === tab.id
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800'
+                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+                      : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800/50 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30'
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -174,17 +182,17 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                 {activeTab === 'settings' && settings && (
                   <div className="space-y-6">
                     {/* Master Toggle */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                    <div className="bg-gray-900/50 rounded-lg p-6 border border-cyan-500/30 relative">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4">
-                          <div className="p-2 bg-purple-600/20 rounded-lg mt-1">
-                            <Zap className="w-5 h-5 text-purple-400" />
+                          <div className="p-2 bg-cyan-500/20 rounded-lg mt-1 border border-cyan-500/50">
+                            <Zap className="w-5 h-5 text-cyan-400" />
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-white mb-1">
-                              Intelligent Prompting
+                            <h3 className="text-lg font-semibold text-cyan-400 mb-1 uppercase font-mono tracking-wider">
+                              INTELLIGENT PROMPTING
                             </h3>
-                            <p className="text-gray-400 text-sm">
+                            <p className="text-gray-300 text-sm font-mono">
                               Automatically enhance your prompts for better AI responses
                             </p>
                           </div>
@@ -196,14 +204,14 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                             onChange={() => toggleSetting('enabled')}
                             className="sr-only peer"
                           />
-                          <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-cyan-500 border border-cyan-500/30"></div>
                         </label>
                       </div>
                     </div>
 
                     {/* Enhancement Level */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                      <h3 className="text-lg font-semibold text-white mb-4">Enhancement Level</h3>
+                    <div className="bg-gray-900/50 rounded-lg p-6 border border-cyan-500/30 relative">
+                      <h3 className="text-lg font-semibold text-cyan-400 mb-4 uppercase font-mono tracking-wider">ENHANCEMENT LEVEL</h3>
                       <div className="grid grid-cols-3 gap-3">
                         {[
                           { 
@@ -230,8 +238,8 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                             onClick={() => toggleSetting('default_level', option.level)}
                             className={`p-4 rounded-lg border transition-all ${
                               settings.default_level === option.level
-                                ? 'bg-purple-600/20 border-purple-500 text-white'
-                                : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:border-gray-600'
+                                ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+                                : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:border-cyan-500/50 hover:text-cyan-300'
                             }`}
                           >
                             <div className="text-2xl mb-2">{option.icon}</div>
@@ -451,17 +459,17 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                         <button
                           onClick={handleTestEnhancement}
                           disabled={testing}
-                          className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-white rounded-lg hover:from-cyan-700 hover:to-purple-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed font-mono uppercase tracking-wider border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
                         >
                           {testing ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                              Testing...
+                              EXECUTING...
                             </>
                           ) : (
                             <>
                               <Sparkles className="w-4 h-4" />
-                              Test Enhancement
+                              EXECUTE TEST
                             </>
                           )}
                         </button>
@@ -543,17 +551,17 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                 <button
                   onClick={handleSaveSettings}
                   disabled={saving}
-                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-white rounded-lg hover:from-cyan-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-mono uppercase tracking-wider border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
                 >
                   {saving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                      Saving...
+                      SAVING...
                     </>
                   ) : (
                     <>
                       <Settings className="w-4 h-4" />
-                      Save Settings
+                      SAVE SETTINGS
                     </>
                   )}
                 </button>

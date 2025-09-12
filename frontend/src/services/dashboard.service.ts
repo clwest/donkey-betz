@@ -47,17 +47,17 @@ export interface ContentBreakdown {
 // Dashboard API Functions
 export const dashboardService = {
   async getStats(): Promise<DashboardStats> {
-    const response = await apiClient.get('/api/v1/dashboard/stats/');
+    const response = await apiClient.get('/v1/dashboard/stats/');
     return response.data;
   },
 
   async getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
-    const response = await apiClient.get(`/api/v1/dashboard/activity/?limit=${limit}`);
+    const response = await apiClient.get(`/v1/dashboard/activity/?limit=${limit}`);
     return response.data;
   },
 
   async getContentBreakdown(): Promise<ContentBreakdown> {
-    const response = await apiClient.get('/api/v1/dashboard/breakdown/');
+    const response = await apiClient.get('/v1/dashboard/breakdown/');
     return response.data;
   },
 };

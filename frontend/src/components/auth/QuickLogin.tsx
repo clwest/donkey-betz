@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import axios from 'axios';
+import { API_CONFIG } from '../../config/api.config';
 
 export const QuickLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -14,7 +15,8 @@ export const QuickLogin: React.FC = () => {
     setError(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/auth/login/', {
+      const baseUrl = import.meta.env.VITE_API_URL || `${API_CONFIG.BASE_URL}/api`;
+      const response = await axios.post(`${baseUrl}/v1/auth/login/`, {
         username,
         password
       });

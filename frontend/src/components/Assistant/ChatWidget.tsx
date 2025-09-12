@@ -318,18 +318,19 @@ export function ChatWidget() {
           onClick={() => setIsOpen(true)}
           className={clsx(
             "fixed bottom-6 right-6 p-5",
-            "bg-gradient-to-br from-purple-600 to-purple-800",
-            "text-white rounded-full shadow-2xl",
-            "hover:shadow-purple-500/30 hover:scale-110",
+            "bg-gradient-to-br from-cyan-600 to-purple-800",
+            "text-white rounded-lg shadow-2xl",
+            "hover:shadow-cyan-500/50 hover:scale-110",
             "transition-all duration-300 z-50 group",
-            "ring-2 ring-purple-500/20"
+            "ring-2 ring-cyan-500/30 border-2 border-cyan-500/50",
+            "shadow-[0_0_20px_rgba(0,255,255,0.3)]"
           )}
-          aria-label="Open AI Assistant"
+          aria-label="Open Neural AI Assistant"
         >
           <ChatBubbleLeftRightIcon className="h-7 w-7" />
-          {/* Pulse indicator for context awareness */}
+          {/* Gaming pulse indicator for context awareness */}
           {pageContext && (
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-purple-400 rounded-full animate-pulse" />
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-cyan-400 rounded-full animate-pulse border border-cyan-300" />
           )}
           {/* Tooltip */}
           <span className={clsx(
@@ -338,7 +339,7 @@ export function ChatWidget() {
             "opacity-0 group-hover:opacity-100 transition-opacity",
             "whitespace-nowrap pointer-events-none"
           )}>
-            AI Assistant {pageContext && `• ${pageContext.page} Help`}
+            NEURAL AI ASSISTANT {pageContext && `• ${pageContext.page.toUpperCase()} PROTOCOL`}
           </span>
         </button>
       )}
@@ -350,26 +351,34 @@ export function ChatWidget() {
           "animate-in fade-in slide-in-from-bottom-5 duration-300"
         )}>
           <div className={clsx(
-            "glass rounded-2xl shadow-2xl",
-            "shadow-purple-500/20",
+            "bg-black rounded-lg shadow-2xl relative",
+            "shadow-cyan-500/30",
             isMinimized ? "w-96" : "w-[520px] h-[720px]",
             "flex flex-col overflow-hidden",
-            "border border-purple-500/20"
+            "border-2 border-cyan-500/50",
+            "shadow-[0_0_20px_rgba(0,255,255,0.3)]",
+            "before:absolute before:inset-0 before:border-2 before:border-cyan-500/30 before:rounded-lg before:animate-pulse"
           )}>
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-800 p-4">
+            {/* Gaming corner decorations */}
+            <div className="absolute top-2 left-2 w-3 h-3 border-l-2 border-t-2 border-cyan-500 z-10" />
+            <div className="absolute top-2 right-2 w-3 h-3 border-r-2 border-t-2 border-cyan-500 z-10" />
+            <div className="absolute bottom-2 left-2 w-3 h-3 border-l-2 border-b-2 border-cyan-500 z-10" />
+            <div className="absolute bottom-2 right-2 w-3 h-3 border-r-2 border-b-2 border-cyan-500 z-10" />
+            
+            {/* Gaming Header */}
+            <div className="bg-gradient-to-r from-black to-gray-900 p-4 border-b border-cyan-500/30 relative">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <div className="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <SparklesIcon className="h-6 w-6 text-white" />
+                    <div className="h-10 w-10 bg-cyan-500/20 rounded-lg flex items-center justify-center border border-cyan-500/50">
+                      <SparklesIcon className="h-6 w-6 text-cyan-400" />
                     </div>
-                    <span className="absolute bottom-0 right-0 h-3 w-3 bg-purple-400 rounded-full border-2 border-purple-600" />
+                    <span className="absolute bottom-0 right-0 h-3 w-3 bg-cyan-400 rounded-full border-2 border-cyan-500 animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-lg">AI Assistant</h3>
-                    <p className="text-purple-100 text-sm opacity-90">
-                      {pageContext ? `Helping with ${pageContext.page}` : 'Always here to help'}
+                    <h3 className="text-cyan-400 font-bold text-lg uppercase font-mono tracking-wider drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">NEURAL AI ASSISTANT</h3>
+                    <p className="text-gray-300 text-sm opacity-90 font-mono">
+                      {pageContext ? `>>> ${pageContext.page.toUpperCase()} PROTOCOL ACTIVE` : '>>> NEURAL ASSISTANT ONLINE'}
                     </p>
                   </div>
                 </div>
@@ -401,11 +410,11 @@ export function ChatWidget() {
                   {messages.length === 0 && (
                     <div className="text-center py-12">
                       <SparklesIcon className="h-12 w-12 text-purple-500/30 mx-auto mb-4" />
-                      <p className="text-gray-300 mb-2 text-lg font-medium">
-                        Hi {currentUser.username}! 👋
+                      <p className="text-cyan-400 mb-2 text-lg font-bold uppercase font-mono tracking-wider">
+                        &gt;&gt;&gt; NEURAL LINK ESTABLISHED: {currentUser.username.toUpperCase()}
                       </p>
-                      <p className="text-gray-400 text-base">
-                        I'm your AI assistant. Ask me anything about content creation!
+                      <p className="text-gray-300 text-base font-mono">
+                        Neural AI Assistant ready. Query content generation protocols?
                       </p>
                       {userStats?.favorite_styles?.length > 0 && (
                         <p className="text-purple-500 text-sm mt-4">
@@ -444,11 +453,11 @@ export function ChatWidget() {
                   
                   {loading && (
                     <div className="flex justify-start">
-                      <div className="glass-dark px-4 py-3 rounded-2xl">
+                      <div className="bg-gray-900/80 px-4 py-3 rounded-lg border border-gray-700">
                         <div className="flex space-x-2">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                          <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                         </div>
                       </div>
                     </div>
@@ -457,22 +466,22 @@ export function ChatWidget() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input */}
-                <form onSubmit={handleSendMessage} className="p-5 border-t border-white/10 bg-dark-900/50">
+                {/* Gaming Input */}
+                <form onSubmit={handleSendMessage} className="p-5 border-t border-cyan-500/30 bg-black/80 relative">
                   <div className="flex space-x-2">
                     <input
                       ref={inputRef}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder={isListening ? "Listening..." : "Type or speak your message..."}
+                      placeholder={isListening ? ">>> NEURAL INTERFACE LISTENING..." : ">>> INPUT NEURAL COMMAND..."}
                       disabled={loading}
                       className={clsx(
-                        "flex-1 bg-dark-800/50 text-white text-base",
-                        "px-5 py-3 rounded-xl",
-                        "border border-white/10 focus:border-purple-500",
+                        "flex-1 bg-gray-900/80 text-white text-base font-mono",
+                        "px-5 py-3 rounded-lg",
+                        "border border-cyan-500/30 focus:border-cyan-500",
                         "focus:outline-none placeholder-gray-500",
-                        "transition-colors",
-                        isListening && "border-red-500 animate-pulse"
+                        "transition-colors focus:shadow-[0_0_10px_rgba(0,255,255,0.3)]",
+                        isListening && "border-cyan-500 animate-pulse shadow-[0_0_10px_rgba(0,255,255,0.5)]"
                       )}
                     />
                     {speechSupported && (
@@ -481,11 +490,10 @@ export function ChatWidget() {
                         onClick={toggleListening}
                         disabled={loading}
                         className={clsx(
-                          "px-4 py-3 rounded-xl",
+                          "px-4 py-3 rounded-lg border",
                           isListening 
-                            ? "bg-red-500 hover:bg-red-600 animate-pulse"
-                            : "bg-dark-700 hover:bg-dark-600",
-                          "text-white",
+                            ? "bg-red-500/20 hover:bg-red-500/30 animate-pulse border-red-500 text-red-400"
+                            : "bg-gray-800/50 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-500 text-cyan-400",
                           "disabled:opacity-50 disabled:cursor-not-allowed",
                           "transition-all duration-200",
                           "flex items-center justify-center"
@@ -503,20 +511,21 @@ export function ChatWidget() {
                       type="submit"
                       disabled={loading || !message.trim()}
                       className={clsx(
-                        "px-4 py-3 rounded-xl",
-                        "bg-gradient-to-r from-purple-600 to-purple-700",
-                        "text-white hover:shadow-lg hover:shadow-purple-500/25",
+                        "px-4 py-3 rounded-lg border border-cyan-500/50",
+                        "bg-gradient-to-r from-cyan-600 to-purple-700",
+                        "text-white hover:shadow-lg hover:shadow-cyan-500/50",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
                         "transition-all duration-200 hover:scale-105",
-                        "flex items-center justify-center"
+                        "flex items-center justify-center",
+                        "shadow-[0_0_10px_rgba(0,255,255,0.3)]"
                       )}
                     >
                       <PaperAirplaneIcon className="h-5 w-5" />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    Powered by GPT-5 • {pageContext?.page || 'AI Content Studio'}
-                    {speechSupported && ' • 🎤 Voice input enabled'}
+                  <p className="text-xs text-gray-400 mt-2 text-center font-mono">
+                    &gt;&gt;&gt; POWERED BY NEURAL GPT-5 • {pageContext?.page?.toUpperCase() || 'NEURAL CONTENT MATRIX'}
+                    {speechSupported && ' • 🎤 VOICE INTERFACE ACTIVE'}
                   </p>
                 </form>
               </>

@@ -1,256 +1,201 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { SparklesIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
-import { QuickLogin } from '../../components/auth/QuickLogin';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  Eye, 
+  EyeOff, 
+  Sparkles, 
+  Mail, 
+  Lock,
+  ArrowLeft,
+  Github,
+  Chrome
+} from 'lucide-react';
+import { toast } from 'sonner';
+import api from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
 
 const LoginPage: React.FC = () => {
-  console.log('🔐 LoginPage: Component rendering');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setUser, setToken } = useAuthStore();
-  
-  console.log('🔐 LoginPage: Auth store hooks loaded', { setUser: !!setUser, setToken: !!setToken });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔐 LoginPage: handleSubmit called with username:', username);
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Use enhanced login endpoint for remember me support
-      const endpoint = rememberMe ? 
-        'http://localhost:8000/api/v1/auth/login-enhanced/' : 
-        'http://localhost:8000/api/v1/auth/login/';
-        
-      const response = await axios.post(endpoint, {
-        username,
-        password,
-        remember_me: rememberMe
-      });
-
-      console.log('🔐 LoginPage: Login response:', response.data);
-      
-      if (response.data.token) {
-        // Set the user data from the response
-        const user = {
-          id: response.data.user.id || String(Math.random()),
-          username: response.data.user.username,
-          email: response.data.user.email,
-          credits: response.data.user.credits || 1000,
-          subscription: response.data.user.subscription || 'premium'
-        };
-        
-        console.log('🔐 LoginPage: Setting user:', user);
-        console.log('🔐 LoginPage: Setting token:', response.data.token);
-        
-        setUser(user);
-        setToken(response.data.token);
-        
-        // Navigate to dashboard
-        console.log('🔐 LoginPage: Navigating to /dashboard');
-        navigate('/dashboard');
-      } else {
-        setError('Invalid response from server');
-      }
-    } catch (err: any) {
-      console.error('🔐 LoginPage: Login error:', err);
-      if (err.response?.status === 401) {
-        setError('Invalid username or password');
-      } else if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
-      } else {
-        setError('Failed to login. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
+    
+    if (!formData.email || !formData.password) {
+      toast.error('Please fill in all fields');
+      return;
     }
-  };
-
-  const handleQuickLogin = async (quickUsername: string, quickPassword: string) => {
-    console.log('🔐 LoginPage: Quick login for user:', quickUsername);
-    setUsername(quickUsername);
-    setPassword(quickPassword);
-    setIsLoading(true);
-    setError(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/auth/login/', {
-        username: quickUsername,
-        password: quickPassword
-      });
-
-      console.log('🔐 LoginPage: Quick login response:', response.data);
+      setLoading(true);
       
-      if (response.data.token) {
-        const user = {
-          id: response.data.user.id || String(Math.random()),
-          username: response.data.user.username,
-          email: response.data.user.email,
-          credits: response.data.user.credits || 1000,
-          subscription: response.data.user.subscription || 'premium'
-        };
-        
-        setUser(user);
-        setToken(response.data.token);
-        navigate('/dashboard');
-      } else {
-        setError('Invalid response from server');
+      const loginData = {
+        username: formData.email,  // Backend expects 'username' not 'email'
+        password: formData.password
+      };
+      
+      console.log('Sending login data:', loginData);
+      
+      const response = await api.post('/v1/auth/login/', loginData);
+      console.log('Login response:', response.data);
+
+      const { token, user } = response.data;
+      
+      if (!token || !user) {
+        throw new Error('Invalid response from server');
       }
-    } catch (err: any) {
-      console.error('🔐 LoginPage: Quick login error:', err);
-      setError('Quick login failed. Please enter credentials manually.');
+      
+      // Update localStorage
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      if (formData.rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+      }
+      
+      // Update auth store (this will trigger AuthGuard to re-evaluate)
+      setToken(token, formData.rememberMe);
+      setUser(user);
+
+      toast.success('Welcome back!');
+      console.log('Navigating to dashboard...');
+      navigate('/dashboard');
+      
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Login failed. Please try again.';
+      toast.error(message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="flex items-center space-x-2">
-            <SparklesIcon className="h-12 w-12 text-purple-400" />
-            <h2 className="text-3xl font-bold text-white">AI Content Studio</h2>
-          </div>
-        </div>
-        <h2 className="mt-6 text-center text-2xl font-bold text-gray-300">
-          Sign in to your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-400">
-          Need an account?{' '}
-          <Link to="/register" className="font-medium text-purple-400 hover:text-purple-300">
-            Create one
-          </Link>
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md relative">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-4 text-gray-400 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Home
+        </Button>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/10 backdrop-blur-md py-8 px-4 shadow-2xl sm:rounded-lg sm:px-10 border border-white/20">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-500/20 border border-red-500 rounded-md p-3">
-                <p className="text-sm text-red-200">{error}</p>
-              </div>
-            )}
-            
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-200">
-                Username
-              </label>
-              <div className="mt-1">
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                  placeholder="Enter your username"
-                />
-              </div>
+        <Card className="bg-gray-800/50 backdrop-blur-lg border-gray-700 shadow-2xl">
+          <CardHeader className="text-center pb-4">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <Sparkles className="h-8 w-8 text-purple-500" />
+              <span className="text-2xl font-bold text-white">Unified Donkey Betz</span>
             </div>
+            <CardTitle className="text-2xl text-white">Welcome Back</CardTitle>
+            <p className="text-gray-400">Sign in to your account to continue</p>
+          </CardHeader>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-200">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 pr-10 border border-gray-600 rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+          <CardContent className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-300">Username or Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="email"
+                    type="text"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="Enter your username or email"
+                    className="pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Enter your password"
+                    className="pl-10 pr-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                    disabled={loading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={formData.rememberMe}
+                    onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
+                    className="border-gray-600 data-[state=checked]:bg-purple-600"
+                  />
+                  <Label htmlFor="remember" className="text-sm text-gray-300 cursor-pointer">
+                    Remember me
+                  </Label>
+                </div>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-purple-400 hover:text-purple-300 hover:underline"
                 >
-                  {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-300" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-300" />
-                  )}
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-800"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
-                  Remember me for 30 days
-                </label>
-              </div>
-              
-              <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-purple-400 hover:text-purple-300">
                   Forgot password?
                 </Link>
               </div>
-            </div>
 
-            <div>
-              <button
+              <Button
                 type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2.5"
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </button>
-            </div>
-          </form>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </form>
 
-          {/* Demo user buttons */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-transparent text-gray-400">Quick access</span>
-              </div>
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">
+                Don't have an account?{' '}
+                <Link
+                  to="/signup"
+                  className="text-purple-400 hover:text-purple-300 hover:underline font-medium"
+                >
+                  Sign up
+                </Link>
+              </p>
             </div>
-
-            <div className="mt-6 space-y-3">
-              <button
-                onClick={() => handleQuickLogin('admin', 'admin123')}
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800/30 hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
-              >
-                Sign in as Admin (admin/admin123)
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-400">
-              Use admin/admin123 for quick access or create your own account.
-            </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -52,25 +52,25 @@ export default function PromptDiagnosticsPage() {
   const tabs = [
     {
       id: 'dashboard' as const,
-      name: 'Dashboard',
+      name: 'NEURAL MATRIX',
       icon: ChartBarIcon,
       count: dashboardData?.overview?.total_analyses || 0,
     },
     {
       id: 'analyzer' as const,
-      name: 'Analyzer',
+      name: 'SCANNER',
       icon: BeakerIcon,
       count: null,
     },
     {
       id: 'history' as const,
-      name: 'History',
+      name: 'ARCHIVES',
       icon: ClockIcon,
       count: analysesData?.analyses?.length || 0,
     },
     {
       id: 'templates' as const,
-      name: 'Templates',
+      name: 'PROTOCOLS',
       icon: DocumentTextIcon,
       count: dashboardData?.overview?.templates_created || 0,
     },
@@ -94,42 +94,41 @@ export default function PromptDiagnosticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-900">
-      {/* Header */}
-      <div className="glass border-b border-white/10">
+    <div className="min-h-screen bg-black">
+      {/* Gaming Header */}
+      <div className="border-b-2 border-purple-800/50 bg-gray-900/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Prompt Diagnostics
+              <h1 className="text-4xl font-bold text-cyan-400 font-mono uppercase tracking-wider glow-text-sm animate-pulse-glow">
+                PROMPT NEURAL SCANNER
               </h1>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Analyze, optimize, and manage your AI prompts for better performance
+              <p className="mt-1 text-lg text-purple-400 font-mono">
+                {'>>>'} NEURAL DIAGNOSTICS TERMINAL • PROMPT OPTIMIZATION PROTOCOLS ACTIVE
               </p>
             </div>
             <div className="flex space-x-3">
               <Button
-                variant="outline"
                 onClick={() => setActiveTab('templates')}
-                className="flex items-center"
+                className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 text-purple-400 font-mono uppercase tracking-wider transition-all duration-300 flex items-center"
               >
-                <DocumentTextIcon className="h-4 w-4 mr-2" />
-                Templates
+                <DocumentTextIcon className="h-4 w-4 mr-2 animate-pulse" />
+                TEMPLATES
               </Button>
               <Button
                 onClick={() => setActiveTab('analyzer')}
-                className="flex items-center"
+                className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 text-cyan-400 font-mono uppercase tracking-wider transition-all duration-300 flex items-center"
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                New Analysis
+                <PlusIcon className="h-4 w-4 mr-2 animate-pulse" />
+                NEURAL SCAN
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="glass border-b border-white/10">
+      {/* Gaming Navigation Tabs */}
+      <div className="border-b-2 border-purple-800/50 bg-gray-900/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
             {tabs.map((tab) => {
@@ -139,21 +138,21 @@ export default function PromptDiagnosticsPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap
+                    flex items-center py-4 px-1 border-b-2 font-mono font-medium text-sm whitespace-nowrap uppercase tracking-wider transition-all duration-300
                     ${activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                      ? 'border-cyan-400 text-cyan-400 glow-text-sm'
+                      : 'border-transparent text-purple-400 hover:text-cyan-300 hover:border-cyan-600/50'
                     }
                   `}
                 >
-                  <Icon className="h-5 w-5 mr-2" />
+                  <Icon className={`h-5 w-5 mr-2 ${activeTab === tab.id ? 'animate-pulse' : ''}`} />
                   {tab.name}
                   {tab.count !== null && (
                     <span className={`
-                      ml-2 py-0.5 px-2 rounded-full text-xs font-medium
+                      ml-2 py-0.5 px-2 rounded text-xs font-mono font-bold border
                       ${activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-200'
-                        : 'bg-dark-700 text-gray-400'
+                        ? 'bg-cyan-900/50 text-cyan-400 border-cyan-400/50 animate-pulse'
+                        : 'bg-gray-900/50 text-purple-400 border-purple-400/50'
                       }
                     `}>
                       {tab.count}
@@ -208,23 +207,25 @@ export default function PromptDiagnosticsPage() {
           </div>
         )}
 
-        {/* History Tab */}
+        {/* Archives Tab */}
         {activeTab === 'history' && (
           <div className="space-y-6">
-            {/* Search Bar */}
-            <Card className="p-4">
+            {/* Gaming Search Bar */}
+            <Card className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 p-4">
               <div className="flex items-center space-x-4">
                 <div className="flex-1 relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-cyan-400 animate-pulse" />
                   <input
                     type="text"
-                    placeholder="Search analyses..."
+                    placeholder=">>> Neural archive search: analyses, protocols, diagnostics..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-600 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-white placeholder-gray-400"
+                    className="w-full pl-10 pr-4 py-3 bg-black/50 border-2 border-gray-800/50 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-400 text-cyan-400 font-mono placeholder-purple-400/70 transition-all duration-300"
                   />
                 </div>
-                <Button variant="outline">Filter</Button>
+                <Button className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 text-purple-400 font-mono uppercase tracking-wider transition-all duration-300">
+                  FILTER
+                </Button>
               </div>
             </Card>
 
@@ -236,57 +237,63 @@ export default function PromptDiagnosticsPage() {
             ) : analysesData?.analyses?.length ? (
               <div className="grid gap-4">
                 {analysesData.analyses?.map((analysis) => (
-                  <Card key={analysis.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <Card key={analysis.id} className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           {getStatusIcon(analysis.status)}
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <h3 className="text-lg font-bold text-cyan-400 font-mono uppercase tracking-wider">
                             {analysis.title}
                           </h3>
-                          <span className="px-2 py-1 text-xs font-medium bg-dark-700 text-gray-400 rounded">
-                            {analysis.prompt_type}
+                          <span className="px-2 py-1 text-xs font-mono font-bold bg-purple-900/50 text-purple-400 border border-purple-400/50 rounded">
+                            {analysis.prompt_type?.toUpperCase()}
                           </span>
                         </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Token Reduction</p>
-                            <p className="text-lg font-medium text-green-600 dark:text-green-400">
+                            <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">Token Efficiency</p>
+                            <p className="text-lg font-bold text-green-400 font-mono glow-text-sm">
                               {analysis.token_reduction_percentage?.toFixed(1)}%
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Clarity Score</p>
-                            <p className="text-lg font-medium text-blue-600 dark:text-blue-400">
+                            <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">Neural Clarity</p>
+                            <p className="text-lg font-bold text-blue-400 font-mono glow-text-sm">
                               {analysis.clarity_score?.toFixed(1)}/100
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Issues Found</p>
-                            <p className="text-lg font-medium text-orange-600 dark:text-orange-400">
+                            <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">Anomalies</p>
+                            <p className="text-lg font-bold text-orange-400 font-mono glow-text-sm">
                               {analysis.issues_count}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Quick Wins</p>
-                            <p className="text-lg font-medium text-purple-600 dark:text-purple-400">
+                            <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">Quick Fixes</p>
+                            <p className="text-lg font-bold text-purple-400 font-mono glow-text-sm">
                               {analysis.quick_wins_count}
                             </p>
                           </div>
                         </div>
                         
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-                          Created {new Date(analysis.created_at).toLocaleDateString()}
+                        <p className="text-sm text-purple-300 mt-3 font-mono">
+                          {'>>>'} Archived: {new Date(analysis.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       
                       <div className="flex flex-col space-y-2 ml-4">
-                        <Button variant="outline" size="sm">
-                          View Details
+                        <Button 
+                          size="sm"
+                          className="bg-cyan-900/50 border border-cyan-400/50 text-cyan-400 hover:bg-cyan-900/80 hover:shadow-lg hover:shadow-cyan-500/30 font-mono uppercase tracking-wider transition-all duration-300"
+                        >
+                          ANALYZE
                         </Button>
-                        <Button variant="outline" size="sm">
-                          Create Template
+                        <Button 
+                          size="sm"
+                          className="bg-purple-900/50 border border-purple-400/50 text-purple-400 hover:bg-purple-900/80 hover:shadow-lg hover:shadow-purple-500/30 font-mono uppercase tracking-wider transition-all duration-300"
+                        >
+                          PROTOCOL
                         </Button>
                       </div>
                     </div>

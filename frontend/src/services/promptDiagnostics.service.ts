@@ -16,7 +16,7 @@ import type {
 } from '../types/promptDiagnostics.types';
 
 export class PromptDiagnosticsService {
-  private readonly baseUrl = '/prompt-diagnostics';
+  private readonly baseUrl = '/v1/prompt-diagnostics';
 
   /**
    * Perform full prompt analysis and optimization

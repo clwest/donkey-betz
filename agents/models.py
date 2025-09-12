@@ -509,6 +509,16 @@ class AgentExecution(UnifiedBaseModel):
         help_text="Execution result data"
     )
     
+    output_data = models.JSONField(
+        default=dict,
+        help_text="Structured output data from agent execution"
+    )
+    
+    llm_response = models.TextField(
+        blank=True,
+        help_text="Raw response from the LLM"
+    )
+    
     output_files = models.JSONField(
         default=list,
         help_text="List of generated output files"

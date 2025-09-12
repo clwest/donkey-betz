@@ -213,11 +213,13 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Gaming Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Welcome back!</h1>
-          <p className="text-gray-400 mt-1">Here's what's happening with your content in the last {stats.usage_period}.</p>
+          <h1 className="text-3xl font-bold text-neon-cyan">Welcome back!</h1>
+          <p className="mt-1" style={{ color: 'var(--gaming-text-muted)' }}>
+            Here's what's happening with your content in the last {stats.usage_period}.
+          </p>
         </div>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => navigate('/studio')}>
@@ -239,13 +241,13 @@ export function DashboardPage() {
             <Card 
               key={stat.label} 
               hover 
-              className="cursor-pointer"
+              className="cursor-pointer card-gaming"
               onClick={() => stat.route && navigate(stat.route)}
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">{stat.label}</p>
-                  <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
+                  <p className="text-sm" style={{ color: 'var(--gaming-text-muted)' }}>{stat.label}</p>
+                  <p className="text-2xl font-bold text-neon-cyan mt-1 font-mono">{stat.value}</p>
                   {trendData && (
                     <div className={`flex items-center gap-1 text-sm mt-2 ${trendData.color}`}>
                       {trendData.isPositive ? (
@@ -257,8 +259,15 @@ export function DashboardPage() {
                     </div>
                   )}
                 </div>
-                <div className="p-3 bg-primary-500/20 rounded-lg">
-                  <stat.icon className="h-6 w-6 text-primary-400" />
+                <div 
+                  className="p-3 rounded-lg"
+                  style={{
+                    background: 'rgba(0, 255, 255, 0.1)',
+                    border: '1px solid var(--gaming-neon-cyan)',
+                    boxShadow: 'var(--gaming-glow-subtle)'
+                  }}
+                >
+                  <stat.icon className="h-6 w-6 text-neon-cyan" />
                 </div>
               </div>
             </Card>
@@ -273,15 +282,21 @@ export function DashboardPage() {
             <Card 
               key={stat.label}
               hover
-              className="cursor-pointer"
+              className="cursor-pointer card-gaming"
               onClick={() => navigate(stat.route)}
             >
               <div className="text-center">
-                <div className="p-2 bg-primary-500/20 rounded-lg inline-flex mb-2">
-                  <stat.icon className="h-5 w-5 text-primary-400" />
+                <div 
+                  className="p-2 rounded-lg inline-flex mb-2"
+                  style={{
+                    background: 'rgba(157, 78, 221, 0.1)',
+                    border: '1px solid var(--gaming-neon-purple)'
+                  }}
+                >
+                  <stat.icon className="h-5 w-5 text-neon-purple" />
                 </div>
-                <p className="text-lg font-bold text-white">{stat.value}</p>
-                <p className="text-xs text-gray-400">{stat.label}</p>
+                <p className="text-lg font-bold text-neon-green font-mono">{stat.value}</p>
+                <p className="text-xs" style={{ color: 'var(--gaming-text-muted)' }}>{stat.label}</p>
               </div>
             </Card>
           ))}
@@ -296,12 +311,12 @@ export function DashboardPage() {
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <Card className="lg:col-span-2">
+        {/* Gaming Recent Activity */}
+        <Card className="lg:col-span-2 card-gaming">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+            <h2 className="text-lg font-semibold text-neon-cyan">Recent Activity</h2>
             <button 
-              className="text-sm text-primary-400 hover:text-primary-300"
+              className="text-sm text-neon-cyan hover:text-neon-purple transition-colors duration-200"
               onClick={() => navigate('/gallery')}
             >
               View all
@@ -310,7 +325,7 @@ export function DashboardPage() {
           <div className="space-y-3">
             {activities.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-400">No recent activity</p>
+                <p style={{ color: 'var(--gaming-text-muted)' }}>No recent activity</p>
                 <Button 
                   variant="secondary" 
                   className="mt-4"
@@ -324,12 +339,12 @@ export function DashboardPage() {
               activities.map((activity) => {
                 const IconComponent = getIconComponent(getContentTypeIcon(activity.type));
                 const typeColors = {
-                  'image': 'bg-purple-500/10 border-purple-500/20',
-                  'video': 'bg-blue-500/10 border-blue-500/20',
-                  'text': 'bg-green-500/10 border-green-500/20',
-                  'workflow': 'bg-orange-500/10 border-orange-500/20'
+                  'image': 'rgba(157, 78, 221, 0.1) border-gaming-neon-purple',
+                  'video': 'rgba(0, 255, 255, 0.1) border-gaming-neon-cyan',
+                  'text': 'rgba(57, 255, 20, 0.1) border-gaming-neon-green',
+                  'workflow': 'rgba(255, 107, 0, 0.1) border-gaming-border'
                 };
-                const bgColor = typeColors[activity.type] || 'bg-white/5 border-white/10';
+                const bgColor = typeColors[activity.type] || 'rgba(255, 255, 255, 0.05) border-gaming-border';
                 
                 return (
                   <div 

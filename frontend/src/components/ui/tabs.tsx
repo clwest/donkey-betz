@@ -32,7 +32,7 @@ const TabsList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={clsx(
-        'inline-flex h-10 items-center justify-center rounded-md bg-dark-800 p-1 text-gray-400',
+        'inline-flex h-10 items-center justify-center rounded-lg bg-gray-900 p-1 text-gray-400 border border-cyan-500/30',
         className
       )}
       {...props}
@@ -54,12 +54,12 @@ const TabsTrigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(
       <button
         ref={ref}
         className={clsx(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium',
-          'transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+          'inline-flex items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-bold uppercase font-mono tracking-wider',
+          'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
           'disabled:pointer-events-none disabled:opacity-50',
           isActive
-            ? 'bg-dark-700 text-white shadow-sm'
-            : 'hover:bg-dark-700/50 hover:text-gray-200',
+            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+            : 'hover:bg-cyan-500/10 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30',
           className
         )}
         onClick={() => onValueChange?.(triggerValue)}

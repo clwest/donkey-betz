@@ -20,18 +20,61 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     className,
     disabled,
     asChild,
+    style,
     ...props 
   }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus-visible-ring';
+    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus-visible-ring relative overflow-hidden';
     
     const variants = {
-      primary: 'bg-gradient-primary text-white hover:shadow-lg hover:shadow-primary-500/25 hover:-translate-y-0.5 active:translate-y-0',
-      secondary: 'bg-dark-800 text-gray-100 border border-dark-700 hover:bg-dark-700 hover:-translate-y-0.5 active:translate-y-0',
-      ghost: 'text-gray-300 hover:bg-white/5 hover:text-white',
-      danger: 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30',
-      outline: 'text-gray-300 border border-gray-600 hover:bg-gray-600/10 hover:text-white',
-      default: 'bg-dark-800 text-gray-100 border border-dark-700 hover:bg-dark-700',
-      destructive: 'bg-red-500 text-white hover:bg-red-600',
+      primary: 'gaming-btn-primary text-white hover:-translate-y-0.5 active:translate-y-0',
+      secondary: 'gaming-btn-secondary hover:-translate-y-0.5 active:translate-y-0',
+      ghost: 'gaming-btn-ghost',
+      danger: 'gaming-btn-danger border hover:-translate-y-0.5',
+      outline: 'gaming-btn-outline border hover:-translate-y-0.5',
+      default: 'gaming-btn-secondary',
+      destructive: 'gaming-btn-danger text-white hover:-translate-y-0.5',
+    };
+
+    const getVariantStyles = (variant: string) => {
+      switch (variant) {
+        case 'primary':
+          return {
+            background: 'var(--gaming-gradient-primary)',
+            border: '1px solid var(--gaming-neon-cyan)',
+            boxShadow: 'var(--gaming-glow-primary)',
+            color: 'white'
+          };
+        case 'secondary':
+          return {
+            background: 'var(--gaming-bg-elevated)',
+            border: '1px solid var(--gaming-border)',
+            color: 'var(--gaming-text-primary)'
+          };
+        case 'ghost':
+          return {
+            background: 'transparent',
+            color: 'var(--gaming-text-secondary)'
+          };
+        case 'danger':
+        case 'destructive':
+          return {
+            background: 'rgba(255, 20, 147, 0.2)',
+            border: '1px solid var(--gaming-neon-pink)',
+            color: 'var(--gaming-neon-pink)'
+          };
+        case 'outline':
+          return {
+            background: 'transparent',
+            border: '1px solid var(--gaming-border)',
+            color: 'var(--gaming-text-primary)'
+          };
+        default:
+          return {
+            background: 'var(--gaming-bg-elevated)',
+            border: '1px solid var(--gaming-border)',
+            color: 'var(--gaming-text-primary)'
+          };
+      }
     };
     
     const sizes = {
@@ -43,6 +86,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     // For simplicity, we ignore asChild for now
     // In a full implementation, asChild would render children as the button element
     
+    const buttonStyle = {
+      ...getVariantStyles(variant),
+      ...style
+    };
+
     return (
       <button
         ref={ref}
@@ -53,7 +101,32 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           (disabled || loading) && 'opacity-50 cursor-not-allowed',
           className
         )}
+        style={buttonStyle}
         disabled={disabled || loading}
+        onMouseEnter={(e) => {
+          if (variant === 'primary') {
+            e.currentTarget.style.boxShadow = 'var(--gaming-glow-primary), 0 0 30px rgba(0, 255, 255, 0.3)';
+          } else if (variant === 'secondary') {
+            e.currentTarget.style.background = 'var(--gaming-bg-tertiary)';
+            e.currentTarget.style.borderColor = 'var(--gaming-neon-cyan)';
+            e.currentTarget.style.boxShadow = 'var(--gaming-glow-subtle)';
+          } else if (variant === 'ghost') {
+            e.currentTarget.style.background = 'rgba(0, 255, 255, 0.05)';
+            e.currentTarget.style.color = 'var(--gaming-text-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (variant === 'primary') {
+            e.currentTarget.style.boxShadow = 'var(--gaming-glow-primary)';
+          } else if (variant === 'secondary') {
+            e.currentTarget.style.background = 'var(--gaming-bg-elevated)';
+            e.currentTarget.style.borderColor = 'var(--gaming-border)';
+            e.currentTarget.style.boxShadow = 'none';
+          } else if (variant === 'ghost') {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'var(--gaming-text-secondary)';
+          }
+        }}
         {...props}
       >
         {loading ? (

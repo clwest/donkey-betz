@@ -386,13 +386,13 @@ export function VideoGenerator() {
       // 2. Content (old model) - 176 images  
       // 3. GeneratedContent (universal) - 0 image types
       const [galleryResponse, oldContentResponse] = await Promise.all([
-        fetch(buildApiUrl('/gallery/list/?limit=200'), {
+        fetch(buildApiUrl('/v1/gallery/list/?limit=200'), {
           headers: {
             'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
             'Content-Type': 'application/json',
           },
         }),
-        fetch(buildApiUrl('/content/list/?type=image&limit=200'), {
+        fetch(buildApiUrl('/v1/content/list/?type=image&limit=200'), {
           headers: {
             'Authorization': `Token 993f8273f70877e23b5c7d2f92ed30562a089fe3`,
             'Content-Type': 'application/json',

@@ -46,57 +46,57 @@ export const API_CONFIG = {
   endpoints: {
     // Authentication
     auth: {
-      login: '/api/v1/auth/login/',
-      logout: '/api/v1/auth/logout/',
-      register: '/api/v1/auth/register/',
-      refresh: '/api/v1/auth/refresh/',
-      profile: '/api/v1/auth/profile/',
-      forgotPassword: '/api/v1/auth/forgot-password/',
-      resetPassword: '/api/v1/auth/reset-password/',
+      login: '/v1/auth/login/',
+      logout: '/v1/auth/logout/',
+      register: '/v1/auth/register/',
+      refresh: '/v1/auth/refresh/',
+      profile: '/v1/auth/profile/',
+      forgotPassword: '/v1/auth/forgot-password/',
+      resetPassword: '/v1/auth/reset-password/',
     },
     
     // Assistant
     assistant: {
-      chat: '/api/v1/assistant/chat/',
+      chat: '/v1/assistant/chat/',
       ws: '/ws/assistant/',
     },
     
     // Agent Orchestra
     orchestra: {
-      agents: '/api/v1/agents/',
-      execute: '/api/v1/agents/execute/',
-      status: '/api/v1/agents/status/',
+      agents: '/v1/agents/',
+      execute: '/v1/agents/execute/',
+      status: '/v1/agents/status/',
       ws: '/ws/orchestra/',
     },
     
     // Sports/Odds
     sports: {
-      leagues: '/api/v1/sports/leagues/',
-      games: '/api/v1/sports/games/',
-      markets: '/api/v1/sports/markets/',
-      odds: '/api/v1/odds/',
-      kelly: '/api/v1/odds/kelly/',
+      leagues: '/v1/sports/leagues/',
+      games: '/v1/sports/games/',
+      markets: '/v1/sports/markets/',
+      odds: '/v1/odds/',
+      kelly: '/v1/odds/kelly/',
     },
     
     // Content
     content: {
-      generate: '/api/v1/content/generate/',
-      images: '/api/v1/content/images/',
-      videos: '/api/v1/content/videos/',
-      upload: '/api/v1/content/upload/',
+      generate: '/v1/content/generate/',
+      images: '/v1/content/images/',
+      videos: '/v1/content/videos/',
+      upload: '/v1/content/upload/',
     },
     
     // Knowledge/RAG
     knowledge: {
-      embeddings: '/api/v1/knowledge/embeddings/',
-      search: '/api/v1/knowledge/search/',
-      documents: '/api/v1/knowledge/documents/',
+      embeddings: '/v1/knowledge/embeddings/',
+      search: '/v1/knowledge/search/',
+      documents: '/v1/knowledge/documents/',
     },
     
     // Health
     health: {
-      check: '/api/v1/health/',
-      status: '/api/v1/status/',
+      check: '/v1/health/',
+      status: '/v1/status/',
     },
   },
 };

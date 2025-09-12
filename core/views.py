@@ -1028,6 +1028,40 @@ def agent_instances(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def agent_executions_list(request):
+    """Get list of agent executions (actual task runs with results)"""
+    from agents.models import AgentExecution
+    from agents.serializers import AgentExecutionSerializer
+    from django.core.paginator import Paginator
+    
+    # Fetch agent executions, ordered by most recent first
+    executions = AgentExecution.objects.select_related('template', 'user').order_by('-created_at')
+    
+    # Filter by status if provided
+    status = request.GET.get('status')
+    if status:
+        executions = executions.filter(status=status)
+    
+    # Paginate results
+    paginator = Paginator(executions, 50)  # 50 executions per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Serialize the executions
+    serializer = AgentExecutionSerializer(page_obj, many=True)
+    
+    return Response({
+        'results': serializer.data,
+        'count': paginator.count,
+        'num_pages': paginator.num_pages,
+        'current_page': page_obj.number,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous()
+    })
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompt_diagnostics_dashboard(request):
     """Placeholder prompt diagnostics dashboard endpoint"""
@@ -1060,6 +1094,21 @@ def prompt_diagnostics_analyses(request):
         'count': 0,
         'next': None,
         'previous': None
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def prompt_diagnostics_templates(request):
+    """Placeholder prompt diagnostics templates endpoint"""
+    return Response({
+        'templates': [],
+        'pagination': {
+            'total': 0,
+            'limit': 50,
+            'offset': 0,
+            'has_next': False
+        }
     })
 
 
@@ -1198,6 +1247,7 @@ def assistant_context(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt
 def assistant_chat(request):
     """
     Personal AI Assistant Chat - powered by real AI providers with RAG

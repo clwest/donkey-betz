@@ -202,11 +202,14 @@ class RAGAssistant:
         
         try:
             # Search with lower threshold to get more results including conversations AND code
+            # CRITICAL: Exclude personal memories unless explicitly searching personal namespace
             vector_results = vector_search(
                 query=query,
                 limit=10,  # Get more results
                 similarity_threshold=0.2,  # Lower threshold to capture more context
-                content_types=None  # Search ALL content types including source_code
+                content_types=None,  # Search ALL content types including source_code
+                namespace='system',  # Only search system namespace by default
+                exclude_personal=True  # NEVER include personal memories in agent searches
             )
             
             if vector_results:

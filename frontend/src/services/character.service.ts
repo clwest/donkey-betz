@@ -19,12 +19,12 @@ import type {
 export const characterService = {
   // Character Variations
   async createVariation(request: CharacterVariationRequest) {
-    const { data } = await apiClient.post('/api/v1/character/variation/', request);
+    const { data } = await apiClient.post('/v1/character/variation/', request);
     return data;
   },
 
   async extractLovedCharacters() {
-    const { data } = await apiClient.post('/api/v1/character/extract-loved/');
+    const { data } = await apiClient.post('/v1/character/extract-loved/');
     return data;
   },
 
@@ -58,22 +58,22 @@ export const characterService = {
     steps?: number;
     seed?: number;
   }) {
-    const { data } = await apiClient.post('/api/v1/character/library/create/', character);
+    const { data } = await apiClient.post('/v1/character/library/create/', character);
     return data;
   },
 
   async updateCharacter(id: string, updates: Partial<CharacterProfile>) {
-    const { data } = await apiClient.patch(`/api/v1/character/library/${id}/`, updates);
+    const { data } = await apiClient.patch(`/v1/character/library/${id}/`, updates);
     return data;
   },
 
   async deleteCharacter(id: string) {
-    const { data } = await apiClient.delete(`/api/v1/character/library/${id}/`);
+    const { data } = await apiClient.delete(`/v1/character/library/${id}/`);
     return data;
   },
 
   async toggleFavorite(id: string) {
-    const { data } = await apiClient.post(`/api/v1/character/library/${id}/toggle-favorite/`);
+    const { data } = await apiClient.post(`/v1/character/library/${id}/toggle-favorite/`);
     return data;
   },
 
@@ -123,13 +123,13 @@ export const characterService = {
 
   // Fine-Tuning
   async fineTuneVariation(request: FineTuneRequest) {
-    const { data } = await apiClient.post('/api/v1/character/fine-tune/', request);
+    const { data } = await apiClient.post('/v1/character/fine-tune/', request);
     return data;
   },
 
   async getCharacterVariations(characterId?: string) {
     const params = characterId ? { character_id: characterId } : {};
-    const { data } = await apiClient.get('/api/v1/character/variations/', { params });
+    const { data } = await apiClient.get('/v1/character/variations/', { params });
     return data;
   },
 
@@ -149,29 +149,29 @@ export const characterService = {
     color_theme?: string;
     is_public?: boolean;
   }) {
-    const { data } = await apiClient.post('/api/v1/character/collections/create/', collection);
+    const { data } = await apiClient.post('/v1/character/collections/create/', collection);
     return data;
   },
 
   async updateCollection(id: string, updates: Partial<CharacterCollection>) {
-    const { data } = await apiClient.patch(`/api/v1/character/collections/${id}/`, updates);
+    const { data } = await apiClient.patch(`/v1/character/collections/${id}/`, updates);
     return data;
   },
 
   async deleteCollection(id: string) {
-    const { data } = await apiClient.delete(`/api/v1/character/collections/${id}/`);
+    const { data } = await apiClient.delete(`/v1/character/collections/${id}/`);
     return data;
   },
 
   async addToCollection(collectionId: string, characterIds: string[]) {
-    const { data } = await apiClient.post(`/api/v1/character/collections/${collectionId}/add/`, {
+    const { data } = await apiClient.post(`/v1/character/collections/${collectionId}/add/`, {
       character_ids: characterIds,
     });
     return data;
   },
 
   async removeFromCollection(collectionId: string, characterIds: string[]) {
-    const { data } = await apiClient.post(`/api/v1/character/collections/${collectionId}/remove/`, {
+    const { data } = await apiClient.post(`/v1/character/collections/${collectionId}/remove/`, {
       character_ids: characterIds,
     });
     return data;
@@ -179,7 +179,7 @@ export const characterService = {
 
   // Character Profiles (Legacy)
   async saveProfile(contentId: string, name: string, tags?: string[]) {
-    const { data } = await apiClient.post('/api/v1/character/save-profile/', {
+    const { data } = await apiClient.post('/v1/character/save-profile/', {
       content_id: contentId,
       name,
       tags,
@@ -188,12 +188,12 @@ export const characterService = {
   },
 
   async getProfiles() {
-    const { data } = await apiClient.get('/api/v1/character/profiles/');
+    const { data } = await apiClient.get('/v1/character/profiles/');
     return data;
   },
 
   async generateWithProfile(profileId: string, scene: string, action?: string) {
-    const { data } = await apiClient.post('/api/v1/character/generate/', {
+    const { data } = await apiClient.post('/v1/character/generate/', {
       profile_id: profileId,
       scene,
       action,
@@ -209,18 +209,18 @@ export const characterService = {
 
   // Character Stats
   async getStats(characterId: string) {
-    const { data } = await apiClient.get(`/api/v1/character/${characterId}/stats/`);
+    const { data } = await apiClient.get(`/v1/character/${characterId}/stats/`);
     return data;
   },
 
   // Export/Import
   async exportCharacter(characterId: string) {
-    const { data } = await apiClient.get(`/api/v1/character/${characterId}/export/`);
+    const { data } = await apiClient.get(`/v1/character/${characterId}/export/`);
     return data;
   },
 
   async importCharacter(characterData: any) {
-    const { data } = await apiClient.post('/api/v1/character/import/', characterData);
+    const { data } = await apiClient.post('/v1/character/import/', characterData);
     return data;
   },
 };

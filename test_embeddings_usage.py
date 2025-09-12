@@ -7,8 +7,17 @@ Run this BEFORE and AFTER applying the fix to see the difference
 import requests
 import json
 
-BASE_URL = "http://localhost:8000"
-TOKEN = "4b9facbb8006ac4dd7408fd45a6747105a6719fb"
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
+TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)
 
 headers = {
     "Authorization": f"Token {TOKEN}",
@@ -25,7 +34,7 @@ print("(This is in your knowledge base based on the conversation you shared)")
 print("-" * 50)
 
 response = requests.post(
-    f"{BASE_URL}/api/assistant/chat/",
+    f"{BASE_URL}/api/v1/assistant/chat/",
     headers=headers,
     json={"message": "Tell me about the Autonomous Knowledge Evolution Engine"}
 )
@@ -65,7 +74,7 @@ print("(Should NOT default to sports betting)")
 print("-" * 50)
 
 response = requests.post(
-    f"{BASE_URL}/api/assistant/chat/",
+    f"{BASE_URL}/api/v1/assistant/chat/",
     headers=headers,
     json={"message": "What can I do with this platform?"}
 )
@@ -103,7 +112,7 @@ print("(Should report available embeddings)")
 print("-" * 50)
 
 response = requests.post(
-    f"{BASE_URL}/api/assistant/chat/",
+    f"{BASE_URL}/api/v1/assistant/chat/",
     headers=headers,
     json={"message": "How many documents and embeddings do you have access to?"}
 )

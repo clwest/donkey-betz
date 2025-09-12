@@ -197,7 +197,7 @@ def _process_with_intelligent_routing(user, message: str, context: str,
         # Route through Intelligent Prompting Agent
         prompt_result = agent_router.execute_intelligent_prompting(message, optimization_context)
         
-        if prompt_result.get('success'):
+        if prompt_result.get('success') and prompt_result.get('content'):
             logger.info("Intelligent Prompting Agent successfully optimized the prompt")
             response_metadata.update({
                 'routing_used': True,
@@ -226,8 +226,8 @@ def _process_with_intelligent_routing(user, message: str, context: str,
         
         best_agent = agent_router.find_best_agent(message, exclude_agents=['Personal Assistant Agent'])
         
-        if best_agent and best_agent['score'] > 0.8:  # High confidence threshold
-            logger.info(f"Routing to specialized agent: {best_agent['agent_name']}")
+        if best_agent and best_agent['score'] > 0.4:  # Lowered threshold for better agent utilization
+            logger.info(f"Routing to specialized agent: {best_agent['agent_name']} (score: {best_agent['score']})")
             
             agent_result = agent_router.execute_agent_for_task(
                 message=message,
@@ -243,12 +243,38 @@ def _process_with_intelligent_routing(user, message: str, context: str,
                     'agent_score': best_agent['score']
                 })
                 
+                # Collect implicit feedback on the response
+                from core.feedback_collector import FeedbackCollector, ResponseAnalyzer
+                
+                feedback_collector = FeedbackCollector()
+                response_analyzer = ResponseAnalyzer()
+                
+                # Analyze response quality
+                quality_analysis = response_analyzer.analyze_response_quality(
+                    agent_result.get('content', ''),
+                    message
+                )
+                
+                # Collect implicit feedback
+                execution_time = agent_result.get('generation_time_ms', 0) / 1000.0  # Convert to seconds
+                implicit_feedback = feedback_collector.collect_implicit_feedback(
+                    execution_id=agent_result.get('execution_id', ''),
+                    response=agent_result.get('content', ''),
+                    response_time=execution_time,
+                    user=user
+                )
+                
+                # Log quality metrics
+                logger.info(f"Response quality: {quality_analysis['quality_score']:.2f}, signals: {quality_analysis['signals']}")
+                
                 return {
                     'message': agent_result['content'],
                     'provider': agent_result.get('provider', 'openai'),
                     'model': agent_result.get('model', 'gpt-4'),
                     'token_usage': agent_result.get('token_usage', {}),
-                    'generation_time_ms': agent_result.get('generation_time_ms', 0)
+                    'generation_time_ms': agent_result.get('generation_time_ms', 0),
+                    'quality_score': quality_analysis['quality_score'],
+                    'execution_id': agent_result.get('execution_id', '')
                 }
             else:
                 logger.warning(f"Specialized agent {best_agent['agent_name']} failed: {agent_result.get('error')}")

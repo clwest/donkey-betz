@@ -5,9 +5,18 @@ Test the Personal Assistant endpoint with real AI
 import requests
 import json
 
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 # API configuration
-BASE_URL = "http://localhost:8000"
-TOKEN = "4b9facbb8006ac4dd7408fd45a6747105a6719fb"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
+TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)
 
 # Headers
 headers = {
@@ -23,12 +32,12 @@ data = {
 
 # Make the request
 print("Testing Personal Assistant endpoint...")
-print(f"URL: {BASE_URL}/api/assistant/chat/")
+print(f"URL: {BASE_URL}/api/v1/assistant/chat/")
 print(f"Data: {json.dumps(data, indent=2)}")
 
 try:
     response = requests.post(
-        f"{BASE_URL}/api/assistant/chat/",
+        f"{BASE_URL}/api/v1/assistant/chat/",
         headers=headers,
         json=data
     )

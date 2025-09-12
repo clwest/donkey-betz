@@ -5,8 +5,17 @@ Test the RAG-Enhanced Assistant
 import requests
 import json
 
-BASE_URL = "http://localhost:8000"
-TOKEN = "4b9facbb8006ac4dd7408fd45a6747105a6719fb"  # Your token
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8001")
+TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)  # Your token
 
 headers = {
     "Authorization": f"Token {TOKEN}",
@@ -34,7 +43,7 @@ for query in test_queries:
     
     try:
         response = requests.post(
-            f"{BASE_URL}/api/assistant/chat/",
+            f"{BASE_URL}/api/v1/assistant/chat/",
             headers=headers,
             json={
                 "message": query,

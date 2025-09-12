@@ -51,49 +51,73 @@ export function StudioPage() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Creation Studio</h1>
-          <p className="text-gray-400 mt-1">Professional AI-powered content creation suite</p>
+    <div className="space-y-8" style={{ backgroundColor: 'var(--gaming-bg-primary)', minHeight: '100vh' }}>
+      {/* Header - Gaming Style */}
+      <div className="gaming-neural-card p-6">
+        <div className="gaming-border-glow"></div>
+        <div className="relative z-10 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-black font-mono uppercase tracking-wider" 
+                style={{ 
+                  color: 'var(--gaming-neon-cyan)',
+                  textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
+                }}>NEURAL CREATION STUDIO</h1>
+            <p className="mt-3 font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+              PROFESSIONAL AI-POWERED CONTENT FORGE
+            </p>
+          </div>
+          <button
+            className="gaming-btn-secondary px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all duration-300 hover:scale-105"
+            style={{
+              background: 'var(--gaming-bg-elevated)',
+              border: '1px solid var(--gaming-neon-purple)',
+              color: 'var(--gaming-neon-purple)'
+            }}
+          >
+            <PlusIcon className="h-4 w-4" />
+            SAVE PRESET
+          </button>
         </div>
-        <Button variant="secondary">
-          <PlusIcon className="h-4 w-4" />
-          Save Preset
-        </Button>
       </div>
 
-      {/* Enhanced Tab Navigation */}
+      {/* Neural Tab Matrix */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
-            <Card
+            <div
               key={tab.id}
-              className={`cursor-pointer transition-all duration-300 ${
-                isActive 
-                  ? 'bg-gradient-primary border-primary-500/50 shadow-lg shadow-primary-500/20' 
-                  : 'hover:bg-white/5 hover:border-white/20'
+              className={`gaming-neural-card p-6 cursor-pointer transition-all duration-300 hover:scale-105 ${
+                isActive ? 'ring-2' : ''
               }`}
+              style={{
+                borderColor: isActive ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
+                boxShadow: isActive ? 'var(--gaming-glow-primary)' : undefined,
+                background: isActive ? 'var(--gaming-gradient-primary)' : undefined
+              }}
               onClick={() => setActiveTab(tab.id)}
             >
-              <div className="text-center">
-                <tab.icon className={`h-8 w-8 mx-auto mb-3 ${
-                  isActive ? 'text-white' : 'text-gray-400'
-                }`} />
-                <h3 className={`font-semibold mb-1 ${
-                  isActive ? 'text-white' : 'text-gray-300'
-                }`}>
+              <div className="gaming-border-glow"></div>
+              <div className="relative z-10 text-center">
+                <tab.icon className={`h-8 w-8 mx-auto mb-3`} 
+                  style={{ 
+                    color: isActive ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    filter: isActive ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))' : undefined
+                  }} />
+                <h3 className={`font-bold font-mono uppercase tracking-wider text-sm mb-2`}
+                    style={{ 
+                      color: isActive ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)'
+                    }}>
                   {tab.label}
                 </h3>
-                <p className={`text-xs ${
-                  isActive ? 'text-gray-200' : 'text-gray-500'
-                }`}>
-                  {tab.description}
+                <p className={`text-xs font-mono`}
+                   style={{ 
+                     color: isActive ? 'var(--gaming-text-secondary)' : 'var(--gaming-text-muted)'
+                   }}>
+                  {tab.description.toUpperCase()}
                 </p>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>

@@ -60,12 +60,12 @@ interface UserStats {
 
 class ProfileService {
   async getProfile(): Promise<UserProfile> {
-    const response = await apiClient.get('/api/v1/profile/');
+    const response = await apiClient.get('/v1/profile/');
     return response.data;
   }
 
   async updateProfile(data: Record<string, any>): Promise<{ message: string }> {
-    const response = await apiClient.put('/api/v1/profile/update/', data);
+    const response = await apiClient.put('/v1/profile/update/', data);
     return response.data;
   }
 
@@ -73,7 +73,7 @@ class ProfileService {
     const formData = new FormData();
     formData.append('avatar', file);
     
-    const response = await apiClient.post('/api/v1/profile/avatar/', formData, {
+    const response = await apiClient.post('/v1/profile/avatar/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -82,17 +82,17 @@ class ProfileService {
   }
 
   async deleteAvatar(): Promise<{ message: string }> {
-    const response = await apiClient.delete('/api/v1/profile/avatar/delete/');
+    const response = await apiClient.delete('/v1/profile/avatar/delete/');
     return response.data;
   }
 
   async getUserStats(): Promise<UserStats> {
-    const response = await apiClient.get('/api/v1/profile/stats/');
+    const response = await apiClient.get('/v1/profile/stats/');
     return response.data;
   }
 
   async changePassword(oldPassword: string, newPassword: string): Promise<{ message: string; token: string }> {
-    const response = await apiClient.post('/api/v1/auth/change-password/', {
+    const response = await apiClient.post('/v1/auth/change-password/', {
       old_password: oldPassword,
       new_password: newPassword,
     });

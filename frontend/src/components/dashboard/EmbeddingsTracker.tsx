@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Brain, TrendingUp, Activity, Database } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { apiClient } from '../../services/api.config';
 
 interface EmbeddingsStats {
   total_embeddings: number;
@@ -37,19 +38,8 @@ const EmbeddingsTracker: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const authToken = token || localStorage.getItem('authToken') || '993f8273f70877e23b5c7d2f92ed30562a089fe3';
-      // Use the API base URL from environment or default
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseUrl}/api/v1/dashboard/embeddings-stats/`, {
-        headers: {
-          'Authorization': `Token ${authToken}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch embeddings stats');
-      
-      const data = await response.json();
-      setStats(data);
+      const response = await apiClient.get('/v1/dashboard/embeddings-stats/');
+      setStats(response.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching embeddings stats:', err);

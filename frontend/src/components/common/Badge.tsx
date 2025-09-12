@@ -9,18 +9,18 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variants = {
-    default: 'bg-primary-500/20 text-primary-400 border border-primary-500/30',
-    secondary: 'bg-dark-700 text-gray-300 border border-dark-600',
-    destructive: 'bg-red-500/20 text-red-400 border border-red-500/30',
-    outline: 'bg-transparent text-gray-400 border border-gray-600',
-    success: 'bg-green-500/20 text-green-400 border border-green-500/30',
-    warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+    default: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shadow-[0_0_8px_rgba(0,255,255,0.3)]',
+    secondary: 'bg-gray-900 text-gray-300 border border-gray-700',
+    destructive: 'bg-red-500/20 text-red-400 border border-red-500/50 shadow-[0_0_8px_rgba(255,0,0,0.3)]',
+    outline: 'bg-transparent text-gray-400 border border-cyan-500/30',
+    success: 'bg-green-500/20 text-green-400 border border-green-500/50 shadow-[0_0_8px_rgba(0,255,0,0.3)]',
+    warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 shadow-[0_0_8px_rgba(255,255,0,0.3)]',
   };
 
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+        'inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase font-mono tracking-wider transition-all duration-200',
         variants[variant],
         className
       )}

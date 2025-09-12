@@ -17,7 +17,6 @@ import {
   CloudArrowUpIcon,
   ArrowRightOnRectangleIcon,
   BeakerIcon,
-  CalculatorIcon,
   CircleStackIcon,
 } from '@heroicons/react/24/outline';
 import { 
@@ -36,7 +35,6 @@ import {
   CloudArrowUpIcon as CloudArrowUpIconSolid,
   ArrowRightOnRectangleIcon as ArrowRightOnRectangleIconSolid,
   BeakerIcon as BeakerIconSolid,
-  CalculatorIcon as CalculatorIconSolid,
   CircleStackIcon as CircleStackIconSolid,
 } from '@heroicons/react/24/solid';
 import clsx from 'clsx';
@@ -48,26 +46,25 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
-  { name: 'Workflows', href: '/workflows', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'NEW' },
-  { name: 'Multi-Agent Workflows', href: '/workflows-multi', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' },
+  { name: 'Control Center', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
+  { name: 'Workflow Engine', href: '/workflows', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'NEW' },
+  { name: 'Multi-Agent Engine', href: '/workflows-multi', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' },
   { name: 'Agent Orchestra', href: '/agent-orchestra', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
-  { name: 'Orchestra (NEW)', href: '/orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'NEW' },
-  { name: 'Sports Betting', href: '/betting', icon: ChartBarIcon, iconActive: ChartBarIconSolid },
-  { name: 'Odds Calculator', href: '/odds', icon: CalculatorIcon, iconActive: CalculatorIconSolid },
-  { name: 'Creation Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
-  { name: 'Content Library', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },
+  { name: 'Orchestra Pro', href: '/orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'NEW' },
+  { name: 'Command Center', href: '/betting', icon: ChartBarIcon, iconActive: ChartBarIconSolid },
+  { name: 'Content Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
+  { name: 'Media Vault', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },
   // { name: 'Characters', href: '/character', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' }, // Hidden - on backburner
-  { name: 'Campaigns', href: '/campaigns', icon: MegaphoneIcon, iconActive: MegaphoneIconSolid },
-  { name: 'eBooks', href: '/ebooks', icon: BookOpenIcon, iconActive: BookOpenIconSolid },
-  { name: 'Voice', href: '/voice', icon: MicrophoneIcon, iconActive: MicrophoneIconSolid },
-  { name: 'Research', href: '/research', icon: AcademicCapIcon, iconActive: AcademicCapIconSolid },
-  { name: 'Content Verification', href: '/mythology', icon: BookOpenIcon, iconActive: BookOpenIconSolid, badge: 'NEW' },
-  { name: 'My Knowledge', href: '/knowledge', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid, badge: 'NEW' },
+  { name: 'Campaign Manager', href: '/campaigns', icon: MegaphoneIcon, iconActive: MegaphoneIconSolid },
+  { name: 'Library', href: '/ebooks', icon: BookOpenIcon, iconActive: BookOpenIconSolid },
+  { name: 'Voice Studio', href: '/voice', icon: MicrophoneIcon, iconActive: MicrophoneIconSolid },
+  { name: 'Intelligence Hub', href: '/research', icon: AcademicCapIcon, iconActive: AcademicCapIconSolid },
+  { name: 'Fact Checker', href: '/mythology', icon: BookOpenIcon, iconActive: BookOpenIconSolid, badge: 'NEW' },
+  { name: 'Knowledge Base', href: '/knowledge', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid, badge: 'NEW' },
   { name: 'Agent Registry', href: '/agent-registry', icon: CircleStackIcon, iconActive: CircleStackIconSolid, badge: 'NEW' },
-  { name: 'Prompt Diagnostics', href: '/prompt-diagnostics', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },
-  { name: 'Feedback', href: '/feedback', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'NEW' },
-  { name: 'AI Settings', href: '/ai-settings', icon: Cog6ToothIcon, iconActive: Cog6ToothIconSolid },
+  { name: 'AI Diagnostics', href: '/prompt-diagnostics', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },
+  { name: 'Feedback Center', href: '/feedback', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'NEW' },
+  { name: 'AI Config', href: '/ai-settings', icon: Cog6ToothIcon, iconActive: Cog6ToothIconSolid },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

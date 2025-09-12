@@ -7,8 +7,17 @@ import requests
 import json
 from datetime import datetime
 
+# Security fix: Load environment variables
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 API_URL = "http://localhost:8000/api"
-AUTH_TOKEN = "fc58364ffbca4e77b732d03711d44965cf40acb6"
+AUTH_TOKEN = os.getenv("TEST_AUTH_TOKEN", "")
+if not TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found. Please set it in .env file.")
+    import sys
+    sys.exit(1)
 
 # Colors
 GREEN = "\033[92m"

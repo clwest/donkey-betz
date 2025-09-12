@@ -11,6 +11,7 @@ Real-time WebSocket consumers for agent orchestration including:
 import json
 import asyncio
 import logging
+import os
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 
@@ -19,6 +20,7 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 from .models import (
     UnifiedAgentTemplate, AgentExecution, AgentRegistry,
@@ -42,11 +44,14 @@ class AgentBaseConsumer(AsyncWebsocketConsumer):
         # Get user from scope (set by AuthMiddleware)
         self.user = self.scope.get('user')
         
-        # For development, accept connections even without authentication
-        # In production, uncomment the authentication check below
-        # if not self.user or not self.user.is_authenticated:
-        #     await self.close(code=4001)
-        #     return
+        # Check if WebSocket authentication is enabled (should always be True in production)
+        enable_ws_auth = os.getenv('ENABLE_WEBSOCKET_AUTH', 'true').lower() == 'true'
+        
+        # Enforce authentication if enabled
+        if enable_ws_auth and (not self.user or not self.user.is_authenticated):
+            logger.warning(f"Unauthenticated WebSocket connection attempt from {self.scope.get('client', ['unknown'])[0]}")
+            await self.close(code=4001)
+            return
         
         await self.accept()
         
@@ -350,13 +355,15 @@ class AgentOrchestrationConsumer(AgentBaseConsumer):
         """Connect to agent orchestration updates"""
         await super().connect()
         
-        # For development, don't require user authentication
-        # if not self.user:
-        #     return
+        # Check if WebSocket authentication is enabled
+        enable_ws_auth = os.getenv('ENABLE_WEBSOCKET_AUTH', 'true').lower() == 'true'
         
-        # Join orchestration group (allow all for now in development)
-        # In production, check: if self.user and self.user.is_staff:
-        if True:  # Allow all connections in development
+        # Require authentication if enabled
+        if enable_ws_auth and not self.user:
+            return
+        
+        # Join orchestration group - staff only in production, all in development
+        if not enable_ws_auth or (self.user and (self.user.is_staff or settings.DEBUG)):
             orchestration_group = "agent_orchestration"
             await self.channel_layer.group_add(orchestration_group, self.channel_name)
             self.groups.append(orchestration_group)

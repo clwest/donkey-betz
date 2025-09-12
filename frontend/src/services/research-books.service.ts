@@ -102,7 +102,7 @@ export const researchBooksService = {
       // Note: 'text' sources need different handling as they're not URLs
     });
 
-    const { data } = await apiClient.post('/api/v1/research-to-book/', {
+    const { data } = await apiClient.post('/v1/research-to-book/', {
       title,
       sources: backendSources,
       options: mergedOptions,
@@ -114,7 +114,7 @@ export const researchBooksService = {
   async ingestDocument(file: File): Promise<DocumentIngest> {
     const formData = createFormData({ document: file });
     
-    const { data } = await apiClient.post('/api/v1/research/ingest/', formData, {
+    const { data } = await apiClient.post('/v1/research/ingest/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -122,18 +122,18 @@ export const researchBooksService = {
 
   // Get ingested documents
   async getDocuments(): Promise<DocumentIngest[]> {
-    const { data } = await apiClient.get('/api/v1/research/documents/');
+    const { data } = await apiClient.get('/v1/research/documents/');
     return data;
   },
 
   // Delete document
   async deleteDocument(documentId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/research/documents/${documentId}/`);
+    await apiClient.delete(`/v1/research/documents/${documentId}/`);
   },
 
   // Extract content from URL
   async extractFromUrl(url: string): Promise<ResearchSource> {
-    const { data } = await apiClient.post('/api/v1/research/extract-url/', { url });
+    const { data } = await apiClient.post('/v1/research/extract-url/', { url });
     return {
       type: 'url',
       content: data.content,
@@ -144,7 +144,7 @@ export const researchBooksService = {
 
   // Extract content from YouTube video
   async extractFromYoutube(url: string): Promise<ResearchSource> {
-    const { data } = await apiClient.post('/api/v1/research/extract-youtube/', { url });
+    const { data } = await apiClient.post('/v1/research/extract-youtube/', { url });
     return {
       type: 'youtube',
       content: data.transcript,
@@ -162,7 +162,7 @@ export const researchBooksService = {
     chapters: { title: string; description: string }[];
     estimated_length: number;
   }> {
-    const { data } = await apiClient.post('/api/v1/research/generate-outline/', {
+    const { data } = await apiClient.post('/v1/research/generate-outline/', {
       title,
       sources,
     });
@@ -171,30 +171,30 @@ export const researchBooksService = {
 
   // Get book generation status
   async getBookStatus(bookId: string): Promise<Book> {
-    const { data } = await apiClient.get(`/api/v1/research/books/${bookId}/`);
+    const { data } = await apiClient.get(`/v1/research/books/${bookId}/`);
     return data;
   },
 
   // Get all books
   async getBooks(): Promise<Book[]> {
-    const { data } = await apiClient.get('/api/v1/research/books/');
+    const { data } = await apiClient.get('/v1/research/books/');
     return data;
   },
 
   // Delete book
   async deleteBook(bookId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/research/books/${bookId}/delete/`);
+    await apiClient.delete(`/v1/research/books/${bookId}/delete/`);
   },
 
   // Generate specific chapter
   async generateChapter(bookId: string, chapterNumber: number): Promise<Chapter> {
-    const { data } = await apiClient.post(`/api/v1/research/books/${bookId}/chapters/${chapterNumber}/generate/`);
+    const { data } = await apiClient.post(`/v1/research/books/${bookId}/chapters/${chapterNumber}/generate/`);
     return data;
   },
 
   // Update chapter content
   async updateChapter(bookId: string, chapterNumber: number, content: string): Promise<Chapter> {
-    const { data } = await apiClient.put(`/api/v1/research/books/${bookId}/chapters/${chapterNumber}/`, {
+    const { data } = await apiClient.put(`/v1/research/books/${bookId}/chapters/${chapterNumber}/`, {
       content,
     });
     return data;
@@ -202,7 +202,7 @@ export const researchBooksService = {
 
   // Export book
   async exportBook(bookId: string, format: 'pdf' | 'docx' | 'epub' | 'txt'): Promise<Blob> {
-    const { data } = await apiClient.post(`/api/v1/research/books/${bookId}/export/`, {
+    const { data } = await apiClient.post(`/v1/research/books/${bookId}/export/`, {
       format,
     }, {
       responseType: 'blob',
@@ -215,7 +215,7 @@ export const researchBooksService = {
     books: Array<{ book: Book; matches: string[] }>;
     total_results: number;
   }> {
-    const { data } = await apiClient.get('/api/v1/research/search/', {
+    const { data } = await apiClient.get('/v1/research/search/', {
       params: { q: query },
     });
     return data;
@@ -230,7 +230,7 @@ export const researchBooksService = {
     sentiment: 'positive' | 'neutral' | 'negative';
     citations_count: number;
   }> {
-    const { data } = await apiClient.get(`/api/v1/research/books/${bookId}/analytics/`);
+    const { data } = await apiClient.get(`/v1/research/books/${bookId}/analytics/`);
     return data;
   },
 
@@ -239,7 +239,7 @@ export const researchBooksService = {
     task_id: string;
     status: 'started';
   }> {
-    const { data } = await apiClient.post(`/api/v1/research/books/${bookId}/batch-generate/`, {
+    const { data } = await apiClient.post(`/v1/research/books/${bookId}/batch-generate/`, {
       chapters: chapterNumbers,
     });
     return data;
@@ -252,7 +252,7 @@ export const researchBooksService = {
     completed_chapters: number[];
     failed_chapters: number[];
   }> {
-    const { data } = await apiClient.get(`/api/v1/research/batch-status/${taskId}/`);
+    const { data } = await apiClient.get(`/v1/research/batch-status/${taskId}/`);
     return data;
   },
 };

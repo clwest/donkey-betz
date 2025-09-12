@@ -6,12 +6,24 @@ Tests all updated API endpoints to ensure they're working correctly
 
 import requests
 import json
+import os
 from typing import Dict, List, Tuple
 import sys
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
-BASE_URL = "http://localhost:8001"
-AUTH_TOKEN = "c4ba8e9a9dc7baea61ee3063c3f74ce038a98502"
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
+AUTH_TOKEN = os.getenv('TEST_AUTH_TOKEN', '424a48280fa87d30f4997beda23ccad57418d7cb')
+
+if not AUTH_TOKEN:
+    print("WARNING: No TEST_AUTH_TOKEN found in environment.")
+    print("Please set TEST_AUTH_TOKEN in your .env file.")
+    print("You can get a token by running: python manage.py create_test_token")
+    sys.exit(1)
+
 HEADERS = {
     "Authorization": f"Token {AUTH_TOKEN}",
     "Content-Type": "application/json"

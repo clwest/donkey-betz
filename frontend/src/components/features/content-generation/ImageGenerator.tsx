@@ -186,7 +186,7 @@ export function ImageGenerator() {
   const loadGalleryImages = async () => {
     setLoadingGallery(true);
     try {
-      const response = await apiClient.get('/content/list/', {
+      const response = await apiClient.get('/api/v1/content/list/', {
         params: {
           type: 'image',
           limit: 50

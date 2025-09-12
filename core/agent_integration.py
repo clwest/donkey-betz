@@ -39,39 +39,81 @@ class AgentRouter:
         """
         # Keywords that indicate prompting/optimization tasks
         prompting_keywords = [
-            'prompt', 'prompting', 'optimize', 'improve', 'better response',
-            'prompt engineering', 'AI response', 'model output', 'generation',
-            'rephrase', 'rewrite prompt', 'enhance prompt', 'prompt quality'
+            'optimize prompt', 'improve prompt', 'better prompt',
+            'prompt engineering', 'enhance prompt', 'rewrite prompt',
+            'prompt optimization', 'prompt quality'
+        ]
+        
+        # Negative indicators - phrases that suggest NOT a prompt optimization task
+        negative_indicators = [
+            'system prompt', 'your prompt', 'main prompt', 
+            'what page', 'what app', 'messed with'
         ]
         
         message_lower = message.lower()
+        
+        # Check for negative indicators first
+        if any(neg in message_lower for neg in negative_indicators):
+            return False
+            
+        # Only route if explicitly about prompt optimization
         return any(keyword in message_lower for keyword in prompting_keywords)
     
     def should_use_agent_routing(self, message: str) -> bool:
         """
         Determine if a message should be routed through the agent system
         """
-        # Check for complex tasks that would benefit from specialized agents
+        # Expanded keywords for better routing coverage
         complex_task_indicators = [
+            # Original technical/business terms
             'analyze', 'research', 'strategy', 'plan', 'create content',
             'business', 'financial', 'marketing', 'legal', 'technical',
-            'code', 'development', 'sports', 'betting', 'odds'
+            'code', 'development', 'sports', 'betting', 'odds',
+            
+            # Common query patterns
+            'summary', 'summarize', 'explain', 'what', 'how', 'why', 'when',
+            'list', 'show', 'tell', 'describe', 'help', 'find', 'search',
+            
+            # Action verbs
+            'write', 'generate', 'make', 'build', 'design', 'implement',
+            'optimize', 'improve', 'fix', 'debug', 'test', 'deploy',
+            
+            # Status/info requests
+            'status', 'update', 'changed', 'new', 'recent', 'latest',
+            'current', 'progress', 'report', 'review', 'check',
+            
+            # Data/content requests
+            'data', 'information', 'details', 'documentation', 'guide',
+            'tutorial', 'example', 'template', 'pattern', 'best practice'
         ]
         
         message_lower = message.lower()
+        
+        # Quick exit for very short messages (likely just greetings)
+        if len(message_lower.strip()) < 10:
+            return False
+            
+        # Route most queries through agents for better responses
+        # Only skip routing for extremely simple responses
+        simple_patterns = ['hi', 'hello', 'thanks', 'goodbye', 'ok', 'yes', 'no']
+        if message_lower.strip() in simple_patterns:
+            return False
+            
+        # Default to routing for richer responses
         return any(indicator in message_lower for indicator in complex_task_indicators)
     
     def find_best_agent(self, message: str, exclude_agents: List[str] = None) -> Optional[Dict[str, Any]]:
         """
-        Find the best agent for a given message
+        Find the best agent for a given message with learning-based scoring
         """
         if not self.registry:
-            return None
+            # If no registry, try to find agents directly
+            return self._find_agent_without_registry(message, exclude_agents)
             
         exclude_agents = exclude_agents or []
         
         # Find agents for the task
-        agents = self.registry.find_agents_for_task(message, limit=3)
+        agents = self.registry.find_agents_for_task(message, limit=5)  # Increased limit
         
         # Filter out excluded agents
         filtered_agents = [
@@ -79,7 +121,137 @@ class AgentRouter:
             if agent['agent_name'] not in exclude_agents
         ]
         
+        # Apply learning-based score adjustments
+        filtered_agents = self._apply_learning_adjustments(filtered_agents)
+        
+        # If no agents from registry, try direct matching
+        if not filtered_agents:
+            return self._find_agent_without_registry(message, exclude_agents)
+            
+        # Sort by adjusted score and return best
+        filtered_agents.sort(key=lambda x: x.get('adjusted_score', x.get('score', 0)), reverse=True)
         return filtered_agents[0] if filtered_agents else None
+    
+    def _apply_learning_adjustments(self, agents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Apply learning-based adjustments to agent scores
+        """
+        from agents.models import UnifiedAgentTemplate
+        
+        for agent_data in agents:
+            try:
+                # Get the actual agent to check performance metrics
+                agent = UnifiedAgentTemplate.objects.filter(
+                    name=agent_data['agent_name']
+                ).first()
+                
+                if agent:
+                    # Adjust score based on success rate
+                    base_score = agent_data.get('score', 0.5)
+                    
+                    # Success rate adjustment (0-100 scale)
+                    if agent.success_rate > 80:
+                        score_boost = 0.2
+                    elif agent.success_rate > 60:
+                        score_boost = 0.1
+                    elif agent.success_rate < 40:
+                        score_boost = -0.2
+                    else:
+                        score_boost = 0
+                    
+                    # User rating adjustment (1-5 scale)
+                    if agent.avg_user_rating > 4.0:
+                        score_boost += 0.15
+                    elif agent.avg_user_rating < 2.5:
+                        score_boost -= 0.15
+                    
+                    # Speed adjustment
+                    if agent.avg_completion_time > 0 and agent.avg_completion_time < 3.0:
+                        score_boost += 0.1  # Fast agent
+                    elif agent.avg_completion_time > 10.0:
+                        score_boost -= 0.1  # Slow agent
+                    
+                    # Check for clarification issues from learning patterns
+                    if agent.metadata and 'learning_patterns' in agent.metadata:
+                        clarification_count = agent.metadata['learning_patterns'].get('asks_clarification_count', 0)
+                        if clarification_count > 5:
+                            score_boost -= 0.3  # Penalize agents that ask too many clarifications
+                    
+                    # Apply adjusted score
+                    agent_data['adjusted_score'] = max(0.1, min(1.0, base_score + score_boost))
+                    agent_data['learning_applied'] = True
+                    agent_data['success_rate'] = agent.success_rate
+                    agent_data['user_rating'] = agent.avg_user_rating
+                    
+                    logger.debug(f"Agent {agent.name}: base={base_score:.2f}, adjusted={agent_data['adjusted_score']:.2f}, "
+                               f"success_rate={agent.success_rate:.1f}%, rating={agent.avg_user_rating:.1f}")
+                    
+            except Exception as e:
+                logger.error(f"Error applying learning adjustments for {agent_data.get('agent_name')}: {e}")
+                agent_data['adjusted_score'] = agent_data.get('score', 0.5)
+        
+        return agents
+    
+    def _find_agent_without_registry(self, message: str, exclude_agents: List[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Fallback method to find agents when registry is unavailable
+        """
+        try:
+            from agents.models import UnifiedAgentTemplate
+            
+            exclude_agents = exclude_agents or []
+            message_lower = message.lower()
+            
+            # Direct keyword to agent mapping for common cases
+            agent_mappings = {
+                'summary': 'Research Agent',
+                'analyze': 'Data Analysis Agent',
+                'write': 'Content Writer Agent',
+                'code': 'Code Assistant Agent',
+                'sports': 'Sports Analytics Agent',
+                'betting': 'Betting Strategy Agent',
+                'research': 'Research Agent',
+                'explain': 'Educational Agent',
+                'help': 'Personal Assistant Agent'
+            }
+            
+            # Find best matching agent based on keywords
+            for keyword, agent_name in agent_mappings.items():
+                if keyword in message_lower and agent_name not in exclude_agents:
+                    try:
+                        agent = UnifiedAgentTemplate.objects.get(
+                            name=agent_name,
+                            is_active=True
+                        )
+                        return {
+                            'agent_name': agent.name,
+                            'score': 0.6,  # Default medium confidence
+                            'agent_id': str(agent.id)
+                        }
+                    except UnifiedAgentTemplate.DoesNotExist:
+                        continue
+            
+            # If no specific match, return a general agent
+            try:
+                general_agent = UnifiedAgentTemplate.objects.filter(
+                    is_active=True
+                ).exclude(
+                    name__in=exclude_agents
+                ).first()
+                
+                if general_agent:
+                    return {
+                        'agent_name': general_agent.name,
+                        'score': 0.5,  # Lower confidence for general match
+                        'agent_id': str(general_agent.id)
+                    }
+            except Exception:
+                pass
+                
+        except Exception as e:
+            logger.error(f"Error in fallback agent finding: {e}")
+            
+        return None
     
     def execute_intelligent_prompting(self, message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -163,12 +335,33 @@ class AgentRouter:
         """
         Execute an agent directly without Celery (for faster response times)
         """
+        execution_start = datetime.now()
+        execution_id = f"direct_{agent.name}_{uuid.uuid4().hex[:8]}"
+        
         try:
+            # Create execution record for tracking
+            from agents.models import AgentExecution, AgentStatus
+            execution = AgentExecution.objects.create(
+                template=agent,
+                user=self.user,
+                execution_id=execution_id,
+                task_description=task_description,
+                task_type='direct_routing',
+                context=context,
+                input_data=input_data,
+                status=AgentStatus.RUNNING,
+                started_at=execution_start
+            )
+            
             # Initialize AI provider
             ai_manager = AIProviderManager()
             available_providers = ai_manager.get_available_providers()
             
             if not available_providers:
+                execution.status = AgentStatus.FAILED
+                execution.error_message = 'No AI providers available'
+                execution.completed_at = datetime.now()
+                execution.save()
                 return {
                     'success': False,
                     'error': 'No AI providers available',
@@ -194,10 +387,9 @@ Please complete this task using your specialized capabilities.
             
             # Prepare config based on model
             if 'gpt-5' in agent.llm_model.lower():
-                config = {'max_completion_tokens': agent.llm_config.get('max_tokens', 1500)}
-                if 'temperature' in agent.llm_config:
-                    # GPT-5 models might not support temperature, so we skip it
-                    pass
+                # GPT-5 models use max_tokens (the ai_providers.py will convert it to max_completion_tokens)
+                config = {'max_tokens': agent.llm_config.get('max_tokens', 1500)}
+                # The ai_providers.py will handle GPT-5 specific parameters
             else:
                 config = agent.llm_config or {'max_tokens': 1500, 'temperature': 0.7}
             
@@ -210,7 +402,21 @@ Please complete this task using your specialized capabilities.
                 config=config
             )
             
+            # Calculate execution time
+            execution_time = (datetime.now() - execution_start).total_seconds()
+            
             if result.success:
+                # Update execution with success
+                execution.status = AgentStatus.COMPLETED
+                execution.result = {'content': result.content[:1000]}  # Store first 1000 chars
+                execution.token_usage = result.token_usage
+                execution.execution_time_seconds = execution_time
+                execution.completed_at = datetime.now()
+                execution.save()
+                
+                # Update agent metrics for learning
+                self._update_agent_metrics(agent, success=True, execution_time=execution_time)
+                
                 return {
                     'success': True,
                     'content': result.content,
@@ -218,22 +424,113 @@ Please complete this task using your specialized capabilities.
                     'provider': provider,
                     'model': agent.llm_model,
                     'token_usage': result.token_usage,
-                    'generation_time_ms': result.generation_time_ms
+                    'generation_time_ms': result.generation_time_ms,
+                    'execution_id': execution_id
                 }
             else:
+                # Update execution with failure
+                execution.status = AgentStatus.FAILED
+                execution.error_message = result.error_message
+                execution.execution_time_seconds = execution_time
+                execution.completed_at = datetime.now()
+                execution.save()
+                
+                # Update agent metrics for learning
+                self._update_agent_metrics(agent, success=False, execution_time=execution_time)
+                
                 return {
                     'success': False,
                     'error': result.error_message,
-                    'fallback_to_direct': True
+                    'fallback_to_direct': True,
+                    'execution_id': execution_id
                 }
                 
         except Exception as e:
             logger.error(f"Error in direct agent execution: {e}")
+            
+            # Update execution record if it exists
+            try:
+                if 'execution' in locals():
+                    execution.status = AgentStatus.FAILED
+                    execution.error_message = str(e)
+                    execution.completed_at = datetime.now()
+                    execution.save()
+            except:
+                pass
+                
             return {
                 'success': False,
                 'error': str(e),
-                'fallback_to_direct': True
+                'fallback_to_direct': True,
+                'execution_id': execution_id
             }
+    
+    def _update_agent_metrics(self, agent: UnifiedAgentTemplate, success: bool, execution_time: float):
+        """
+        Update agent performance metrics for learning
+        """
+        try:
+            # Update usage count
+            agent.usage_count += 1
+            
+            # Update success rate (rolling average)
+            if agent.usage_count == 1:
+                agent.success_rate = 100.0 if success else 0.0
+            else:
+                # Calculate new success rate as rolling average
+                current_success = 1.0 if success else 0.0
+                agent.success_rate = ((agent.success_rate * (agent.usage_count - 1)) + (current_success * 100)) / agent.usage_count
+            
+            # Update average completion time
+            if agent.avg_completion_time == 0:
+                agent.avg_completion_time = execution_time
+            else:
+                agent.avg_completion_time = ((agent.avg_completion_time * (agent.usage_count - 1)) + execution_time) / agent.usage_count
+            
+            # Save updated metrics
+            agent.save(update_fields=['usage_count', 'success_rate', 'avg_completion_time'])
+            
+            # If learning is enabled, trigger learning update
+            if agent.learning_enabled:
+                self._trigger_learning_update(agent, success, execution_time)
+                
+        except Exception as e:
+            logger.error(f"Error updating agent metrics: {e}")
+    
+    def _trigger_learning_update(self, agent: UnifiedAgentTemplate, success: bool, execution_time: float):
+        """
+        Trigger learning updates for agents with learning enabled
+        """
+        try:
+            # Log learning event
+            logger.info(f"Learning update for {agent.name}: success={success}, time={execution_time:.2f}s")
+            
+            # Update routing keywords based on success
+            if success and execution_time < 5.0:  # Fast, successful execution
+                # This agent performed well, increase its routing priority
+                # Could update routing_keywords or scoring logic here
+                pass
+            elif not success:
+                # This agent failed, might need to adjust routing
+                # Could decrease confidence scores for similar tasks
+                pass
+                
+            # Store learning outcome for future analysis
+            from self_awareness.models import SystemEvolution
+            SystemEvolution.objects.create(
+                change_type='agent_learning',
+                description=f"Agent {agent.name} execution: {'success' if success else 'failure'}",
+                impact_score=0.7 if success else 0.3,
+                metadata={
+                    'agent_id': str(agent.id),
+                    'agent_name': agent.name,
+                    'success': success,
+                    'execution_time': execution_time
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in learning update: {e}")
 
 
 class IntelligentPromptOptimizer:

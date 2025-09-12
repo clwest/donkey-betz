@@ -94,16 +94,20 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'core.auth_middleware.SecurityHeadersMiddleware',  # Enhanced security headers
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'core.middleware.DisableCSRFForAuthEndpoints',  # Custom CSRF exemption
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.auth_middleware.RateLimitingMiddleware',  # Enhanced rate limiting
+    'core.auth_middleware.APILoggingMiddleware',  # API request/response logging
     
     # Unified platform middleware (will be created)
     # 'gateway.middleware.UnifiedAPIMiddleware',
-    # 'security.middleware.UnifiedAuthMiddleware',
     # 'monitoring.middleware.PerformanceMiddleware',
     # 'billing.middleware.UsageTrackingMiddleware',
 ]
@@ -252,6 +256,14 @@ AGENT_ORCHESTRATION = {
     'AGENT_REGISTRY_CACHE_TTL': int(os.environ.get('AGENT_REGISTRY_CACHE_TTL', '900')),
 }
 
+# WebSocket Security Configuration
+def env_bool(key, default=False):
+    """Helper to parse boolean environment variables"""
+    return os.getenv(key, str(default)).lower() in ('true', '1', 'yes')
+
+REQUIRE_WEBSOCKET_AUTH = env_bool('REQUIRE_WEBSOCKET_AUTH', not DEBUG)
+ENABLE_WEBSOCKET_AUTH = env_bool('ENABLE_WEBSOCKET_AUTH', True)
+
 # Sports Analytics Configuration
 SPORTS_ANALYTICS = {
     'ENABLE_SPORTS_ANALYTICS': os.environ.get('ENABLE_SPORTS_ANALYTICS', 'True') == 'True',
@@ -289,16 +301,18 @@ REST_FRAMEWORK = {
 }
 
 # CORS Configuration
-# In production, dynamically allow the origin if not in development
+# SECURITY: Never use CORS_ALLOW_ALL_ORIGINS in production!
 if DEBUG:
-    # Development - allow specific origins
-    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:8080,http://localhost:5173').split(',')
-    CORS_ALLOW_ALL_ORIGINS = True  # For development only
+    # Development - allow specific origins only
+    default_dev_origins = 'http://localhost:3000,http://localhost:8080,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173'
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', default_dev_origins).split(',')
+    # SECURITY WARNING: Set to False for better security even in development
+    CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'false').lower() == 'true'
 else:
-    # Production - allow configured origins or use regex pattern
+    # Production - strictly controlled origins
     CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else []
-    CORS_ALLOW_ALL_ORIGINS = False
-    # Allow any HTTPS origin in production (can be restricted later)
+    CORS_ALLOW_ALL_ORIGINS = False  # Never allow all origins in production
+    # Allow specific subdomains in production
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r"^https://.*\.donkeybetz\.com$",  # Allow all subdomains
         r"^https://.*\.vercel\.app$",      # Allow Vercel deployments
@@ -431,3 +445,167 @@ LOGGING = {
         },
     },
 }
+
+# =============================================================================
+# PRODUCTION SECURITY CONFIGURATION
+# =============================================================================
+
+# Import secure environment manager
+from core.security import env, env_bool, env_int, env_list
+
+# Security Headers and HTTPS
+if not DEBUG:
+    # HTTPS and Security Headers
+    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', True)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # HSTS (HTTP Strict Transport Security)
+    SECURE_HSTS_SECONDS = env_int('SECURE_HSTS_SECONDS', 31536000)  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', True)
+    SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', True)
+    
+    # Security Headers
+    SECURE_CONTENT_TYPE_NOSNIFF = env_bool('SECURE_CONTENT_TYPE_NOSNIFF', True)
+    SECURE_BROWSER_XSS_FILTER = env_bool('SECURE_BROWSER_XSS_FILTER', True)
+    X_FRAME_OPTIONS = env('X_FRAME_OPTIONS', 'DENY')
+    
+    # Cookie Security
+    SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', True)
+    SESSION_COOKIE_HTTPONLY = env_bool('SESSION_COOKIE_HTTPONLY', True)
+    SESSION_COOKIE_SAMESITE = env('SESSION_COOKIE_SAMESITE', 'Strict')
+    SESSION_COOKIE_AGE = env_int('SESSION_COOKIE_AGE', 1209600)  # 2 weeks
+    SESSION_EXPIRE_AT_BROWSER_CLOSE = env_bool('SESSION_EXPIRE_AT_BROWSER_CLOSE', False)
+    
+    CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', True)
+    CSRF_COOKIE_HTTPONLY = env_bool('CSRF_COOKIE_HTTPONLY', True)
+    CSRF_COOKIE_SAMESITE = env('CSRF_COOKIE_SAMESITE', 'Strict')
+    CSRF_USE_SESSIONS = env_bool('CSRF_USE_SESSIONS', False)
+    
+    # Content Security Policy (CSP)
+    CSP_DEFAULT_SRC = env_list('CSP_DEFAULT_SRC', ["'self'"])
+    CSP_SCRIPT_SRC = env_list('CSP_SCRIPT_SRC', ["'self'", "'unsafe-inline'"])
+    CSP_STYLE_SRC = env_list('CSP_STYLE_SRC', ["'self'", "'unsafe-inline'"])
+    CSP_IMG_SRC = env_list('CSP_IMG_SRC', ["'self'", 'data:', 'https:'])
+    CSP_FONT_SRC = env_list('CSP_FONT_SRC', ["'self'", 'data:'])
+    CSP_CONNECT_SRC = env_list('CSP_CONNECT_SRC', ["'self'", 'ws:', 'wss:', 'https:'])
+    CSP_FRAME_ANCESTORS = env_list('CSP_FRAME_ANCESTORS', ["'none'"])
+    
+    # Referrer Policy
+    SECURE_REFERRER_POLICY = env('SECURE_REFERRER_POLICY', 'strict-origin-when-cross-origin')
+
+# Enhanced Password Validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': env_int('PASSWORD_MIN_LENGTH', 12),
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Rate Limiting Configuration
+RATE_LIMIT_ENABLED = env_bool('RATE_LIMIT_ENABLED', not DEBUG)
+if RATE_LIMIT_ENABLED:
+    RATELIMIT_ENABLE = True
+    # RATELIMIT_VIEW = 'core.views.ratelimit_exceeded'  # Uncomment when view is created
+    RATELIMIT_RATE = env('RATELIMIT_RATE', '100/h')  # Default: 100 requests per hour
+    
+    # Specific rate limits
+    LOGIN_RATE_LIMIT = env('LOGIN_RATE_LIMIT', '5/m')  # 5 login attempts per minute
+    API_RATE_LIMIT = env('API_RATE_LIMIT', '1000/h')  # 1000 API calls per hour
+    REGISTER_RATE_LIMIT = env('REGISTER_RATE_LIMIT', '3/h')  # 3 registrations per hour
+
+# Account Security
+ACCOUNT_LOCKOUT_ATTEMPTS = env_int('ACCOUNT_LOCKOUT_ATTEMPTS', 5)
+ACCOUNT_LOCKOUT_DURATION = env_int('ACCOUNT_LOCKOUT_DURATION', 1800)  # 30 minutes
+PASSWORD_RESET_TIMEOUT = env_int('PASSWORD_RESET_TIMEOUT', 3600)  # 1 hour
+
+# File Upload Security
+FILE_UPLOAD_MAX_MEMORY_SIZE = env_int('FILE_UPLOAD_MAX_MEMORY_SIZE', 5242880)  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = env_int('DATA_UPLOAD_MAX_MEMORY_SIZE', 5242880)  # 5MB
+MAX_UPLOAD_SIZE = env_int('MAX_UPLOAD_SIZE', 10485760)  # 10MB
+
+# Allowed file extensions for uploads
+ALLOWED_UPLOAD_EXTENSIONS = env_list(
+    'ALLOWED_UPLOAD_EXTENSIONS',
+    ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.txt', '.csv', '.json']
+)
+
+# Two-Factor Authentication
+ENABLE_2FA = env_bool('ENABLE_2FA', False)
+if ENABLE_2FA:
+    INSTALLED_APPS += ['django_otp', 'django_otp.plugins.otp_totp']
+    MIDDLEWARE += ['django_otp.middleware.OTPMiddleware']
+    OTP_TOTP_ISSUER = env('2FA_ISSUER_NAME', 'Unified Donkey Betz')
+
+# API Security
+API_KEY_CUSTOM_HEADER = 'HTTP_X_API_KEY'
+REQUIRE_API_KEY = env_bool('REQUIRE_API_KEY', not DEBUG)
+
+# Audit Logging
+ENABLE_AUDIT_LOG = env_bool('ENABLE_AUDIT_LOG', not DEBUG)
+AUDIT_LOG_RETENTION_DAYS = env_int('AUDIT_LOG_RETENTION_DAYS', 90)
+
+# Security Monitoring
+ENABLE_SECURITY_MONITORING = env_bool('ENABLE_SECURITY_MONITORING', not DEBUG)
+SECURITY_ALERT_EMAIL = env('SECURITY_ALERT_EMAIL', '')
+FAILED_LOGIN_THRESHOLD = env_int('FAILED_LOGIN_THRESHOLD', 10)
+
+# IP Whitelisting/Blacklisting
+ENABLE_IP_FILTERING = env_bool('ENABLE_IP_FILTERING', False)
+IP_WHITELIST = env_list('IP_WHITELIST', [])
+IP_BLACKLIST = env_list('IP_BLACKLIST', [])
+
+# Session Security
+SESSION_SAVE_EVERY_REQUEST = env_bool('SESSION_SAVE_EVERY_REQUEST', True)
+SESSION_COOKIE_NAME = env('SESSION_COOKIE_NAME', 'sessionid')
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+# CSRF Protection
+# CSRF_FAILURE_VIEW = 'core.views.csrf_failure'  # Uncomment when view is created
+CSRF_COOKIE_NAME = env('CSRF_COOKIE_NAME', 'csrftoken')
+
+# Clickjacking Protection
+X_FRAME_OPTIONS = env('X_FRAME_OPTIONS', 'DENY')
+
+# Host Header Validation
+USE_X_FORWARDED_HOST = env_bool('USE_X_FORWARDED_HOST', False)
+USE_X_FORWARDED_PORT = env_bool('USE_X_FORWARDED_PORT', False)
+
+# SQL Injection Protection (already handled by Django ORM)
+# XSS Protection (handled by Django templates and CSP)
+
+# Directory Traversal Protection
+DISALLOWED_USER_AGENTS = env_list('DISALLOWED_USER_AGENTS', [])
+
+# Secure Random Number Generation
+# Django uses os.urandom() by default which is cryptographically secure
+
+# Backup and Recovery Configuration
+if not DEBUG:
+    BACKUP_ENABLED = env_bool('BACKUP_ENABLED', True)
+    BACKUP_RETENTION_DAYS = env_int('BACKUP_RETENTION_DAYS', 30)
+    BACKUP_ENCRYPTION_KEY = env('BACKUP_ENCRYPTION_KEY', '')
+
+# Environment Validation
+if env_bool('VALIDATE_ENVIRONMENT', not DEBUG):
+    from core.security import validate_environment
+    validation_results = validate_environment()
+    if not validation_results['valid']:
+        import warnings
+        for error in validation_results['errors']:
+            warnings.warn(f"SECURITY ERROR: {error}", RuntimeWarning)
+        if not DEBUG:
+            raise ImproperlyConfigured(
+                "Security validation failed. Please fix the errors above."
+            )

@@ -315,40 +315,57 @@ Tone: ${editForm.tone || 'professional'}`;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/campaigns')}
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            Back
-          </Button>
-          {isEditing ? (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={editForm.name}
-                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                className="text-2xl font-bold bg-dark-800 text-white px-3 py-1 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none"
+    <div className="space-y-6" style={{ backgroundColor: 'var(--gaming-bg-primary)', minHeight: '100vh' }}>
+      {/* Header - Gaming Style */}
+      <div className="gaming-neural-card p-6">
+        <div className="gaming-border-glow"></div>
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/campaigns')}
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Back
+            </Button>
+            {isEditing ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  className="gaming-neural-input text-2xl font-bold font-mono px-3 py-1 rounded-lg"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  color: 'var(--gaming-text-primary)'
+                }}
                 placeholder="Campaign Name"
               />
               <input
                 type="text"
                 value={editForm.description}
                 onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                className="text-gray-400 bg-dark-800 px-3 py-1 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none w-full"
+                className="gaming-neural-input font-mono px-3 py-1 rounded-lg w-full"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  color: 'var(--gaming-text-secondary)'
+                }}
                 placeholder="Campaign Description"
               />
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-white">
-                  {campaign.name || campaign.title || 'Untitled Campaign'}
+                <h1 className="text-3xl font-black uppercase tracking-wider" 
+                    style={{ 
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--gaming-neon-cyan)',
+                      textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
+                    }}>
+                  {campaign.name || campaign.title || 'UNTITLED CAMPAIGN'}
                 </h1>
                 <Button
                   size="sm"
@@ -358,14 +375,18 @@ Tone: ${editForm.tone || 'professional'}`;
                   <PencilIcon className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-gray-400 mt-1">
-                {campaign.description || 'No description'}
+              <p className="mt-3 font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+                {campaign.description || 'NO DESCRIPTION'}
               </p>
             </div>
           )}
-        </div>
+          </div>
         <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(campaign.status)}`}>
+          <span className={`px-4 py-2 rounded-xl text-sm font-bold font-mono uppercase tracking-wider ${getStatusColor(campaign.status)}`}
+                style={{
+                  border: '1px solid var(--gaming-border)',
+                  boxShadow: '0 0 10px rgba(0, 255, 255, 0.2)'
+                }}>
             {campaign.status}
           </span>
           {campaign.status === 'draft' && (
@@ -396,56 +417,84 @@ Tone: ${editForm.tone || 'professional'}`;
             Delete
           </Button>
         </div>
+        </div>
       </div>
 
-      {/* Campaign Info - Editable */}
+      {/* Campaign Info - Gaming Style */}
       {isEditing ? (
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Campaign Details</h3>
+        <div className="gaming-neural-card p-6">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10">
+          <h3 className="text-xl font-bold font-mono uppercase tracking-wider mb-6" 
+              style={{ color: 'var(--gaming-neon-cyan)' }}>CAMPAIGN NEURAL DATA</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-400 block mb-1">Business Name</label>
+              <label className="text-sm font-mono uppercase tracking-wider block mb-2" 
+                     style={{ color: 'var(--gaming-text-secondary)' }}>BUSINESS ENTITY</label>
               <input
                 type="text"
                 value={editForm.business_name}
                 onChange={(e) => setEditForm({...editForm, business_name: e.target.value})}
-                className="w-full bg-dark-800 text-white px-3 py-2 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none"
+                className="gaming-neural-input w-full px-3 py-2 rounded-lg font-mono"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  color: 'var(--gaming-text-primary)'
+                }}
                 placeholder="Your Company Name"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 block mb-1">Product/Service</label>
+              <label className="text-sm font-mono uppercase tracking-wider block mb-2" 
+                     style={{ color: 'var(--gaming-text-secondary)' }}>PRODUCT MODULE</label>
               <input
                 type="text"
                 value={editForm.product}
                 onChange={(e) => setEditForm({...editForm, product: e.target.value})}
-                className="w-full bg-dark-800 text-white px-3 py-2 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none"
+                className="gaming-neural-input w-full px-3 py-2 rounded-lg font-mono"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  color: 'var(--gaming-text-primary)'
+                }}
                 placeholder="What you're promoting"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 block mb-1">Target Audience</label>
+              <label className="text-sm font-mono uppercase tracking-wider block mb-2" 
+                     style={{ color: 'var(--gaming-text-secondary)' }}>TARGET MATRIX</label>
               <input
                 type="text"
                 value={editForm.target_audience}
                 onChange={(e) => setEditForm({...editForm, target_audience: e.target.value})}
-                className="w-full bg-dark-800 text-white px-3 py-2 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none"
+                className="gaming-neural-input w-full px-3 py-2 rounded-lg font-mono"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  color: 'var(--gaming-text-primary)'
+                }}
                 placeholder="Who is your audience?"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-400 block mb-1">Tone</label>
+              <label className="text-sm font-mono uppercase tracking-wider block mb-2" 
+                     style={{ color: 'var(--gaming-text-secondary)' }}>NEURAL TONE</label>
               <select
                 value={editForm.tone}
                 onChange={(e) => setEditForm({...editForm, tone: e.target.value})}
-                className="w-full bg-dark-800 text-white px-3 py-2 rounded-lg border border-dark-600 focus:border-primary-500 focus:outline-none"
+                className="gaming-neural-input w-full px-3 py-2 rounded-lg font-mono"
+                style={{
+                  background: 'var(--gaming-bg-elevated)',
+                  border: '1px solid var(--gaming-border)',
+                  color: 'var(--gaming-text-primary)'
+                }}
               >
-                <option value="professional">Professional</option>
-                <option value="casual">Casual</option>
-                <option value="friendly">Friendly</option>
-                <option value="excited">Excited</option>
-                <option value="urgent">Urgent</option>
-                <option value="technical">Technical</option>
+                <option value="professional" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>PROFESSIONAL</option>
+                <option value="casual" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>CASUAL</option>
+                <option value="friendly" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>FRIENDLY</option>
+                <option value="excited" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>EXCITED</option>
+                <option value="urgent" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>URGENT</option>
+                <option value="technical" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>TECHNICAL</option>
               </select>
             </div>
           </div>
@@ -453,45 +502,69 @@ Tone: ${editForm.tone || 'professional'}`;
             <Button onClick={handleSaveEdit}>Save Changes</Button>
             <Button variant="secondary" onClick={() => setIsEditing(false)}>Cancel</Button>
           </div>
-        </Card>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <div className="text-sm text-gray-400">Business</div>
-            <div className="text-lg font-semibold text-white">
-              {campaign.config?.business || 'Not specified'}
+          <div className="gaming-neural-card p-4">
+            <div className="gaming-border-glow"></div>
+            <div className="relative z-10">
+              <div className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>BUSINESS ENTITY</div>
+              <div className="text-lg font-bold font-mono" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                {(campaign.config?.business || 'NOT SPECIFIED').toUpperCase()}
+              </div>
             </div>
-          </Card>
-          <Card>
-            <div className="text-sm text-gray-400">Product</div>
-            <div className="text-lg font-semibold text-white">
-              {campaign.config?.product || 'Not specified'}
+          </div>
+          <div className="gaming-neural-card p-4">
+            <div className="gaming-border-glow"></div>
+            <div className="relative z-10">
+              <div className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>PRODUCT MODULE</div>
+              <div className="text-lg font-bold font-mono" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                {(campaign.config?.product || 'NOT SPECIFIED').toUpperCase()}
+              </div>
             </div>
-          </Card>
-          <Card>
-            <div className="text-sm text-gray-400">Target Audience</div>
-            <div className="text-lg font-semibold text-white">
-              {typeof campaign.target_audience === 'object' 
-                ? campaign.target_audience.description 
-                : campaign.target_audience || 'Not specified'}
+          </div>
+          <div className="gaming-neural-card p-4">
+            <div className="gaming-border-glow"></div>
+            <div className="relative z-10">
+              <div className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>TARGET MATRIX</div>
+              <div className="text-lg font-bold font-mono" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                {(typeof campaign.target_audience === 'object' 
+                  ? campaign.target_audience.description 
+                  : campaign.target_audience || 'NOT SPECIFIED').toUpperCase()}
+              </div>
             </div>
-          </Card>
-          <Card>
-            <div className="text-sm text-gray-400">Tone</div>
-            <div className="text-lg font-semibold text-white capitalize">
-              {campaign.tone || 'Professional'}
+          </div>
+          <div className="gaming-neural-card p-4">
+            <div className="gaming-border-glow"></div>
+            <div className="relative z-10">
+              <div className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>NEURAL TONE</div>
+              <div className="text-lg font-bold font-mono uppercase" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                {(campaign.tone || 'PROFESSIONAL').toUpperCase()}
+              </div>
             </div>
-          </Card>
+          </div>
         </div>
       )}
 
-      {/* Content Generation */}
-      <Card>
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-white mb-2">Generate Content</h2>
-          <p className="text-sm text-gray-400">Generate any type of content for this campaign. Mix and match as needed!</p>
-          <p className="text-xs text-primary-400 mt-1">💡 Pro tip: If your podcast goes viral, generate social posts and blogs to amplify it!</p>
-        </div>
+      {/* Content Generation - Gaming Style */}
+      <div className="gaming-neural-card p-6">
+        <div className="gaming-border-glow"></div>
+        <div className="relative z-10">
+          <div className="mb-6">
+            <h2 className="text-2xl font-black font-mono uppercase tracking-wider mb-3" 
+                style={{ 
+                  color: 'var(--gaming-neon-cyan)',
+                  textShadow: '0 0 15px rgba(0, 255, 255, 0.5)'
+                }}>NEURAL CONTENT FORGE</h2>
+            <p className="text-sm font-mono mb-2" style={{ color: 'var(--gaming-text-secondary)' }}>
+              GENERATE ANY TYPE OF CONTENT FOR THIS CAMPAIGN MATRIX. MIX AND MATCH AS NEEDED!
+            </p>
+            <p className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--gaming-neon-purple)' }}>
+              <span className="animate-pulse">⚡</span>
+              NEURAL TIP: IF YOUR PODCAST GOES VIRAL, GENERATE SOCIAL POSTS AND BLOGS TO AMPLIFY IT!
+            </p>
+          </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {/* Quick Content */}
@@ -580,19 +653,28 @@ Tone: ${editForm.tone || 'professional'}`;
             </div>
           )}
         </div>
-      </Card>
+      </div>
 
-      {/* Analytics Preview */}
+      {/* Analytics Preview - Gaming Style */}
       {campaign.status !== 'draft' && (
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <ChartBarIcon className="h-5 w-5 text-primary-400" />
-            <h2 className="text-xl font-semibold text-white">Performance</h2>
+        <div className="gaming-neural-card p-6">
+          <div className="gaming-border-glow"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <ChartBarIcon className="h-6 w-6" style={{ 
+                color: 'var(--gaming-neon-purple)',
+                filter: 'drop-shadow(0 0 8px rgba(157, 78, 221, 0.8))'
+              }} />
+              <h2 className="text-xl font-bold font-mono uppercase tracking-wider" 
+                  style={{ color: 'var(--gaming-neon-purple)' }}>NEURAL METRICS</h2>
+            </div>
+            <div className="text-center py-12" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <div className="gaming-loading-matrix mb-4 mx-auto"></div>
+              <p className="font-mono uppercase tracking-wide">ANALYTICS MATRIX INITIALIZING...</p>
+              <p className="font-mono text-sm mt-2">METRICS WILL APPEAR ONCE CAMPAIGN IS ACTIVE</p>
+            </div>
           </div>
-          <div className="text-center py-8 text-gray-400">
-            <p>Analytics will appear here once the campaign is running</p>
-          </div>
-        </Card>
+        </div>
       )}
 
       {/* Content Viewer Modal */}
@@ -689,6 +771,7 @@ Tone: ${editForm.tone || 'professional'}`;
                   setSelectedContentType('');
                 }}
                 className="text-gray-400 hover:text-white"
+                aria-label="Close modal"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -858,13 +941,13 @@ Tone: ${editForm.tone || 'professional'}`;
                 }}
                 className="bg-red-500/20 text-red-400 hover:bg-red-500/30"
               >
-                <TrashIcon className="h-4 w-4" />
                 Delete Campaign
               </Button>
             </div>
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
