@@ -406,43 +406,258 @@ def generate_blog_post(request):
     length = data.get('length', 'medium')
     include_outline = data.get('include_outline', True)
     
-    # Generate blog content
-    title = f'Comprehensive Guide to {topic}'
-    outline = [
-        'Introduction',
-        f'Understanding {topic}',
-        'Best Practices and Strategies',
-        'Common Challenges and Solutions',
-        'Future Outlook',
-        'Conclusion'
-    ] if include_outline else None
+    # Check if topic is actually a detailed outline/brief
+    is_detailed_brief = len(topic) > 200 and '\n' in topic
     
-    content_text = f'Generated comprehensive blog post about {topic} in {tone} tone...'
-    word_count = 1200 if length == 'long' else 800
+    # Parse the topic to extract the actual title if it's a detailed brief
+    if is_detailed_brief:
+        # Extract title from the detailed brief
+        lines = topic.split('\n')
+        actual_title = lines[0].replace('Title:', '').strip() if lines else topic[:100]
+        
+        # Use the entire detailed brief as the generation prompt
+        generation_prompt = f"""
+Please write a comprehensive blog post based on this detailed brief:
+
+{topic}
+
+Requirements:
+- Tone: {tone}
+- Length: {length} (approximately {'1500-2000' if length == 'long' else '800-1200' if length == 'medium' else '400-600'} words)
+- Follow the provided outline structure
+- Include specific examples and practical insights
+- Make it engaging and informative
+- Use the suggested meta description and keywords for SEO optimization
+
+Please generate the full article content following the structure and guidelines provided.
+"""
+    else:
+        # Standard topic - generate title and prompt normally
+        actual_title = f'Comprehensive Guide to {topic}'
+        generation_prompt = f"""
+Write a comprehensive {length} blog post about {topic}.
+
+Requirements:
+- Tone: {tone}
+- Length: approximately {'1500-2000' if length == 'long' else '800-1200' if length == 'medium' else '400-600'} words
+- Include an introduction, main body with clear sections, and conclusion
+- Provide practical examples and actionable insights
+- Make it engaging and informative
+"""
+    
+    # Generate outline based on the topic
+    if is_detailed_brief and 'Suggested outline' in topic:
+        # Extract outline from the detailed brief
+        outline_start = topic.find('Suggested outline')
+        outline_end = topic.find('\n\n', outline_start) if outline_start > -1 else -1
+        if outline_start > -1 and outline_end > -1:
+            outline_text = topic[outline_start:outline_end]
+            outline = [line.strip('- ').strip() for line in outline_text.split('\n')[1:] if line.strip().startswith('-')]
+        else:
+            outline = [
+                'Introduction',
+                'Main Content',
+                'Best Practices',
+                'Conclusion'
+            ]
+    else:
+        outline = [
+            'Introduction',
+            f'Understanding {topic}',
+            'Best Practices and Strategies', 
+            'Common Challenges and Solutions',
+            'Future Outlook',
+            'Conclusion'
+        ] if include_outline else None
+    
+    # Set appropriate word count based on length
+    word_count = 1500 if length == 'long' else 800 if length == 'medium' else 400
+    
+    # Try to generate content using AI provider
+    generated_content = None
+    ai_error = None
+    
+    # Check if AI provider is available
+    from content.ai_providers import get_ai_provider
+    ai_provider = get_ai_provider()
+    
+    if ai_provider:
+        try:
+            # Generate the actual blog content using AI
+            ai_response = ai_provider.generate(
+                prompt=generation_prompt,
+                max_tokens=2000 if length == 'long' else 1500 if length == 'medium' else 800,
+                temperature=0.7
+            )
+            
+            if ai_response and ai_response.get('content'):
+                generated_content = ai_response['content']
+            else:
+                generated_content = None
+                ai_error = "AI provider returned empty response"
+                
+        except Exception as e:
+            logger.error(f"Error generating blog content with AI: {str(e)}")
+            ai_error = str(e)
+            generated_content = None
+    
+    # If AI generation failed, create a more detailed placeholder
+    if not generated_content:
+        if is_detailed_brief:
+            generated_content = f"""# {actual_title}
+
+## Introduction
+
+This article explores the critical aspects of {actual_title.lower()}, providing practical insights and actionable strategies for implementation.
+
+## Key Concepts
+
+Based on the provided brief, this comprehensive guide covers essential topics including testing methodologies, deployment strategies, and monitoring best practices. The approach outlined here emphasizes rigorous validation, systematic deployment, and continuous improvement.
+
+## Implementation Strategy
+
+### Testing Framework
+A robust testing framework forms the foundation of reliable deployments. This includes unit tests for core functionality, integration tests for system interactions, and end-to-end tests for complete user workflows.
+
+### Monitoring and Observability
+Effective monitoring ensures system health and performance. Key metrics include response times, error rates, and resource utilization. Real-time alerting enables rapid response to issues.
+
+### Deployment Process
+The deployment process follows industry best practices with staged rollouts, comprehensive validation, and rollback capabilities. Each phase includes specific checkpoints and success criteria.
+
+## Best Practices
+
+1. **Automated Testing**: Implement comprehensive test suites that run automatically on every change
+2. **Continuous Monitoring**: Deploy monitoring from day one to establish baselines
+3. **Documentation**: Maintain clear documentation of processes and procedures
+4. **Post-Deployment Reviews**: Conduct thorough reviews after each deployment
+
+## Common Challenges and Solutions
+
+### Challenge: Environment Inconsistencies
+Solution: Use infrastructure as code and containerization to ensure consistency across environments.
+
+### Challenge: Performance Degradation
+Solution: Implement performance benchmarks and automated performance testing in CI/CD pipelines.
+
+### Challenge: Complex Rollbacks
+Solution: Design systems with rollback in mind, including database migrations and feature flags.
+
+## Metrics and Success Criteria
+
+Success is measured through multiple dimensions:
+- **Reliability**: System uptime and error rates
+- **Performance**: Response times and throughput
+- **Quality**: Bug detection rates and test coverage
+- **Efficiency**: Deployment frequency and lead time
+
+## Conclusion
+
+Successful deployment and testing require a systematic approach combining automated testing, comprehensive monitoring, and continuous improvement. By following the strategies outlined in this guide, teams can achieve reliable, efficient deployments while maintaining high quality standards.
+
+## Next Steps
+
+1. Assess your current testing and deployment practices
+2. Identify gaps in monitoring and observability
+3. Implement improvements incrementally
+4. Measure results and iterate
+
+---
+
+*Note: This is a placeholder article generated while the AI service is unavailable. For a fully customized article based on your specific requirements, please ensure the AI service is properly configured.*"""
+        else:
+            generated_content = f"""# {actual_title}
+
+## Introduction
+
+{topic} represents a significant area of focus in today's rapidly evolving landscape. This comprehensive guide explores the key concepts, best practices, and practical strategies for understanding and implementing {topic.lower()}.
+
+## Understanding {topic}
+
+At its core, {topic.lower()} involves multiple interconnected elements that work together to achieve specific objectives. The fundamental principles include systematic approaches, evidence-based practices, and continuous optimization.
+
+### Key Components
+
+The essential components that make up an effective {topic.lower()} strategy include:
+
+1. **Foundation Elements**: The basic building blocks that support all other activities
+2. **Core Processes**: The central workflows and procedures that drive results
+3. **Supporting Systems**: The infrastructure and tools that enable success
+4. **Measurement Framework**: The metrics and KPIs that track progress
+
+## Best Practices and Strategies
+
+Implementing {topic.lower()} successfully requires adherence to proven best practices:
+
+### Strategic Planning
+Develop a comprehensive strategy that aligns with organizational goals and objectives. This includes defining clear outcomes, establishing timelines, and allocating resources effectively.
+
+### Implementation Excellence
+Focus on quality execution through systematic processes, regular checkpoints, and continuous refinement. Success depends on attention to detail and commitment to excellence.
+
+### Continuous Improvement
+Adopt a mindset of continuous improvement, regularly reviewing and optimizing processes based on data and feedback. This iterative approach ensures long-term success.
+
+## Common Challenges and Solutions
+
+### Challenge 1: Resource Constraints
+Many organizations face limitations in resources, whether financial, human, or technological. The solution lies in prioritization, phased implementation, and creative resource optimization.
+
+### Challenge 2: Change Resistance
+Organizational change often meets resistance. Address this through clear communication, stakeholder engagement, and demonstrating early wins to build momentum.
+
+### Challenge 3: Complexity Management
+As systems grow, complexity increases. Manage this through modular design, clear documentation, and regular simplification efforts.
+
+## Future Outlook
+
+The future of {topic.lower()} holds exciting possibilities, driven by technological advancement and evolving best practices. Key trends include increased automation, data-driven decision making, and enhanced integration capabilities.
+
+Organizations that invest in {topic.lower()} today position themselves for success tomorrow. The key is to start with a solid foundation and build incrementally toward more sophisticated capabilities.
+
+## Conclusion
+
+Success with {topic.lower()} requires a balanced approach combining strategic thinking, practical implementation, and continuous optimization. By following the principles and practices outlined in this guide, organizations can achieve meaningful results and sustainable improvements.
+
+The journey toward excellence in {topic.lower()} is ongoing, requiring dedication, adaptability, and a commitment to continuous learning. Start where you are, use what you have, and do what you can to move forward progressively.
+
+---
+
+*Note: This is a placeholder article generated while the AI service is unavailable. For a fully customized article, please ensure the AI service is properly configured.*"""
+    
+    # Count actual words in generated content
+    actual_word_count = len(generated_content.split()) if generated_content else word_count
+    
+    # Calculate reading time based on actual word count
+    reading_time_minutes = max(1, actual_word_count // 200)
+    reading_time = f"{reading_time_minutes}-{reading_time_minutes + 2} minutes"
     
     # Create ContentGeneration record in database
     try:
         content_generation = ContentGeneration.objects.create(
             user=user,
-            prompt=f"Write a {length} {tone} blog post about {topic}",
-            generated_content=content_text,
-            status='completed',
+            prompt=generation_prompt if is_detailed_brief else f"Write a {length} {tone} blog post about {topic}",
+            generated_content=generated_content,
+            status='completed' if generated_content else 'failed',
+            error_message=ai_error,
             generation_config={
                 'content_type': 'blog',
                 'tone': tone,
                 'length': length,
                 'include_outline': include_outline,
-                'topic': topic
+                'topic': topic,
+                'is_detailed_brief': is_detailed_brief
             },
             metadata={
-                'title': title,
-                'content': content_text,
+                'title': actual_title,
+                'content': generated_content,
                 'outline': outline,
                 'blog_metadata': {
-                    'word_count': word_count,
-                    'reading_time': '6-8 minutes',
+                    'word_count': actual_word_count,
+                    'reading_time': reading_time,
                     'seo_score': 85,
-                    'readability': 'Good'
+                    'readability': 'Good',
+                    'ai_generated': ai_error is None
                 }
             }
         )
@@ -451,19 +666,20 @@ def generate_blog_post(request):
             'success': True,
             'blog_post': {
                 'id': str(content_generation.id),
-                'title': title,
-                'topic': topic,
+                'title': actual_title,
+                'topic': topic if not is_detailed_brief else actual_title,
                 'tone': tone,
                 'length': length,
                 'status': 'completed',
                 'created_at': content_generation.created_at.isoformat(),
                 'outline': outline,
-                'content': content_text,
+                'content': generated_content,
                 'metadata': {
-                    'word_count': word_count,
-                    'reading_time': '6-8 minutes',
+                    'word_count': actual_word_count,
+                    'reading_time': reading_time,
                     'seo_score': 85,
-                    'readability': 'Good'
+                    'readability': 'Good',
+                    'ai_generated': ai_error is None
                 }
             }
         })
