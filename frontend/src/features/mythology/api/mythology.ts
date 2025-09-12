@@ -67,6 +67,19 @@ export interface AlertNotification {
   read: boolean;
 }
 
+export interface MythologyEvent {
+  id: string;
+  event_type: string;
+  mutation_type?: string;
+  patterns_detected: string[];
+  risk_level: number;
+  confidence_score: number;
+  was_prevented: boolean;
+  prevention_method?: string;
+  created_at: string;
+  content_preview: string;
+}
+
 // API Query Keys
 export const mythologyKeys = {
   all: ['mythology'] as const,
@@ -74,6 +87,7 @@ export const mythologyKeys = {
   flaggedContent: (filters?: any) => [...mythologyKeys.all, 'flagged', filters] as const,
   notifications: () => [...mythologyKeys.all, 'notifications'] as const,
   contentDetail: (id: number) => [...mythologyKeys.all, 'content', id] as const,
+  recentEvents: (params?: any) => [...mythologyKeys.all, 'recent-events', params] as const,
 };
 
 // API Functions
@@ -149,6 +163,16 @@ const mythologyAPI = {
     const response = await apiClient.post('/api/v1/mythology/notifications/mark-all-read/');
     return response.data;
   },
+
+  // Get recent events for Neural Scan section
+  getRecentEvents: async (params?: {
+    limit?: number;
+    risk_level_min?: number;
+  }): Promise<MythologyEvent[]> => {
+    Logger.api('GET', '/api/v1/mythology/recent-events/', { params });
+    const response = await apiClient.get('/api/v1/mythology/recent-events/', { params });
+    return response.data.events || [];
+  },
 };
 
 // React Query Hooks
@@ -183,6 +207,15 @@ export const useNotifications = (params?: Parameters<typeof mythologyAPI.getNoti
     queryFn: () => mythologyAPI.getNotifications(params),
     staleTime: 5 * 1000, // 5 seconds
     refetchInterval: 30 * 1000, // Refetch every 30 seconds
+  });
+};
+
+export const useRecentEvents = (params?: Parameters<typeof mythologyAPI.getRecentEvents>[0]) => {
+  return useQuery({
+    queryKey: mythologyKeys.recentEvents(params),
+    queryFn: () => mythologyAPI.getRecentEvents(params),
+    staleTime: 10 * 1000, // 10 seconds
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds for live data
   });
 };
 
