@@ -156,7 +156,7 @@ Always prioritize code quality, user experience, and professional-grade function
             },
             
             'llm_provider': 'anthropic',
-            'llm_model': 'claude-3.5-sonnet-20241022',
+            'llm_model': 'claude-3-5-sonnet-20241022',
             'llm_config': {
                 'temperature': 0.1,  # Low temperature for precise, consistent technical output
                 'max_tokens': 4096,
