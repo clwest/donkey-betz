@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +15,9 @@ import {
   SparklesIcon,
   CheckCircleIcon,
   XCircleIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  EyeIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import '../styles/gaming-theme.css';
 import { workflowsService } from '@/services/workflows.service';
@@ -41,6 +44,7 @@ interface TeamWorkflow {
 }
 
 export default function MultiAgentWorkflowsPage() {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgents, setSelectedAgents] = useState<Map<string, string>>(new Map()); // Map of agent name to agent id
   const [loading, setLoading] = useState(true);
@@ -153,17 +157,45 @@ export default function MultiAgentWorkflowsPage() {
         }
       };
 
-      await workflowsService.createWorkflow(workflowData);
+      const createResponse = await workflowsService.createWorkflow(workflowData);
       
       // Execute the workflow
-      await workflowsService.executeWorkflow({
+      const executeResponse = await workflowsService.executeWorkflow({
         workflow_name: teamWorkflow.name,
         prompt: taskPrompt,
         params: {}
       });
 
-      toast.success(`Team workflow "${teamWorkflow.name}" created and executed successfully`);
-      setDialogOpen(false);
+      // Show success message with action buttons
+      toast.success(
+        <div>
+          <p className="font-bold mb-2">Team Deployed Successfully!</p>
+          <p className="text-sm mb-3">"{teamWorkflow.name}" is now executing with {selectedAgents.size} agents</p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => navigate('/workflows')}
+              className="text-xs"
+            >
+              <EyeIcon className="h-3 w-3 mr-1" />
+              View Status
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              className="text-xs"
+            >
+              Continue Here
+            </Button>
+          </div>
+        </div>,
+        {
+          duration: 8000,
+        }
+      );
+      
+      // Clear form but keep dialog open for user choice
       setSelectedAgents(new Map());
       setTaskPrompt('');
       setTeamWorkflow({
@@ -240,6 +272,14 @@ export default function MultiAgentWorkflowsPage() {
               className="gaming-btn-active px-8 py-4 text-lg">
               <PlusIcon className="h-5 w-5 mr-3" />
               BUILD TEAM ({selectedAgents.size})
+            </Button>
+            
+            <Button 
+              onClick={() => navigate('/workflows')}
+              variant="outline"
+              className="px-8 py-3">
+              <ChartBarIcon className="h-5 w-5 mr-3" />
+              VIEW EXECUTIONS
             </Button>
             
             <Button 
