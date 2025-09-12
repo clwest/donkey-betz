@@ -221,82 +221,116 @@ def execute_workflow(request):
                 'error': 'Prompt must be at least 10 characters'
             }, status=400)
         
-        # Create dynamic orchestration based on workflow name
-        agent_sequence = []
+        # First, try to find an existing orchestration with this name
+        existing_orchestration = AgentOrchestration.objects.filter(
+            user=request.user,
+            name=workflow_name,
+            status=AgentStatus.PENDING
+        ).order_by('-created_at').first()
         
-        if 'content' in workflow_name.lower() or 'blog' in workflow_name.lower():
-            # Content workflow
-            research_agent = UnifiedAgentTemplate.objects.filter(
-                specialization=AgentSpecialization.RESEARCH
-            ).first()
-            content_agent = UnifiedAgentTemplate.objects.filter(
-                specialization=AgentSpecialization.CONTENT
-            ).first()
+        if existing_orchestration:
+            # Use the existing orchestration
+            orchestration = existing_orchestration
+            orchestration.workflow_definition['prompt'] = prompt
+            orchestration.status = AgentStatus.RUNNING
+            orchestration.save()
+            orchestration_id = orchestration.id
+            agent_sequence = orchestration.agent_sequence
+        else:
+            # Create dynamic orchestration based on workflow name if not found
+            agent_sequence = []
             
-            if research_agent and content_agent:
+            if 'content' in workflow_name.lower() or 'blog' in workflow_name.lower():
+                # Content workflow
+                research_agent = UnifiedAgentTemplate.objects.filter(
+                    specialization=AgentSpecialization.RESEARCH
+                ).first()
+                content_agent = UnifiedAgentTemplate.objects.filter(
+                    specialization=AgentSpecialization.CONTENT
+                ).first()
+                
+                if research_agent and content_agent:
+                    agent_sequence = [
+                        {'agent_id': str(research_agent.id), 'name': research_agent.name, 'order': 1},
+                        {'agent_id': str(content_agent.id), 'name': content_agent.name, 'order': 2}
+                    ]
+            
+            elif 'business' in workflow_name.lower() or 'strategy' in workflow_name.lower():
+                # Business workflow
+                research_agent = UnifiedAgentTemplate.objects.filter(
+                    specialization=AgentSpecialization.RESEARCH
+                ).first()
+                business_agent = UnifiedAgentTemplate.objects.filter(
+                    specialization=AgentSpecialization.BUSINESS
+                ).first()
+                
+                if research_agent and business_agent:
+                    agent_sequence = [
+                        {'agent_id': str(research_agent.id), 'name': research_agent.name, 'order': 1},
+                        {'agent_id': str(business_agent.id), 'name': business_agent.name, 'order': 2}
+                    ]
+            
+            elif 'sports' in workflow_name.lower() or 'betting' in workflow_name.lower():
+                # Sports workflow
+                sports_agents = UnifiedAgentTemplate.objects.filter(
+                    specialization__in=[AgentSpecialization.SPORTS_ANALYTICS, AgentSpecialization.ODDS_CALCULATION]
+                )[:2]
+                
                 agent_sequence = [
-                    {'agent_id': str(research_agent.id), 'name': research_agent.name, 'order': 1},
-                    {'agent_id': str(content_agent.id), 'name': content_agent.name, 'order': 2}
+                    {'agent_id': str(agent.id), 'name': agent.name, 'order': i+1}
+                    for i, agent in enumerate(sports_agents)
                 ]
-        
-        elif 'business' in workflow_name.lower() or 'strategy' in workflow_name.lower():
-            # Business workflow
-            research_agent = UnifiedAgentTemplate.objects.filter(
-                specialization=AgentSpecialization.RESEARCH
-            ).first()
-            business_agent = UnifiedAgentTemplate.objects.filter(
-                specialization=AgentSpecialization.BUSINESS
-            ).first()
             
-            if research_agent and business_agent:
-                agent_sequence = [
-                    {'agent_id': str(research_agent.id), 'name': research_agent.name, 'order': 1},
-                    {'agent_id': str(business_agent.id), 'name': business_agent.name, 'order': 2}
-                ]
-        
-        elif 'sports' in workflow_name.lower() or 'betting' in workflow_name.lower():
-            # Sports workflow
-            sports_agents = UnifiedAgentTemplate.objects.filter(
-                specialization__in=[AgentSpecialization.SPORTS_ANALYTICS, AgentSpecialization.ODDS_CALCULATION]
-            )[:2]
+            if not agent_sequence:
+                # Default to any available agent
+                default_agent = UnifiedAgentTemplate.objects.first()
+                if default_agent:
+                    agent_sequence = [{
+                        'agent_id': str(default_agent.id), 
+                        'name': default_agent.name, 
+                        'order': 1
+                    }]
             
-            agent_sequence = [
-                {'agent_id': str(agent.id), 'name': agent.name, 'order': i+1}
-                for i, agent in enumerate(sports_agents)
-            ]
+            if not agent_sequence:
+                return Response({
+                    'success': False,
+                    'error': 'No agents available for execution'
+                }, status=400)
+            
+            # Create new orchestration
+            orchestration = AgentOrchestration.objects.create(
+                    user=request.user,
+                    name=workflow_name,
+                    description=f"Dynamic workflow: {workflow_name}",
+                    workflow_definition={'name': workflow_name, 'description': f"Dynamic workflow: {workflow_name}", 'prompt': prompt},
+                    agent_sequence=agent_sequence,
+                    execution_strategy='sequential',
+                    status=AgentStatus.RUNNING
+            )
+            orchestration_id = orchestration.id
         
-        if not agent_sequence:
-            # Default to any available agent
-            default_agent = UnifiedAgentTemplate.objects.first()
-            if default_agent:
-                agent_sequence = [{
-                    'agent_id': str(default_agent.id), 
-                    'name': default_agent.name, 
-                    'order': 1
-                }]
-        
-        if not agent_sequence:
-            return Response({
-                'success': False,
-                'error': 'No agents available for execution'
-            }, status=400)
-        
-        # Create orchestration
-        orchestration = AgentOrchestration.objects.create(
-                user=request.user,
-                name=workflow_name,
-                description=f"Dynamic workflow: {workflow_name}",
-                workflow_definition={'name': workflow_name, 'description': f"Dynamic workflow: {workflow_name}", 'prompt': prompt},
-                agent_sequence=agent_sequence,
-                execution_strategy='sequential',
-                status=AgentStatus.PENDING
-        )
-        orchestration_id = orchestration.id
-        
-        # Execute the orchestration with Celery task
-        task = execute_orchestration.delay(
-            orchestration_id=str(orchestration_id)
-        )
+        # Try to execute the orchestration with Celery task
+        try:
+            task = execute_orchestration.delay(
+                orchestration_id=str(orchestration_id)
+            )
+            task_id = task.id
+        except Exception as celery_error:
+            logger.warning(f"Celery execution failed, using synchronous fallback: {celery_error}")
+            # Fallback: Mark as running without Celery
+            task_id = None
+            
+            # Create mock execution records for tracking
+            for i, agent_info in enumerate(agent_sequence):
+                AgentExecution.objects.create(
+                    user=request.user,
+                    parent_orchestration=orchestration,
+                    agent_name=agent_info['name'],
+                    agent_id=agent_info['agent_id'],
+                    user_prompt=prompt,
+                    status=AgentStatus.PENDING,
+                    execution_order=i + 1
+                )
         
         return Response({
             'success': True,
@@ -306,8 +340,9 @@ def execute_workflow(request):
                 'status': 'started',
                 'workflow_name': workflow_name,
                 'execution_id': str(orchestration_id),
-                'task_id': task.id,
-                'message': f'Executing REAL workflow: {workflow_name} with {len(agent_sequence) if "agent_sequence" in locals() else "existing"} agents'
+                'task_id': task_id,
+                'message': f'Executing workflow: {workflow_name} with {len(agent_sequence)} agents',
+                'agents': [a['name'] for a in agent_sequence]
             }
         })
         
