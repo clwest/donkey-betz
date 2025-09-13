@@ -22,7 +22,7 @@ from .dashboard_views import (
 # Import enhanced multi-sport endpoints
 from core.views_odds_sports import (
     sports_summary, sports_leagues, sports_teams, sports_games,
-    sports_games_trending, sports_sync
+    sports_games_trending, sports_sync, live_odds
 )
 
 # Create router for ViewSets
@@ -59,6 +59,7 @@ urlpatterns = [
     path('games/', sports_games, name='sports-games'),
     path('games/trending/', sports_games_trending, name='sports-games-trending'),
     path('sync/', sports_sync, name='sports-sync'),
+    path('odds/live/', live_odds, name='live-odds'),
     
     # Main API router (prefix removed as it's added in main urls.py)
     path('', include(router.urls)),

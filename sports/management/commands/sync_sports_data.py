@@ -1,289 +1,157 @@
 """
-Management command to sync sports data from multiple providers
-
-This command replaces the need for Polygon.io by pulling data from:
-- ESPN Hidden API (free, comprehensive)
-- TheSportsDB.com (free, community-driven)
-- The Odds API (free tier available)
-
-Usage:
-    python manage.py sync_sports_data --leagues --teams --games --odds
-    python manage.py sync_sports_data --all
-    python manage.py sync_sports_data --sport nfl --date 2024-09-15
+Management command to sync sports data from external APIs
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import datetime, timedelta
-import logging
-
+from sports.models import League, Team, Game
 from sports.data_providers import sports_data_manager
-from sports.models import League, SportType
-
+from dateutil import parser
+import logging
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync sports data from multiple free providers'
+    help = 'Sync sports data from ESPN and other external APIs'
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--leagues',
-            action='store_true',
-            help='Sync leagues from all providers',
-        )
-        parser.add_argument(
-            '--teams',
-            action='store_true',
-            help='Sync teams for all leagues',
-        )
-        parser.add_argument(
-            '--games',
-            action='store_true',
-            help='Sync games for all leagues',
-        )
-        parser.add_argument(
-            '--odds',
-            action='store_true',
-            help='Sync odds data',
-        )
-        parser.add_argument(
-            '--all',
-            action='store_true',
-            help='Sync everything (leagues, teams, games, odds)',
-        )
-        parser.add_argument(
             '--sport',
             type=str,
-            help='Sync only specific sport (nfl, nba, mlb, etc.)',
+            default='ncaaf',
+            help='Sport type to sync (nfl, ncaaf, nba, ncaab, mlb, nhl)'
         )
         parser.add_argument(
             '--date',
             type=str,
-            help='Sync games for specific date (YYYY-MM-DD format)',
+            help='Date to sync games for (YYYY-MM-DD format)'
         )
         parser.add_argument(
-            '--days',
-            type=int,
-            default=7,
-            help='Number of days to sync games for (default: 7)',
+            '--all-sports',
+            action='store_true',
+            help='Sync all supported sports'
         )
 
     def handle(self, *args, **options):
-        self.stdout.write(
-            self.style.SUCCESS('🏈 Starting Sports Data Sync with Free Providers')
-        )
-        
-        # Log what we're about to do
-        providers_info = [
-            "📺 ESPN Hidden API (free, comprehensive)",
-            "🏆 TheSportsDB.com (free, community-driven)", 
-            "💰 The Odds API (free tier)",
-        ]
-        
-        self.stdout.write("Available data sources:")
-        for provider in providers_info:
-            self.stdout.write(f"  • {provider}")
-        
-        sync_all = options['all']
-        
-        # Sync leagues
-        if options['leagues'] or sync_all:
-            self.sync_leagues()
-        
-        # Sync teams  
-        if options['teams'] or sync_all:
-            self.sync_teams(options.get('sport'))
-        
-        # Sync games
-        if options['games'] or sync_all:
-            self.sync_games(
-                sport=options.get('sport'),
-                date=options.get('date'),
-                days=options.get('days', 7)
-            )
-        
-        # Sync odds
-        if options['odds'] or sync_all:
-            self.sync_odds(options.get('sport'))
-        
-        self.stdout.write(
-            self.style.SUCCESS('✅ Sports data sync completed!')
-        )
+        sport = options['sport']
+        date = options['date']
+        all_sports = options['all_sports']
 
-    def sync_leagues(self):
-        """Sync leagues from all providers"""
-        self.stdout.write("🔄 Syncing leagues...")
-        
-        results = sports_data_manager.sync_leagues()
-        
-        self.stdout.write(
-            f"  ✅ Created: {results['created']} leagues"
-        )
-        self.stdout.write(
-            f"  🔄 Updated: {results['updated']} leagues"
-        )
-        
-        if results['errors'] > 0:
-            self.stdout.write(
-                self.style.WARNING(f"  ⚠️ Errors: {results['errors']}")
-            )
-
-    def sync_teams(self, sport_filter=None):
-        """Sync teams for leagues"""
-        self.stdout.write("🔄 Syncing teams...")
-        
-        leagues = League.objects.filter(is_active=True)
-        
-        if sport_filter:
-            sport_type = self._get_sport_type(sport_filter)
-            if sport_type:
-                leagues = leagues.filter(sport_type=sport_type)
-        
-        total_created = 0
-        total_updated = 0
-        total_errors = 0
-        
-        for league in leagues:
-            self.stdout.write(f"  📋 Syncing teams for {league.name}...")
-            
-            results = sports_data_manager.sync_teams(league)
-            
-            total_created += results['created']
-            total_updated += results['updated'] 
-            total_errors += results['errors']
-            
-            if results['created'] > 0 or results['updated'] > 0:
-                self.stdout.write(
-                    f"    ✅ {league.abbreviation}: +{results['created']} new, ~{results['updated']} updated"
-                )
-        
-        self.stdout.write(
-            f"  📊 Total: {total_created} created, {total_updated} updated, {total_errors} errors"
-        )
-
-    def sync_games(self, sport=None, date=None, days=7):
-        """Sync games for leagues"""
-        self.stdout.write("🔄 Syncing games...")
-        
-        leagues = League.objects.filter(is_active=True)
-        
-        if sport:
-            sport_type = self._get_sport_type(sport)
-            if sport_type:
-                leagues = leagues.filter(sport_type=sport_type)
-        
-        # Determine date range
-        if date:
-            start_date = datetime.strptime(date, '%Y-%m-%d').date()
-            dates = [start_date]
+        if all_sports:
+            sports_to_sync = ['nfl', 'ncaaf', 'nba', 'ncaab', 'mlb', 'nhl']
         else:
-            # Sync for next `days` days
-            today = timezone.now().date()
-            dates = [today + timedelta(days=i) for i in range(days)]
-        
-        total_created = 0
-        total_updated = 0
-        total_errors = 0
-        
-        for league in leagues:
-            for sync_date in dates:
-                date_str = sync_date.strftime('%Y-%m-%d')
-                self.stdout.write(f"  📅 Syncing {league.abbreviation} games for {date_str}...")
-                
-                results = sports_data_manager.sync_games(league, date_str)
-                
-                total_created += results['created']
-                total_updated += results['updated']
-                total_errors += results['errors']
-                
-                if results['created'] > 0 or results['updated'] > 0:
-                    self.stdout.write(
-                        f"    🎮 {league.abbreviation} {date_str}: +{results['created']} new, ~{results['updated']} updated"
-                    )
-        
-        self.stdout.write(
-            f"  📊 Total games: {total_created} created, {total_updated} updated, {total_errors} errors"
-        )
+            sports_to_sync = [sport]
 
-    def sync_odds(self, sport=None):
-        """Sync odds data from The Odds API"""
-        self.stdout.write("🔄 Syncing odds data...")
+        total_games_synced = 0
         
-        # Map our sport types to Odds API sport keys
-        odds_api_sports = {
-            SportType.NFL: 'americanfootball_nfl',
-            SportType.NCAAF: 'americanfootball_ncaaf', 
-            SportType.NBA: 'basketball_nba',
-            SportType.NCAAB: 'basketball_ncaab',
-            SportType.MLB: 'baseball_mlb',
-            SportType.NHL: 'icehockey_nhl',
-            SportType.SOCCER: 'soccer_epl',  # Premier League as default
-            SportType.MMA: 'mma_mixed_martial_arts',
-            SportType.TENNIS: 'tennis_atp',
-        }
-        
-        if sport:
-            sport_type = self._get_sport_type(sport)
-            if sport_type and sport_type in odds_api_sports:
-                sports_to_sync = [odds_api_sports[sport_type]]
-            else:
-                self.stdout.write(
-                    self.style.WARNING(f"Sport '{sport}' not supported for odds sync")
-                )
-                return
-        else:
-            sports_to_sync = list(odds_api_sports.values())
-        
-        total_updated = 0
-        total_errors = 0
-        
-        for sport_key in sports_to_sync:
-            self.stdout.write(f"  💰 Syncing odds for {sport_key}...")
+        for sport_type in sports_to_sync:
+            self.stdout.write(f"\nSyncing {sport_type.upper()} games...")
             
-            results = sports_data_manager.sync_odds(sport_key)
-            
-            total_updated += results['updated']
-            total_errors += results['errors']
-            
-            if results['updated'] > 0:
-                self.stdout.write(
-                    f"    💸 {sport_key}: {results['updated']} odds updated"
+            try:
+                # Get or create league
+                league, created = League.objects.get_or_create(
+                    sport_type=sport_type,
+                    defaults={
+                        'name': sport_type.upper(),
+                        'abbreviation': sport_type.upper(),
+                        'country': 'USA',
+                        'is_active': True
+                    }
                 )
+                
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f"Created league: {league.name}"))
+                
+                # Sync games from ESPN
+                sync_result = sports_data_manager.sync_games(sport_type, date)
+                
+                if not sync_result['success']:
+                    self.stdout.write(self.style.ERROR(f"Failed to sync {sport_type}: {sync_result.get('message')}"))
+                    continue
+                
+                games_saved = 0
+                for game_data in sync_result.get('games', []):
+                    try:
+                        # Get or create teams
+                        home_team_data = game_data.get('home_team', {})
+                        away_team_data = game_data.get('away_team', {})
+                        
+                        # Get or create teams using the unique constraint fields (league + abbreviation)
+                        home_abbreviation = home_team_data.get('abbreviation', 'UNK')
+                        home_team, _ = Team.objects.get_or_create(
+                            league=league,
+                            abbreviation=home_abbreviation,
+                            defaults={
+                                'name': home_team_data.get('name', 'Unknown'),
+                                'city': '',
+                                'is_active': True
+                            }
+                        )
+                        
+                        away_abbreviation = away_team_data.get('abbreviation', 'UNK')
+                        away_team, _ = Team.objects.get_or_create(
+                            league=league,
+                            abbreviation=away_abbreviation,
+                            defaults={
+                                'name': away_team_data.get('name', 'Unknown'),
+                                'city': '',
+                                'is_active': True
+                            }
+                        )
+                        
+                        # Parse date
+                        game_date = parser.parse(game_data.get('date', timezone.now().isoformat()))
+                        
+                        # Map ESPN status to our status
+                        status_map = {
+                            'STATUS_SCHEDULED': 'scheduled',
+                            'STATUS_IN_PROGRESS': 'live',
+                            'STATUS_FINAL': 'final',
+                            'STATUS_POSTPONED': 'postponed',
+                            'STATUS_CANCELED': 'cancelled',
+                            'STATUS_HALFTIME': 'halftime',
+                        }
+                        
+                        game_status = status_map.get(
+                            game_data.get('status', 'STATUS_SCHEDULED'),
+                            'scheduled'
+                        )
+                        
+                        # Create or update game
+                        game, created = Game.objects.update_or_create(
+                            external_id=game_data.get('external_id', f"espn_{game_data.get('name', '')}"),
+                            defaults={
+                                'league': league,
+                                'home_team': home_team,
+                                'away_team': away_team,
+                                'scheduled_start': game_date,
+                                'status': game_status,
+                                'venue_name': game_data.get('venue', ''),
+                                'home_score': home_team_data.get('score'),
+                                'away_score': away_team_data.get('score'),
+                                'is_active': True
+                            }
+                        )
+                        
+                        if created:
+                            games_saved += 1
+                            self.stdout.write(f"  Created game: {away_team.name} @ {home_team.name}")
+                        else:
+                            self.stdout.write(f"  Updated game: {away_team.name} @ {home_team.name}")
+                            
+                    except Exception as e:
+                        self.stdout.write(self.style.ERROR(f"  Error saving game: {e}"))
+                        continue
+                
+                total_games_synced += games_saved
+                self.stdout.write(self.style.SUCCESS(
+                    f"Synced {games_saved} new games for {sport_type.upper()} "
+                    f"(total: {len(sync_result.get('games', []))} games fetched)"
+                ))
+                
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Error syncing {sport_type}: {e}"))
+                continue
         
-        if total_errors > 0:
-            self.stdout.write(
-                self.style.WARNING(
-                    f"  ⚠️ Note: {total_errors} errors occurred. This is normal for free tier API limits."
-                )
-            )
-        
-        self.stdout.write(
-            f"  📊 Total odds: {total_updated} updated, {total_errors} errors"
-        )
-
-    def _get_sport_type(self, sport_str):
-        """Convert string to SportType enum"""
-        sport_mapping = {
-            'nfl': SportType.NFL,
-            'ncaaf': SportType.NCAAF,
-            'college-football': SportType.NCAAF,
-            'nba': SportType.NBA,
-            'ncaab': SportType.NCAAB,
-            'college-basketball': SportType.NCAAB,
-            'mlb': SportType.MLB,
-            'baseball': SportType.MLB,
-            'nhl': SportType.NHL,
-            'hockey': SportType.NHL,
-            'soccer': SportType.SOCCER,
-            'football': SportType.SOCCER,  # For international users
-            'mma': SportType.MMA,
-            'ufc': SportType.MMA,
-            'tennis': SportType.TENNIS,
-            'golf': SportType.GOLF,
-            'boxing': SportType.BOXING,
-            'esports': SportType.ESPORTS,
-        }
-        
-        return sport_mapping.get(sport_str.lower())
+        self.stdout.write(self.style.SUCCESS(f"\n✅ Total games synced: {total_games_synced}"))

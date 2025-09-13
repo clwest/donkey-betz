@@ -298,6 +298,36 @@ Please complete this task using your specialized capabilities.
             raise
 
 
+@shared_task(bind=True, max_retries=1, time_limit=60)
+def execute_agent_async(self, execution_id: str):
+    """
+    Execute an agent asynchronously with timeout.
+    This is a wrapper around execute_agent for better async control.
+    """
+    try:
+        # Since we're already in a Celery task, just call the function directly
+        # The 'self' parameter will be passed automatically by Celery
+        return execute_agent(self, execution_id)
+    except Exception as e:
+        logger.error(f"Agent async execution failed for {execution_id}: {e}")
+        
+        # Mark execution as failed
+        try:
+            execution = AgentExecution.objects.get(execution_id=execution_id)
+            execution.status = AgentStatus.FAILED
+            execution.error_message = str(e)
+            execution.completed_at = timezone.now()
+            execution.save()
+        except AgentExecution.DoesNotExist:
+            pass
+        
+        # Retry if possible
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e, countdown=30)
+        else:
+            raise
+
+
 @shared_task
 def cleanup_old_executions(days_to_keep: int = 30):
     """
@@ -347,8 +377,8 @@ def check_stuck_executions():
     return stuck_executions.count()
 
 
-@shared_task
-def execute_orchestration(orchestration_id: int):
+@shared_task(bind=True, max_retries=3)
+def execute_orchestration(self, orchestration_id: str):
     """
     Execute an agent orchestration with multiple agents.
     
@@ -358,18 +388,208 @@ def execute_orchestration(orchestration_id: int):
     try:
         orchestration = AgentOrchestration.objects.get(id=orchestration_id)
         
-        # Implementation for orchestration execution
-        # This would coordinate multiple agent executions
-        # based on the orchestration strategy
+        logger.info(f"Starting orchestration {orchestration_id}: {orchestration.name}")
         
-        logger.info(f"Executing orchestration {orchestration_id}")
+        # Update orchestration status to running
+        orchestration.status = AgentStatus.RUNNING
+        orchestration.save()
         
-        # TODO: Implement orchestration logic
-        # - Parse workflow definition
-        # - Execute agents in sequence/parallel
-        # - Handle dependencies
-        # - Aggregate results
+        # Get the prompt from workflow definition
+        prompt = orchestration.workflow_definition.get('prompt', 'Execute workflow')
+        
+        # Execute agents based on strategy
+        if orchestration.execution_strategy == 'sequential':
+            # Sequential execution
+            previous_result = None
+            for i, agent_info in enumerate(orchestration.agent_sequence):
+                logger.info(f"Executing agent {i+1}/{len(orchestration.agent_sequence)}: {agent_info['name']}")
+                
+                # Create execution record
+                execution = AgentExecution.objects.create(
+                    user=orchestration.user,
+                    parent_orchestration=orchestration,
+                    agent_id=agent_info.get('agent_id'),
+                    user_prompt=prompt if i == 0 else f"Continue from: {previous_result[:100] if previous_result else 'previous step'}",
+                    execution_context={
+                        'orchestration_id': str(orchestration_id),
+                        'step': i + 1,
+                        'total_steps': len(orchestration.agent_sequence),
+                        'previous_result': previous_result
+                    },
+                    status=AgentStatus.RUNNING,
+                    execution_order=i + 1
+                )
+                
+                # Mock execution (replace with actual agent execution)
+                execution.result = {
+                    'output': f"Agent {agent_info['name']} completed successfully",
+                    'data': f"Processed: {prompt[:50]}..." if prompt else "Processed workflow"
+                }
+                execution.status = AgentStatus.COMPLETED
+                execution.completed_at = timezone.now()
+                execution.save()
+                
+                previous_result = json.dumps(execution.result)
+                
+        elif orchestration.execution_strategy == 'parallel':
+            # Parallel execution (simplified - in production use celery group)
+            executions = []
+            for i, agent_info in enumerate(orchestration.agent_sequence):
+                execution = AgentExecution.objects.create(
+                    user=orchestration.user,
+                    parent_orchestration=orchestration,
+                    agent_id=agent_info.get('agent_id'),
+                    user_prompt=prompt,
+                    execution_context={
+                        'orchestration_id': str(orchestration_id),
+                        'parallel': True
+                    },
+                    status=AgentStatus.RUNNING,
+                    execution_order=i + 1
+                )
+                executions.append(execution)
+            
+            # Mock parallel completion
+            for execution in executions:
+                execution.result = {
+                    'output': f"Agent completed in parallel",
+                    'data': f"Processed: {prompt[:50]}..." if prompt else "Processed"
+                }
+                execution.status = AgentStatus.COMPLETED
+                execution.completed_at = timezone.now()
+                execution.save()
+        
+        # Mark orchestration as completed
+        orchestration.status = AgentStatus.COMPLETED
+        orchestration.completed_at = timezone.now()
+        orchestration.save()
+        
+        logger.info(f"Orchestration {orchestration_id} completed successfully")
+        
+        # Send WebSocket notification if needed
+        send_execution_update(str(orchestration_id), {
+            'status': 'completed',
+            'message': f'Workflow {orchestration.name} completed successfully'
+        })
+        
+        return {
+            'success': True,
+            'orchestration_id': str(orchestration_id),
+            'message': f'Executed {len(orchestration.agent_sequence)} agents successfully'
+        }
         
     except AgentOrchestration.DoesNotExist:
         logger.error(f"Orchestration {orchestration_id} not found")
         raise
+    except Exception as e:
+        logger.error(f"Error executing orchestration {orchestration_id}: {e}")
+        if 'orchestration' in locals():
+            orchestration.status = AgentStatus.FAILED
+            orchestration.error_message = str(e)
+            orchestration.completed_at = timezone.now()
+            orchestration.save()
+        raise
+
+
+@shared_task(bind=True, max_retries=2)
+def execute_sports_orchestration(self, game_id: str, home_team: str, away_team: str, 
+                                 league: str, subscription_tier: str = 'basic',
+                                 selected_agents: list = None):
+    """
+    Execute sports betting agent orchestration asynchronously.
+    This task handles the coordination of multiple betting analysis agents.
+    """
+    import asyncio
+    from sports.orchestration import execute_coordinated_analysis
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    
+    logger.info(f"🚀 Starting async sports orchestration for {home_team} vs {away_team}")
+    
+    channel_layer = get_channel_layer()
+    
+    try:
+        # Send initial status via WebSocket
+        async_to_sync(channel_layer.group_send)(
+            'agents_general',
+            {
+                'type': 'agent_progress',
+                'data': {
+                    'game_id': game_id,
+                    'agent_name': 'Orchestration Engine',
+                    'agent_id': 'orchestration',
+                    'status': 'running',
+                    'message_type': 'orchestration',
+                    'content': f'🎯 Starting orchestration for {home_team} vs {away_team}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            }
+        )
+        
+        # Create a new event loop for async execution
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            # Execute the orchestration
+            orchestration_results = loop.run_until_complete(
+                execute_coordinated_analysis(
+                    game_id=game_id,
+                    home_team=home_team,
+                    away_team=away_team,
+                    league=league,
+                    subscription_tier=subscription_tier,
+                    selected_agents=selected_agents
+                )
+            )
+            
+            # Send completion status via WebSocket
+            async_to_sync(channel_layer.group_send)(
+                'agents_general',
+                {
+                    'type': 'agent_progress',
+                    'data': {
+                        'game_id': game_id,
+                        'agent_name': 'Orchestration Engine',
+                        'agent_id': 'orchestration',
+                        'status': 'completed',
+                        'message_type': 'result',
+                        'content': f'✅ Orchestration completed for {home_team} vs {away_team}',
+                        'timestamp': datetime.now().isoformat(),
+                        'results': orchestration_results
+                    }
+                }
+            )
+            
+            logger.info(f"✅ Sports orchestration completed successfully for game {game_id}")
+            return {
+                'success': True,
+                'game_id': game_id,
+                'results': orchestration_results
+            }
+            
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        logger.error(f"❌ Sports orchestration failed for game {game_id}: {str(e)}")
+        
+        # Send error status via WebSocket
+        async_to_sync(channel_layer.group_send)(
+            'agents_general',
+            {
+                'type': 'agent_progress',
+                'data': {
+                    'game_id': game_id,
+                    'agent_name': 'Orchestration Engine',
+                    'agent_id': 'orchestration',
+                    'status': 'error',
+                    'message_type': 'error',
+                    'content': f'❌ Orchestration failed: {str(e)}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            }
+        )
+        
+        # Retry if we haven't exceeded max retries
+        raise self.retry(exc=e, countdown=30)

@@ -26,7 +26,7 @@ import { AlertNotifications } from '../components/AlertNotifications';
 import { UserReportButton } from '../components/UserReportButton';
 
 export const MythologyDashboard: React.FC = () => {
-  const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   // API hooks
@@ -59,7 +59,14 @@ export const MythologyDashboard: React.FC = () => {
 
   // Handle review modal close
   const handleReviewClose = () => {
+    console.log('Closing review modal');
     setSelectedContentId(null);
+  };
+
+  // Handle review click
+  const handleReviewClick = (contentId: string) => {
+    console.log('Opening review modal for content ID:', contentId);
+    setSelectedContentId(contentId);
   };
 
   // Handle mark all notifications as read
@@ -272,7 +279,7 @@ export const MythologyDashboard: React.FC = () => {
             <CardContent>
               <FlaggedContentTable 
                 filters={{}}
-                onReviewClick={setSelectedContentId}
+                onReviewClick={handleReviewClick}
                 compact={false}
               />
             </CardContent>
@@ -376,8 +383,8 @@ export const MythologyDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <FlaggedContentTable 
-                filters={{ priority: 'high,critical' }}
-                onReviewClick={setSelectedContentId}
+                filters={{ priority: 'high' }}
+                onReviewClick={handleReviewClick}
               />
             </CardContent>
           </Card>
@@ -394,7 +401,7 @@ export const MythologyDashboard: React.FC = () => {
             <CardContent>
               <FlaggedContentTable 
                 filters={{ status: 'resolved' }}
-                onReviewClick={setSelectedContentId}
+                onReviewClick={handleReviewClick}
                 showReviewDetails={true}
               />
             </CardContent>

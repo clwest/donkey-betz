@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '../common/Card';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -59,50 +59,13 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
   
   const { instances, selectedInstance } = useAgentOrchestraStore();
   
-  // Filter instances for this specific game
-  const gameInstances = instances.filter(instance => 
-    instance.parameters?.game_id === game.id
-  );
+  // Filter instances for this specific game - memoized to prevent infinite loops
+  const gameInstances = useMemo(() => 
+    instances.filter(instance => 
+      instance.parameters?.game_id === game.id
+    ), [instances, game.id]);
 
-  useEffect(() => {
-    // Convert agent instances to analysis results
-    const results: AnalysisResult[] = gameInstances.map(instance => {
-      // Parse the result based on the agent type
-      let parsedContent: any = {};
-      
-      if (instance.result) {
-        try {
-          if (typeof instance.result === 'string') {
-            // Try to extract structured data from string result
-            parsedContent = parseAnalysisContent(instance.result, instance.agentType);
-          } else if (typeof instance.result === 'object') {
-            const result = instance.result as any;
-            if (result.output) {
-              parsedContent = parseAnalysisContent(result.output, instance.agentType);
-            } else {
-              parsedContent = result;
-            }
-          }
-        } catch (error) {
-          console.error('Failed to parse agent result:', error);
-        }
-      }
-      
-      return {
-        id: instance.id,
-        type: determineAnalysisType(instance.agentType),
-        agentName: instance.template?.name || instance.agentType || 'Unknown Agent',
-        timestamp: new Date(instance.created_at),
-        status: instance.status,
-        content: parsedContent,
-        error: instance.error
-      };
-    });
-    
-    setAnalysisResults(results);
-  }, [gameInstances]);
-
-  const parseAnalysisContent = (result: string, agentType: string): any => {
+  const parseAnalysisContent = useCallback((result: string, agentType: string): any => {
     // Enhanced parsing logic for different agent types
     const content: any = {};
     
@@ -141,7 +104,45 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
     content.detailedAnalysis = result;
     
     return content;
-  };
+  }, [game.home_team_name]);
+
+  useEffect(() => {
+    // Convert agent instances to analysis results
+    const results: AnalysisResult[] = gameInstances.map(instance => {
+      // Parse the result based on the agent type
+      let parsedContent: any = {};
+      
+      if (instance.result) {
+        try {
+          if (typeof instance.result === 'string') {
+            // Try to extract structured data from string result
+            parsedContent = parseAnalysisContent(instance.result, instance.template?.name || '');
+          } else if (typeof instance.result === 'object') {
+            const result = instance.result as any;
+            if (result.output) {
+              parsedContent = parseAnalysisContent(result.output, instance.template?.name || '');
+            } else {
+              parsedContent = result;
+            }
+          }
+        } catch (error) {
+          console.error('Failed to parse agent result:', error);
+        }
+      }
+      
+      return {
+        id: instance.id,
+        type: determineAnalysisType(instance.template?.name || instance.template_name || ''),
+        agentName: instance.template?.name || instance.template_name || 'Unknown Agent',
+        timestamp: new Date(instance.created_at),
+        status: instance.status,
+        content: parsedContent,
+        error: instance.error_message
+      };
+    });
+    
+    setAnalysisResults(results);
+  }, [gameInstances, parseAnalysisContent]);
 
   const determineAnalysisType = (agentType: string): AnalysisResult['type'] => {
     const type = agentType.toLowerCase();

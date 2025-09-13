@@ -24,8 +24,14 @@ django_asgi_app = get_asgi_application()
 # Import WebSocket consumers after Django is set up
 from content.consumers import ContentProcessingConsumer, ContentAnalyticsConsumer
 from agents.consumers import AgentExecutionConsumer, AgentOrchestrationConsumer
-from sports.consumers import GameConsumer, OddsConsumer, ArbitrageConsumer, RecommendationConsumer, DashboardConsumer
+from sports.consumers import SportsConsumer, OddsConsumer, GamesConsumer
 from core.test_consumers import EchoTestConsumer
+from core.consumers import (
+    AgentProgressConsumer, SportsArbitrageConsumer, SportsDashboardConsumer,
+    LiveSportsConsumer, AssistantChatConsumer, OrchestrationConsumer,
+    AgentChannelsConsumer, NotificationConsumer, MythologyConsumer,
+    ArbitrageConsumer
+)
 
 # WebSocket URL routing
 websocket_urlpatterns = [
@@ -43,12 +49,11 @@ websocket_urlpatterns = [
     path('ws/assistant/', AgentOrchestrationConsumer.as_asgi()),  # Generic assistant endpoint
     
     # Sports Analytics WebSockets
-    path('ws/sports/games/<uuid:game_id>/', GameConsumer.as_asgi()),
-    path('ws/sports/odds/market/<uuid:market_id>/', OddsConsumer.as_asgi()),
-    path('ws/sports/odds/game/<uuid:game_id>/', OddsConsumer.as_asgi()),
+    path('ws/sports/', SportsConsumer.as_asgi()),
+    path('ws/sports/odds/', OddsConsumer.as_asgi()),
+    path('ws/sports/games/', GamesConsumer.as_asgi()),
     path('ws/sports/arbitrage/', ArbitrageConsumer.as_asgi()),
-    path('ws/sports/recommendations/', RecommendationConsumer.as_asgi()),
-    path('ws/sports/dashboard/', DashboardConsumer.as_asgi()),
+    path('ws/sports/dashboard/', SportsDashboardConsumer.as_asgi()),
 ]
 
 # ASGI application with WebSocket support

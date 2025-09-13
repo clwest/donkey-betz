@@ -271,7 +271,7 @@ except ImportError:
     }
 
 # CORS Configuration - SECURE IMPLEMENTATION
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:8081').split(',')
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,http://localhost:8080,http://localhost:8081,http://localhost:5173,http://127.0.0.1:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 # Allow null origin for file:// protocol during development
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in DEBUG mode
@@ -291,11 +291,22 @@ CORS_ALLOWED_HEADERS = [
     'x-requested-with',
     'x-orchestrator',
     'x-orchestra-client',
+    'x-dbao-client',
+    'x-version',
+    'x-client',
 ]
 
 # Allow all headers in development (alternative method)
 if DEBUG:
-    CORS_ALLOW_HEADERS = ['*']  # Allow all headers in development
+    from corsheaders.defaults import default_headers
+    # Add custom headers to default headers (avoiding duplicates)
+    CORS_ALLOW_HEADERS = list(default_headers) + [
+        'x-orchestrator',
+        'x-orchestra-client',
+        'x-dbao-client',
+        'x-version',
+        'x-client',
+    ]
 
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
@@ -384,6 +395,18 @@ SPORTS_ANALYTICS = {
     'DEFAULT_SPORTSBOOKS': ['draftkings', 'fanduel', 'bet365', 'caesars'],
 }
 
+# External API Keys for Sports Data
+ODDS_API_KEY = os.environ.get('THE_ODDS_API_KEY', 'demo')  # Real API key from .env
+SPORTRADAR_API_KEY = os.environ.get('SPORTRADAR_API_KEY', 'demo')  # Real SportRadar key from .env
+SPORTSDB_API_KEY = os.environ.get('SPORTSDB_API_KEY', '1')  # Free tier key for TheSportsDB
+
+# API Rate Limiting
+API_RATE_LIMITS = {
+    'espn': 100,  # requests per minute (no official limit)
+    'odds_api': 500,  # requests per month for free tier
+    'sportsdb': 100,  # requests per minute
+}
+
 # Redis Configuration
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
@@ -395,15 +418,6 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'parser_class': 'redis.connection.PythonParser',
-            'connection_pool_kwargs': {
-                'max_connections': 50,
-                'retry_on_timeout': True,
-                'socket_connect_timeout': 5,
-                'socket_timeout': 5,
-            },
-        },
         'KEY_PREFIX': 'unified_platform',
         'TIMEOUT': 300,
         'VERSION': 1,

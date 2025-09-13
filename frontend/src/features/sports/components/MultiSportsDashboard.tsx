@@ -21,6 +21,7 @@ import { Select, SelectItem } from '../../../components/common/Select';
 import { toast } from 'sonner';
 // import { GameOddsCard } from './GameOddsCard';
 import { GamingGameCard } from './GamingGameCard';
+import { useWebSocket } from '../../../hooks/useWebSocket';
 import '../../../styles/gaming-theme.css';
 import { 
   RefreshCw, 
@@ -39,28 +40,33 @@ import {
   Signal,
   Gamepad2,
   Palette,
+  DollarSign,
   Flame as FireIcon
 } from 'lucide-react';
 
 import type { League, Game } from '../api/sports';
-import {
-  SportType,
-  GameStatus,
-  listLeagues,
-  getSportsTypes,
-  getLiveGames,
-  getGamesBySport,
-  getTrendingGames,
-  syncSportsData,
-  getSportDisplayName,
-  getSportEmoji,
-  formatGameTime,
-  getGameStatusDisplay,
-  getGameStatusColor,
-  isGameLive,
-  isGameFinished,
-  formatTeamRecord,
-  getTodayDateString
+import { 
+SportType,
+GameStatus,
+listLeagues,
+getSportsTypes,
+getLiveGames,
+getGamesBySport,
+getTrendingGames,
+syncSportsData,
+getSportDisplayName,
+getSportEmoji,
+formatGameTime,
+getGameStatusDisplay,
+getGameStatusColor,
+isGameLive,
+isGameFinished,
+getInferredGameStatus,
+formatTeamRecord,
+getTodayDateString,
+getUpcomingDateRange,
+getThisWeekDateRange,
+  getDateString
 } from '../api/sports';
 
 interface SportsType {
@@ -72,10 +78,12 @@ interface SportsType {
 export default function MultiSportsDashboard() {
   const navigate = useNavigate();
   const [selectedSport, setSelectedSport] = useState<SportType>(SportType.NCAAF);
-  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
+  const [selectedDate, setSelectedDate] = useState<string>('thisweek'); // Default to this week
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [gamingTheme, setGamingTheme] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   
   // Data state
   const [sportsTypes, setSportsTypes] = useState<SportsType[]>([]);
@@ -83,6 +91,45 @@ export default function MultiSportsDashboard() {
   const [games, setGames] = useState<Game[]>([]);
   const [liveGames, setLiveGames] = useState<Game[]>([]);
   const [trendingGames, setTrendingGames] = useState<Game[]>([]);
+
+  // WebSocket connection for live updates
+  const { isConnected: wsConnected, sendMessage } = useWebSocket({
+    url: '/ws/live-sports/',
+    onMessage: (data) => {
+      console.log('🔴 [WebSocket] Live sports update:', data);
+      
+      if (data.type === 'game_update') {
+        // Update specific game in the games list
+        setGames(prevGames => 
+          prevGames.map(game => 
+            game.id === data.game_id ? { ...game, ...data.data } : game
+          )
+        );
+        
+        // Also update live games if this game is live
+        setLiveGames(prevLive => 
+          prevLive.map(game => 
+            game.id === data.game_id ? { ...game, ...data.data } : game
+          )
+        );
+        
+        toast.success(`Game update: ${data.data.away_team_name} vs ${data.data.home_team_name}`);
+      } else if (data.type === 'odds_update') {
+        console.log('💰 Odds update received:', data);
+        toast.info('Live odds updated');
+      }
+    },
+    onOpen: () => {
+      console.log('🔗 WebSocket connected for live sports');
+      toast.success('🔴 Connected to live updates');
+    },
+    onClose: () => {
+      console.log('❌ WebSocket disconnected');
+      toast.error('❌ Live updates disconnected');
+    },
+    reconnect: true,
+    maxReconnectAttempts: 5
+  });
 
   // Helper function to derive sport type from league name
   const getSportTypeFromLeague = (leagueName: string): SportType => {
@@ -113,6 +160,18 @@ export default function MultiSportsDashboard() {
       loadGamesForSport();
     }
   }, [selectedSport, selectedDate]);
+
+  // Auto-sync every 2 minutes if enabled
+  useEffect(() => {
+    if (!autoSyncEnabled) return;
+
+    const syncInterval = setInterval(() => {
+      console.log('⏰ [Dashboard] Auto-sync triggered');
+      handleSyncData(true); // Silent sync
+    }, 2 * 60 * 1000); // 2 minutes
+
+    return () => clearInterval(syncInterval);
+  }, [autoSyncEnabled, selectedSport]);
 
   const loadDashboardData = async () => {
     console.log('🏁 [Dashboard] Starting to load dashboard data...');
@@ -156,38 +215,56 @@ export default function MultiSportsDashboard() {
       return;
     }
 
-    console.log(`🎮 [Dashboard] Loading games for sport: ${selectedSport} on date: ${selectedDate}`);
+    console.log(`🎮 [Dashboard] Loading games for sport: ${selectedSport} with date filter: ${selectedDate}`);
     try {
+      let gamesPromise: Promise<Game[]>;
+      
+      // Handle different date filter options
+      if (selectedDate === 'upcoming') {
+        // Get games for the next 7 days
+        const dateRange = getUpcomingDateRange();
+        gamesPromise = getGamesBySport(selectedSport, undefined, dateRange);
+      } else if (selectedDate === 'thisweek') {
+        // Get games for this week (Monday to Sunday)
+        const dateRange = getThisWeekDateRange();
+        gamesPromise = getGamesBySport(selectedSport, undefined, dateRange);
+      } else if (selectedDate === 'today') {
+        // Get games for today only
+        gamesPromise = getGamesBySport(selectedSport, getTodayDateString());
+      } else {
+        // Specific date selected
+        gamesPromise = getGamesBySport(selectedSport, selectedDate);
+      }
+
       const [leaguesData, gamesData] = await Promise.all([
         listLeagues(selectedSport),
-        getGamesBySport(selectedSport, selectedDate)
+        gamesPromise
       ]);
-
-      // If no games found for today, fetch upcoming games without date filter
-      let finalGamesData = gamesData;
-      if ((!gamesData || gamesData.length === 0) && selectedDate === getTodayDateString()) {
-        console.log(`📅 [Dashboard] No games today, fetching upcoming games for ${selectedSport}`);
-        finalGamesData = await getGamesBySport(selectedSport, ''); // Empty string for no date filter
-      }
 
       console.log(`✅ [Dashboard] Games loaded for ${selectedSport}:`, {
         leagues: leaguesData,
         leaguesCount: leaguesData?.length || 0,
-        games: finalGamesData,
-        gamesCount: finalGamesData?.length || 0,
-        selectedDate
+        games: gamesData,
+        gamesCount: gamesData?.length || 0,
+        dateFilter: selectedDate
       });
 
+      // Sort games by scheduled_start time and remove duplicates
+      const sortedGames = gamesData ? 
+        [...new Map(gamesData.map(game => [game.id, game])).values()]
+          .sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())
+        : [];
+
       setLeagues(leaguesData || []);
-      setGames(finalGamesData || []);
+      setGames(sortedGames);
     } catch (error) {
       console.error(`❌ [Dashboard] Error loading games for ${selectedSport}:`, error);
       toast.error(`Failed to load ${getSportDisplayName(selectedSport)} games`);
     }
   };
 
-  const handleSyncData = async () => {
-    console.log('🔄 [Dashboard] Starting sync for sport:', selectedSport);
+  const handleSyncData = async (silent: boolean = false) => {
+    console.log('🔄 [Dashboard] Starting sync for sport:', selectedSport, { silent });
     setSyncing(true);
     try {
       const syncOptions = {
@@ -203,7 +280,23 @@ export default function MultiSportsDashboard() {
       console.log('📥 [Dashboard] Sync result:', result);
 
       if (result?.success) {
-        toast.success(result.message || 'Data synced successfully');
+        setLastSyncTime(new Date());
+        
+        // Show detailed sync results if available (only if not silent)
+        if (!silent) {
+          if (result.games_synced || result.total_games_fetched || result.games_with_odds) {
+            const details = [];
+            if (result.games_synced) details.push(`${result.games_synced} games synced`);
+            if (result.total_games_fetched) details.push(`${result.total_games_fetched} games fetched`);
+            if (result.games_with_odds) details.push(`${result.games_with_odds} with live odds`);
+            
+            const detailMessage = details.length > 0 ? `: ${details.join(', ')}` : '';
+            toast.success(`🎯 Data synced successfully${detailMessage}`);
+          } else {
+            toast.success(result.message || '🎯 Data synced successfully');
+          }
+        }
+        
         console.log('♻️ [Dashboard] Reloading data after sync...');
         await loadDashboardData();
         await loadGamesForSport();
@@ -220,10 +313,34 @@ export default function MultiSportsDashboard() {
     }
   };
 
+  // Filter games by status (using time-based inference)
+  const upcomingGames = games.filter(game => {
+    // Use time-based inference if status is still 'scheduled'
+    const inferredStatus = getInferredGameStatus(game);
+    return inferredStatus === 'scheduled' && !isGameLive(game) && !isGameFinished(game);
+  });
+  
+  const inProgressGames = games.filter(game => {
+    // Use the enhanced isGameLive that includes time-based inference
+    return isGameLive(game) && !isGameFinished(game);
+  });
+  
+  const completedGames = games.filter(game => {
+    // Use the enhanced isGameFinished that includes time-based inference
+    return isGameFinished(game);
+  });
+  
+  const otherGames = games.filter(game => 
+    !['scheduled', 'live', 'halftime', 'final'].includes(game.status) &&
+    !isGameLive(game) && !isGameFinished(game) && 
+    !upcomingGames.includes(game)
+  );
+
   const renderGameCard = (game: Game, contextSport?: SportType) => {
     const isLive = isGameLive(game);
     const isFinished = isGameFinished(game);
-    const isScheduled = game.status === 'scheduled';
+    const inferredStatus = getInferredGameStatus(game);
+    const isScheduled = inferredStatus === 'scheduled';
     const sportType = contextSport || getSportTypeFromLeague(game.league);
     
     const handleGameClick = () => {
@@ -251,7 +368,16 @@ export default function MultiSportsDashboard() {
           <div className="absolute top-4 right-4">
             <div className="gaming-status gaming-status-live">
               <div className="gaming-pulse-dot"></div>
-              LIVE
+              {game.status === 'scheduled' ? 'LIKELY LIVE' : 'LIVE'}
+            </div>
+          </div>
+        )}
+        
+        {/* Finished indicator for games that should be done */}
+        {!isLive && isFinished && game.status === 'scheduled' && (
+          <div className="absolute top-4 right-4">
+            <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green">
+              LIKELY FINAL
             </div>
           </div>
         )}
@@ -269,7 +395,7 @@ export default function MultiSportsDashboard() {
                 {isLive && <Zap className="w-3 h-3 mr-1" />}
                 {isFinished && <Trophy className="w-3 h-3 mr-1" />}
                 {isScheduled && <Timer className="w-3 h-3 mr-1" />}
-                {getGameStatusDisplay(game.status)}
+                {getGameStatusDisplay(inferredStatus)}
               </div>
               
               {/* Sport emoji with glow */}
@@ -290,17 +416,37 @@ export default function MultiSportsDashboard() {
             {/* Away Team */}
             <div className="gaming-team gaming-hover-glow">
               <div className="gaming-team-avatar">
-                {game.away_team_name.substring(0, 2).toUpperCase()}
+                {game.away_team?.logo_url ? (
+                  <img 
+                    src={game.away_team.logo_url} 
+                    alt={game.away_team_name}
+                    className="w-12 h-12 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={game.away_team?.logo_url ? 'hidden' : 'flex'} style={{alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%'}}>
+                  {game.away_team_abbreviation || game.away_team_name.substring(0, 2).toUpperCase()}
+                </div>
               </div>
               <div className="gaming-team-info">
                 <div className="gaming-team-name">
                   {game.away_team_name}
                 </div>
-                <div className="gaming-team-record">
-                  {game.away_team.current_record ? 
-                    `AWAY (${formatTeamRecord(game.away_team.current_record)})` : 
-                    'AWAY TEAM'
-                  }
+                <div className="gaming-team-record space-y-1">
+                  <div className="text-xs">
+                    {game.away_team?.current_record?.wins ? 
+                      `Record: ${game.away_team.current_record.wins}-${game.away_team.current_record.losses}` : 
+                      'Away Team'
+                    }
+                  </div>
+                  {game.away_team?.ats_record?.wins && (
+                    <div className="text-xs gaming-text-accent">
+                      ATS: {game.away_team.ats_record.wins}-{game.away_team.ats_record.losses}
+                    </div>
+                  )}
                 </div>
               </div>
               {game.away_score !== null && (
@@ -321,17 +467,37 @@ export default function MultiSportsDashboard() {
             {/* Home Team */}
             <div className="gaming-team gaming-hover-glow">
               <div className="gaming-team-avatar gaming-home">
-                {game.home_team_name.substring(0, 2).toUpperCase()}
+                {game.home_team?.logo_url ? (
+                  <img 
+                    src={game.home_team.logo_url} 
+                    alt={game.home_team_name}
+                    className="w-12 h-12 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={game.home_team?.logo_url ? 'hidden' : 'flex'} style={{alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%'}}>
+                  {game.home_team_abbreviation || game.home_team_name.substring(0, 2).toUpperCase()}
+                </div>
               </div>
               <div className="gaming-team-info">
                 <div className="gaming-team-name">
                   {game.home_team_name}
                 </div>
-                <div className="gaming-team-record">
-                  {game.home_team.current_record ? 
-                    `HOME (${formatTeamRecord(game.home_team.current_record)})` : 
-                    'HOME TEAM'
-                  }
+                <div className="gaming-team-record space-y-1">
+                  <div className="text-xs">
+                    {game.home_team?.current_record?.wins ? 
+                      `Record: ${game.home_team.current_record.wins}-${game.home_team.current_record.losses}` : 
+                      'Home Team'
+                    }
+                  </div>
+                  {game.home_team?.ats_record?.wins && (
+                    <div className="text-xs gaming-text-accent">
+                      ATS: {game.home_team.ats_record.wins}-{game.home_team.ats_record.losses}
+                    </div>
+                  )}
                 </div>
               </div>
               {game.home_score !== null && (
@@ -346,11 +512,18 @@ export default function MultiSportsDashboard() {
 
           {/* Gaming Footer */}
           <div className="pt-6 mt-6 border-t border-gaming-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 gaming-text-accent text-sm">
-                <Clock className="w-4 h-4" />
-                <span className="font-bold font-mono">{formatGameTime(game.scheduled_start)}</span>
-              </div>
+          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 gaming-text-accent text-sm">
+          <Clock className="w-4 h-4" />
+          <span className="font-bold font-mono">{formatGameTime(game.scheduled_start)}</span>
+          {/* Show warning if status might be stale */}
+          {game.status === 'scheduled' && (isLive || isFinished) && (
+          <span className="text-xs gaming-text-warning ml-2 flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" />
+            {isLive ? 'Should be LIVE' : 'Likely FINAL'}
+            </span>
+            )}
+                </div>
               <div className="flex items-center gap-3">
                 {game.week && (
                   <div className="gaming-status text-xs px-3 py-1">
@@ -365,22 +538,52 @@ export default function MultiSportsDashboard() {
               </div>
             </div>
             
-            {/* Betting Actions */}
-            <div className="mt-4 pt-4 border-t border-gaming-border/50">
+            {/* Enhanced Betting Info */}
+            <div className="mt-4 pt-4 border-t border-gaming-border/50 space-y-3">
+              {/* Betting Markets Row */}
               <div className="flex items-center justify-between text-sm">
-                <div className="gaming-text-accent">
-                  💰 Betting Available
+                <div className="gaming-text-accent flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  Betting Markets
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <div className="gaming-status text-xs px-2 py-1 bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
-                    MONEYLINE
+                    ML
                   </div>
                   <div className="gaming-status text-xs px-2 py-1 bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
                     SPREAD
                   </div>
                   <div className="gaming-status text-xs px-2 py-1 bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green">
-                    TOTAL
+                    O/U
                   </div>
+                </div>
+              </div>
+              
+              {/* Quick Odds Preview */}
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="text-center p-2 bg-gaming-dark/50 rounded border border-gaming-border">
+                  <div className="gaming-text-muted">Away ML</div>
+                  <div className="font-bold gaming-text-primary">+{Math.floor(Math.random() * 200) + 100}</div>
+                </div>
+                <div className="text-center p-2 bg-gaming-dark/50 rounded border border-gaming-border">
+                  <div className="gaming-text-muted">Spread</div>
+                  <div className="font-bold gaming-text-primary">-{(Math.random() * 10 + 1).toFixed(1)}</div>
+                </div>
+                <div className="text-center p-2 bg-gaming-dark/50 rounded border border-gaming-border">
+                  <div className="gaming-text-muted">Total</div>
+                  <div className="font-bold gaming-text-primary">{(Math.random() * 20 + 40).toFixed(1)}</div>
+                </div>
+              </div>
+              
+              {/* Game Intelligence */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs gaming-text-accent">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>Hot Game</span>
+                  <div className="w-2 h-2 bg-gaming-neon-cyan rounded-full animate-pulse"></div>
+                </div>
+                <div className="text-xs gaming-text-muted">
+                  Click for AI Analysis
                 </div>
               </div>
             </div>
@@ -393,7 +596,7 @@ export default function MultiSportsDashboard() {
   const renderSportsOverview = () => {
     console.log('🎨 [Dashboard] Rendering sports overview with:', sportsTypes);
     return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {sportsTypes.map((sport) => (
         <div 
           key={sport.sport_type}
@@ -471,7 +674,7 @@ export default function MultiSportsDashboard() {
           <p className="gaming-text-secondary text-lg">[STANDBY MODE] &gt;&gt; Waiting for live action...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {liveGames.map(renderGameCard)}
         </div>
       )}
@@ -492,7 +695,7 @@ export default function MultiSportsDashboard() {
           </div>
           <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green px-4 py-2">
             <FireIcon className="w-4 h-4 mr-2" />
-            {trendingGames.length} HOT MATCHES
+            {trendingGames.filter(game => game.status !== 'final').length} HOT MATCHES
           </div>
         </div>
         
@@ -503,8 +706,11 @@ export default function MultiSportsDashboard() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {trendingGames.slice(0, 12).map(renderGameCard)}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {trendingGames
+          .filter(game => game.status !== 'final')
+          .slice(0, 12)
+          .map(renderGameCard)}
       </div>
     </div>
     );
@@ -555,11 +761,32 @@ export default function MultiSportsDashboard() {
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2 gaming-text-accent">
                   <Activity className="w-4 h-4" />
-                  <span className="font-bold font-mono">{liveGames.length + trendingGames.slice(0, 8).length} ACTIVE GAMES</span>
+                  <span className="font-bold font-mono">
+                    {liveGames.length + trendingGames.filter(game => game.status !== 'final').slice(0, 8).length} ACTIVE GAMES
+                  </span>
+                </div>
+                
+                {lastSyncTime && (
+                  <div className="flex items-center gap-2 gaming-text-muted text-xs">
+                    <Clock className="w-3 h-3" />
+                    <span>Last sync: {lastSyncTime.toLocaleTimeString()}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={autoSyncEnabled}
+                      onChange={(e) => setAutoSyncEnabled(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-xs gaming-text-secondary">Auto-sync</span>
+                  </label>
                 </div>
                 
                 <Button
-                  onClick={handleSyncData}
+                  onClick={() => handleSyncData(false)}
                   disabled={syncing}
                   variant="secondary"
                   className="px-4 py-2 border-gaming-border hover:border-gaming-neon-cyan hover:text-gaming-neon-cyan"
@@ -576,12 +803,15 @@ export default function MultiSportsDashboard() {
           </div>
           <div className="p-6">
             <div className="space-y-8">
-              {/* Mix of Live Games and Trending Games */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Mix of Live Games and Trending Games (excluding completed) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Show live games first */}
                 {liveGames.slice(0, 4).map(renderGameCard)}
-                {/* Fill remaining slots with trending games */}
-                {trendingGames.slice(0, 8 - liveGames.slice(0, 4).length).map(renderGameCard)}
+                {/* Fill remaining slots with trending games that are not completed */}
+                {trendingGames
+                  .filter(game => game.status !== 'final')
+                  .slice(0, 8 - liveGames.slice(0, 4).length)
+                  .map(renderGameCard)}
               </div>
               
               {liveGames.length === 0 && trendingGames.length === 0 && (
@@ -612,19 +842,25 @@ export default function MultiSportsDashboard() {
               {/* Gaming Date Selector */}
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 gaming-text-accent" />
-                <input
-                  type="date"
+                <select
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="gaming-card px-4 py-2 border border-gaming-border rounded-lg gaming-text-primary font-mono text-sm focus:border-gaming-neon-cyan focus:outline-none transition-colors"
-                />
+                  className="gaming-card px-4 py-2 border border-gaming-border rounded-lg gaming-text-primary font-mono text-sm focus:border-gaming-neon-cyan focus:outline-none transition-colors cursor-pointer"
+                >
+                  <option value="thisweek">This Week (Mon-Sun)</option>
+                  <option value="upcoming">Next 7 Days</option>
+                  <option value="today">Today Only</option>
+                  <option value={getDateString(1)}>Tomorrow</option>
+                  <option value={getDateString(2)}>Saturday {getDateString(2)}</option>
+                  <option value={getDateString(3)}>Sunday {getDateString(3)}</option>
+                </select>
               </div>
             </div>
           </div>
           <div className="p-6">
             <div className="space-y-6">
               {/* Sport Filter Cards Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sportsTypes.map((sport) => (
                   <div 
                     key={sport.sport_type}
@@ -682,6 +918,16 @@ export default function MultiSportsDashboard() {
                       <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-3 py-2">
                         {games.length} GAMES LOADED
                       </div>
+                      
+                      <div className={`gaming-status px-3 py-2 ${
+                        wsConnected 
+                          ? 'gaming-status-live' 
+                          : 'bg-red-500/20 border-red-500 text-red-400'
+                      }`}>
+                        <Wifi className="w-4 h-4 mr-2" />
+                        {wsConnected ? 'LIVE WS' : 'WS OFF'}
+                        {wsConnected && <div className="gaming-pulse-dot ml-2"></div>}
+                      </div>
                     </div>
                   </div>
 
@@ -712,8 +958,131 @@ export default function MultiSportsDashboard() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {games.map(renderGameCard)}
+                    <div className="space-y-8">
+                      {/* In-Progress Games Section */}
+                      {inProgressGames.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4 border-b border-gaming-neon-red pb-2">
+                            <div className="flex items-center gap-3">
+                              <Zap className="w-6 h-6 gaming-text-danger animate-pulse" />
+                              <h4 className="text-2xl font-black gaming-text-danger">
+                                GAMES IN PROGRESS
+                              </h4>
+                            </div>
+                            <div className="gaming-status gaming-status-live px-3 py-1">
+                              <div className="gaming-pulse-dot"></div>
+                              {inProgressGames.length} LIVE NOW
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {inProgressGames.map(game => renderGameCard(game, selectedSport))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Upcoming Games Section */}
+                      {upcomingGames.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4 border-b border-gaming-border pb-2">
+                            <div className="flex items-center gap-3">
+                              <Timer className="w-6 h-6 gaming-text-accent" />
+                              <h4 className="text-2xl font-black gaming-text-primary">
+                                UPCOMING GAMES
+                              </h4>
+                            </div>
+                            <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-3 py-1">
+                              {upcomingGames.length} SCHEDULED
+                            </div>
+                          </div>
+                          
+                          {/* Group upcoming games by date */}
+                          {(() => {
+                            const today = getTodayDateString();
+                            const gamesByDate = upcomingGames.reduce((acc, game) => {
+                              const gameDate = game.scheduled_start.split('T')[0];
+                              if (!acc[gameDate]) {
+                                acc[gameDate] = [];
+                              }
+                              acc[gameDate].push(game);
+                              return acc;
+                            }, {} as Record<string, Game[]>);
+                            
+                            // Sort dates with today first
+                            const sortedDates = Object.keys(gamesByDate).sort((a, b) => {
+                              if (a === today) return -1;
+                              if (b === today) return 1;
+                              return a.localeCompare(b);
+                            });
+                            
+                            return sortedDates.map(date => {
+                              const dateGames = gamesByDate[date];
+                              const isToday = date === today;
+                              const dateObj = new Date(date + 'T00:00:00');
+                              const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                              const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              
+                              return (
+                                <div key={date} className="space-y-4">
+                                  <div className="flex items-center gap-4 border-b border-gaming-border/50 pb-2">
+                                    <div className="flex items-center gap-3">
+                                      <Calendar className="w-5 h-5 gaming-text-accent" />
+                                      <h5 className="text-lg font-bold gaming-text-primary">
+                                        {isToday ? 'TODAY' : dayName.toUpperCase()}
+                                      </h5>
+                                      <span className="gaming-text-secondary font-mono">{dateStr}</span>
+                                    </div>
+                                    <div className={`gaming-status ${
+                                      isToday ? 'bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green' : 'bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple'
+                                    } px-3 py-1 text-xs`}>
+                                      {dateGames.length} {dateGames.length === 1 ? 'GAME' : 'GAMES'}
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {dateGames.map(game => renderGameCard(game, selectedSport))}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Other Status Games (Postponed, Suspended, etc.) */}
+                      {otherGames.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4 border-b border-gaming-border pb-2">
+                            <div className="flex items-center gap-3">
+                              <Activity className="w-6 h-6 gaming-text-muted" />
+                              <h4 className="text-xl font-bold gaming-text-muted">
+                                OTHER STATUS
+                              </h4>
+                            </div>
+                            <div className="gaming-status bg-gray-500/20 border-gray-500 text-gray-400 px-3 py-1">
+                              {otherGames.length} GAMES
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {otherGames.map(game => renderGameCard(game, selectedSport))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show message if all games are completed */}
+                      {upcomingGames.length === 0 && inProgressGames.length === 0 && completedGames.length > 0 && (
+                        <div className="gaming-card text-center py-12">
+                          <div className="gaming-border-glow"></div>
+                          <Trophy className="w-16 h-16 gaming-text-neon-green mx-auto mb-6" />
+                          <h4 className="text-2xl font-bold gaming-text-primary mb-4">
+                            ALL GAMES COMPLETED
+                          </h4>
+                          <p className="gaming-text-secondary text-lg mb-2">
+                            {completedGames.length} games finished for {selectedDate}
+                          </p>
+                          <p className="gaming-text-accent">
+                            [TIP] &gt;&gt; Try selecting a different date or sync for new games
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

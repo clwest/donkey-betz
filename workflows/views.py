@@ -493,7 +493,7 @@ def workflow_history(request):
                 'workflow_name': orch.name,
                 'status': orch.status.lower(),
                 'started_at': orch.created_at.isoformat(),
-                'completed_at': orch.completed_at.isoformat() if orch.completed_at else None,
+                'completed_at': orch.updated_at.isoformat() if orch.status == AgentStatus.COMPLETED else None,
                 'prompt': orch.description or "Multi-agent workflow",
                 'progress': {
                     'current_step': completed_count,
@@ -505,13 +505,14 @@ def workflow_history(request):
         
         # Add single executions to history
         for exec in single_executions:
+            agent_name = exec.template.name if exec.template else "Unknown Agent"
             history.append({
                 'execution_id': str(exec.id),
-                'workflow_name': f"Single Agent: {exec.agent_name}",
+                'workflow_name': f"Single Agent: {agent_name}",
                 'status': exec.status.lower(),
                 'started_at': exec.created_at.isoformat(),
                 'completed_at': exec.completed_at.isoformat() if exec.completed_at else None,
-                'prompt': exec.user_prompt or "Single agent execution",
+                'prompt': exec.task_description or "Single agent execution",
                 'progress': {
                     'current_step': 1 if exec.status == AgentStatus.COMPLETED else 0,
                     'total_steps': 1,

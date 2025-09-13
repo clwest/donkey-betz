@@ -44,6 +44,7 @@
   --gaming-text-accent: #00FFFF;
   --gaming-text-muted: #7C7C8A;
   --gaming-text-inverse: #0A0A0F;
+  --gaming-text-warning: #FFA500;
   
   /* Border System */
   --gaming-border: #3A3A4A;
@@ -693,4 +694,9 @@ body.gaming-theme {
   .gaming-neural-card {
     margin: 8px 0;
   }
+}
+
+/* Gaming warning text for stale status */
+.gaming-text-warning {
+  color: var(--gaming-text-warning) !important;
 }

@@ -189,21 +189,18 @@ class Command(BaseCommand):
         ).first()
         
         if not team:
-            # Create new team with unique abbreviation
+            # Create new team with unique abbreviation using get_or_create
             abbr = team_name[:3].upper()
-            # Check if abbreviation exists and make it unique
-            counter = 1
-            base_abbr = abbr
-            while Team.objects.filter(league=league, abbreviation=abbr).exists():
-                abbr = f"{base_abbr}{counter}"
-                counter += 1
             
-            team = Team.objects.create(
-                name=team_name,
-                abbreviation=abbr,
-                city=team_name.rsplit(' ', 1)[0] if ' ' in team_name else team_name,
+            # Use get_or_create with the unique constraint fields
+            team, created = Team.objects.get_or_create(
                 league=league,
-                metadata={'api_provider': 'THE_ODDS_API'}
+                abbreviation=abbr,
+                defaults={
+                    'name': team_name,
+                    'city': team_name.rsplit(' ', 1)[0] if ' ' in team_name else team_name,
+                    'metadata': {'api_provider': 'THE_ODDS_API'}
+                }
             )
             self.stdout.write(f"    Created team: {team_name} ({abbr})")
         

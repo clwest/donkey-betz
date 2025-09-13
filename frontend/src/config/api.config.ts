@@ -33,7 +33,7 @@ const getWsUrl = () => {
     return `${protocol}//${window.location.host}`;
   }
   
-  // Development defaults
+  // Development defaults - WebSocket runs on same port as API (8000)
   return 'ws://localhost:8000';
 };
 
@@ -111,6 +111,76 @@ export const buildWsUrl = (endpoint: string): string => {
   const wsUrl = API_CONFIG.WS_URL;
   return `${wsUrl}${endpoint}`;
 };
+
+// API Request Helper with authentication
+export async function apiRequest<T = any>(
+  endpoint: string, 
+  options: RequestInit & { params?: Record<string, any> } = {}
+): Promise<T> {
+  const { params, ...requestOptions } = options;
+  
+  // Build the full URL
+  let url = endpoint.startsWith('http') ? endpoint : buildApiUrl(endpoint);
+  
+  // Add query parameters if provided
+  if (params) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url += (url.includes('?') ? '&' : '?') + queryString;
+    }
+  }
+  
+  // Get auth token from localStorage
+  const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN;
+  
+  // Prepare headers
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...requestOptions.headers,
+  };
+  
+  // Add auth token if available
+  if (token) {
+    headers['Authorization'] = `Token ${token}`;
+  }
+  
+  try {
+    const response = await fetch(url, {
+      ...requestOptions,
+      headers,
+    });
+    
+    // Handle non-OK responses
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.error || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+    
+    // Handle empty responses
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return {} as T;
+    }
+    
+    // Parse JSON response
+    return await response.json();
+  } catch (error) {
+    console.error('API Request failed:', error);
+    throw error;
+  }
+}
 
 // Export for backwards compatibility
 export default API_CONFIG;

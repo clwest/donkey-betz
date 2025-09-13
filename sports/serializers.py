@@ -130,9 +130,22 @@ class TeamSerializer(serializers.ModelSerializer):
         return games
 
 
+class TeamCompactSerializer(serializers.ModelSerializer):
+    """Compact team serializer for embedding in game objects"""
+    
+    class Meta:
+        model = Team
+        fields = [
+            'id', 'name', 'city', 'abbreviation', 'logo_url',
+            'current_record', 'ats_record', 'ou_record'
+        ]
+
+
 class GameSerializer(serializers.ModelSerializer):
     """Game serializer with detailed information"""
     
+    home_team = TeamCompactSerializer(read_only=True)
+    away_team = TeamCompactSerializer(read_only=True)
     home_team_name = serializers.CharField(source='home_team.name', read_only=True)
     away_team_name = serializers.CharField(source='away_team.name', read_only=True)
     home_team_abbreviation = serializers.CharField(source='home_team.abbreviation', read_only=True)

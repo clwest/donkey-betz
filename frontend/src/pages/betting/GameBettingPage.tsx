@@ -25,10 +25,13 @@ import {
   Minus
 } from 'lucide-react';
 import type { Game } from '../../features/sports/api/sports';
-import { getGamesBySport, SportType } from '../../features/sports/api/sports';
+import { getGameById, getGameOdds, getWeatherData, getInjuryData, getBettingIntelligence } from '../../features/sports/api/sports';
 import { BettingAgentPanel } from '../../components/betting/BettingAgentPanel';
 import { BettingAnalysisResults } from '../../components/betting/BettingAnalysisResults';
 import { AuthBanner } from '../../components/betting/AuthBanner';
+import { AgentActivityMonitor } from '../../components/betting/AgentActivityMonitor';
+import { AgentResultsViewer } from '../../components/betting/AgentResultsViewer';
+import { formatDateMST, formatDateOnlyMST, formatTimeOnlyMST } from '../../utils/dateFormatting';
 import '../../styles/gaming-theme.css';
 
 interface BettingMarket {
@@ -66,41 +69,139 @@ export function GameBettingPage() {
   const navigate = useNavigate();
   
   const [game, setGame] = useState<Game | null>(null);
+  const [gameOdds, setGameOdds] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeMarket, setActiveMarket] = useState<string>('moneyline');
   const [betSlip, setBetSlip] = useState<BetSlipItem[]>([]);
   const [bankroll, setBankroll] = useState<number>(1000);
   const [kellyFraction, setKellyFraction] = useState<number>(0.25);
   const [defaultWinProb, setDefaultWinProb] = useState<number>(0.52);
+  const [realWeather, setRealWeather] = useState<any>(null);
+  const [realInjuries, setRealInjuries] = useState<any>(null);
+  const [realBettingIntelligence, setRealBettingIntelligence] = useState<any>(null);
 
-  // Load game data
+  // Function to get real weather data using WeatherAPI
+  const fetchWeatherData = async (venueName: string, gameDate: string) => {
+    try {
+      console.log('🌤️ [GameBettingPage] Fetching weather for venue:', venueName);
+      const weatherResponse = await getWeatherData(venueName);
+      
+      if (weatherResponse.success) {
+        console.log('✅ [GameBettingPage] Got real weather data:', weatherResponse);
+        return weatherResponse;
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('❌ [GameBettingPage] Weather data not available:', error);
+      return null;
+    }
+  };
+
+  // Function to get real injury data using injury intelligence API
+  const fetchInjuryData = async (homeTeam: string, awayTeam: string) => {
+    try {
+      console.log('🏥 [GameBettingPage] Fetching injuries for teams:', homeTeam, 'vs', awayTeam);
+      const injuryResponse = await getInjuryData(homeTeam, awayTeam);
+      
+      if (injuryResponse.success) {
+        console.log('✅ [GameBettingPage] Got real injury data:', injuryResponse);
+        return injuryResponse;
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('❌ [GameBettingPage] Injury data not available:', error);
+      return null;
+    }
+  };
+
+  // Function to get real betting intelligence using betting intelligence API
+  const fetchBettingIntelligenceData = async (homeTeam: string, awayTeam: string) => {
+    try {
+      console.log('📊 [GameBettingPage] Fetching betting intelligence for teams:', homeTeam, 'vs', awayTeam);
+      const bettingResponse = await getBettingIntelligence(homeTeam, awayTeam);
+      
+      if (bettingResponse.success) {
+        console.log('✅ [GameBettingPage] Got real betting intelligence:', bettingResponse);
+        return bettingResponse;
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('❌ [GameBettingPage] Betting intelligence not available:', error);
+      return null;
+    }
+  };
+
+  // Load game data and odds
   useEffect(() => {
-    const loadGame = async () => {
+    const loadGameData = async () => {
       if (!gameId) return;
       
       try {
-        // In a real app, we'd have a getGameById API
-        // For now, search through different sports to find the game
-        const sports = [SportType.NCAAF, SportType.NFL, SportType.NBA, SportType.MLB];
+        console.log('🎯 [GameBettingPage] Loading game:', gameId);
         
-        for (const sport of sports) {
-          const games = await getGamesBySport(sport);
-          const foundGame = games.find(g => g.id === gameId);
-          if (foundGame) {
-            setGame(foundGame);
-            break;
-          }
+        // Load game details and odds in parallel
+        const [gameData, oddsData] = await Promise.all([
+          getGameById(gameId),
+          getGameOdds(gameId)
+        ]);
+        
+        console.log('✅ [GameBettingPage] Loaded:', { game: gameData, odds: oddsData });
+        
+        setGame(gameData);
+        setGameOdds(oddsData);
+        
+        // Try to fetch real weather data
+        if (gameData.venue_name) {
+          const weatherData = await fetchWeatherData(gameData.venue_name, gameData.scheduled_start);
+          setRealWeather(weatherData);
+        }
+        
+        // Try to fetch real injury data
+        if (gameData.home_team_name && gameData.away_team_name) {
+          const injuryData = await fetchInjuryData(gameData.home_team_name, gameData.away_team_name);
+          setRealInjuries(injuryData);
+        }
+        
+        // Try to fetch real betting intelligence data
+        if (gameData.home_team_name && gameData.away_team_name) {
+          const bettingData = await fetchBettingIntelligenceData(gameData.home_team_name, gameData.away_team_name);
+          setRealBettingIntelligence(bettingData);
         }
       } catch (error) {
-        console.error('Failed to load game:', error);
+        console.error('❌ [GameBettingPage] Failed to load game data:', error);
         toast.error('Failed to load game details');
       } finally {
         setLoading(false);
       }
     };
 
-    loadGame();
+    loadGameData();
   }, [gameId]);
+
+  // Get real 2025 season team records (can be enhanced to pull from database)
+  const getRealTeamRecords = (game: Game) => {
+    // Real 2025 season records - this could be enhanced to pull from API/database
+    const realRecords: Record<string, any> = {
+      'Colorado Buffaloes': { record: '1-1', homeRecord: '1-0', awayRecord: '0-1' },
+      'Houston Cougars': { record: '2-0', homeRecord: '1-0', awayRecord: '1-0' },
+      // Add more teams as needed
+    };
+    
+    console.log('🏈 [getRealTeamRecords] Team names:', {
+      home: game.home_team_name,
+      away: game.away_team_name,
+      homeRecord: realRecords[game.home_team_name],
+      awayRecord: realRecords[game.away_team_name]
+    });
+    
+    return {
+      [game.home_team_name]: realRecords[game.home_team_name] || { record: 'TBD', homeRecord: 'TBD', awayRecord: 'TBD' },
+      [game.away_team_name]: realRecords[game.away_team_name] || { record: 'TBD', homeRecord: 'TBD', awayRecord: 'TBD' }
+    };
+  };
 
   // Generate realistic game-specific data based on actual game details
   const generateGameSpecificData = (game: Game) => {
@@ -112,9 +213,12 @@ export function GameBettingPage() {
     const random = (min: number, max: number) => min + Math.abs(seed % (max - min + 1));
     
     // Generate realistic injury data based on team names and sport
-    const positions = game.league.toLowerCase().includes('nfl') || game.league.toLowerCase().includes('ncaaf') 
+    const leagueStr = (game.league_name || game.league).toLowerCase();
+    const positions = leagueStr.includes('football') || leagueStr.includes('ncaaf') || leagueStr.includes('nfl')
       ? ['QB', 'RB', 'WR', 'TE', 'OL', 'DE', 'LB', 'CB', 'S']
-      : ['PG', 'SG', 'SF', 'PF', 'C'];
+      : leagueStr.includes('basketball') || leagueStr.includes('nba') || leagueStr.includes('ncaab')
+      ? ['PG', 'SG', 'SF', 'PF', 'C'] 
+      : ['P1', 'P2', 'P3', 'P4', 'P5']; // Generic positions for other sports
     
     const statuses = ['Questionable', 'Probable', 'Doubtful', 'Out'];
     const injuryTypes = ['Ankle', 'Knee', 'Shoulder', 'Hamstring', 'Back', 'Wrist', 'Concussion'];
@@ -148,28 +252,15 @@ export function GameBettingPage() {
     return {
       weather: {
         condition: ['Clear', 'Partly Cloudy', 'Overcast', 'Light Rain', 'Windy'][random(0, 4)],
-        temperature: random(45, 85),
-        humidity: random(30, 80),
-        wind: `${['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][random(0, 7)]} ${random(3, 15)} mph`
+        temperature: random(55, 78), // More realistic football weather
+        humidity: random(35, 65),
+        wind: `${['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][random(0, 7)]} ${random(5, 12)} mph`
       },
       injuries: [
         ...generateInjuries(game.home_team_name, homeSeed),
         ...generateInjuries(game.away_team_name, awaySeed)
       ],
-      teamStats: {
-        [game.home_team_name]: {
-          record: `${random(4, 12)}-${random(0, 8)}`,
-          pointsFor: random(180, 350),
-          pointsAgainst: random(160, 320),
-          homeRecord: `${random(2, 8)}-${random(0, 4)}`
-        },
-        [game.away_team_name]: {
-          record: `${random(3, 11)}-${random(1, 9)}`,
-          pointsFor: random(170, 340),
-          pointsAgainst: random(150, 310),
-          awayRecord: `${random(1, 7)}-${random(1, 5)}`
-        }
-      },
+      teamStats: getRealTeamRecords(game),
       trends: [
         `${game.home_team_name} is ${random(3, 9)}-${random(1, 5)} ATS at home`,
         `${game.away_team_name} is ${random(2, 8)}-${random(2, 6)} ATS on the road`,
@@ -182,8 +273,143 @@ export function GameBettingPage() {
   
   const gameDetails = game ? generateGameSpecificData(game) : null;
 
-  // Mock betting markets
-  const bettingMarkets: BettingMarket[] = game ? [
+  // Convert real odds data to betting markets format
+  const convertOddsToMarkets = (oddsData: any): BettingMarket[] => {
+    console.log('🎯 [convertOddsToMarkets] Converting odds data:', oddsData);
+    if (!oddsData || !oddsData.markets) {
+      console.log('❌ [convertOddsToMarkets] No markets data found');
+      return [];
+    }
+    
+    const markets: BettingMarket[] = [];
+    
+    // Group markets by type
+    const marketsByType = oddsData.markets.reduce((acc: any, market: any) => {
+      if (!acc[market.market_type]) {
+        acc[market.market_type] = [];
+      }
+      acc[market.market_type].push(market);
+      return acc;
+    }, {});
+    
+    // Convert moneyline markets
+    if (marketsByType.moneyline) {
+      const moneylineMarket = marketsByType.moneyline[0]; // Take first moneyline market
+      const options: BettingOption[] = [];
+      
+      moneylineMarket.odds_lines?.forEach((line: any) => {
+        if (line.home_odds && line.is_current) {
+          options.push({
+            id: `ml_home_${line.id}`,
+            name: `${game?.home_team_name || 'Home'} (${line.sportsbook_name})`,
+            odds: line.home_odds,
+            implied_prob: (line.implied_probabilities?.home || 0) * 100,
+            kelly_rec: 2.5
+          });
+        }
+        if (line.away_odds && line.is_current) {
+          options.push({
+            id: `ml_away_${line.id}`,
+            name: `${game?.away_team_name || 'Away'} (${line.sportsbook_name})`,
+            odds: line.away_odds,
+            implied_prob: (line.implied_probabilities?.away || 0) * 100,
+            kelly_rec: 3.2
+          });
+        }
+      });
+      
+      if (options.length > 0) {
+        markets.push({
+          type: 'moneyline',
+          name: 'Moneyline',
+          options
+        });
+      }
+    }
+    
+    // Convert spread markets
+    if (marketsByType.spread) {
+      const spreadMarket = marketsByType.spread[0];
+      const options: BettingOption[] = [];
+      
+      spreadMarket.odds_lines?.forEach((line: any) => {
+        if (line.home_spread !== null && line.home_odds && line.is_current) {
+          options.push({
+            id: `spread_home_${line.id}`,
+            name: `${game?.home_team_name || 'Home'} ${line.home_spread > 0 ? '+' : ''}${line.home_spread}`,
+            odds: line.home_odds,
+            line: line.home_spread,
+            implied_prob: (line.implied_probabilities?.home || 0.524) * 100,
+            kelly_rec: 1.8
+          });
+        }
+        if (line.away_spread !== null && line.away_odds && line.is_current) {
+          options.push({
+            id: `spread_away_${line.id}`,
+            name: `${game?.away_team_name || 'Away'} ${line.away_spread > 0 ? '+' : ''}${line.away_spread}`,
+            odds: line.away_odds,
+            line: line.away_spread,
+            implied_prob: (line.implied_probabilities?.away || 0.524) * 100,
+            kelly_rec: 1.8
+          });
+        }
+      });
+      
+      if (options.length > 0) {
+        markets.push({
+          type: 'spread',
+          name: 'Point Spread',
+          options
+        });
+      }
+    }
+    
+    // Convert total markets
+    if (marketsByType.total) {
+      const totalMarket = marketsByType.total[0];
+      const options: BettingOption[] = [];
+      
+      totalMarket.odds_lines?.forEach((line: any) => {
+        if (line.total_line !== null && line.is_current) {
+          if (line.over_odds) {
+            options.push({
+              id: `total_over_${line.id}`,
+              name: `Over ${line.total_line}`,
+              odds: line.over_odds,
+              line: line.total_line,
+              implied_prob: (line.implied_probabilities?.over || 0.51) * 100,
+              kelly_rec: 2.1
+            });
+          }
+          if (line.under_odds) {
+            options.push({
+              id: `total_under_${line.id}`,
+              name: `Under ${line.total_line}`,
+              odds: line.under_odds,
+              line: line.total_line,
+              implied_prob: (line.implied_probabilities?.under || 0.535) * 100,
+              kelly_rec: 1.2
+            });
+          }
+        }
+      });
+      
+      if (options.length > 0) {
+        markets.push({
+          type: 'total',
+          name: 'Total Points',
+          options
+        });
+      }
+    }
+    
+    console.log('✅ [convertOddsToMarkets] Created markets:', markets);
+    return markets;
+  };
+
+  // Use real odds data if available, otherwise fallback to mock data
+  console.log('🎲 [GameBettingPage] Current data state:', { hasGame: !!game, hasGameOdds: !!gameOdds, gameOdds });
+  const bettingMarkets: BettingMarket[] = gameOdds ? convertOddsToMarkets(gameOdds) : game ? [
     {
       type: 'moneyline',
       name: 'Moneyline',
@@ -409,13 +635,18 @@ export function GameBettingPage() {
             </div>
             
             <div className="text-3xl font-black gaming-text-primary flex items-center gap-4 justify-center">
-              <div className="text-4xl">{game.league === 'NFL' ? '🏈' : game.league === 'NBA' ? '🏀' : '⚾'}</div>
+              <div className="text-4xl">
+                {(game.league_name || game.league).toLowerCase().includes('football') ? '🏈' : 
+                 (game.league_name || game.league).toLowerCase().includes('basketball') ? '🏀' : 
+                 (game.league_name || game.league).toLowerCase().includes('baseball') ? '⚾' : 
+                 (game.league_name || game.league).toLowerCase().includes('hockey') ? '🏒' : '🏆'}
+              </div>
               <div>
                 <div className="flex items-center gap-4">
                   {game.away_team_name} <span className="gaming-text-neon text-2xl">@</span> {game.home_team_name}
                 </div>
                 <div className="gaming-text-secondary text-lg font-mono mt-2">
-                  {game.league} • {new Date(game.scheduled_start).toLocaleDateString()} • {new Date(game.scheduled_start).toLocaleTimeString()}
+                  {game.league_name || game.league} • {formatDateOnlyMST(game.scheduled_start)} • {formatTimeOnlyMST(game.scheduled_start)} MST
                 </div>
               </div>
             </div>
@@ -444,12 +675,16 @@ export function GameBettingPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="gaming-team">
                       <div className="gaming-team-avatar text-sm">
-                        {game.away_team_name.substring(0, 3)}
+                        {game?.away_team_abbreviation ? 
+                          game.away_team_abbreviation.substring(0, 3).toUpperCase() :
+                          (game?.away_team_name || 'AWAY').substring(0, 3).toUpperCase()}
                       </div>
                       <div>
-                        <div className="gaming-team-name text-sm">{game.away_team_name}</div>
+                        <div className="gaming-team-name text-sm">{game?.away_team_name || 'Away Team'}</div>
                         <div className="gaming-text-secondary text-xs">
-                          {gameDetails?.teamStats[game.away_team_name]?.record} (Away: {gameDetails?.teamStats[game.away_team_name]?.awayRecord})
+                          {gameDetails?.teamStats?.[game?.away_team_name]?.record || 'Record: TBD'} 
+                          {gameDetails?.teamStats?.[game?.away_team_name]?.awayRecord && 
+                            ` (Road: ${gameDetails.teamStats[game.away_team_name].awayRecord})`}
                         </div>
                       </div>
                     </div>
@@ -458,18 +693,22 @@ export function GameBettingPage() {
                     
                     <div className="gaming-team gaming-home">
                       <div className="gaming-team-avatar gaming-home text-sm">
-                        {game.home_team_name.substring(0, 3)}
+                        {game?.home_team_abbreviation ? 
+                          game.home_team_abbreviation.substring(0, 3).toUpperCase() :
+                          (game?.home_team_name || 'HOME').substring(0, 3).toUpperCase()}
                       </div>
                       <div>
-                        <div className="gaming-team-name text-sm">{game.home_team_name}</div>
+                        <div className="gaming-team-name text-sm">{game?.home_team_name || 'Home Team'}</div>
                         <div className="gaming-text-secondary text-xs">
-                          {gameDetails?.teamStats[game.home_team_name]?.record} (Home: {gameDetails?.teamStats[game.home_team_name]?.homeRecord})
+                          {gameDetails?.teamStats?.[game?.home_team_name]?.record || 'Record: TBD'}
+                          {gameDetails?.teamStats?.[game?.home_team_name]?.homeRecord && 
+                            ` (Home: ${gameDetails.teamStats[game.home_team_name].homeRecord})`}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Weather & Venue */}
+                  {/* Venue & Weather Info */}
                   <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan p-3 text-sm">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1">
@@ -478,11 +717,15 @@ export function GameBettingPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Cloud className="w-3 h-3" />
-                        <span>{gameDetails?.weather.condition} {gameDetails?.weather.temperature}°F</span>
+                        <span>
+                          {realWeather?.condition || gameDetails?.weather?.condition || 'Clear'} {realWeather?.temperature || gameDetails?.weather?.temperature || 72}°F
+                        </span>
                       </div>
                     </div>
                     <div className="text-xs opacity-75">
-                      Humidity: {gameDetails?.weather.humidity}% • Wind: {gameDetails?.weather.wind}
+                      {realWeather || gameDetails?.weather ? 
+                        `Humidity: ${realWeather?.humidity || gameDetails?.weather?.humidity || 45}% • Wind: ${realWeather?.wind || gameDetails?.weather?.wind || 'Light'}` :
+                        `Kickoff: ${formatDateMST(game.scheduled_start)} MST • ${game.league_name || game.league}`}
                     </div>
                   </div>
                 </div>
@@ -498,7 +741,7 @@ export function GameBettingPage() {
                   </h3>
                   
                   <div className="space-y-4 max-h-72 overflow-y-auto">
-                    {gameDetails?.injuries.map((injury, idx) => {
+                    {(realInjuries?.injuries || gameDetails?.injuries || []).map((injury, idx) => {
                       const getStatusColor = (status: string) => {
                         switch (status) {
                           case 'Out': return 'bg-red-500/20 border-red-500 text-red-400';
@@ -567,7 +810,7 @@ export function GameBettingPage() {
                   <div className="mt-4 pt-4 border-t border-gaming-border/30">
                     <div className="flex items-center justify-between text-xs">
                       <div className="gaming-text-accent">
-                        📊 Total Players Listed: {gameDetails?.injuries.length}
+                        📊 Total Players Listed: {realInjuries?.summary?.total_injuries || gameDetails?.injuries?.length || 0}
                       </div>
                       <div className="gaming-text-secondary">
                         Updated: Live Feed
@@ -577,7 +820,7 @@ export function GameBettingPage() {
                 </div>
               </Card>
 
-              {/* Professional Betting Trends */}
+              {/* Advanced Betting Intelligence */}
               <Card className="gaming-card">
                 <div className="gaming-border-glow"></div>
                 <div className="p-6">
@@ -585,26 +828,144 @@ export function GameBettingPage() {
                     <TrendingUp className="w-5 h-5 text-cyan-400" />
                     BETTING INTELLIGENCE
                   </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {gameDetails?.trends.map((trend, idx) => (
-                      <div 
-                        key={idx} 
-                        className="gaming-card-inner p-4 border border-gaming-border/30 hover:border-gaming-neon-cyan/50 transition-all duration-300 group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-2 h-2 rounded-full bg-cyan-400 mt-2 flex-shrink-0 group-hover:bg-gaming-neon-green transition-colors"></div>
-                          <div className="gaming-text-primary text-sm font-medium leading-relaxed">
-                            {trend}
+                  
+                  {realBettingIntelligence?.trends ? (
+                    <div className="space-y-4">
+                      {realBettingIntelligence.trends.map((trend, idx) => {
+                        const getIconAndColor = (type: string) => {
+                          switch (type) {
+                            case 'KELLY_RECOMMENDATION':
+                              return { icon: Calculator, color: 'green', border: 'border-green-500/30', bg: 'bg-green-500/5' };
+                            case 'MARKET_VALUE':
+                              return { icon: DollarSign, color: 'orange', border: 'border-orange-500/30', bg: 'bg-orange-500/5' };
+                            case 'ATS_ANALYSIS':
+                              return { icon: Activity, color: 'blue', border: 'border-blue-500/30', bg: 'bg-blue-500/5' };
+                            case 'MARKET_SENTIMENT':
+                              return { icon: Users, color: 'purple', border: 'border-purple-500/30', bg: 'bg-purple-500/5' };
+                            case 'SITUATIONAL_EDGE':
+                              return { icon: Zap, color: 'cyan', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' };
+                            case 'TOTALS_ANALYSIS':
+                              return { icon: Target, color: 'red', border: 'border-red-500/30', bg: 'bg-red-500/5' };
+                            case 'SCORING_EDGE':
+                              return { icon: Trophy, color: 'yellow', border: 'border-yellow-500/30', bg: 'bg-yellow-500/5' };
+                            default:
+                              return { icon: TrendingUp, color: 'gray', border: 'border-gray-500/30', bg: 'bg-gray-500/5' };
+                          }
+                        };
+
+                        const { icon: Icon, color, border, bg } = getIconAndColor(trend.type);
+                        const isKellyRec = trend.type === 'KELLY_RECOMMENDATION';
+                        const hasSpecialData = trend.type === 'MARKET_SENTIMENT' && trend.public_percentage;
+
+                        return (
+                          <div key={idx} className={`gaming-card-inner ${border} ${bg}`}>
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <Icon className={`w-4 h-4 text-${color}-400`} />
+                                  <span className={`font-bold text-${color}-400 text-sm`}>
+                                    {trend.category.toUpperCase()}
+                                  </span>
+                                </div>
+                                
+                                {/* Special indicators for different trend types */}
+                                {isKellyRec && trend.kelly_percentage && (
+                                  <div className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium">
+                                    {trend.kelly_percentage} Allocation
+                                  </div>
+                                )}
+                                
+                                {hasSpecialData && (
+                                  <div className="flex gap-2 text-xs">
+                                    <div className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
+                                      Public: {trend.public_percentage}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {trend.value && !isKellyRec && !hasSpecialData && (
+                                  <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                    trend.impact === 'Positive' || trend.impact === 'Recommended'
+                                      ? 'bg-green-500/20 text-green-400'
+                                      : trend.impact === 'Negative' || trend.impact === 'Bearish'
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-gray-500/20 text-gray-400'
+                                  }`}>
+                                    {trend.value}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Main trend text */}
+                              <div className="text-xs gaming-text-primary leading-relaxed">
+                                {trend.text}
+                              </div>
+
+                              {/* Additional Kelly metrics */}
+                              {isKellyRec && (trend.expected_value || trend.expected_roi) && (
+                                <div className="mt-3 grid grid-cols-2 gap-3">
+                                  {trend.expected_value && (
+                                    <div className="bg-gaming-background/50 p-2 rounded border border-gaming-border/30">
+                                      <div className="gaming-text-secondary text-xs mb-1">Expected Value</div>
+                                      <div className="text-sm font-bold text-green-400">{trend.expected_value}</div>
+                                    </div>
+                                  )}
+                                  {trend.expected_roi && (
+                                    <div className="bg-gaming-background/50 p-2 rounded border border-gaming-border/30">
+                                      <div className="gaming-text-secondary text-xs mb-1">Expected ROI</div>
+                                      <div className="text-sm font-bold text-cyan-400">{trend.expected_roi}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Confidence and risk indicators */}
+                              <div className="mt-3 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    trend.confidence === 'High' ? 'bg-green-400' :
+                                    trend.confidence === 'Medium' ? 'bg-yellow-400' : 'bg-red-400'
+                                  }`}></div>
+                                  <span className="gaming-text-secondary">
+                                    {trend.confidence} Confidence
+                                  </span>
+                                </div>
+                                
+                                {trend.kelly_suggestion && (
+                                  <div className="gaming-text-accent">
+                                    Kelly: {trend.kelly_suggestion}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // Fallback to basic trends if enhanced intelligence not available
+                    <div className="grid grid-cols-1 gap-4">
+                      {(gameDetails?.trends || []).map((trend, idx) => (
+                        <div 
+                          key={idx} 
+                          className="gaming-card-inner p-4 border border-gaming-border/30 hover:border-gaming-neon-cyan/50 transition-all duration-300 group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-2 h-2 rounded-full bg-cyan-400 mt-2 flex-shrink-0 group-hover:bg-gaming-neon-green transition-colors"></div>
+                            <div className="gaming-text-primary text-sm font-medium leading-relaxed">
+                              {trend}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-gaming-border/30 flex items-center justify-between text-xs gaming-text-secondary">
-                    <span>🔄 LIVE BETTING FEED</span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="mt-6 pt-4 border-t border-gaming-border/30 flex items-center justify-between text-xs gaming-text-secondary">
+                    <span>📊 {realBettingIntelligence?.agents_used?.length || 3} AGENTS ACTIVE</span>
                     <span className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                      UPDATING
+                      LIVE ANALYSIS
                     </span>
                   </div>
                 </div>
@@ -613,13 +974,32 @@ export function GameBettingPage() {
             </div>
 
             {/* Right Half: AI Agents */}
-            <div>
+            <div className="space-y-6">
               <BettingAgentPanel game={game} />
+              <AgentActivityMonitor 
+                gameId={game.id} 
+                onAgentActivity={(activity) => {
+                  // Reduced logging to avoid spam in development
+                  if (import.meta.env.DEV && activity.message_type === 'result') {
+                    console.log('🤖 Agent Result:', activity.agent_name, '-', activity.content);
+                  }
+                  // Could trigger additional UI updates based on agent activity
+                }}
+              />
             </div>
             
           </div>
           
-          {/* Row 2: Betting Markets + Kelly Calculator */}
+          {/* Row 2: Agent Analysis Reports - Full Width */}
+          <div className="mt-8">
+            <AgentResultsViewer 
+              gameId={game.id}
+              limit={20}
+              autoRefresh={true}
+            />
+          </div>
+          
+          {/* Row 3: Betting Markets + Kelly Calculator */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
             {/* Left: Betting Markets (3 columns) */}

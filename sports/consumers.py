@@ -1,732 +1,491 @@
 """
-Sports Analytics WebSocket Consumers
-
-Real-time WebSocket consumers for live sports data streaming including:
-- Live odds updates
-- Line movement notifications
-- Game score updates
-- Arbitrage alerts
-- Betting recommendations
+WebSocket consumers for real-time sports data updates
 """
-
 import json
-import asyncio
 import logging
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
-from decimal import Decimal
-
-from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.utils import timezone
-from django.core.serializers.json import DjangoJSONEncoder
-
-from .models import (
-    Game, BettingMarket, OddsLine, LineMovement, ArbitrageOpportunity,
-    BettingRecommendation, GameStatus, MarketStatus
-)
-from .serializers import (
-    GameSerializer, OddsLineSerializer, LineMovementSerializer,
-    ArbitrageOpportunitySerializer, BettingRecommendationSerializer
-)
+from django.core.cache import cache
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class SportsBaseConsumer(AsyncWebsocketConsumer):
-    """Base consumer with common functionality"""
+class SportsConsumer(AsyncJsonWebsocketConsumer):
+    """
+    Main sports WebSocket consumer for real-time updates.
+    Handles game updates, odds changes, and score updates.
+    """
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.user = None
-        self.groups = []
-        
     async def connect(self):
-        """Handle WebSocket connection"""
-        # Get user from scope (set by AuthMiddleware)
-        self.user = self.scope.get('user')
+        """Accept WebSocket connection and join sports update group"""
+        self.room_group_name = 'sports_updates'
         
-        # Allow anonymous connections for development/testing
-        from django.contrib.auth.models import AnonymousUser
-        if not self.user or isinstance(self.user, AnonymousUser):
-            # For anonymous users, we still accept but with limited functionality
-            self.user = AnonymousUser()
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
         
         await self.accept()
         
-        # Add user to their personal group
-        from django.contrib.auth.models import AnonymousUser
-        if not isinstance(self.user, AnonymousUser):
-            user_group = f"user_{self.user.id}"
-            await self.channel_layer.group_add(user_group, self.channel_name)
-            self.groups.append(user_group)
-            logger.info(f"WebSocket connected: {self.user.username}")
-        else:
-            logger.info("WebSocket connected: anonymous user")
+        # Send initial connection confirmation
+        await self.send_json({
+            'type': 'connection_established',
+            'message': 'Connected to sports updates'
+        })
+        
+        logger.info(f"WebSocket connected: {self.channel_name}")
     
     async def disconnect(self, close_code):
-        """Handle WebSocket disconnection"""
-        # Remove from all groups
-        for group in self.groups:
-            await self.channel_layer.group_discard(group, self.channel_name)
+        """Leave sports update group on disconnect"""
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
         
-        logger.info(f"WebSocket disconnected: {self.user.username if self.user else 'anonymous'}")
+        logger.info(f"WebSocket disconnected: {self.channel_name}, code: {close_code}")
     
-    async def send_json_data(self, data: Dict[str, Any]):
-        """Send JSON data with proper encoding"""
-        await self.send(text_data=json.dumps(data, cls=DjangoJSONEncoder))
-    
-    async def send_error(self, message: str, error_code: str = "generic_error"):
-        """Send error message"""
-        await self.send_json_data({
-            'type': 'error',
-            'error_code': error_code,
-            'message': message,
-            'timestamp': timezone.now()
-        })
-
-
-class GameConsumer(SportsBaseConsumer):
-    """Consumer for real-time game updates"""
-    
-    async def connect(self):
-        """Connect to game updates"""
-        await super().connect()
+    async def receive_json(self, content: Dict[str, Any]):
+        """
+        Handle incoming WebSocket messages from client.
         
-        if not self.user:
+        Supported message types:
+        - subscribe_game: Subscribe to updates for a specific game
+        - unsubscribe_game: Unsubscribe from game updates
+        - subscribe_league: Subscribe to all games in a league
+        - get_live_odds: Request current odds for a game
+        """
+        message_type = content.get('type')
+        
+        if message_type == 'subscribe_game':
+            await self.subscribe_to_game(content.get('game_id'))
+        elif message_type == 'unsubscribe_game':
+            await self.unsubscribe_from_game(content.get('game_id'))
+        elif message_type == 'subscribe_league':
+            await self.subscribe_to_league(content.get('league'))
+        elif message_type == 'get_live_odds':
+            await self.send_live_odds(content.get('game_id'))
+        else:
+            await self.send_json({
+                'type': 'error',
+                'message': f'Unknown message type: {message_type}'
+            })
+    
+    async def subscribe_to_game(self, game_id: str):
+        """Subscribe to updates for a specific game"""
+        if not game_id:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id is required'
+            })
             return
         
-        # Get game ID from URL
-        self.game_id = self.scope['url_route']['kwargs']['game_id']
+        game_group = f'game_{game_id}'
+        await self.channel_layer.group_add(
+            game_group,
+            self.channel_name
+        )
         
-        # Verify game exists
-        try:
-            self.game = await self.get_game(self.game_id)
-        except Game.DoesNotExist:
-            await self.send_error("Game not found", "game_not_found")
-            await self.close()
-            return
-        
-        # Join game group
-        self.game_group = f"game_{self.game_id}"
-        await self.channel_layer.group_add(self.game_group, self.channel_name)
-        self.groups.append(self.game_group)
-        
-        # Send initial game data
-        await self.send_initial_data()
-    
-    @database_sync_to_async
-    def get_game(self, game_id):
-        """Get game from database"""
-        return Game.objects.select_related('league', 'home_team', 'away_team').get(id=game_id)
-    
-    async def send_initial_data(self):
-        """Send initial game data"""
-        game_data = await self.serialize_game(self.game)
-        
-        await self.send_json_data({
-            'type': 'initial_data',
-            'game': game_data,
-            'subscribed_to': f"game_{self.game_id}",
-            'timestamp': timezone.now()
-        })
-    
-    @database_sync_to_async
-    def serialize_game(self, game):
-        """Serialize game data"""
-        return GameSerializer(game).data
-    
-    async def receive(self, text_data):
-        """Handle incoming messages"""
-        try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
-            
-            if message_type == 'subscribe_markets':
-                await self.subscribe_to_markets()
-            elif message_type == 'ping':
-                await self.send_json_data({'type': 'pong', 'timestamp': timezone.now()})
-            else:
-                await self.send_error(f"Unknown message type: {message_type}")
-                
-        except json.JSONDecodeError:
-            await self.send_error("Invalid JSON", "invalid_json")
-    
-    async def subscribe_to_markets(self):
-        """Subscribe to betting markets for this game"""
-        markets_group = f"markets_{self.game_id}"
-        await self.channel_layer.group_add(markets_group, self.channel_name)
-        self.groups.append(markets_group)
-        
-        await self.send_json_data({
+        await self.send_json({
             'type': 'subscribed',
-            'subscription': 'markets',
-            'game_id': str(self.game_id)
+            'game_id': game_id,
+            'message': f'Subscribed to game {game_id} updates'
         })
     
-    # Message handlers for different types of updates
-    async def game_update(self, event):
-        """Handle game status updates"""
-        await self.send_json_data({
-            'type': 'game_update',
-            'data': event['data'],
-            'timestamp': timezone.now()
+    async def unsubscribe_from_game(self, game_id: str):
+        """Unsubscribe from game updates"""
+        if not game_id:
+            return
+        
+        game_group = f'game_{game_id}'
+        await self.channel_layer.group_discard(
+            game_group,
+            self.channel_name
+        )
+        
+        await self.send_json({
+            'type': 'unsubscribed',
+            'game_id': game_id,
+            'message': f'Unsubscribed from game {game_id} updates'
+        })
+    
+    async def subscribe_to_league(self, league: str):
+        """Subscribe to all games in a league"""
+        if not league:
+            await self.send_json({
+                'type': 'error',
+                'message': 'league is required'
+            })
+            return
+        
+        league_group = f'league_{league}'
+        await self.channel_layer.group_add(
+            league_group,
+            self.channel_name
+        )
+        
+        await self.send_json({
+            'type': 'subscribed',
+            'league': league,
+            'message': f'Subscribed to {league} updates'
+        })
+    
+    async def send_live_odds(self, game_id: str):
+        """Send current odds for a specific game"""
+        if not game_id:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id is required'
+            })
+            return
+        
+        # Check cache first for latest odds
+        cache_key = f'odds_{game_id}'
+        odds_data = cache.get(cache_key)
+        
+        if odds_data:
+            await self.send_json({
+                'type': 'live_odds',
+                'game_id': game_id,
+                'odds': odds_data
+            })
+        else:
+            await self.send_json({
+                'type': 'no_odds',
+                'game_id': game_id,
+                'message': 'No odds available for this game'
+            })
+    
+    # Channel layer message handlers
+    async def sports_update(self, event):
+        """Handle sports update messages from channel layer"""
+        await self.send_json({
+            'type': 'sports_update',
+            'data': event['data']
+        })
+    
+    async def odds_update(self, event):
+        """Handle odds update messages from channel layer"""
+        await self.send_json({
+            'type': 'odds_update',
+            'game_id': event['game_id'],
+            'odds': event['odds']
         })
     
     async def score_update(self, event):
-        """Handle score updates"""
-        await self.send_json_data({
+        """Handle score update messages from channel layer"""
+        await self.send_json({
             'type': 'score_update',
-            'data': event['data'],
-            'timestamp': timezone.now()
+            'game_id': event['game_id'],
+            'score': event['score']
         })
     
-    async def market_update(self, event):
-        """Handle betting market updates"""
-        await self.send_json_data({
-            'type': 'market_update',
-            'data': event['data'],
-            'timestamp': timezone.now()
+    async def game_status_update(self, event):
+        """Handle game status changes (started, final, postponed, etc.)"""
+        await self.send_json({
+            'type': 'game_status',
+            'game_id': event['game_id'],
+            'status': event['status']
         })
 
 
-class OddsConsumer(SportsBaseConsumer):
-    """Consumer for real-time odds updates"""
+class OddsConsumer(AsyncJsonWebsocketConsumer):
+    """
+    Specialized consumer for odds-specific updates.
+    Handles real-time odds changes and line movements.
+    """
     
     async def connect(self):
-        """Connect to odds updates"""
-        await super().connect()
+        """Accept connection and join odds updates group"""
+        self.room_group_name = 'odds_updates'
         
-        if not self.user:
-            return
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
         
-        # Get market ID from URL
-        self.market_id = self.scope['url_route']['kwargs'].get('market_id')
-        self.game_id = self.scope['url_route']['kwargs'].get('game_id')
+        await self.accept()
         
-        if self.market_id:
-            # Subscribe to specific market
-            try:
-                self.market = await self.get_market(self.market_id)
-                self.odds_group = f"odds_{self.market_id}"
-                await self.channel_layer.group_add(self.odds_group, self.channel_name)
-                self.groups.append(self.odds_group)
-                
-                await self.send_initial_odds_data()
-                
-            except BettingMarket.DoesNotExist:
-                await self.send_error("Market not found", "market_not_found")
-                await self.close()
-                return
-                
-        elif self.game_id:
-            # Subscribe to all markets for a game
-            try:
-                self.game = await self.get_game(self.game_id)
-                self.odds_group = f"odds_game_{self.game_id}"
-                await self.channel_layer.group_add(self.odds_group, self.channel_name)
-                self.groups.append(self.odds_group)
-                
-                await self.send_initial_game_odds()
-                
-            except Game.DoesNotExist:
-                await self.send_error("Game not found", "game_not_found")
-                await self.close()
-                return
+        await self.send_json({
+            'type': 'connection_established',
+            'message': 'Connected to odds updates'
+        })
+        
+        logger.info(f"Odds WebSocket connected: {self.channel_name}")
+    
+    async def disconnect(self, close_code):
+        """Leave odds update group"""
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        logger.info(f"Odds WebSocket disconnected: {self.channel_name}")
+    
+    async def receive_json(self, content: Dict[str, Any]):
+        """
+        Handle incoming messages for odds subscriptions.
+        
+        Supported message types:
+        - subscribe_market: Subscribe to a specific betting market
+        - subscribe_all_markets: Subscribe to all markets for a game
+        - get_line_history: Get historical line movements
+        """
+        message_type = content.get('type')
+        
+        if message_type == 'subscribe_market':
+            await self.subscribe_to_market(
+                content.get('game_id'),
+                content.get('market_type')
+            )
+        elif message_type == 'subscribe_all_markets':
+            await self.subscribe_to_all_markets(content.get('game_id'))
+        elif message_type == 'get_line_history':
+            await self.send_line_history(
+                content.get('game_id'),
+                content.get('market_type')
+            )
         else:
-            await self.send_error("Market ID or Game ID required", "missing_id")
-            await self.close()
+            await self.send_json({
+                'type': 'error',
+                'message': f'Unknown message type: {message_type}'
+            })
+    
+    async def subscribe_to_market(self, game_id: str, market_type: str):
+        """Subscribe to specific market updates (spread, total, moneyline)"""
+        if not game_id or not market_type:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id and market_type are required'
+            })
             return
-    
-    @database_sync_to_async
-    def get_market(self, market_id):
-        """Get market from database"""
-        return BettingMarket.objects.select_related('game').get(id=market_id)
-    
-    @database_sync_to_async
-    def get_game(self, game_id):
-        """Get game from database"""
-        return Game.objects.get(id=game_id)
-    
-    async def send_initial_odds_data(self):
-        """Send initial odds data for market"""
-        current_odds = await self.get_current_odds(self.market_id)
-        odds_data = [await self.serialize_odds(odds) for odds in current_odds]
         
-        await self.send_json_data({
-            'type': 'initial_odds',
-            'market_id': str(self.market_id),
-            'odds': odds_data,
-            'timestamp': timezone.now()
-        })
-    
-    async def send_initial_game_odds(self):
-        """Send initial odds data for all game markets"""
-        markets = await self.get_game_markets(self.game_id)
+        market_group = f'market_{game_id}_{market_type}'
+        await self.channel_layer.group_add(
+            market_group,
+            self.channel_name
+        )
         
-        game_odds = {}
-        for market in markets:
-            odds = await self.get_current_odds(market.id)
-            game_odds[str(market.id)] = {
-                'market_type': market.market_type,
-                'market_name': market.market_name,
-                'odds': [await self.serialize_odds(odds_line) for odds_line in odds]
-            }
-        
-        await self.send_json_data({
-            'type': 'initial_game_odds',
-            'game_id': str(self.game_id),
-            'markets': game_odds,
-            'timestamp': timezone.now()
-        })
-    
-    @database_sync_to_async
-    def get_current_odds(self, market_id):
-        """Get current odds for market"""
-        return list(OddsLine.objects.filter(
-            market_id=market_id,
-            is_current=True
-        ).select_related('sportsbook'))
-    
-    @database_sync_to_async
-    def get_game_markets(self, game_id):
-        """Get markets for game"""
-        return list(BettingMarket.objects.filter(
-            game_id=game_id,
-            is_active=True,
-            status=MarketStatus.OPEN
-        ))
-    
-    @database_sync_to_async
-    def serialize_odds(self, odds_line):
-        """Serialize odds line"""
-        return OddsLineSerializer(odds_line).data
-    
-    async def receive(self, text_data):
-        """Handle incoming messages"""
-        try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
-            
-            if message_type == 'subscribe_sportsbook':
-                sportsbook_id = data.get('sportsbook_id')
-                if sportsbook_id:
-                    await self.subscribe_sportsbook(sportsbook_id)
-            elif message_type == 'unsubscribe_sportsbook':
-                sportsbook_id = data.get('sportsbook_id')
-                if sportsbook_id:
-                    await self.unsubscribe_sportsbook(sportsbook_id)
-            elif message_type == 'ping':
-                await self.send_json_data({'type': 'pong', 'timestamp': timezone.now()})
-            else:
-                await self.send_error(f"Unknown message type: {message_type}")
-                
-        except json.JSONDecodeError:
-            await self.send_error("Invalid JSON", "invalid_json")
-    
-    async def subscribe_sportsbook(self, sportsbook_id):
-        """Subscribe to specific sportsbook odds"""
-        sportsbook_group = f"sportsbook_{sportsbook_id}"
-        await self.channel_layer.group_add(sportsbook_group, self.channel_name)
-        self.groups.append(sportsbook_group)
-        
-        await self.send_json_data({
+        await self.send_json({
             'type': 'subscribed',
-            'subscription': 'sportsbook',
-            'sportsbook_id': sportsbook_id
+            'game_id': game_id,
+            'market_type': market_type,
+            'message': f'Subscribed to {market_type} updates for game {game_id}'
         })
     
-    async def unsubscribe_sportsbook(self, sportsbook_id):
-        """Unsubscribe from sportsbook odds"""
-        sportsbook_group = f"sportsbook_{sportsbook_id}"
-        await self.channel_layer.group_discard(sportsbook_group, self.channel_name)
-        if sportsbook_group in self.groups:
-            self.groups.remove(sportsbook_group)
+    async def subscribe_to_all_markets(self, game_id: str):
+        """Subscribe to all betting markets for a game"""
+        if not game_id:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id is required'
+            })
+            return
         
-        await self.send_json_data({
-            'type': 'unsubscribed',
-            'subscription': 'sportsbook',
-            'sportsbook_id': sportsbook_id
+        # Subscribe to all market types
+        market_types = ['spread', 'total', 'moneyline']
+        for market_type in market_types:
+            market_group = f'market_{game_id}_{market_type}'
+            await self.channel_layer.group_add(
+                market_group,
+                self.channel_name
+            )
+        
+        await self.send_json({
+            'type': 'subscribed_all',
+            'game_id': game_id,
+            'markets': market_types,
+            'message': f'Subscribed to all markets for game {game_id}'
         })
     
-    # Message handlers
-    async def odds_update(self, event):
-        """Handle odds updates"""
-        await self.send_json_data({
-            'type': 'odds_update',
-            'data': event['data'],
-            'timestamp': timezone.now()
+    async def send_line_history(self, game_id: str, market_type: str):
+        """Send historical line movement data"""
+        if not game_id or not market_type:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id and market_type are required'
+            })
+            return
+        
+        # Get line history from cache
+        cache_key = f'line_history_{game_id}_{market_type}'
+        history = cache.get(cache_key, [])
+        
+        await self.send_json({
+            'type': 'line_history',
+            'game_id': game_id,
+            'market_type': market_type,
+            'history': history
+        })
+    
+    # Channel layer message handlers
+    async def odds_change(self, event):
+        """Handle odds change notifications"""
+        await self.send_json({
+            'type': 'odds_change',
+            'game_id': event['game_id'],
+            'market_type': event['market_type'],
+            'old_value': event.get('old_value'),
+            'new_value': event['new_value'],
+            'timestamp': event.get('timestamp')
         })
     
     async def line_movement(self, event):
-        """Handle line movement notifications"""
-        await self.send_json_data({
+        """Handle significant line movements"""
+        await self.send_json({
             'type': 'line_movement',
-            'data': event['data'],
-            'timestamp': timezone.now()
+            'game_id': event['game_id'],
+            'market_type': event['market_type'],
+            'movement': event['movement'],
+            'timestamp': event.get('timestamp')
         })
 
 
-class ArbitrageConsumer(SportsBaseConsumer):
-    """Consumer for arbitrage opportunity alerts"""
+class GamesConsumer(AsyncJsonWebsocketConsumer):
+    """
+    Consumer for game-specific updates and live game tracking.
+    """
     
     async def connect(self):
-        """Connect to arbitrage alerts"""
-        await super().connect()
+        """Accept connection and set up game tracking"""
+        self.subscribed_games = set()
+        await self.accept()
         
-        if not self.user:
-            return
-        
-        # Join arbitrage alerts group
-        arbitrage_group = "arbitrage_alerts"
-        await self.channel_layer.group_add(arbitrage_group, self.channel_name)
-        self.groups.append(arbitrage_group)
-        
-        # Send initial arbitrage opportunities
-        await self.send_initial_opportunities()
-    
-    async def send_initial_opportunities(self):
-        """Send current arbitrage opportunities"""
-        opportunities = await self.get_active_opportunities()
-        opportunities_data = [await self.serialize_opportunity(opp) for opp in opportunities]
-        
-        await self.send_json_data({
-            'type': 'initial_opportunities',
-            'opportunities': opportunities_data,
-            'count': len(opportunities_data),
-            'timestamp': timezone.now()
+        await self.send_json({
+            'type': 'connection_established',
+            'message': 'Connected to games updates'
         })
-    
-    @database_sync_to_async
-    def get_active_opportunities(self):
-        """Get active arbitrage opportunities"""
-        return list(ArbitrageOpportunity.objects.filter(
-            is_active=True,
-            expires_at__gt=timezone.now()
-        ).select_related('game', 'sportsbook_1', 'sportsbook_2')[:20])
-    
-    @database_sync_to_async
-    def serialize_opportunity(self, opportunity):
-        """Serialize arbitrage opportunity"""
-        return ArbitrageOpportunitySerializer(opportunity).data
-    
-    async def receive(self, text_data):
-        """Handle incoming messages"""
-        try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
-            
-            if message_type == 'set_min_profit':
-                min_profit = data.get('min_profit', 1.0)
-                await self.set_profit_filter(min_profit)
-            elif message_type == 'subscribe_sport':
-                sport_type = data.get('sport_type')
-                if sport_type:
-                    await self.subscribe_sport(sport_type)
-            elif message_type == 'ping':
-                await self.send_json_data({'type': 'pong', 'timestamp': timezone.now()})
-            else:
-                await self.send_error(f"Unknown message type: {message_type}")
-                
-        except json.JSONDecodeError:
-            await self.send_error("Invalid JSON", "invalid_json")
-    
-    async def set_profit_filter(self, min_profit):
-        """Set minimum profit filter for user"""
-        # Store user preference (could save to database)
-        await self.send_json_data({
-            'type': 'filter_set',
-            'filter': 'min_profit',
-            'value': min_profit,
-            'message': f'Minimum profit filter set to {min_profit}%'
-        })
-    
-    async def subscribe_sport(self, sport_type):
-        """Subscribe to arbitrage alerts for specific sport"""
-        sport_group = f"arbitrage_{sport_type}"
-        await self.channel_layer.group_add(sport_group, self.channel_name)
-        self.groups.append(sport_group)
         
-        await self.send_json_data({
-            'type': 'subscribed',
-            'subscription': 'sport',
-            'sport_type': sport_type
-        })
+        logger.info(f"Games WebSocket connected: {self.channel_name}")
     
-    # Message handlers
-    async def arbitrage_alert(self, event):
-        """Handle new arbitrage opportunity alerts"""
-        await self.send_json_data({
-            'type': 'arbitrage_alert',
-            'data': event['data'],
-            'timestamp': timezone.now()
-        })
-    
-    async def arbitrage_expired(self, event):
-        """Handle arbitrage opportunity expiration"""
-        await self.send_json_data({
-            'type': 'arbitrage_expired',
-            'data': event['data'],
-            'timestamp': timezone.now()
-        })
-
-
-class RecommendationConsumer(SportsBaseConsumer):
-    """Consumer for betting recommendations"""
-    
-    async def connect(self):
-        """Connect to betting recommendations"""
-        await super().connect()
-        
-        from django.contrib.auth.models import AnonymousUser
-        if not self.user or isinstance(self.user, AnonymousUser):
-            return
-        
-        # Join user's recommendation group
-        rec_group = f"recommendations_{self.user.id}"
-        await self.channel_layer.group_add(rec_group, self.channel_name)
-        self.groups.append(rec_group)
-        
-        # Send initial recommendations
-        await self.send_initial_recommendations()
-    
-    async def send_initial_recommendations(self):
-        """Send current active recommendations for user"""
-        recommendations = await self.get_user_recommendations()
-        rec_data = [await self.serialize_recommendation(rec) for rec in recommendations]
-        
-        await self.send_json_data({
-            'type': 'initial_recommendations',
-            'recommendations': rec_data,
-            'count': len(rec_data),
-            'timestamp': timezone.now()
-        })
-    
-    @database_sync_to_async
-    def get_user_recommendations(self):
-        """Get user's active recommendations"""
-        from django.contrib.auth.models import AnonymousUser
-        if isinstance(self.user, AnonymousUser):
-            return []  # Return empty list for anonymous users
-        
-        return list(BettingRecommendation.objects.filter(
-            user=self.user,
-            is_active=True,
-            expires_at__gt=timezone.now()
-        ).select_related('game', 'market', 'recommended_sportsbook')[:10])
-    
-    @database_sync_to_async
-    def serialize_recommendation(self, recommendation):
-        """Serialize recommendation"""
-        return BettingRecommendationSerializer(recommendation).data
-    
-    async def receive(self, text_data):
-        """Handle incoming messages"""
-        try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
-            
-            if message_type == 'request_recommendations':
-                sport_type = data.get('sport_type')
-                await self.request_recommendations(sport_type)
-            elif message_type == 'accept_recommendation':
-                rec_id = data.get('recommendation_id')
-                if rec_id:
-                    await self.accept_recommendation(rec_id)
-            elif message_type == 'reject_recommendation':
-                rec_id = data.get('recommendation_id')
-                if rec_id:
-                    await self.reject_recommendation(rec_id)
-            elif message_type == 'ping':
-                await self.send_json_data({'type': 'pong', 'timestamp': timezone.now()})
-            else:
-                await self.send_error(f"Unknown message type: {message_type}")
-                
-        except json.JSONDecodeError:
-            await self.send_error("Invalid JSON", "invalid_json")
-    
-    async def request_recommendations(self, sport_type=None):
-        """Request new recommendations"""
-        # This would trigger the recommendation service
-        await self.send_json_data({
-            'type': 'generation_started',
-            'sport_type': sport_type,
-            'estimated_time': '30-60 seconds',
-            'message': 'Generating new recommendations...'
-        })
-    
-    @database_sync_to_async
-    def update_recommendation_status(self, rec_id, status):
-        """Update recommendation status"""
-        try:
-            rec = BettingRecommendation.objects.get(
-                id=rec_id,
-                user=self.user
+    async def disconnect(self, close_code):
+        """Clean up game subscriptions on disconnect"""
+        # Leave all subscribed game groups
+        for game_id in self.subscribed_games:
+            game_group = f'live_game_{game_id}'
+            await self.channel_layer.group_discard(
+                game_group,
+                self.channel_name
             )
-            rec.user_action = status
-            rec.save()
-            return True
-        except BettingRecommendation.DoesNotExist:
-            return False
-    
-    async def accept_recommendation(self, rec_id):
-        """Accept a recommendation"""
-        success = await self.update_recommendation_status(rec_id, 'accepted')
         
-        if success:
-            await self.send_json_data({
-                'type': 'recommendation_accepted',
-                'recommendation_id': rec_id,
-                'message': 'Recommendation accepted'
-            })
+        logger.info(f"Games WebSocket disconnected: {self.channel_name}")
+    
+    async def receive_json(self, content: Dict[str, Any]):
+        """
+        Handle game tracking requests.
+        
+        Supported message types:
+        - track_game: Start tracking a live game
+        - untrack_game: Stop tracking a game
+        - get_game_stats: Get current game statistics
+        """
+        message_type = content.get('type')
+        
+        if message_type == 'track_game':
+            await self.track_game(content.get('game_id'))
+        elif message_type == 'untrack_game':
+            await self.untrack_game(content.get('game_id'))
+        elif message_type == 'get_game_stats':
+            await self.send_game_stats(content.get('game_id'))
         else:
-            await self.send_error("Recommendation not found", "rec_not_found")
-    
-    async def reject_recommendation(self, rec_id):
-        """Reject a recommendation"""
-        success = await self.update_recommendation_status(rec_id, 'rejected')
-        
-        if success:
-            await self.send_json_data({
-                'type': 'recommendation_rejected',
-                'recommendation_id': rec_id,
-                'message': 'Recommendation rejected'
+            await self.send_json({
+                'type': 'error',
+                'message': f'Unknown message type: {message_type}'
             })
-        else:
-            await self.send_error("Recommendation not found", "rec_not_found")
     
-    # Message handlers
-    async def new_recommendation(self, event):
-        """Handle new recommendation alerts"""
-        await self.send_json_data({
-            'type': 'new_recommendation',
-            'data': event['data'],
-            'timestamp': timezone.now()
-        })
-    
-    async def recommendation_expired(self, event):
-        """Handle recommendation expiration"""
-        await self.send_json_data({
-            'type': 'recommendation_expired',
-            'data': event['data'],
-            'timestamp': timezone.now()
-        })
-
-
-class DashboardConsumer(SportsBaseConsumer):
-    """Consumer for dashboard real-time updates"""
-    
-    async def connect(self):
-        """Connect to dashboard updates"""
-        await super().connect()
-        
-        from django.contrib.auth.models import AnonymousUser
-        if not self.user or isinstance(self.user, AnonymousUser):
+    async def track_game(self, game_id: str):
+        """Start tracking a live game"""
+        if not game_id:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id is required'
+            })
             return
         
-        # Join dashboard group
-        dashboard_group = f"dashboard_{self.user.id}"
-        await self.channel_layer.group_add(dashboard_group, self.channel_name)
-        self.groups.append(dashboard_group)
+        if game_id not in self.subscribed_games:
+            game_group = f'live_game_{game_id}'
+            await self.channel_layer.group_add(
+                game_group,
+                self.channel_name
+            )
+            self.subscribed_games.add(game_id)
         
-        # Send initial dashboard data
-        await self.send_dashboard_summary()
-    
-    async def send_dashboard_summary(self):
-        """Send dashboard summary data"""
-        summary = await self.get_dashboard_data()
-        
-        await self.send_json_data({
-            'type': 'dashboard_summary',
-            'data': summary,
-            'timestamp': timezone.now()
+        await self.send_json({
+            'type': 'tracking_started',
+            'game_id': game_id,
+            'message': f'Now tracking game {game_id}'
         })
     
-    @database_sync_to_async
-    def get_dashboard_data(self):
-        """Get dashboard data for user"""
-        from django.db.models import Sum, Count, Avg
-        from django.contrib.auth.models import AnonymousUser
+    async def untrack_game(self, game_id: str):
+        """Stop tracking a game"""
+        if not game_id:
+            return
         
-        if isinstance(self.user, AnonymousUser):
-            # Return demo data for anonymous users
-            return {
-                'user_stats': {
-                    'total_bets': 0,
-                    'total_wagered': '0.00',
-                    'total_profit': '0.00',
-                    'roi': 0.0
-                },
-                'system_stats': {
-                    'active_arbitrage': 0,
-                    'total_games': Game.objects.filter(status='scheduled').count(),
-                    'active_markets': Market.objects.filter(is_active=True).count()
-                },
-                'recent_activity': []
-            }
+        if game_id in self.subscribed_games:
+            game_group = f'live_game_{game_id}'
+            await self.channel_layer.group_discard(
+                game_group,
+                self.channel_name
+            )
+            self.subscribed_games.remove(game_id)
         
-        # User's betting stats
-        user_bets = self.user.bets.filter(is_active=True)
-        total_bets = user_bets.count()
-        total_wagered = user_bets.aggregate(Sum('stake'))['stake__sum'] or Decimal('0.00')
-        total_profit = user_bets.aggregate(Sum('result_amount'))['result_amount__sum'] or Decimal('0.00')
-        
-        # Active opportunities
-        active_arbitrage = ArbitrageOpportunity.objects.filter(
-            is_active=True,
-            expires_at__gt=timezone.now()
-        ).count()
-        
-        active_recommendations = BettingRecommendation.objects.filter(
-            user=self.user,
-            is_active=True,
-            expires_at__gt=timezone.now()
-        ).count()
-        
-        # Today's games
-        today_games = Game.objects.filter(
-            scheduled_start__date=timezone.now().date(),
-            is_active=True
-        ).count()
-        
-        return {
-            'user_stats': {
-                'total_bets': total_bets,
-                'total_wagered': float(total_wagered),
-                'total_profit': float(total_profit),
-                'roi': float(total_profit / total_wagered * 100) if total_wagered > 0 else 0.0
-            },
-            'opportunities': {
-                'arbitrage': active_arbitrage,
-                'recommendations': active_recommendations
-            },
-            'games': {
-                'today': today_games
-            },
-            'last_updated': timezone.now()
-        }
+        await self.send_json({
+            'type': 'tracking_stopped',
+            'game_id': game_id,
+            'message': f'Stopped tracking game {game_id}'
+        })
     
-    async def receive(self, text_data):
-        """Handle incoming messages"""
-        try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
-            
-            if message_type == 'refresh_dashboard':
-                await self.send_dashboard_summary()
-            elif message_type == 'ping':
-                await self.send_json_data({'type': 'pong', 'timestamp': timezone.now()})
-            else:
-                await self.send_error(f"Unknown message type: {message_type}")
-                
-        except json.JSONDecodeError:
-            await self.send_error("Invalid JSON", "invalid_json")
+    async def send_game_stats(self, game_id: str):
+        """Send current game statistics"""
+        if not game_id:
+            await self.send_json({
+                'type': 'error',
+                'message': 'game_id is required'
+            })
+            return
+        
+        # Get game stats from cache
+        cache_key = f'game_stats_{game_id}'
+        stats = cache.get(cache_key)
+        
+        if stats:
+            await self.send_json({
+                'type': 'game_stats',
+                'game_id': game_id,
+                'stats': stats
+            })
+        else:
+            await self.send_json({
+                'type': 'no_stats',
+                'game_id': game_id,
+                'message': 'No statistics available for this game'
+            })
     
-    # Message handlers
-    async def dashboard_update(self, event):
-        """Handle dashboard updates"""
-        await self.send_json_data({
-            'type': 'dashboard_update',
-            'data': event['data'],
-            'timestamp': timezone.now()
+    # Channel layer message handlers
+    async def game_update(self, event):
+        """Handle general game updates"""
+        await self.send_json({
+            'type': 'game_update',
+            'game_id': event['game_id'],
+            'data': event['data']
+        })
+    
+    async def play_by_play(self, event):
+        """Handle play-by-play updates for live games"""
+        await self.send_json({
+            'type': 'play_by_play',
+            'game_id': event['game_id'],
+            'play': event['play'],
+            'timestamp': event.get('timestamp')
+        })
+    
+    async def quarter_end(self, event):
+        """Handle quarter/period end notifications"""
+        await self.send_json({
+            'type': 'quarter_end',
+            'game_id': event['game_id'],
+            'quarter': event['quarter'],
+            'score': event['score']
         })

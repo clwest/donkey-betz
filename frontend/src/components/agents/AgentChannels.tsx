@@ -4,12 +4,19 @@
  * Real-time agent collaboration viewer that allows users to watch agents
  * think, communicate, and work together in Slack-style channels.
  * 
- * Integrated from donkey_betz agent channels system.
+ * Uses hybrid REST API + WebSocket approach for optimal performance.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { buildWsUrl } from '../../config/api.config';
+import { agentChannelsService } from '../../services/agentChannels.service';
+import type { 
+  AgentChannel, 
+  ChannelMessage, 
+  ChannelMembership,
+  PostMessageRequest 
+} from '../../services/agentChannels.service';
 import { 
   MessageCircle, 
   Users, 
@@ -23,43 +30,12 @@ import {
   Download,
   Hash,
   Clock,
-  User
+  User,
+  Send,
+  Plus,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
-
-interface AgentChannel {
-  id: number;
-  name: string;
-  display_name: string;
-  description: string;
-  channel_type: string;
-  orchestration_id?: number;
-  is_active: boolean;
-  created_at: string;
-  message_count?: number;
-  active_agents?: number;
-}
-
-interface ChannelMessage {
-  id: number;
-  channel: number;
-  message_type: 'agent_message' | 'task_update' | 'tool_usage' | 'collaboration_request' | 'system_status' | 'user_message';
-  agent_instance?: {
-    id: number;
-    template: {
-      name: string;
-      avatar_url?: string;
-    };
-  };
-  user?: {
-    id: number;
-    username: string;
-  };
-  content: string;
-  rich_content?: any;
-  timestamp: string;
-  thread_id?: string;
-  reactions?: any[];
-}
 
 interface UseWebSocketOptions {
   onMessage?: (message: any) => void;
@@ -68,14 +44,14 @@ interface UseWebSocketOptions {
   autoReconnect?: boolean;
 }
 
-// Simple WebSocket hook
+// WebSocket hook for real-time updates
 function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
-  const connect = () => {
+  const connect = useCallback(() => {
     try {
       const wsUrl = url.startsWith('ws') ? url : buildWsUrl(url);
       const ws = new WebSocket(wsUrl);
@@ -117,20 +93,20 @@ function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
     }
-  };
+  }, [url, options]);
 
   useEffect(() => {
     connect();
     return () => {
       socket?.close();
     };
-  }, [url]);
+  }, []);
 
-  const sendMessage = (message: any) => {
+  const sendMessage = useCallback((message: any) => {
     if (socket && isConnected) {
       socket.send(JSON.stringify(message));
     }
-  };
+  }, [socket, isConnected]);
 
   return { isConnected, sendMessage };
 }
@@ -139,8 +115,12 @@ export const AgentChannels: React.FC = () => {
   const [channels, setChannels] = useState<AgentChannel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<AgentChannel | null>(null);
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
+  const [members, setMembers] = useState<ChannelMembership[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [messageInput, setMessageInput] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
@@ -149,22 +129,95 @@ export const AgentChannels: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Load channels from REST API
+  const loadChannels = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await agentChannelsService.channels.listChannels({
+        is_active: true,
+        page_size: 100
+      });
+      setChannels(response.results);
+    } catch (err) {
+      console.error('Failed to load channels:', err);
+      setError('Failed to load channels. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load messages for selected channel
+  const loadChannelMessages = async (channelId: string) => {
+    try {
+      setLoadingMessages(true);
+      setError(null);
+      const response = await agentChannelsService.channels.getChannelMessages(channelId, {
+        page_size: 50
+      });
+      setMessages(response.results.reverse()); // Reverse to show oldest first
+      
+      // Load members
+      const membersData = await agentChannelsService.channels.getChannelMembers(channelId);
+      setMembers(membersData);
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+      setError('Failed to load messages. Please try again.');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  // Send message to channel
+  const sendMessage = async () => {
+    if (!selectedChannel || !messageInput.trim()) return;
+
+    try {
+      const messageData: PostMessageRequest = {
+        content: messageInput,
+        message_type: 'user_message'
+      };
+      
+      const newMessage = await agentChannelsService.channels.postMessage(
+        selectedChannel.id,
+        messageData
+      );
+      
+      // Add to local state immediately
+      setMessages(prev => [...prev, newMessage]);
+      setMessageInput('');
+      
+      // Play notification sound
+      if (soundEnabled && audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setError('Failed to send message. Please try again.');
+    }
+  };
+
   // WebSocket connection for real-time updates
-  const { isConnected, sendMessage } = useWebSocket('/ws/channels/', {
+  const { isConnected, sendMessage: sendWsMessage } = useWebSocket('/ws/channels/', {
     onMessage: (message) => {
       console.log('[AgentChannels] WebSocket message:', message);
       
-      if (message.type === 'channels_list') {
-        setChannels(message.channels || []);
-        setLoading(false);
-      } else if (message.type === 'channel_messages') {
-        setMessages(message.messages || []);
-      } else if (message.type === 'channel_message') {
-        const newMessage = message.data as ChannelMessage;
+      if (message.type === 'channel_message' || message.type === 'agent_message') {
+        const newMessage = message.data || message;
         
         // Add to messages if it's for the selected channel
-        if (selectedChannel && newMessage.channel === selectedChannel.id) {
-          setMessages(prev => [...prev, newMessage]);
+        if (selectedChannel && (
+          newMessage.channel === selectedChannel.id ||
+          newMessage.channel_id === selectedChannel.id
+        )) {
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMessage.id)) {
+              return prev;
+            }
+            return [...prev, newMessage];
+          });
           
           // Play notification sound
           if (soundEnabled && audioRef.current) {
@@ -175,53 +228,33 @@ export const AgentChannels: React.FC = () => {
         
         // Update channel message count
         setChannels(prev => prev.map(channel => 
-          channel.id === newMessage.channel 
+          channel.id === (newMessage.channel || newMessage.channel_id)
             ? { ...channel, message_count: (channel.message_count || 0) + 1 }
             : channel
         ));
-      } else if (message.type === 'agent_message') {
-        // Handle agent messages
-        const agentMessage: ChannelMessage = {
-          id: Date.now(),
-          channel: message.channel_id,
-          message_type: 'agent_message',
-          content: message.content || message.message || '',
-          rich_content: message.rich_content || {},
-          timestamp: message.timestamp || new Date().toISOString(),
-          agent_instance: message.agent_id ? {
-            id: message.agent_id,
-            template: {
-              name: message.agent_name || 'Agent',
-            }
-          } : undefined
-        };
-        
-        // Add to messages if it's for the selected channel
-        if (selectedChannel && message.channel_id === selectedChannel.id) {
-          setMessages(prev => [...prev, agentMessage]);
-          
-          // Play notification sound
-          if (soundEnabled && audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(e => console.log('Audio play failed:', e));
-          }
-        }
         
         // Add to recording if active
         if (isRecording) {
           setRecordingData(prev => [...prev, {
             timestamp: new Date().toISOString(),
             channel: selectedChannel?.name,
-            message: agentMessage
+            message: newMessage
           }]);
         }
       }
     },
     onConnect: () => {
-      console.log('[AgentChannels] Connected to agent channels');
+      console.log('[AgentChannels] Connected to WebSocket');
+      // Subscribe to selected channel if any
+      if (selectedChannel) {
+        sendWsMessage({
+          type: 'subscribe_channel',
+          channel_id: selectedChannel.id
+        });
+      }
     },
     onDisconnect: () => {
-      console.log('[AgentChannels] Disconnected from agent channels');
+      console.log('[AgentChannels] Disconnected from WebSocket');
     },
     autoReconnect: true
   });
@@ -233,25 +266,23 @@ export const AgentChannels: React.FC = () => {
     }
   }, [messages, autoScroll]);
 
-  // Load channels on mount and when connected
+  // Load channels on mount
   useEffect(() => {
-    if (isConnected) {
-      console.log('[AgentChannels] Requesting channels via WebSocket');
-      sendMessage({ type: 'get_channels' });
-    } else {
-      setLoading(true);
-    }
-  }, [isConnected]);
+    loadChannels();
+  }, []);
 
-  // Load channel messages when channel changes
+  // Load messages when channel changes
   useEffect(() => {
-    if (selectedChannel && isConnected) {
+    if (selectedChannel) {
       loadChannelMessages(selectedChannel.id);
-      // Subscribe to this channel's updates
-      sendMessage({
-        type: 'subscribe_channel',
-        channel_id: selectedChannel.id
-      });
+      
+      // Subscribe to channel updates via WebSocket
+      if (isConnected) {
+        sendWsMessage({
+          type: 'subscribe_channel',
+          channel_id: selectedChannel.id
+        });
+      }
     }
   }, [selectedChannel, isConnected]);
 
@@ -262,17 +293,6 @@ export const AgentChannels: React.FC = () => {
       setSelectedChannel(activeChannels[0] || channels[0]);
     }
   }, [channels, selectedChannel]);
-
-  const loadChannelMessages = (channelId: number) => {
-    if (isConnected) {
-      console.log(`[AgentChannels] Requesting messages for channel ${channelId} via WebSocket`);
-      sendMessage({
-        type: 'get_channel_messages',
-        channel_id: channelId
-      });
-      setMessages([]);
-    }
-  };
 
   const formatMessageTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString([], { 
@@ -288,8 +308,11 @@ export const AgentChannels: React.FC = () => {
       case 'task_update': return '⚡';
       case 'tool_usage': return '🔧';
       case 'collaboration_request': return '🤝';
-      case 'system_status': return '📊';
+      case 'status_update': return '📊';
+      case 'system_message': return '📢';
       case 'user_message': return '👤';
+      case 'result_share': return '📤';
+      case 'error_report': return '❌';
       default: return '💬';
     }
   };
@@ -300,8 +323,11 @@ export const AgentChannels: React.FC = () => {
       case 'task_update': return 'bg-yellow-500';
       case 'tool_usage': return 'bg-green-500';
       case 'collaboration_request': return 'bg-purple-500';
-      case 'system_status': return 'bg-gray-500';
+      case 'status_update': return 'bg-gray-500';
+      case 'system_message': return 'bg-red-500';
       case 'user_message': return 'bg-indigo-500';
+      case 'result_share': return 'bg-teal-500';
+      case 'error_report': return 'bg-red-600';
       default: return 'bg-blue-500';
     }
   };
@@ -321,8 +347,8 @@ export const AgentChannels: React.FC = () => {
   const filteredMessages = messages.filter(message =>
     !searchQuery || 
     message.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    message.agent_instance?.template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    message.user?.username.toLowerCase().includes(searchQuery.toLowerCase())
+    message.agent_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    message.user_username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -362,6 +388,15 @@ export const AgentChannels: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* Refresh button */}
+              <button
+                onClick={loadChannels}
+                className="p-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                title="Refresh channels"
+              >
+                <RefreshCw className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              </button>
+              
               {/* Recording Controls */}
               <button
                 onClick={() => {
@@ -417,6 +452,20 @@ export const AgentChannels: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Error Alert */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <p className="text-red-800 dark:text-red-300">{error}</p>
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-12 gap-6 h-[800px]">
           {/* Channel Sidebar */}
@@ -478,7 +527,7 @@ export const AgentChannels: React.FC = () => {
                             {channel.display_name || channel.name}
                           </span>
                         </div>
-                        {channel.message_count && (
+                        {channel.message_count > 0 && (
                           <span className="text-xs bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
                             {channel.message_count}
                           </span>
@@ -489,10 +538,10 @@ export const AgentChannels: React.FC = () => {
                         {channel.description || 'Agent collaboration channel'}
                       </div>
                       
-                      {channel.active_agents && (
+                      {channel.member_count !== undefined && (
                         <div className="flex items-center text-xs text-slate-400">
                           <Activity className="h-3 w-3 mr-1" />
-                          {channel.active_agents} agents active
+                          {channel.member_count} members
                         </div>
                       )}
                     </div>
@@ -551,12 +600,17 @@ export const AgentChannels: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-6">
                 {selectedChannel ? (
                   <div className="space-y-4">
-                    {filteredMessages.length === 0 ? (
+                    {loadingMessages ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                        <p className="mt-4 text-slate-500 dark:text-slate-400">Loading messages...</p>
+                      </div>
+                    ) : filteredMessages.length === 0 ? (
                       <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                         <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p className="text-lg">No messages in this channel yet.</p>
                         <p className="text-sm mt-2">
-                          Agent communications will appear here in real-time.
+                          Be the first to send a message or wait for agent communications.
                         </p>
                       </div>
                     ) : (
@@ -573,14 +627,14 @@ export const AgentChannels: React.FC = () => {
                             {/* Message Header */}
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-slate-900 dark:text-white text-sm">
-                                {message.agent_instance?.template.name || message.user?.username || 'System'}
+                                {message.agent_name || message.user_username || 'System'}
                               </span>
                               <span className={`px-2 py-1 rounded text-xs text-white ${getMessageTypeColor(message.message_type)}`}>
                                 {message.message_type.replace('_', ' ')}
                               </span>
                               <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {formatMessageTime(message.timestamp)}
+                                {formatMessageTime(message.timestamp || message.created_at)}
                               </span>
                             </div>
                             
@@ -597,6 +651,21 @@ export const AgentChannels: React.FC = () => {
                                 </pre>
                               </div>
                             )}
+                            
+                            {/* Reactions */}
+                            {message.reactions && Object.keys(message.reactions).length > 0 && (
+                              <div className="mt-2 flex gap-2">
+                                {Object.entries(message.reactions).map(([emoji, users]) => (
+                                  <span
+                                    key={emoji}
+                                    className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-xs flex items-center gap-1"
+                                  >
+                                    <span>{emoji}</span>
+                                    <span className="text-slate-600 dark:text-slate-400">{users.length}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))
@@ -610,6 +679,30 @@ export const AgentChannels: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Message Input */}
+              {selectedChannel && (
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type a message..."
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                      className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={!messageInput.trim()}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Send
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

@@ -94,11 +94,19 @@ class AgentRouter:
             return False
             
         # Route most queries through agents for better responses
-        # Only skip routing for extremely simple responses
-        simple_patterns = ['hi', 'hello', 'thanks', 'goodbye', 'ok', 'yes', 'no']
-        if message_lower.strip() in simple_patterns:
-            return False
-            
+        # Only skip routing for extremely simple responses and casual conversations
+        simple_patterns = [
+            'hi', 'hello', 'thanks', 'goodbye', 'ok', 'yes', 'no',
+            'how are you', 'how is it going', 'how\'s it going', 'what\'s up',
+            'hey there', 'good morning', 'good afternoon', 'good evening',
+            'nice to meet you', 'pleased to meet you'
+        ]
+        
+        # Check for exact matches or substring matches for greetings
+        for pattern in simple_patterns:
+            if pattern in message_lower.strip():
+                return False
+                
         # Default to routing for richer responses
         return any(indicator in message_lower for indicator in complex_task_indicators)
     

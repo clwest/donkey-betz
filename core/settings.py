@@ -103,6 +103,7 @@ MIDDLEWARE = [
     'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.rate_limiter.RateLimitMiddleware',  # Global rate limiting
     'core.auth_middleware.RateLimitingMiddleware',  # Enhanced rate limiting
     'core.auth_middleware.APILoggingMiddleware',  # API request/response logging
     
@@ -184,6 +185,40 @@ else:
     # SQLite configuration
     DATABASES['default']['OPTIONS'] = {}
     DATABASES['default']['CONN_MAX_AGE'] = 0
+
+# Cache Configuration
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/1')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True
+            },
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'IGNORE_EXCEPTIONS': DEBUG,  # Ignore cache errors in development
+        },
+        'KEY_PREFIX': 'udb',  # Unified Donkey Betz prefix
+        'TIMEOUT': 300,  # Default 5 minutes
+    }
+}
+
+# Fallback to local memory cache if Redis is not available
+try:
+    import redis
+    r = redis.from_url(REDIS_URL)
+    r.ping()
+except:
+    CACHES['default'] = {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
 
 # AI Provider Configuration
 AI_PROVIDERS = {
