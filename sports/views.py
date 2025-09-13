@@ -265,18 +265,33 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
     """Game API endpoints"""
     
     permission_classes = [permissions.AllowAny]  # Allow public read access
-    queryset = Game.objects.filter(is_active=True).select_related('league', 'home_team', 'away_team')
+    queryset = Game.objects.filter(is_active=True).select_related('league', 'home_team', 'away_team').distinct()
     serializer_class = GameSerializer
     pagination_class = SportsAnalyticsPagination
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'home_team', 'away_team', 'season', 'is_playoff']  # Removed 'league' to handle manually
+    filter_backends = [SearchFilter, OrderingFilter]  # Removed DjangoFilterBackend to handle filtering manually
+    # filterset_fields = ['status', 'home_team', 'away_team', 'season', 'is_playoff']  # Handled manually in get_queryset
     search_fields = ['home_team__name', 'away_team__name', 'venue_name']
-    ordering_fields = ['scheduled_start', 'created_at']
-    ordering = ['-scheduled_start']
+    ordering_fields = ['scheduled_start', 'created_at', 'league__name']
+    ordering = ['league__name', 'scheduled_start']  # Order by league then time
     
     def get_queryset(self):
         """Filter games based on query parameters"""
         queryset = super().get_queryset()
+        
+        # Status filtering (previously handled by DjangoFilterBackend)
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        # Exclude completed games option
+        exclude_completed = self.request.query_params.get('exclude_completed')
+        if exclude_completed == 'true':
+            queryset = queryset.exclude(status=GameStatus.FINAL)
+            
+        # Sport type filtering
+        sport_type = self.request.query_params.get('sport_type')
+        if sport_type:
+            queryset = queryset.filter(league__sport_type=sport_type)
         
         # League filtering - accept either UUID or abbreviation/name
         league_param = self.request.query_params.get('league')
@@ -302,11 +317,12 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
         if date:
             # Single date filter
             queryset = queryset.filter(scheduled_start__date=date)
-        else:
+        elif date_from or date_to:
+            # Date range filtering - use both if provided
             if date_from:
-                queryset = queryset.filter(scheduled_start__gte=date_from)
+                queryset = queryset.filter(scheduled_start__date__gte=date_from)
             if date_to:
-                queryset = queryset.filter(scheduled_start__lte=date_to)
+                queryset = queryset.filter(scheduled_start__date__lte=date_to)
         
         # Today's games
         if self.request.query_params.get('today') == 'true':
@@ -321,6 +337,16 @@ class GameViewSet(viewsets.ReadOnlyModelViewSet):
                 scheduled_start__date__gte=week_start,
                 scheduled_start__date__lte=week_end
             )
+        
+        # Order by league name first, then scheduled_start to group games properly
+        queryset = queryset.order_by('league__name', 'scheduled_start').distinct()
+        
+        # Debug: log the final query
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Final game queryset count: {queryset.count()}")
+        if date_from or date_to:
+            logger.info(f"Date filter applied - from: {date_from}, to: {date_to}")
         
         return queryset
     

@@ -44,11 +44,8 @@ import AssistantChatPage from './pages/assistant/AssistantChatPage';
 // Prompt Diagnostics
 import PromptDiagnosticsPage from './pages/prompt-diagnostics/PromptDiagnosticsPage';
 
-// Agent Registry
-import AgentRegistryPage from './pages/AgentRegistryPage';
-
-// Multi-Agent Workflows
-import MultiAgentWorkflowsPage from './pages/MultiAgentWorkflowsPage';
+// Unified Agent Orchestra Hub
+import AgentOrchestraHub from './pages/AgentOrchestraHub';
 
 // Debug Page
 import DebugPage from './pages/DebugPage';
@@ -56,13 +53,8 @@ import DebugPage from './pages/DebugPage';
 // Connectivity
 import { ConnectivityPage } from './pages/connectivity/ConnectivityPage';
 
-
 // Sports
 import { SportsBoardPage } from './features/sports/pages/SportsBoardPage';
-
-// Agent Orchestra
-import AgentOrchestrationPage from './pages/AgentOrchestrationPage';
-import { OrchestraPage } from './features/agent-orchestra/pages/OrchestraPage';
 
 // Mythology
 import { MythologyDashboard } from './features/mythology/pages/MythologyDashboard';
@@ -168,12 +160,18 @@ function App() {
             <Route path="ai-settings" element={<AISettingsPage />} />
             <Route path="knowledge" element={<PersonalKnowledge />} />
             <Route path="prompt-diagnostics" element={<PromptDiagnosticsPage />} />
-            <Route path="agent-registry" element={<AgentRegistryPage />} />
-            <Route path="workflows-multi" element={<MultiAgentWorkflowsPage />} />
+            
+            {/* Unified Agent Orchestra Hub - replaces all individual agent pages */}
+            <Route path="agent-hub" element={<AgentOrchestraHub />} />
+            {/* Redirects for backwards compatibility */}
+            <Route path="agent-registry" element={<Navigate to="/agent-hub" replace />} />
+            <Route path="workflows-multi" element={<Navigate to="/agent-hub" replace />} />
+            <Route path="agent-orchestra" element={<Navigate to="/agent-hub" replace />} />
+            <Route path="orchestra" element={<Navigate to="/agent-hub" replace />} />
+            <Route path="agent-channels" element={<Navigate to="/agent-hub" replace />} />
+            
             <Route path="connectivity" element={<ConnectivityPage />} />
             <Route path="sports/board" element={<SportsBoardPage />} />
-            <Route path="agent-orchestra" element={<AgentOrchestrationPage />} />
-            <Route path="orchestra" element={<OrchestraPage />} />
             <Route path="mythology" element={<MythologyDashboard />} />
             <Route path="life-convictions" element={<LifeConvictionsPage />} />
             <Route path="debug" element={<DebugPage />} />

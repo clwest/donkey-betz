@@ -4,6 +4,7 @@ Views for the mythology lab dashboard and hallucination review system.
 
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -414,12 +415,12 @@ def acknowledge_alert(request, alert_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def flagged_content_detail(request, flagged_id):
+def flagged_content_detail(request, content_id):
     """
     Get detailed information about a specific flagged content.
     """
     try:
-        flagged = FlaggedHallucination.objects.get(id=flagged_id)
+        flagged = FlaggedHallucination.objects.get(id=content_id)
         
         # Get related reviews
         reviews = list(flagged.reviews.all().order_by('-created_at'))
@@ -565,9 +566,9 @@ def flagged_content_list(request):
             }
             
             results.append({
-                'id': item.id,  # Keep as int, not string
+                'id': str(item.id),  # Convert UUID to string for frontend
                 'content_type': 'text',  # Default content type
-                'content_id': item.id,  # Use flagged item ID as content ID
+                'content_id': str(item.id),  # Use flagged item ID as content ID
                 'flag_type': flag_type_mapping.get(item.flagged_type, 'other'),
                 'priority': item.priority,
                 'status': status_mapping.get(item.verification_status, 'pending'),
@@ -653,29 +654,144 @@ def recent_events(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def submit_review(request):
     """Submit review action for flagged content"""
     try:
-        # Mock implementation - replace with actual logic
+        content_id = request.data.get('content_id')
+        action = request.data.get('action')
+        notes = request.data.get('notes', '')
+        edit_content = request.data.get('edit_content', None)
+        
+        if not content_id or not action:
+            return Response({
+                'success': False,
+                'message': 'Content ID and action are required'
+            }, status=400)
+        
+        # Get the flagged content
+        try:
+            flagged = FlaggedHallucination.objects.get(id=content_id)
+        except FlaggedHallucination.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Flagged content not found'
+            }, status=404)
+        
+        # Map action to verification status
+        status_mapping = {
+            'approve': 'verified_safe',
+            'remove': 'verified_hallucination',
+            'edit': 'verified_safe',  # After editing, it's considered safe
+            'flag_false_positive': 'false_positive'
+        }
+        
+        # Update flagged content status
+        flagged.verification_status = status_mapping.get(action, 'needs_human_review')
+        flagged.verification_notes = notes
+        flagged.verified_by = request.user
+        flagged.verified_at = timezone.now()
+        flagged.reviewed_at = timezone.now()
+        
+        # If content was edited, update it
+        if action == 'edit' and edit_content:
+            flagged.flagged_content = edit_content
+            flagged.metadata['edited'] = True
+            flagged.metadata['original_content'] = flagged.flagged_content
+        
+        flagged.save()
+        
+        # Create a review record
+        review = HallucinationReview.objects.create(
+            flagged_hallucination=flagged,
+            reviewer=request.user,
+            review_action=action,
+            review_notes=notes,
+            confidence_rating=5  # Default confidence
+        )
+        
         return Response({
             'success': True,
-            'message': 'Review submitted successfully'
+            'message': f'Content has been {action}d successfully'
         }, status=200)
     except Exception as e:
+        logger.error(f"Submit review error: {e}")
         return Response({'error': str(e)}, status=500)
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def report_content(request):
     """Report content for review"""
     try:
-        # Mock implementation - replace with actual logic
+        content_type = request.data.get('content_type')
+        content_id = request.data.get('content_id')
+        flag_type = request.data.get('flag_type')
+        reason = request.data.get('reason')
+        additional_info = request.data.get('additional_info', '')
+        
+        if not all([content_type, content_id, flag_type, reason]):
+            return Response({
+                'success': False,
+                'message': 'All required fields must be provided'
+            }, status=400)
+        
+        # Map flag types to flagged types
+        flag_type_mapping = {
+            'misinformation': 'hallucination',
+            'harmful': 'harmful_content',
+            'inappropriate': 'inappropriate_content',
+            'spam': 'spam_content',
+            'other': 'other'
+        }
+        
+        # Create flagged content entry
+        flagged = FlaggedHallucination.objects.create(
+            flagged_type=flag_type_mapping.get(flag_type, 'other'),
+            original_prompt=f"User reported {content_type} #{content_id}",
+            flagged_content=f"{reason}\n\nAdditional info: {additional_info}" if additional_info else reason,
+            patterns_detected=[flag_type],
+            risk_score=0.5,  # Default medium risk for user reports
+            confidence_score=0.8,  # High confidence for user reports
+            detection_method='user_report',
+            verification_status='pending',
+            priority='medium' if flag_type != 'harmful' else 'high',
+            requires_immediate_attention=flag_type == 'harmful',
+            user=request.user,
+            session_id=request.session.session_key if hasattr(request, 'session') else None,
+            metadata={
+                'content_type': content_type,
+                'content_id': content_id,
+                'flag_type': flag_type,
+                'user_reason': reason,
+                'additional_info': additional_info
+            }
+        )
+        
+        # Create an alert if it's high priority
+        if flagged.priority in ['high', 'critical']:
+            MythologyAlert.objects.create(
+                alert_type='immediate_review',
+                severity='high' if flagged.priority == 'high' else 'critical',
+                title=f'User reported {flag_type} content',
+                description=f"User {request.user.username} reported {content_type} #{content_id} as {flag_type}",
+                data={
+                    'flagged_id': str(flagged.id),
+                    'reporter': request.user.username,
+                    'content_info': {
+                        'type': content_type,
+                        'id': content_id
+                    }
+                }
+            )
+        
         return Response({
             'success': True,
             'message': 'Content reported successfully',
-            'flag_id': 1
+            'flag_id': flagged.id
         }, status=200)
     except Exception as e:
+        logger.error(f"Report content error: {e}")
         return Response({'error': str(e)}, status=500)
 
 

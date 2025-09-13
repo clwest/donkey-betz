@@ -88,6 +88,14 @@ def auto_register_tools():
     except ImportError as e:
         logger.warning(f"Could not import NewsAPITool: {e}")
     
+    # Register sports-specific tools
+    try:
+        from .sports_tools import register_sports_tools
+        registered_sports = register_sports_tools()
+        logger.info(f"Registered {len(registered_sports)} sports tools: {registered_sports}")
+    except ImportError as e:
+        logger.warning(f"Could not import sports tools: {e}")
+    
     logger.info(f"Tool registry initialized with {len(ToolRegistry._tools)} tools")
 
 

@@ -33,6 +33,13 @@ export enum SportType {
   ESPORTS = 'esports'
 }
 
+export interface TeamRecord {
+  wins?: number;
+  losses?: number;
+  ties?: number;
+  win_percentage?: number;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -42,7 +49,9 @@ export interface Team {
   conference?: string;
   division?: string;
   logo_url?: string;
-  current_record?: Record<string, any>;
+  current_record?: TeamRecord;
+  ats_record?: TeamRecord;
+  ou_record?: TeamRecord;
 }
 
 export interface BettingMarket {
@@ -74,10 +83,13 @@ export interface Game {
   id: string;
   external_id?: string;
   league: string;
+  league_name?: string;
   home_team: Team;
   away_team: Team;
   home_team_name: string;
   away_team_name: string;
+  home_team_abbreviation?: string;
+  away_team_abbreviation?: string;
   scheduled_start: string; // ISO timestamp
   status: GameStatus;
   venue_name?: string;
@@ -151,24 +163,34 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
     body: options.body ? JSON.parse(options.body as string) : undefined
   });
   
-  // Get auth token from localStorage - no hardcoded fallback
+  // Get auth token from localStorage - allow public access for sports data
   const token = localStorage.getItem('authToken');
   
-  if (!token) {
+  // For public sports endpoints, allow access without authentication
+  const publicEndpoints = ['/sports/', '/games/', '/leagues/', '/teams/', '/summary/'];
+  const isPublicEndpoint = publicEndpoints.some(endpoint => path.includes(endpoint));
+  
+  if (!token && !isPublicEndpoint) {
     console.error('[Sports API] No auth token found - user must be logged in');
-    toast.error('Please log in to access sports data');
+    toast.error('Please log in to access this feature');
     throw new Error('Authentication required');
   }
   
   try {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'X-DBAO-Client': 'AI-Studio-Web',
+      ...options.headers,
+    };
+    
+    // Only add Authorization header if we have a token
+    if (token) {
+      headers['Authorization'] = `Token ${token}`;
+    }
+    
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-DBAO-Client': 'AI-Studio-Web',
-        'Authorization': `Token ${token}`,
-        ...options.headers,
-      },
+      headers,
     });
 
     // Read response as text first
@@ -260,13 +282,20 @@ export async function getLiveGames(): Promise<Game[]> {
 /**
  * Get games by sport type
  */
-export async function getGamesBySport(sportType: SportType, date?: string): Promise<Game[]> {
+export async function getGamesBySport(sportType: SportType, date?: string, dateRange?: { from: string; to: string }): Promise<Game[]> {
   const params = new URLSearchParams({ sport_type: sportType });
-  if (date) {
+  
+  if (dateRange) {
+    params.append('date_from', dateRange.from);
+    params.append('date_to', dateRange.to);
+  } else if (date) {
     params.append('date', date);
   }
   
-  console.log('🎮 [getGamesBySport] Fetching games:', { sportType, date, params: params.toString() });
+  // Add page_size to get more results
+  params.append('page_size', '100');
+  
+  console.log('🎮 [getGamesBySport] Fetching games:', { sportType, date, dateRange, params: params.toString() });
   const result = await fetchApi<Game[]>(`/v1/sports/games/?${params.toString()}`);
   console.log('🎮 [getGamesBySport] Got games:', result);
   return result;
@@ -294,6 +323,16 @@ export async function getGameOdds(gameId: string): Promise<any> {
   console.log('💰 [getGameOdds] Fetching odds for game:', gameId);
   const result = await fetchApi<any>(`/v1/sports/games/${gameId}/odds/`);
   console.log('💰 [getGameOdds] Got odds:', result);
+  return result;
+}
+
+/**
+ * Get individual game by ID with full details
+ */
+export async function getGameById(gameId: string): Promise<Game> {
+  console.log('🎮 [getGameById] Fetching game:', gameId);
+  const result = await fetchApi<Game>(`/v1/sports/games/${gameId}/`);
+  console.log('🎮 [getGameById] Got game:', result);
   return result;
 }
 
@@ -427,6 +466,37 @@ export function getImpliedProbability(americanOdds: number): number {
  */
 export function formatGameTime(isoString: string): string {
   const date = new Date(isoString);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const isTomorrow = date.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+  const isYesterday = date.toDateString() === new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString();
+  
+  // For yesterday/today/tomorrow, show relative time
+  if (isYesterday) {
+    return 'Yesterday ' + date.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    });
+  }
+  
+  if (isToday) {
+    return 'Today ' + date.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    });
+  }
+  
+  if (isTomorrow) {
+    return 'Tomorrow ' + date.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    });
+  }
+  
+  // Otherwise show full date/time
   return date.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -482,17 +552,83 @@ export function getSportEmoji(sportType: SportType): string {
 }
 
 /**
- * Check if a game is live
+ * Check if a game is live (with time-based inference)
  */
 export function isGameLive(game: Game): boolean {
-  return [GameStatus.LIVE, GameStatus.HALFTIME].includes(game.status);
+  // Check actual status first
+  if ([GameStatus.LIVE, GameStatus.HALFTIME].includes(game.status)) {
+    return true;
+  }
+  
+  // If status is 'scheduled' but game should have started, infer it's likely live
+  if (game.status === GameStatus.SCHEDULED) {
+    const now = new Date();
+    const gameTime = new Date(game.scheduled_start);
+    const timeDiff = now.getTime() - gameTime.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    // If game started within last 4 hours, it's likely live
+    // (most games don't last longer than 4 hours)
+    if (hoursDiff >= 0 && hoursDiff <= 4) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 /**
- * Check if a game is finished
+ * Check if a game is finished (with time-based inference)
  */
 export function isGameFinished(game: Game): boolean {
-  return game.status === GameStatus.FINAL;
+  // Check actual status first
+  if (game.status === GameStatus.FINAL) {
+    return true;
+  }
+  
+  // If status is 'scheduled' but game should be over, infer it's likely finished
+  if (game.status === GameStatus.SCHEDULED) {
+    const now = new Date();
+    const gameTime = new Date(game.scheduled_start);
+    const timeDiff = now.getTime() - gameTime.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    // If game started more than 4 hours ago, it's likely finished
+    // (most games finish within 4 hours)
+    if (hoursDiff > 4) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Get inferred game status based on time if status is still 'scheduled'
+ */
+export function getInferredGameStatus(game: Game): GameStatus {
+  // If status is not scheduled, return actual status
+  if (game.status !== GameStatus.SCHEDULED) {
+    return game.status;
+  }
+  
+  const now = new Date();
+  const gameTime = new Date(game.scheduled_start);
+  const timeDiff = now.getTime() - gameTime.getTime();
+  const hoursDiff = timeDiff / (1000 * 60 * 60);
+  
+  // Game hasn't started yet
+  if (hoursDiff < 0) {
+    return GameStatus.SCHEDULED;
+  }
+  
+  // Game started within last 4 hours - likely live
+  if (hoursDiff <= 4) {
+    return GameStatus.LIVE;
+  }
+  
+  // Game started more than 4 hours ago - likely finished
+  return GameStatus.FINAL;
 }
 
 /**
@@ -561,6 +697,37 @@ export function getDateString(daysFromToday: number): string {
 }
 
 /**
+ * Get upcoming games date range (today to 7 days ahead)
+ */
+export function getUpcomingDateRange(): { from: string; to: string } {
+  return {
+    from: getTodayDateString(),
+    to: getDateString(7)
+  };
+}
+
+/**
+ * Get this week's date range (Monday to Sunday)
+ */
+export function getThisWeekDateRange(): { from: string; to: string } {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const monday = new Date(today);
+  const sunday = new Date(today);
+  
+  // Get Monday (start of week)
+  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  
+  // Get Sunday (end of week)
+  sunday.setDate(monday.getDate() + 6);
+  
+  return {
+    from: monday.toISOString().split('T')[0],
+    to: sunday.toISOString().split('T')[0]
+  };
+}
+
+/**
  * Sync sports data from all providers
  */
 export async function syncSportsData(options: {
@@ -569,20 +736,266 @@ export async function syncSportsData(options: {
   games?: boolean;
   odds?: boolean;
   sport?: SportType;
-}): Promise<{ success: boolean; message: string }> {
-  const params = new URLSearchParams();
+}): Promise<{ 
+  success: boolean; 
+  message: string; 
+  games_synced?: number; 
+  total_games_fetched?: number;
+  games_with_odds?: number;
+}> {
+  console.log('🔄 [syncSportsData] Syncing with ESPN + The Odds API:', options);
   
-  if (options.leagues) params.append('leagues', 'true');
-  if (options.teams) params.append('teams', 'true');
-  if (options.games) params.append('games', 'true');
-  if (options.odds) params.append('odds', 'true');
-  if (options.sport) params.append('sport', options.sport);
-  
-  console.log('🔄 [syncSportsData] Syncing sports data:', options);
-  const result = await fetchApi<{ success: boolean; message: string }>('/v1/sports/sync/', {
+  const result = await fetchApi<{ 
+    success: boolean; 
+    message: string; 
+    games_synced?: number; 
+    total_games_fetched?: number;
+    games_with_odds?: number;
+  }>('/v1/sports/sync/', {
     method: 'POST',
     body: JSON.stringify(options),
   });
+  
   console.log('🔄 [syncSportsData] Sync result:', result);
+  return result;
+}
+
+/**
+ * Get real weather data for a venue using WeatherAPI
+ */
+export async function getWeatherData(venue: string): Promise<{
+  success: boolean;
+  location?: string;
+  condition?: string;
+  temperature?: number;
+  humidity?: number;
+  wind?: string;
+  wind_speed?: number;
+  wind_direction?: string;
+  feels_like?: number;
+  uv_index?: number;
+  visibility?: number;
+  last_updated?: string;
+  icon?: string;
+}> {
+  console.log('🌤️ [getWeatherData] Fetching weather for venue:', venue);
+  
+  const result = await fetchApi<{
+    success: boolean;
+    location?: string;
+    condition?: string;
+    temperature?: number;
+    humidity?: number;
+    wind?: string;
+    wind_speed?: number;
+    wind_direction?: string;
+    feels_like?: number;
+    uv_index?: number;
+    visibility?: number;
+    last_updated?: string;
+    icon?: string;
+  }>(`/v1/sports/weather/?venue=${encodeURIComponent(venue)}`);
+  
+  console.log('🌤️ [getWeatherData] Weather result:', result);
+  return result;
+}
+
+/**
+ * Get real injury data for teams using injury intelligence API
+ */
+export async function getInjuryData(homeTeam: string, awayTeam: string): Promise<{
+  success: boolean;
+  injuries?: Array<{
+    team: string;
+    player: string;
+    jersey_number: number;
+    position: string;
+    injury: string;
+    status: 'Questionable' | 'Probable' | 'Doubtful' | 'Out';
+    impact_level: 'Low' | 'Medium' | 'High';
+  }>;
+  summary?: {
+    total_injuries: number;
+    players_out: number;
+    questionable: number;
+    last_updated: string;
+    home_team_injuries: number;
+    away_team_injuries: number;
+  };
+  teams?: {
+    home_team: string;
+    away_team: string;
+  };
+}> {
+  console.log('🏥 [getInjuryData] Fetching injuries for teams:', homeTeam, 'vs', awayTeam);
+  
+  const result = await fetchApi<{
+    success: boolean;
+    injuries?: Array<{
+      team: string;
+      player: string;
+      jersey_number: number;
+      position: string;
+      injury: string;
+      status: 'Questionable' | 'Probable' | 'Doubtful' | 'Out';
+      impact_level: 'Low' | 'Medium' | 'High';
+    }>;
+    summary?: {
+      total_injuries: number;
+      players_out: number;
+      questionable: number;
+      last_updated: string;
+      home_team_injuries: number;
+      away_team_injuries: number;
+    };
+    teams?: {
+      home_team: string;
+      away_team: string;
+    };
+  }>(`/v1/sports/injuries/?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}`);
+  
+  console.log('🏥 [getInjuryData] Injury result:', result);
+  return result;
+}
+
+/**
+ * Get betting intelligence data for teams
+ */
+export async function getBettingIntelligence(homeTeam: string, awayTeam: string): Promise<{
+  success: boolean;
+  trends?: Array<{
+    type: string;
+    category: string;
+    text: string;
+    confidence: 'High' | 'Medium' | 'Low';
+    impact: 'Positive' | 'Negative' | 'Neutral' | 'Recommended' | 'Pass' | 'Bearish' | 'Overpriced' | 'Follow Sharp';
+    value?: string;
+    kelly_suggestion?: string;
+    kelly_percentage?: string;
+    risk_level?: string;
+    expected_value?: string;
+    public_percentage?: string;
+    sharp_indicator?: string;
+    allocation_percent?: string;
+    expected_roi?: string;
+    efficiency_rating?: number;
+    analysis?: string;
+  }>;
+  analysis?: {
+    KELLY_RECOMMENDATION?: {
+      allocation_percent: string;
+      expected_roi: string;
+      analysis: string;
+    };
+    MARKET_VALUE?: {
+      efficiency_rating: number;
+      analysis: string;
+    };
+    ATS_ANALYSIS?: {
+      analysis: string;
+    };
+    MARKET_SENTIMENT?: {
+      public_percentage: string;
+      sharp_percentage: string;
+      analysis: string;
+    };
+    SITUATIONAL_EDGE?: {
+      analysis: string;
+    };
+    TOTALS_ANALYSIS?: {
+      analysis: string;
+    };
+    SCORING_EDGE?: {
+      analysis: string;
+    };
+  };
+  summary?: {
+    total_insights: number;
+    value_opportunities: number;
+    kelly_recommendations: number;
+    market_efficiency: string;
+    suggested_kelly_allocation: string;
+    risk_assessment: string;
+    edge_confidence: string;
+    overall_recommendation: string;
+    expected_roi: string;
+    last_updated: string;
+  };
+  teams?: {
+    home_team: string;
+    away_team: string;
+  };
+  agents_used?: string[];
+}> {
+  console.log('📊 [getBettingIntelligence] Fetching betting intelligence for teams:', homeTeam, 'vs', awayTeam);
+  
+  const result = await fetchApi<{
+    success: boolean;
+    trends?: Array<{
+      type: string;
+      category: string;
+      text: string;
+      confidence: 'High' | 'Medium' | 'Low';
+      impact: 'Positive' | 'Negative' | 'Neutral' | 'Recommended' | 'Pass' | 'Bearish' | 'Overpriced' | 'Follow Sharp';
+      value?: string;
+      kelly_suggestion?: string;
+      kelly_percentage?: string;
+      risk_level?: string;
+      expected_value?: string;
+      public_percentage?: string;
+      sharp_indicator?: string;
+      allocation_percent?: string;
+      expected_roi?: string;
+      efficiency_rating?: number;
+      analysis?: string;
+    }>;
+    analysis?: {
+      KELLY_RECOMMENDATION?: {
+        allocation_percent: string;
+        expected_roi: string;
+        analysis: string;
+      };
+      MARKET_VALUE?: {
+        efficiency_rating: number;
+        analysis: string;
+      };
+      ATS_ANALYSIS?: {
+        analysis: string;
+      };
+      MARKET_SENTIMENT?: {
+        public_percentage: string;
+        sharp_percentage: string;
+        analysis: string;
+      };
+      SITUATIONAL_EDGE?: {
+        analysis: string;
+      };
+      TOTALS_ANALYSIS?: {
+        analysis: string;
+      };
+      SCORING_EDGE?: {
+        analysis: string;
+      };
+    };
+    summary?: {
+      total_insights: number;
+      value_opportunities: number;
+      kelly_recommendations: number;
+      market_efficiency: string;
+      suggested_kelly_allocation: string;
+      risk_assessment: string;
+      edge_confidence: string;
+      overall_recommendation: string;
+      expected_roi: string;
+      last_updated: string;
+    };
+    teams?: {
+      home_team: string;
+      away_team: string;
+    };
+    agents_used?: string[];
+  }>(`/v1/sports/betting-intelligence/?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}`);
+  
+  console.log('📊 [getBettingIntelligence] Betting intelligence result:', result);
   return result;
 }

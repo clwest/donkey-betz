@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getGameOdds, getMarkets, Game, BettingMarket, OddsLine } from '../api/sports';
+import { formatGameTime, formatTimeOnlyMST } from '../../../utils/dateFormatting';
 
 interface GamingGameOddsCardProps {
   game: Game;
@@ -80,9 +81,7 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
     }
   };
 
-  const gameDate = new Date(game.scheduled_start);
-  const isToday = new Date().toDateString() === gameDate.toDateString();
-  const isTomorrow = new Date(Date.now() + 86400000).toDateString() === gameDate.toDateString();
+  const { day, time } = formatGameTime(game.scheduled_start);
 
   return (
     <motion.div
@@ -105,9 +104,9 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
           </div>
           <div className="flex items-center gap-2 text-sm gaming-text-muted">
             <Calendar className="h-3 w-3" />
-            {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : format(gameDate, 'MMM d')}
+            {day}
             <span className="gaming-text-accent">•</span>
-            {format(gameDate, 'h:mm a')}
+            {time} MST
           </div>
         </div>
 

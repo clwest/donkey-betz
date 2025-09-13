@@ -30,7 +30,10 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
   Select,
+  SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '../../../components/ui/select';
 import {
   DropdownMenu,
@@ -51,7 +54,7 @@ interface FlaggedContentTableProps {
     flag_type?: string;
     limit?: number;
   };
-  onReviewClick?: (contentId: number) => void;
+  onReviewClick?: (contentId: string) => void;
   compact?: boolean;
   showReviewDetails?: boolean;
 }
@@ -65,7 +68,7 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
   compact = false,
   showReviewDetails = false,
 }) => {
-  // Local state
+  // Local state - initialize with filters from props
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(filters.status || 'all');
   const [priorityFilter, setPriorityFilter] = useState<string>(filters.priority || 'all');
@@ -74,6 +77,13 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = compact ? 5 : 10;
+  
+  // Update filters when props change
+  React.useEffect(() => {
+    if (filters.status) setStatusFilter(filters.status);
+    if (filters.priority) setPriorityFilter(filters.priority);
+    if (filters.flag_type) setFlagTypeFilter(filters.flag_type);
+  }, [filters.status, filters.priority, filters.flag_type]);
 
   // Build query parameters
   const queryParams = useMemo(() => {
@@ -238,29 +248,44 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
             </div>
           </div>
           
-          <Select value={statusFilter} onValueChange={setStatusFilter} className="w-40">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="reviewing">Reviewing</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
               <SelectItem value="dismissed">Dismissed</SelectItem>
+            </SelectContent>
           </Select>
 
-          <Select value={priorityFilter} onValueChange={setPriorityFilter} className="w-40">
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Select priority" />
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem value="all">All Priority</SelectItem>
               <SelectItem value="critical">Critical</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
           </Select>
 
-          <Select value={flagTypeFilter} onValueChange={setFlagTypeFilter} className="w-48">
+          <Select value={flagTypeFilter} onValueChange={setFlagTypeFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="misinformation">Misinformation</SelectItem>
               <SelectItem value="harmful">Harmful Content</SelectItem>
               <SelectItem value="inappropriate">Inappropriate</SelectItem>
               <SelectItem value="spam">Spam</SelectItem>
               <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
           </Select>
         </div>
       )}
@@ -346,7 +371,14 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
               </TableRow>
             ) : (
               filteredData.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/50">
+                <TableRow 
+                  key={item.id} 
+                  className="hover:bg-muted/50 cursor-pointer" 
+                  onClick={() => {
+                    console.log('Row clicked for item:', item.id);
+                    onReviewClick?.(item.id);
+                  }}
+                >
                   <TableCell>
                     <PriorityBadge priority={item.priority} />
                   </TableCell>
@@ -356,6 +388,10 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
                     </div>
                     <div className="text-sm text-muted-foreground truncate" title={item.reason}>
                       {item.reason}
+                    </div>
+                    {/* Add a subtle indicator that this is clickable */}
+                    <div className="text-xs text-blue-500 opacity-70 mt-1">
+                      Click to review →
                     </div>
                   </TableCell>
                   <TableCell>
@@ -398,16 +434,28 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
                       )}
                     </TableCell>
                   )}
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('Dropdown button clicked for item:', item.id);
+                          }}
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem 
-                          onClick={() => onReviewClick?.(item.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('Review menu item clicked for item:', item.id);
+                            onReviewClick?.(item.id);
+                          }}
                           className="flex items-center space-x-2"
                         >
                           <Eye className="h-4 w-4" />

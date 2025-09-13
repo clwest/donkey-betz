@@ -1060,14 +1060,14 @@ export function ResearchBooks() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-400 line-clamp-2">
-                      {doc.content_preview.length > 150 
+                      {doc.content_preview && doc.content_preview.length > 150 
                         ? `${doc.content_preview.slice(0, 150)}...` 
-                        : doc.content_preview}
+                        : doc.content_preview || 'No preview available'}
                     </p>
                     <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                      <span>Pages: {doc.pages}</span>
-                      <span>Words: {doc.word_count.toLocaleString()}</span>
-                      <span>Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                      <span>Pages: {doc.pages || 0}</span>
+                      <span>Words: {(doc.word_count || 0).toLocaleString()}</span>
+                      <span>Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown'}</span>
                     </div>
                   </div>
                   <Button

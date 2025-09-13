@@ -18,9 +18,12 @@ class SafeWebSocketMixin:
         """Safely send data, handling closed connections"""
         try:
             await self.send(text_data=json.dumps(data))
-        except Exception:
-            # Connection closed, ignore
-            pass
+        except Exception as e:
+            # Log the error but don't crash the consumer
+            print(f"[SafeWebSocket] Failed to send message: {e}")
+            # Re-raise if it's not a connection-related error
+            if "connection" not in str(e).lower() and "close" not in str(e).lower():
+                raise
 class AgentProgressConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Real-time agent execution progress and status updates.
@@ -29,9 +32,10 @@ class AgentProgressConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     
     async def connect(self):
         self.instance_id = self.scope['url_route']['kwargs'].get('instance_id', 'all')
-        self.room_group_name = f'agent_progress_{self.instance_id}'
+        self.room_group_name = 'agents_general'  # Use general group for all agent messages
+        self.game_subscriptions = set()  # Track subscribed games
         
-        # Join room group
+        # Join the general agents room
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -68,6 +72,18 @@ class AgentProgressConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                     'type': 'pong',
                     'timestamp': datetime.now().isoformat()
                 })
+            elif message_type == 'subscribe':
+                # Handle game subscription
+                game_id = text_data_json.get('game_id')
+                if game_id:
+                    self.game_subscriptions.add(game_id)
+                    await self.safe_send({
+                        'type': 'subscribed',
+                        'data': {
+                            'game_id': game_id,
+                            'status': 'subscribed'
+                        }
+                    })
             elif message_type == 'subscribe_agent':
                 instance_id = text_data_json.get('instance_id')
                 # Handle agent subscription
@@ -187,32 +203,95 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     
     async def connect(self):
-        self.room_group_name = 'live_sports'
-        
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
-        
-        await self.accept()
+        try:
+            print(f"[LiveSports] CONNECT METHOD CALLED")
+            self.room_group_name = 'live_sports'
+            self.user = self.scope.get('user', AnonymousUser())
+            
+            # Log connection attempt
+            user_info = getattr(self.user, 'username', 'anonymous') if not isinstance(self.user, AnonymousUser) else 'anonymous'
+            print(f"[LiveSports] Connection attempt from user: {user_info}")
+            
+            print(f"[LiveSports] Adding to channel group...")
+            await self.channel_layer.group_add(
+                self.room_group_name,
+                self.channel_name
+            )
+            print(f"[LiveSports] Added to channel group successfully")
+            
+            print(f"[LiveSports] Accepting connection...")
+            await self.accept()
+            print(f"[LiveSports] Connection accepted")
+            
+            # Send connection established message with initial data
+            print(f"[LiveSports] Sending welcome message...")
+            await self.safe_send({
+                'type': 'connection_established',
+                'data': {
+                    'message': 'Connected to live sports updates',
+                    'user': user_info,
+                    'timestamp': datetime.now().isoformat()
+                }
+            })
+            print(f"[LiveSports] Welcome message sent successfully")
+        except Exception as e:
+            print(f"[LiveSports] ERROR in connect method: {e}")
+            import traceback
+            traceback.print_exc()
+            # Still try to accept the connection
+            try:
+                await self.accept()
+            except:
+                pass
     
     async def disconnect(self, close_code):
+        user_info = getattr(self.user, 'username', 'anonymous') if hasattr(self, 'user') and not isinstance(self.user, AnonymousUser) else 'anonymous'
+        print(f"[LiveSports] Disconnection (code: {close_code}) for user: {user_info}")
+        
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
     
     async def receive(self, text_data):
-        text_data_json = json.loads(text_data)
-        message_type = text_data_json.get('type', 'subscribe')
-        
-        if message_type == 'subscribe_sport':
-            sport = text_data_json.get('sport', 'all')
+        try:
+            print(f"[LiveSports] Received: {text_data}")
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type', 'ping')
+            print(f"[LiveSports] Message type: {message_type}")
+            
+            if message_type == 'ping':
+                print(f"[LiveSports] Sending pong response...")
+                await self.safe_send({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                })
+                print(f"[LiveSports] Pong sent successfully")
+            elif message_type == 'subscribe_sport':
+                sport = text_data_json.get('sport', 'all')
+                print(f"[LiveSports] Subscribing to sport: {sport}")
+                await self.safe_send({
+                    'type': 'subscribed',
+                    'sport': sport,
+                    'timestamp': datetime.now().isoformat()
+                })
+                print(f"[LiveSports] Subscription confirmation sent")
+            else:
+                print(f"[LiveSports] Unknown message type: {message_type}")
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': f'Unknown message type: {message_type}'}
+                })
+                print(f"[LiveSports] Error message sent")
+        except json.JSONDecodeError as e:
+            print(f"[LiveSports] JSON decode error: {e}")
             await self.safe_send({
-                'type': 'subscribed',
-                'sport': sport,
-                'timestamp': datetime.now().isoformat()
+                'type': 'error',
+                'data': {'message': 'Invalid JSON format'}
             })
+        except Exception as e:
+            print(f"[LiveSports] Unexpected error in receive: {e}")
+            # Don't disconnect on receive errors - just log and continue
     
     async def live_odds_update(self, event):
         """Send live odds update"""

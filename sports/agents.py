@@ -41,7 +41,12 @@ class SportsAgentRegistry:
             ValueBettingAgent,
             ContrarianBettingAgent,
             LiveBettingAgent,
-            WeatherAnalyzer
+            WeatherAnalyzer,
+            InjuryAnalyzer,
+            BettingIntelligenceAnalyzer,
+            MarketValueAnalyzer,
+            SituationalAnalyzer,
+            PublicSentimentAnalyzer
         ]
         
         registered_count = 0
@@ -863,6 +868,66 @@ class WeatherAnalyzer(BaseSportsAgent):
         self.routing_keywords = ["weather", "wind", "temperature", "precipitation", "outdoor conditions", "climate impact"]
 
 
+class InjuryAnalyzer(BaseSportsAgent):
+    """Agent for injury impact analysis on sports betting outcomes"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "injury-analyzer-agent"
+        self.display_name = "Injury Intelligence Analysis Specialist"
+        self.description = "Analyzes player injuries and their impact on game outcomes and betting lines"
+        self.capabilities = ["injury_analysis", "player_impact_assessment", "lineup_adjustments", "injury_history_tracking"]
+        self.routing_keywords = ["injury", "injured", "out", "questionable", "doubtful", "injury report", "player availability"]
+
+
+class BettingIntelligenceAnalyzer(BaseSportsAgent):
+    """Agent for comprehensive betting intelligence and trend analysis"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "betting-intelligence-agent"
+        self.display_name = "Betting Intelligence & Trends Specialist"
+        self.description = "Analyzes betting trends, ATS records, over/under patterns, and provides intelligent betting insights"
+        self.capabilities = ["betting_trends", "ats_analysis", "over_under_patterns", "team_performance_metrics", "historical_matchups"]
+        self.routing_keywords = ["betting trends", "ATS", "against the spread", "over under", "team stats", "betting intelligence", "matchup analysis"]
+
+
+class MarketValueAnalyzer(BaseSportsAgent):
+    """Agent for line value assessment and market efficiency analysis"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "market-value-analyzer-agent"
+        self.display_name = "Market Value & Line Assessment Specialist"
+        self.description = "Analyzes betting line value, market efficiency, implied probabilities, and identifies betting opportunities"
+        self.capabilities = ["line_value_assessment", "market_efficiency", "implied_probability", "line_movement", "value_identification"]
+        self.routing_keywords = ["line value", "market efficiency", "implied probability", "betting value", "line assessment", "market analysis"]
+
+
+class SituationalAnalyzer(BaseSportsAgent):
+    """Agent for situational betting analysis and contextual factors"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "situational-analyzer-agent"
+        self.display_name = "Situational Analysis Specialist"
+        self.description = "Analyzes situational factors affecting game outcomes including rest, motivation, revenge games, and scheduling"
+        self.capabilities = ["situational_analysis", "rest_analysis", "motivation_factors", "scheduling_advantages", "contextual_betting"]
+        self.routing_keywords = ["situational", "rest advantage", "motivation", "revenge game", "scheduling", "context", "situational betting"]
+
+
+class PublicSentimentAnalyzer(BaseSportsAgent):
+    """Agent for public vs sharp money analysis and market sentiment"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "public-sentiment-agent"
+        self.display_name = "Public vs Sharp Money Specialist"
+        self.description = "Analyzes public betting percentages vs sharp money movement, reverse line movement, and contrarian opportunities"
+        self.capabilities = ["public_betting_analysis", "sharp_money_detection", "reverse_line_movement", "contrarian_betting", "market_sentiment"]
+        self.routing_keywords = ["public money", "sharp money", "contrarian", "reverse line movement", "public sentiment", "fade public", "market sentiment"]
+
+
 # Export all agent classes for easy registration
 SPORTS_AGENT_CLASSES = [
     OddsCalculationAgent,
@@ -877,5 +942,10 @@ SPORTS_AGENT_CLASSES = [
     ValueBettingAgent,
     ContrarianBettingAgent,
     LiveBettingAgent,
-    WeatherAnalyzer
+    WeatherAnalyzer,
+    InjuryAnalyzer,
+    BettingIntelligenceAnalyzer,
+    MarketValueAnalyzer,
+    SituationalAnalyzer,
+    PublicSentimentAnalyzer
 ]

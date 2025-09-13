@@ -13,7 +13,7 @@ urlpatterns = [
     
     # Flagged content management  
     path('flagged-content/', views.flagged_content_list, name='flagged_content_list'),
-    path('flagged-content/<int:content_id>/', views.flagged_content_detail, name='flagged_content_detail'),
+    path('flagged-content/<uuid:content_id>/', views.flagged_content_detail, name='flagged_content_detail'),
     path('review/', views.submit_review, name='submit_review'),
     
     # Recent events for Neural Scan section
@@ -24,6 +24,6 @@ urlpatterns = [
     
     # Notifications
     path('notifications/', views.notifications_list, name='notifications_list'),
-    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/<uuid:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
 ]

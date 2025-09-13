@@ -203,17 +203,26 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ contentId, onClose }) 
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">User</Label>
-                    <p className="text-sm">{content.flagged_by.username}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-                    <p className="text-sm">{content.flagged_by.email}</p>
-                  </div>
+                  {content.flagged_by ? (
+                    <>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">User</Label>
+                        <p className="text-sm">{content.flagged_by.username || 'Unknown User'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                        <p className="text-sm">{content.flagged_by.email || 'No email provided'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">User</Label>
+                      <p className="text-sm">System Generated</p>
+                    </div>
+                  )}
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Date</Label>
-                    <p className="text-sm">{format(new Date(content.flagged_at), 'PPpp')}</p>
+                    <p className="text-sm">{content.flagged_at ? format(new Date(content.flagged_at), 'PPpp') : 'Unknown'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -229,7 +238,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ contentId, onClose }) 
                   <CardContent className="space-y-2">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Reviewed By</Label>
-                      <p className="text-sm">{content.reviewed_by.username}</p>
+                      <p className="text-sm">{content.reviewed_by?.username || 'Unknown Reviewer'}</p>
                     </div>
                     {content.reviewed_at && (
                       <div>

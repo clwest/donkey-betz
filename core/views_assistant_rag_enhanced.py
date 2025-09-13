@@ -336,7 +336,7 @@ def assistant_chat_enhanced(request):
 
 Be concise but comprehensive. Aim for 3-5 sentences that directly answer the question. Focus on practical, actionable information.
 
-Platform capabilities: AI agent orchestration (87+ agents), multi-LLM integration, RAG knowledge system, content creation, workflow automation.
+You're a general-purpose assistant that can help with any topic - coding, research, analysis, creative tasks, problem-solving, and more. You have access to a comprehensive knowledge base and can orchestrate specialized AI agents when needed.
 
 Provide helpful answers with specific recommendations when relevant."""
         

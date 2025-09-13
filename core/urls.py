@@ -14,10 +14,14 @@ from rest_framework.routers import DefaultRouter
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
-    agent_instances, agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
+    agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
     feedback_analytics, feedback_history, feedback_submit, prompting_stats,
     assistant_context, research_books, research_documents, prompting_test,
     personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
+)
+# Import agent instance views
+from agents.views_instances import (
+    list_instances, get_instance_status, delete_instance, delete_multiple_instances
 )
 from core.views_knowledge import (
     personal_knowledge_upload, personal_knowledge_delete, personal_knowledge_stats
@@ -65,7 +69,8 @@ from core.views_agent_orchestration import (
 from core.views_odds_sports import (
     convert_odds, calculate_expected_value, calculate_kelly_criterion, detect_arbitrage,
     sports_game_analysis, live_betting_opportunities, list_betting_markets,
-    get_bankroll_management, get_bankroll_stats
+    get_bankroll_management, get_bankroll_stats, live_odds, get_weather_data, get_injury_data,
+    get_betting_intelligence, orchestrate_agent_analysis
 )
 
 # Import Phase 2 advanced features
@@ -114,7 +119,13 @@ urlpatterns = [
     path('api/v1/metrics/', record_metric, name='record-metric'),
     path('api/v1/health/', health_check, name='health-check'),
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
-    path('api/v1/instances/', agent_instances, name='agent-instances'),
+    
+    # Agent execution instances endpoints
+    path('api/v1/instances/', list_instances, name='agent-instances'),
+    path('api/v1/instances/<str:instance_id>/', get_instance_status, name='agent-instance-status'),
+    path('api/v1/instances/<str:instance_id>/delete/', delete_instance, name='agent-instance-delete'),
+    path('api/v1/instances/delete-multiple/', delete_multiple_instances, name='agent-instances-delete-multiple'),
+    
     path('api/v1/executions/', agent_executions_list, name='agent-executions'),
     
     # Placeholder endpoints for missing APIs
@@ -217,7 +228,7 @@ urlpatterns = [
     # Agent Orchestration APIs (from DBAO tools-manifest)
     path('api/v1/agents/list/', list_agents, name='agents-list'),
     path('api/v1/agents/by-specialization/', get_agents_by_specialization, name='agents-by-specialization'),
-    path('api/v1/agents/execute/', execute_agent_orchestration, name='agents-execute'),
+    # path('api/v1/agents/execute/', execute_agent_orchestration, name='agents-execute'),  # Commented out - using agents.urls version
     path('api/v1/agents/orchestrate/', orchestrate_multi_agent_task, name='agents-orchestrate'),
     path('api/v1/agents/suggest/', suggest_agent, name='agents-suggest'),
     path('api/v1/agents/route/', route_task, name='agents-route'),
@@ -233,9 +244,14 @@ urlpatterns = [
     path('api/v1/odds/arbitrage/', detect_arbitrage, name='arbitrage'),
     path('api/v1/sports/analyze-game/', sports_game_analysis, name='sports-analyze'),
     path('api/v1/sports/live-opportunities/', live_betting_opportunities, name='live-opportunities'),
+    path('api/v1/sports/live-odds/', live_odds, name='live-odds'),
     path('api/v1/odds/markets/', list_betting_markets, name='betting-markets'),
     path('api/v1/odds/bankroll/', get_bankroll_management, name='bankroll'),
     path('api/v1/odds/bankroll/stats/', get_bankroll_stats, name='bankroll-stats'),
+    path('api/v1/sports/weather/', get_weather_data, name='weather-data'),
+    path('api/v1/sports/injuries/', get_injury_data, name='injury-data'),
+    path('api/v1/sports/betting-intelligence/', get_betting_intelligence, name='betting-intelligence'),
+    path('api/v1/sports/orchestrate/', orchestrate_agent_analysis, name='orchestrate-agents'),
     # Add missing betting endpoints expected by verification
     path('api/v1/betting/live/', live_betting_opportunities, name='betting-live'),
     path('api/v1/betting/arbitrage/', detect_arbitrage, name='betting-arbitrage'),

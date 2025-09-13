@@ -137,7 +137,8 @@ class OpenAIProvider(BaseAIProvider):
             try:
                 if 'gpt-5' in model.lower():
                     # Try with max_completion_tokens first (new parameter for GPT-5)
-                    completion_params["max_completion_tokens"] = config.get('max_tokens', 2000)
+                    # Check for both max_completion_tokens and max_tokens in config
+                    completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 2000))
                     # GPT-5 doesn't support temperature and other parameters
                 else:
                     # Non-GPT-5 models use standard parameters

@@ -28,6 +28,7 @@ export interface AgentInstance {
   id: string;
   execution_id: string;
   template: Agent;
+  name?: string;
   template_name?: string;
   task_description: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
@@ -126,6 +127,7 @@ export class AgentOrchestraService {
     STATUS: '/v1/agents/status/',  // Fixed to use correct endpoint path
     ORCHESTRATE: '/v1/agents/orchestrate/',  // Fixed to use correct endpoint path
     ORCHESTRATIONS: '/v1/orchestrations/',
+    EXECUTIONS: '/v1/agents/executions/',  // Agent execution results
     BETTING: '/v1/betting/',
     ODDS: '/v1/odds/',  // Sports odds uses v1
     HEALTH: '/v1/agents/health/'  // Fixed to use correct endpoint path
@@ -442,6 +444,54 @@ Always include mathematical backing for your analysis and make content both educ
     return null;
   }
 
+  static async getExecutions(params?: any): Promise<ServiceResponse<any>> {
+    try {
+      // If gameId is provided, use the game-specific endpoint which includes full results
+      if (params?.input_data__game_id) {
+        const gameId = params.input_data__game_id;
+        const url = `/v1/agents/game/${gameId}/executions/`;
+        const data = await this.makeRequest<any>('GET', url);
+        
+        // Transform response to match expected format
+        return {
+          success: true,
+          data: {
+            results: data.executions || [],
+            count: data.executions?.length || 0
+          }
+        };
+      }
+      
+      // Otherwise use the standard endpoint
+      const queryParams = new URLSearchParams();
+      if (params) {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null) {
+            queryParams.append(key, params[key].toString());
+          }
+        });
+      }
+      
+      const url = queryParams.toString() 
+        ? `${this.BASE_ENDPOINTS.EXECUTIONS}?${queryParams}`
+        : this.BASE_ENDPOINTS.EXECUTIONS;
+      
+      const data = await this.makeRequest<any>('GET', url);
+      
+      return {
+        success: true,
+        data
+      };
+    } catch (error) {
+      Logger.error('Agent Orchestra', 'Failed to fetch executions', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: { results: [] }
+      };
+    }
+  }
+
   static async suggestAgent(taskDescription: string): Promise<AgentSuggestion[]> {
     try {
       const data = await this.makeRequest<{ suggestions?: AgentSuggestion[] } | AgentSuggestion[]>(
@@ -494,9 +544,23 @@ Always include mathematical backing for your analysis and make content both educ
       return instances.map((instance): AgentInstance => ({
         id: instance.id,
         execution_id: instance.execution_id,
-        template: {
-          id: instance.template || 'unknown',
-          name: instance.template_name || 'Unknown Agent',
+        name: instance.name || instance.template?.name || 'Unknown Agent',
+        template: instance.template ? {
+          id: instance.template.id || 'unknown',
+          name: instance.template.name || instance.name || 'Unknown Agent',
+          description: instance.template.description || instance.task_description || 'Agent execution',
+          specialization: instance.template.specialization || instance.task_type || 'general',
+          capabilities: [],
+          required_tools: [],
+          system_prompt: '',
+          personality_traits: {},
+          llm_provider: 'openai',
+          llm_model: 'gpt-5-mini',
+          created_at: instance.created_at,
+          updated_at: instance.updated_at
+        } : {
+          id: 'unknown',
+          name: instance.name || instance.template_name || 'Unknown Agent',
           description: instance.task_description || 'Agent execution',
           specialization: instance.task_type || 'general',
           capabilities: [],
@@ -508,7 +572,7 @@ Always include mathematical backing for your analysis and make content both educ
           created_at: instance.created_at,
           updated_at: instance.updated_at
         },
-        template_name: instance.template_name,
+        template_name: instance.template?.name || instance.name || instance.template_name,
         task_description: instance.task_description,
         status: instance.status as 'pending' | 'running' | 'completed' | 'failed',
         result: instance.result,
@@ -1166,3 +1230,6 @@ export const useAgentWebSocket = () => {
     getStats
   };
 };
+
+// Export a singleton instance for convenience
+export const agentOrchestraService = AgentOrchestraService;

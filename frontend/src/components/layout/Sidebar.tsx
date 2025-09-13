@@ -18,6 +18,7 @@ import {
   ArrowRightOnRectangleIcon,
   BeakerIcon,
   CircleStackIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { 
   HomeIcon as HomeIconSolid,
@@ -36,6 +37,7 @@ import {
   ArrowRightOnRectangleIcon as ArrowRightOnRectangleIconSolid,
   BeakerIcon as BeakerIconSolid,
   CircleStackIcon as CircleStackIconSolid,
+  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
 } from '@heroicons/react/24/solid';
 import clsx from 'clsx';
 import { useAuthStore } from '../../store/authStore';
@@ -47,10 +49,8 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Control Center', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
-  { name: 'Workflow Engine', href: '/workflows', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'NEW' },
-  { name: 'Multi-Agent Engine', href: '/workflows-multi', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' },
-  { name: 'Agent Orchestra', href: '/agent-orchestra', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
-  { name: 'Orchestra Pro', href: '/orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'NEW' },
+  { name: 'Neural Orchestra', href: '/agent-hub', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'UNIFIED' },
+  { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },
   { name: 'Command Center', href: '/betting', icon: ChartBarIcon, iconActive: ChartBarIconSolid },
   { name: 'Content Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
   { name: 'Media Vault', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },
@@ -61,7 +61,6 @@ const navigation = [
   { name: 'Intelligence Hub', href: '/research', icon: AcademicCapIcon, iconActive: AcademicCapIconSolid },
   { name: 'Fact Checker', href: '/mythology', icon: BookOpenIcon, iconActive: BookOpenIconSolid, badge: 'NEW' },
   { name: 'Knowledge Base', href: '/knowledge', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid, badge: 'NEW' },
-  { name: 'Agent Registry', href: '/agent-registry', icon: CircleStackIcon, iconActive: CircleStackIconSolid, badge: 'NEW' },
   { name: 'AI Diagnostics', href: '/prompt-diagnostics', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },
   { name: 'Feedback Center', href: '/feedback', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'NEW' },
   { name: 'AI Config', href: '/ai-settings', icon: Cog6ToothIcon, iconActive: Cog6ToothIconSolid },

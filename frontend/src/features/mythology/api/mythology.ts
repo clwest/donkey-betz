@@ -8,9 +8,9 @@ import { Logger } from '../../../utils/logger';
 
 // Types
 export interface FlaggedContent {
-  id: number;
+  id: string;
   content_type: string;
-  content_id: number;
+  content_id: string;
   flag_type: 'misinformation' | 'harmful' | 'inappropriate' | 'spam' | 'other';
   priority: 'low' | 'medium' | 'high' | 'critical';
   status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
@@ -33,7 +33,7 @@ export interface FlaggedContent {
 }
 
 export interface ReviewAction {
-  content_id: number;
+  content_id: string;
   action: 'approve' | 'remove' | 'edit' | 'flag_false_positive';
   notes?: string;
   edit_content?: string;
@@ -41,7 +41,7 @@ export interface ReviewAction {
 
 export interface ReportContent {
   content_type: string;
-  content_id: number;
+  content_id: string;
   flag_type: string;
   reason: string;
   additional_info?: string;
@@ -57,11 +57,11 @@ export interface MythologyStats {
 }
 
 export interface AlertNotification {
-  id: number;
+  id: string;
   type: 'new_flag' | 'high_priority' | 'urgent_review';
   title: string;
   message: string;
-  content_id?: number;
+  content_id?: string;
   priority: string;
   created_at: string;
   read: boolean;
@@ -86,7 +86,7 @@ export const mythologyKeys = {
   stats: () => [...mythologyKeys.all, 'stats'] as const,
   flaggedContent: (filters?: any) => [...mythologyKeys.all, 'flagged', filters] as const,
   notifications: () => [...mythologyKeys.all, 'notifications'] as const,
-  contentDetail: (id: number) => [...mythologyKeys.all, 'content', id] as const,
+  contentDetail: (id: string) => [...mythologyKeys.all, 'content', id] as const,
   recentEvents: (params?: any) => [...mythologyKeys.all, 'recent-events', params] as const,
 };
 
@@ -120,7 +120,7 @@ const mythologyAPI = {
   },
 
   // Get specific flagged content details
-  getFlaggedContentDetail: async (id: number): Promise<FlaggedContent> => {
+  getFlaggedContentDetail: async (id: string): Promise<FlaggedContent> => {
     Logger.api('GET', `/v1/mythology/flagged-content/${id}/`, {});
     const response = await apiClient.get(`/v1/mythology/flagged-content/${id}/`);
     return response.data;
@@ -151,7 +151,7 @@ const mythologyAPI = {
   },
 
   // Mark notification as read
-  markNotificationRead: async (id: number): Promise<{ success: boolean }> => {
+  markNotificationRead: async (id: string): Promise<{ success: boolean }> => {
     Logger.api('PATCH', `/v1/mythology/notifications/${id}/read/`, {});
     const response = await apiClient.patch(`/v1/mythology/notifications/${id}/read/`);
     return response.data;
@@ -193,7 +193,7 @@ export const useFlaggedContent = (params?: Parameters<typeof mythologyAPI.getFla
   });
 };
 
-export const useFlaggedContentDetail = (id: number) => {
+export const useFlaggedContentDetail = (id: string) => {
   return useQuery({
     queryKey: mythologyKeys.contentDetail(id),
     queryFn: () => mythologyAPI.getFlaggedContentDetail(id),
@@ -280,6 +280,9 @@ export const useMythologyWebSocket = (onNewNotification?: (notification: AlertNo
   const queryClient = useQueryClient();
   let reconnectTimeout: NodeJS.Timeout | null = null;
   let isConnecting = false;
+  let reconnectAttempts = 0;
+  const maxReconnectAttempts = 5;
+  const baseReconnectDelay = 2000; // Start with 2 seconds
 
   // WebSocket connection for real-time updates
   const connectWebSocket = () => {
@@ -287,70 +290,87 @@ export const useMythologyWebSocket = (onNewNotification?: (notification: AlertNo
       return null; // Prevent multiple connections
     }
     
-    isConnecting = true;
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-    const ws = new WebSocket(`${wsUrl}/ws/mythology/`);
+    isConnecting = false;
+    
+    // Check if WebSocket is available in the browser
+    if (typeof WebSocket === 'undefined') {
+      Logger.error('Mythology WebSocket', 'WebSocket not supported by browser');
+      return null;
+    }
+    
+    try {
+      const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+      const ws = new WebSocket(`${wsUrl}/ws/mythology/`);
 
-    ws.onopen = () => {
-      isConnecting = false;
-      Logger.component('Mythology WebSocket', 'Connected to real-time notifications');
-      
-      // Clear any pending reconnect timeout
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-      }
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      ws.onopen = () => {
+        isConnecting = false;
+        reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+        Logger.component('Mythology WebSocket', 'Connected to real-time notifications');
         
-        if (data.type === 'mythology_notification') {
-          const notification: AlertNotification = data.notification;
-          
-          // Update notifications query
-          queryClient.invalidateQueries({ queryKey: mythologyKeys.notifications() });
-          
-          // Update stats if it's a new flag
-          if (notification.type === 'new_flag') {
-            queryClient.invalidateQueries({ queryKey: mythologyKeys.stats() });
-          }
-          
-          // Call callback
-          onNewNotification?.(notification);
-          
-          Logger.event('Mythology WebSocket', 'New notification received', notification);
-        } else if (data.type === 'connection_established') {
-          Logger.component('Mythology WebSocket', 'Connection established');
-        }
-      } catch (error) {
-        Logger.error('Mythology WebSocket', 'Failed to parse message', error);
-      }
-    };
-
-    ws.onclose = (event) => {
-      isConnecting = false;
-      
-      // Only reconnect if it wasn't a manual close (code 1000) and not a connection failure
-      if (event.code !== 1000 && event.code !== 1006 && !reconnectTimeout) {
-        Logger.warn('Mythology WebSocket', 'Connection closed unexpectedly, attempting to reconnect in 5s');
-        reconnectTimeout = setTimeout(() => {
+        // Clear any pending reconnect timeout
+        if (reconnectTimeout) {
+          clearTimeout(reconnectTimeout);
           reconnectTimeout = null;
-          connectWebSocket();
-        }, 5000);
-      } else {
-        Logger.component('Mythology WebSocket', 'Connection closed or failed to connect - not reconnecting');
-      }
-    };
+        }
+      };
 
-    ws.onerror = (error) => {
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'mythology_notification') {
+            const notification: AlertNotification = data.notification;
+            
+            // Update notifications query
+            queryClient.invalidateQueries({ queryKey: mythologyKeys.notifications() });
+            
+            // Update stats if it's a new flag
+            if (notification.type === 'new_flag') {
+              queryClient.invalidateQueries({ queryKey: mythologyKeys.stats() });
+            }
+            
+            // Call callback
+            onNewNotification?.(notification);
+            
+            Logger.event('Mythology WebSocket', 'New notification received', notification);
+          } else if (data.type === 'connection_established') {
+            Logger.component('Mythology WebSocket', 'Connection established');
+          }
+        } catch (error) {
+          Logger.error('Mythology WebSocket', 'Failed to parse message', error);
+        }
+      };
+
+      ws.onclose = (event) => {
+        isConnecting = false;
+        
+        // Attempt reconnect with exponential backoff
+        if (reconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), 30000);
+          reconnectAttempts++;
+          
+          Logger.warn('Mythology WebSocket', `Connection closed (code: ${event.code}). Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+          
+          reconnectTimeout = setTimeout(() => {
+            reconnectTimeout = null;
+            connectWebSocket();
+          }, delay);
+        } else {
+          Logger.component('Mythology WebSocket', 'Max reconnection attempts reached. WebSocket will not reconnect automatically.');
+        }
+      };
+
+      ws.onerror = (error) => {
+        isConnecting = false;
+        Logger.error('Mythology WebSocket', 'Connection error - server may be down', error);
+      };
+
+      return ws;
+    } catch (error) {
       isConnecting = false;
-      Logger.error('Mythology WebSocket', 'Connection error - server may be down', error);
-      // Don't attempt reconnection on initial connection errors
-    };
-
-    return ws;
+      Logger.error('Mythology WebSocket', 'Failed to create WebSocket connection', error);
+      return null;
+    }
   };
 
   return { connectWebSocket };

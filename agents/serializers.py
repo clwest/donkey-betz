@@ -11,7 +11,10 @@ from .models import (
     AgentExecution,
     AgentOrchestration,
     AgentTool,
-    AgentRegistry
+    AgentRegistry,
+    AgentChannel,
+    AgentChannelMessage,
+    AgentChannelMembership
 )
 
 User = get_user_model()
@@ -132,7 +135,7 @@ class AgentExecutionSerializer(serializers.ModelSerializer):
 
 
 class AgentExecutionListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for execution lists"""
+    """Serializer for execution lists - includes results for frontend display"""
     
     template_name = serializers.CharField(source='template.name', read_only=True)
     user_username = serializers.CharField(source='user.username', read_only=True)
@@ -143,7 +146,8 @@ class AgentExecutionListSerializer(serializers.ModelSerializer):
             'id', 'execution_id', 'template_name', 'user_username',
             'task_description', 'status', 'priority', 'progress_percentage',
             'started_at', 'completed_at', 'execution_time_seconds',
-            'total_cost', 'user_rating', 'created_at'
+            'total_cost', 'user_rating', 'created_at',
+            'result', 'output_data', 'llm_response', 'error_message'
         ]
 
 
@@ -335,3 +339,224 @@ class AgentRegistryStatsSerializer(serializers.Serializer):
     recent_activity = serializers.ListField()
     top_performing_agents = serializers.ListField()
     capability_coverage = serializers.DictField()
+
+
+# =============================================================================
+# Agent Channel Serializers - "Slack for AI Agents"
+# =============================================================================
+
+class AgentChannelSerializer(serializers.ModelSerializer):
+    """Serializer for agent channels"""
+    
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    message_count = serializers.IntegerField(read_only=True)
+    member_count = serializers.SerializerMethodField()
+    active_agents = serializers.SerializerMethodField()
+    recent_messages = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = AgentChannel
+        fields = [
+            'id', 'name', 'display_name', 'description', 'channel_type',
+            'orchestration', 'is_active', 'is_archived', 'is_public',
+            'metadata', 'message_count', 'created_by',
+            'created_by_username', 'created_at', 'updated_at',
+            'member_count', 'active_agents', 'recent_messages'
+        ]
+        read_only_fields = [
+            'id', 'message_count', 'created_by_username', 
+            'created_at', 'updated_at', 'member_count', 
+            'active_agents', 'recent_messages'
+        ]
+    
+    def get_member_count(self, obj):
+        """Get total number of members in channel"""
+        return obj.memberships.count()
+    
+    def get_active_agents(self, obj):
+        """Get count of active agent members"""
+        return obj.memberships.filter(agent_template__isnull=False).count()
+    
+    def get_recent_messages(self, obj):
+        """Get last 5 messages preview"""
+        recent = obj.messages.order_by('-created_at')[:5]
+        return AgentChannelMessageListSerializer(recent, many=True).data
+
+
+class AgentChannelListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for channel lists"""
+    
+    message_count = serializers.IntegerField(read_only=True)
+    member_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = AgentChannel
+        fields = [
+            'id', 'name', 'display_name', 'description', 'channel_type',
+            'is_active', 'message_count', 'member_count',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_member_count(self, obj):
+        """Get total number of members"""
+        return obj.memberships.count()
+
+
+class AgentChannelMessageSerializer(serializers.ModelSerializer):
+    """Serializer for channel messages"""
+    
+    agent_name = serializers.SerializerMethodField()
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    channel_name = serializers.CharField(source='channel.name', read_only=True)
+    reactions_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = AgentChannelMessage
+        fields = [
+            'id', 'channel', 'channel_name', 'message_type',
+            'agent_template', 'agent_name', 'user', 'user_username',
+            'content', 'rich_content', 'timestamp', 'thread_id',
+            'parent_message', 'reactions', 'reactions_count',
+            'edited_at', 'is_active',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'channel_name', 'agent_name', 'user_username',
+            'timestamp', 'reactions_count', 'created_at', 'updated_at'
+        ]
+    
+    def get_agent_name(self, obj):
+        """Get agent template name if agent message"""
+        if obj.agent_template:
+            return obj.agent_template.display_name or obj.agent_template.name
+        return None
+    
+    def get_reactions_count(self, obj):
+        """Get total reaction count"""
+        if obj.reactions:
+            return sum(len(users) for users in obj.reactions.values())
+        return 0
+
+
+class AgentChannelMessageListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for message lists"""
+    
+    agent_name = serializers.SerializerMethodField()
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = AgentChannelMessage
+        fields = [
+            'id', 'channel', 'message_type', 'agent_name', 'user_username',
+            'content', 'timestamp', 'thread_id', 'created_at'
+        ]
+    
+    def get_agent_name(self, obj):
+        """Get agent name for quick display"""
+        if obj.agent_template:
+            return obj.agent_template.name
+        return None
+
+
+class AgentChannelMembershipSerializer(serializers.ModelSerializer):
+    """Serializer for channel memberships"""
+    
+    channel_name = serializers.CharField(source='channel.name', read_only=True)
+    agent_name = serializers.SerializerMethodField()
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    member_display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = AgentChannelMembership
+        fields = [
+            'id', 'channel', 'channel_name', 'agent_template', 'agent_name',
+            'user', 'user_username', 'role', 'notification_level',
+            'is_watching', 'last_read_at', 'joined_at',
+            'is_active', 'metadata', 'created_at', 'updated_at',
+            'member_display_name'
+        ]
+        read_only_fields = [
+            'id', 'channel_name', 'agent_name', 'user_username',
+            'joined_at', 'created_at', 'updated_at', 'member_display_name'
+        ]
+    
+    def get_agent_name(self, obj):
+        """Get agent name if agent membership"""
+        if obj.agent_template:
+            return obj.agent_template.display_name or obj.agent_template.name
+        return None
+    
+    def get_member_display_name(self, obj):
+        """Get display name for the member"""
+        if obj.user:
+            return obj.user.username
+        elif obj.agent_template:
+            return obj.agent_template.display_name or obj.agent_template.name
+        return "Unknown"
+
+
+class CreateChannelSerializer(serializers.Serializer):
+    """Serializer for creating new channels"""
+    
+    name = serializers.CharField(
+        max_length=100,
+        help_text="Unique channel name (e.g., 'general', 'project-x')"
+    )
+    display_name = serializers.CharField(
+        max_length=200,
+        help_text="Display name for the channel"
+    )
+    description = serializers.CharField(
+        required=False,
+        help_text="Channel description"
+    )
+    channel_type = serializers.ChoiceField(
+        choices=[
+            ('project', 'Project Channel'),
+            ('topic', 'Topic Channel'),
+            ('team', 'Team Channel'),
+            ('general', 'General Channel'),
+            ('system', 'System Channel'),
+            ('orchestration', 'Orchestration Channel'),
+        ],
+        default='general'
+    )
+    metadata = serializers.JSONField(
+        default=dict,
+        help_text="Additional channel metadata"
+    )
+
+
+class PostMessageSerializer(serializers.Serializer):
+    """Serializer for posting messages to channels"""
+    
+    message_type = serializers.ChoiceField(
+        choices=[
+            ('agent_message', 'Agent Message'),
+            ('system_message', 'System Message'),
+            ('user_message', 'User Message'),
+            ('status_update', 'Status Update'),
+            ('task_update', 'Task Update'),
+            ('tool_usage', 'Tool Usage'),
+            ('collaboration_request', 'Collaboration Request'),
+            ('result_share', 'Result Share'),
+            ('error_report', 'Error Report'),
+        ],
+        default='user_message'
+    )
+    content = serializers.CharField(
+        help_text="Message content"
+    )
+    rich_content = serializers.JSONField(
+        required=False,
+        default=dict,
+        help_text="Rich content (code, links, etc.)"
+    )
+    thread_id = serializers.CharField(
+        required=False,
+        help_text="Thread ID for threaded messages"
+    )
+    parent_message = serializers.UUIDField(
+        required=False,
+        help_text="Parent message ID for replies"
+    )
