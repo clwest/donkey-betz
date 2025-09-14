@@ -45,6 +45,11 @@ import AgentOrchestraHub from './pages/AgentOrchestraHub';
 import { UnifiedCommandCenter } from './pages/UnifiedCommandCenter';
 import { DecisionDetailPage } from './pages/DecisionDetailPage';
 
+// New UI/UX Components
+import DecisionCommand from './components/DecisionCommand';
+import NeuralOrchestra from './components/NeuralOrchestra';
+import ControlCenter from './components/ControlCenter';
+
 // Debug Page
 import DebugPage from './pages/DebugPage';
 
@@ -138,6 +143,11 @@ function App() {
             <Route path="agents" element={<AgentsPage />} />
             <Route path="command-center" element={<UnifiedCommandCenter />} />
             <Route path="decision/:domain/:decisionId" element={<DecisionDetailPage />} />
+
+            {/* New Enhanced UI/UX Components */}
+            <Route path="decision-command" element={<DecisionCommand />} />
+            <Route path="neural-orchestra" element={<NeuralOrchestra />} />
+            <Route path="control-center" element={<ControlCenter />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
             <Route path="campaigns">

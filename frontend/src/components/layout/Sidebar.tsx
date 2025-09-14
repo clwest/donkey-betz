@@ -48,9 +48,12 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Control Center', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
-  { name: 'Decision Command', href: '/command-center', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'SKYNET' },
-  { name: 'Neural Orchestra', href: '/agent-hub', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'UNIFIED' },
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
+  { name: 'Decision Command', href: '/decision-command', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: '$0 START' },
+  { name: 'Neural Orchestra', href: '/neural-orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'LIVE' },
+  { name: 'Control Center', href: '/control-center', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },
+  { name: 'Legacy Command', href: '/command-center', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid },
+  { name: 'Agent Hub', href: '/agent-hub', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
   { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },
   { name: 'Content Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
   { name: 'Media Vault', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },
