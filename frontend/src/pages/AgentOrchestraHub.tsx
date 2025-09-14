@@ -140,9 +140,20 @@ export default function AgentOrchestraHub() {
 
   // WebSocket Management
   const connectWebSocket = useCallback(() => {
+    // Clean up existing connection
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     try {
-      // Use channels WebSocket which is confirmed working
-      const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000/ws/channels/`;
+      // Use dynamic API base URL from environment
+      const isDev = import.meta.env.MODE !== 'production';
+      const wsBase = isDev ? 'ws://localhost:8000' :
+        (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host;
+      const wsUrl = `${wsBase}/ws/channels/`;
+
+      console.log('[NEURAL LINK] Connecting to:', wsUrl);
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -163,25 +174,30 @@ export default function AgentOrchestraHub() {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setWsConnected(false);
-        console.log('[NEURAL LINK] Connection terminated');
-        // Don't show error toast on normal close
+        console.log('[NEURAL LINK] Connection terminated, code:', event.code);
+
+        // Only attempt reconnection for unexpected closures (not normal close = 1000)
+        if (event.code !== 1000 && event.code !== 1001) {
+          console.log('[NEURAL LINK] Scheduling reconnection...');
+          setTimeout(() => {
+            if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+              connectWebSocket();
+            }
+          }, 3000);
+        }
       };
 
       ws.onerror = (error) => {
         console.error('[NEURAL LINK] Connection error:', error);
-        // Retry connection after 5 seconds on error
-        setTimeout(() => {
-          if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-            connectWebSocket();
-          }
-        }, 5000);
+        setWsConnected(false);
       };
 
       wsRef.current = ws;
     } catch (error) {
       console.error('[NEURAL LINK] Failed to establish connection:', error);
+      setWsConnected(false);
     }
   }, []);
 
@@ -222,19 +238,30 @@ export default function AgentOrchestraHub() {
 
       // Load execution history - handle if endpoint doesn't exist
       try {
-        const historyResponse = await fetch('http://localhost:8000/api/v1/workflows/history/', {
-          headers: {
-            'Authorization': `Token ${localStorage.getItem('auth_token') || '993f8273f70877e23b5c7d2f92ed30562a089fe3'}`,
-            'Content-Type': 'application/json'
+        const isDev = import.meta.env.MODE !== 'production';
+        const apiBase = isDev ? 'http://localhost:8000' : window.location.origin;
+        const authToken = localStorage.getItem('auth_token');
+
+        // Only try to fetch history if we have a valid auth token
+        if (authToken) {
+          const historyResponse = await fetch(`${apiBase}/api/v1/workflows/history/`, {
+            headers: {
+              'Authorization': `Token ${authToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (historyResponse.ok) {
+            const historyData = await historyResponse.json();
+            setExecutions(historyData.executions || []);
+          } else if (historyResponse.status === 401) {
+            console.log('[NEURAL MATRIX] Authentication required for workflow history');
           }
-        });
-        
-        if (historyResponse.ok) {
-          const historyData = await historyResponse.json();
-          setExecutions(historyData.executions || []);
+        } else {
+          console.log('[NEURAL MATRIX] No auth token available for history');
         }
       } catch (historyError) {
-        console.log('[NEURAL MATRIX] Workflow history endpoint not available');
+        console.log('[NEURAL MATRIX] Workflow history endpoint not available:', historyError.message);
         // Continue without history - not critical
       }
     } catch (error) {
@@ -321,12 +348,15 @@ export default function AgentOrchestraHub() {
     document.body.classList.add('gaming-theme');
     loadAllData();
     connectWebSocket();
-    
+
     return () => {
       document.body.classList.remove('gaming-theme');
-      wsRef.current?.close();
+      if (wsRef.current) {
+        wsRef.current.close(1000, 'Component unmounting');
+        wsRef.current = null;
+      }
     };
-  }, [connectWebSocket]);
+  }, []); // Empty dependency array to run only on mount/unmount
 
   if (loading) {
     return (

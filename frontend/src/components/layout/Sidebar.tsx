@@ -49,20 +49,15 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Control Center', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
+  { name: 'Decision Command', href: '/command-center', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'SKYNET' },
   { name: 'Neural Orchestra', href: '/agent-hub', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'UNIFIED' },
   { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },
-  { name: 'Command Center', href: '/betting', icon: ChartBarIcon, iconActive: ChartBarIconSolid },
   { name: 'Content Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
   { name: 'Media Vault', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },
   // { name: 'Characters', href: '/character', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' }, // Hidden - on backburner
   { name: 'Campaign Manager', href: '/campaigns', icon: MegaphoneIcon, iconActive: MegaphoneIconSolid },
   { name: 'Library', href: '/ebooks', icon: BookOpenIcon, iconActive: BookOpenIconSolid },
   { name: 'Voice Studio', href: '/voice', icon: MicrophoneIcon, iconActive: MicrophoneIconSolid },
-  { name: 'Intelligence Hub', href: '/research', icon: AcademicCapIcon, iconActive: AcademicCapIconSolid },
-  { name: 'Fact Checker', href: '/mythology', icon: BookOpenIcon, iconActive: BookOpenIconSolid, badge: 'NEW' },
-  { name: 'Knowledge Base', href: '/knowledge', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid, badge: 'NEW' },
-  { name: 'AI Diagnostics', href: '/prompt-diagnostics', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },
-  { name: 'Feedback Center', href: '/feedback', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'NEW' },
   { name: 'AI Config', href: '/ai-settings', icon: Cog6ToothIcon, iconActive: Cog6ToothIconSolid },
 ];
 

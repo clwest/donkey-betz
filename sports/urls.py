@@ -25,6 +25,11 @@ from core.views_odds_sports import (
     sports_games_trending, sports_sync, live_odds
 )
 
+# Import intelligence endpoints
+from .intelligence_views import (
+    analyze_intelligence, search_memory, get_patterns, submit_feedback
+)
+
 # Create router for ViewSets
 router = DefaultRouter()
 
@@ -63,9 +68,12 @@ urlpatterns = [
     
     # Main API router (prefix removed as it's added in main urls.py)
     path('', include(router.urls)),
-    
-    # Additional custom endpoints could be added here
-    # path('custom-endpoint/', custom_view, name='custom-endpoint'),
+
+    # Intelligence API endpoints
+    path('intelligence/analyze/', analyze_intelligence, name='intelligence-analyze'),
+    path('intelligence/memory/search/', search_memory, name='intelligence-memory-search'),
+    path('intelligence/patterns/', get_patterns, name='intelligence-patterns'),
+    path('intelligence/feedback/', submit_feedback, name='intelligence-feedback'),
 ]
 
 """

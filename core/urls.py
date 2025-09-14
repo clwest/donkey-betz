@@ -11,6 +11,7 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 
 # Import core views
+from core.intelligence_api import skynet_status, live_opportunities, live_predictions
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
@@ -118,6 +119,11 @@ urlpatterns = [
     path('api/v1/info/', platform_info, name='platform-info'),
     path('api/v1/metrics/', record_metric, name='record-metric'),
     path('api/v1/health/', health_check, name='health-check'),
+
+    # Intelligence endpoints (temporary fix)
+    path('api/v1/intelligence/skynet/status/', skynet_status, name='skynet-status'),
+    path('api/v1/intelligence/opportunities/', live_opportunities, name='live-opportunities'),
+    path('api/v1/intelligence/predictions/', live_predictions, name='live-predictions'),
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     
     # Agent execution instances endpoints

@@ -15,7 +15,13 @@ except ImportError:
 websocket_urlpatterns = [
     # Test endpoints
     re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
-    
+
+    # Command Center & Intelligence WebSockets
+    re_path(r'^ws/command-center/$', consumers.CommandCenterConsumer.as_asgi()),
+    re_path(r'^ws/opportunity-scanner/$', consumers.OpportunityScannerConsumer.as_asgi()),
+    re_path(r'^ws/intelligence/$', consumers.CommandCenterConsumer.as_asgi()),
+    re_path(r'^ws/decisions/$', consumers.CommandCenterConsumer.as_asgi()),
+
     # Agent orchestration WebSocket (for orchestra frontend)
     re_path(r'^ws/agents/$', consumers.AgentProgressConsumer.as_asgi()),
     
