@@ -12,7 +12,6 @@ import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { WorkflowsPage } from './pages/workflows/WorkflowsPage';
 import { WorkflowBuilderPage } from './pages/workflows/WorkflowBuilderPage';
 import { AgentsPage } from './pages/agents/AgentsPage';
-import { BettingPage } from './pages/betting/BettingPage';
 import { GameBettingPage } from './pages/betting/GameBettingPage';
 import { StudioPage } from './pages/studio/StudioPage';
 import { GalleryPage } from './pages/gallery/GalleryPage';
@@ -20,10 +19,8 @@ import { CampaignsPage } from './pages/campaigns/CampaignsPage';
 import { CampaignDetailPage } from './pages/campaigns/CampaignDetailPage';
 import { EbooksPage } from './pages/ebooks/EbooksPage';
 import { VoicePage } from './pages/voice/VoicePage';
-import { ResearchPage } from './pages/research/ResearchPage';
 import { CharacterPage } from './pages/character/CharacterPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
-import { FeedbackDashboard } from './pages/feedback/FeedbackDashboard';
 import { AISettingsPage } from './pages/ai-settings/AISettingsPage';
 
 // Public Pages
@@ -41,11 +38,12 @@ import SportsAnalysisPage from './pages/sports/SportsAnalysisPage';
 // Assistant Pages
 import AssistantChatPage from './pages/assistant/AssistantChatPage';
 
-// Prompt Diagnostics
-import PromptDiagnosticsPage from './pages/prompt-diagnostics/PromptDiagnosticsPage';
-
 // Unified Agent Orchestra Hub
 import AgentOrchestraHub from './pages/AgentOrchestraHub';
+
+// Universal Decision Command Center
+import { UnifiedCommandCenter } from './pages/UnifiedCommandCenter';
+import { DecisionDetailPage } from './pages/DecisionDetailPage';
 
 // Debug Page
 import DebugPage from './pages/DebugPage';
@@ -56,9 +54,6 @@ import { ConnectivityPage } from './pages/connectivity/ConnectivityPage';
 // Sports
 import { SportsBoardPage } from './features/sports/pages/SportsBoardPage';
 
-// Mythology
-import { MythologyDashboard } from './features/mythology/pages/MythologyDashboard';
-
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -67,7 +62,6 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 
 // Features
-import PersonalKnowledge from './components/features/personal-knowledge/PersonalKnowledge';
 import { ChatWidget } from './components/Assistant';
 import { LifeConvictionsPage } from './pages/life-convictions/LifeConvictionsPage';
 
@@ -142,8 +136,8 @@ function App() {
               <Route path=":id" element={<WorkflowBuilderPage />} />
             </Route>
             <Route path="agents" element={<AgentsPage />} />
-            <Route path="betting" element={<BettingPage />} />
-            <Route path="betting/game/:gameId" element={<GameBettingPage />} />
+            <Route path="command-center" element={<UnifiedCommandCenter />} />
+            <Route path="decision/:domain/:decisionId" element={<DecisionDetailPage />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
             <Route path="campaigns">
@@ -153,26 +147,31 @@ function App() {
             </Route>
             <Route path="ebooks" element={<EbooksPage />} />
             <Route path="voice" element={<VoicePage />} />
-            <Route path="research" element={<ResearchPage />} />
             <Route path="character" element={<CharacterPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="feedback" element={<FeedbackDashboard />} />
             <Route path="ai-settings" element={<AISettingsPage />} />
-            <Route path="knowledge" element={<PersonalKnowledge />} />
-            <Route path="prompt-diagnostics" element={<PromptDiagnosticsPage />} />
             
             {/* Unified Agent Orchestra Hub - replaces all individual agent pages */}
             <Route path="agent-hub" element={<AgentOrchestraHub />} />
+
             {/* Redirects for backwards compatibility */}
+            {/* Agent Hub redirects */}
             <Route path="agent-registry" element={<Navigate to="/agent-hub" replace />} />
             <Route path="workflows-multi" element={<Navigate to="/agent-hub" replace />} />
             <Route path="agent-orchestra" element={<Navigate to="/agent-hub" replace />} />
             <Route path="orchestra" element={<Navigate to="/agent-hub" replace />} />
             <Route path="agent-channels" element={<Navigate to="/agent-hub" replace />} />
-            
+
+            {/* Decision Command Center redirects - consolidated pages */}
+            <Route path="betting" element={<Navigate to="/command-center" replace />} />
+            <Route path="research" element={<Navigate to="/command-center" replace />} />
+            <Route path="feedback" element={<Navigate to="/command-center" replace />} />
+            <Route path="knowledge" element={<Navigate to="/command-center" replace />} />
+            <Route path="prompt-diagnostics" element={<Navigate to="/command-center" replace />} />
+            <Route path="mythology" element={<Navigate to="/command-center" replace />} />
+
             <Route path="connectivity" element={<ConnectivityPage />} />
             <Route path="sports/board" element={<SportsBoardPage />} />
-            <Route path="mythology" element={<MythologyDashboard />} />
             <Route path="life-convictions" element={<LifeConvictionsPage />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>

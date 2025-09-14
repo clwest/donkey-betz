@@ -117,7 +117,10 @@ urlpatterns = [
     
     # Core endpoints (auth, profile, assistant, etc.)
     path('', include('core.urls')),
-    
+
+    # Intelligence API endpoints
+    path('api/v1/intelligence/', include('intelligence.urls')),
+
     # All API v1 endpoints are handled by core.urls
     # This file just provides the root platform info and delegates to core
     

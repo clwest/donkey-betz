@@ -10,6 +10,12 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 
+# Import intelligence engine
+try:
+    from intelligence.realtime_engine import intelligence_engine
+except ImportError:
+    intelligence_engine = None
+
 # Import sports updates consumer
 from .consumers_sports import SportsUpdatesConsumer
 
@@ -1224,45 +1230,337 @@ class SportsRecommendationConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Sports recommendation WebSocket for betting suggestions.
     """
-    
+
     async def connect(self):
         self.room_group_name = 'sports_recommendations'
-        
+
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
-        
+
         await self.accept()
-        
+
         # Log connection with user info
         user = self.scope.get('user', AnonymousUser())
         if not isinstance(user, AnonymousUser):
             print(f"INFO WebSocket connected: {user.username}")
         else:
             print("INFO WebSocket connected: anonymous user")
-    
+
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
         print("INFO WebSocket disconnected: ")
-    
+
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message_type = text_data_json.get('type', 'ping')
-        
+
         if message_type == 'ping':
             await self.safe_send({
                 'type': 'pong',
                 'timestamp': datetime.now().isoformat()
             })
-    
+
     async def recommendation_update(self, event):
         """Send recommendation update to WebSocket"""
         await self.safe_send({
             'type': 'recommendation_update',
+            'data': event['data']
+        })
+
+
+class CommandCenterConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Command Center WebSocket for unified intelligence platform updates.
+    Handles real-time communication for the Bloomberg Terminal-like interface.
+    """
+
+    async def connect(self):
+        self.room_group_name = 'command_center'
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+        # Send connection established with initial dashboard state and intelligence status
+        initial_data = {
+            'message': 'Connected to Command Center - LIMITLESS INTELLIGENCE ACTIVE',
+            'timestamp': datetime.now().isoformat(),
+            'features': {
+                'prediction_engine': True,
+                'opportunity_scanner': True,
+                'risk_manager': True,
+                'collaborative_decisions': True,
+                'outcome_prediction': True,
+                'auto_execution': True
+            }
+        }
+
+        # Check intelligence engine status
+        if intelligence_engine:
+            try:
+                live_opportunities = intelligence_engine.get_current_opportunities()
+                live_predictions = intelligence_engine.get_current_predictions()
+                initial_data['intelligence_status'] = 'ONLINE'
+                initial_data['live_opportunities'] = len(live_opportunities)
+                initial_data['live_predictions'] = len(live_predictions)
+                initial_data['skynet_status'] = 'OPERATIONAL'
+            except Exception:
+                initial_data['intelligence_status'] = 'INITIALIZING'
+                initial_data['skynet_status'] = 'BOOTING'
+        else:
+            initial_data['intelligence_status'] = 'OFFLINE'
+            initial_data['skynet_status'] = 'OFFLINE'
+
+        await self.safe_send({
+            'type': 'connection_established',
+            'data': initial_data
+        })
+
+        # Stream initial intelligence data
+        if intelligence_engine:
+            try:
+                # Stream recent predictions
+                live_predictions = intelligence_engine.get_current_predictions()
+                for pred in live_predictions[:2]:  # Send first 2 predictions
+                    await self.safe_send({
+                        'type': 'intelligence_update',
+                        'data': {
+                            'type': 'new_prediction',
+                            'prediction': pred,
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    })
+
+                # Stream top opportunities
+                live_opportunities = intelligence_engine.get_current_opportunities()
+                for opp in live_opportunities[:1]:  # Send top opportunity
+                    await self.safe_send({
+                        'type': 'intelligence_update',
+                        'data': {
+                            'type': 'new_opportunity',
+                            'opportunity': opp,
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    })
+            except Exception as e:
+                print(f"Error streaming initial intelligence data: {e}")
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        try:
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type', 'ping')
+
+            if message_type == 'ping':
+                await self.safe_send({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                })
+            elif message_type == 'subscribe_predictions':
+                # Handle prediction subscription
+                await self.safe_send({
+                    'type': 'subscribed',
+                    'data': {'feature': 'predictions', 'status': 'active'}
+                })
+            elif message_type == 'request_intelligence':
+                # Handle intelligence request
+                domain = text_data_json.get('domain', 'SPORTS_BETTING')
+                await self.safe_send({
+                    'type': 'intelligence_update',
+                    'data': {
+                        'domain': domain,
+                        'predictions': [{
+                            'id': 'pred_1',
+                            'type': 'arbitrage',
+                            'edge': 4.2,
+                            'confidence': 0.85,
+                            'timeWindow': 180
+                        }],
+                        'timestamp': datetime.now().isoformat()
+                    }
+                })
+        except json.JSONDecodeError:
+            await self.safe_send({
+                'type': 'error',
+                'data': {'message': 'Invalid JSON format'}
+            })
+
+    async def intelligence_update(self, event):
+        """Send intelligence update to WebSocket"""
+        await self.safe_send({
+            'type': 'intelligence_update',
+            'data': event['data']
+        })
+
+    async def decision_update(self, event):
+        """Send decision update to WebSocket"""
+        await self.safe_send({
+            'type': 'decision_update',
+            'data': event['data']
+        })
+
+
+class OpportunityScannerConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Opportunity Scanner WebSocket for real-time market opportunity detection.
+    Streams live opportunities across sports betting, crypto, trading, and other domains.
+    """
+
+    async def connect(self):
+        self.room_group_name = 'opportunity_scanner'
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+        # Send connection established with initial scanner state and live opportunities
+        initial_data = {
+            'message': 'Connected to Opportunity Scanner - SKYNET ONLINE',
+            'timestamp': datetime.now().isoformat(),
+            'scanner_status': 'active',
+            'domains_monitored': ['SPORTS_BETTING', 'CRYPTO', 'TRADING', 'REAL_ESTATE'],
+            'current_opportunities': 12,
+            'avg_edge': 4.2
+        }
+
+        # Get live opportunities if intelligence engine is available
+        if intelligence_engine:
+            try:
+                live_opportunities = intelligence_engine.get_current_opportunities()
+                initial_data['live_opportunities_count'] = len(live_opportunities)
+                initial_data['intelligence_engine'] = 'ONLINE'
+            except Exception:
+                initial_data['intelligence_engine'] = 'INITIALIZING'
+        else:
+            initial_data['intelligence_engine'] = 'OFFLINE'
+
+        await self.safe_send({
+            'type': 'connection_established',
+            'data': initial_data
+        })
+
+        # Stream current opportunities immediately
+        if intelligence_engine:
+            try:
+                live_opportunities = intelligence_engine.get_current_opportunities()
+                for opp in live_opportunities[:3]:  # Send first 3 opportunities
+                    await self.safe_send({
+                        'type': 'new_opportunity',
+                        'data': opp
+                    })
+            except Exception as e:
+                print(f"Error streaming initial opportunities: {e}")
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        try:
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type', 'ping')
+
+            if message_type == 'ping':
+                await self.safe_send({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                })
+            elif message_type == 'update_settings':
+                # Handle scanner settings update
+                settings = text_data_json.get('settings', {})
+                await self.safe_send({
+                    'type': 'settings_updated',
+                    'data': {
+                        'settings': settings,
+                        'status': 'applied',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                })
+            elif message_type == 'request_opportunities':
+                # Stream live opportunities from intelligence engine
+                if intelligence_engine:
+                    try:
+                        live_opportunities = intelligence_engine.get_current_opportunities()
+                        if live_opportunities:
+                            for opp in live_opportunities:
+                                await self.safe_send({
+                                    'type': 'new_opportunity',
+                                    'data': opp
+                                })
+                        else:
+                            # Send status if no opportunities
+                            await self.safe_send({
+                                'type': 'scanner_status',
+                                'data': {
+                                    'message': 'No live opportunities detected at this time',
+                                    'scanning': True,
+                                    'timestamp': datetime.now().isoformat()
+                                }
+                            })
+                    except Exception as e:
+                        print(f"Error fetching live opportunities: {e}")
+                        # Fallback to demo opportunity
+                        await self.safe_send({
+                            'type': 'new_opportunity',
+                            'data': {
+                                'id': 'demo_' + str(int(datetime.now().timestamp())),
+                                'type': 'arbitrage',
+                                'domain': 'SPORTS_BETTING',
+                                'entity': 'Live Game Analysis',
+                                'description': 'Demo opportunity - Intelligence engine initializing',
+                                'edge': 4.2,
+                                'confidence': 0.85,
+                                'profit_potential': 250,
+                                'time_window': 180,
+                                'timestamp': datetime.now().isoformat(),
+                                'status': 'demo'
+                            }
+                        })
+                else:
+                    # Intelligence engine not available
+                    await self.safe_send({
+                        'type': 'system_status',
+                        'data': {
+                            'message': 'Intelligence engine offline - using demo data',
+                            'engine_status': 'initializing',
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    })
+        except json.JSONDecodeError:
+            await self.safe_send({
+                'type': 'error',
+                'data': {'message': 'Invalid JSON format'}
+            })
+
+    async def new_opportunity(self, event):
+        """Send new opportunity alert to WebSocket"""
+        await self.safe_send({
+            'type': 'new_opportunity',
+            'data': event['data']
+        })
+
+    async def opportunity_update(self, event):
+        """Send opportunity update to WebSocket"""
+        await self.safe_send({
+            'type': 'opportunity_update',
             'data': event['data']
         })
 

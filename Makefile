@@ -13,7 +13,7 @@ ACTIVATE := source $(VENV)/bin/activate
 
 # Service Ports
 BACKEND_PORT := 8000
-WEBSOCKET_PORT := 8001
+WEBSOCKET_PORT := 8000  # Daphne handles both HTTP and WebSocket on same port
 FRONTEND_PORT := 3000
 MOBILE_PORT := 8081
 REDIS_PORT := 6379
@@ -152,8 +152,7 @@ unified-dev: health-check ## Start complete development environment with all ser
 	@sleep 1
 	@make _start-celery &
 	@echo "$(GREEN)✅ All services started! Platform available at:$(NC)"
-	@echo "  $(YELLOW)Backend (Django):$(NC)     http://localhost:$(BACKEND_PORT)"
-	@echo "  $(YELLOW)WebSocket (Daphne):$(NC)   ws://localhost:$(WEBSOCKET_PORT)"
+	@echo "  $(YELLOW)Backend (HTTP/WS):$(NC)    http://localhost:$(BACKEND_PORT) | ws://localhost:$(WEBSOCKET_PORT)"
 	@echo "  $(YELLOW)Frontend (React):$(NC)     http://localhost:$(FRONTEND_PORT)"
 	@echo "  $(YELLOW)Mobile (Expo):$(NC)        http://localhost:$(MOBILE_PORT)"
 	@echo "  $(YELLOW)Flower (Celery):$(NC)      http://localhost:$(FLOWER_PORT)"

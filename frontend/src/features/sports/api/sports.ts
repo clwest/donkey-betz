@@ -157,42 +157,66 @@ export interface KellyResponse {
 // Generic API request handler with comprehensive error handling
 async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${DBAO_API_URL}${path}`;
-  
+
   console.log('🔍 [Sports API] Request:', {
     method: options.method || 'GET',
     path,
     url,
     body: options.body ? JSON.parse(options.body as string) : undefined
   });
-  
+
   // Get auth token from localStorage - allow public access for sports data
   const token = localStorage.getItem('authToken');
-  
+
+  // Get CSRF token from cookies
+  const getCsrfToken = () => {
+    const name = 'csrftoken=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) === 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return null;
+  };
+
   // For public sports endpoints, allow access without authentication
   const publicEndpoints = ['/sports/', '/games/', '/leagues/', '/teams/', '/summary/'];
   const isPublicEndpoint = publicEndpoints.some(endpoint => path.includes(endpoint));
-  
+
   if (!token && !isPublicEndpoint) {
     console.error('[Sports API] No auth token found - user must be logged in');
     toast.error('Please log in to access this feature');
     throw new Error('Authentication required');
   }
-  
+
   try {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'X-DBAO-Client': 'AI-Studio-Web',
       ...options.headers,
     };
-    
+
+    // Add CSRF token for POST/PUT/DELETE requests
+    const csrfToken = getCsrfToken();
+    if (csrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method || '')) {
+      headers['X-CSRFToken'] = csrfToken;
+    }
+
     // Only add Authorization header if we have a token
     if (token) {
       headers['Authorization'] = `Token ${token}`;
     }
-    
+
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include', // Include cookies for CSRF
     });
 
     // Read response as text first
@@ -1072,4 +1096,166 @@ export async function getBettingIntelligence(homeTeam: string, awayTeam: string)
   
   console.log('📊 [getBettingIntelligence] Betting intelligence result:', result);
   return result;
+}
+
+/**
+ * Universal Intelligence API - Domain-agnostic decision analysis
+ */
+export interface DecisionContext {
+  domain: 'SPORTS_BETTING' | 'TRADING' | 'CRYPTO' | 'REAL_ESTATE' | 'BUSINESS';
+  entity_id: string;
+  data_points: Record<string, any>;
+  risk_level?: number;
+  time_horizon?: string;
+  constraints?: Record<string, any>;
+}
+
+export interface IntelligenceResult {
+  primary_action: 'STRONG_EXECUTE' | 'EXECUTE' | 'WAIT' | 'AVOID' | 'STRONG_AVOID';
+  confidence: number;
+  position_sizing: {
+    kelly_percentage: number;
+    recommended_stake: number;
+    max_exposure: number;
+  };
+  risk_assessment: {
+    overall_risk: number;
+    risk_factors: string[];
+    mitigation_strategies: string[];
+  };
+  agent_consensus: {
+    alpha_squadron: number;
+    bravo_squadron: number;
+    charlie_squadron: number;
+    delta_squadron: number;
+    echo_squadron: number;
+  };
+  similar_scenarios: Array<{
+    domain: string;
+    entity_id: string;
+    timestamp: string;
+    outcome: string;
+    similarity: number;
+  }>;
+  cross_domain_patterns: Array<{
+    pattern_name: string;
+    confidence: number;
+    description: string;
+    historical_success_rate: number;
+  }>;
+  memory_references: string[];
+  execution_plan?: string[];
+}
+
+export async function getUniversalIntelligence(context: DecisionContext): Promise<IntelligenceResult> {
+  console.log('🧠 [Universal Intelligence] Analyzing decision context:', context);
+
+  const result = await fetchApi<IntelligenceResult>('/v1/sports/intelligence/analyze/', {
+    method: 'POST',
+    body: JSON.stringify(context)
+  });
+
+  console.log('🧠 [Universal Intelligence] Analysis result:', result);
+  return result;
+}
+
+/**
+ * Search intelligence memory for similar patterns and decisions
+ */
+export interface MemorySearchQuery {
+  query: string;
+  domain?: string;
+  limit?: number;
+  time_range?: {
+    start: string;
+    end: string;
+  };
+}
+
+export interface MemorySearchResult {
+  memories: Array<{
+    id: string;
+    domain: string;
+    entity_id: string;
+    timestamp: string;
+    context: Record<string, any>;
+    decision: string;
+    outcome?: string;
+    similarity_score: number;
+  }>;
+  patterns_found: string[];
+  total_results: number;
+}
+
+export async function searchMemory(query: MemorySearchQuery): Promise<MemorySearchResult> {
+  console.log('🔍 [Memory Search] Searching intelligence memory:', query);
+
+  const params = new URLSearchParams();
+  params.append('query', query.query);
+  if (query.domain) params.append('domain', query.domain);
+  if (query.limit) params.append('limit', query.limit.toString());
+  if (query.time_range) {
+    params.append('start_time', query.time_range.start);
+    params.append('end_time', query.time_range.end);
+  }
+
+  const result = await fetchApi<MemorySearchResult>(`/v1/sports/intelligence/memory/search/?${params.toString()}`);
+
+  console.log('🔍 [Memory Search] Found', result.total_results, 'results');
+  return result;
+}
+
+/**
+ * Get pattern library - recognized patterns across all domains
+ */
+export interface Pattern {
+  id: string;
+  name: string;
+  description: string;
+  domains: string[];
+  frequency: number;
+  success_rate: number;
+  last_seen: string;
+  examples: Array<{
+    domain: string;
+    entity_id: string;
+    timestamp: string;
+    outcome: string;
+  }>;
+}
+
+export async function getPatternLibrary(domain?: string): Promise<Pattern[]> {
+  console.log('📚 [Pattern Library] Fetching patterns for domain:', domain || 'all');
+
+  const url = domain
+    ? `/v1/sports/intelligence/patterns/?domain=${domain}`
+    : '/v1/sports/intelligence/patterns/';
+
+  const result = await fetchApi<Pattern[]>(url);
+
+  console.log('📚 [Pattern Library] Found', result.length, 'patterns');
+  return result;
+}
+
+/**
+ * Submit feedback on intelligence decision
+ */
+export interface IntelligenceFeedback {
+  entity_id: string;
+  domain: string;
+  decision_id: string;
+  outcome: 'SUCCESS' | 'FAILURE' | 'NEUTRAL';
+  actual_return?: number;
+  notes?: string;
+}
+
+export async function submitIntelligenceFeedback(feedback: IntelligenceFeedback): Promise<void> {
+  console.log('📝 [Intelligence Feedback] Submitting feedback:', feedback);
+
+  await fetchApi('/v1/sports/intelligence/feedback/', {
+    method: 'POST',
+    body: JSON.stringify(feedback)
+  });
+
+  console.log('📝 [Intelligence Feedback] Feedback submitted successfully');
 }

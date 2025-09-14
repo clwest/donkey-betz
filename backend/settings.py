@@ -58,7 +58,13 @@ INSTALLED_APPS = [
     
     # Self-Awareness & Intelligence
     "self_awareness",
-    
+
+    # Real-Time Intelligence Engine
+    "intelligence.apps.IntelligenceConfig",
+
+    # ML Intelligence Pipeline
+    "ml_intelligence.apps.MlIntelligenceConfig",
+
     # Style Memory System
     "style_memory",
     
