@@ -149,9 +149,54 @@ Please complete this task using your specialized capabilities.
             'current_step': 'Processing with AI model'
         })
         
-        # Execute the AI call
+        # Execute the AI call with advisor consultation
         start_time = timezone.now()
-        
+
+        # Check if we should consult advisors (for important decisions)
+        consult_advisors = (
+            agent_template.specialization and
+            any(domain in agent_template.specialization.lower()
+                for domain in ['sports', 'crypto', 'option', 'trading', 'real', 'estate', 'market'])
+        )
+
+        collaborative_decision = None
+        if consult_advisors:
+            try:
+                from intelligence.orchestration.agent_advisor_bridge import (
+                    agent_advisor_bridge, AgentAdvisorContext
+                )
+
+                # Create context for collaboration
+                advisor_context = AgentAdvisorContext(
+                    agent_id=str(agent_template.id),
+                    agent_name=agent_template.name,
+                    task_description=task_description,
+                    domain=agent_template.specialization or 'general',
+                    input_data=input_data or {},
+                    required_confidence=0.7,
+                    max_advisors=3,
+                    use_ml_enhancement=True
+                )
+
+                # Get collaborative decision
+                collaborative_decision = agent_advisor_bridge.orchestrate_collaborative_decision(
+                    advisor_context
+                )
+
+                # Enhance the prompt with advisor insights
+                if collaborative_decision and collaborative_decision.confidence > 0.6:
+                    advisor_insights = "\n\nAdvisor Insights:\n"
+                    for reason in collaborative_decision.reasoning[:3]:
+                        advisor_insights += f"- {reason}\n"
+
+                    user_prompt = user_prompt + advisor_insights
+
+                    # Log the collaboration
+                    logger.info(f"Agent {agent_template.name} consulted {len(collaborative_decision.participating_advisors)} advisors")
+
+            except Exception as e:
+                logger.warning(f"Advisor consultation failed: {e}, proceeding without advisors")
+
         try:
             # Use the AI provider to generate response
             result = provider.generate_content(
@@ -185,13 +230,25 @@ Please complete this task using your specialized capabilities.
                 'execution_time': execution_time,
                 'token_usage': token_usage
             }
+            # Include collaboration data if available
+            collaboration_data = {}
+            if collaborative_decision:
+                collaboration_data = {
+                    'advisors_consulted': collaborative_decision.participating_advisors,
+                    'consensus_confidence': collaborative_decision.confidence,
+                    'ml_enhanced': len(collaborative_decision.ml_predictions) > 0,
+                    'risk_assessment': collaborative_decision.risk_assessment,
+                    'recommended_actions': collaborative_decision.recommended_actions[:3]
+                }
+
             execution.output_data = {
                 'response': result_content,
                 'metadata': {
                     'model': agent_template.llm_model,
                     'provider': agent_template.llm_provider,
                     'execution_time': execution_time
-                }
+                },
+                'collaboration': collaboration_data
             }
             execution.llm_response = result_content
             execution.token_usage = token_usage
