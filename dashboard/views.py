@@ -12,8 +12,10 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from core.cache_middleware import cache_api_response
+import logging
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -77,14 +79,14 @@ def dashboard_stats(request):
         except:
             pass
     
-    # Get REAL embedding counts from ai_unified_platform database
+    # Get REAL embedding counts from unified_donkey_betz database
     try:
         import psycopg2
         conn = psycopg2.connect(
             host='localhost',
-            database='ai_unified_platform',
-            user='ai_unified_user',
-            password='[REDACTED - HISTORICAL SECRET]'
+            database='unified_donkey_betz',
+            user='postgres',
+            password=''
         )
         cursor = conn.cursor()
         

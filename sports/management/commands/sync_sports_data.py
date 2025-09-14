@@ -118,6 +118,23 @@ class Command(BaseCommand):
                             'scheduled'
                         )
                         
+                        # Extract live game state data
+                        game_situation = game_data.get('game_situation', {})
+                        live_stats = {}
+
+                        # Add situation data if available
+                        if game_situation:
+                            live_stats.update({
+                                'down': game_situation.get('down'),
+                                'distance': game_situation.get('distance'),
+                                'down_distance_text': game_situation.get('down_distance_text'),
+                                'possession': game_situation.get('possession'),
+                                'is_red_zone': game_situation.get('is_red_zone'),
+                                'last_play': game_situation.get('last_play'),
+                                'timeouts_home': game_situation.get('timeouts_home'),
+                                'timeouts_away': game_situation.get('timeouts_away')
+                            })
+
                         # Create or update game
                         game, created = Game.objects.update_or_create(
                             external_id=game_data.get('external_id', f"espn_{game_data.get('name', '')}"),
@@ -130,6 +147,9 @@ class Command(BaseCommand):
                                 'venue_name': game_data.get('venue', ''),
                                 'home_score': home_team_data.get('score'),
                                 'away_score': away_team_data.get('score'),
+                                'current_period': str(game_data.get('period', '')) if game_data.get('period') else '',
+                                'time_remaining': game_data.get('display_clock', ''),
+                                'live_stats': live_stats,
                                 'is_active': True
                             }
                         )

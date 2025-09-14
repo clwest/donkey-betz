@@ -396,9 +396,11 @@ SPORTS_ANALYTICS = {
 }
 
 # External API Keys for Sports Data
-ODDS_API_KEY = os.environ.get('THE_ODDS_API_KEY', 'demo')  # Real API key from .env
+THE_ODDS_API_KEY = os.environ.get('THE_ODDS_API_KEY', 'demo')  # Real API key from .env
+ODDS_API_KEY = os.environ.get('THE_ODDS_API_KEY', 'demo')  # Alias for compatibility
 SPORTRADAR_API_KEY = os.environ.get('SPORTRADAR_API_KEY', 'demo')  # Real SportRadar key from .env
 SPORTSDB_API_KEY = os.environ.get('SPORTSDB_API_KEY', '1')  # Free tier key for TheSportsDB
+WEATHER_API_KEY = os.environ.get('WEATHERAPI_KEY', '')  # Weather API key - matches .env variable name
 
 # API Rate Limiting
 API_RATE_LIMITS = {

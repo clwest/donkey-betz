@@ -233,17 +233,17 @@
   /* Gaming Gradients - Electric & Neon */
   --gradient-primary: linear-gradient(135deg, #9D4EDD 0%, #00FFFF 100%);        /* Purple to Cyan */
   --gradient-accent: linear-gradient(135deg, #39FF14 0%, #00FFFF 100%);         /* Matrix Green to Cyan */
-  --gradient-warm: linear-gradient(135deg, #FF1493 0%, #FF6B00 100%);           /* Hot Pink to Orange */
-  --gradient-neon: linear-gradient(90deg, #00FFFF 0%, #9D4EDD 50%, #FF1493 100%); /* Full neon spectrum */
+  --gradient-warm: linear-gradient(135deg, #FF6B00 0%, #FFD700 100%);           /* Orange to Gold */
+  --gradient-neon: linear-gradient(90deg, #00FFFF 0%, #9D4EDD 50%, #00FFFF 100%); /* Cyan to Purple to Cyan */
   --gradient-matrix: linear-gradient(180deg, #39FF14 0%, #00FF41 100%);         /* Matrix cascade */
   --gradient-cyber: radial-gradient(circle at center, rgba(0, 255, 255, 0.2) 0%, rgba(157, 78, 221, 0.1) 50%, transparent 100%);
-  
+
   /* Gaming Mesh Gradients for Background */
-  --gradient-mesh: 
+  --gradient-mesh:
     radial-gradient(circle at 20% 50%, rgba(157, 78, 221, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 40% 80%, rgba(57, 255, 20, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 60% 10%, rgba(255, 20, 147, 0.05) 0%, transparent 50%);
+    radial-gradient(circle at 60% 10%, rgba(157, 78, 221, 0.05) 0%, transparent 50%);
   
   /* ============================================
    * Z-INDEX SYSTEM

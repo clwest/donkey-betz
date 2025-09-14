@@ -18,6 +18,12 @@ from .agent_integration import AgentRouter, IntelligentPromptOptimizer
 from .views_assistant_rag_enhanced import RAGAssistant, _get_knowledge_base_size, _get_total_embeddings
 from content.ai_providers import AIProviderManager
 from mythology.services import MythologyPreventionService, HallucinationFlaggingService
+from .assistant_prompt_enhanced import (
+    get_enhanced_system_prompt,
+    format_rag_response_with_sources,
+    validate_response_for_hallucinations,
+    apply_mythology_guards
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -322,13 +328,10 @@ def _process_direct(user, message: str, context: str, response_metadata: Dict[st
             model = 'default'
         
         # Build enhanced system prompt (optimized for personal assistant role)
-        system_prompt = f"""You are {getattr(user, 'username', user.email)}'s personal AI assistant.
-
-Be concise but comprehensive. Aim for 3-5 sentences that directly answer the question. Focus on practical, actionable information.
-
-You're a general-purpose assistant that can help with any topic - coding, research, analysis, creative tasks, problem-solving, and more. You have access to a comprehensive knowledge base and can orchestrate specialized AI agents when needed.
-
-Provide helpful answers with specific recommendations when relevant."""
+        # Use enhanced system prompt that prevents hallucinations
+        has_rag_context = bool(response_metadata.get('sources'))
+        source_count = len(response_metadata.get('sources', []))
+        system_prompt = get_enhanced_system_prompt(user, has_rag_context, source_count)
         
         # Add compressed context to user message if available
         enhanced_message = message
@@ -355,7 +358,8 @@ Provide helpful answers with specific recommendations when relevant."""
             def validate_response_length(content: str) -> str:
                 """Enforce 5-sentence maximum and 800 character limit"""
                 if not content:
-                    return content
+                    logger.warning("Empty content received from AI provider")
+                    return "I can provide information about your knowledge base, but I need a moment to process the request properly. Please try asking again."
                     
                 # Split into sentences
                 sentences = [s.strip() for s in content.split('.') if s.strip()]
@@ -377,8 +381,41 @@ Provide helpful answers with specific recommendations when relevant."""
             
             # Apply length validation
             validated_content = validate_response_length(result.content)
+
+            # Extract confidence scores from sources
+            confidence_scores = []
+            if response_metadata.get('sources'):
+                confidence_scores = [s.get('similarity', 0.5) for s in response_metadata['sources']]
+
+            # Format response with source attribution
+            validated_content = format_rag_response_with_sources(
+                validated_content,
+                response_metadata.get('sources', []),
+                confidence_scores
+            )
+
+            # Check for hallucinations
+            available_data = {
+                'total_embeddings': response_metadata.get('total_embeddings_available', 16929),
+                'knowledge_base_size': response_metadata.get('knowledge_base_size', 0)
+            }
+            hallucination_check = validate_response_for_hallucinations(validated_content, available_data)
+
+            if hallucination_check:
+                logger.warning(f"Potential hallucinations detected: {hallucination_check}")
+                # Add warning to metadata
+                response_metadata['hallucination_warnings'] = hallucination_check
+
+            # Apply mythology guards
+            mythology_service = MythologyPreventionService()
+            validated_content, mythology_patterns = apply_mythology_guards(validated_content, mythology_service)
+
+            if mythology_patterns:
+                logger.info(f"Mythology patterns corrected: {mythology_patterns}")
+                response_metadata['mythology_corrected'] = True
+
             result.content = validated_content
-            
+
             # Log response metrics for monitoring
             char_count = len(validated_content)
             sentence_count = len([s for s in validated_content.split('.') if s.strip()])

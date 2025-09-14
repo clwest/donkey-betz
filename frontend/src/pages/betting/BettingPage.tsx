@@ -4,6 +4,10 @@ import { SportsBoardPage } from '../../features/sports/pages/SportsBoardPage';
 
 export const BettingPage: React.FC = () => {
   console.log('[BettingPage] Component rendering with SportsBoardPage...');
-  
-  return <SportsBoardPage />;
+
+  return (
+    <div data-page="betting" className="betting-page">
+      <SportsBoardPage />
+    </div>
+  );
 };

@@ -68,12 +68,12 @@ def search_embeddings(
         return []
     
     try:
-        # Connect to ai_unified_platform database instead of default
+        # Connect to the default database where unified_embeddings actually exists
         conn = psycopg2.connect(
             host='localhost',
-            database='ai_unified_platform',
-            user='ai_unified_user',
-            password='[REDACTED - HISTORICAL SECRET]'
+            database='unified_donkey_betz',
+            user='postgres',
+            password=''  # No password for local postgres
         )
         
         with conn.cursor() as cursor:
