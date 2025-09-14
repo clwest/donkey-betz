@@ -40,6 +40,9 @@ websocket_urlpatterns = [
     # Live sports and betting updates
     re_path(r'^ws/live-sports/$', consumers.LiveSportsConsumer.as_asgi()),
     re_path(r'^ws/arbitrage/$', consumers.ArbitrageConsumer.as_asgi()),
+
+    # Sports real-time updates and force refresh
+    re_path(r'^ws/sports/updates/$', consumers.SportsUpdatesConsumer.as_asgi()),
     
     # Assistant chat WebSocket (from ai-content-studio)
     re_path(r'^ws/assistant/$', consumers.AssistantChatConsumer.as_asgi()),

@@ -15,7 +15,7 @@ import { formatDistanceToNow } from 'date-fns';
 import '../../styles/gaming-theme.css';
 
 // Import API functions
-import { getGameById, getGameOdds, getWeatherData, getInjuryData, getBettingIntelligence, getGameDetails, getBookmakerAnalysis } from '../../features/sports/api/sports';
+import { getGameById, getGameOdds, getWeatherData, getInjuryData, getBettingIntelligence } from '../../features/sports/api/sports';
 import type { Game } from '../../features/sports/api/sports';
 
 interface GameData {
@@ -24,8 +24,6 @@ interface GameData {
   weather: any;
   injuries: any;
   intelligence: any;
-  gameDetails: any;
-  bookmakerAnalysis: any;
   last_update: string;
 }
 
@@ -44,8 +42,8 @@ interface BetSlipItem {
   market: string;
 }
 
-export function GameBettingPage() {
-  const { gameId } = useParams<{ gameId: string }>();
+export const GameDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [gameData, setGameData] = useState<GameData | null>(null);
@@ -56,18 +54,17 @@ export function GameBettingPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // WebSocket for live updates
-  const { isConnected, sendMessage } = useWebSocket({
-    url: '/ws/sports/',
+  const { isConnected, sendMessage } = useWebSocket('/ws/sports/updates/', {
     onOpen: () => {
-      if (gameId) {
+      if (id) {
         sendMessage({
           type: 'subscribe_game',
-          game_id: gameId
+          game_id: id
         });
       }
     },
     onMessage: (data: any) => {
-      if (data.type === 'game_updated' && data.game_id === gameId) {
+      if (data.type === 'game_updated' && data.game_id === id) {
         fetchGameData();
       }
     }
@@ -75,17 +72,15 @@ export function GameBettingPage() {
 
   // Comprehensive data fetching
   const fetchGameData = async () => {
-    if (!gameId) return;
+    if (!id) return;
 
     try {
       setLoading(true);
 
       // Fetch all data in parallel
-      const [gameResult, oddsResult, gameDetailsResult, bookmakerAnalysisResult] = await Promise.all([
-        getGameById(gameId),
-        getGameOdds(gameId),
-        getGameDetails(gameId),
-        getBookmakerAnalysis(gameId)
+      const [gameResult, oddsResult] = await Promise.all([
+        getGameById(id),
+        getGameOdds(id)
       ]);
 
       // Additional data fetching
@@ -112,8 +107,6 @@ export function GameBettingPage() {
         weather: weatherResult,
         injuries: injuryResult,
         intelligence: intelligenceResult,
-        gameDetails: gameDetailsResult,
-        bookmakerAnalysis: bookmakerAnalysisResult,
         last_update: new Date().toISOString()
       });
     } catch (error) {
@@ -130,7 +123,7 @@ export function GameBettingPage() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [gameId, autoRefresh]);
+  }, [id, autoRefresh]);
 
   // Betting functions
   const addToBetSlip = (option: BettingOption, market: string) => {
@@ -194,7 +187,7 @@ export function GameBettingPage() {
   }
 
   const game = gameData.game;
-  const isLive = game.status === 'status_in_progress' || game.status === 'live';
+  const isLive = game.status === 'live';
 
   return (
     <div className="min-h-screen gaming-theme">
@@ -304,7 +297,7 @@ export function GameBettingPage() {
                 <div className="text-center">
                   <div className="text-xs gaming-text-secondary mb-2">GAME STATUS</div>
 
-                  {isLive && (game.home_score !== null && game.away_score !== null) ? (
+                  {isLive && game.home_score !== null && game.away_score !== null ? (
                     <div>
                       <div className="text-2xl font-bold gaming-text-neon mb-1">
                         {game.away_score} - {game.home_score}
@@ -365,7 +358,7 @@ export function GameBettingPage() {
               />
             )}
             {activeView === 'analysis' && <AnalysisView gameData={gameData} />}
-            {activeView === 'news' && <NewsView />}
+            {activeView === 'news' && <NewsView gameData={gameData} />}
             {activeView === 'live' && <LiveView gameData={gameData} />}
           </div>
 
@@ -423,23 +416,12 @@ export function GameBettingPage() {
               <div className="gaming-border-glow"></div>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="text-xs gaming-text-secondary mb-2">BOOKMAKER AI</div>
+                  <div className="text-xs gaming-text-secondary mb-2">AI CONFIDENCE</div>
                   <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gaming-neon-green/20 flex items-center justify-center border border-gaming-neon-green/50">
                     <Brain className="w-5 h-5 text-gaming-neon-green" />
                   </div>
-                  <div className="text-lg font-bold text-gaming-neon-green">
-                    {gameData?.bookmakerAnalysis?.analysis?.true_odds?.model_confidence ?
-                      `${(gameData.bookmakerAnalysis.analysis.true_odds.model_confidence * 100).toFixed(0)}%` :
-                      '87%'}
-                  </div>
-                  <div className="text-xs gaming-text-secondary">
-                    {gameData?.bookmakerAnalysis?.analysis ? 'Analysis Ready' : 'Analyzing...'}
-                  </div>
-                  {gameData?.bookmakerAnalysis?.analysis?.value_bets?.length > 0 && (
-                    <div className="mt-2 px-2 py-1 bg-gaming-bg-secondary/30 rounded text-xs gaming-text-accent">
-                      {gameData.bookmakerAnalysis.analysis.value_bets.length} Value Bets Found
-                    </div>
-                  )}
+                  <div className="text-lg font-bold text-gaming-neon-green">87%</div>
+                  <div className="text-xs gaming-text-secondary">Analysis Ready</div>
                 </div>
               </CardContent>
             </Card>
@@ -448,7 +430,7 @@ export function GameBettingPage() {
       </div>
     </div>
   );
-}
+};
 
 // Dashboard View Component
 const DashboardView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
@@ -756,192 +738,22 @@ const BettingView: React.FC<{
 };
 
 // Analysis View Component
-const AnalysisView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
-  const bookmakerAnalysis = gameData?.bookmakerAnalysis;
-  const gameDetails = gameData?.gameDetails;
-
-  if (!bookmakerAnalysis) {
-    return (
-      <div className="space-y-6">
-        <Card className="gaming-card">
-          <div className="gaming-border-glow"></div>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 gaming-text-primary">
-              <Brain className="w-5 h-5" />
-              AI Bookmaker Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <Brain className="w-16 h-16 mx-auto mb-4 gaming-text-secondary animate-pulse" />
-              <h3 className="text-xl font-bold gaming-text-primary mb-2">Loading Analysis...</h3>
-              <p className="gaming-text-secondary">Analyzing market conditions and generating recommendations</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
+const AnalysisView: React.FC<{ gameData: GameData }> = ({ }) => {
   return (
     <div className="space-y-6">
-      {/* Main Analysis Header */}
       <Card className="gaming-card">
         <div className="gaming-border-glow"></div>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 gaming-text-primary">
             <Brain className="w-5 h-5" />
-            AI Bookmaker Analysis
-            <Badge className="bg-gaming-neon-green/20 text-gaming-neon-green border-gaming-neon-green/50 ml-2">
-              ACTIVE
-            </Badge>
+            AI Analysis Engine
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-6">
-            {/* Overall Recommendation */}
-            <div className="p-4 bg-gaming-bg-secondary/20 rounded-lg border border-gaming-border/30">
-              <h3 className="text-lg font-bold gaming-text-primary mb-3 flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Overall Recommendation
-              </h3>
-              <div className="text-2xl font-bold gaming-text-neon mb-2">
-                {bookmakerAnalysis.analysis?.overall_recommendation || 'ANALYZING...'}
-              </div>
-              <p className="text-sm gaming-text-secondary">
-                {bookmakerAnalysis.analysis?.sharp_money?.confidence &&
-                 `Sharp Probability: ${(bookmakerAnalysis.analysis.sharp_money.confidence * 100).toFixed(0)}%`}
-              </p>
-            </div>
-
-            {/* Market Efficiency */}
-            <div className="p-4 bg-gaming-bg-secondary/20 rounded-lg border border-gaming-border/30">
-              <h3 className="text-lg font-bold gaming-text-primary mb-3 flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                Market Efficiency
-              </h3>
-              <div className="text-2xl font-bold gaming-text-neon mb-2">
-                {bookmakerAnalysis.analysis?.market_efficiency ?
-                  `${(bookmakerAnalysis.analysis.market_efficiency * 100).toFixed(0)}%` :
-                  'CALCULATING...'}
-              </div>
-              <p className="text-sm gaming-text-secondary">
-                {bookmakerAnalysis.analysis?.total_edge ?
-                 `Total Edge: ${bookmakerAnalysis.analysis.total_edge.toFixed(1)}%` : ''}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Key Insights */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Sharp Money Analysis */}
-        <Card className="gaming-card">
-          <div className="gaming-border-glow"></div>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 gaming-text-primary text-base">
-              <Shield className="w-4 h-4" />
-              Sharp Money Detection
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {bookmakerAnalysis.analysis?.value_bets?.slice(0, 3).map((bet: any, idx: number) => (
-              <div key={idx} className="mb-3 p-3 bg-gaming-bg-secondary/10 rounded border border-gaming-border/20">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium gaming-text-primary">{bet.market} {bet.selection}</span>
-                  <Badge className={`text-xs ${
-                    bet.confidence === 'HIGH' ? 'bg-gaming-neon-green/20 text-gaming-neon-green' :
-                    bet.confidence === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {bet.confidence}
-                  </Badge>
-                </div>
-                <p className="text-xs gaming-text-secondary">Line: {bet.line} • Edge: {bet.edge}%</p>
-              </div>
-            )) || (
-              <div className="text-center py-6">
-                <Shield className="w-8 h-8 mx-auto mb-2 gaming-text-secondary" />
-                <p className="text-sm gaming-text-secondary">Analyzing betting patterns...</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Kelly Criterion Recommendations */}
-        <Card className="gaming-card">
-          <div className="gaming-border-glow"></div>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 gaming-text-primary text-base">
-              <Target className="w-4 h-4" />
-              Kelly Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {bookmakerAnalysis.analysis?.value_bets?.slice(0, 3).map((bet: any, idx: number) => (
-              <div key={idx} className="mb-3 p-3 bg-gaming-bg-secondary/10 rounded border border-gaming-border/20">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium gaming-text-primary">{bet.bookmaker}</span>
-                  <span className="text-sm font-bold gaming-text-neon">
-                    {bet.edge}% Edge
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="gaming-text-secondary">{bet.market}: {bet.line}</span>
-                  <Badge className={`${
-                    bet.confidence === 'HIGH' ? 'bg-gaming-neon-green/20 text-gaming-neon-green' :
-                    bet.confidence === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {bet.confidence}
-                  </Badge>
-                </div>
-              </div>
-            )) || (
-              <div className="text-center py-6">
-                <Target className="w-8 h-8 mx-auto mb-2 gaming-text-secondary" />
-                <p className="text-sm gaming-text-secondary">Computing Kelly stakes...</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Detailed Analysis */}
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 gaming-text-primary">
-            <Brain className="w-5 h-5" />
-            Detailed Market Analysis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {(bookmakerAnalysis.analysis?.value_bets || bookmakerAnalysis.recommendations)?.map((item: any, idx: number) => (
-              <div key={idx} className="p-4 bg-gaming-bg-secondary/10 rounded-lg border border-gaming-border/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-gaming-neon-cyan rounded-full"></div>
-                  <span className="text-sm font-medium gaming-text-accent uppercase">
-                    {item.type || item.category || 'VALUE BET'}
-                  </span>
-                </div>
-                <p className="text-sm gaming-text-primary mb-2">
-                  {item.book ? `${item.book}: ${item.direction} ${item.line}` : item.text || item.insight}
-                </p>
-                {item.edge && (
-                  <div className="text-xs gaming-text-neon">
-                    💡 Edge: {item.edge.toFixed(1)}% • Confidence: {item.confidence}
-                  </div>
-                )}
-              </div>
-            )) || (
-              <div className="text-center py-8">
-                <Brain className="w-12 h-12 mx-auto mb-4 gaming-text-secondary animate-pulse" />
-                <p className="gaming-text-secondary">Generating detailed analysis...</p>
-              </div>
-            )}
+          <div className="text-center py-12">
+            <Brain className="w-16 h-16 mx-auto mb-4 gaming-text-secondary" />
+            <h3 className="text-xl font-bold gaming-text-primary mb-2">Deep Analysis Coming Soon</h3>
+            <p className="gaming-text-secondary">Advanced AI-powered game analysis and predictions</p>
           </div>
         </CardContent>
       </Card>
@@ -950,7 +762,7 @@ const AnalysisView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
 };
 
 // News View Component
-const NewsView: React.FC = () => {
+const NewsView: React.FC<{ gameData: GameData }> = ({ }) => {
   return (
     <div className="space-y-6">
       <Card className="gaming-card">
@@ -975,7 +787,7 @@ const NewsView: React.FC = () => {
 
 // Live View Component
 const LiveView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
-  const isLive = gameData.game.status === 'status_in_progress' || gameData.game.status === 'live';
+  const isLive = gameData.game.status === 'live';
 
   return (
     <div className="space-y-6">

@@ -23,9 +23,9 @@ class ConversationMemory:
     def __init__(self):
         self.db_config = {
             'host': 'localhost',
-            'database': 'ai_unified_platform',
-            'user': 'ai_unified_user',
-            'password': 'ai_unified_pass_2025'
+            'database': 'unified_donkey_betz',
+            'user': 'postgres',
+            'password': ''
         }
     
     def save_conversation(self, user_id, user_message: str, 

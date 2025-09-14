@@ -98,6 +98,8 @@ export interface Game {
   season?: string;
   home_score?: number;
   away_score?: number;
+  current_period?: string;
+  time_remaining?: string;
   weather_data?: Record<string, any>;
   live_stats?: Record<string, any>;
 }
@@ -245,7 +247,7 @@ export async function listLeagues(sportType?: SportType): Promise<League[]> {
   if (sportType) {
     params.append('sport_type', sportType);
   }
-  
+
   console.log('🏆 [listLeagues] Fetching leagues:', { sportType, params: params.toString() });
   const result = await fetchApi<League[]>(`/v1/sports/leagues/?${params.toString()}`);
   console.log('🏆 [listLeagues] Got leagues:', result);
@@ -284,20 +286,42 @@ export async function getLiveGames(): Promise<Game[]> {
  */
 export async function getGamesBySport(sportType: SportType, date?: string, dateRange?: { from: string; to: string }): Promise<Game[]> {
   const params = new URLSearchParams({ sport_type: sportType });
-  
+
   if (dateRange) {
     params.append('date_from', dateRange.from);
     params.append('date_to', dateRange.to);
   } else if (date) {
     params.append('date', date);
   }
-  
+
   // Add page_size to get more results
   params.append('page_size', '100');
-  
+
   console.log('🎮 [getGamesBySport] Fetching games:', { sportType, date, dateRange, params: params.toString() });
   const result = await fetchApi<Game[]>(`/v1/sports/games/?${params.toString()}`);
   console.log('🎮 [getGamesBySport] Got games:', result);
+
+  // Log detailed info about first game to check data
+  if (result && result.length > 0) {
+    const firstGame = result[0];
+    console.log('🏈 [getGamesBySport] First game details:', {
+      id: firstGame.id,
+      teams: `${firstGame.away_team?.name} @ ${firstGame.home_team?.name}`,
+      home_team: {
+        name: firstGame.home_team?.name,
+        logo_url: firstGame.home_team?.logo_url,
+        current_record: firstGame.home_team?.current_record
+      },
+      away_team: {
+        name: firstGame.away_team?.name,
+        logo_url: firstGame.away_team?.logo_url,
+        current_record: firstGame.away_team?.current_record
+      },
+      has_logos: !!(firstGame.home_team?.logo_url || firstGame.away_team?.logo_url),
+      has_records: !!(firstGame.home_team?.current_record || firstGame.away_team?.current_record)
+    });
+  }
+
   return result;
 }
 
@@ -552,28 +576,58 @@ export function getSportEmoji(sportType: SportType): string {
 }
 
 /**
+ * Get complete game details with all odds from multiple sportsbooks
+ */
+export async function getGameDetails(gameId: string): Promise<any> {
+  console.log('🎮 [getGameDetails] Fetching complete game details:', gameId);
+  const result = await fetchApi<any>(`/v1/games/${gameId}/details/`);
+  console.log('🎮 [getGameDetails] Got game details:', result);
+  return result;
+}
+
+/**
+ * Get AI Bookmaker analysis for a game
+ */
+export async function getBookmakerAnalysis(gameId: string): Promise<any> {
+  console.log('🤖 [getBookmakerAnalysis] Fetching AI analysis for game:', gameId);
+  const result = await fetchApi<any>(`/v1/games/${gameId}/bookmaker-analysis/`);
+  console.log('🤖 [getBookmakerAnalysis] Got bookmaker analysis:', result);
+  return result;
+}
+
+/**
  * Check if a game is live (with time-based inference)
  */
 export function isGameLive(game: Game): boolean {
-  // Check actual status first
-  if ([GameStatus.LIVE, GameStatus.HALFTIME].includes(game.status)) {
+  // Check actual status first - handle various status formats from API
+  const liveStatuses = [
+    GameStatus.LIVE,
+    GameStatus.HALFTIME,
+    'status_in_progress',
+    'status_end_period',
+    'in_progress',
+    'live',
+    'halftime'
+  ];
+
+  if (liveStatuses.includes(game.status)) {
     return true;
   }
-  
+
   // If status is 'scheduled' but game should have started, infer it's likely live
-  if (game.status === GameStatus.SCHEDULED) {
+  if (game.status === GameStatus.SCHEDULED || game.status === 'status_scheduled') {
     const now = new Date();
     const gameTime = new Date(game.scheduled_start);
     const timeDiff = now.getTime() - gameTime.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
-    
+
     // If game started within last 4 hours, it's likely live
     // (most games don't last longer than 4 hours)
     if (hoursDiff >= 0 && hoursDiff <= 4) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -581,25 +635,33 @@ export function isGameLive(game: Game): boolean {
  * Check if a game is finished (with time-based inference)
  */
 export function isGameFinished(game: Game): boolean {
-  // Check actual status first
-  if (game.status === GameStatus.FINAL) {
+  // Check actual status first - handle various status formats from API
+  const finalStatuses = [
+    GameStatus.FINAL,
+    'status_final',
+    'final',
+    'completed',
+    'finished'
+  ];
+
+  if (finalStatuses.includes(game.status)) {
     return true;
   }
-  
+
   // If status is 'scheduled' but game should be over, infer it's likely finished
-  if (game.status === GameStatus.SCHEDULED) {
+  if (game.status === GameStatus.SCHEDULED || game.status === 'status_scheduled') {
     const now = new Date();
     const gameTime = new Date(game.scheduled_start);
     const timeDiff = now.getTime() - gameTime.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
-    
+
     // If game started more than 4 hours ago, it's likely finished
     // (most games finish within 4 hours)
     if (hoursDiff > 4) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -736,27 +798,39 @@ export async function syncSportsData(options: {
   games?: boolean;
   odds?: boolean;
   sport?: SportType;
-}): Promise<{ 
-  success: boolean; 
-  message: string; 
-  games_synced?: number; 
+}): Promise<{
+  success: boolean;
+  message: string;
+  games_synced?: number;
   total_games_fetched?: number;
   games_with_odds?: number;
+  data?: any;
 }> {
-  console.log('🔄 [syncSportsData] Syncing with ESPN + The Odds API:', options);
-  
-  const result = await fetchApi<{ 
-    success: boolean; 
-    message: string; 
-    games_synced?: number; 
+  console.log('🔄 [syncSportsData] Starting sync with options:', options);
+  console.log('🔄 [syncSportsData] Syncing with ESPN + The Odds API');
+
+  const result = await fetchApi<{
+    success: boolean;
+    message: string;
+    games_synced?: number;
     total_games_fetched?: number;
     games_with_odds?: number;
+    data?: any;
   }>('/v1/sports/sync/', {
     method: 'POST',
     body: JSON.stringify(options),
   });
-  
-  console.log('🔄 [syncSportsData] Sync result:', result);
+
+  console.log('🔄 [syncSportsData] Full sync result:', {
+    success: result.success,
+    message: result.message,
+    games_synced: result.games_synced,
+    total_games_fetched: result.total_games_fetched,
+    games_with_odds: result.games_with_odds,
+    data: result.data,
+    fullResult: result
+  });
+
   return result;
 }
 

@@ -54,7 +54,7 @@
   
   /* Gaming-Specific Gradients */
   --gaming-gradient-primary: linear-gradient(135deg, #9D4EDD 0%, #00FFFF 100%);
-  --gaming-gradient-neon: linear-gradient(90deg, #00FFFF 0%, #9D4EDD 50%, #FF1493 100%);
+  --gaming-gradient-neon: linear-gradient(90deg, #00FFFF 0%, #9D4EDD 50%, #00FFFF 100%);
   --gaming-gradient-matrix: linear-gradient(180deg, #39FF14 0%, #00FF41 100%);
   --gaming-gradient-cyber: radial-gradient(circle at center, rgba(0, 255, 255, 0.2) 0%, rgba(157, 78, 221, 0.1) 50%, transparent 100%);
   
@@ -78,13 +78,14 @@
 
 /* Gaming Card Base */
 .gaming-card {
-  background: var(--gaming-bg-secondary);
+  background: linear-gradient(135deg, var(--gaming-bg-secondary) 0%, rgba(26, 26, 35, 0.8) 100%);
   border: 1px solid var(--gaming-border);
   border-radius: 16px;
   padding: 24px;
   position: relative;
   overflow: hidden;
   transition: all var(--gaming-duration-normal) ease-out;
+  backdrop-filter: blur(10px);
 }
 
 .gaming-card::before {
@@ -100,12 +101,12 @@
 
 .gaming-card:hover {
   border-color: var(--gaming-neon-cyan);
-  box-shadow: var(--gaming-glow-subtle);
-  transform: translateY(-4px);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
 .gaming-card:hover::before {
-  left: 0;
+  display: none; /* Disable the sliding animation to prevent flashing */
 }
 
 /* Gaming Border Glow Animation */
@@ -123,8 +124,8 @@
 }
 
 .gaming-card:hover .gaming-border-glow {
-  opacity: 0.5;
-  animation: gaming-pulse var(--gaming-duration-pulse) ease-in-out infinite;
+  opacity: 0.3;
+  /* Removed pulsing animation to prevent flashing */
 }
 
 @keyframes gaming-pulse {
@@ -699,4 +700,37 @@ body.gaming-theme {
 /* Gaming warning text for stale status */
 .gaming-text-warning {
   color: var(--gaming-text-warning) !important;
+}
+
+/* Override any unwanted pink hover effects on betting pages */
+.betting-page *:not(.gaming-card):not(.gaming-btn):not(.gaming-bet-option):not(.gaming-team):not(button):not(a):hover {
+  background-color: inherit !important;
+}
+
+/* Remove pink from selection highlighting */
+.betting-page ::selection,
+[data-page="betting"] ::selection {
+  background-color: rgba(0, 255, 255, 0.3) !important;
+  color: var(--gaming-text-primary) !important;
+}
+
+/* Ensure no pink appears on hover for non-interactive elements */
+.betting-page div:hover,
+.betting-page span:hover,
+.betting-page p:hover,
+.betting-page h1:hover,
+.betting-page h2:hover,
+.betting-page h3:hover {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Keep intentional gaming hover effects */
+.betting-page .gaming-card:hover,
+.betting-page .gaming-btn:hover,
+.betting-page .gaming-bet-option:hover,
+.betting-page .gaming-team:hover,
+.betting-page button:hover,
+.betting-page a:hover {
+  /* These keep their designed hover effects */
 }

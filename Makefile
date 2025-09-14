@@ -186,7 +186,7 @@ _start-celery: ## Internal: Start Celery workers and beat
 	@echo "$(CYAN)Starting Celery services...$(NC)"
 	@cd $(PWD) && $(ACTIVATE) && celery -A core worker -l info --detach
 	@cd $(PWD) && $(ACTIVATE) && celery -A core beat -l info --detach
-	@cd $(PWD) && $(ACTIVATE) && celery -A core flower --broker=redis://localhost:6379/2 --detach --port=$(FLOWER_PORT)
+	@cd $(PWD) && $(ACTIVATE) && celery --broker=redis://localhost:6379/2 -A core flower --detach --port=$(FLOWER_PORT)
 
 # =============================================================================
 # SETUP & INSTALLATION

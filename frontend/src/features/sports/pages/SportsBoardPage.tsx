@@ -43,7 +43,7 @@ export function SportsBoardPage() {
       {/* Header */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-gradient">
-          🏈 Multi-Sport Betting Hub
+          🎯 DONKEY BETZ COMMAND CENTER
         </h1>
         <p className="text-xl text-gray-400 max-w-3xl mx-auto">
           Real-time sports data and betting odds across all major leagues - 

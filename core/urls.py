@@ -70,7 +70,7 @@ from core.views_odds_sports import (
     convert_odds, calculate_expected_value, calculate_kelly_criterion, detect_arbitrage,
     sports_game_analysis, live_betting_opportunities, list_betting_markets,
     get_bankroll_management, get_bankroll_stats, live_odds, get_weather_data, get_injury_data,
-    get_betting_intelligence, orchestrate_agent_analysis
+    get_betting_intelligence, orchestrate_agent_analysis, get_game_details, get_bookmaker_analysis
 )
 
 # Import Phase 2 advanced features
@@ -247,6 +247,10 @@ urlpatterns = [
     path('api/v1/sports/live-odds/', live_odds, name='live-odds'),
     path('api/v1/odds/markets/', list_betting_markets, name='betting-markets'),
     path('api/v1/odds/bankroll/', get_bankroll_management, name='bankroll'),
+
+    # Game detail endpoints
+    path('api/v1/games/<str:game_id>/details/', get_game_details, name='game-details'),
+    path('api/v1/games/<str:game_id>/bookmaker-analysis/', get_bookmaker_analysis, name='bookmaker-analysis'),
     path('api/v1/odds/bankroll/stats/', get_bankroll_stats, name='bankroll-stats'),
     path('api/v1/sports/weather/', get_weather_data, name='weather-data'),
     path('api/v1/sports/injuries/', get_injury_data, name='injury-data'),

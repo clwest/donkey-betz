@@ -298,22 +298,41 @@ class SportsDataManager:
                                 matched_odds = odds_game
                                 break
                     
+                    # Extract game state details
+                    status_info = event.get('status', {})
+                    situation = competition.get('situation', {})
+
                     game_data = {
                         'external_id': event.get('id'),
                         'name': event.get('name'),
                         'date': event.get('date'),
-                        'status': event.get('status', {}).get('type', {}).get('name'),
+                        'status': status_info.get('type', {}).get('name'),
+                        'status_detail': status_info.get('type', {}).get('detail', ''),
+                        'period': status_info.get('period', 0),
+                        'display_clock': status_info.get('displayClock', ''),
+                        'game_situation': {
+                            'down': situation.get('down'),
+                            'distance': situation.get('distance'),
+                            'down_distance_text': situation.get('downDistanceText', ''),
+                            'possession': situation.get('possession'),
+                            'is_red_zone': situation.get('isRedZone', False),
+                            'last_play': situation.get('lastPlay', {}).get('text', ''),
+                            'timeouts_home': situation.get('homeTimeouts'),
+                            'timeouts_away': situation.get('awayTimeouts')
+                        },
                         'home_team': {
                             'id': competitors[0].get('id'),
                             'name': home_team_name,
                             'abbreviation': competitors[0].get('team', {}).get('abbreviation'),
-                            'score': competitors[0].get('score')
+                            'score': competitors[0].get('score'),
+                            'winner': competitors[0].get('winner', False)
                         },
                         'away_team': {
                             'id': competitors[1].get('id'),
                             'name': away_team_name,
                             'abbreviation': competitors[1].get('team', {}).get('abbreviation'),
-                            'score': competitors[1].get('score')
+                            'score': competitors[1].get('score'),
+                            'winner': competitors[1].get('winner', False)
                         },
                         'venue': competition.get('venue', {}).get('fullName'),
                         'odds': matched_odds,

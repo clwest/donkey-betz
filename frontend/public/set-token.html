@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Set Auth Token</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .token-option {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .token-option:hover {
+            background: #3a3a3a;
+        }
+        .success {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quick Auth Token Setup</h1>
+
+    <div class="token-option" onclick="setToken('admin')">
+        <h3>Admin User</h3>
+        <p>Username: admin</p>
+        <small>Token: 0ef9dd74...ba3ea0f4</small>
+    </div>
+
+    <div class="token-option" onclick="setToken('chris')">
+        <h3>Chris User</h3>
+        <p>Username: chris | Password: chris123</p>
+        <small>Token: 2447578c...f3535dfc</small>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        const tokens = {
+            admin: '0ef9dd74312961574231b1c573d8af0cba3ea0f4',
+            chris: '2447578c3bb5aca86100be7b2f1bbdb2f3535dfc'
+        };
+
+        function setToken(user) {
+            const token = tokens[user];
+            localStorage.setItem('authToken', token);
+            localStorage.setItem('currentUser', user);
+
+            document.getElementById('message').innerHTML = `
+                <div class="success">
+                    ✅ Token set for ${user}!<br>
+                    <button onclick="goToApp()">Go to Application</button>
+                </div>
+            `;
+        }
+
+        function goToApp() {
+            window.location.href = 'http://localhost:3000';
+        }
+
+        // Check current token
+        const currentToken = localStorage.getItem('authToken');
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentToken) {
+            document.getElementById('message').innerHTML = `
+                <p>Current user: ${currentUser || 'Unknown'}</p>
+                <button onclick="clearToken()">Clear Token</button>
+            `;
+        }
+
+        function clearToken() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+    </script>
+</body>
+</html>
