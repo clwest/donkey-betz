@@ -24,6 +24,7 @@ export function useWebSocket(config: WebSocketConfig) {
   } = config;
 
   const [isConnected, setIsConnected] = useState(false);
+  const [lastMessage, setLastMessage] = useState<any>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -94,9 +95,12 @@ export function useWebSocket(config: WebSocketConfig) {
         try {
           const data = JSON.parse(event.data);
           console.log('[WebSocket] Message received:', data);
+          setLastMessage(data);
           configRef.current.onMessage?.(data);
         } catch (error) {
           console.error('[WebSocket] Error parsing message:', error);
+          // If parsing fails, still set the raw message
+          setLastMessage(event.data);
         }
       };
 
@@ -166,5 +170,6 @@ export function useWebSocket(config: WebSocketConfig) {
     sendMessage,
     disconnect,
     reconnect: connect,
+    lastMessage,
   };
 }

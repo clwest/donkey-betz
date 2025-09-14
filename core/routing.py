@@ -12,6 +12,12 @@ try:
 except ImportError:
     sports_ws_patterns = []
 
+# Import intelligence routing for new UI components
+try:
+    from intelligence.routing import websocket_urlpatterns as intelligence_ws_patterns
+except ImportError:
+    intelligence_ws_patterns = []
+
 websocket_urlpatterns = [
     # Test endpoints
     re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
@@ -69,3 +75,6 @@ websocket_urlpatterns = [
 
 # Add sports WebSocket patterns if available
 websocket_urlpatterns.extend(sports_ws_patterns)
+
+# Add intelligence WebSocket patterns for new UI components
+websocket_urlpatterns.extend(intelligence_ws_patterns)
