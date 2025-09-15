@@ -125,19 +125,20 @@ def execute_agent(self, execution_id: str, **kwargs):
             'agent_tools': agent_template.required_tools,
         }
         
-        # Prepare the prompt
-        system_prompt = agent_template.system_prompt
-        user_prompt = f"""
-Task: {execution.task_description}
+        # Prepare GPT-5-mini compatible prompt with platform awareness
+        from agents.platform_integration import inject_platform_tools_prompt
 
-Input Data:
-{json.dumps(execution.input_data, indent=2)}
+        base_prompt = agent_template.system_prompt if agent_template.system_prompt else "Business specialist."
+        platform_tools = inject_platform_tools_prompt()
 
-Context:
-{json.dumps(execution.context, indent=2)}
+        # Combine base prompt with platform integration
+        system_prompt = f"{base_prompt}\n\n{platform_tools}"
 
-Please complete this task using your specialized capabilities.
-"""
+        # Extract key info from input data for simple prompt
+        opportunity = execution.input_data.get('opportunity', 'business opportunity')
+        step = execution.input_data.get('step', execution.task_description)
+
+        user_prompt = f"Please create a detailed action plan for this business task: {step}. This task is part of developing the {opportunity} opportunity. You should recommend only our internal platform tools and services. Write your response using complete sentences and clear explanations. Include specific steps, internal tools to use, and expected outcomes."
         
         # Update progress
         execution.current_step = "Processing with AI model"

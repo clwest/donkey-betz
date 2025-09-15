@@ -1,0 +1,33 @@
+{
+  "test_timestamp": "2025-09-14T20:39:00.387442",
+  "summary": {
+    "total_tests": 2,
+    "successful_tests": 2,
+    "avg_platform_score": 0.0,
+    "total_external_mentions": 0
+  },
+  "test_results": {
+    "digital_templates": {
+      "status": "SUCCESS",
+      "plan_id": "f85112c7-7421-47e4-833a-ab2f7dfbc157",
+      "analysis": {
+        "platform_tools_mentioned": 0,
+        "external_tools_mentioned": 0,
+        "platform_awareness_score": 0,
+        "recommendations": []
+      },
+      "raw_results": null
+    },
+    "content_creation": {
+      "status": "SUCCESS",
+      "plan_id": "dd1147ce-137d-4792-942c-e16886169523",
+      "analysis": {
+        "platform_tools_mentioned": 0,
+        "external_tools_mentioned": 0,
+        "platform_awareness_score": 0,
+        "recommendations": []
+      },
+      "raw_results": null
+    }
+  }
+}

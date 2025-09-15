@@ -136,12 +136,20 @@ class OpenAIProvider(BaseAIProvider):
             # Handle GPT-5 models differently - they have different parameters
             try:
                 if 'gpt-5' in model.lower():
-                    # GPT-5 works best without token limits or with very high limits
-                    # It uses reasoning tokens that don't count toward output
-                    if config.get('max_completion_tokens') or config.get('max_tokens'):
-                        # Use a much higher limit for GPT-5 to account for reasoning tokens
-                        completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 2000)) + 2000
-                    # GPT-5 doesn't support temperature and other parameters (only default value of 1)
+                    # GPT-5-mini has very strict parameter limitations
+                    if 'gpt-5-mini' in model.lower():
+                        # GPT-5-mini ONLY supports max_completion_tokens - no temperature or other params
+                        completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 1000))
+                        # DO NOT add temperature - GPT-5-mini only supports default (1.0)
+                    elif 'gpt-5-nano' in model.lower():
+                        # GPT-5-nano similar restrictions
+                        completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 500))
+                        # DO NOT add temperature for nano either
+                    else:
+                        # Full GPT-5 has limited parameter support
+                        if config.get('max_completion_tokens') or config.get('max_tokens'):
+                            completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 2000))
+                        # Full GPT-5 doesn't support temperature and other parameters
                 else:
                     # Non-GPT-5 models use standard parameters
                     completion_params["max_tokens"] = config.get('max_tokens', 2000)
@@ -168,19 +176,48 @@ class OpenAIProvider(BaseAIProvider):
             
             # Debug and handle potential None content
             content = response.choices[0].message.content
-            if content is None:
-                logger.warning(f"OpenAI returned None content for model {model}")
-                # Try to get any available text
-                if hasattr(response.choices[0], 'text'):
-                    content = response.choices[0].text
-                    logger.info(f"Used text field instead: {content[:50] if content else 'empty'}...")
-                elif hasattr(response.choices[0].message, 'text'):
-                    content = response.choices[0].message.text
-                    logger.info(f"Used message.text field: {content[:50] if content else 'empty'}...")
+            logger.info(f"Raw content from {model}: '{content}' (type: {type(content)})")
+
+            if content is None or content == "":
+                logger.warning(f"OpenAI returned None/empty content for model {model}")
+                if content is None:
+                    logger.debug(f"Content is None")
                 else:
-                    content = ""
-                    logger.error(f"No content field found in response for {model}")
-                    logger.debug(f"Response structure: {response}")
+                    logger.debug(f"Content is empty string")
+
+                # For GPT-5-mini, empty content often means system prompt interference
+                if 'gpt-5-mini' in model.lower():
+                    logger.warning(f"GPT-5-mini returned empty content - likely system prompt issue")
+                    # Try without system prompt for GPT-5-mini
+                    try:
+                        logger.info("Retrying GPT-5-mini without system prompt")
+                        simple_messages = [{"role": "user", "content": user_prompt}]
+                        retry_response = self.client.chat.completions.create(
+                            model=model,
+                            messages=simple_messages,
+                            max_completion_tokens=config.get('max_completion_tokens', config.get('max_tokens', 300))
+                        )
+                        content = retry_response.choices[0].message.content or ""
+                        if content:
+                            logger.info(f"GPT-5-mini retry without system prompt successful")
+                        else:
+                            logger.error(f"GPT-5-mini still empty after retry")
+                            content = ""
+                    except Exception as e:
+                        logger.error(f"GPT-5-mini retry failed: {e}")
+                        content = ""
+                else:
+                    # Try to get any available text for other models
+                    if hasattr(response.choices[0], 'text'):
+                        content = response.choices[0].text
+                        logger.info(f"Used text field instead: {content[:50] if content else 'empty'}...")
+                    elif hasattr(response.choices[0].message, 'text'):
+                        content = response.choices[0].message.text
+                        logger.info(f"Used message.text field: {content[:50] if content else 'empty'}...")
+                    else:
+                        content = ""
+                        logger.error(f"No content field found in response for {model}")
+                        logger.debug(f"Response structure: {response}")
             
             token_usage = {
                 'prompt_tokens': response.usage.prompt_tokens,
@@ -194,43 +231,37 @@ class OpenAIProvider(BaseAIProvider):
                 response.usage.completion_tokens
             )
             
-            # Ensure we always return some content
+            # Final check for empty content after all retries
             if not content or len(str(content).strip()) == 0:
-                logger.warning(f"Empty or None content after processing for {model}, attempting fallback")
-                # Try a simpler retry without any special parameters
-                try:
-                    # Use correct parameter for GPT-5
-                    if 'gpt-5' in model.lower():
-                        simple_response = self.client.chat.completions.create(
-                            model=model,
-                            messages=[{"role": "user", "content": "Please respond with 'I am working.'"}],
-                            max_completion_tokens=50
-                        )
-                    else:
-                        simple_response = self.client.chat.completions.create(
-                            model=model,
-                            messages=[{"role": "user", "content": "Please respond with 'I am working.'"}],
-                            max_tokens=50
-                        )
-                    test_content = simple_response.choices[0].message.content
-                    if test_content:
-                        logger.info(f"Simple test worked, retrying original")
-                        # Retry the original with minimal parameters
+                logger.warning(f"Empty content after all processing for {model}")
+
+                # For GPT-5-mini specifically, provide specific guidance
+                if 'gpt-5-mini' in model.lower():
+                    logger.error(f"GPT-5-mini failed even after retries - prompt incompatible")
+                    content = "GPT-5-mini Error: This prompt pattern is not compatible. Try: complete sentences, avoid single words, use clear questions."
+                else:
+                    # Try a simpler retry for other models
+                    try:
+                        logger.info(f"Attempting simplified retry for {model}")
+                        # Use correct parameter for GPT-5
                         if 'gpt-5' in model.lower():
                             retry_response = self.client.chat.completions.create(
                                 model=model,
                                 messages=messages,
-                                max_completion_tokens=500
+                                max_completion_tokens=300
                             )
                         else:
                             retry_response = self.client.chat.completions.create(
                                 model=model,
                                 messages=messages,
-                                max_tokens=500
+                                max_tokens=300
                             )
                         content = retry_response.choices[0].message.content or ""
-                except Exception as e:
-                    logger.error(f"Fallback attempt failed: {e}")
+                        if content:
+                            logger.info(f"Simplified retry successful for {model}")
+                    except Exception as e:
+                        logger.error(f"Fallback attempt failed: {e}")
+                        content = f"Error: Model {model} failed after retry. Try simpler prompt."
             
             return GenerationResult(
                 success=True,

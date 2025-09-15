@@ -1,0 +1,53 @@
+{
+  "validation_timestamp": "2025-09-14T20:38:04.534178",
+  "summary": {
+    "total_tests": 6,
+    "successful_tests": 5,
+    "success_rate": 83.33333333333334
+  },
+  "test_results": {
+    "web_search": {
+      "status": "ERROR",
+      "error": "API returned 202"
+    },
+    "api_calls": {
+      "status": "SUCCESS",
+      "api_working": true,
+      "results_count": 3,
+      "sample_data": {
+        "name": "idimetrix",
+        "url": "https://github.com/idimetrix/idimetrix"
+      }
+    },
+    "file_creation": {
+      "status": "SUCCESS",
+      "file_created": "income_builder_outputs/tool_validation_test_20250914_203804.json",
+      "file_size": 204,
+      "content_valid": true
+    },
+    "income_builder_integration": {
+      "status": "SUCCESS",
+      "api_working": true,
+      "opportunities_count": 8,
+      "has_data": true
+    },
+    "action_plan_api": {
+      "status": "SUCCESS",
+      "api_working": true,
+      "plan_created": true,
+      "plan_id": "fcbd69f2-7376-4097-a76d-917b21888cea",
+      "celery_task_id": "7b3989ed-4be7-472c-b777-81f7474fc031"
+    },
+    "simulation_validation": {
+      "status": "SUCCESS",
+      "simulation_indicators_found": [],
+      "real_tool_indicators_found": [
+        "requests.get(",
+        "web_search",
+        "real_data"
+      ],
+      "file_analyzed": "/Users/donkeyking/development/unified-donkey-betz/intelligence/tasks.py"
+    }
+  },
+  "validation_errors": []
+}
