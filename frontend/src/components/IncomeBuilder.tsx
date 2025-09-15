@@ -73,20 +73,13 @@ export default function IncomeBuilder() {
   const [actionPlans, setActionPlans] = useState<any[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [viewingFile, setViewingFile] = useState<string | null>(null);
+  const [activeAutomations, setActiveAutomations] = useState<any[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     fetchOpportunities();
     fetchRevenueData();
-    // Load saved action plans from localStorage
-    const savedPlans = localStorage.getItem('incomeBuilderActionPlans');
-    if (savedPlans) {
-      try {
-        setActionPlans(JSON.parse(savedPlans));
-      } catch (e) {
-        console.error('Error loading saved action plans:', e);
-      }
-    }
+    loadActionPlansFromBackend();
 
     // Connect to WebSocket for real-time updates
     connectWebSocket();
@@ -171,6 +164,8 @@ export default function IncomeBuilder() {
           console.log('📊 Polling response:', data);
 
           if (data.success && data.plans) {
+            let hasNewlyCompleted = false;
+
             // Update local plans with backend status
             const updatedPlans = actionPlans.map(localPlan => {
               const backendPlan = data.plans.find((bp: any) => bp.id === localPlan.backend_id);
@@ -178,11 +173,13 @@ export default function IncomeBuilder() {
                 console.log(`📋 Backend plan for ${localPlan.backend_id}:`, backendPlan);
                 console.log('📁 Results:', backendPlan.results);
 
-                if (backendPlan.status === 'completed' && backendPlan.results) {
-                  console.log('✅ Plan completed with results:', {
-                    files: backendPlan.results.files_created,
-                    status: backendPlan.results.status,
-                    message: backendPlan.results.message
+                // Check if this plan just completed
+                if (localPlan.status !== 'completed' && backendPlan.status === 'completed') {
+                  hasNewlyCompleted = true;
+                  console.log('✅ Plan just completed with results:', {
+                    files: backendPlan.results?.files_created,
+                    status: backendPlan.results?.status,
+                    message: backendPlan.results?.message
                   });
                 }
 
@@ -203,6 +200,14 @@ export default function IncomeBuilder() {
 
             setActionPlans(updatedPlans);
             localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+
+            // Save to backend
+            saveActionPlansToBackend(updatedPlans);
+
+            // Auto-switch to completed tab when a plan finishes
+            if (hasNewlyCompleted) {
+              setActiveTab('completed-plans');
+            }
           }
         } catch (error) {
           console.error('Error polling plan status:', error);
@@ -212,6 +217,91 @@ export default function IncomeBuilder() {
 
     return () => clearInterval(pollInterval);
   }, [actionPlans]);
+
+  const analyzePlanForAutomation = async (plan: any) => {
+    try {
+      const planContent = await fetch(`${API_BASE_URL}${plan.file_path}`).then(r => r.text());
+
+      const response = await fetch('http://localhost:5001/api/income-builder/analyze-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_content: planContent })
+      });
+
+      const analysis = await response.json();
+
+      // Update plan with analysis
+      const updatedPlans = actionPlans.map(p =>
+        p.id === plan.id ? { ...p, automation_analysis: analysis } : p
+      );
+      setActionPlans(updatedPlans);
+      localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+
+    } catch (error) {
+      console.error('Error analyzing plan:', error);
+    }
+  };
+
+  const executePlanAutomation = async (plan: any) => {
+    try {
+      const response = await fetch('http://localhost:5001/api/income-builder/process-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_file: plan.file_path.replace('/static/', 'income_builder_outputs/'),
+          auto_execute: true
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.execution_id) {
+        // Track active automation
+        setActiveAutomations(prev => [...prev, {
+          execution_id: result.execution_id,
+          plan_type: plan.opportunity_title,
+          started_at: new Date().toISOString(),
+          status: 'running'
+        }]);
+
+        // Start monitoring execution
+        monitorAutomationExecution(result.execution_id);
+      }
+    } catch (error) {
+      console.error('Error executing automation:', error);
+    }
+  };
+
+  const monitorAutomationExecution = async (executionId: string) => {
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:5001/api/income-builder/execution-status/${executionId}`);
+        const status = await response.json();
+
+        setActiveAutomations(prev => prev.map(a =>
+          a.execution_id === executionId
+            ? { ...a, ...status }
+            : a
+        ));
+
+        // Continue monitoring if still running
+        if (status.progress?.pending > 0 || status.progress?.in_progress > 0) {
+          setTimeout(() => checkStatus(), 5000);
+        } else {
+          // Mark as completed
+          setActiveAutomations(prev => prev.map(a =>
+            a.execution_id === executionId
+              ? { ...a, status: 'completed' }
+              : a
+          ));
+        }
+      } catch (error) {
+        console.error('Error monitoring execution:', error);
+      }
+    };
+
+    checkStatus();
+  };
 
   const fetchOpportunities = async () => {
     try {
@@ -236,6 +326,81 @@ export default function IncomeBuilder() {
       }
     } catch (error) {
       console.error('Error fetching revenue data:', error);
+    }
+  };
+
+  const loadActionPlansFromBackend = async () => {
+    try {
+      // First try to load from backend
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/plans/`, {
+        credentials: 'include' // Include cookies for session handling
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.plans && data.plans.length > 0) {
+          console.log('📂 Loaded', data.plans.length, 'plans from backend');
+          setActionPlans(data.plans);
+
+          // Check if we should show completed tab
+          const completedCount = data.plans.filter((p: any) => p.status === 'completed').length;
+          const inProgressCount = data.plans.filter((p: any) => p.status === 'in_progress').length;
+
+          if (completedCount > 0 && inProgressCount === 0) {
+            setActiveTab('completed-plans');
+          }
+
+          // Also save to localStorage as backup
+          localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(data.plans));
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading plans from backend:', error);
+    }
+
+    // Fallback to localStorage if backend fails or has no data
+    const savedPlans = localStorage.getItem('incomeBuilderActionPlans');
+    if (savedPlans) {
+      try {
+        const parsedPlans = JSON.parse(savedPlans);
+        setActionPlans(parsedPlans);
+
+        // If there are completed plans and user hasn't created new ones, show completed tab
+        const completedCount = parsedPlans.filter((p: any) => p.status === 'completed').length;
+        const inProgressCount = parsedPlans.filter((p: any) => p.status === 'in_progress').length;
+
+        if (completedCount > 0 && inProgressCount === 0) {
+          setActiveTab('completed-plans');
+        }
+
+        // Try to sync localStorage plans to backend
+        if (parsedPlans.length > 0) {
+          saveActionPlansToBackend(parsedPlans);
+        }
+      } catch (e) {
+        console.error('Error loading saved action plans:', e);
+      }
+    }
+  };
+
+  const saveActionPlansToBackend = async (plans: any[]) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/plans/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies for session handling
+        body: JSON.stringify({ plans })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('💾 Saved', data.saved_plans?.length || 0, 'plans to backend');
+      }
+    } catch (error) {
+      console.error('Error saving plans to backend:', error);
     }
   };
 
@@ -270,6 +435,9 @@ export default function IncomeBuilder() {
 
         // Save to localStorage
         localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+
+        // Save to backend
+        saveActionPlansToBackend(updatedPlans);
 
         // Switch to the action plans tab
         setActiveTab('action-plans');
@@ -362,12 +530,219 @@ export default function IncomeBuilder() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
-          <TabsTrigger value="action-plans">My Action Plans</TabsTrigger>
+          <TabsTrigger value="action-plans">
+            My Action Plans
+            {actionPlans.filter(p => p.status === 'in_progress').length > 0 && (
+              <Badge className="ml-2 bg-blue-500 text-white text-xs">
+                {actionPlans.filter(p => p.status === 'in_progress').length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="completed-plans" className="relative">
+            <span className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-yellow-500" />
+              Completed
+              {actionPlans.filter(p => p.status === 'completed').length > 0 && (
+                <Badge className="bg-green-500 text-white text-xs">
+                  {actionPlans.filter(p => p.status === 'completed').length}
+                </Badge>
+              )}
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="quick-start">Quick Start</TabsTrigger>
           <TabsTrigger value="automation">Automation</TabsTrigger>
         </TabsList>
+
+        {/* Automation Tab - NEW */}
+        <TabsContent value="automation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                Automated Task Execution
+              </CardTitle>
+              <CardDescription>
+                Your Income Builder plans can now be automatically executed by our 102+ agent network
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Automation Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-2 border-blue-200">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-5 w-5 text-blue-500" />
+                      <p className="font-semibold">Task Extraction</p>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Plans automatically parsed into 10-15 actionable tasks
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-purple-200">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Rocket className="h-5 w-5 text-purple-500" />
+                      <p className="font-semibold">Agent Delegation</p>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Tasks routed to specialized agents for execution
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-green-200">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <p className="font-semibold">Real Results</p>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Actual deliverables created automatically
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Plans with Automation */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Automation-Ready Plans</h3>
+                {actionPlans.filter(p => p.status === 'completed' && p.file_path).map((plan, index) => (
+                  <Card key={index} className="border-l-4 border-l-green-500">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle className="text-lg">{plan.opportunity_title}</CardTitle>
+                          <CardDescription>Completed: {new Date(plan.completed_at || Date.now()).toLocaleDateString()}</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => analyzePlanForAutomation(plan)}
+                          >
+                            <Target className="h-4 w-4 mr-1" />
+                            Analyze Tasks
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => executePlanAutomation(plan)}
+                            className="bg-gradient-to-r from-purple-600 to-blue-600"
+                          >
+                            <Zap className="h-4 w-4 mr-1" />
+                            Auto-Execute
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    {plan.automation_analysis && (
+                      <CardContent>
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <p className="text-gray-600">Total Tasks</p>
+                              <p className="font-bold text-lg">{plan.automation_analysis.total_tasks}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Agents Required</p>
+                              <p className="font-bold text-lg">{plan.automation_analysis.agents_required?.length || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Priority Tasks</p>
+                              <p className="font-bold text-lg">{plan.automation_analysis.priority_tasks?.length || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Phases</p>
+                              <p className="font-bold text-lg">{Object.keys(plan.automation_analysis.phases || {}).length}</p>
+                            </div>
+                          </div>
+
+                          {plan.automation_analysis.priority_tasks && (
+                            <div>
+                              <p className="font-semibold text-sm mb-2">Top Priority Tasks:</p>
+                              <div className="space-y-1">
+                                {plan.automation_analysis.priority_tasks.slice(0, 3).map((task: any, i: number) => (
+                                  <div key={i} className="flex items-center gap-2 text-sm">
+                                    <Badge variant="outline" className="text-xs">
+                                      {task.agent}
+                                    </Badge>
+                                    <span>{task.title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+
+                {actionPlans.filter(p => p.status === 'completed' && p.file_path).length === 0 && (
+                  <Alert>
+                    <AlertDescription>
+                      Complete an action plan to unlock automation capabilities.
+                      Once you have a completed plan, you can automatically execute it across our agent network.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              {/* Active Automations */}
+              {activeAutomations.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Active Automations</h3>
+                  {activeAutomations.map((automation, index) => (
+                    <Card key={index} className="border-2 border-blue-500">
+                      <CardHeader>
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg">{automation.plan_type}</CardTitle>
+                          <Badge className="bg-blue-500">
+                            <Zap className="h-3 w-3 mr-1" />
+                            Running
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Execution Progress</span>
+                            <span>{automation.progress?.completion_percentage?.toFixed(0) || 0}%</span>
+                          </div>
+                          <Progress value={automation.progress?.completion_percentage || 0} className="h-2" />
+
+                          <div className="grid grid-cols-3 gap-2 text-sm mt-3">
+                            <div className="text-center">
+                              <p className="text-gray-600">Completed</p>
+                              <p className="font-bold">{automation.progress?.completed || 0}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-gray-600">In Progress</p>
+                              <p className="font-bold">{automation.progress?.in_progress || 0}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-gray-600">Pending</p>
+                              <p className="font-bold">{automation.progress?.pending || 0}</p>
+                            </div>
+                          </div>
+
+                          {automation.current_tasks && automation.current_tasks.length > 0 && (
+                            <div className="mt-3 p-2 bg-blue-50 rounded">
+                              <p className="text-xs font-semibold mb-1">Currently Executing:</p>
+                              <p className="text-xs">{automation.current_tasks[0]}</p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Opportunities Tab */}
         <TabsContent value="opportunities" className="space-y-4">
@@ -486,18 +861,24 @@ export default function IncomeBuilder() {
           )}
         </TabsContent>
 
-        {/* Action Plans Tab */}
+        {/* Action Plans Tab - Only show non-completed plans */}
         <TabsContent value="action-plans" className="space-y-4">
-          {actionPlans.length === 0 ? (
+          {actionPlans.filter(p => p.status !== 'completed').length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">
-                <p className="text-gray-500 mb-4">No action plans created yet.</p>
-                <p className="text-sm text-gray-400">Select an opportunity and click "Get Action Plan" to create your first plan.</p>
+                <p className="text-gray-500 mb-4">No active action plans.</p>
+                <p className="text-sm text-gray-400">Select an opportunity and click "Get Action Plan" to create a new plan.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
-              {actionPlans.map((plan, index) => (
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Active Action Plans</h3>
+                <Badge variant="outline">
+                  {actionPlans.filter(p => p.status === 'in_progress').length} in progress
+                </Badge>
+              </div>
+              {actionPlans.filter(p => p.status !== 'completed').map((plan, index) => (
                 <Card key={index} className={plan.status === 'in_progress' ? 'border-blue-500' : ''}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -829,13 +1210,271 @@ export default function IncomeBuilder() {
           )}
         </TabsContent>
 
+        {/* Completed Plans Tab - Show only completed plans */}
+        <TabsContent value="completed-plans" className="space-y-4">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Trophy className="h-8 w-8 text-yellow-500" />
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Completed Action Plans</h2>
+                  <p className="text-gray-400">Your successful income generation achievements</p>
+                </div>
+              </div>
+              {actionPlans.filter(p => p.status === 'completed').length > 0 && (
+                <Card className="bg-slate-800 border-green-500/30">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-green-400">
+                        {actionPlans.filter(p => p.status === 'completed').length}
+                      </p>
+                      <p className="text-sm text-green-300">Plans Completed</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {actionPlans.filter(p => p.status === 'completed').length === 0 ? (
+            <Card className="bg-slate-800 border-slate-700">
+              <CardContent className="text-center py-12">
+                <Trophy className="h-16 w-16 mx-auto text-gray-600 mb-4" />
+                <p className="text-gray-300 mb-2 text-lg">No completed plans yet</p>
+                <p className="text-sm text-gray-500">Complete your first action plan to see it here!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {/* Success Summary Card */}
+              <Card className="bg-slate-800 border-cyan-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <CheckCircle className="h-6 w-6 text-cyan-400" />
+                    Success Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Total Completed</p>
+                      <p className="text-2xl font-bold text-green-400">
+                        {actionPlans.filter(p => p.status === 'completed').length}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Files Generated</p>
+                      <p className="text-2xl font-bold text-cyan-400">
+                        {actionPlans.filter(p => p.status === 'completed')
+                          .reduce((total, plan) => total + (plan.results?.files_created?.length || 0), 0)}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Success Rate</p>
+                      <p className="text-2xl font-bold text-purple-400">
+                        {((actionPlans.filter(p => p.status === 'completed').length /
+                          Math.max(actionPlans.length, 1)) * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Completed Plans List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {actionPlans.filter(p => p.status === 'completed').map((plan, index) => (
+                  <Card key={index} className="bg-slate-800 border-green-500/30 hover:border-green-400/50 transition-all">
+                    <CardHeader className="bg-slate-900/50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-white">
+                            <CheckCircle className="h-5 w-5 text-green-400" />
+                            {plan.opportunity_title || 'Completed Plan'}
+                          </CardTitle>
+                          <CardDescription className="text-gray-400">
+                            Completed: {plan.completed_at ?
+                              new Date(plan.completed_at).toLocaleDateString() :
+                              'Recently'}
+                          </CardDescription>
+                        </div>
+                        <Badge className="bg-green-600/20 text-green-400 border-green-500/50">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Complete
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      {/* Results Summary */}
+                      {plan.results && Object.keys(plan.results).length > 0 && (
+                        <div className="space-y-3">
+                          {/* Files Created */}
+                          {plan.results.files_created && plan.results.files_created.length > 0 && (
+                            <div className="bg-slate-900/50 rounded-lg p-3 border border-cyan-500/20">
+                              <h5 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-1">
+                                <FileText className="h-4 w-4" />
+                                Generated Files ({plan.results.files_created.length})
+                              </h5>
+                              <div className="space-y-1">
+                                {plan.results.files_created.slice(0, 3).map((file: string | any, idx: number) => {
+                                  const filepath = typeof file === 'string' ? file : String(file);
+                                  const filename = filepath.split('/').pop() || filepath;
+                                  return (
+                                    <div key={idx} className="flex items-center justify-between">
+                                      <span className="text-sm text-gray-300 truncate">📄 {filename}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-xs h-6 px-2"
+                                        onClick={() => {
+                                          const cleanFilename = filepath.startsWith('income_builder_outputs/')
+                                            ? filepath.replace('income_builder_outputs/', '')
+                                            : filepath;
+                                          setViewingFile(cleanFilename);
+                                        }}
+                                      >
+                                        <Eye className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                                {plan.results.files_created.length > 3 && (
+                                  <p className="text-xs text-gray-500">
+                                    +{plan.results.files_created.length - 3} more files
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* ML Score */}
+                          {plan.results.ml_score && (
+                            <div className="bg-slate-900/50 rounded-lg p-3 border border-purple-500/20">
+                              <h5 className="text-sm font-semibold text-purple-400 mb-1">
+                                🤖 AI Success Score
+                              </h5>
+                              <div className="flex items-center gap-2">
+                                <Progress
+                                  value={plan.results.ml_score * 100}
+                                  className="h-2 flex-1 bg-slate-700"
+                                />
+                                <span className="text-sm font-bold text-purple-400">
+                                  {(plan.results.ml_score * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => {
+                                // Expand to show full details
+                                const updatedPlans = actionPlans.map((p, i) =>
+                                  p === plan ? { ...p, expanded: !p.expanded } : p
+                                );
+                                setActionPlans(updatedPlans);
+                                localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+                              }}
+                            >
+                              {plan.expanded ? 'Hide' : 'View'} Details
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => {
+                                // Download results
+                                let content = `Income Builder - Completed Action Plan\n`;
+                                content += `========================================\n\n`;
+                                content += `Opportunity: ${plan.opportunity_title}\n`;
+                                content += `Completed: ${new Date(plan.completed_at || Date.now()).toLocaleString()}\n\n`;
+
+                                if (plan.results.files_created) {
+                                  content += `Generated Files:\n`;
+                                  plan.results.files_created.forEach((file: string) => {
+                                    content += `  ✓ ${file}\n`;
+                                  });
+                                  content += `\n`;
+                                }
+
+                                if (plan.results.ml_score) {
+                                  content += `AI Success Score: ${(plan.results.ml_score * 100).toFixed(1)}%\n\n`;
+                                }
+
+                                content += `Full Results:\n`;
+                                content += JSON.stringify(plan.results, null, 2);
+
+                                const blob = new Blob([content], { type: 'text/plain' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `${plan.opportunity_title.replace(/\s+/g, '_')}_completed.txt`;
+                                a.click();
+                              }}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Export
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Expanded Details */}
+                      {plan.expanded && (
+                        <div className="mt-4 pt-4 border-t space-y-3">
+                          {plan.steps && (
+                            <div>
+                              <h5 className="text-sm font-semibold mb-2">Completed Steps:</h5>
+                              <ol className="list-decimal list-inside space-y-1">
+                                {plan.steps.map((step: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-green-600">
+                                    <CheckCircle className="inline-block ml-1 h-3 w-3" />
+                                    <span className="ml-1 text-gray-700">{step}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+
+                          {plan.execution_logs && plan.execution_logs.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-semibold mb-2">Execution History:</h5>
+                              <div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
+                                {plan.execution_logs.map((log: any, idx: number) => (
+                                  <div key={idx} className="text-xs">
+                                    <span className="text-gray-500">
+                                      {new Date(log.timestamp).toLocaleTimeString()}
+                                    </span>
+                                    <span className={`ml-2 ${
+                                      log.level === 'success' ? 'text-green-600' : 'text-gray-600'
+                                    }`}>
+                                      {log.message}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
         {/* Quick Start Tab */}
         <TabsContent value="quick-start" className="space-y-4">
-          <Alert className="border-green-200 bg-green-50">
-            <Rocket className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Your Quick Start Path to $1000/month:</strong>
-              <ol className="mt-2 space-y-1 list-decimal list-inside">
+          <Alert className="border-cyan-500/30 bg-slate-800">
+            <Rocket className="h-4 w-4 text-cyan-400" />
+            <AlertDescription className="text-gray-300">
+              <strong className="text-white">Your Quick Start Path to $1000/month:</strong>
+              <ol className="mt-2 space-y-1 list-decimal list-inside text-gray-400">
                 <li>Start with Content Writing (1-3 days to first income)</li>
                 <li>Add Social Media Management (Week 1)</li>
                 <li>Launch Digital Templates (Week 2)</li>
@@ -845,52 +1484,52 @@ export default function IncomeBuilder() {
           </Alert>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
+            <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle>Week 1 Goals</CardTitle>
+                <CardTitle className="text-white">Week 1 Goals</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-blue-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <Target className="h-4 w-4 text-cyan-400" />
                     Create profiles on 3 platforms
                   </li>
-                  <li className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-blue-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <Target className="h-4 w-4 text-cyan-400" />
                     Complete 5 sample projects
                   </li>
-                  <li className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-blue-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <Target className="h-4 w-4 text-cyan-400" />
                     Apply to 50 opportunities
                   </li>
-                  <li className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-blue-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <Target className="h-4 w-4 text-cyan-400" />
                     Earn first $100
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle>Month 1 Targets</CardTitle>
+                <CardTitle className="text-white">Month 1 Targets</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <TrendingUp className="h-4 w-4 text-green-400" />
                     3 active income streams
                   </li>
-                  <li className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <TrendingUp className="h-4 w-4 text-green-400" />
                     $500+ monthly revenue
                   </li>
-                  <li className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <TrendingUp className="h-4 w-4 text-green-400" />
                     5+ positive reviews
                   </li>
-                  <li className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  <li className="flex items-center gap-2 text-gray-300">
+                    <TrendingUp className="h-4 w-4 text-green-400" />
                     2 recurring clients
                   </li>
                 </ul>
@@ -901,67 +1540,75 @@ export default function IncomeBuilder() {
 
         {/* Automation Tab */}
         <TabsContent value="automation" className="space-y-4">
-          <Alert className="border-purple-200 bg-purple-50">
-            <Zap className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Automated Income Potential: $200-950/day</strong>
-              <p className="mt-1">Set up once, earn continuously with AI automation</p>
+          <Alert className="border-purple-500/30 bg-slate-800">
+            <Zap className="h-4 w-4 text-purple-400" />
+            <AlertDescription className="text-gray-300">
+              <strong className="text-white">Automated Income Potential: $200-950/day</strong>
+              <p className="mt-1 text-gray-400">Set up once, earn continuously with AI automation</p>
             </AlertDescription>
           </Alert>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
+            <Card className="bg-slate-800 border-slate-700 hover:border-cyan-500/30 transition-all">
               <CardHeader>
-                <CardTitle>Blog Automation</CardTitle>
-                <CardDescription>3 posts/day across platforms</CardDescription>
+                <CardTitle className="text-white">Blog Automation</CardTitle>
+                <CardDescription className="text-gray-400">3 posts/day across platforms</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-green-600">$50-200/day</p>
-                  <p className="text-sm text-gray-600">AdSense + Affiliates + Sponsored</p>
-                  <Button className="w-full" variant="outline">Setup Automation</Button>
+                  <p className="text-2xl font-bold text-green-400">$50-200/day</p>
+                  <p className="text-sm text-gray-500">AdSense + Affiliates + Sponsored</p>
+                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30" variant="outline">
+                    Setup Automation
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-800 border-slate-700 hover:border-cyan-500/30 transition-all">
               <CardHeader>
-                <CardTitle>Social Media Automation</CardTitle>
-                <CardDescription>10 posts/day automated</CardDescription>
+                <CardTitle className="text-white">Social Media Automation</CardTitle>
+                <CardDescription className="text-gray-400">10 posts/day automated</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-blue-600">$30-150/day</p>
-                  <p className="text-sm text-gray-600">Sponsored + Affiliate Marketing</p>
-                  <Button className="w-full" variant="outline">Setup Automation</Button>
+                  <p className="text-2xl font-bold text-cyan-400">$30-150/day</p>
+                  <p className="text-sm text-gray-500">Sponsored + Affiliate Marketing</p>
+                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30" variant="outline">
+                    Setup Automation
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-800 border-slate-700 hover:border-purple-500/30 transition-all">
               <CardHeader>
-                <CardTitle>Video Scripts</CardTitle>
-                <CardDescription>5 scripts/day for creators</CardDescription>
+                <CardTitle className="text-white">Video Scripts</CardTitle>
+                <CardDescription className="text-gray-400">5 scripts/day for creators</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-purple-600">$100-500/day</p>
-                  <p className="text-sm text-gray-600">Direct Sales + Subscriptions</p>
-                  <Button className="w-full" variant="outline">Setup Automation</Button>
+                  <p className="text-2xl font-bold text-purple-400">$100-500/day</p>
+                  <p className="text-sm text-gray-500">Direct Sales + Subscriptions</p>
+                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-purple-500/30" variant="outline">
+                    Setup Automation
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-slate-800 border-slate-700 hover:border-indigo-500/30 transition-all">
               <CardHeader>
-                <CardTitle>Digital Templates</CardTitle>
-                <CardDescription>10 new templates/week</CardDescription>
+                <CardTitle className="text-white">Digital Templates</CardTitle>
+                <CardDescription className="text-gray-400">10 new templates/week</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-indigo-600">$20-100/day</p>
-                  <p className="text-sm text-gray-600">Etsy + Gumroad + Creative Market</p>
-                  <Button className="w-full" variant="outline">Setup Automation</Button>
+                  <p className="text-2xl font-bold text-indigo-400">$20-100/day</p>
+                  <p className="text-sm text-gray-500">Etsy + Gumroad + Creative Market</p>
+                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-indigo-500/30" variant="outline">
+                    Setup Automation
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -24,217 +24,83 @@ class ActionPlanFormatter:
         for i, step in enumerate(steps, 1):
             step_data = plan_data.get(f'step_{i}_data', {})
             ai_content = step_data.get('ai_content', '')
-            if ai_content and 'GPT-5-mini Error' not in ai_content:
+            if ai_content:
                 step_contents.append({
                     'number': i,
                     'title': step,
                     'content': ai_content
                 })
 
-        # Create the formatted plan
-        formatted_plan = f"""# 🚀 {opportunity} - Master Action Plan
+        # Build the complete plan with ACTUAL AI-generated content
+        formatted_plan = f"""# 🚀 {opportunity} - Complete Action Plan
 
 ## 📋 Executive Summary
-Transform your expertise into a profitable {opportunity.lower()} business using our platform's powerful AI tools and automation capabilities.
+Your personalized roadmap for {opportunity.lower()} success, powered by AI-generated insights and real market data.
 
 **Timeline:** {timeline}
-**Difficulty:** Intermediate
-**Investment:** Minimal (Platform tools included)
-**Potential:** $2,000-$10,000/month
+**Total Steps:** {len(steps)}
+**Status:** Ready for Execution
 
 ---
 
-## 🎯 Your Success Path
+## 📊 Action Steps Overview
 
-### Phase 1: Foundation (Week 1)
-**Goal:** Establish your service foundation using platform tools
+"""
+        # Add each step's title as overview
+        for i, step in enumerate(steps, 1):
+            formatted_plan += f"{i}. {step}\n"
 
-#### Day 1-3: Setup & Research
-✅ **Use AI Content Studio** to create your brand identity
-- Generate professional logo with DALL-E integration
-- Design brand colors and style guide
-- Create business card templates
+        formatted_plan += "\n---\n\n## 🎯 Detailed Action Plan\n\n"
 
-✅ **Deploy Research Agent** for market analysis
-- Analyze competitor pricing and services
-- Identify your unique value proposition
-- Find your first 10 potential clients
+        # Now add the ACTUAL AI-generated content for each step
+        for step_info in step_contents:
+            formatted_plan += f"### Step {step_info['number']}: {step_info['title']}\n\n"
+            formatted_plan += step_info['content']
+            formatted_plan += "\n\n---\n\n"
 
-#### Day 4-7: Content Creation
-✅ **Leverage Content-Creator Agent** for materials
-- Generate service descriptions and packages
-- Create email templates for outreach
-- Build FAQ and knowledge base
+        # Add platform tools and resources section
+        formatted_plan += """## 🛠️ Platform Tools & Resources
 
-💡 **Platform Advantage:** No external tools needed - everything integrated!
+### AI-Powered Tools Available
+- **AI Content Studio** - Create visual assets and branding
+- **Content-Creator Agent** - Generate high-quality written content
+- **Research Agent** - Market analysis and competitor research
+- **Revenue Engine** - Payment processing and invoicing
+- **ML Analytics** - Performance tracking and optimization
 
----
-
-### Phase 2: Launch (Week 2)
-**Goal:** Go live with your service
-
-#### Day 8-10: Platform Setup
-✅ **Configure Revenue Engine** for payments
-- Set up tiered pricing (Basic/Pro/Premium)
-- Enable automated invoicing
-- Configure subscription management
-
-✅ **Activate Marketing Agent** for promotion
-- Create social media campaign
-- Design promotional graphics
-- Schedule content distribution
-
-#### Day 11-14: First Clients
-✅ **Use Outreach Automation**
-- Send personalized proposals
-- Track engagement with ML Analytics
-- A/B test your messaging
-
-🎉 **Milestone:** Land your first 3 paying clients!
-
----
-
-### Phase 3: Scale (Week 3)
-**Goal:** Optimize and expand
-
-#### Day 15-17: Service Optimization
-✅ **Deploy Specialized Agents**
-- Use coding-agent for automation scripts
-- Implement workflow improvements
-- Create client onboarding system
-
-#### Day 18-21: Growth Tactics
-✅ **Leverage Platform Analytics**
-- Track conversion rates
-- Optimize pricing strategy
-- Identify expansion opportunities
-
-📈 **Target:** 10 active clients by end of week 3
-
----
-
-### Phase 4: Systemize (Week 4)
-**Goal:** Build sustainable business
-
-#### Day 22-24: Automation
-✅ **Full Platform Integration**
-- Automate repetitive tasks
-- Set up recurring revenue streams
-- Create passive income products
-
-#### Day 25-28: Scale Strategy
-✅ **Growth Planning**
-- Hire virtual assistants through agent network
-- Expand service offerings
-- Plan for $5K+ monthly revenue
-
-🏆 **Success Metrics:**
-- 15+ active clients
-- $3,000+ monthly recurring revenue
-- 80% automated workflows
-- 5-star client satisfaction
-
----
-
-## 💰 Revenue Projections
-
-| Week | Clients | Revenue | Platform Tools Used |
-|------|---------|---------|-------------------|
-| 1 | 0-2 | $0-500 | AI Content Studio, Research Agent |
-| 2 | 3-5 | $500-1,500 | Revenue Engine, Marketing Agent |
-| 3 | 6-10 | $1,500-3,000 | ML Analytics, Specialized Agents |
-| 4 | 11-15 | $3,000-5,000 | Full Automation Suite |
-
----
-
-## 🛠️ Platform Tools Checklist
-
-### Essential Tools (Week 1)
-- [ ] AI Content Studio - Branding & design
-- [ ] Content-Creator Agent - Copy & materials
-- [ ] Research Agent - Market analysis
-
-### Growth Tools (Week 2-3)
-- [ ] Revenue Engine - Payment processing
-- [ ] Marketing Agent - Promotion
-- [ ] ML Analytics - Performance tracking
-
-### Scale Tools (Week 4+)
-- [ ] Coding Agent - Automation
-- [ ] Agent Network - Virtual team
-- [ ] Distribution System - Multi-channel reach
-
----
-
-## 📚 Resources & Support
-
-### Platform Documentation
-- **AI Content Studio Guide:** Create stunning visuals with DALL-E
-- **Agent Network Tutorial:** Deploy specialized agents
-- **Revenue Engine Setup:** Start accepting payments in minutes
-
-### Quick Links
-- 🎨 Access AI Content Studio
+### Quick Access Links
+- 🎨 Launch AI Content Studio
 - 🤖 Deploy Specialized Agents
 - 💳 Configure Revenue Engine
-- 📊 View ML Analytics Dashboard
+- 📊 View Analytics Dashboard
 
 ---
 
-## ⚡ Quick Start Actions
+## 💰 Revenue Potential
 
-### Today (Do These Now!)
-1. **Create your brand** using AI Content Studio
-2. **Research your niche** with Research Agent
-3. **Draft your first offer** with Content-Creator
-
-### Tomorrow
-1. Set up Revenue Engine for payments
-2. Create 5 pieces of marketing content
-3. Reach out to 10 potential clients
-
-### This Week
-1. Land your first 3 clients
-2. Deliver exceptional service
-3. Collect testimonials
+Based on market research and platform capabilities:
+- **Week 1-2:** $0-$500 (Setup & First Clients)
+- **Week 3-4:** $500-$2,000 (Growth Phase)
+- **Month 2:** $2,000-$5,000 (Scaling)
+- **Month 3+:** $5,000-$10,000+ (Optimized)
 
 ---
 
-## 🎯 Success Tips
+## ✅ Success Tips
 
-✨ **Leverage Platform Advantages:**
-- No external subscriptions needed
-- All tools integrated seamlessly
-- Real-time analytics and optimization
-- 24/7 AI agent support
-
-⚠️ **Avoid Common Mistakes:**
-- Don't use external tools like Canva or Gumroad
-- Don't manually handle what agents can automate
-- Don't ignore the ML Analytics insights
-- Don't undercharge - our platform adds premium value
-
----
-
-## 📈 30-Day Success Metrics
-
-**Week 1:** Foundation ✅
-**Week 2:** First Revenue ✅
-**Week 3:** Scaling Up ✅
-**Week 4:** Systems Built ✅
-
-**30-Day Goals:**
-- 💰 $3,000+ in revenue
-- 👥 15+ happy clients
-- ⚡ 80% automated
-- 🚀 Ready to scale to $10K/month
+1. **Leverage Platform Tools** - Use built-in AI capabilities instead of external services
+2. **Start Small, Scale Fast** - Begin with 1-2 clients, then rapidly expand
+3. **Automate Everything** - Use agents to handle repetitive tasks
+4. **Track & Optimize** - Monitor metrics and continuously improve
+5. **Build Relationships** - Focus on client satisfaction for referrals
 
 ---
 
 *Generated by Income Builder AI System*
-*Powered by 102+ Specialized Agents*
-*All tools included - no external subscriptions needed!*
+*Powered by Real Market Data & AI Analysis*
 """
+
+        return formatted_plan
 
         return formatted_plan
 
@@ -245,12 +111,21 @@ Transform your expertise into a profitable {opportunity.lower()} business using 
         ai_content = step_data.get('ai_content', '')
         real_data = step_data.get('real_data', {})
 
-        # Extract useful data from real_data
-        search_results = real_data.get('search_results', {}).get('results', [])
+        # Extract useful data from real_data - handle both dict and list formats
+        search_results_data = real_data.get('search_results', {})
+        search_results = []
+
+        # Handle different formats of search_results
+        if isinstance(search_results_data, dict):
+            search_results = search_results_data.get('results', [])
+        elif isinstance(search_results_data, list):
+            search_results = search_results_data
+
         market_insights = []
 
         for result in search_results[:3]:
-            if result.get('snippet'):
+            # Handle both dict and other formats
+            if isinstance(result, dict) and result.get('snippet'):
                 market_insights.append(f"• {result['snippet']}")
 
         formatted_step = f"""# Step {step_number}: {step_title}

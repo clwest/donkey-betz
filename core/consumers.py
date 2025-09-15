@@ -1392,6 +1392,18 @@ class CommandCenterConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                         'timestamp': datetime.now().isoformat()
                     }
                 })
+            elif message_type == 'analyze_opportunities':
+                # Handle AI Income Builder opportunity analysis
+                await self.handle_analyze_opportunities(text_data_json)
+            elif message_type == 'start_opportunity':
+                # Handle starting an opportunity action plan
+                await self.handle_start_opportunity(text_data_json)
+            elif message_type == 'update_profile':
+                # Handle user profile updates
+                await self.handle_update_profile(text_data_json)
+            elif message_type == 'get_earnings':
+                # Handle earnings data request
+                await self.handle_get_earnings(text_data_json)
         except json.JSONDecodeError:
             await self.safe_send({
                 'type': 'error',
@@ -1411,6 +1423,331 @@ class CommandCenterConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             'type': 'decision_update',
             'data': event['data']
         })
+
+    async def handle_analyze_opportunities(self, data):
+        """Handle opportunity analysis request from Decision Command"""
+        try:
+            # Import AIIncomeBuilder
+            from intelligence.income_builder import income_builder, UserProfile, SkillLevel
+
+            # Extract user profile data from request
+            profile_data = data.get('profile', {})
+
+            # Create UserProfile from frontend data
+            user_profile = UserProfile(
+                id=profile_data.get('id', 'user_1'),
+                current_balance=float(profile_data.get('currentBalance', 0)),
+                skills=profile_data.get('skills', []),
+                skill_level=SkillLevel(profile_data.get('skillLevel', 'beginner')),
+                available_hours_per_week=int(profile_data.get('availableHours', 10)),
+                interests=profile_data.get('interests', [])
+            )
+
+            # Analyze opportunities using AIIncomeBuilder
+            analysis_result = await income_builder.analyze_user_potential(user_profile)
+
+            # Get real opportunities from spider network
+            spider_opportunities = await self.get_spider_opportunities(user_profile)
+
+            # Combine AI analysis with spider data
+            combined_opportunities = self.combine_opportunities(
+                analysis_result, spider_opportunities
+            )
+
+            # Send response back to frontend
+            await self.safe_send({
+                'type': 'opportunities_analyzed',
+                'data': {
+                    'status': 'success',
+                    'analysis': combined_opportunities,
+                    'timestamp': datetime.now().isoformat(),
+                    'user_id': user_profile.id
+                }
+            })
+
+            # Store analysis in database
+            await self.save_opportunity_analysis(user_profile, combined_opportunities)
+
+        except Exception as e:
+            await self.safe_send({
+                'type': 'error',
+                'data': {
+                    'message': f'Opportunity analysis failed: {str(e)}',
+                    'error_type': 'analysis_error'
+                }
+            })
+
+    async def handle_start_opportunity(self, data):
+        """Handle starting an opportunity action plan"""
+        try:
+            from intelligence.income_builder import income_builder
+            from intelligence.models import ActionPlan, OpportunityActionPlan
+
+            user_id = data.get('user_id', 'user_1')
+            opportunity_id = data.get('opportunity_id')
+
+            if not opportunity_id:
+                raise ValueError("Opportunity ID is required")
+
+            # Create action plan using AIIncomeBuilder
+            action_plan = await income_builder.create_action_plan(user_id, opportunity_id)
+
+            # Save to database
+            plan_instance = await self.save_action_plan(action_plan, user_id)
+
+            # Start execution
+            if plan_instance:
+                task_id = plan_instance.start_execution()
+
+                await self.safe_send({
+                    'type': 'opportunity_started',
+                    'data': {
+                        'status': 'success',
+                        'plan_id': str(plan_instance.id),
+                        'task_id': task_id,
+                        'action_plan': action_plan,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                })
+            else:
+                raise Exception("Failed to create action plan")
+
+        except Exception as e:
+            await self.safe_send({
+                'type': 'error',
+                'data': {
+                    'message': f'Failed to start opportunity: {str(e)}',
+                    'error_type': 'start_error'
+                }
+            })
+
+    async def handle_update_profile(self, data):
+        """Handle user profile updates"""
+        try:
+            from intelligence.models import UserIncomeProfile
+
+            profile_data = data.get('profile', {})
+            user_id = profile_data.get('id', 'user_1')
+
+            # Save profile to database
+            await self.save_user_profile(user_id, profile_data)
+
+            await self.safe_send({
+                'type': 'profile_updated',
+                'data': {
+                    'status': 'success',
+                    'user_id': user_id,
+                    'timestamp': datetime.now().isoformat()
+                }
+            })
+
+        except Exception as e:
+            await self.safe_send({
+                'type': 'error',
+                'data': {
+                    'message': f'Profile update failed: {str(e)}',
+                    'error_type': 'profile_error'
+                }
+            })
+
+    async def handle_get_earnings(self, data):
+        """Handle earnings data request"""
+        try:
+            from intelligence.models import EarningRecord
+
+            user_id = data.get('user_id', 'user_1')
+
+            # Get earnings from database
+            earnings_data = await self.get_user_earnings(user_id)
+
+            await self.safe_send({
+                'type': 'earnings_data',
+                'data': {
+                    'status': 'success',
+                    'earnings': earnings_data,
+                    'timestamp': datetime.now().isoformat()
+                }
+            })
+
+        except Exception as e:
+            await self.safe_send({
+                'type': 'error',
+                'data': {
+                    'message': f'Failed to get earnings: {str(e)}',
+                    'error_type': 'earnings_error'
+                }
+            })
+
+    async def get_spider_opportunities(self, user_profile):
+        """Get real opportunities from spider network"""
+        try:
+            # Use the new spider opportunity connector
+            from intelligence.spider_opportunity_connector import get_spider_opportunities
+
+            # Convert user profile to expected format
+            profile_dict = {
+                'id': user_profile.id,
+                'skills': user_profile.skills,
+                'skillLevel': user_profile.skill_level.value,
+                'currentBalance': float(user_profile.current_balance),
+                'availableHours': user_profile.available_hours_per_week
+            }
+
+            # Get opportunities from spider network
+            spider_opportunities = await get_spider_opportunities(profile_dict)
+
+            # Format for frontend
+            spider_opps = []
+            for opp in spider_opportunities[:10]:  # Top 10
+                spider_opps.append({
+                    'id': opp.id,
+                    'title': opp.title,
+                    'description': opp.description,
+                    'type': opp.opportunity_type,
+                    'platform': opp.platform,
+                    'budget_range': f"${opp.budget_min or 0}-${opp.budget_max or 0}" if opp.budget_min or opp.budget_max else "TBD",
+                    'skills_required': opp.skills_required,
+                    'urgency': opp.urgency,
+                    'score': opp.quality_score,
+                    'source': 'spider_network',
+                    'spider_source': opp.spider_source
+                })
+
+            return spider_opps[:5]  # Return top 5
+
+        except Exception as e:
+            # If spider network is not available, return empty list
+            print(f"Spider network not available: {e}")
+            return []
+
+    def combine_opportunities(self, ai_analysis, spider_opportunities):
+        """Combine AI analysis with spider network opportunities"""
+        combined = ai_analysis.copy()
+
+        # Ensure data_sources is always present
+        combined['data_sources'] = ['ai_income_builder']
+
+        # Add spider opportunities to the mix
+        if spider_opportunities:
+            # Mix spider opportunities with AI opportunities
+            all_opportunities = combined.get('top_opportunities', []) + spider_opportunities
+
+            # Sort by relevance/score and take top opportunities
+            combined['top_opportunities'] = all_opportunities[:6]  # Top 6 total
+            combined['spider_opportunities_count'] = len(spider_opportunities)
+            combined['data_sources'].append('spider_network')
+        else:
+            combined['spider_opportunities_count'] = 0
+
+        return combined
+
+    @database_sync_to_async
+    def save_opportunity_analysis(self, user_profile, analysis):
+        """Save opportunity analysis to database"""
+        try:
+            from intelligence.models import UserIncomeProfile, OpportunityTracking
+            from django.contrib.auth.models import User
+
+            # Get or create user
+            user, created = User.objects.get_or_create(
+                username=user_profile.id,
+                defaults={'email': f'{user_profile.id}@example.com'}
+            )
+
+            # Update user income profile
+            profile, created = UserIncomeProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    'current_balance': user_profile.current_balance,
+                    'skills': user_profile.skills,
+                    'skill_level': user_profile.skill_level.value,
+                    'available_hours_per_week': user_profile.available_hours_per_week,
+                    'analysis_data': analysis
+                }
+            )
+
+            return True
+
+        except Exception as e:
+            print(f"Failed to save analysis: {e}")
+            return False
+
+    @database_sync_to_async
+    def save_action_plan(self, action_plan, user_id):
+        """Save action plan to database"""
+        try:
+            from intelligence.models import ActionPlan
+            from django.contrib.auth.models import User
+
+            user, created = User.objects.get_or_create(
+                username=user_id,
+                defaults={'email': f'{user_id}@example.com'}
+            )
+
+            plan_instance = ActionPlan.objects.create(
+                user=user,
+                opportunity_id=action_plan.get('plan_id', ''),
+                opportunity_title=action_plan.get('opportunity', ''),
+                plan_data=action_plan,
+                steps=action_plan.get('week_by_week', []),
+                timeline='4 weeks',
+                expected_outcome=action_plan.get('success_metrics', {})
+            )
+
+            return plan_instance
+
+        except Exception as e:
+            print(f"Failed to save action plan: {e}")
+            return None
+
+    @database_sync_to_async
+    def save_user_profile(self, user_id, profile_data):
+        """Save user profile to database"""
+        try:
+            from intelligence.models import UserIncomeProfile
+            from django.contrib.auth.models import User
+
+            user, created = User.objects.get_or_create(
+                username=user_id,
+                defaults={'email': f'{user_id}@example.com'}
+            )
+
+            UserIncomeProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    'current_balance': float(profile_data.get('currentBalance', 0)),
+                    'skills': profile_data.get('skills', []),
+                    'skill_level': profile_data.get('skillLevel', 'beginner'),
+                    'available_hours_per_week': int(profile_data.get('availableHours', 10))
+                }
+            )
+
+            return True
+
+        except Exception as e:
+            print(f"Failed to save profile: {e}")
+            return False
+
+    @database_sync_to_async
+    def get_user_earnings(self, user_id):
+        """Get user earnings from database"""
+        try:
+            from intelligence.models import EarningRecord
+            from django.contrib.auth.models import User
+
+            user = User.objects.get(username=user_id)
+            earnings = EarningRecord.objects.filter(user=user).order_by('-created_at')[:10]
+
+            return [{
+                'amount': float(record.amount),
+                'source': record.source,
+                'date': record.created_at.isoformat(),
+                'opportunity_id': record.opportunity_id
+            } for record in earnings]
+
+        except Exception as e:
+            print(f"Failed to get earnings: {e}")
+            return []
 
 
 class OpportunityScannerConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):

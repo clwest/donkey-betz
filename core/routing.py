@@ -32,6 +32,7 @@ websocket_urlpatterns = [
     re_path(r'^ws/opportunity-scanner/$', consumers.OpportunityScannerConsumer.as_asgi()),
     re_path(r'^ws/intelligence/$', consumers.CommandCenterConsumer.as_asgi()),
     re_path(r'^ws/decisions/$', consumers.CommandCenterConsumer.as_asgi()),
+    re_path(r'^ws/decision/$', consumers.CommandCenterConsumer.as_asgi()),  # Add singular route
 
     # Agent orchestration WebSocket (for orchestra frontend)
     re_path(r'^ws/agents/$', consumers.AgentProgressConsumer.as_asgi()),

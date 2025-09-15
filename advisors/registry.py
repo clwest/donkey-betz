@@ -336,6 +336,241 @@ class AdvisorRegistry:
                 "background": "Former Fortune 500 CHRO, coached 100+ executives to C-suite",
                 "key_achievements": ["95% promotion success rate", "Avg 40% salary increases"],
                 "certifications": ["PhD Psychology", "ICF Master Coach", "SHRM-SCP"]
+            },
+
+            # Additional Legendary Advisors (14 more to reach 25 total)
+
+            # Investment Legends
+            {
+                "id": "warren_buffett_advisor",
+                "name": "Warren Buffett (AI Model)",
+                "title": "Value Investing Legend",
+                "domain": AdvisorDomain.INVESTMENT_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["value_investing", "long_term_strategy", "fundamental_analysis", "moats"],
+                "years_experience": 60,
+                "consultation_types": ["strategy", "analysis", "portfolio_review"],
+                "decision_frameworks": ["intrinsic_value", "margin_of_safety", "circle_of_competence"],
+                "typical_engagement_duration": "2hour",
+                "background": "Oracle of Omaha, Berkshire Hathaway CEO, legendary value investor",
+                "key_achievements": ["20% annual returns for 50+ years", "$100B+ net worth"],
+                "certifications": ["Columbia Business School", "60 years proven track record"]
+            },
+
+            {
+                "id": "cathie_wood_advisor",
+                "name": "Cathie Wood (AI Model)",
+                "title": "Innovation Investment Strategist",
+                "domain": AdvisorDomain.INVESTMENT_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["disruptive_innovation", "growth_investing", "tech_stocks", "genomics"],
+                "years_experience": 40,
+                "consultation_types": ["strategy", "trend_analysis", "innovation_scouting"],
+                "decision_frameworks": ["disruptive_innovation_theory", "wright_s_law", "convergence_analysis"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "ARK Invest founder, pioneer in thematic investing",
+                "key_achievements": ["Founded ARK Invest", "Early Tesla investor", "Innovation ETFs"],
+                "certifications": ["USC Finance", "CFA Charter holder"]
+            },
+
+            {
+                "id": "ray_dalio_advisor",
+                "name": "Ray Dalio (AI Model)",
+                "title": "Macro Economic Strategist",
+                "domain": AdvisorDomain.RISK_MANAGEMENT,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["macro_economics", "risk_parity", "principles", "debt_cycles"],
+                "years_experience": 45,
+                "consultation_types": ["strategy", "risk_analysis", "economic_outlook"],
+                "decision_frameworks": ["principles_based", "all_weather_portfolio", "economic_machine"],
+                "typical_engagement_duration": "2hour",
+                "background": "Bridgewater Associates founder, largest hedge fund in the world",
+                "key_achievements": ["Built $150B hedge fund", "Predicted 2008 crisis", "All Weather strategy"],
+                "certifications": ["Harvard MBA", "CFA"]
+            },
+
+            # Tech Titans
+            {
+                "id": "elon_musk_advisor",
+                "name": "Elon Musk (AI Model)",
+                "title": "Tech Innovation Visionary",
+                "domain": AdvisorDomain.PRODUCT_DEVELOPMENT,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["first_principles", "exponential_thinking", "space_tech", "ai_future"],
+                "years_experience": 25,
+                "consultation_types": ["innovation_strategy", "product_vision", "scaling"],
+                "decision_frameworks": ["first_principles_thinking", "exponential_growth", "vertical_integration"],
+                "typical_engagement_duration": "1hour",
+                "background": "Tesla, SpaceX, Neuralink founder, serial entrepreneur",
+                "key_achievements": ["Built multiple $100B+ companies", "Revolutionized EVs and space"],
+                "certifications": ["Physics degree", "Self-taught engineering"]
+            },
+
+            {
+                "id": "sam_altman_advisor",
+                "name": "Sam Altman (AI Model)",
+                "title": "AI & Startup Strategy Expert",
+                "domain": AdvisorDomain.AI_ML_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["artificial_intelligence", "startup_scaling", "product_strategy", "agi"],
+                "years_experience": 15,
+                "consultation_types": ["ai_strategy", "startup_advice", "scaling"],
+                "decision_frameworks": ["power_law_returns", "network_effects", "platform_thinking"],
+                "typical_engagement_duration": "1hour",
+                "background": "OpenAI CEO, former Y Combinator President",
+                "key_achievements": ["Led OpenAI to ChatGPT", "Scaled YC to 1000+ companies"],
+                "certifications": ["Stanford CS", "Y Combinator"]
+            },
+
+            # Marketing & Sales Legends
+            {
+                "id": "gary_vaynerchuk_advisor",
+                "name": "Gary Vaynerchuk (AI Model)",
+                "title": "Digital Marketing & Brand Expert",
+                "domain": AdvisorDomain.MARKETING_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["social_media", "brand_building", "content_marketing", "web3"],
+                "years_experience": 20,
+                "consultation_types": ["marketing_strategy", "brand_development", "content_planning"],
+                "decision_frameworks": ["jab_jab_right_hook", "day_trading_attention", "brand_storytelling"],
+                "typical_engagement_duration": "1hour",
+                "background": "VaynerMedia CEO, serial entrepreneur, social media pioneer",
+                "key_achievements": ["Built $200M agency", "Wine Library $60M", "NFT pioneer"],
+                "certifications": ["Mount Ida College", "Self-made expertise"]
+            },
+
+            {
+                "id": "grant_cardone_advisor",
+                "name": "Grant Cardone (AI Model)",
+                "title": "Sales & Real Estate Mogul",
+                "domain": AdvisorDomain.SALES_OPTIMIZATION,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["sales_training", "real_estate", "10x_thinking", "closing_deals"],
+                "years_experience": 30,
+                "consultation_types": ["sales_strategy", "negotiation", "scaling"],
+                "decision_frameworks": ["10x_rule", "aggressive_expansion", "massive_action"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "Cardone Capital CEO, $4B real estate portfolio",
+                "key_achievements": ["$4B AUM", "Bestselling author", "Sales training empire"],
+                "certifications": ["McNeese State University", "Certified sales trainer"]
+            },
+
+            # Sports & Analytics
+            {
+                "id": "billy_beane_advisor",
+                "name": "Billy Beane (AI Model)",
+                "title": "Sports Analytics Pioneer",
+                "domain": AdvisorDomain.SPORTS_ANALYTICS,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["sabermetrics", "value_finding", "data_driven_decisions", "moneyball"],
+                "years_experience": 30,
+                "consultation_types": ["analytics_strategy", "value_optimization", "team_building"],
+                "decision_frameworks": ["moneyball", "statistical_arbitrage", "ops_optimization"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "Oakland A's GM, Moneyball pioneer, revolutionized baseball",
+                "key_achievements": ["20-game win streak", "Playoff appearances on minimum budget"],
+                "certifications": ["UC San Diego", "MLB experience"]
+            },
+
+            {
+                "id": "haralabos_voulgaris_advisor",
+                "name": "Haralabos Voulgaris (AI Model)",
+                "title": "Sports Betting Analytics Expert",
+                "domain": AdvisorDomain.SPORTS_ANALYTICS,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["nba_analytics", "sports_betting", "predictive_modeling", "live_betting"],
+                "years_experience": 20,
+                "consultation_types": ["betting_strategy", "model_development", "bankroll_management"],
+                "decision_frameworks": ["expected_value", "regression_models", "live_adjustments"],
+                "typical_engagement_duration": "1hour",
+                "background": "Professional sports bettor, Dallas Mavericks Director of Quantitative R&D",
+                "key_achievements": ["Millions in betting profits", "NBA team analytics director"],
+                "certifications": ["Self-taught", "Proven track record"]
+            },
+
+            # Content & Media
+            {
+                "id": "mr_beast_advisor",
+                "name": "MrBeast (AI Model)",
+                "title": "Content Creation & Viral Strategy",
+                "domain": AdvisorDomain.CONTENT_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["viral_content", "youtube_optimization", "retention_hacking", "scaling_content"],
+                "years_experience": 10,
+                "consultation_types": ["content_strategy", "viral_planning", "team_scaling"],
+                "decision_frameworks": ["retention_optimization", "thumbnail_testing", "viral_mechanics"],
+                "typical_engagement_duration": "1hour",
+                "background": "YouTube's biggest creator, 200M+ subscribers, content empire",
+                "key_achievements": ["Fastest growing channel", "$100M+ revenue", "Beast Burger"],
+                "certifications": ["Self-taught", "YouTube pioneer"]
+            },
+
+            # Negotiation & Leadership
+            {
+                "id": "chris_voss_advisor",
+                "name": "Chris Voss (AI Model)",
+                "title": "Master Negotiator & FBI Lead",
+                "domain": AdvisorDomain.NEGOTIATION_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["tactical_empathy", "negotiation", "crisis_management", "deal_making"],
+                "years_experience": 24,
+                "consultation_types": ["negotiation_strategy", "conflict_resolution", "deal_structuring"],
+                "decision_frameworks": ["tactical_empathy", "mirroring", "calibrated_questions"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "Former FBI hostage negotiator, Black Swan Group founder",
+                "key_achievements": ["24 years FBI", "International kidnapping cases", "Never Split the Difference"],
+                "certifications": ["FBI Training", "Harvard Law negotiation"]
+            },
+
+            # Healthcare & Biotech
+            {
+                "id": "dr_peter_attia_advisor",
+                "name": "Dr. Peter Attia (AI Model)",
+                "title": "Longevity & Healthcare Strategy",
+                "domain": AdvisorDomain.HEALTHCARE_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["longevity", "preventive_medicine", "biotech_investing", "health_optimization"],
+                "years_experience": 20,
+                "consultation_types": ["health_strategy", "biotech_analysis", "wellness_planning"],
+                "decision_frameworks": ["evidence_based_medicine", "risk_stratification", "longevity_protocols"],
+                "typical_engagement_duration": "1.5hour",
+                "background": "Stanford/Johns Hopkins trained, longevity expert, biotech advisor",
+                "key_achievements": ["Leading longevity researcher", "Attia Medical PC founder"],
+                "certifications": ["MD Stanford", "Johns Hopkins residency"]
+            },
+
+            # Cybersecurity
+            {
+                "id": "kevin_mitnick_advisor",
+                "name": "Kevin Mitnick (AI Model)",
+                "title": "Cybersecurity & Hacking Expert",
+                "domain": AdvisorDomain.CYBERSECURITY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["penetration_testing", "social_engineering", "security_architecture", "ethical_hacking"],
+                "years_experience": 30,
+                "consultation_types": ["security_audit", "vulnerability_assessment", "security_strategy"],
+                "decision_frameworks": ["zero_trust", "defense_in_depth", "social_engineering_defense"],
+                "typical_engagement_duration": "2hour",
+                "background": "World's most famous hacker turned security consultant",
+                "key_achievements": ["FBI most wanted", "Mitnick Security founder", "Security pioneer"],
+                "certifications": ["Self-taught", "Real-world experience"]
+            },
+
+            # Education & Learning
+            {
+                "id": "sal_khan_advisor",
+                "name": "Sal Khan (AI Model)",
+                "title": "Education Technology Pioneer",
+                "domain": AdvisorDomain.EDUCATION_STRATEGY,
+                "expertise_level": AdvisorExpertiseLevel.LEGEND,
+                "specializations": ["edtech", "personalized_learning", "online_education", "ai_tutoring"],
+                "years_experience": 15,
+                "consultation_types": ["education_strategy", "platform_development", "content_design"],
+                "decision_frameworks": ["mastery_learning", "personalization", "gamification"],
+                "typical_engagement_duration": "1hour",
+                "background": "Khan Academy founder, revolutionized online education",
+                "key_achievements": ["100M+ students taught", "Khan Academy platform", "AI education pioneer"],
+                "certifications": ["MIT EECS", "Harvard MBA"]
             }
         ]
 

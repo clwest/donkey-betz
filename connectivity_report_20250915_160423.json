@@ -1,0 +1,80 @@
+{
+  "test_timestamp": "2025-09-15T16:04:23.984568",
+  "connectivity_score": 40.0,
+  "overall_status": "NEEDS ATTENTION",
+  "test_results": {
+    "Agent Registry": {
+      "status": "PASS",
+      "message": "149 agents active, registry fully functional",
+      "details": {
+        "total_agents": 149,
+        "sample_agent": "business-agent",
+        "best_match_test": "arbitrage-hunter-agent"
+      }
+    },
+    "Advisor Registry": {
+      "status": "PASS",
+      "message": "25 advisors active, including legendary experts",
+      "details": {
+        "total_advisors": 25,
+        "sample_advisor": "Jennifer Park",
+        "best_match_test": "Robert Wilson",
+        "legend_count": 17
+      }
+    },
+    "System Integration": {
+      "status": "FAIL",
+      "message": "Only 0 components, expected 100+"
+    },
+    "Communication Channels": {
+      "status": "PASS",
+      "message": "Communication channels operational",
+      "details": {
+        "test_message_id": "1dfed0b6-8987-4e3c-a04f-e22f3ce0a168",
+        "message_queues_active": 0,
+        "websocket_connections": 0
+      }
+    },
+    "Data Pipelines": {
+      "status": "FAIL",
+      "message": "Only 0 data flows, expected 3+"
+    },
+    "Agent-Advisor Bridge": {
+      "status": "PASS",
+      "message": "Agent-advisor bridge operational",
+      "details": {
+        "test_consultation_id": "consult_real_estate_mogul_test_user_1757952263",
+        "matched_advisor": "Robert Wilson",
+        "total_advisors": 25
+      }
+    },
+    "Revenue Pipeline": {
+      "status": "FAIL",
+      "message": "No revenue components found"
+    },
+    "Automation Systems": {
+      "status": "FAIL",
+      "message": "Task parsing failed"
+    },
+    "ML Integration": {
+      "status": "FAIL",
+      "message": "No ML components found"
+    },
+    "WebSocket Connectivity": {
+      "status": "FAIL",
+      "message": "Only 0 WebSocket endpoints, expected 3+"
+    }
+  },
+  "system_overview": {
+    "agents_active": 149,
+    "advisors_active": 25,
+    "total_components": 0,
+    "data_flows": 0,
+    "message_channels": 0
+  },
+  "recommendations": [
+    "System needs significant attention",
+    "Multiple integration failures detected",
+    "Fix critical issues before production use"
+  ]
+}

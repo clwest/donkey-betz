@@ -324,7 +324,7 @@ class AgentRegistry:
                 'error_message': execution.error_message,
                 'started_at': execution.started_at,
                 'completed_at': execution.completed_at,
-                'execution_time_ms': getattr(execution, 'execution_time_seconds', 0) * 1000 if hasattr(execution, 'execution_time_seconds') else 0
+                'execution_time_ms': (getattr(execution, 'execution_time_seconds', 0) or 0) * 1000 if hasattr(execution, 'execution_time_seconds') and getattr(execution, 'execution_time_seconds', None) is not None else 0
             }
 
         except AgentExecution.DoesNotExist:
