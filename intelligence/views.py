@@ -310,7 +310,7 @@ class ExecuteActionPlanView(APIView):
                     'started_at': plan.started_at.isoformat() if plan.started_at else None,
                     'completed_at': plan.completed_at.isoformat() if plan.completed_at else None,
                     'execution_logs': plan.execution_logs[-10:] if plan.execution_logs else [],  # Last 10 logs
-                    'results': plan.results if plan.status == 'completed' else {},  # Include results for completed plans
+                    'results': plan.results or {},  # Always include results for progressive updates
                     'steps': plan.steps,  # Include steps for display
                     'resources': plan.resources
                 })

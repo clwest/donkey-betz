@@ -587,8 +587,9 @@ export default function IncomeBuilder() {
                             <div className="border-l-2 border-green-400 pl-3">
                               <h5 className="text-xs font-semibold text-green-700 mb-1">📁 Files Created:</h5>
                               <div className="space-y-2">
-                                {plan.results.files_created.map((file: string, idx: number) => {
-                                  const filename = file.split('/').pop() || file;
+                                {plan.results.files_created.map((file: string | any, idx: number) => {
+                                  const filepath = typeof file === 'string' ? file : String(file);
+                                  const filename = filepath.split('/').pop() || filepath;
                                   return (
                                     <div key={idx} className="flex items-center justify-between">
                                       <span className="text-sm text-gray-700">{filename}</span>
@@ -596,7 +597,13 @@ export default function IncomeBuilder() {
                                         size="sm"
                                         variant="outline"
                                         className="text-xs gap-1"
-                                        onClick={() => setViewingFile(filename)}
+                                        onClick={() => {
+                                          // Extract just the filename from the path
+                                          const filename = filepath.startsWith('income_builder_outputs/')
+                                            ? filepath.replace('income_builder_outputs/', '')
+                                            : filepath;
+                                          setViewingFile(filename);
+                                        }}
                                       >
                                         <Eye className="h-3 w-3" />
                                         View

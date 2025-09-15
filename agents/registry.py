@@ -106,6 +106,7 @@ class AgentRegistry:
                     'llm_model': agent.llm_model,
                     'llm_config': agent.llm_config,
                     'performance_metrics': getattr(agent, 'performance_metrics', {}),
+                    'is_active': agent.is_active,
                     'is_verified': agent.is_verified,
                     'created_at': agent.created_at,
                     'updated_at': agent.updated_at
@@ -323,7 +324,7 @@ class AgentRegistry:
                 'error_message': execution.error_message,
                 'started_at': execution.started_at,
                 'completed_at': execution.completed_at,
-                'execution_time_ms': execution.execution_time_ms
+                'execution_time_ms': getattr(execution, 'execution_time_seconds', 0) * 1000 if hasattr(execution, 'execution_time_seconds') else 0
             }
 
         except AgentExecution.DoesNotExist:
