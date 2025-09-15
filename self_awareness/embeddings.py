@@ -113,25 +113,30 @@ class CodebaseEmbeddingManager:
     def _get_code_files(self) -> List[Path]:
         """Get list of code files to process"""
         extensions = {'.py', '.js', '.tsx', '.jsx', '.vue', '.sql'}
-        exclude_patterns = {'.venv', 'node_modules', '__pycache__', '.git', 'migrations'}
-        
+        exclude_patterns = {'venv', '.venv', 'node_modules', '__pycache__', '.git', 'migrations', 'dist', 'build', '.tox', 'venv_ml'}
+
         code_files = []
-        
+
         for ext in extensions:
             for file_path in self.base_dir.rglob(f'*{ext}'):
-                # Skip excluded directories
-                if any(pattern in str(file_path) for pattern in exclude_patterns):
+                # Skip excluded directories - check each part of the path
+                path_parts = file_path.parts
+                if any(pattern in path_parts for pattern in exclude_patterns):
                     continue
-                    
+
+                # Also check if pattern is in the string path
+                if any(f'/{pattern}/' in str(file_path) for pattern in exclude_patterns):
+                    continue
+
                 # Skip empty files or very small files
                 try:
                     if file_path.stat().st_size < 50:  # Less than 50 bytes
                         continue
                 except:
                     continue
-                    
+
                 code_files.append(file_path)
-                
+
         return sorted(code_files)
         
     def _process_file(self, file_path: Path, force_refresh: bool) -> Dict[str, int]:
@@ -169,16 +174,17 @@ class CodebaseEmbeddingManager:
             chunks = self._split_file_into_chunks(content, file_path)
             stats['chunks_created'] = len(chunks)
             
-            # Generate embeddings for each chunk
-            with transaction.atomic():
-                for chunk in chunks:
-                    try:
-                        embedding = self._generate_embedding(chunk)
-                        if embedding:
-                            self._save_embedding(chunk, embedding, file_hash)
-                            stats['embeddings_generated'] += 1
-                    except Exception as e:
-                        logger.error(f"Error generating embedding for chunk in {file_path}: {e}")
+            # Generate embeddings for each chunk (no atomic transaction to allow partial success)
+            for chunk in chunks:
+                try:
+                    embedding = self._generate_embedding(chunk)
+                    if embedding:
+                        self._save_embedding(chunk, embedding, file_hash)
+                        stats['embeddings_generated'] += 1
+                except Exception as e:
+                    logger.error(f"Error generating embedding for chunk in {file_path}: {e}")
+                    # Continue processing other chunks even if one fails
+                    continue
                         
         except Exception as e:
             logger.error(f"Error processing file {file_path}: {e}")
@@ -538,21 +544,27 @@ class CodebaseEmbeddingManager:
         tokens = len(chunk.content.split())
         complexity_score = self._calculate_chunk_complexity(chunk)
         importance_score = self._calculate_importance_score(chunk)
-        
-        CodeEmbedding.objects.create(
+
+        # Create unique hash for this specific chunk (not the whole file)
+        chunk_hash = hashlib.sha256(chunk.content.encode()).hexdigest()
+
+        # Use update_or_create to handle duplicates gracefully
+        CodeEmbedding.objects.update_or_create(
             file_path=chunk.file_path,
-            file_type=Path(chunk.file_path).suffix,
-            function_name=chunk.function_name or "",
-            class_name=chunk.class_name or "",
-            code_snippet=chunk.content,
-            code_hash=file_hash,
-            embedding_vector=embedding,
-            embedding_model=self.embedding_model,
-            tokens=tokens,
-            complexity_score=complexity_score,
-            importance_score=importance_score,
-            dependencies=chunk.dependencies,
-            imports=chunk.imports
+            code_hash=chunk_hash,  # Use chunk-specific hash
+            defaults={
+                'file_type': Path(chunk.file_path).suffix,
+                'function_name': chunk.function_name or "",
+                'class_name': chunk.class_name or "",
+                'code_snippet': chunk.content,
+                'embedding_vector': embedding,
+                'embedding_model': self.embedding_model,
+                'tokens': tokens,
+                'complexity_score': complexity_score,
+                'importance_score': importance_score,
+                'dependencies': chunk.dependencies,
+                'imports': chunk.imports
+            }
         )
         
     def _calculate_chunk_complexity(self, chunk: CodeChunk) -> float:

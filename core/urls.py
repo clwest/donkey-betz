@@ -11,7 +11,13 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 
 # Import core views
-from core.intelligence_api import skynet_status, live_opportunities, live_predictions
+from core.intelligence_api import (
+    skynet_status, live_opportunities, live_predictions,
+    income_builder_analysis, income_action_plan,
+    execute_action_plan_view, view_generated_file,
+    monetization_opportunities, create_monetization_plan,
+    content_automation_plan, track_revenue
+)
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
@@ -124,6 +130,19 @@ urlpatterns = [
     path('api/v1/intelligence/skynet/status/', skynet_status, name='skynet-status'),
     path('api/v1/intelligence/opportunities/', live_opportunities, name='live-opportunities'),
     path('api/v1/intelligence/predictions/', live_predictions, name='live-predictions'),
+
+    # AI Income Builder - Start from $0
+    path('api/v1/intelligence/income-builder/', income_builder_analysis, name='income-builder'),
+    path('api/v1/intelligence/income-builder/action-plan/', income_action_plan, name='income-action-plan'),
+    path('api/v1/intelligence/income-builder/execute/', execute_action_plan_view, name='execute-action-plan'),
+    path('api/v1/intelligence/income-builder/file/<str:filename>/', view_generated_file, name='view-generated-file'),
+
+    # Unified Monetization Engine
+    path('api/v1/monetization/opportunities/', monetization_opportunities, name='monetization-opportunities'),
+    path('api/v1/monetization/plan/', create_monetization_plan, name='create-monetization-plan'),
+    path('api/v1/monetization/content-automation/', content_automation_plan, name='content-automation'),
+    path('api/v1/monetization/track-revenue/', track_revenue, name='track-revenue'),
+
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     
     # Agent execution instances endpoints
@@ -296,6 +315,7 @@ urlpatterns = [
     path('api/v1/campaigns/', include('campaigns.urls')),  # Campaigns module
     path('api/v1/mythology/', include('mythology.urls')),  # Mythology/Hallucination Review module
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
+    path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),

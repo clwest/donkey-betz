@@ -12,7 +12,7 @@ import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { WorkflowsPage } from './pages/workflows/WorkflowsPage';
 import { WorkflowBuilderPage } from './pages/workflows/WorkflowBuilderPage';
 import { AgentsPage } from './pages/agents/AgentsPage';
-import { GameBettingPage } from './pages/betting/GameBettingPage';
+// import { GameBettingPage } from './pages/betting/GameBettingPage'; // DISABLED - NO SPORTS
 import { StudioPage } from './pages/studio/StudioPage';
 import { GalleryPage } from './pages/gallery/GalleryPage';
 import { CampaignsPage } from './pages/campaigns/CampaignsPage';
@@ -32,8 +32,8 @@ import BlogsPage from './pages/public/BlogsPage';
 // User Pages
 // import UserDashboard from './pages/user/UserDashboard'; // Removed to avoid dashboard conflict
 
-// Sports Pages
-import SportsAnalysisPage from './pages/sports/SportsAnalysisPage';
+// Sports Pages - DISABLED
+// import SportsAnalysisPage from './pages/sports/SportsAnalysisPage';
 
 // Assistant Pages
 import AssistantChatPage from './pages/assistant/AssistantChatPage';
@@ -56,8 +56,8 @@ import DebugPage from './pages/DebugPage';
 // Connectivity
 import { ConnectivityPage } from './pages/connectivity/ConnectivityPage';
 
-// Sports
-import { SportsBoardPage } from './features/sports/pages/SportsBoardPage';
+// Sports - DISABLED
+// import { SportsBoardPage } from './features/sports/pages/SportsBoardPage';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -69,6 +69,10 @@ import { AuthGuard } from './components/auth/AuthGuard';
 // Features
 import { ChatWidget } from './components/Assistant';
 import { LifeConvictionsPage } from './pages/life-convictions/LifeConvictionsPage';
+import IncomeBuilder from './components/IncomeBuilder';
+import MonetizationDashboard from './pages/MonetizationDashboard';
+import RevenueOpportunities from './components/RevenueOpportunities';
+import RevenueDashboard from './components/RevenueDashboard';
 
 
 // Stores
@@ -121,8 +125,8 @@ function App() {
           
           {/* User Dashboard - Removed to avoid conflict with main dashboard */}
           
-          {/* Sports Analysis */}
-          <Route path="/sports/analyze" element={<SportsAnalysisPage />} />
+          {/* Sports Analysis - DISABLED
+          <Route path="/sports/analyze" element={<SportsAnalysisPage />} /> */}
           
           {/* AI Assistant */}
           <Route path="/assistant/chat" element={<AssistantChatPage />} />
@@ -173,7 +177,7 @@ function App() {
             <Route path="agent-channels" element={<Navigate to="/agent-hub" replace />} />
 
             {/* Decision Command Center redirects - consolidated pages */}
-            <Route path="betting" element={<Navigate to="/command-center" replace />} />
+            <Route path="betting" element={<Navigate to="/income-builder" replace />} /> {/* Redirect to Income Builder instead */}
             <Route path="research" element={<Navigate to="/command-center" replace />} />
             <Route path="feedback" element={<Navigate to="/command-center" replace />} />
             <Route path="knowledge" element={<Navigate to="/command-center" replace />} />
@@ -181,8 +185,12 @@ function App() {
             <Route path="mythology" element={<Navigate to="/command-center" replace />} />
 
             <Route path="connectivity" element={<ConnectivityPage />} />
-            <Route path="sports/board" element={<SportsBoardPage />} />
+            {/* <Route path="sports/board" element={<SportsBoardPage />} /> DISABLED - NO SPORTS */}
             <Route path="life-convictions" element={<LifeConvictionsPage />} />
+            <Route path="income-builder" element={<IncomeBuilder />} />
+            <Route path="monetization" element={<MonetizationDashboard />} />
+            <Route path="revenue-opportunities" element={<RevenueOpportunities />} />
+            <Route path="revenue-dashboard" element={<RevenueDashboard />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>

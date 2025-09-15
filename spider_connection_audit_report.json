@@ -1,0 +1,294 @@
+{
+  "summary": {
+    "timestamp": "2025-09-14T23:00:51.184882",
+    "total_spiders": 1870,
+    "spider_swarms": 10,
+    "connected_agents": 19,
+    "connected_advisors": 12,
+    "orphaned_agents": 0,
+    "income_builder_connected": true,
+    "income_builder_spider_count": 250,
+    "universal_feeds": [
+      "news_harvester",
+      "adaptive"
+    ],
+    "critical_status": {
+      "all_critical_connected": true,
+      "revenue_pipeline_active": true
+    }
+  },
+  "connections": {
+    "spiders": {
+      "financial_intel": {
+        "count": 250,
+        "type": "FinancialIntelligenceSpider",
+        "subscribers": [
+          "warren_buffett",
+          "ray_dalio",
+          "financial_strategist",
+          "crypto_expert",
+          "options_master"
+        ],
+        "total_connections": 5
+      },
+      "innovation_tracker": {
+        "count": 150,
+        "type": "InnovationTrackingSpider",
+        "subscribers": [
+          "cathie_wood",
+          "peter_thiel",
+          "ai_strategist",
+          "tech_architect"
+        ],
+        "total_connections": 4
+      },
+      "market_data": {
+        "count": 200,
+        "type": "MarketDataSpider",
+        "subscribers": [
+          "trading_agents",
+          "crypto_expert",
+          "options_master"
+        ],
+        "total_connections": 3
+      },
+      "social_sentiment": {
+        "count": 300,
+        "type": "SocialSentimentSpider",
+        "subscribers": [
+          "sentiment_agents",
+          "marketing_agents",
+          "social_trend_analyzers"
+        ],
+        "total_connections": 3
+      },
+      "news_harvester": {
+        "count": 200,
+        "type": "NewsHarvesterSpider",
+        "subscribers": [
+          "ALL"
+        ],
+        "total_connections": 127
+      },
+      "research_papers": {
+        "count": 100,
+        "type": "ResearchPaperSpider",
+        "subscribers": [
+          "ai_strategist",
+          "research_agents",
+          "academic_advisors"
+        ],
+        "total_connections": 3
+      },
+      "patent_monitor": {
+        "count": 50,
+        "type": "PatentMonitorSpider",
+        "subscribers": [
+          "cathie_wood",
+          "tech_architect",
+          "innovation_agents"
+        ],
+        "total_connections": 3
+      },
+      "regulatory": {
+        "count": 70,
+        "type": "RegulatoryTrackingSpider",
+        "subscribers": [
+          "legal_counsel",
+          "compliance_agents",
+          "financial_strategist"
+        ],
+        "total_connections": 3
+      },
+      "competitive": {
+        "count": 100,
+        "type": "CompetitiveIntelligenceSpider",
+        "subscribers": [
+          "business_strategist",
+          "startup_guru",
+          "competitive_agents"
+        ],
+        "total_connections": 3
+      },
+      "adaptive": {
+        "count": 450,
+        "type": "AdaptiveSpider",
+        "subscribers": [
+          "ALL"
+        ],
+        "total_connections": 127
+      }
+    },
+    "agents": {
+      "financial_analyst": [
+        "financial_intel"
+      ],
+      "portfolio_manager": [
+        "financial_intel"
+      ],
+      "risk_assessor": [
+        "financial_intel"
+      ],
+      "crypto_trader": [
+        "financial_intel"
+      ],
+      "forex_trader": [
+        "financial_intel"
+      ],
+      "income_builder": [
+        "financial_intel"
+      ],
+      "tech_scout": [
+        "innovation_tracker"
+      ],
+      "startup_evaluator": [
+        "innovation_tracker"
+      ],
+      "patent_analyzer": [
+        "innovation_tracker"
+      ],
+      "innovation_tracker": [
+        "innovation_tracker"
+      ],
+      "market_maker": [
+        "market_data"
+      ],
+      "arbitrage_finder": [
+        "market_data"
+      ],
+      "spread_analyzer": [
+        "market_data"
+      ],
+      "volatility_trader": [
+        "market_data"
+      ],
+      "sports_arbitrage": [
+        "market_data"
+      ],
+      "sentiment_analyzer": [
+        "social_sentiment"
+      ],
+      "social_media_monitor": [
+        "social_sentiment"
+      ],
+      "trend_detector": [
+        "social_sentiment"
+      ],
+      "influencer_tracker": [
+        "social_sentiment"
+      ]
+    },
+    "advisors": {
+      "warren_buffett": [
+        "financial_intel"
+      ],
+      "ray_dalio": [
+        "financial_intel",
+        "market_data"
+      ],
+      "peter_lynch": [
+        "financial_intel"
+      ],
+      "george_soros": [
+        "financial_intel"
+      ],
+      "cathie_wood": [
+        "innovation_tracker"
+      ],
+      "peter_thiel": [
+        "innovation_tracker"
+      ],
+      "marc_andreessen": [
+        "innovation_tracker"
+      ],
+      "reid_hoffman": [
+        "innovation_tracker"
+      ],
+      "paul_tudor_jones": [
+        "market_data"
+      ],
+      "stanley_druckenmiller": [
+        "market_data"
+      ],
+      "gary_vaynerchuk": [
+        "social_sentiment"
+      ],
+      "tim_ferriss": [
+        "social_sentiment"
+      ]
+    },
+    "routing_table": {},
+    "orphaned": {
+      "spiders": [],
+      "agents": [],
+      "advisors": []
+    },
+    "total_spiders": 1870
+  },
+  "critical_connections": {
+    "income_builder": [
+      "financial_intel"
+    ],
+    "sports_arbitrage": [
+      "market_data"
+    ],
+    "warren_buffett": [
+      "financial_intel"
+    ],
+    "cathie_wood": [
+      "innovation_tracker"
+    ],
+    "ray_dalio": [
+      "financial_intel",
+      "market_data"
+    ]
+  },
+  "routing_tables": {
+    "financial_intel": [
+      "advisor:warren_buffett",
+      "advisor:ray_dalio",
+      "advisor:peter_lynch",
+      "advisor:george_soros",
+      "agent:financial_analyst",
+      "agent:portfolio_manager",
+      "agent:risk_assessor",
+      "agent:crypto_trader",
+      "agent:forex_trader",
+      "agent:income_builder"
+    ],
+    "innovation_tracker": [
+      "advisor:cathie_wood",
+      "advisor:peter_thiel",
+      "advisor:marc_andreessen",
+      "advisor:reid_hoffman",
+      "agent:tech_scout",
+      "agent:startup_evaluator",
+      "agent:patent_analyzer",
+      "agent:innovation_tracker"
+    ],
+    "market_data": [
+      "advisor:ray_dalio",
+      "advisor:paul_tudor_jones",
+      "advisor:stanley_druckenmiller",
+      "agent:market_maker",
+      "agent:arbitrage_finder",
+      "agent:spread_analyzer",
+      "agent:volatility_trader",
+      "agent:sports_arbitrage"
+    ],
+    "social_sentiment": [
+      "advisor:gary_vaynerchuk",
+      "advisor:tim_ferriss",
+      "agent:sentiment_analyzer",
+      "agent:social_media_monitor",
+      "agent:trend_detector",
+      "agent:influencer_tracker"
+    ],
+    "news_harvester": "ALL",
+    "research_papers": "innovation_tracker + financial_intel",
+    "patent_monitor": "innovation_tracker",
+    "regulatory": "financial_intel + market_data",
+    "competitive": "innovation_tracker + financial_intel",
+    "adaptive": "ALL"
+  }
+}
