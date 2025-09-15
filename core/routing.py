@@ -5,6 +5,7 @@ Migrated from DBAO tools-manifest WebSocket capabilities.
 
 from django.urls import re_path
 from . import consumers
+from . import orchestra_consumers
 
 # Import sports routing if available
 try:
@@ -21,6 +22,10 @@ except ImportError:
 websocket_urlpatterns = [
     # Test endpoints
     re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
+
+    # Orchestra and Control Panel WebSockets
+    re_path(r'^ws/orchestra/$', orchestra_consumers.OrchestraConsumer.as_asgi()),
+    re_path(r'^ws/control/$', orchestra_consumers.ControlConsumer.as_asgi()),
 
     # Command Center & Intelligence WebSockets
     re_path(r'^ws/command-center/$', consumers.CommandCenterConsumer.as_asgi()),

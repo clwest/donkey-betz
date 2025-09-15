@@ -1,0 +1,132 @@
+{
+  "spider_id": "job_hunter_revenue_optimized",
+  "created_at": "2025-09-14T16:37:44.873634",
+  "optimization_focus": "revenue_generation",
+  "target_income": 100,
+  "priority": "high_value_opportunities",
+  "search_configurations": [
+    {
+      "search_id": "high_budget_content",
+      "keywords": "content writer $1000 ongoing blog technical",
+      "platforms": [
+        "upwork",
+        "linkedin"
+      ],
+      "budget_filter": "$500+",
+      "frequency": "hourly",
+      "priority": "medium"
+    },
+    {
+      "search_id": "ai_consulting",
+      "keywords": "AI consultant ChatGPT implementation automation",
+      "platforms": [
+        "upwork",
+        "linkedin",
+        "freelancer"
+      ],
+      "budget_filter": "$1000+",
+      "frequency": "hourly",
+      "priority": "high"
+    },
+    {
+      "search_id": "automation_projects",
+      "keywords": "automation Zapier Make workflow integration",
+      "platforms": [
+        "upwork",
+        "guru"
+      ],
+      "budget_filter": "$800+",
+      "frequency": "every 2 hours",
+      "priority": "medium"
+    },
+    {
+      "search_id": "prompt_engineering",
+      "keywords": "prompt engineer AI optimization LLM",
+      "platforms": [
+        "upwork",
+        "linkedin"
+      ],
+      "budget_filter": "$500+",
+      "frequency": "every 3 hours",
+      "priority": "medium"
+    },
+    {
+      "search_id": "social_media_retainer",
+      "keywords": "social media manager monthly retainer ongoing",
+      "platforms": [
+        "upwork",
+        "freelancer"
+      ],
+      "budget_filter": "$600+",
+      "frequency": "daily",
+      "priority": "medium"
+    }
+  ],
+  "content_filters": {
+    "minimum_budget": 300,
+    "quality_indicators": [
+      "5.00",
+      "Weekly",
+      "established company",
+      "Remote",
+      "Sealed",
+      "Guaranteed",
+      "Spent $",
+      "Payment verified",
+      "growing company",
+      "Escrow",
+      "$",
+      "salary",
+      "$500+",
+      "Monthly",
+      "Premium",
+      "Custom offer",
+      "Pro",
+      "$1000+",
+      "Full-time",
+      "Business",
+      "Enterprise",
+      "Featured",
+      "Urgent",
+      "NDA",
+      "Long-term",
+      "benefits",
+      "Contract",
+      "Milestone",
+      "Ongoing"
+    ],
+    "negative_keywords": [
+      "test",
+      "sample",
+      "trial",
+      "free",
+      "volunteer",
+      "$5",
+      "$10",
+      "$25",
+      "beginner",
+      "student",
+      "one-time",
+      "quick task",
+      "simple"
+    ]
+  },
+  "scheduling": {
+    "frequency": "every_hour",
+    "peak_hours": [
+      9,
+      10,
+      11,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "time_zones": [
+      "EST",
+      "PST",
+      "GMT"
+    ]
+  }
+}

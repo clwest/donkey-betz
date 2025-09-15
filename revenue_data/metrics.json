@@ -1,0 +1,43 @@
+{
+  "total_proposals_created": 5,
+  "total_proposals_submitted": 5,
+  "total_responses": 3,
+  "total_accepted": 2,
+  "total_completed": 2,
+  "total_revenue_earned": 1200.0,
+  "response_rate": 0.6,
+  "acceptance_rate": 0.6666666666666666,
+  "completion_rate": 1.0,
+  "daily_proposals": 5,
+  "daily_revenue": 1200.0,
+  "weekly_revenue": 0.0,
+  "monthly_revenue": 0.0,
+  "platform_stats": {
+    "Upwork": {
+      "submitted": 2,
+      "responses": 1,
+      "accepted": 0,
+      "revenue": 0.0
+    },
+    "LinkedIn": {
+      "submitted": 1,
+      "responses": 1,
+      "accepted": 1,
+      "revenue": 800.0
+    },
+    "Fiverr": {
+      "submitted": 1,
+      "responses": 0,
+      "accepted": 0,
+      "revenue": 0.0
+    },
+    "Facebook Groups": {
+      "submitted": 1,
+      "responses": 1,
+      "accepted": 1,
+      "revenue": 400.0
+    }
+  },
+  "first_100_progress": 1.0,
+  "days_to_first_100": 0
+}

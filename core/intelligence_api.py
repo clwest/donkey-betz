@@ -7,6 +7,19 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from datetime import datetime
+import asyncio
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from backend.intelligence.income_builder import income_builder, UserProfile, SkillLevel
+from backend.intelligence.monetization_engine import monetization_engine
+
+# Import the views we need to expose
+from intelligence.views import ExecuteActionPlanView, ViewGeneratedFileView
+
+# Create view instances
+execute_action_plan_view = ExecuteActionPlanView.as_view()
+view_generated_file = ViewGeneratedFileView.as_view()
 
 
 @api_view(['GET'])
@@ -68,3 +81,255 @@ def live_predictions(request):
             }
         ]
     })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def income_builder_analysis(request):
+    """💰 AI Income Builder - Start from $0"""
+
+    if request.method == 'GET':
+        # Get available income opportunities
+        opportunities = []
+        for opp in income_builder.opportunities:
+            opportunities.append({
+                'id': opp.id,
+                'title': opp.title,
+                'stream_type': opp.stream_type.value,
+                'description': opp.description,
+                'time_to_income': opp.time_to_first_income,
+                'potential_monthly': opp.potential_monthly,
+                'difficulty': opp.difficulty.value,
+                'initial_investment': opp.initial_investment,
+                'success_rate': opp.success_rate,
+                'market_demand': opp.market_demand,
+                'required_skills': opp.required_skills,
+                'action_steps': opp.action_steps,
+                'resources': opp.resources
+            })
+
+        return Response({
+            'success': True,
+            'opportunities': opportunities,
+            'count': len(opportunities),
+            'message': 'Start earning from $0 with AI assistance'
+        })
+
+    else:  # POST - Analyze user potential
+        try:
+            # Create user profile from request data
+            user_data = request.data
+            user_profile = UserProfile(
+                id=str(request.user.id) if request.user.is_authenticated else "anonymous",
+                current_balance=user_data.get('current_balance', 0.0),
+                skills=user_data.get('skills', []),
+                skill_level=SkillLevel[user_data.get('skill_level', 'BEGINNER').upper()],
+                available_hours_per_week=user_data.get('available_hours', 10),
+                interests=user_data.get('interests', [])
+            )
+
+            # Get income analysis
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            analysis = loop.run_until_complete(
+                income_builder.analyze_user_potential(user_profile)
+            )
+
+            return Response({
+                'success': True,
+                'analysis': analysis,
+                'message': 'Income opportunities analyzed successfully'
+            })
+
+        except Exception as e:
+            return Response({
+                'error': f'Failed to analyze income opportunities: {str(e)}',
+                'success': False
+            })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def income_action_plan(request):
+    """📋 Create personalized action plan for income generation"""
+    try:
+        user_id = str(request.user.id) if request.user.is_authenticated else "anonymous"
+        opportunity_id = request.data.get('opportunity_id')
+
+        if not opportunity_id:
+            return Response({
+                'error': 'opportunity_id is required',
+                'success': False
+            })
+
+        # Create action plan
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        action_plan = loop.run_until_complete(
+            income_builder.create_action_plan(user_id, opportunity_id)
+        )
+
+        return Response({
+            'success': True,
+            'action_plan': action_plan,
+            'message': 'Action plan created successfully'
+        })
+
+    except Exception as e:
+        return Response({
+            'error': f'Failed to create action plan: {str(e)}',
+            'success': False
+        })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def monetization_opportunities(request):
+    """💰 Unified Monetization - All Revenue Streams"""
+
+    if request.method == 'GET':
+        # Get revenue dashboard
+        dashboard = monetization_engine.get_revenue_dashboard()
+
+        return Response({
+            'success': True,
+            'dashboard': dashboard,
+            'active_opportunities': len(monetization_engine.opportunities),
+            'message': 'Multiple revenue streams available'
+        })
+
+    else:  # POST - Analyze best opportunities
+        try:
+            user_data = request.data
+            user_profile = {
+                'current_balance': user_data.get('current_balance', 0),
+                'available_hours': user_data.get('available_hours', 20),
+                'skills': user_data.get('skills', []),
+                'interests': user_data.get('interests', [])
+            }
+
+            # Get best opportunities
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            opportunities = loop.run_until_complete(
+                monetization_engine.analyze_best_opportunities(user_profile)
+            )
+
+            return Response({
+                'success': True,
+                'opportunities': [
+                    {
+                        'id': opp['opportunity'].id,
+                        'title': opp['opportunity'].title,
+                        'stream': opp['opportunity'].stream.value,
+                        'potential_revenue': opp['opportunity'].potential_revenue,
+                        'hours_required': opp['opportunity'].time_investment,
+                        'roi': opp['roi'],
+                        'score': opp['score'],
+                        'ai_powered': opp['ai_powered'],
+                        'highly_automated': opp['highly_automated'],
+                        'quick_start': opp['quick_start']
+                    }
+                    for opp in opportunities
+                ],
+                'message': 'Opportunities analyzed successfully'
+            })
+
+        except Exception as e:
+            return Response({
+                'error': f'Failed to analyze opportunities: {str(e)}',
+                'success': False
+            })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_monetization_plan(request):
+    """📋 Create Complete Monetization Plan"""
+    try:
+        selected_streams = request.data.get('streams', [])
+
+        if not selected_streams:
+            return Response({
+                'error': 'Please select at least one revenue stream',
+                'success': False
+            })
+
+        # Create monetization plan
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        plan = loop.run_until_complete(
+            monetization_engine.create_monetization_plan(selected_streams)
+        )
+
+        return Response({
+            'success': True,
+            'plan': plan,
+            'message': 'Monetization plan created successfully'
+        })
+
+    except Exception as e:
+        return Response({
+            'error': f'Failed to create plan: {str(e)}',
+            'success': False
+        })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def content_automation_plan(request):
+    """🤖 Get Content Automation & Monetization Plan"""
+    try:
+        # Get automation plan
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        automation = loop.run_until_complete(
+            monetization_engine.automate_content_monetization()
+        )
+
+        return Response({
+            'success': True,
+            'automation_plan': automation,
+            'total_potential': '$200-950/day automated income',
+            'message': 'Content automation plan ready'
+        })
+
+    except Exception as e:
+        return Response({
+            'error': f'Failed to get automation plan: {str(e)}',
+            'success': False
+        })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def track_revenue(request):
+    """📊 Track Revenue from Any Stream"""
+    try:
+        stream = request.data.get('stream')
+        amount = request.data.get('amount', 0)
+
+        if not stream:
+            return Response({
+                'error': 'Stream is required',
+                'success': False
+            })
+
+        # Track revenue
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(
+            monetization_engine.track_revenue(stream, amount)
+        )
+
+        return Response({
+            'success': True,
+            'tracking': result,
+            'message': f'Revenue tracked: ${amount} from {stream}'
+        })
+
+    except Exception as e:
+        return Response({
+            'error': f'Failed to track revenue: {str(e)}',
+            'success': False
+        })

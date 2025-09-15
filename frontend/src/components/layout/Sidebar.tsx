@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  HomeIcon, 
+import {
+  HomeIcon,
   CpuChipIcon,
   SparklesIcon,
   PhotoIcon,
@@ -19,8 +19,10 @@ import {
   BeakerIcon,
   CircleStackIcon,
   ChatBubbleLeftRightIcon,
+  CurrencyDollarIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline';
-import { 
+import {
   HomeIcon as HomeIconSolid,
   CpuChipIcon as CpuChipIconSolid,
   SparklesIcon as SparklesIconSolid,
@@ -38,6 +40,8 @@ import {
   BeakerIcon as BeakerIconSolid,
   CircleStackIcon as CircleStackIconSolid,
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
+  CurrencyDollarIcon as CurrencyDollarIconSolid,
+  BanknotesIcon as BanknotesIconSolid,
 } from '@heroicons/react/24/solid';
 import clsx from 'clsx';
 import { useAuthStore } from '../../store/authStore';
@@ -49,7 +53,11 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
-  { name: 'Decision Command', href: '/decision-command', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: '$0 START' },
+  { name: 'Income Builder', href: '/income-builder', icon: CurrencyDollarIcon, iconActive: CurrencyDollarIconSolid, badge: '🔥 START HERE' },
+  { name: 'Revenue Opportunities', href: '/revenue-opportunities', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 LIVE' },
+  { name: 'Revenue Dashboard', href: '/revenue-dashboard', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: '📊 METRICS' },
+  { name: 'Monetization Hub', href: '/monetization', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: 'TRACK $$$' },
+  { name: 'Decision Command', href: '/decision-command', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'AI DECISIONS' },
   { name: 'Neural Orchestra', href: '/neural-orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'LIVE' },
   { name: 'Control Center', href: '/control-center', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: 'NEW' },
   { name: 'Legacy Command', href: '/command-center', icon: CloudArrowUpIcon, iconActive: CloudArrowUpIconSolid },

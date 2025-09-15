@@ -1,0 +1,170 @@
+{
+  "platform": "guru",
+  "spider_id": "guru_revenue_spider",
+  "url_patterns": [
+    "https://www.guru.com/d/jobs/",
+    "https://www.guru.com/d/job-search/"
+  ],
+  "quality_indicators": [
+    "Payment verified",
+    "Escrow",
+    "$500+",
+    "$1000+",
+    "Ongoing",
+    "Long-term"
+  ],
+  "search_strategies": [
+    {
+      "strategy_id": "guru_content_writing",
+      "opportunity_type": "content_writing",
+      "keywords": [
+        "content writer",
+        "blog writer",
+        "copywriter",
+        "technical writer",
+        "SEO content",
+        "marketing copy",
+        "article writing",
+        "ghost writer",
+        "$500+",
+        "$1000+"
+      ],
+      "search_frequency": "hourly",
+      "priority": "high"
+    },
+    {
+      "strategy_id": "guru_prompt_engineering",
+      "opportunity_type": "prompt_engineering",
+      "keywords": [
+        "prompt engineer",
+        "AI optimization",
+        "ChatGPT expert",
+        "Claude specialist",
+        "prompt design",
+        "AI consultant",
+        "machine learning",
+        "LLM optimization",
+        "AI integration",
+        "automation"
+      ],
+      "search_frequency": "hourly",
+      "priority": "high"
+    },
+    {
+      "strategy_id": "guru_ai_automation",
+      "opportunity_type": "ai_automation",
+      "keywords": [
+        "automation specialist",
+        "workflow automation",
+        "process automation",
+        "Zapier expert",
+        "Make.com",
+        "AI integration",
+        "business automation",
+        "workflow designer",
+        "system integration",
+        "API integration"
+      ],
+      "search_frequency": "hourly",
+      "priority": "medium"
+    },
+    {
+      "strategy_id": "guru_social_media",
+      "opportunity_type": "social_media",
+      "keywords": [
+        "social media manager",
+        "content creator",
+        "Instagram growth",
+        "LinkedIn marketing",
+        "TikTok strategy",
+        "social media strategy",
+        "influencer marketing",
+        "brand management",
+        "community management",
+        "monthly retainer"
+      ],
+      "search_frequency": "hourly",
+      "priority": "medium"
+    },
+    {
+      "strategy_id": "guru_ai_tutoring",
+      "opportunity_type": "ai_tutoring",
+      "keywords": [
+        "AI trainer",
+        "AI consultant",
+        "business training",
+        "productivity coach",
+        "ChatGPT training",
+        "AI implementation",
+        "team training",
+        "corporate training",
+        "executive coaching",
+        "workshop facilitator"
+      ],
+      "search_frequency": "hourly",
+      "priority": "high"
+    }
+  ],
+  "data_extraction": {
+    "job_title": {
+      "selector": "h2, h3, .job-title",
+      "priority": "high"
+    },
+    "budget": {
+      "selector": ".budget, .price, .rate",
+      "priority": "high"
+    },
+    "description": {
+      "selector": ".description, .job-description",
+      "priority": "medium"
+    },
+    "client_info": {
+      "selector": ".client, .employer",
+      "priority": "medium"
+    },
+    "posting_date": {
+      "selector": ".date, .posted",
+      "priority": "low"
+    },
+    "deadline": {
+      "selector": ".deadline, .due",
+      "priority": "medium"
+    }
+  },
+  "filters": {
+    "minimum_budget": 300,
+    "exclude_keywords": [
+      "test",
+      "sample",
+      "free",
+      "volunteer"
+    ],
+    "include_keywords": [
+      "Instagram growth",
+      "AI trainer",
+      "copywriter",
+      "productivity coach",
+      "prompt engineer",
+      "AI optimization",
+      "ChatGPT expert",
+      "technical writer",
+      "workflow automation",
+      "LinkedIn marketing",
+      "TikTok strategy",
+      "social media manager",
+      "process automation",
+      "automation specialist",
+      "content creator",
+      "Zapier expert",
+      "ChatGPT training",
+      "Make.com",
+      "business training",
+      "blog writer",
+      "prompt design",
+      "content writer",
+      "Claude specialist",
+      "AI consultant",
+      "SEO content"
+    ]
+  }
+}

@@ -136,10 +136,12 @@ class OpenAIProvider(BaseAIProvider):
             # Handle GPT-5 models differently - they have different parameters
             try:
                 if 'gpt-5' in model.lower():
-                    # Try with max_completion_tokens first (new parameter for GPT-5)
-                    # Check for both max_completion_tokens and max_tokens in config
-                    completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 2000))
-                    # GPT-5 doesn't support temperature and other parameters
+                    # GPT-5 works best without token limits or with very high limits
+                    # It uses reasoning tokens that don't count toward output
+                    if config.get('max_completion_tokens') or config.get('max_tokens'):
+                        # Use a much higher limit for GPT-5 to account for reasoning tokens
+                        completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 2000)) + 2000
+                    # GPT-5 doesn't support temperature and other parameters (only default value of 1)
                 else:
                     # Non-GPT-5 models use standard parameters
                     completion_params["max_tokens"] = config.get('max_tokens', 2000)
@@ -562,3 +564,54 @@ class AIProviderManager:
         if provider_instance:
             return provider_instance.estimate_cost(model, input_tokens, output_tokens)
         return 0.0
+
+    def generate_embeddings(self, texts: List[str], model: str = "text-embedding-3-small") -> Dict[str, Any]:
+        """Generate embeddings for texts using OpenAI"""
+        # Use OpenAI provider for embeddings
+        provider_instance = self.get_provider('openai')
+
+        if not provider_instance:
+            # Try to initialize OpenAI if not already done
+            if HAS_OPENAI and settings.AI_PROVIDERS.get('OPENAI_API_KEY'):
+                try:
+                    provider_instance = OpenAIProvider(settings.AI_PROVIDERS['OPENAI_API_KEY'])
+                    self.providers['openai'] = provider_instance
+                except Exception as e:
+                    logger.error(f"Failed to initialize OpenAI for embeddings: {e}")
+                    return {'error': str(e)}
+            else:
+                return {'error': 'OpenAI provider not available for embeddings'}
+
+        # Generate embeddings
+        try:
+            if not hasattr(provider_instance, 'client'):
+                provider_instance._initialize_client()
+
+            response = provider_instance.client.embeddings.create(
+                model=model,
+                input=texts
+            )
+
+            embeddings = [item.embedding for item in response.data]
+
+            return {
+                'embeddings': embeddings,
+                'model': model,
+                'usage': response.usage.total_tokens if hasattr(response, 'usage') else 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating embeddings: {e}")
+            return {'error': str(e)}
+
+
+# Convenience function for backward compatibility
+def get_ai_provider():
+    """Get the default AI provider instance."""
+    manager = AIProviderManager()
+    # Try to get OpenAI first, then any available provider
+    for provider_name in ['openai', 'anthropic', 'google']:
+        provider = manager.get_provider(provider_name)
+        if provider:
+            return provider
+    return None

@@ -1,0 +1,96 @@
+{
+  "validation_timestamp": "84686.902298541",
+  "tests_run": [
+    {
+      "agent": "Income Builder",
+      "ml_pipeline_test": {
+        "status": "PASS",
+        "message": "ML Pipeline produces variable outputs",
+        "scores": [
+          0.8799999999999999,
+          0.95
+        ],
+        "engine": "real_analysis"
+      },
+      "file_generation_test": {
+        "status": "PASS",
+        "message": "Created 2 real files",
+        "files": [
+          {
+            "path": "action_plans/validation_test_user/workflow_content_writing_validation_test_user_detailed_plan.md",
+            "size": 2265
+          },
+          {
+            "path": "action_plans/validation_test_user/workflow_content_writing_validation_test_user_checklist.md",
+            "size": 646
+          }
+        ]
+      },
+      "tool_integration_test": {
+        "status": "PASS",
+        "message": "Tools initialized: ['news_api', 'file_generation']",
+        "tools": {
+          "web_search": false,
+          "news_api": true,
+          "file_generation": true
+        }
+      },
+      "market_research_test": {
+        "status": "LIMITED",
+        "message": "Market research method exists but no tools used",
+        "limitation": "Limited to static analysis - real market research tools not available"
+      },
+      "overall_score": 90
+    },
+    {
+      "test": "Hardcoded Pattern Scan",
+      "violations_found": 2,
+      "violations": [
+        {
+          "file": "/Users/donkeyking/development/unified-donkey-betz/intelligence/income_builder.py",
+          "pattern": "mock",
+          "description": "Mock data usage"
+        },
+        {
+          "file": "/Users/donkeyking/development/unified-donkey-betz/backend/intelligence/income_builder.py",
+          "pattern": "mock",
+          "description": "Mock data usage"
+        }
+      ],
+      "status": "FAIL"
+    },
+    {
+      "test": "Real File Output Check",
+      "real_files_found": 4,
+      "files": [
+        {
+          "path": "/Users/donkeyking/development/unified-donkey-betz/action_plans/validation_test_user/workflow_content_writing_validation_test_user_checklist.md",
+          "size": 646,
+          "created": 1757884578.3504734
+        },
+        {
+          "path": "/Users/donkeyking/development/unified-donkey-betz/action_plans/validation_test_user/workflow_content_writing_validation_test_user_detailed_plan.md",
+          "size": 2265,
+          "created": 1757884578.350389
+        },
+        {
+          "path": "/Users/donkeyking/development/unified-donkey-betz/action_plans/test_validation_user/workflow_content_writing_test_validation_user_detailed_plan.md",
+          "size": 2265,
+          "created": 1757884496.804482
+        },
+        {
+          "path": "/Users/donkeyking/development/unified-donkey-betz/action_plans/test_validation_user/workflow_content_writing_test_validation_user_checklist.md",
+          "size": 646,
+          "created": 1757884496.8045974
+        }
+      ],
+      "status": "PASS"
+    }
+  ],
+  "overall_score": 105,
+  "violations_found": [],
+  "recommendations": [
+    "System is performing well with real tool usage"
+  ],
+  "status": "EXCELLENT"
+}

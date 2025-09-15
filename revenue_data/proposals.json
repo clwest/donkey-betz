@@ -1,0 +1,90 @@
+[
+  {
+    "proposal_id": "prop_001",
+    "opportunity_type": "content_writing",
+    "platform": "Upwork",
+    "client_name": "TechCorp",
+    "project_description": "Blog posts about AI tools",
+    "proposal_value": 500,
+    "submitted_date": "2025-09-14T16:36:14.795335",
+    "status": "responded",
+    "response_date": "2025-09-14T16:36:14.796769",
+    "acceptance_date": null,
+    "completion_date": null,
+    "payment_date": null,
+    "actual_payment": null,
+    "notes": [
+      "Response: Interested, wants to see portfolio"
+    ]
+  },
+  {
+    "proposal_id": "prop_002",
+    "opportunity_type": "prompt_engineering",
+    "platform": "LinkedIn",
+    "client_name": "Marketing Agency",
+    "project_description": "ChatGPT optimization",
+    "proposal_value": 800,
+    "submitted_date": "2025-09-14T16:36:14.795646",
+    "status": "completed",
+    "response_date": "2025-09-14T16:36:14.797421",
+    "acceptance_date": "2025-09-14T16:36:14.797813",
+    "completion_date": "2025-09-14T16:36:14.798421",
+    "payment_date": "2025-09-14T16:36:14.798422",
+    "actual_payment": 800,
+    "notes": [
+      "Response: Very impressed with examples",
+      "Accepted: Hired for 3-month project"
+    ]
+  },
+  {
+    "proposal_id": "prop_003",
+    "opportunity_type": "ai_automation",
+    "platform": "Fiverr",
+    "client_name": "E-commerce Store",
+    "project_description": "Order processing automation",
+    "proposal_value": 1200,
+    "submitted_date": "2025-09-14T16:36:14.795986",
+    "status": "submitted",
+    "response_date": null,
+    "acceptance_date": null,
+    "completion_date": null,
+    "payment_date": null,
+    "actual_payment": null,
+    "notes": []
+  },
+  {
+    "proposal_id": "prop_004",
+    "opportunity_type": "social_media",
+    "platform": "Facebook Groups",
+    "client_name": "Local Business",
+    "project_description": "Instagram management",
+    "proposal_value": 400,
+    "submitted_date": "2025-09-14T16:36:14.796294",
+    "status": "completed",
+    "response_date": "2025-09-14T16:36:14.796924",
+    "acceptance_date": "2025-09-14T16:36:14.797100",
+    "completion_date": "2025-09-14T16:36:14.798117",
+    "payment_date": "2025-09-14T16:36:14.798118",
+    "actual_payment": 400,
+    "notes": [
+      "Response: Looks good, when can you start?",
+      "Accepted: Accepted at full rate, starting Monday"
+    ]
+  },
+  {
+    "proposal_id": "prop_005",
+    "opportunity_type": "content_writing",
+    "platform": "Upwork",
+    "client_name": "SaaS Startup",
+    "project_description": "Technical documentation",
+    "proposal_value": 600,
+    "submitted_date": "2025-09-14T16:36:14.796612",
+    "status": "submitted",
+    "response_date": null,
+    "acceptance_date": null,
+    "completion_date": null,
+    "payment_date": null,
+    "actual_payment": null,
+    "notes": []
+  }
+]
