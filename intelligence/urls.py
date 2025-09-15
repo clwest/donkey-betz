@@ -10,6 +10,7 @@ from .views import (
     LivePredictionsView,
     IncomeBuilderAnalysisView,
     IncomeActionPlanView,
+    ActionPlanPersistenceView,
     ExecuteActionPlanView,
     ViewGeneratedFileView,
     RevenueOpportunitiesView,
@@ -28,6 +29,7 @@ urlpatterns = [
     # AI Income Builder - Start from $0
     path('income-builder/', IncomeBuilderAnalysisView.as_view(), name='income_builder'),
     path('income-builder/action-plan/', IncomeActionPlanView.as_view(), name='income_action_plan'),
+    path('income-builder/plans/', ActionPlanPersistenceView.as_view(), name='action_plan_persistence'),
     path('income-builder/execute/', ExecuteActionPlanView.as_view(), name='execute_action_plan'),
     path('income-builder/file/<str:filename>/', ViewGeneratedFileView.as_view(), name='view_generated_file'),
 

@@ -351,3 +351,225 @@ class RevenueMetrics(models.Model):
         metrics.save()
 
         return metrics
+
+
+class UserIncomeProfile(models.Model):
+    """Track user's financial status, skills, and availability for income opportunities"""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='income_profile')
+
+    # Financial status
+    current_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    # Skills and experience
+    skills = models.JSONField(default=list)  # List of skills
+    skill_level = models.CharField(max_length=20, default='beginner')  # beginner, intermediate, advanced, expert
+    interests = models.JSONField(default=list)  # List of interests
+
+    # Availability
+    available_hours_per_week = models.IntegerField(default=10)
+
+    # Progress tracking
+    completed_projects = models.JSONField(default=list)
+    active_streams = models.JSONField(default=list)
+    reputation_score = models.FloatField(default=0.0)
+    learning_progress = models.JSONField(default=dict)
+
+    # Analysis data
+    analysis_data = models.JSONField(default=dict)  # Store latest opportunity analysis
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['skill_level', 'available_hours_per_week']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - ${self.current_balance} - {self.skill_level}"
+
+    def add_earnings(self, amount, source, opportunity_id=None):
+        """Add earnings and update balance"""
+        self.current_balance += amount
+        self.total_earned += amount
+        self.save()
+
+        # Create earning record
+        EarningRecord.objects.create(
+            user=self.user,
+            amount=amount,
+            source=source,
+            opportunity_id=opportunity_id or ''
+        )
+
+
+class OpportunityTracking(models.Model):
+    """Track user progress on specific opportunities"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tracked_opportunities')
+    opportunity_id = models.CharField(max_length=100, db_index=True)
+    opportunity_title = models.CharField(max_length=255)
+    opportunity_type = models.CharField(max_length=50)  # content_creation, freelance_services, etc.
+
+    # Status tracking
+    STATUS_CHOICES = [
+        ('identified', 'Identified'),
+        ('analyzing', 'Analyzing'),
+        ('planning', 'Planning'),
+        ('started', 'Started'),
+        ('in_progress', 'In Progress'),
+        ('first_income', 'First Income'),
+        ('scaling', 'Scaling'),
+        ('optimized', 'Optimized'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='identified')
+
+    # Progress metrics
+    progress_percentage = models.IntegerField(default=0)  # 0-100
+    current_step = models.CharField(max_length=255, blank=True)
+    steps_completed = models.JSONField(default=list)
+
+    # Financial tracking
+    total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    target_monthly = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Time tracking
+    hours_invested = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+
+    # Data storage
+    opportunity_data = models.JSONField(default=dict)  # Store full opportunity details
+    tracking_notes = models.TextField(blank=True)
+
+    # Timestamps
+    started_at = models.DateTimeField(null=True, blank=True)
+    first_income_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'opportunity_id']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['opportunity_type', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.opportunity_title} ({self.status})"
+
+    def update_progress(self, new_status=None, step_completed=None, earnings=0):
+        """Update tracking progress"""
+        if new_status:
+            self.status = new_status
+            if new_status == 'started' and not self.started_at:
+                self.started_at = timezone.now()
+            elif new_status == 'first_income' and not self.first_income_at:
+                self.first_income_at = timezone.now()
+
+        if step_completed and step_completed not in self.steps_completed:
+            self.steps_completed.append(step_completed)
+
+        if earnings > 0:
+            self.total_earned += earnings
+            # Update user profile
+            if hasattr(self.user, 'income_profile'):
+                self.user.income_profile.add_earnings(earnings, self.opportunity_title, self.opportunity_id)
+
+        self.save()
+
+
+class EarningRecord(models.Model):
+    """Record individual earnings from opportunities"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='earnings')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    source = models.CharField(max_length=255)  # Description of earning source
+    opportunity_id = models.CharField(max_length=100, blank=True)
+
+    # Categorization
+    EARNING_TYPES = [
+        ('freelance', 'Freelance Work'),
+        ('product_sales', 'Product Sales'),
+        ('affiliate', 'Affiliate Commission'),
+        ('investment', 'Investment Return'),
+        ('service', 'Service Payment'),
+        ('other', 'Other'),
+    ]
+    earning_type = models.CharField(max_length=20, choices=EARNING_TYPES, default='other')
+
+    # Additional data
+    client_info = models.JSONField(default=dict, blank=True)
+    transaction_data = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True)
+
+    # Timestamps
+    earned_date = models.DateField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-earned_date', '-created_at']
+        indexes = [
+            models.Index(fields=['user', 'earned_date']),
+            models.Index(fields=['earning_type', 'earned_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - ${self.amount} from {self.source}"
+
+
+class ActionStep(models.Model):
+    """Individual action steps within action plans"""
+
+    action_plan = models.ForeignKey(ActionPlan, on_delete=models.CASCADE, related_name='action_steps')
+    step_number = models.IntegerField()
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+
+    # Step details
+    estimated_duration = models.CharField(max_length=50, blank=True)  # e.g., "2 hours", "1 day"
+    required_tools = models.JSONField(default=list)
+    prerequisites = models.JSONField(default=list)
+
+    # Status tracking
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('skipped', 'Skipped'),
+        ('blocked', 'Blocked'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Execution tracking
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    actual_duration = models.DurationField(null=True, blank=True)
+
+    # Results
+    completion_notes = models.TextField(blank=True)
+    output_data = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ['action_plan', 'step_number']
+        unique_together = ['action_plan', 'step_number']
+
+    def __str__(self):
+        return f"Step {self.step_number}: {self.title}"
+
+    def mark_completed(self, notes='', output_data=None):
+        """Mark step as completed"""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        if self.started_at:
+            self.actual_duration = self.completed_at - self.started_at
+        self.completion_notes = notes
+        if output_data:
+            self.output_data = output_data
+        self.save()
+
+        # Update parent action plan progress
+        self.action_plan.update_progress(self.step_number, step_completed=True)

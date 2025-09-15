@@ -14,6 +14,8 @@ from rest_framework.permissions import AllowAny
 from .realtime_engine import intelligence_engine
 from .income_builder import income_builder, UserProfile, SkillLevel
 from .models import ActionPlan
+from django.contrib.auth.models import AnonymousUser
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +171,166 @@ class IncomeBuilderAnalysisView(APIView):
                 'error': f'Failed to get opportunities: {str(e)}',
                 'success': False
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ActionPlanPersistenceView(APIView):
+    """📂 Save and retrieve action plans for persistence across sessions"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """Get all action plans for the current user/session"""
+        try:
+            # Get user or use session ID for anonymous users
+            if request.user.is_authenticated:
+                user = request.user
+                plans = ActionPlan.objects.filter(user=user).order_by('-created_at')
+            else:
+                # Use session-based storage for anonymous users
+                session_id = request.session.session_key
+                if not session_id:
+                    request.session.create()
+                    session_id = request.session.session_key
+
+                # For anonymous users, return empty list (or implement session-based storage)
+                plans = ActionPlan.objects.filter(
+                    user=None,
+                    opportunity_id__startswith=f"anon_{session_id}_"
+                ).order_by('-created_at') if session_id else []
+
+            # Serialize plans
+            serialized_plans = []
+            for plan in plans:
+                serialized_plans.append({
+                    'id': str(plan.id),
+                    'backend_id': str(plan.id),
+                    'opportunity_id': plan.opportunity_id,
+                    'opportunity_title': plan.opportunity_title,
+                    'opportunity_data': plan.opportunity_data,
+                    'plan_data': plan.plan_data,
+                    'steps': plan.steps,
+                    'resources': plan.resources,
+                    'timeline': plan.timeline,
+                    'expected_outcome': plan.expected_outcome,
+                    'status': plan.status,
+                    'progress': plan.progress,
+                    'current_step': plan.current_step,
+                    'completed_steps': plan.completed_steps,
+                    'execution_logs': plan.execution_logs,
+                    'results': plan.results,
+                    'created_at': plan.created_at.isoformat(),
+                    'started_at': plan.started_at.isoformat() if plan.started_at else None,
+                    'completed_at': plan.completed_at.isoformat() if plan.completed_at else None,
+                    'celery_task_id': plan.celery_task_id
+                })
+
+            return Response({
+                'success': True,
+                'plans': serialized_plans,
+                'count': len(serialized_plans)
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error retrieving action plans: {e}")
+            return Response({
+                'error': str(e),
+                'success': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        """Save or update action plans"""
+        try:
+            plans_data = request.data.get('plans', [])
+            saved_plans = []
+
+            for plan_data in plans_data:
+                # Check if plan exists
+                plan_id = plan_data.get('backend_id') or plan_data.get('id')
+
+                if plan_id:
+                    try:
+                        # Update existing plan
+                        plan = ActionPlan.objects.get(id=plan_id)
+
+                        # Update fields
+                        plan.status = plan_data.get('status', plan.status)
+                        plan.progress = plan_data.get('progress', plan.progress)
+                        plan.current_step = plan_data.get('current_step', plan.current_step)
+                        plan.completed_steps = plan_data.get('completed_steps', plan.completed_steps)
+                        plan.execution_logs = plan_data.get('execution_logs', plan.execution_logs)
+                        plan.results = plan_data.get('results', plan.results)
+
+                        if plan_data.get('completed_at'):
+                            plan.completed_at = datetime.fromisoformat(plan_data['completed_at'].replace('Z', '+00:00'))
+
+                        plan.save()
+                        saved_plans.append(str(plan.id))
+
+                    except ActionPlan.DoesNotExist:
+                        # Create new plan if ID doesn't exist
+                        plan = self._create_new_plan(request, plan_data)
+                        if plan:
+                            saved_plans.append(str(plan.id))
+                else:
+                    # Create new plan
+                    plan = self._create_new_plan(request, plan_data)
+                    if plan:
+                        saved_plans.append(str(plan.id))
+
+            return Response({
+                'success': True,
+                'saved_plans': saved_plans,
+                'message': f'Saved {len(saved_plans)} action plans'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error saving action plans: {e}")
+            return Response({
+                'error': str(e),
+                'success': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _create_new_plan(self, request, plan_data):
+        """Helper to create a new action plan"""
+        try:
+            # Handle user
+            user = request.user if request.user.is_authenticated else None
+
+            # For anonymous users, prefix the opportunity_id with session
+            opportunity_id = plan_data.get('opportunity_id')
+            if not user and request.session.session_key:
+                opportunity_id = f"anon_{request.session.session_key}_{opportunity_id}"
+
+            plan = ActionPlan.objects.create(
+                user=user,
+                opportunity_id=opportunity_id,
+                opportunity_title=plan_data.get('opportunity_title', ''),
+                opportunity_data=plan_data.get('opportunity_data', {}),
+                plan_data=plan_data.get('plan_data', plan_data),
+                steps=plan_data.get('steps', []),
+                resources=plan_data.get('resources', []),
+                timeline=plan_data.get('timeline', ''),
+                expected_outcome=plan_data.get('expected_outcome', ''),
+                status=plan_data.get('status', 'created'),
+                progress=plan_data.get('progress', 0),
+                current_step=plan_data.get('current_step', 0),
+                completed_steps=plan_data.get('completed_steps', []),
+                execution_logs=plan_data.get('execution_logs', []),
+                results=plan_data.get('results', {}),
+                celery_task_id=plan_data.get('celery_task_id', '')
+            )
+
+            # Set timestamps if provided
+            if plan_data.get('started_at'):
+                plan.started_at = datetime.fromisoformat(plan_data['started_at'].replace('Z', '+00:00'))
+            if plan_data.get('completed_at'):
+                plan.completed_at = datetime.fromisoformat(plan_data['completed_at'].replace('Z', '+00:00'))
+
+            plan.save()
+            return plan
+
+        except Exception as e:
+            logger.error(f"Error creating action plan: {e}")
+            return None
 
 
 class IncomeActionPlanView(APIView):

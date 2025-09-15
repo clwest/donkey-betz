@@ -1,0 +1,23 @@
+{
+  "default_settings": {
+    "timeout_seconds": 300,
+    "max_retries": 3,
+    "enable_monitoring": true,
+    "enable_caching": true
+  },
+  "income_builder": {
+    "default_output_dir": "income_builder_outputs",
+    "max_opportunities": 10,
+    "research_depth": "comprehensive"
+  },
+  "content_creator": {
+    "default_output_dir": "content_outputs",
+    "default_word_count": 1200,
+    "enable_seo_optimization": true
+  },
+  "payment_processor": {
+    "default_output_dir": "payment_outputs",
+    "default_payment_terms": "Net 15",
+    "enable_stripe_integration": true
+  }
+}

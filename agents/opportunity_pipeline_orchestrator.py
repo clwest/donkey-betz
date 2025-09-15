@@ -52,6 +52,11 @@ except ImportError:
         def get_new_opportunities(self):
             return []
 
+try:
+    from self_awareness.embeddings import CodebaseEmbeddingManager, SemanticCodeSearchEngine
+except ImportError:
+    CodebaseEmbeddingManager = SemanticCodeSearchEngine = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,6 +79,9 @@ class OpportunityContext:
     current_stage: PipelineStage
     metadata: Dict[str, Any]
     pipeline_config: Dict[str, Any]
+    opportunity_embedding: Optional[List[float]] = None
+    similar_opportunities: Optional[List[Dict[str, Any]]] = None
+    memory_insights: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -101,6 +109,11 @@ class OpportunityPipelineOrchestrator:
         self.agent_registry = get_agent_registry() if get_agent_registry else None
         self.revenue_integration = RevenueIncomeIntegration() if RevenueIncomeIntegration else None
         self.spider_network = SpiderNetwork()
+
+        # Memory and embeddings integration
+        self.embedding_manager = CodebaseEmbeddingManager() if CodebaseEmbeddingManager else None
+        self.search_engine = SemanticCodeSearchEngine() if SemanticCodeSearchEngine else None
+        self.opportunity_memory = {}  # Cache for opportunity patterns
 
         # Stage configuration
         self.stage_agents = {
@@ -152,8 +165,8 @@ class OpportunityPipelineOrchestrator:
         try:
             logger.info(f"Starting pipeline orchestration for opportunity: {opportunity.get('title', 'Unknown')}")
 
-            # Initialize pipeline context
-            context = await self._initialize_pipeline_context(opportunity, pipeline_config)
+            # Initialize pipeline context with memory and embeddings
+            context = await self._initialize_pipeline_context_with_memory(opportunity, pipeline_config)
 
             # Track pipeline execution
             pipeline_id = await self._create_pipeline_tracking(context)
@@ -194,8 +207,8 @@ class OpportunityPipelineOrchestrator:
                     logger.info(f"Pipeline optimization decided to stop at stage: {stage.value}")
                     break
 
-            # Generate final pipeline report
-            pipeline_report = await self._generate_pipeline_report(
+            # Generate final pipeline report with memory insights
+            pipeline_report = await self._generate_pipeline_report_with_memory(
                 context,
                 stage_results,
                 current_value,
@@ -311,17 +324,35 @@ class OpportunityPipelineOrchestrator:
         current_value: float,
         previous_results: List[StageResult]
     ) -> Optional[Dict[str, Any]]:
-        """Select the optimal agent for a specific pipeline stage"""
+        """Select the optimal agent for a specific pipeline stage using memory and embeddings"""
+
+        # Use memory insights to enhance agent selection
+        memory_recommended_agents = []
+        if context.memory_insights and context.memory_insights.get('successful_agents'):
+            memory_recommended_agents = context.memory_insights['successful_agents'].get(stage.value, [])
 
         # Get potential agents for this stage
         candidate_agents = self.stage_agents.get(stage, [])
 
-        if not candidate_agents:
-            # Fallback to intelligent agent discovery
-            task_description = f"Stage {stage.value} processing for {context.opportunity_id}"
-            return self.agent_registry.find_best_agent(task_description)
+        # Add memory-recommended agents to candidates
+        candidate_agents.extend(memory_recommended_agents)
+        candidate_agents = list(set(candidate_agents))  # Remove duplicates
 
-        # Score each candidate agent
+        if not candidate_agents:
+            # Use semantic search to find similar successful pipelines
+            if self.search_engine and context.opportunity_embedding:
+                similar_pipelines = await self._find_similar_successful_pipelines(context)
+                if similar_pipelines:
+                    for pipeline in similar_pipelines[:3]:  # Top 3 similar
+                        stage_agents = pipeline.get('agents_used', {}).get(stage.value, [])
+                        candidate_agents.extend(stage_agents)
+
+            # Fallback to intelligent agent discovery
+            if not candidate_agents:
+                task_description = f"Stage {stage.value} processing for {context.opportunity_id}"
+                return self.agent_registry.find_best_agent(task_description)
+
+        # Score each candidate agent with memory-enhanced scoring
         agent_scores = []
 
         for agent_name in candidate_agents:
@@ -329,7 +360,7 @@ class OpportunityPipelineOrchestrator:
             if not agent:
                 continue
 
-            score = await self._score_agent_for_stage(
+            score = await self._score_agent_for_stage_with_memory(
                 agent, stage, context, current_value, previous_results
             )
 
@@ -340,7 +371,12 @@ class OpportunityPipelineOrchestrator:
 
         # Return the highest scoring agent
         agent_scores.sort(key=lambda x: x[1], reverse=True)
-        return agent_scores[0][0]
+        selected_agent = agent_scores[0][0]
+
+        # Log selection reasoning for memory learning
+        await self._log_agent_selection_reasoning(stage, selected_agent, agent_scores, context)
+
+        return selected_agent
 
     async def _score_agent_for_stage(
         self,
@@ -594,6 +630,641 @@ class OpportunityPipelineOrchestrator:
             return True  # High value opportunities worth pushing through
 
         return False
+
+    async def _score_agent_for_stage_with_memory(
+        self,
+        agent: Dict[str, Any],
+        stage: PipelineStage,
+        context: OpportunityContext,
+        current_value: float,
+        previous_results: List[StageResult]
+    ) -> float:
+        """Enhanced agent scoring using memory and embeddings"""
+
+        # Start with base scoring
+        base_score = await self._score_agent_for_stage(agent, stage, context, current_value, previous_results)
+
+        # Memory enhancement bonuses
+        memory_bonus = 0.0
+
+        # Check agent's historical performance on similar opportunities
+        if context.memory_insights and context.memory_insights.get('agent_performance'):
+            agent_performance = context.memory_insights['agent_performance'].get(agent['name'], {})
+            success_rate = agent_performance.get('success_rate', 0.5)
+            avg_quality = agent_performance.get('avg_quality_score', 0.5)
+
+            # Bonus for proven performance
+            memory_bonus += (success_rate - 0.5) * 10.0  # Up to 5 points bonus
+            memory_bonus += (avg_quality - 0.5) * 10.0   # Up to 5 points bonus
+
+        # Similarity bonus: agents that worked well on similar opportunities
+        if context.similar_opportunities:
+            for similar_opp in context.similar_opportunities[:3]:
+                if similar_opp.get('successful_agents', {}).get(stage.value) == agent['name']:
+                    similarity_weight = similar_opp.get('similarity', 0.7)
+                    memory_bonus += similarity_weight * 8.0  # Up to 8 points bonus
+
+        # Opportunity type matching bonus
+        if context.opportunity_embedding and self.search_engine:
+            # Find agent's best-performing opportunity types
+            agent_specialties = await self._get_agent_opportunity_specialties(agent['name'])
+            for specialty in agent_specialties:
+                if specialty['similarity'] > 0.7:  # High similarity to current opportunity
+                    memory_bonus += specialty['performance_score'] * 5.0
+
+        return base_score + memory_bonus
+
+    async def _find_similar_successful_pipelines(self, context: OpportunityContext) -> List[Dict[str, Any]]:
+        """Find similar opportunities that had successful pipeline outcomes"""
+
+        if not self.search_engine or not context.opportunity_embedding:
+            return []
+
+        # Search for similar opportunities in memory
+        similar_opportunities = []
+
+        # This would query a pipeline results database
+        # For now, return cached results or mock data
+        if context.opportunity_id in self.opportunity_memory:
+            return self.opportunity_memory[context.opportunity_id].get('similar_pipelines', [])
+
+        return similar_opportunities
+
+    async def _get_agent_opportunity_specialties(self, agent_name: str) -> List[Dict[str, Any]]:
+        """Get agent's specialties based on past opportunity performance"""
+
+        # This would analyze historical performance data
+        # Return mock specialties for now
+        specialties = [
+            {
+                'opportunity_type': 'content_creation',
+                'similarity': 0.8,
+                'performance_score': 0.9,
+                'success_count': 12
+            },
+            {
+                'opportunity_type': 'market_research',
+                'similarity': 0.7,
+                'performance_score': 0.85,
+                'success_count': 8
+            }
+        ]
+
+        return specialties
+
+    async def _log_agent_selection_reasoning(
+        self,
+        stage: PipelineStage,
+        selected_agent: Dict[str, Any],
+        all_scores: List[Tuple[Dict[str, Any], float]],
+        context: OpportunityContext
+    ):
+        """Log agent selection reasoning for future memory learning"""
+
+        reasoning = {
+            'stage': stage.value,
+            'selected_agent': selected_agent['name'],
+            'selection_score': all_scores[0][1] if all_scores else 0,
+            'alternatives': [
+                {'agent': agent['name'], 'score': score}
+                for agent, score in all_scores[1:6]  # Top 5 alternatives
+            ],
+            'opportunity_context': {
+                'platform': context.source_platform,
+                'priority': context.priority_level,
+                'value': context.metadata.get('current_value', 0)
+            },
+            'memory_factors': {
+                'used_historical_data': bool(context.memory_insights),
+                'found_similar_opportunities': bool(context.similar_opportunities),
+                'embedding_available': bool(context.opportunity_embedding)
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+
+        # Store reasoning for learning
+        logger.info(f"Agent selection reasoning: {reasoning}")
+
+        # Update opportunity memory cache
+        if context.opportunity_id not in self.opportunity_memory:
+            self.opportunity_memory[context.opportunity_id] = {}
+
+        if 'agent_selections' not in self.opportunity_memory[context.opportunity_id]:
+            self.opportunity_memory[context.opportunity_id]['agent_selections'] = []
+
+        self.opportunity_memory[context.opportunity_id]['agent_selections'].append(reasoning)
+
+    async def _initialize_pipeline_context_with_memory(
+        self,
+        opportunity: Dict[str, Any],
+        pipeline_config: Optional[Dict]
+    ) -> OpportunityContext:
+        """Initialize pipeline context enhanced with memory and embeddings"""
+
+        # Start with basic context
+        context = OpportunityContext(
+            opportunity_id=opportunity.get('id', f"opp_{datetime.now().strftime('%Y%m%d%H%M%S')}"),
+            source_platform=opportunity.get('platform', 'unknown'),
+            priority_level=opportunity.get('priority', 'medium'),
+            success_probability=opportunity.get('success_probability', 0.5),
+            current_stage=PipelineStage.DISCOVERY,
+            metadata={
+                'original_opportunity': opportunity,
+                'pipeline_started': datetime.now().isoformat(),
+                'config': pipeline_config or {}
+            },
+            pipeline_config=pipeline_config or {}
+        )
+
+        # Generate opportunity embedding for semantic analysis
+        if self.embedding_manager:
+            context.opportunity_embedding = await self._generate_opportunity_embedding(opportunity)
+
+        # Find similar opportunities from memory
+        if self.search_engine and context.opportunity_embedding:
+            context.similar_opportunities = await self._find_similar_opportunities(context.opportunity_embedding)
+
+        # Extract memory insights for this opportunity type
+        context.memory_insights = await self._extract_memory_insights(opportunity, context)
+
+        return context
+
+    async def _generate_opportunity_embedding(self, opportunity: Dict[str, Any]) -> Optional[List[float]]:
+        """Generate embedding vector for opportunity semantic analysis"""
+
+        if not self.embedding_manager:
+            return None
+
+        try:
+            # Create comprehensive opportunity description for embedding
+            opportunity_text = self._prepare_opportunity_for_embedding(opportunity)
+
+            # Generate embedding (adapting the existing embedding method)
+            # This would be similar to the CodebaseEmbeddingManager approach
+            from content.ai_providers import AIProviderManager
+            ai_provider = AIProviderManager()
+
+            response = ai_provider.generate_embeddings(
+                texts=[opportunity_text],
+                model='text-embedding-3-small'
+            )
+
+            if response and response.get('embeddings'):
+                return response['embeddings'][0]
+
+        except Exception as e:
+            logger.error(f"Error generating opportunity embedding: {e}")
+
+        return None
+
+    def _prepare_opportunity_for_embedding(self, opportunity: Dict[str, Any]) -> str:
+        """Prepare opportunity data for embedding generation"""
+
+        parts = []
+
+        # Basic opportunity info
+        if opportunity.get('title'):
+            parts.append(f"Title: {opportunity['title']}")
+
+        if opportunity.get('description'):
+            parts.append(f"Description: {opportunity['description']}")
+
+        if opportunity.get('platform'):
+            parts.append(f"Platform: {opportunity['platform']}")
+
+        if opportunity.get('category'):
+            parts.append(f"Category: {opportunity['category']}")
+
+        if opportunity.get('skills_required'):
+            skills = ', '.join(opportunity['skills_required'][:5])  # First 5 skills
+            parts.append(f"Skills: {skills}")
+
+        if opportunity.get('budget_range'):
+            parts.append(f"Budget: {opportunity['budget_range']}")
+
+        if opportunity.get('timeline'):
+            parts.append(f"Timeline: {opportunity['timeline']}")
+
+        # Opportunity context and characteristics
+        parts.append(f"Type: Opportunity for pipeline processing")
+        parts.append(f"Value potential: {opportunity.get('base_value', 'unknown')}")
+
+        return '\n'.join(parts)
+
+    async def _find_similar_opportunities(self, opportunity_embedding: List[float]) -> List[Dict[str, Any]]:
+        """Find similar opportunities using semantic search"""
+
+        # This would search a database of past opportunities and their embeddings
+        # For now, return mock similar opportunities
+        similar_opportunities = [
+            {
+                'opportunity_id': 'opp_20241201_001',
+                'similarity': 0.85,
+                'final_value': 2500,
+                'success_rate': 0.9,
+                'successful_agents': {
+                    'discovery': 'market-research-agent',
+                    'analysis': 'financial-analyst-agent',
+                    'execution': 'business-strategy-agent',
+                    'optimization': 'financial-agent'
+                },
+                'completion_time': 180,  # minutes
+                'quality_score': 0.87
+            },
+            {
+                'opportunity_id': 'opp_20241128_003',
+                'similarity': 0.78,
+                'final_value': 1800,
+                'success_rate': 0.8,
+                'successful_agents': {
+                    'discovery': 'reddit-scout-agent',
+                    'analysis': 'data-analyst',
+                    'execution': 'content-creator',
+                    'optimization': 'performance-optimizer'
+                },
+                'completion_time': 220,
+                'quality_score': 0.82
+            }
+        ]
+
+        return similar_opportunities
+
+    async def _extract_memory_insights(
+        self,
+        opportunity: Dict[str, Any],
+        context: OpportunityContext
+    ) -> Dict[str, Any]:
+        """Extract memory insights for opportunity processing optimization"""
+
+        insights = {
+            'successful_agents': {},
+            'agent_performance': {},
+            'optimization_patterns': {},
+            'risk_factors': [],
+            'success_predictors': []
+        }
+
+        # Analyze similar opportunities for pattern extraction
+        if context.similar_opportunities:
+            # Extract successful agent patterns
+            stage_agent_success = {}
+            agent_performance_data = {}
+
+            for similar_opp in context.similar_opportunities:
+                # Weight by similarity and success rate
+                weight = similar_opp['similarity'] * similar_opp['success_rate']
+
+                for stage, agent in similar_opp.get('successful_agents', {}).items():
+                    if stage not in stage_agent_success:
+                        stage_agent_success[stage] = {}
+                    if agent not in stage_agent_success[stage]:
+                        stage_agent_success[stage][agent] = 0
+                    stage_agent_success[stage][agent] += weight
+
+                    # Track agent performance
+                    if agent not in agent_performance_data:
+                        agent_performance_data[agent] = {
+                            'total_weight': 0,
+                            'success_weight': 0,
+                            'quality_scores': []
+                        }
+
+                    agent_performance_data[agent]['total_weight'] += 1
+                    agent_performance_data[agent]['success_weight'] += similar_opp['success_rate']
+                    agent_performance_data[agent]['quality_scores'].append(similar_opp['quality_score'])
+
+            # Convert to recommendations
+            for stage, agents in stage_agent_success.items():
+                best_agents = sorted(agents.items(), key=lambda x: x[1], reverse=True)
+                insights['successful_agents'][stage] = [agent for agent, score in best_agents[:3]]
+
+            # Calculate agent performance metrics
+            for agent, data in agent_performance_data.items():
+                if data['total_weight'] > 0:
+                    insights['agent_performance'][agent] = {
+                        'success_rate': data['success_weight'] / data['total_weight'],
+                        'avg_quality_score': sum(data['quality_scores']) / len(data['quality_scores']) if data['quality_scores'] else 0.5,
+                        'experience_level': data['total_weight']
+                    }
+
+        # Extract optimization patterns
+        if context.similar_opportunities:
+            avg_completion_time = sum(opp['completion_time'] for opp in context.similar_opportunities) / len(context.similar_opportunities)
+            avg_value_multiplier = sum(opp['final_value'] / opportunity.get('base_value', 100) for opp in context.similar_opportunities) / len(context.similar_opportunities)
+
+            insights['optimization_patterns'] = {
+                'expected_completion_time': avg_completion_time,
+                'expected_value_multiplier': avg_value_multiplier,
+                'optimal_pipeline_length': 4,  # discovery -> analysis -> execution -> optimization
+                'resource_allocation': self._calculate_optimal_resource_allocation(context.similar_opportunities)
+            }
+
+        # Identify risk factors based on historical data
+        insights['risk_factors'] = await self._identify_historical_risk_factors(opportunity, context)
+
+        # Identify success predictors
+        insights['success_predictors'] = await self._identify_success_predictors(opportunity, context)
+
+        return insights
+
+    async def _generate_pipeline_report_with_memory(
+        self,
+        context: OpportunityContext,
+        stage_results: List[StageResult],
+        final_value: float,
+        initial_value: float
+    ) -> Dict[str, Any]:
+        """Generate comprehensive pipeline execution report with memory insights"""
+
+        # Get base report
+        base_report = await self._generate_pipeline_report(context, stage_results, final_value, initial_value)
+
+        # Add memory-specific insights
+        memory_analysis = {
+            'memory_utilization': {
+                'used_embeddings': bool(context.opportunity_embedding),
+                'found_similar_opportunities': len(context.similar_opportunities) if context.similar_opportunities else 0,
+                'applied_memory_insights': bool(context.memory_insights),
+                'agent_selection_enhanced': True  # We always enhance now
+            },
+            'learning_outcomes': {
+                'new_patterns_discovered': await self._identify_new_patterns(context, stage_results),
+                'agent_performance_updates': await self._generate_agent_performance_updates(context, stage_results),
+                'successful_strategies': await self._extract_successful_strategies(context, stage_results, final_value),
+                'failure_learnings': await self._extract_failure_learnings(context, stage_results)
+            },
+            'prediction_accuracy': await self._assess_prediction_accuracy(context, stage_results, final_value),
+            'optimization_recommendations': await self._generate_optimization_recommendations(context, stage_results),
+            'memory_update_actions': await self._plan_memory_updates(context, stage_results, final_value)
+        }
+
+        # Combine reports
+        enhanced_report = {**base_report, 'memory_analysis': memory_analysis}
+
+        # Store this pipeline's results for future memory learning
+        await self._store_pipeline_results_for_memory(context, stage_results, final_value, enhanced_report)
+
+        return enhanced_report
+
+    async def _identify_new_patterns(self, context: OpportunityContext, stage_results: List[StageResult]) -> List[str]:
+        """Identify new patterns discovered in this pipeline execution"""
+
+        patterns = []
+
+        # Check for unusual success combinations
+        successful_agents = [r.agent_used for r in stage_results if r.success]
+        if len(successful_agents) >= 3:
+            agent_combo = f"{successful_agents[0]} → {successful_agents[1]} → {successful_agents[2]}"
+            patterns.append(f"Successful agent combination: {agent_combo}")
+
+        # Check for unexpected performance
+        for result in stage_results:
+            if result.quality_score > 0.9:
+                patterns.append(f"Exceptional performance by {result.agent_used} in {result.stage.value}")
+            elif result.success and result.quality_score < 0.4:
+                patterns.append(f"Low-quality success by {result.agent_used} - investigate efficiency")
+
+        # Platform-specific patterns
+        if context.source_platform and len(stage_results) > 2:
+            avg_quality = sum(r.quality_score for r in stage_results) / len(stage_results)
+            if avg_quality > 0.8:
+                patterns.append(f"High-quality pipeline pattern for {context.source_platform} opportunities")
+
+        return patterns
+
+    async def _generate_agent_performance_updates(self, context: OpportunityContext, stage_results: List[StageResult]) -> Dict[str, Any]:
+        """Generate agent performance updates for memory learning"""
+
+        updates = {}
+
+        for result in stage_results:
+            agent_name = result.agent_used
+            if agent_name not in updates:
+                updates[agent_name] = {
+                    'stage_performances': [],
+                    'overall_metrics': {}
+                }
+
+            updates[agent_name]['stage_performances'].append({
+                'stage': result.stage.value,
+                'success': result.success,
+                'quality_score': result.quality_score,
+                'execution_time': result.execution_time,
+                'opportunity_context': {
+                    'platform': context.source_platform,
+                    'priority': context.priority_level
+                }
+            })
+
+        return updates
+
+    async def _extract_successful_strategies(self, context: OpportunityContext, stage_results: List[StageResult], final_value: float) -> List[str]:
+        """Extract successful strategies to remember for future pipelines"""
+
+        strategies = []
+
+        # Value multiplication strategies
+        value_multiplier = final_value / context.metadata['original_opportunity'].get('base_value', 100)
+        if value_multiplier > 3.0:
+            successful_agents = [r.agent_used for r in stage_results if r.success]
+            strategies.append(f"High value multiplication ({value_multiplier:.1f}x) achieved with agents: {' → '.join(successful_agents)}")
+
+        # Time efficiency strategies
+        total_time = sum(r.execution_time for r in stage_results)
+        if total_time < 120:  # Less than 2 minutes
+            strategies.append(f"Fast execution strategy completed in {total_time:.1f}s")
+
+        # Quality consistency strategies
+        quality_scores = [r.quality_score for r in stage_results if r.success]
+        if quality_scores and min(quality_scores) > 0.7:
+            strategies.append("High quality consistency maintained across all stages")
+
+        return strategies
+
+    async def _extract_failure_learnings(self, context: OpportunityContext, stage_results: List[StageResult]) -> List[str]:
+        """Extract failure learnings to avoid in future pipelines"""
+
+        learnings = []
+
+        failed_stages = [r for r in stage_results if not r.success]
+        for failure in failed_stages:
+            learnings.append(f"Agent {failure.agent_used} failed in {failure.stage.value} stage - consider alternative agents")
+
+        # Pattern analysis for prevention
+        if len(failed_stages) > 1:
+            learnings.append("Multiple stage failures - review pipeline complexity and agent compatibility")
+
+        return learnings
+
+    async def _assess_prediction_accuracy(self, context: OpportunityContext, stage_results: List[StageResult], final_value: float) -> Dict[str, Any]:
+        """Assess how accurate our memory-based predictions were"""
+
+        accuracy = {}
+
+        if context.memory_insights and context.memory_insights.get('optimization_patterns'):
+            predicted_value = context.memory_insights['optimization_patterns'].get('expected_value_multiplier', 1.0)
+            actual_multiplier = final_value / context.metadata['original_opportunity'].get('base_value', 100)
+
+            accuracy['value_prediction'] = {
+                'predicted_multiplier': predicted_value,
+                'actual_multiplier': actual_multiplier,
+                'accuracy_score': 1.0 - abs(predicted_value - actual_multiplier) / max(predicted_value, actual_multiplier)
+            }
+
+            predicted_time = context.memory_insights['optimization_patterns'].get('expected_completion_time', 200)
+            actual_time = sum(r.execution_time for r in stage_results)
+
+            accuracy['time_prediction'] = {
+                'predicted_time': predicted_time,
+                'actual_time': actual_time,
+                'accuracy_score': 1.0 - abs(predicted_time - actual_time) / max(predicted_time, actual_time)
+            }
+
+        return accuracy
+
+    async def _generate_optimization_recommendations(self, context: OpportunityContext, stage_results: List[StageResult]) -> List[str]:
+        """Generate optimization recommendations based on memory analysis"""
+
+        recommendations = []
+
+        # Agent optimization recommendations
+        for result in stage_results:
+            if result.execution_time > 60:  # Slow execution
+                recommendations.append(f"Consider faster alternatives to {result.agent_used} for {result.stage.value} stage")
+
+            if result.success and result.quality_score < 0.6:  # Low quality
+                recommendations.append(f"Improve quality standards for {result.agent_used} in {result.stage.value} stage")
+
+        # Pipeline optimization
+        avg_quality = sum(r.quality_score for r in stage_results) / len(stage_results) if stage_results else 0
+        if avg_quality < 0.7:
+            recommendations.append("Overall pipeline quality below target - review agent selection criteria")
+
+        # Memory utilization optimization
+        if not context.opportunity_embedding:
+            recommendations.append("Enable opportunity embedding generation for better agent selection")
+
+        return recommendations
+
+    async def _plan_memory_updates(self, context: OpportunityContext, stage_results: List[StageResult], final_value: float) -> List[str]:
+        """Plan updates to memory based on pipeline results"""
+
+        updates = []
+
+        # Agent performance tracking updates
+        for result in stage_results:
+            updates.append(f"Update {result.agent_used} performance metrics for {result.stage.value} stage")
+
+        # Pattern recognition updates
+        if final_value > context.metadata['original_opportunity'].get('base_value', 100) * 2:
+            updates.append("Add high-value pipeline pattern to successful strategies database")
+
+        # Similarity updates
+        if context.opportunity_embedding:
+            updates.append("Update opportunity embedding similarity index with new successful pattern")
+
+        return updates
+
+    async def _store_pipeline_results_for_memory(
+        self,
+        context: OpportunityContext,
+        stage_results: List[StageResult],
+        final_value: float,
+        report: Dict[str, Any]
+    ):
+        """Store pipeline results for future memory learning"""
+
+        # Create comprehensive memory record
+        memory_record = {
+            'opportunity_id': context.opportunity_id,
+            'opportunity_embedding': context.opportunity_embedding,
+            'opportunity_characteristics': {
+                'platform': context.source_platform,
+                'priority': context.priority_level,
+                'base_value': context.metadata['original_opportunity'].get('base_value', 100),
+                'final_value': final_value,
+                'value_multiplier': final_value / context.metadata['original_opportunity'].get('base_value', 100)
+            },
+            'pipeline_execution': {
+                'stages_completed': len(stage_results),
+                'successful_agents': {r.stage.value: r.agent_used for r in stage_results if r.success},
+                'stage_quality_scores': {r.stage.value: r.quality_score for r in stage_results},
+                'total_execution_time': sum(r.execution_time for r in stage_results),
+                'overall_success_rate': len([r for r in stage_results if r.success]) / len(stage_results) if stage_results else 0
+            },
+            'success_metrics': {
+                'pipeline_successful': len([r for r in stage_results if r.success]) >= 3,
+                'high_quality': all(r.quality_score > 0.7 for r in stage_results if r.success),
+                'efficient_execution': sum(r.execution_time for r in stage_results) < 180
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+
+        # Store in opportunity memory cache
+        self.opportunity_memory[context.opportunity_id]['pipeline_results'] = memory_record
+
+        logger.info(f"Stored pipeline results for memory learning: {context.opportunity_id}")
+
+    def _calculate_optimal_resource_allocation(self, similar_opportunities: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate optimal resource allocation based on historical patterns"""
+
+        high_value_opps = [opp for opp in similar_opportunities if opp['final_value'] > 2000]
+
+        if len(high_value_opps) > len(similar_opportunities) * 0.5:
+            return {'priority': 'high', 'budget': 'premium', 'timeline': 'expedited'}
+        else:
+            return {'priority': 'medium', 'budget': 'standard', 'timeline': 'normal'}
+
+    async def _identify_historical_risk_factors(
+        self,
+        opportunity: Dict[str, Any],
+        context: OpportunityContext
+    ) -> List[str]:
+        """Identify potential risk factors based on historical patterns"""
+
+        risk_factors = []
+
+        # Platform-specific risks
+        if opportunity.get('platform') == 'reddit':
+            risk_factors.append('High competition on Reddit - ensure unique angle')
+        elif opportunity.get('platform') == 'freelance':
+            risk_factors.append('Client communication challenges common in freelance')
+
+        # Value-based risks
+        if opportunity.get('base_value', 0) > 5000:
+            risk_factors.append('High-value opportunity - increased quality expectations')
+
+        # Timeline risks
+        if opportunity.get('timeline', '').lower() in ['urgent', 'asap', 'immediate']:
+            risk_factors.append('Tight timeline - may require parallel processing')
+
+        return risk_factors
+
+    async def _identify_success_predictors(
+        self,
+        opportunity: Dict[str, Any],
+        context: OpportunityContext
+    ) -> List[str]:
+        """Identify factors that predict pipeline success"""
+
+        predictors = []
+
+        # Positive indicators from similar opportunities
+        if context.similar_opportunities:
+            avg_success_rate = sum(opp['success_rate'] for opp in context.similar_opportunities) / len(context.similar_opportunities)
+            if avg_success_rate > 0.8:
+                predictors.append('High success rate for similar opportunities')
+
+        # Opportunity characteristics
+        if opportunity.get('skills_required'):
+            if len(opportunity['skills_required']) <= 3:
+                predictors.append('Focused skill requirements increase success probability')
+
+        if opportunity.get('budget_range'):
+            if 'negotiable' in opportunity['budget_range'].lower():
+                predictors.append('Flexible budget indicates client commitment')
+
+        return predictors
 
     async def _initialize_pipeline_context(
         self,

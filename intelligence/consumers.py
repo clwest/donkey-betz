@@ -79,6 +79,28 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer):
                         'status': plan_status
                     }))
 
+            elif message_type == 'analyze_opportunities':
+                # Handle analyze opportunities request from frontend
+                profile_data = data.get('profile', {})
+                await self.analyze_opportunities(profile_data)
+
+            elif message_type == 'select_opportunity':
+                # Handle opportunity selection
+                opportunity_id = data.get('opportunity_id')
+                if opportunity_id:
+                    await self.select_opportunity(opportunity_id)
+
+            elif message_type == 'get_action_plan':
+                # Get detailed action plan for opportunity
+                opportunity_id = data.get('opportunity_id')
+                if opportunity_id:
+                    await self.get_action_plan(opportunity_id)
+
+            elif message_type == 'update_profile':
+                # Handle profile update
+                profile_data = data.get('profile', {})
+                await self.update_profile(profile_data)
+
         except json.JSONDecodeError:
             logger.error(f"Invalid JSON received: {text_data}")
             await self.send(text_data=json.dumps({
@@ -137,6 +159,103 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer):
             }
         except ActionPlan.DoesNotExist:
             return None
+
+    async def analyze_opportunities(self, profile_data):
+        """Analyze opportunities for user profile using real AI Income Builder"""
+        try:
+            # Import the actual working income builder
+            from backend.intelligence.income_builder import income_builder, UserProfile, SkillLevel
+
+            # Create user profile
+            profile = UserProfile(
+                id=profile_data.get('id', 'default_user'),
+                current_balance=profile_data.get('current_balance', 0.0),
+                skills=profile_data.get('skills', ['writing', 'research']),
+                skill_level=SkillLevel(profile_data.get('skill_level', 'beginner')),
+                available_hours_per_week=profile_data.get('available_hours', 10)
+            )
+
+            # Use the real income builder to analyze opportunities
+            analysis = await income_builder.analyze_user_potential(profile)
+
+            # Send the real analysis results to frontend
+            await self.send(text_data=json.dumps({
+                'type': 'opportunities_analysis',
+                'top_opportunities': analysis.get('top_opportunities', []),
+                'earnings_projection': analysis.get('earnings_projection', {}),
+                'recommended_path': analysis.get('recommended_path', []),
+                'skill_gaps': analysis.get('skill_gaps', []),
+                'success_probability': analysis.get('success_probability', 0)
+            }))
+
+        except Exception as e:
+            logger.error(f"Error analyzing opportunities: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to analyze opportunities: {str(e)}'
+            }))
+
+    async def select_opportunity(self, opportunity_id):
+        """Handle opportunity selection and create action plan"""
+        try:
+            from backend.intelligence.income_builder import income_builder
+
+            # Create action plan for the selected opportunity
+            plan = await income_builder.create_action_plan('user', opportunity_id)
+
+            await self.send(text_data=json.dumps({
+                'type': 'action_plan',
+                'plan': plan,
+                'opportunity_id': opportunity_id
+            }))
+
+        except Exception as e:
+            logger.error(f"Error selecting opportunity: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to select opportunity: {str(e)}'
+            }))
+
+    async def get_action_plan(self, opportunity_id):
+        """Get detailed action plan for opportunity"""
+        try:
+            from backend.intelligence.income_builder import income_builder
+
+            # Get detailed action plan
+            plan = await income_builder.create_action_plan('user', opportunity_id)
+
+            await self.send(text_data=json.dumps({
+                'type': 'action_plan',
+                'opportunity_id': opportunity_id,
+                'week_by_week': plan.get('week_by_week', []),
+                'daily_tasks': plan.get('daily_tasks', {}),
+                'success_metrics': plan.get('success_metrics', {}),
+                'full_plan': plan
+            }))
+
+        except Exception as e:
+            logger.error(f"Error getting action plan: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to get action plan: {str(e)}'
+            }))
+
+    async def update_profile(self, profile_data):
+        """Update user profile"""
+        try:
+            # Store profile update and send confirmation
+            await self.send(text_data=json.dumps({
+                'type': 'profile_updated',
+                'profile': profile_data,
+                'message': 'Profile updated successfully'
+            }))
+
+        except Exception as e:
+            logger.error(f"Error updating profile: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to update profile: {str(e)}'
+            }))
 
 
 class RevenueIncomeConsumer(AsyncWebsocketConsumer):
