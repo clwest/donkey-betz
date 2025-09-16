@@ -15,7 +15,8 @@ from .views import (
     ViewGeneratedFileView,
     RevenueOpportunitiesView,
     SubmitProposalView,
-    RevenueMetricsView
+    RevenueMetricsView,
+    ExecuteAgentPlanView
 )
 
 urlpatterns = [
@@ -37,4 +38,7 @@ urlpatterns = [
     path('revenue/opportunities/', RevenueOpportunitiesView.as_view(), name='revenue_opportunities'),
     path('revenue/submit/', SubmitProposalView.as_view(), name='submit_proposal'),
     path('revenue/metrics/', RevenueMetricsView.as_view(), name='revenue_metrics'),
+
+    # Agent Execution Endpoints
+    path('agent-execute/', ExecuteAgentPlanView.as_view(), name='execute_agent_plan'),
 ]

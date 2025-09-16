@@ -16,6 +16,8 @@ from .income_builder import income_builder, UserProfile, SkillLevel
 from .models import ActionPlan
 from django.contrib.auth.models import AnonymousUser
 import json
+from .agent_instruction_parser import AgentInstructionParser
+from .agent_execution_pipeline import execute_plan_async
 
 logger = logging.getLogger(__name__)
 
@@ -847,6 +849,126 @@ class RevenueMetricsView(APIView):
 
         except Exception as e:
             logger.error(f"Error calculating metrics: {e}")
+            return Response({
+                'error': str(e),
+                'success': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ExecuteAgentPlanView(APIView):
+    """🤖 Execute an action plan through the agent network"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        """Trigger agent execution for a plan"""
+        try:
+            plan_id = request.data.get('plan_id')
+
+            if not plan_id:
+                return Response({
+                    'error': 'plan_id is required',
+                    'success': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get the plan
+            try:
+                plan = ActionPlan.objects.get(id=plan_id)
+            except ActionPlan.DoesNotExist:
+                return Response({
+                    'error': 'Plan not found',
+                    'success': False
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Check if plan is ready for execution
+            if plan.status != 'completed':
+                # For now, allow execution of any plan with content
+                if not plan.results or not plan.results.get('files_created'):
+                    return Response({
+                        'error': 'Plan must be completed before execution',
+                        'success': False
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Trigger async execution through Celery
+            result = execute_plan_async.delay(str(plan_id))
+
+            # Update plan status
+            plan.status = 'executing'
+            plan.save()
+
+            return Response({
+                'success': True,
+                'message': 'Agent execution started',
+                'plan_id': str(plan_id),
+                'task_id': str(result.id),
+                'status': 'executing'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error triggering agent execution: {e}")
+            return Response({
+                'error': str(e),
+                'success': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        """Get execution status for a plan"""
+        try:
+            plan_id = request.query_params.get('plan_id')
+
+            if not plan_id:
+                return Response({
+                    'error': 'plan_id is required',
+                    'success': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get the plan
+            try:
+                plan = ActionPlan.objects.get(id=plan_id)
+            except ActionPlan.DoesNotExist:
+                return Response({
+                    'error': 'Plan not found',
+                    'success': False
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Parse instructions to show what would be executed
+            parser = AgentInstructionParser()
+
+            # Get plan content
+            content = ""
+            if plan.results and plan.results.get('files_created'):
+                # Try to load the complete plan file
+                files = plan.results.get('files_created', [])
+                for file_path in files:
+                    if 'Complete_Plan' in file_path:
+                        try:
+                            import os
+                            full_path = os.path.join('income_builder_outputs', file_path.split('/')[-1])
+                            if os.path.exists(full_path):
+                                with open(full_path, 'r') as f:
+                                    content = f.read()
+                                break
+                        except:
+                            pass
+
+            instructions = []
+            if content:
+                instructions = parser.parse_plan(content)
+
+            # Get execution results if any
+            agent_executions = plan.results.get('agent_executions', []) if plan.results else []
+
+            return Response({
+                'success': True,
+                'plan_id': str(plan_id),
+                'status': plan.status,
+                'progress': plan.progress,
+                'instructions_count': len(instructions),
+                'instructions': parser.to_json() if instructions else [],
+                'executions': agent_executions,
+                'can_execute': len(instructions) > 0
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Error getting execution status: {e}")
             return Response({
                 'error': str(e),
                 'success': False
