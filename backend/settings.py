@@ -67,6 +67,9 @@ INSTALLED_APPS = [
 
     # Style Memory System
     "style_memory",
+
+    # Data Persistence Infrastructure
+    "persistence",
     
     # Dashboard
     "dashboard",

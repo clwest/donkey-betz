@@ -15,8 +15,11 @@ import {
   BarChart,
   PieChart,
   LineChart,
-  Zap
+  Zap,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 interface DailyMetric {
   date: string;
@@ -36,26 +39,85 @@ interface PlatformStats {
 const RevenueDashboard: React.FC = () => {
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
   const [metrics, setMetrics] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetric[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
 
-  // Fetch metrics based on timeframe
-  const fetchMetrics = async () => {
-    setLoading(true);
-    try {
-      const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
-      const response = await fetch(`/api/v1/intelligence/revenue/metrics/?days=${days}`);
-      const data = await response.json();
+  // Use Production WebSocket with enhanced reliability
+  const { sendMessage, lastMessage, isConnected } = useWebSocket({
+    url: '/ws/revenue-dashboard/',
+    onMessage: (data) => {
+      console.log('Revenue Dashboard received production data:', data);
 
-      if (data.success) {
+      if (data.type === 'metrics_update') {
         setMetrics(data.metrics);
-        // Generate sample daily metrics for visualization
-        generateDailyMetrics(days, data.metrics);
+        generateDailyMetrics(timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90, data.metrics);
+        setLoading(false);
+      } else if (data.type === 'connection_status') {
+        console.log('Production WebSocket status:', data.status);
+        if (data.status === 'connected' || data.status === 'reconnected') {
+          setLoading(false);
+          // Request initial data on connection
+          sendMessage({ type: 'get_data' });
+        }
+      } else if (data.type === 'live_update') {
+        // Handle real-time updates
+        if (data.metrics) {
+          setMetrics(data.metrics);
+          generateDailyMetrics(timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90, data.metrics);
+        }
+      } else if (data.type === 'heartbeat') {
+        // Respond to heartbeat
+        sendMessage({ type: 'ping', timestamp: data.timestamp });
+      } else if (data.type === 'error') {
+        console.error('WebSocket error:', data.message);
+        // Handle errors gracefully
       }
-    } catch (error) {
-      console.error('Error fetching metrics:', error);
-    } finally {
-      setLoading(false);
+    },
+    onOpen: () => {
+      setWsConnected(true);
+      setLoading(false); // Stop loading when connected
+      console.log('Revenue Dashboard connected to production WebSocket');
+
+      // Immediately request metrics data when connected
+      sendMessage({ type: 'refresh_metrics' });
+      console.log('📤 Sent metrics request on connection');
+    },
+    onClose: () => {
+      setWsConnected(false);
+      console.log('Revenue Dashboard disconnected from production WebSocket');
+    },
+    reconnectInterval: 5000,
+    maxReconnectAttempts: 10
+  });
+
+  useEffect(() => {
+    setWsConnected(isConnected);
+  }, [isConnected]);
+
+  // Request metrics update via Production WebSocket
+  const fetchMetrics = () => {
+    if (wsConnected) {
+      sendMessage({
+        type: 'get_data',
+        timeframe: timeframe
+      });
+    }
+  };
+
+  // Refresh metrics with production reliability
+  const refreshMetrics = () => {
+    if (wsConnected) {
+      sendMessage({ type: 'refresh_metrics' });
+    } else {
+      console.warn('Cannot refresh metrics - WebSocket not connected');
+    }
+  };
+
+  // Send heartbeat to maintain connection
+  const sendHeartbeat = () => {
+    if (wsConnected) {
+      sendMessage({ type: 'ping', timestamp: Date.now() });
     }
   };
 
@@ -85,7 +147,7 @@ const RevenueDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchMetrics();
-  }, [timeframe]);
+  }, [timeframe, wsConnected]);
 
   // Calculate growth percentages
   const calculateGrowth = (current: number, previous: number): number => {
@@ -137,7 +199,19 @@ const RevenueDashboard: React.FC = () => {
             Track your automated revenue generation performance
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <Badge variant={wsConnected ? "default" : "secondary"} className="flex items-center gap-1">
+            {wsConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            {wsConnected ? 'Production Live' : 'Reconnecting...'}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshMetrics}
+            disabled={!wsConnected}
+          >
+            Refresh
+          </Button>
           <Button
             variant={timeframe === '7d' ? 'default' : 'outline'}
             size="sm"
@@ -173,7 +247,7 @@ const RevenueDashboard: React.FC = () => {
             <div className="text-2xl font-bold">${metrics.total_revenue.toFixed(2)}</div>
             <div className="flex items-center text-xs text-green-600">
               <TrendingUp className="h-3 w-3 mr-1" />
-              +23.5% from last period
+              {wsConnected ? 'Live Updates' : '+23.5% from last period'}
             </div>
           </CardContent>
         </Card>
@@ -211,7 +285,7 @@ const RevenueDashboard: React.FC = () => {
             <div className="text-2xl font-bold">${metrics.average_deal_size.toFixed(2)}</div>
             <div className="flex items-center text-xs text-green-600">
               <TrendingUp className="h-3 w-3 mr-1" />
-              +12.3% from last period
+              {wsConnected ? 'Real-time' : '+12.3% from last period'}
             </div>
           </CardContent>
         </Card>

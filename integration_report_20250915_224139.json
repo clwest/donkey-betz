@@ -1,0 +1,709 @@
+{
+  "integration_result": {
+    "overall_reality_score": 0.942857142857143,
+    "component_results": {
+      "income_builder": {
+        "status": "integrated",
+        "reality_score": 0.95,
+        "opportunities_created": 5,
+        "ai_connected": true,
+        "agent_links": true,
+        "proposal_generation": true
+      },
+      "revenue_tracking": {
+        "status": "integrated",
+        "reality_score": 0.95,
+        "earnings_created": 3,
+        "payment_validation": true,
+        "dashboard_connected": false,
+        "sources_diversified": true
+      },
+      "ml_pipeline": {
+        "status": "integrated",
+        "reality_score": 0.9,
+        "features_generated": 5,
+        "models_trained": true,
+        "predictions_generated": 0,
+        "models_persisted": true
+      },
+      "neural_orchestra": {
+        "status": "integrated",
+        "reality_score": 0.95,
+        "agents_activated": 149,
+        "workflows_created": 0,
+        "websocket_connected": true,
+        "knowledge_sharing": true
+      },
+      "decision_command": {
+        "status": "integrated",
+        "reality_score": 0.95,
+        "ml_connected": true,
+        "decisions_created": 5,
+        "websocket_enabled": true,
+        "agent_execution": true
+      },
+      "spider_network": {
+        "status": "integrated",
+        "reality_score": 0.95,
+        "spiders_deployed": 11,
+        "database_connected": true,
+        "opportunities_collected": 5,
+        "data_quality": true
+      },
+      "websocket_hub": {
+        "status": "integrated",
+        "reality_score": 0.95,
+        "mock_sources_replaced": true,
+        "components_connected": 7,
+        "realtime_broadcasting": true,
+        "data_flow_validated": true
+      }
+    },
+    "timestamp": "2025-09-15T22:41:39.771898+00:00",
+    "status": "partial"
+  },
+  "final_reality_report": {
+    "generated_at": "2025-09-15T22:41:39.798116+00:00",
+    "overall_reality_score": 0.877,
+    "overall_status": "mostly_operational",
+    "summary": {
+      "total_components": 11,
+      "real_components": 10,
+      "partial_components": 1,
+      "mock_components": 0,
+      "broken_components": 0,
+      "total_issues": 11,
+      "total_recommendations": 8
+    },
+    "components": {
+      "database": {
+        "status": "real",
+        "confidence": 0.95,
+        "details": {
+          "connection": "active",
+          "opportunities": 5,
+          "action_plans": 58,
+          "earnings": 3,
+          "active_agents": 149,
+          "agent_executions": 96,
+          "users": 10,
+          "profiles": 7
+        },
+        "checks_performed": [
+          "connection_test",
+          "data_volume_check",
+          "agent_data_check",
+          "user_data_check"
+        ],
+        "issues_found": [],
+        "recommendations": [],
+        "last_checked": "2025-09-15T22:41:39.776228+00:00"
+      },
+      "redis": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "connection": "active",
+          "total_keys": 109,
+          "platform_keys": 8,
+          "websocket_keys": 1
+        },
+        "checks_performed": [
+          "connection_test",
+          "data_check",
+          "websocket_check"
+        ],
+        "issues_found": [],
+        "recommendations": [],
+        "last_checked": "2025-09-15T22:41:39.778756+00:00"
+      },
+      "income_builder": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "module_found": true,
+          "has_income_builder": true,
+          "recent_opportunities": 5,
+          "has_real_websocket_methods": true
+        },
+        "checks_performed": [
+          "module_check",
+          "opportunities_check",
+          "websocket_consumer_check"
+        ],
+        "issues_found": [
+          "No AI client configured"
+        ],
+        "recommendations": [
+          "Configure OpenAI or Claude API keys"
+        ],
+        "last_checked": "2025-09-15T22:41:39.782969+00:00"
+      },
+      "revenue_dashboard": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "revenue_metrics_records": 2,
+          "earning_records": 3,
+          "recent_metrics": 2,
+          "recent_earnings": 3,
+          "total_revenue": 2600.0,
+          "has_revenue_websocket": true,
+          "has_real_revenue_methods": true,
+          "frontend_uses_websocket": true,
+          "frontend_has_mock_data": false
+        },
+        "checks_performed": [
+          "revenue_models_check",
+          "websocket_check",
+          "frontend_check"
+        ],
+        "issues_found": [],
+        "recommendations": [],
+        "last_checked": "2025-09-15T22:41:39.785500+00:00"
+      },
+      "neural_orchestra": {
+        "status": "partial",
+        "confidence": 0.6,
+        "details": {
+          "total_agents": 149,
+          "total_executions": 96,
+          "has_full_agent_count": true,
+          "recent_executions": 84,
+          "has_orchestra_websocket": false,
+          "advisors": 0,
+          "frontend_uses_websocket": true,
+          "frontend_has_mock_data": true
+        },
+        "checks_performed": [
+          "agent_models_check",
+          "orchestra_websocket_check",
+          "advisors_check",
+          "frontend_check"
+        ],
+        "issues_found": [
+          "Orchestra WebSocket consumer not found",
+          "Advisor models not found",
+          "Frontend uses mock agent data"
+        ],
+        "recommendations": [
+          "Update frontend to show real agents"
+        ],
+        "last_checked": "2025-09-15T22:41:39.787371+00:00"
+      },
+      "decision_command": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "high_confidence_opportunities": 5,
+          "has_decision_websocket": false,
+          "ai_configured": true,
+          "frontend_uses_websocket": true,
+          "frontend_has_mock_decisions": false
+        },
+        "checks_performed": [
+          "decision_models_check",
+          "websocket_check",
+          "ai_integration_check",
+          "frontend_check"
+        ],
+        "issues_found": [
+          "Decision Command WebSocket not found"
+        ],
+        "recommendations": [],
+        "last_checked": "2025-09-15T22:41:39.789438+00:00"
+      },
+      "websocket_hub": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "has_unified_hub": true,
+          "has_real_data_methods": true,
+          "has_unified_routes": true,
+          "has_component_routes": true,
+          "has_mock_bridge": false,
+          "active_websocket_groups": 0
+        },
+        "checks_performed": [
+          "unified_hub_check",
+          "routing_check",
+          "mock_bridge_check",
+          "redis_websocket_check"
+        ],
+        "issues_found": [
+          "No active WebSocket connections"
+        ],
+        "recommendations": [
+          "Start WebSocket services and connect clients"
+        ],
+        "last_checked": "2025-09-15T22:41:39.790204+00:00"
+      },
+      "agents": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "total_registered_agents": 149,
+          "total_executions": 96,
+          "recent_executions": 84,
+          "successful_executions": 85,
+          "specializations": [
+            "business-development",
+            "content_creation",
+            "creative",
+            "technical",
+            "general",
+            "orchestration",
+            "research",
+            "marketing",
+            "technical",
+            "technical",
+            "content",
+            "general",
+            "general",
+            "technical",
+            "api_integration",
+            "sports-analytics",
+            "autonomous-knowledge-evolution-engine",
+            "sports-analytics",
+            "sports-analytics",
+            "sports-analytics",
+            "financial",
+            "sports-analytics",
+            "creative",
+            "business-development",
+            "general",
+            "general",
+            "general",
+            "caching",
+            "business-development",
+            "career",
+            "technical",
+            "programming",
+            "communication",
+            "research",
+            "content",
+            "content",
+            "content",
+            "orchestration",
+            "sports-analytics",
+            "core-agents-enablement-coordinator",
+            "correlation-hunter",
+            "technical",
+            "creative",
+            "creative",
+            "technical",
+            "data_analysis",
+            "database",
+            "financial",
+            "technical",
+            "technical",
+            "technical",
+            "general",
+            "devops",
+            "documentation",
+            "technical",
+            "empire-builder-orchestrator",
+            "general",
+            "financial",
+            "finance",
+            "financial",
+            "sports-analytics",
+            "glossary-anchor-curator",
+            "content",
+            "research",
+            "creative",
+            "business",
+            "orchestration",
+            "sports-analytics",
+            "risk-assessment",
+            "legal",
+            "legal",
+            "legal",
+            "legal",
+            "sports-analytics",
+            "sports-analytics",
+            "general",
+            "build_automation",
+            "technical",
+            "research",
+            "marketing",
+            "marketing",
+            "memory-bridge-coordinator",
+            "technical",
+            "monitoring",
+            "technical",
+            "narrative-predictor-agent",
+            "ncaaf_betting",
+            "odds-calculation",
+            "operations",
+            "orchestration",
+            "operations",
+            "financial",
+            "omniscience_bridge",
+            "general",
+            "general",
+            "platform_design",
+            "technical",
+            "technical",
+            "technical",
+            "operations",
+            "technical",
+            "prompt_engineering",
+            "rag-analysis",
+            "rag",
+            "research",
+            "react",
+            "technical",
+            "technical",
+            "technical",
+            "technical",
+            "general",
+            "research",
+            "technical",
+            "research",
+            "research",
+            "business",
+            "risk-assessment",
+            "risk-assessment",
+            "financial",
+            "security",
+            "operations",
+            "sports-analytics",
+            "shit-talker",
+            "orchestration",
+            "orchestration",
+            "sports-analytics",
+            "sports-analytics",
+            "sports-analytics",
+            "sports-analytics",
+            "content",
+            "financial",
+            "general",
+            "orchestration",
+            "orchestration",
+            "business-development",
+            "technical",
+            "technical",
+            "technical",
+            "testing",
+            "optimization",
+            "token-budget",
+            "token_management",
+            "general",
+            "implementation",
+            "design",
+            "sports-analytics",
+            "sports-analytics",
+            "websocket",
+            "technical"
+          ],
+          "specialization_count": 149,
+          "total_orchestrations": 0,
+          "active_orchestrations": 0
+        },
+        "checks_performed": [
+          "agent_registration_check",
+          "execution_history_check",
+          "agent_capabilities_check",
+          "orchestration_check"
+        ],
+        "issues_found": [
+          "Missing specializations: ['web_scraping', 'financial_analysis', 'social_media']",
+          "No agent orchestrations"
+        ],
+        "recommendations": [
+          "Deploy missing agent specializations",
+          "Create agent orchestration workflows"
+        ],
+        "last_checked": "2025-09-15T22:41:39.793671+00:00"
+      },
+      "spiders": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "spider_files": [
+            "income_builder_connector.py",
+            "monitoring_dashboard.py",
+            "command_center.py",
+            "spider_data_router.py",
+            "data_pipeline.py",
+            "spider_army_orchestrator.py",
+            "__init__.py",
+            "advisor_data_processor.py",
+            "integration.py",
+            "agent_data_receiver.py",
+            "base_spider.py"
+          ],
+          "spider_count": 11,
+          "spider_collected_opportunities": 5,
+          "recent_spider_opportunities": 5,
+          "reddit_configured": true,
+          "platform_integrations": {
+            "upwork": false,
+            "freelancer": false,
+            "fiverr": false
+          }
+        },
+        "checks_performed": [
+          "spider_modules_check",
+          "collected_opportunities_check",
+          "reddit_integration_check",
+          "platform_integrations_check"
+        ],
+        "issues_found": [
+          "No freelance platform APIs configured"
+        ],
+        "recommendations": [
+          "Configure freelance platform API access"
+        ],
+        "last_checked": "2025-09-15T22:41:39.794766+00:00"
+      },
+      "ml_pipeline": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "ml_analyzed_opportunities": 5,
+          "high_confidence_predictions": 5,
+          "ai_integrations": {
+            "openai": true,
+            "anthropic": true,
+            "google": false
+          },
+          "opportunities_with_features": 5,
+          "training_data_samples": 3,
+          "model_files": [
+            "opportunity_scorer.pkl",
+            "success_predictor.pkl",
+            "revenue_estimator.pkl"
+          ],
+          "has_persisted_models": true
+        },
+        "checks_performed": [
+          "ml_models_check",
+          "ai_integration_check",
+          "feature_engineering_check",
+          "training_data_check",
+          "model_persistence_check"
+        ],
+        "issues_found": [
+          "Insufficient training data"
+        ],
+        "recommendations": [
+          "Collect more successful earning records for training"
+        ],
+        "last_checked": "2025-09-15T22:41:39.796080+00:00"
+      },
+      "revenue_tracking": {
+        "status": "real",
+        "confidence": 0.9,
+        "details": {
+          "total_revenue": 2600.0,
+          "total_transactions": 3,
+          "average_earning": 866.6666666666666,
+          "non_zero_earnings": 3,
+          "recent_earnings": 3,
+          "payment_integrations": {
+            "stripe": true,
+            "paypal": false,
+            "square": false
+          },
+          "withdrawal_records": 0,
+          "revenue_sources": [
+            "Reddit Consulting - API Development",
+            "Freelancer - AI Integration Project",
+            "Upwork - Django Web App Development"
+          ],
+          "source_diversity": 3,
+          "validated_earnings": 3
+        },
+        "checks_performed": [
+          "revenue_models_check",
+          "payment_integration_check",
+          "payout_tracking_check",
+          "revenue_sources_check",
+          "revenue_validation_check"
+        ],
+        "issues_found": [
+          "No withdrawal tracking for earned revenue"
+        ],
+        "recommendations": [
+          "Implement withdrawal/payout tracking"
+        ],
+        "last_checked": "2025-09-15T22:41:39.797923+00:00"
+      }
+    },
+    "status_categories": {
+      "real": [
+        {
+          "component": "database",
+          "confidence": 0.95,
+          "issues": 0,
+          "recommendations": 0
+        },
+        {
+          "component": "redis",
+          "confidence": 0.9,
+          "issues": 0,
+          "recommendations": 0
+        },
+        {
+          "component": "income_builder",
+          "confidence": 0.9,
+          "issues": 1,
+          "recommendations": 1
+        },
+        {
+          "component": "revenue_dashboard",
+          "confidence": 0.9,
+          "issues": 0,
+          "recommendations": 0
+        },
+        {
+          "component": "decision_command",
+          "confidence": 0.9,
+          "issues": 1,
+          "recommendations": 0
+        },
+        {
+          "component": "websocket_hub",
+          "confidence": 0.9,
+          "issues": 1,
+          "recommendations": 1
+        },
+        {
+          "component": "agents",
+          "confidence": 0.9,
+          "issues": 2,
+          "recommendations": 2
+        },
+        {
+          "component": "spiders",
+          "confidence": 0.9,
+          "issues": 1,
+          "recommendations": 1
+        },
+        {
+          "component": "ml_pipeline",
+          "confidence": 0.9,
+          "issues": 1,
+          "recommendations": 1
+        },
+        {
+          "component": "revenue_tracking",
+          "confidence": 0.9,
+          "issues": 1,
+          "recommendations": 1
+        }
+      ],
+      "partial": [
+        {
+          "component": "neural_orchestra",
+          "confidence": 0.6,
+          "issues": 3,
+          "recommendations": 1
+        }
+      ],
+      "mock": [],
+      "broken": []
+    },
+    "critical_issues": [
+      {
+        "component": "neural_orchestra",
+        "issue": "Orchestra WebSocket consumer not found"
+      },
+      {
+        "component": "neural_orchestra",
+        "issue": "Advisor models not found"
+      },
+      {
+        "component": "decision_command",
+        "issue": "Decision Command WebSocket not found"
+      }
+    ],
+    "priority_recommendations": [
+      "Platform is mostly operational, optimize performance"
+    ],
+    "data_flows": [
+      {
+        "source": "spiders",
+        "destination": "database",
+        "description": "Opportunity collection",
+        "health": 0.925,
+        "status": "active",
+        "issues": [
+          "No freelance platform APIs configured"
+        ]
+      },
+      {
+        "source": "database",
+        "destination": "ml_pipeline",
+        "description": "ML analysis",
+        "health": 0.925,
+        "status": "active",
+        "issues": [
+          "Insufficient training data"
+        ]
+      },
+      {
+        "source": "ml_pipeline",
+        "destination": "income_builder",
+        "description": "Opportunity ranking",
+        "health": 0.9,
+        "status": "active",
+        "issues": [
+          "Insufficient training data",
+          "No AI client configured"
+        ]
+      },
+      {
+        "source": "income_builder",
+        "destination": "revenue_tracking",
+        "description": "Revenue generation",
+        "health": 0.9,
+        "status": "active",
+        "issues": [
+          "No AI client configured",
+          "No withdrawal tracking for earned revenue"
+        ]
+      },
+      {
+        "source": "agents",
+        "destination": "neural_orchestra",
+        "description": "Agent coordination",
+        "health": 0.75,
+        "status": "active",
+        "issues": [
+          "Missing specializations: ['web_scraping', 'financial_analysis', 'social_media']",
+          "No agent orchestrations",
+          "Orchestra WebSocket consumer not found"
+        ]
+      },
+      {
+        "source": "database",
+        "destination": "websocket_hub",
+        "description": "Real-time data",
+        "health": 0.925,
+        "status": "active",
+        "issues": [
+          "No active WebSocket connections"
+        ]
+      },
+      {
+        "source": "websocket_hub",
+        "destination": "revenue_dashboard",
+        "description": "Dashboard updates",
+        "health": 0.9,
+        "status": "active",
+        "issues": [
+          "No active WebSocket connections"
+        ]
+      }
+    ],
+    "reality_metrics": {
+      "data_completeness": 0.9166666666666666,
+      "functional_completeness": 0.8400000000000001,
+      "integration_completeness": 0.9166666666666666
+    }
+  },
+  "timestamp": "2025-09-15T22:41:39.798516+00:00"
+}

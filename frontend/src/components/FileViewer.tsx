@@ -22,7 +22,9 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
   const fetchFileContent = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8000/api/v1/intelligence/income-builder/file/${filename}/`);
+      // Properly encode the filename for URL (handles spaces and special characters)
+      const encodedFilename = encodeURIComponent(filename);
+      const response = await fetch(`http://localhost:8000/api/v1/intelligence/income-builder/file/${encodedFilename}/`);
       const data = await response.json();
 
       if (data.success) {
@@ -76,24 +78,29 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
                 margin: 0 auto;
                 padding: 40px 20px;
                 line-height: 1.6;
-                color: #333;
+                color: #d1d5db;
+                background: #111827;
               }
               pre {
-                background: #f5f5f5;
+                background: #1f2937;
+                color: #d1d5db;
                 padding: 15px;
                 border-radius: 5px;
                 overflow-x: auto;
+                border: 1px solid #374151;
               }
               code {
-                background: #f0f0f0;
+                background: #374151;
+                color: #67e8f9;
                 padding: 2px 5px;
                 border-radius: 3px;
               }
-              h1 { color: #2563eb; margin-top: 2em; }
-              h2 { color: #3b82f6; margin-top: 1.5em; }
-              h3 { color: #60a5fa; margin-top: 1em; }
-              ul, ol { margin-left: 20px; }
-              a { color: #0066cc; }
+              h1 { color: #a5f3fc; margin-top: 2em; }
+              h2 { color: #67e8f9; margin-top: 1.5em; }
+              h3 { color: #22d3ee; margin-top: 1em; }
+              ul, ol { margin-left: 20px; color: #d1d5db; }
+              a { color: #22d3ee; }
+              a:hover { color: #67e8f9; text-decoration: underline; }
             </style>
           </head>
           <body>
@@ -111,32 +118,32 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
     return lines.map((line, index) => {
       // Headers
       if (line.startsWith('### ')) {
-        return <h3 key={index} className="text-lg font-semibold mt-3 mb-2 text-blue-700">{line.slice(4)}</h3>;
+        return <h3 key={index} className="text-lg font-semibold mt-3 mb-2 text-cyan-400">{line.slice(4)}</h3>;
       }
       if (line.startsWith('## ')) {
-        return <h2 key={index} className="text-xl font-bold mt-4 mb-2 text-blue-800">{line.slice(3)}</h2>;
+        return <h2 key={index} className="text-xl font-bold mt-4 mb-2 text-cyan-300">{line.slice(3)}</h2>;
       }
       if (line.startsWith('# ')) {
-        return <h1 key={index} className="text-2xl font-bold mt-4 mb-3 text-blue-900">{line.slice(2)}</h1>;
+        return <h1 key={index} className="text-2xl font-bold mt-4 mb-3 text-cyan-200">{line.slice(2)}</h1>;
       }
 
       // Lists
       if (line.match(/^\d+\./)) {
-        return <li key={index} className="ml-6 list-decimal">{line.replace(/^\d+\.\s*/, '')}</li>;
+        return <li key={index} className="ml-6 list-decimal text-gray-300">{line.replace(/^\d+\.\s*/, '')}</li>;
       }
       if (line.startsWith('- ')) {
-        return <li key={index} className="ml-6 list-disc">{line.slice(2)}</li>;
+        return <li key={index} className="ml-6 list-disc text-gray-300">{line.slice(2)}</li>;
       }
 
       // Links
       if (line.includes('http')) {
         const parts = line.split(' ');
         return (
-          <p key={index} className="my-1">
+          <p key={index} className="my-1 text-gray-300">
             {parts.map((part, i) => {
               if (part.startsWith('http')) {
                 return (
-                  <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 hover:underline">
                     {part}
                   </a>
                 );
@@ -149,7 +156,7 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
 
       // Regular text
       if (line.trim()) {
-        return <p key={index} className="my-1">{line}</p>;
+        return <p key={index} className="my-1 text-gray-300">{line}</p>;
       }
 
       return <br key={index} />;
@@ -157,12 +164,12 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
   };
 
   return (
-    <Card className="fixed inset-4 z-50 flex flex-col bg-white shadow-2xl">
+    <Card className="fixed inset-4 z-50 flex flex-col bg-gray-900 shadow-2xl border-gray-700">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-800">
         <div className="flex items-center gap-3">
-          <FileText className="h-5 w-5 text-blue-600" />
-          <h2 className="text-lg font-semibold">{filename}</h2>
+          <FileText className="h-5 w-5 text-cyan-400" />
+          <h2 className="text-lg font-semibold text-gray-100">{filename}</h2>
         </div>
 
         <div className="flex items-center gap-2">
@@ -216,13 +223,13 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1 p-6">
+      <ScrollArea className="flex-1 p-6 bg-gray-900">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
           </div>
         ) : (
-          <div className="prose prose-blue max-w-none">
+          <div className="prose prose-invert max-w-none text-gray-200">
             {renderMarkdown(content)}
           </div>
         )}

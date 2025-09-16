@@ -1,0 +1,31 @@
+{
+  "demo_start": "2025-09-15T16:35:02.733978",
+  "opportunities_found": 5,
+  "opportunities_scored": 5,
+  "actionable_opportunities": 5,
+  "proposals_generated": 5,
+  "proposals_submitted": 5,
+  "responses_received": 1,
+  "contracts_won": 1,
+  "total_revenue": 340.0,
+  "successful_proposals": [
+    {
+      "platform": "freelancer",
+      "title": "Email Marketing Automation",
+      "revenue": 340.0,
+      "proposal_id": "prop_freelancer_005"
+    }
+  ],
+  "revenue_breakdown": {
+    "freelancer": 340.0
+  },
+  "performance_metrics": {
+    "response_rate": 20.0,
+    "win_rate": 100.0,
+    "overall_success_rate": 20.0,
+    "avg_revenue_per_win": 340.0,
+    "revenue_per_proposal": 68.0
+  },
+  "demo_end": "2025-09-15T16:35:03.242929",
+  "demo_duration": 0.508951
+}

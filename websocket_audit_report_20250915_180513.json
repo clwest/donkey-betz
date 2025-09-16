@@ -1,0 +1,242 @@
+{
+  "summary": {
+    "total_endpoints_tested": 17,
+    "successful_connections": 0,
+    "connection_success_rate": 0.0,
+    "endpoints_with_responses": 0,
+    "response_success_rate": 0.0,
+    "endpoints_with_errors": 17,
+    "working_endpoints": [],
+    "broken_endpoints": [
+      "/ws/income-builder/",
+      "/ws/revenue-dashboard/",
+      "/ws/neural-orchestra/",
+      "/ws/decision-command/",
+      "/ws/revenue/",
+      "/ws/decision/",
+      "/ws/orchestra/",
+      "/ws/bridge/income-builder/",
+      "/ws/bridge/revenue/",
+      "/ws/bridge/decision/",
+      "/ws/bridge/orchestra/",
+      "/ws/unified-platform/",
+      "/ws/platform-orchestrator/",
+      "/ws/command-center/",
+      "/ws/opportunity-scanner/",
+      "/ws/agents/",
+      "/ws/dashboard/"
+    ],
+    "silent_endpoints": [],
+    "critical_issues": [
+      "Income Builder endpoint completely non-functional - frontend will show no data",
+      "Revenue Dashboard endpoint completely non-functional - frontend will show no data",
+      "Neural Orchestra endpoint completely non-functional - frontend will show no data",
+      "Decision Command endpoint completely non-functional - frontend will show no data",
+      "No endpoints are sending data - entire frontend will be static"
+    ],
+    "total_audit_time_ms": 17089.027166366577,
+    "audit_timestamp": "2025-09-15T18:05:13.042630"
+  },
+  "detailed_results": [
+    {
+      "endpoint": "/ws/income-builder/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 31.651020050048828,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:04:55.953599"
+    },
+    {
+      "endpoint": "/ws/revenue-dashboard/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.1109580993652344,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:04:56.986633"
+    },
+    {
+      "endpoint": "/ws/neural-orchestra/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.2499561309814453,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:04:57.990034"
+    },
+    {
+      "endpoint": "/ws/decision-command/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.6340484619140625,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:04:58.993504"
+    },
+    {
+      "endpoint": "/ws/revenue/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.131223678588867,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:04:59.997338"
+    },
+    {
+      "endpoint": "/ws/decision/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 3.216981887817383,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:01.000701"
+    },
+    {
+      "endpoint": "/ws/orchestra/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 1.4650821685791016,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:02.005098"
+    },
+    {
+      "endpoint": "/ws/bridge/income-builder/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.3453235626220703,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:03.007821"
+    },
+    {
+      "endpoint": "/ws/bridge/revenue/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.6311874389648438,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:04.010591"
+    },
+    {
+      "endpoint": "/ws/bridge/decision/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.834320068359375,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:05.014483"
+    },
+    {
+      "endpoint": "/ws/bridge/orchestra/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 3.390073776245117,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:06.018564"
+    },
+    {
+      "endpoint": "/ws/unified-platform/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 1.6126632690429688,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:07.023142"
+    },
+    {
+      "endpoint": "/ws/platform-orchestrator/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.4352073669433594,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:08.025956"
+    },
+    {
+      "endpoint": "/ws/command-center/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.5610923767089844,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:09.029659"
+    },
+    {
+      "endpoint": "/ws/opportunity-scanner/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.3412704467773438,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:10.032678"
+    },
+    {
+      "endpoint": "/ws/agents/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 2.34222412109375,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:11.036380"
+    },
+    {
+      "endpoint": "/ws/dashboard/",
+      "connection_success": false,
+      "response_received": false,
+      "data_format": null,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_time_ms": 1.4748573303222656,
+      "messages_received": [],
+      "test_timestamp": "2025-09-15T18:05:12.039911"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "component": "Income Builder",
+      "issue": "WebSocket endpoint not accessible",
+      "fix": "Verify /ws/income-builder/ route is properly configured in routing.py and consumer exists",
+      "technical_details": "Connection failed with: Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'"
+    },
+    {
+      "priority": "HIGH",
+      "component": "Revenue Dashboard",
+      "issue": "WebSocket endpoint not accessible",
+      "fix": "Verify /ws/revenue-dashboard/ route is properly configured in routing.py and consumer exists",
+      "technical_details": "Connection failed with: Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'"
+    },
+    {
+      "priority": "HIGH",
+      "component": "Neural Orchestra",
+      "issue": "WebSocket endpoint not accessible",
+      "fix": "Verify /ws/neural-orchestra/ route is properly configured in routing.py and consumer exists",
+      "technical_details": "Connection failed with: Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'"
+    },
+    {
+      "priority": "HIGH",
+      "component": "Decision Command",
+      "issue": "WebSocket endpoint not accessible",
+      "fix": "Verify /ws/decision-command/ route is properly configured in routing.py and consumer exists",
+      "technical_details": "Connection failed with: Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'"
+    }
+  ]
+}

@@ -1250,17 +1250,18 @@ def assistant_context(request):
 @csrf_exempt
 def assistant_chat(request):
     """
-    Personal AI Assistant Chat - powered by real AI providers with RAG
+    Personal AI Assistant Chat - powered by real AI providers with RAG and System Self-Awareness
     """
     user = request.user
     logger = logging.getLogger(__name__)
-    
+
     try:
         # Use request.data for DRF views instead of request.body
         message = request.data.get('message', '').strip()
         conversation_id = request.data.get('conversation_id', str(uuid.uuid4()))
         use_personal_assistant = request.data.get('use_personal_assistant', True)
         use_rag = request.data.get('use_rag', True)  # Enable RAG by default
+        use_self_awareness = request.data.get('use_self_awareness', True)  # Enable self-awareness by default
         
         if not message:
             return Response({
@@ -1306,15 +1307,27 @@ def assistant_chat(request):
                 provider = available_providers[0]  # Use any available provider
                 model = 'default'
             
+            # Get System Self-Awareness context if enabled
+            system_context = None
+            if use_self_awareness:
+                try:
+                    from core.personal_assistant_integration import personal_assistant_integration
+                    system_context = personal_assistant_integration.enhance_assistant_context(
+                        message, conversation_id
+                    )
+                    logger.info(f"Enhanced with system awareness: {system_context.get('system_awareness', {}).get('operational_percentage', 0)}% operational")
+                except Exception as e:
+                    logger.error(f"Error getting system awareness context: {e}")
+
             # Get RAG context if enabled
             rag_context = None
             enhanced_message = message
-            
+
             if use_rag:
                 try:
                     logger.info(f"Getting RAG context for query: {message[:100]}...")
                     rag_context = get_rag_context(message)
-                    
+
                     if rag_context.get('has_context'):
                         enhanced_message = enhance_prompt_with_rag(message, rag_context)
                         logger.info(f"RAG context found: {rag_context['used_documents']} documents used")
@@ -1324,8 +1337,8 @@ def assistant_chat(request):
                     logger.error(f"RAG integration failed: {e}")
                     # Continue without RAG if it fails
             
-            # Create system prompt for personal assistant
-            system_prompt = f"""You are {user.username if hasattr(user, 'username') else user.email}'s personal AI assistant.
+            # Create system prompt for personal assistant with self-awareness
+            system_prompt = f"""You are {user.username if hasattr(user, 'username') else user.email}'s personal AI assistant with System Self-Awareness.
 
 CRITICAL RESPONSE GUIDELINES:
 1. Be EXTREMELY CONCISE - default to 1-3 sentences unless specifically asked for details
@@ -1340,7 +1353,22 @@ For complex requests - provide the essential answer first, then ask if they need
 
 You are a general-purpose AI assistant who can help with any topic - coding, research, analysis, creative tasks, problem-solving, conversations, and more. You have access to a comprehensive knowledge base and can orchestrate specialized AI agents when needed for complex tasks.
 
-Remember: BREVITY IS KEY. Most responses should be 1-3 sentences maximum."""
+"""
+
+            # Add system awareness context if available
+            if system_context:
+                awareness = system_context.get('system_awareness', {})
+                if awareness:
+                    system_prompt += f"""
+SYSTEM AWARENESS:
+- Platform is {awareness.get('operational_percentage', 0)}% operational
+- Real Components: {', '.join(awareness.get('real_components', [])[:3]) if awareness.get('real_components') else 'None'}
+- Issues: {', '.join(awareness.get('broken_flows', [])[:2]) if awareness.get('broken_flows') else 'None'}
+
+When relevant to the user's question, briefly mention system status.
+"""
+
+            system_prompt += "\nRemember: BREVITY IS KEY. Most responses should be 1-3 sentences maximum."
 
             # Generate AI response
             # Use different config for GPT-5 models (no temperature parameter)
@@ -1396,7 +1424,15 @@ Remember: BREVITY IS KEY. Most responses should be 1-3 sentences maximum."""
                         'documents_used': rag_context['used_documents'],
                         'total_documents_found': rag_context['total_documents']
                     }
-                
+
+                # Add system awareness info if available
+                if system_context:
+                    response_data['system_awareness'] = {
+                        'operational_percentage': system_context.get('system_awareness', {}).get('operational_percentage', 0),
+                        'recommendations': system_context.get('recommendations', []),
+                        'routing': system_context.get('routing', {})
+                    }
+
                 return Response(response_data)
             else:
                 logger.error(f"AI generation failed: {result.error_message}")

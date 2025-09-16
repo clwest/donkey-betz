@@ -39,9 +39,14 @@ interface Agent {
   id: string;
   name: string;
   type: string;
-  status: 'idle' | 'working' | 'consulting';
+  status: 'idle' | 'working' | 'consulting' | 'busy' | 'active' | 'standby';
   currentTask?: string;
   performance: number;
+  usage_count?: number;
+  recent_activity?: number;
+  position?: { x: number; y: number };
+  confidence_score?: number;
+  collaboration_ready?: boolean;
 }
 
 interface Advisor {
@@ -50,31 +55,90 @@ interface Advisor {
   expertise: string;
   consultations: number;
   successRate: number;
+  status?: 'available' | 'consulting' | 'busy';
+  active_consultations?: number;
+  total_consultations?: number;
+  specializations?: string[];
 }
 
 interface Workflow {
   id: string;
   name: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  type?: string;
+  description?: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'completing' | 'initializing';
   progress: number;
-  steps: WorkflowStep[];
+  priority?: 'low' | 'normal' | 'high' | 'urgent' | 'critical';
+  agents?: string[];
+  agent_details?: Agent[];
+  created_at?: string;
+  estimated_completion?: string;
+  current_step?: string;
+  steps_completed?: WorkflowStep[];
+  revenue_potential?: number;
+  collaboration_score?: number;
+  is_real_orchestration?: boolean;
+  steps?: WorkflowStep[];
 }
 
 interface WorkflowStep {
-  id: string;
+  id?: string;
   name: string;
-  type: string;
-  status: 'pending' | 'running' | 'completed';
+  type?: string;
+  status?: 'pending' | 'running' | 'completed';
   agents?: string[];
   advisors?: string[];
+  completed_at?: string;
+  agent_id?: string;
+  duration_minutes?: number;
 }
 
 interface Connection {
+  id: string;
   source: string;
   target: string;
-  type: 'consultation' | 'collaboration' | 'data_flow';
+  type: 'consultation' | 'collaboration' | 'data_flow' | 'mentorship';
   strength: number;
-  active: boolean;
+  status?: 'active' | 'idle' | 'planning' | 'completed';
+  active?: boolean;
+  last_interaction?: string;
+  interaction_count?: number;
+  specialization_match?: string;
+  confidence_score?: number;
+  project?: string;
+  collaboration_type?: string;
+  shared_context?: string;
+}
+
+interface SystemMetrics {
+  system_health?: {
+    uptime_percentage: number;
+    response_time_ms: number;
+    error_rate: number;
+    active_connections: number;
+    last_updated: string;
+  };
+  revenue_metrics?: {
+    daily_revenue: number;
+    weekly_revenue: number;
+    monthly_projection: number;
+    conversion_rate: number;
+    active_clients: number;
+  };
+  ml_learning_loop?: {
+    training_accuracy: number;
+    model_performance: number;
+    data_quality_score: number;
+    learning_rate: number;
+    iteration_count: number;
+  };
+  spider_network?: {
+    active_spiders: number;
+    data_points_collected: number;
+    processing_queue: number;
+    success_rate: number;
+    last_data_update: string;
+  };
 }
 
 const NeuralOrchestra: React.FC = () => {
@@ -83,31 +147,104 @@ const NeuralOrchestra: React.FC = () => {
   const [advisors, setAdvisors] = useState<Advisor[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics>({});
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'network' | 'workflow' | 'performance'>('network');
+  const [connectionTypes, setConnectionTypes] = useState<Record<string, any>>({});
+  const [isAnimating, setIsAnimating] = useState(true);
 
-  const { sendMessage, lastMessage } = useWebSocket({
-    url: '/ws/orchestra/',
+  const { sendMessage, lastMessage, isConnected } = useWebSocket({
+    url: '/ws/neural-orchestra/',
     onMessage: (data) => {
-      console.log('Neural Orchestra received:', data);
-      if (data.type === 'orchestra_update') {
-        // Handle orchestra updates
-        console.log('Active workflows:', data.active_workflows);
+      console.log('Neural Orchestra received from unified hub:', data);
+      if (data.type === 'orchestra_update' || data.type === 'live_update') {
+        // Handle real orchestra updates
+        if (data.agents) {
+          setAgents(data.agents);
+          console.log(`✅ Updated with ${data.agents.length} real agents`);
+        }
+        if (data.advisors) {
+          setAdvisors(data.advisors);
+          console.log(`✅ Updated with ${data.advisors.length} real advisors`);
+        }
+        if (data.connections) {
+          setConnections(data.connections);
+          console.log(`✅ Updated with ${data.connections.length} connections`);
+        }
+        if (data.workflows) {
+          setWorkflows(data.workflows);
+          console.log(`✅ Updated with ${data.workflows.length} workflows`);
+        }
+        if (data.system_metrics) {
+          setSystemMetrics(data.system_metrics);
+          console.log('📊 System Metrics updated');
+        }
+        if (data.connection_types) {
+          setConnectionTypes(data.connection_types);
+        }
+
+        // Log detailed stats
+        if (data.connection_summary) {
+          console.log('🔗 Connection Summary:', data.connection_summary);
+        }
+
+        // Show data source confirmation
+        if (data.data_source) {
+          console.log(`🎯 Data Source: ${data.data_source}`);
+        }
+
+      } else if (data.type === 'workflow_triggered') {
+        // Handle new workflow creation
+        if (data.workflow) {
+          setWorkflows(prev => [...prev, data.workflow]);
+          console.log(`🚀 New workflow created: ${data.workflow.name}`);
+        }
+      } else if (data.type === 'workflow_progress_update') {
+        // Handle workflow progress updates
+        setWorkflows(prev => prev.map(workflow =>
+          workflow.id === data.workflow_id
+            ? { ...workflow, progress: data.progress, status: data.status, current_step: data.current_step }
+            : workflow
+        ));
+        console.log(`📈 Workflow ${data.workflow_id} progress: ${data.progress}%`);
       } else if (data.type === 'network_state') {
-        // Update network visualization data
+        // Update network visualization data (legacy support)
         if (data.data) {
           setAgents(data.data.agents || []);
           setAdvisors(data.data.advisors || []);
           setConnections(data.data.connections || []);
         }
+      } else if (data.type === 'connection_status') {
+        console.log('Neural Orchestra connection status:', data.message);
+      } else if (data.type === 'heartbeat') {
+        // Heartbeat received - connection is healthy
+        console.log('💓 Neural Orchestra heartbeat received');
       }
+    },
+    onOpen: () => {
+      console.log('Neural Orchestra connected to WebSocket');
+
+      // Request initial data with multiple triggers to ensure we get data
+      sendMessage({ type: 'get_data', component: 'neural_orchestra' });
+      sendMessage({ type: 'get_network_state' });
+      sendMessage({ type: 'get_agents' });
+      console.log('📤 Sent multiple data requests on connection');
     }
   });
 
   useEffect(() => {
-    // Initialize with mock data for demonstration
-    initializeMockData();
-  }, []);
+    // Only initialize with mock data if no real data after 5 seconds
+    const timer = setTimeout(() => {
+      if (agents.length === 0 && advisors.length === 0) {
+        console.log('⚠️ No real data received after 5 seconds, using mock data as fallback');
+        initializeMockData();
+      } else {
+        console.log(`✅ Real data loaded: ${agents.length} agents, ${advisors.length} advisors, ${connections.length} connections`);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [agents.length, advisors.length, connections.length]);
 
   useEffect(() => {
     if (viewMode === 'network') {
@@ -169,25 +306,35 @@ const NeuralOrchestra: React.FC = () => {
 
     const width = 800;
     const height = 400;
-    const centerX = width / 2;
-    const centerY = height / 2;
 
     // Create groups for different layers
     const linkGroup = svg.append('g').attr('class', 'links');
     const nodeGroup = svg.append('g').attr('class', 'nodes');
 
-    // Position nodes in a circular layout
+    // Combine agents and advisors with different layouts
     const allNodes = [
-      ...agents.map(a => ({ ...a, nodeType: 'agent', radius: 30 })),
-      ...advisors.map(a => ({ ...a, nodeType: 'advisor', radius: 35 }))
+      ...agents.map(a => ({
+        ...a,
+        nodeType: 'agent',
+        radius: 20,
+        // Use provided coordinates if available, otherwise use grid layout
+        x: a.x ? Math.min(a.x, width - 50) : (50 + Math.random() * (width - 100)),
+        y: a.y ? Math.min(a.y, height - 50) : (50 + Math.random() * (height - 100))
+      })),
+      ...advisors.map((a, i) => ({
+        ...a,
+        nodeType: 'advisor',
+        radius: 25,
+        // Position advisors in a side panel area
+        x: width - 100 + (i % 2) * 30,
+        y: 50 + (i * 30) % (height - 100)
+      }))
     ];
 
-    const angleStep = (2 * Math.PI) / allNodes.length;
-    allNodes.forEach((node, i) => {
-      const angle = i * angleStep;
-      node.x = centerX + Math.cos(angle) * 150;
-      node.y = centerY + Math.sin(angle) * 150;
-    });
+    console.log(`🎨 Rendering ${allNodes.length} nodes (${agents.length} agents, ${advisors.length} advisors)`);
+
+    // Scale nodes for better visibility with many agents
+    const nodeScale = Math.max(0.5, Math.min(1.0, 100 / allNodes.length));
 
     // Draw connections
     connections.forEach(conn => {
@@ -195,14 +342,20 @@ const NeuralOrchestra: React.FC = () => {
       const target = allNodes.find(n => n.id === conn.target);
 
       if (source && target) {
+        const connectionColor = {
+          consultation: '#8b5cf6',
+          collaboration: '#3b82f6',
+          data_flow: '#10b981'
+        }[conn.type] || '#d1d5db';
+
         const link = linkGroup.append('line')
           .attr('x1', source.x)
           .attr('y1', source.y)
           .attr('x2', target.x)
           .attr('y2', target.y)
-          .attr('stroke', conn.active ? '#8b5cf6' : '#d1d5db')
-          .attr('stroke-width', conn.strength * 3)
-          .attr('stroke-opacity', conn.active ? 0.6 : 0.3);
+          .attr('stroke', conn.active ? connectionColor : '#d1d5db')
+          .attr('stroke-width', Math.max(1, conn.strength * 3 * nodeScale))
+          .attr('stroke-opacity', conn.active ? 0.7 : 0.3);
 
         if (conn.active) {
           // Animate active connections
@@ -210,34 +363,45 @@ const NeuralOrchestra: React.FC = () => {
             .append('animate')
             .attr('attributeName', 'stroke-dashoffset')
             .attr('values', '10;0')
-            .attr('dur', '1s')
+            .attr('dur', '1.5s')
             .attr('repeatCount', 'indefinite');
         }
       }
     });
 
-    // Draw nodes
-    allNodes.forEach(node => {
+    // Draw nodes (only show a subset if too many)
+    const nodesToShow = allNodes.length > 50 ? allNodes.slice(0, 50) : allNodes;
+
+    nodesToShow.forEach(node => {
+      const scaledRadius = node.radius * nodeScale;
+
       const group = nodeGroup.append('g')
         .attr('transform', `translate(${node.x}, ${node.y})`)
         .style('cursor', 'pointer')
         .on('click', () => setSelectedNode(node.id));
 
-      // Node circle
+      // Node circle with status-based colors
+      const statusColors = {
+        working: '#f59e0b',
+        consulting: '#8b5cf6',
+        idle: node.nodeType === 'agent' ? '#3b82f6' : '#10b981',
+        available: '#10b981'
+      };
+
       group.append('circle')
-        .attr('r', node.radius)
-        .attr('fill', node.nodeType === 'agent' ? '#3b82f6' : '#10b981')
-        .attr('fill-opacity', 0.2)
-        .attr('stroke', node.nodeType === 'agent' ? '#3b82f6' : '#10b981')
+        .attr('r', scaledRadius)
+        .attr('fill', statusColors[node.status] || statusColors.idle)
+        .attr('fill-opacity', node.status === 'idle' ? 0.2 : 0.4)
+        .attr('stroke', statusColors[node.status] || statusColors.idle)
         .attr('stroke-width', 2);
 
-      // Status indicator for agents
+      // Status indicator for active nodes
       if (node.nodeType === 'agent' && node.status !== 'idle') {
         group.append('circle')
-          .attr('r', 5)
-          .attr('cx', node.radius * 0.7)
-          .attr('cy', -node.radius * 0.7)
-          .attr('fill', node.status === 'working' ? '#f59e0b' : '#8b5cf6')
+          .attr('r', 3 * nodeScale)
+          .attr('cx', scaledRadius * 0.7)
+          .attr('cy', -scaledRadius * 0.7)
+          .attr('fill', '#ffffff')
           .append('animate')
           .attr('attributeName', 'opacity')
           .attr('values', '1;0.3;1')
@@ -245,22 +409,34 @@ const NeuralOrchestra: React.FC = () => {
           .attr('repeatCount', 'indefinite');
       }
 
-      // Icon
+      // Icon (smaller for many nodes)
       const icon = node.nodeType === 'agent' ? '🤖' : '👤';
       group.append('text')
         .attr('text-anchor', 'middle')
         .attr('dy', '0.3em')
-        .attr('font-size', '20')
+        .attr('font-size', Math.max(12, 16 * nodeScale))
         .text(icon);
 
-      // Label
-      group.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dy', node.radius + 15)
-        .attr('font-size', '12')
-        .attr('fill', '#4b5563')
-        .text(node.name);
+      // Label (only show for larger nodes or selected)
+      if (nodeScale > 0.7 || node.id === selectedNode) {
+        group.append('text')
+          .attr('text-anchor', 'middle')
+          .attr('dy', scaledRadius + 12)
+          .attr('font-size', Math.max(8, 10 * nodeScale))
+          .attr('fill', '#4b5563')
+          .text(node.name.length > 15 ? node.name.substring(0, 12) + '...' : node.name);
+      }
     });
+
+    // Add a summary label for hidden nodes
+    if (allNodes.length > 50) {
+      svg.append('text')
+        .attr('x', 10)
+        .attr('y', height - 10)
+        .attr('font-size', '12')
+        .attr('fill', '#6b7280')
+        .text(`Showing 50 of ${allNodes.length} nodes`);
+    }
   };
 
   const getStatusColor = (status: string) => {

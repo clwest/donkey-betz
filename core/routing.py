@@ -24,7 +24,8 @@ websocket_urlpatterns = [
     re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
 
     # Orchestra and Control Panel WebSockets
-    re_path(r'^ws/orchestra/$', orchestra_consumers.OrchestraConsumer.as_asgi()),
+    re_path(r'^ws/orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
+    re_path(r'^ws/neural-orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
     re_path(r'^ws/control/$', orchestra_consumers.ControlConsumer.as_asgi()),
 
     # Command Center & Intelligence WebSockets
@@ -84,3 +85,160 @@ websocket_urlpatterns.extend(sports_ws_patterns)
 
 # Add intelligence WebSocket patterns for new UI components
 websocket_urlpatterns.extend(intelligence_ws_patterns)
+
+# Unified Platform Hub - Real Data Integration
+# Central hub providing real data flow for all platform components
+from .unified_hub import UnifiedWebSocketHub
+
+# Reality Checking WebSocket Consumer
+class RealityCheckConsumer(UnifiedWebSocketHub):
+    """Specialized consumer for reality checking and system monitoring"""
+
+    async def connect(self):
+        self.component_type = 'reality_checker'
+        await super().connect()
+
+        # Send initial reality status
+        await self.send_reality_status()
+
+    async def receive(self, text_data):
+        """Handle reality checking specific messages"""
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+
+            if message_type == 'reality_check_all':
+                await self.send_reality_status()
+            elif message_type == 'trace_data_flow':
+                flow_type = data.get('flow_type', 'opportunity_pipeline')
+                await self.trace_data_flow(flow_type)
+            elif message_type == 'get_dashboard_data':
+                await self.send_dashboard_data()
+            else:
+                await super().receive(text_data)
+
+        except Exception as e:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Reality check error: {str(e)}'
+            }))
+
+    async def trace_data_flow(self, flow_type):
+        """Initiate data flow tracing"""
+        from .data_flow_tracer import data_flow_tracer, FlowType
+
+        flow_map = {
+            'opportunity_pipeline': FlowType.OPPORTUNITY_PIPELINE,
+            'revenue_pipeline': FlowType.REVENUE_PIPELINE,
+            'websocket_pipeline': FlowType.WEBSOCKET_PIPELINE
+        }
+
+        if flow_type in flow_map:
+            # Start a test trace
+            test_data = {'id': 'reality_check_trace', 'type': 'test'}
+
+            if flow_type == 'opportunity_pipeline':
+                trace_id = data_flow_tracer.trace_opportunity_pipeline(test_data)
+            elif flow_type == 'revenue_pipeline':
+                trace_id = data_flow_tracer.trace_revenue_pipeline(test_data)
+            else:
+                trace_id = data_flow_tracer.trace_websocket_pipeline(test_data, 'income_builder')
+
+            # Get completed trace
+            completed_trace = data_flow_tracer.get_trace_by_id(trace_id)
+
+            await self.send(text_data=json.dumps({
+                'type': 'trace_completed',
+                'flow_type': flow_type,
+                'trace_id': trace_id,
+                'success': completed_trace.success if completed_trace else False,
+                'processing_time_ms': completed_trace.total_processing_time_ms if completed_trace else 0,
+                'stages_completed': len(completed_trace.trace_points) if completed_trace else 0
+            }))
+
+    async def send_dashboard_data(self):
+        """Send truth dashboard data"""
+        from .truth_dashboard import truth_dashboard
+
+        try:
+            dashboard_data = await sync_to_async(truth_dashboard.generate_dashboard_data)()
+
+            await self.send(text_data=json.dumps({
+                'type': 'dashboard_data',
+                'data': dashboard_data
+            }))
+        except Exception as e:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Dashboard data error: {str(e)}'
+            }))
+
+# Production WebSocket endpoints with enhanced reliability
+from .production_websocket import ProductionRevenueConsumer
+
+unified_endpoints = [
+    # Production Revenue Dashboard with real-time updates
+    re_path(r'^ws/revenue-dashboard/$', ProductionRevenueConsumer.as_asgi()),
+    re_path(r'^ws/revenue/$', ProductionRevenueConsumer.as_asgi()),
+
+    # Other component endpoints (will upgrade to production one by one)
+    re_path(r'^ws/income-builder/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/decision-command/$', UnifiedWebSocketHub.as_asgi()),
+    # Neural Orchestra uses dedicated consumer - see line 28
+    re_path(r'^ws/control-center/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/revenue-opportunities/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/monetization-hub/$', UnifiedWebSocketHub.as_asgi()),
+
+    # Alternative paths for component access
+    re_path(r'^ws/decision/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/orchestra/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/control/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/opportunities/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/monetization/$', UnifiedWebSocketHub.as_asgi()),
+
+    # Legacy bridge endpoints (fallback)
+    re_path(r'^ws/bridge/income-builder/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/bridge/revenue/$', ProductionRevenueConsumer.as_asgi()),
+    re_path(r'^ws/bridge/decision/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/bridge/orchestra/$', UnifiedWebSocketHub.as_asgi()),
+
+    # Reality Checking and System Monitoring
+    re_path(r'^ws/reality-check/$', RealityCheckConsumer.as_asgi()),
+    re_path(r'^ws/truth-dashboard/$', RealityCheckConsumer.as_asgi()),
+    re_path(r'^ws/system-monitor/$', RealityCheckConsumer.as_asgi()),
+]
+
+# Platform Unification Orchestrator endpoints
+from .platform_unification_orchestrator import PlatformUnificationConsumer
+
+unification_endpoints = [
+    # Platform Unification Control
+    re_path(r'^ws/platform-orchestrator/$', PlatformUnificationConsumer.as_asgi()),
+    re_path(r'^ws/unified-platform/$', PlatformUnificationConsumer.as_asgi()),
+
+    # Content-Intelligence Pipeline
+    re_path(r'^ws/content-intelligence-pipeline/$', PlatformUnificationConsumer.as_asgi()),
+    re_path(r'^ws/spider-content-feed/$', PlatformUnificationConsumer.as_asgi()),
+
+    # Agent Content Factory
+    re_path(r'^ws/agent-content-factory/$', PlatformUnificationConsumer.as_asgi()),
+    re_path(r'^ws/content-workflow-monitor/$', PlatformUnificationConsumer.as_asgi()),
+
+    # Advisor Content Streams
+    re_path(r'^ws/advisor-content-streams/$', PlatformUnificationConsumer.as_asgi()),
+    re_path(r'^ws/expert-consultation-updates/$', PlatformUnificationConsumer.as_asgi()),
+
+    # Semantic Search Interface
+    re_path(r'^ws/semantic-search/$', PlatformUnificationConsumer.as_asgi()),
+    re_path(r'^ws/knowledge-discovery/$', PlatformUnificationConsumer.as_asgi()),
+
+    # Revenue Pipeline Monitoring
+    re_path(r'^ws/revenue-pipeline-monitor/$', PlatformUnificationConsumer.as_asgi()),
+    re_path(r'^ws/content-monetization-tracker/$', PlatformUnificationConsumer.as_asgi()),
+]
+
+# Add unified platform endpoints
+websocket_urlpatterns.extend(unified_endpoints)
+
+# Add platform unification endpoints
+websocket_urlpatterns.extend(unification_endpoints)

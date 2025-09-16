@@ -24,6 +24,7 @@ from .assistant_prompt_enhanced import (
     validate_response_for_hallucinations,
     apply_mythology_guards
 )
+from .personal_assistant_integration import personal_assistant_integration
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -69,7 +70,19 @@ def assistant_chat_intelligent(request):
         
         # Use the guarded message for processing
         message = guarded_message
-        
+
+        # Get System Self-Awareness context
+        use_self_awareness = request.data.get('use_self_awareness', True)
+        system_awareness_context = None
+        if use_self_awareness:
+            try:
+                system_awareness_context = personal_assistant_integration.enhance_assistant_context(
+                    message, conversation_id
+                )
+                logger.info(f"System awareness: {system_awareness_context.get('system_awareness', {}).get('operational_percentage', 0)}% operational")
+            except Exception as e:
+                logger.error(f"Error getting system awareness: {e}")
+
         # Initialize components
         rag_assistant = RAGAssistant(user)
         agent_router = AgentRouter(user)
@@ -96,16 +109,28 @@ def assistant_chat_intelligent(request):
             'agent_used': None,
             'prompt_optimized': False
         }
+
+        # Add system awareness to metadata if available
+        if system_awareness_context:
+            response_metadata['system_awareness'] = {
+                'operational_percentage': system_awareness_context.get('system_awareness', {}).get('operational_percentage', 0),
+                'platform_reality': system_awareness_context.get('system_awareness', {}).get('platform_reality', 'unknown'),
+                'real_components': system_awareness_context.get('system_awareness', {}).get('real_components', []),
+                'mock_components': system_awareness_context.get('system_awareness', {}).get('mock_components', []),
+                'broken_flows': system_awareness_context.get('system_awareness', {}).get('broken_flows', []),
+                'recommendations': system_awareness_context.get('recommendations', []),
+                'routing': system_awareness_context.get('routing', {})
+            }
         
         # Determine routing strategy
         if force_direct or not use_intelligent_routing:
             # Direct processing without agent routing
             logger.info("Using direct processing (routing disabled)")
-            result = _process_direct(user, message, context, response_metadata)
+            result = _process_direct(user, message, context, response_metadata, system_awareness_context)
         else:
             # Intelligent routing through specialized agents
             result = _process_with_intelligent_routing(
-                user, message, context, agent_router, prompt_optimizer, response_metadata
+                user, message, context, agent_router, prompt_optimizer, response_metadata, system_awareness_context
             )
         
         # Ensure we have a valid result
@@ -179,9 +204,9 @@ def assistant_chat_intelligent(request):
         }, status=500)
 
 
-def _process_with_intelligent_routing(user, message: str, context: str, 
+def _process_with_intelligent_routing(user, message: str, context: str,
                                     agent_router: AgentRouter, prompt_optimizer: IntelligentPromptOptimizer,
-                                    response_metadata: Dict[str, Any]) -> Dict[str, Any]:
+                                    response_metadata: Dict[str, Any], system_awareness_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Process message using intelligent agent routing
     """
@@ -199,6 +224,14 @@ def _process_with_intelligent_routing(user, message: str, context: str,
                 'preferences': 'comprehensive_responses'
             }
         }
+
+        # Add system awareness if available
+        if system_awareness_context:
+            optimization_context['system_awareness'] = {
+                'operational_percentage': system_awareness_context.get('system_awareness', {}).get('operational_percentage', 0),
+                'platform_reality': system_awareness_context.get('system_awareness', {}).get('platform_reality', 'unknown'),
+                'recommendations': system_awareness_context.get('recommendations', [])[:3]  # Include top 3 recommendations
+            }
         
         # Route through Intelligent Prompting Agent
         prompt_result = agent_router.execute_intelligent_prompting(message, optimization_context)
@@ -288,10 +321,10 @@ def _process_with_intelligent_routing(user, message: str, context: str,
     
     # Step 3: Fall back to direct processing with enhanced prompt
     logger.info("Using enhanced direct processing")
-    return _process_direct(user, message, context, response_metadata)
+    return _process_direct(user, message, context, response_metadata, system_awareness_context)
 
 
-def _process_direct(user, message: str, context: str, response_metadata: Dict[str, Any]) -> Dict[str, Any]:
+def _process_direct(user, message: str, context: str, response_metadata: Dict[str, Any], system_awareness_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Process message directly without agent routing (fallback method)
     """
@@ -299,11 +332,11 @@ def _process_direct(user, message: str, context: str, response_metadata: Dict[st
         # Get AI provider
         ai_manager = AIProviderManager()
         available_providers = ai_manager.get_available_providers()
-        
+
         if not available_providers:
             logger.warning("No AI providers available for direct processing")
             return {
-                'message': f"I understand you asked: '{message}'. " + 
+                'message': f"I understand you asked: '{message}'. " +
                           (f"I found {len(response_metadata.get('sources', []))} relevant items in the knowledge base. " if response_metadata.get('sources') else "") +
                           "However, I'm currently running in mock mode. Please configure AI provider API keys for full functionality.",
                 'provider': 'mock',
@@ -332,6 +365,19 @@ def _process_direct(user, message: str, context: str, response_metadata: Dict[st
         has_rag_context = bool(response_metadata.get('sources'))
         source_count = len(response_metadata.get('sources', []))
         system_prompt = get_enhanced_system_prompt(user, has_rag_context, source_count)
+
+        # Add system awareness to the prompt if available
+        if system_awareness_context:
+            awareness = system_awareness_context.get('system_awareness', {})
+            if awareness:
+                system_prompt += f"""
+
+SYSTEM AWARENESS:
+- Platform is {awareness.get('operational_percentage', 0)}% operational ({awareness.get('platform_reality', 'unknown')})
+- Real Components: {', '.join(awareness.get('real_components', [])[:3]) if awareness.get('real_components') else 'None'}
+- Issues: {', '.join(awareness.get('broken_flows', [])[:2]) if awareness.get('broken_flows') else 'None'}
+
+When relevant to the user's question, briefly mention system status."""
         
         # Add compressed context to user message if available
         enhanced_message = message

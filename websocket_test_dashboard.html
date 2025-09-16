@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Data Flow Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: white; }
+        .component { margin: 20px 0; padding: 15px; border: 1px solid #333; border-radius: 8px; background: #2a2a2a; }
+        .status { padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        .connected { background: #10b981; color: white; }
+        .disconnected { background: #ef4444; color: white; }
+        .data-received { background: #3b82f6; color: white; }
+        .no-data { background: #f59e0b; color: black; }
+        .data-preview { margin-top: 10px; padding: 10px; background: #1f2937; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        button { background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #4f46e5; }
+        .timestamp { color: #9ca3af; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 WebSocket Data Flow Dashboard</h1>
+    <p>Real-time monitoring of frontend data connections</p>
+    
+    <div id="components"></div>
+    
+    <script>
+        const components = [
+            { name: 'Income Builder', url: 'ws://localhost:8000/ws/income-builder/', testMessage: {type: 'get_data', component: 'income_builder'} },
+            { name: 'Revenue Dashboard', url: 'ws://localhost:8000/ws/revenue-dashboard/', testMessage: {type: 'refresh_metrics'} },
+            { name: 'Neural Orchestra', url: 'ws://localhost:8000/ws/neural-orchestra/', testMessage: {type: 'get_data', component: 'neural_orchestra'} },
+            { name: 'Decision Command', url: 'ws://localhost:8000/ws/decision-command/', testMessage: {action: 'analyze_opportunities'} }
+        ];
+        
+        function createComponentDiv(component) {
+            return `
+                <div class="component" id="${component.name.replace(' ', '_')}">
+                    <h3>${component.name}</h3>
+                    <div class="status disconnected" id="${component.name.replace(' ', '_')}_status">Disconnected</div>
+                    <button onclick="testComponent('${component.name}')">Test Connection</button>
+                    <button onclick="requestData('${component.name}')">Request Data</button>
+                    <div class="timestamp" id="${component.name.replace(' ', '_')}_time">Never connected</div>
+                    <div class="data-preview" id="${component.name.replace(' ', '_')}_data">No data received</div>
+                </div>
+            `;
+        }
+        
+        function updateComponentStatus(name, status, data = null) {
+            const statusEl = document.getElementById(name.replace(' ', '_') + '_status');
+            const timeEl = document.getElementById(name.replace(' ', '_') + '_time');
+            const dataEl = document.getElementById(name.replace(' ', '_') + '_data');
+            
+            statusEl.textContent = status;
+            statusEl.className = 'status ' + (status === 'Connected' ? 'connected' : status.includes('Data') ? 'data-received' : 'disconnected');
+            timeEl.textContent = new Date().toLocaleTimeString();
+            
+            if (data) {
+                dataEl.textContent = JSON.stringify(data, null, 2);
+            }
+        }
+        
+        function testComponent(name) {
+            const component = components.find(c => c.name === name);
+            const ws = new WebSocket(component.url);
+            
+            ws.onopen = () => {
+                updateComponentStatus(name, 'Connected');
+                ws.send(JSON.stringify(component.testMessage));
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateComponentStatus(name, 'Data Received', data);
+            };
+            
+            ws.onerror = () => {
+                updateComponentStatus(name, 'Connection Error');
+            };
+            
+            setTimeout(() => ws.close(), 5000);
+        }
+        
+        function requestData(name) {
+            testComponent(name);
+        }
+        
+        // Initialize dashboard
+        document.getElementById('components').innerHTML = components.map(createComponentDiv).join('');
+        
+        // Auto-test all components on load
+        setTimeout(() => {
+            components.forEach(comp => testComponent(comp.name));
+        }, 1000);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            components.forEach(comp => testComponent(comp.name));
+        }, 30000);
+    </script>
+</body>
+</html>
+    

@@ -1,0 +1,126 @@
+{
+  "timestamp": "2025-09-15T12:48:42.750802",
+  "summary": {
+    "total": 12,
+    "connected": 0,
+    "working": 0,
+    "partial": 0,
+    "broken": 12,
+    "component_status": {
+      "Income Builder": false,
+      "Revenue Dashboard": false,
+      "Decision Command": false,
+      "Neural Orchestra": false
+    }
+  },
+  "detailed_results": {
+    "ws://localhost:8000/ws/income-builder/": {
+      "url": "ws://localhost:8000/ws/income-builder/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/revenue-income/": {
+      "url": "ws://localhost:8000/ws/revenue-income/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/decision/": {
+      "url": "ws://localhost:8000/ws/decision/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/decisions/": {
+      "url": "ws://localhost:8000/ws/decisions/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/command-center/": {
+      "url": "ws://localhost:8000/ws/command-center/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/orchestra/": {
+      "url": "ws://localhost:8000/ws/orchestra/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/agents/": {
+      "url": "ws://localhost:8000/ws/agents/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/agents/execution/": {
+      "url": "ws://localhost:8000/ws/agents/execution/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/agents/orchestration/": {
+      "url": "ws://localhost:8000/ws/agents/orchestration/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/dashboard/": {
+      "url": "ws://localhost:8000/ws/dashboard/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/notifications/": {
+      "url": "ws://localhost:8000/ws/notifications/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    },
+    "ws://localhost:8000/ws/test/echo/": {
+      "url": "ws://localhost:8000/ws/test/echo/",
+      "connected": false,
+      "can_send": false,
+      "receives_data": false,
+      "error": "Unexpected error: BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "response_data": null,
+      "connection_time": null
+    }
+  }
+}
