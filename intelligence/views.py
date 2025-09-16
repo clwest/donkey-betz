@@ -191,11 +191,15 @@ class ActionPlanPersistenceView(APIView):
                     request.session.create()
                     session_id = request.session.session_key
 
-                # For anonymous users, return empty list (or implement session-based storage)
+                # For anonymous users, get all anonymous plans (last 50)
+                # We'll filter by recent ones to avoid showing ALL anonymous plans
+                from datetime import timedelta
+                from django.utils import timezone
+                cutoff = timezone.now() - timedelta(days=7)  # Last 7 days
                 plans = ActionPlan.objects.filter(
                     user=None,
-                    opportunity_id__startswith=f"anon_{session_id}_"
-                ).order_by('-created_at') if session_id else []
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:50]  # Limit to 50 most recent
 
             # Serialize plans
             serialized_plans = []
@@ -499,19 +503,58 @@ class ViewGeneratedFileView(APIView):
         """Get content of a generated file"""
         from pathlib import Path
         import os
+        import urllib.parse
 
         try:
-            # Security check - only allow files in income_builder_outputs
-            file_path = Path("income_builder_outputs") / filename
+            # Decode URL-encoded filename (handles spaces and special characters)
+            decoded_filename = urllib.parse.unquote(filename)
 
-            # Ensure the file is within the allowed directory
-            if not str(file_path).startswith("income_builder_outputs"):
+            # Security check - only allow files in income_builder_outputs
+            file_path = Path("income_builder_outputs") / decoded_filename
+
+            # Ensure the file is within the allowed directory (resolve to prevent path traversal)
+            try:
+                resolved_path = file_path.resolve()
+                allowed_dir = Path("income_builder_outputs").resolve()
+                if not str(resolved_path).startswith(str(allowed_dir)):
+                    return Response({
+                        'error': 'Invalid file path',
+                        'success': False
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except:
                 return Response({
                     'error': 'Invalid file path',
                     'success': False
                 }, status=status.HTTP_403_FORBIDDEN)
 
             # Check if file exists
+            if not file_path.exists():
+                # Try to find the file in a subdirectory
+                # For files like AI-Powered_Social_Media_Management_Complete_Plan.md
+                # that might be in "AI Social Media Management/" subdirectory
+
+                # Try common subdirectory patterns
+                possible_subdirs = [
+                    "AI Social Media Management",
+                    "AI-Powered Social Media Management",
+                    "AI_Social_Media_Management"
+                ]
+
+                for subdir in possible_subdirs:
+                    alt_path = Path("income_builder_outputs") / subdir / decoded_filename
+                    if alt_path.exists():
+                        file_path = alt_path
+                        break
+
+                # If still not found, try to find it by searching
+                if not file_path.exists():
+                    import glob
+                    search_pattern = f"income_builder_outputs/**/{decoded_filename}"
+                    matches = glob.glob(search_pattern, recursive=True)
+                    if matches:
+                        file_path = Path(matches[0])
+
+            # Final check if file exists
             if not file_path.exists():
                 return Response({
                     'error': 'File not found',

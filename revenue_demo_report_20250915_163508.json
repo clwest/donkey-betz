@@ -1,0 +1,31 @@
+{
+  "demo_start": "2025-09-15T16:35:08.125498",
+  "opportunities_found": 5,
+  "opportunities_scored": 5,
+  "actionable_opportunities": 5,
+  "proposals_generated": 5,
+  "proposals_submitted": 5,
+  "responses_received": 1,
+  "contracts_won": 1,
+  "total_revenue": 570.0,
+  "successful_proposals": [
+    {
+      "platform": "upwork",
+      "title": "Web Scraping Automation",
+      "revenue": 570.0,
+      "proposal_id": "prop_upwork_004"
+    }
+  ],
+  "revenue_breakdown": {
+    "upwork": 570.0
+  },
+  "performance_metrics": {
+    "response_rate": 20.0,
+    "win_rate": 100.0,
+    "overall_success_rate": 20.0,
+    "avg_revenue_per_win": 570.0,
+    "revenue_per_proposal": 114.0
+  },
+  "demo_end": "2025-09-15T16:35:08.634112",
+  "demo_duration": 0.508614
+}

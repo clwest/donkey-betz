@@ -468,13 +468,17 @@ Base recommendations on the concrete data collected, not generic advice."""
 
                     except Exception as agent_error:
                         plan.add_log(f"Agent routing failed: {agent_error}, falling back to direct AI", level='warning')
-                        # Fallback to direct GPT-4o-mini call
+                        # Fallback to direct GPT-5-mini call
                         response = ai_manager.generate_content(
                             provider='openai',
-                            model='gpt-4o-mini',
+                            model='gpt-5-mini',  # GPT-5-mini
                             system_prompt="You are an expert business consultant.",
                             user_prompt=f"Create a 3-step action plan for: {step}",
-                            config={'max_tokens': 500, 'temperature': 0.7}
+                            config={
+                                'max_completion_tokens': 500,  # GPT-5 uses max_completion_tokens
+                                'temperature': 1.0,  # GPT-5 always uses temperature 1.0
+                                'reasoning_effort': 'medium'  # GPT-5-mini supports reasoning tokens
+                            }
                         )
 
                     # Handle GenerationResult object with detailed logging

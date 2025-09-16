@@ -5,6 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import FileViewer from './FileViewer';
 import {
   DollarSign,
@@ -21,7 +27,10 @@ import {
   Wifi,
   WifiOff,
   Eye,
-  FileText
+  FileText,
+  FileSpreadsheet,
+  FileJson,
+  File
 } from 'lucide-react';
 
 // Use API configuration
@@ -77,6 +86,7 @@ export default function IncomeBuilder() {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    console.log('🚀 IncomeBuilder component mounted, fetching data...');
     fetchOpportunities();
     fetchRevenueData();
     loadActionPlansFromBackend();
@@ -91,6 +101,16 @@ export default function IncomeBuilder() {
     };
   }, []);
 
+  // Debug: Monitor opportunities state changes
+  useEffect(() => {
+    console.log('📋 Opportunities state updated:', opportunities.length, 'items', opportunities);
+  }, [opportunities]);
+
+  // Debug: Monitor revenue data state changes
+  useEffect(() => {
+    console.log('💳 Revenue data state updated:', revenueData);
+  }, [revenueData]);
+
   const connectWebSocket = () => {
     try {
       const ws = new WebSocket(`${WS_BASE_URL}/ws/income-builder/`);
@@ -98,6 +118,11 @@ export default function IncomeBuilder() {
       ws.onopen = () => {
         console.log('✅ WebSocket connected for Income Builder');
         setWsConnected(true);
+        setLoading(false); // Stop loading when connected
+
+        // Immediately request data when connected
+        ws.send(JSON.stringify({"action": "get_opportunities"}));
+        console.log('📤 Sent data request on connection');
       };
 
       ws.onmessage = (event) => {
@@ -129,7 +154,36 @@ export default function IncomeBuilder() {
   };
 
   const handleWebSocketMessage = (data: any) => {
-    if (data.type === 'action_plan_update') {
+    console.log('📨 Income Builder received WS message:', data);
+
+    if (data.type === 'opportunities_update' && data.opportunities) {
+      // Only update if we're getting more opportunities or if we have none
+      setOpportunities(prev => {
+        if (prev.length === 0 || data.opportunities.length >= prev.length) {
+          console.log(`✅ Updating opportunities: ${prev.length} → ${data.opportunities.length}`);
+          return data.opportunities;
+        } else {
+          console.log(`⚠️ Skipping WebSocket update: current ${prev.length} > incoming ${data.opportunities.length}`);
+          return prev;
+        }
+      });
+      setLoading(false);
+
+      // Log source for debugging
+      if (data.source) {
+        console.log(`📋 Opportunities source: ${data.source} (${data.opportunities.length} items)`);
+        if (data.reddit_count) {
+          console.log(`🔥 Enhanced with ${data.reddit_count} Reddit opportunities`);
+        }
+      }
+    } else if (data.type === 'reddit_opportunities' && data.opportunities) {
+      // Legacy handler - replace non-reddit opportunities and add reddit ones
+      setOpportunities(prev => [...data.opportunities, ...prev.filter(o => !o.id.startsWith('reddit_'))]);
+      setLoading(false);
+    } else if (data.type === 'revenue_update' && data.revenue) {
+      // Update revenue data
+      setRevenueData(data.revenue);
+    } else if (data.type === 'action_plan_update') {
       // Update specific action plan
       setActionPlans(prev => prev.map(plan =>
         plan.backend_id === data.plan_id
@@ -147,6 +201,9 @@ export default function IncomeBuilder() {
     } else if (data.type === 'new_opportunity') {
       // Add new opportunity
       setOpportunities(prev => [...prev, data.opportunity]);
+    } else if (data.type === 'automation_update' && data.automations) {
+      // Update active automations
+      setActiveAutomations(data.automations);
     }
   };
 
@@ -158,7 +215,7 @@ export default function IncomeBuilder() {
 
       if (inProgressPlans.length > 0) {
         try {
-          const response = await fetch('http://localhost:8000/api/v1/intelligence/income-builder/execute/');
+          const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/execute/`);
           const data = await response.json();
 
           console.log('📊 Polling response:', data);
@@ -213,7 +270,7 @@ export default function IncomeBuilder() {
           console.error('Error polling plan status:', error);
         }
       }
-    }, 5000); // Poll every 5 seconds
+    }, 30000); // Poll every 30 seconds to avoid rate limiting
 
     return () => clearInterval(pollInterval);
   }, [actionPlans]);
@@ -222,7 +279,7 @@ export default function IncomeBuilder() {
     try {
       const planContent = await fetch(`${API_BASE_URL}${plan.file_path}`).then(r => r.text());
 
-      const response = await fetch('http://localhost:5001/api/income-builder/analyze-plan', {
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/analyze-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_content: planContent })
@@ -244,7 +301,7 @@ export default function IncomeBuilder() {
 
   const executePlanAutomation = async (plan: any) => {
     try {
-      const response = await fetch('http://localhost:5001/api/income-builder/process-plan', {
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/process-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -275,7 +332,7 @@ export default function IncomeBuilder() {
   const monitorAutomationExecution = async (executionId: string) => {
     const checkStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:5001/api/income-builder/execution-status/${executionId}`);
+        const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/execution-status/${executionId}`);
         const status = await response.json();
 
         setActiveAutomations(prev => prev.map(a =>
@@ -305,13 +362,16 @@ export default function IncomeBuilder() {
 
   const fetchOpportunities = async () => {
     try {
+      console.log('🔍 Fetching opportunities from:', `${API_BASE_URL}/v1/intelligence/income-builder/`);
       const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/`);
       const data = await response.json();
+      console.log('📊 Opportunities data received:', data);
       if (data.success) {
+        console.log('✅ Setting opportunities:', data.opportunities);
         setOpportunities(data.opportunities);
       }
     } catch (error) {
-      console.error('Error fetching opportunities:', error);
+      console.error('❌ Error fetching opportunities:', error);
     } finally {
       setLoading(false);
     }
@@ -319,13 +379,16 @@ export default function IncomeBuilder() {
 
   const fetchRevenueData = async () => {
     try {
+      console.log('💰 Fetching revenue data from:', `${API_BASE_URL}/v1/monetization/opportunities/`);
       const response = await fetch(`${API_BASE_URL}/v1/monetization/opportunities/`);
       const data = await response.json();
+      console.log('💵 Revenue data received:', data);
       if (data.success) {
+        console.log('✅ Setting revenue dashboard:', data.dashboard);
         setRevenueData(data.dashboard);
       }
     } catch (error) {
-      console.error('Error fetching revenue data:', error);
+      console.error('❌ Error fetching revenue data:', error);
     }
   };
 
@@ -459,6 +522,150 @@ export default function IncomeBuilder() {
       case 'advanced': return 'bg-orange-500';
       case 'expert': return 'bg-red-500';
       default: return 'bg-gray-500';
+    }
+  };
+
+  // Export functions for multiple formats
+  const exportAsJSON = (plan: any, type: string = 'full') => {
+    const filename = `${plan.opportunity_title.replace(/\s+/g, '_')}_${type}.json`;
+    const data = JSON.stringify(plan, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsCSV = (plan: any) => {
+    let csv = 'Field,Value\n';
+    csv += `"Opportunity","${plan.opportunity_title}"\n`;
+    csv += `"Status","${plan.status}"\n`;
+    csv += `"Progress","${plan.progress}%"\n`;
+    csv += `"Created","${new Date(plan.created_at).toLocaleString()}"\n`;
+
+    if (plan.completed_at) {
+      csv += `"Completed","${new Date(plan.completed_at).toLocaleString()}"\n`;
+    }
+
+    if (plan.steps?.length > 0) {
+      csv += `"Total Steps","${plan.steps.length}"\n`;
+      plan.steps.forEach((step: any, i: number) => {
+        csv += `"Step ${i+1}","${step.description}"\n`;
+      });
+    }
+
+    if (plan.results?.files_created?.length > 0) {
+      csv += `"Files Created","${plan.results.files_created.length}"\n`;
+      plan.results.files_created.forEach((file: string, i: number) => {
+        csv += `"File ${i+1}","${file}"\n`;
+      });
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${plan.opportunity_title.replace(/\s+/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsMarkdown = (plan: any) => {
+    let md = `# ${plan.opportunity_title}\n\n`;
+    md += `**Status:** ${plan.status}\n`;
+    md += `**Progress:** ${plan.progress}%\n`;
+    md += `**Created:** ${new Date(plan.created_at).toLocaleString()}\n`;
+
+    if (plan.completed_at) {
+      md += `**Completed:** ${new Date(plan.completed_at).toLocaleString()}\n`;
+    }
+
+    md += '\n## Action Steps\n\n';
+    if (plan.steps?.length > 0) {
+      plan.steps.forEach((step: any, i: number) => {
+        md += `${i+1}. ${step.description}\n`;
+        if (step.status === 'completed') {
+          md += `   - ✅ Completed\n`;
+        }
+      });
+    }
+
+    if (plan.results?.files_created?.length > 0) {
+      md += '\n## Generated Files\n\n';
+      plan.results.files_created.forEach((file: string) => {
+        md += `- ${file}\n`;
+      });
+    }
+
+    if (plan.timeline) {
+      md += `\n## Timeline\n${plan.timeline}\n`;
+    }
+
+    if (plan.expected_outcome) {
+      md += `\n## Expected Outcome\n${plan.expected_outcome}\n`;
+    }
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${plan.opportunity_title.replace(/\s+/g, '_')}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsPDF = (plan: any) => {
+    // Create HTML content for PDF
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${plan.opportunity_title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #2563eb; }
+          h2 { color: #3b82f6; margin-top: 20px; }
+          .meta { color: #666; margin: 10px 0; }
+          .step { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+          .completed { background: #d1fae5; }
+          .file { margin: 5px 0; padding: 5px 10px; background: #e0e7ff; border-radius: 3px; }
+        </style>
+      </head>
+      <body>
+        <h1>${plan.opportunity_title}</h1>
+        <div class="meta">Status: ${plan.status} | Progress: ${plan.progress}%</div>
+        <div class="meta">Created: ${new Date(plan.created_at).toLocaleString()}</div>
+        ${plan.completed_at ? `<div class="meta">Completed: ${new Date(plan.completed_at).toLocaleString()}</div>` : ''}
+
+        <h2>Action Steps</h2>
+        ${plan.steps?.map((step: any, i: number) => `
+          <div class="step ${step.status === 'completed' ? 'completed' : ''}">
+            ${i+1}. ${step.description}
+            ${step.status === 'completed' ? ' ✓' : ''}
+          </div>
+        `).join('') || '<p>No steps defined</p>'}
+
+        ${plan.results?.files_created?.length > 0 ? `
+          <h2>Generated Files</h2>
+          ${plan.results.files_created.map((file: string) => `
+            <div class="file">${file}</div>
+          `).join('')}
+        ` : ''}
+
+        ${plan.timeline ? `<h2>Timeline</h2><p>${plan.timeline}</p>` : ''}
+        ${plan.expected_outcome ? `<h2>Expected Outcome</h2><p>${plan.expected_outcome}</p>` : ''}
+      </body>
+      </html>
+    `;
+
+    // Open in new window for printing to PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
     }
   };
 
@@ -968,30 +1175,54 @@ export default function IncomeBuilder() {
                             <div className="border-l-2 border-green-400 pl-3">
                               <h5 className="text-xs font-semibold text-green-700 mb-1">📁 Files Created:</h5>
                               <div className="space-y-2">
-                                {plan.results.files_created.map((file: string | any, idx: number) => {
-                                  const filepath = typeof file === 'string' ? file : String(file);
-                                  const filename = filepath.split('/').pop() || filepath;
-                                  return (
-                                    <div key={idx} className="flex items-center justify-between">
-                                      <span className="text-sm text-gray-700">{filename}</span>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-xs gap-1"
-                                        onClick={() => {
-                                          // Extract just the filename from the path
-                                          const filename = filepath.startsWith('income_builder_outputs/')
-                                            ? filepath.replace('income_builder_outputs/', '')
-                                            : filepath;
-                                          setViewingFile(filename);
-                                        }}
-                                      >
-                                        <Eye className="h-3 w-3" />
-                                        View
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
+                                {plan.results.files_created
+                                  .flat() // Flatten nested arrays
+                                  .filter((file: any) => typeof file === 'string' && file.length > 0)
+                                  .map((file: string, idx: number) => {
+                                    const filepath = file;
+                                    const filename = filepath.split('/').pop() || filepath;
+
+                                    // Extract the actual file path
+                                    // Files are stored in subdirectories but the database might not have the full path
+                                    let viewPath = filepath;
+
+                                    // Remove the income_builder_outputs prefix if present
+                                    if (filepath.startsWith('income_builder_outputs/')) {
+                                      viewPath = filepath.replace('income_builder_outputs/', '');
+                                    }
+
+                                    // If the path doesn't include a directory, add it based on the plan type
+                                    if (!viewPath.includes('/')) {
+                                      // Map plan titles to their directory names
+                                      if (plan.opportunity_title?.includes('Social Media')) {
+                                        viewPath = `AI Social Media Management/${viewPath}`;
+                                      } else if (plan.opportunity_title?.includes('Content Writing')) {
+                                        viewPath = `AI-Assisted Content Writing/${viewPath}`;
+                                      } else if (plan.opportunity_title?.includes('Digital Templates')) {
+                                        viewPath = `AI-Generated Digital Templates/${viewPath}`;
+                                      } else if (plan.opportunity_title?.includes('Online Tutoring')) {
+                                        viewPath = `AI-Enhanced Online Tutoring/${viewPath}`;
+                                      }
+                                    }
+
+                                    return (
+                                      <div key={idx} className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-700" title={filepath}>{filename}</span>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-xs gap-1"
+                                          onClick={() => {
+                                            console.log('Viewing file:', viewPath);
+                                            setViewingFile(viewPath);
+                                          }}
+                                        >
+                                          <Eye className="h-3 w-3" />
+                                          View
+                                        </Button>
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             </div>
                           )}
@@ -1020,39 +1251,36 @@ export default function IncomeBuilder() {
                             );
                           })}
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-3"
-                          onClick={() => {
-                            // Download results as formatted document
-                            let content = `Income Builder Action Plan Results\n`;
-                            content += `=====================================\n\n`;
-                            content += `Opportunity: ${plan.opportunity_title}\n`;
-                            content += `Completed: ${new Date(plan.completed_at || Date.now()).toLocaleString()}\n\n`;
-
-                            if (plan.results.files_created) {
-                              content += `Files Created:\n`;
-                              plan.results.files_created.forEach((file: string) => {
-                                content += `  - ${file}\n`;
-                              });
-                              content += `\n`;
-                            }
-
-                            content += `Full Results:\n`;
-                            content += JSON.stringify(plan.results, null, 2);
-
-                            const blob = new Blob([content], { type: 'text/plain' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `${plan.opportunity_title.replace(/\s+/g, '_')}_results.txt`;
-                            a.click();
-                          }}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Full Results
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-3"
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Export Results
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => exportAsPDF(plan)}>
+                              <File className="mr-2 h-4 w-4" />
+                              Export as PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportAsMarkdown(plan)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Export as Markdown
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportAsCSV(plan)}>
+                              <FileSpreadsheet className="mr-2 h-4 w-4" />
+                              Export as CSV
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportAsJSON(plan)}>
+                              <FileJson className="mr-2 h-4 w-4" />
+                              Export as JSON
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     )}
 
@@ -1123,7 +1351,7 @@ export default function IncomeBuilder() {
                             const opportunity = opportunities.find(o => o.id === plan.opportunity_id);
 
                             // Call backend API to save and execute the plan
-                            const response = await fetch('http://localhost:8000/api/v1/intelligence/income-builder/execute/', {
+                            const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/execute/`, {
                               method: 'POST',
                               headers: {
                                 'Content-Type': 'application/json',
@@ -1315,28 +1543,56 @@ export default function IncomeBuilder() {
                                 Generated Files ({plan.results.files_created.length})
                               </h5>
                               <div className="space-y-1">
-                                {plan.results.files_created.slice(0, 3).map((file: string | any, idx: number) => {
-                                  const filepath = typeof file === 'string' ? file : String(file);
-                                  const filename = filepath.split('/').pop() || filepath;
-                                  return (
-                                    <div key={idx} className="flex items-center justify-between">
-                                      <span className="text-sm text-gray-300 truncate">📄 {filename}</span>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-xs h-6 px-2"
-                                        onClick={() => {
-                                          const cleanFilename = filepath.startsWith('income_builder_outputs/')
-                                            ? filepath.replace('income_builder_outputs/', '')
-                                            : filepath;
-                                          setViewingFile(cleanFilename);
-                                        }}
-                                      >
-                                        <Eye className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
+                                {plan.results.files_created
+                                  .flat() // Flatten nested arrays
+                                  .filter((file: any) => typeof file === 'string' && file.length > 0)
+                                  .slice(0, 5)
+                                  .map((file: string, idx: number) => {
+                                    const filepath = file;
+                                    const filename = filepath.split('/').pop() || filepath;
+
+                                    // Extract the actual file path
+                                    // Files are stored in subdirectories but the database might not have the full path
+                                    let viewPath = filepath;
+
+                                    // Remove the income_builder_outputs prefix if present
+                                    if (filepath.startsWith('income_builder_outputs/')) {
+                                      viewPath = filepath.replace('income_builder_outputs/', '');
+                                    }
+
+                                    // If the path doesn't include a directory, add it based on the plan type
+                                    if (!viewPath.includes('/')) {
+                                      // Map plan titles to their directory names
+                                      if (plan.opportunity_title?.includes('Social Media')) {
+                                        viewPath = `AI Social Media Management/${viewPath}`;
+                                      } else if (plan.opportunity_title?.includes('Content Writing')) {
+                                        viewPath = `AI-Assisted Content Writing/${viewPath}`;
+                                      } else if (plan.opportunity_title?.includes('Digital Templates')) {
+                                        viewPath = `AI-Generated Digital Templates/${viewPath}`;
+                                      } else if (plan.opportunity_title?.includes('Online Tutoring')) {
+                                        viewPath = `AI-Enhanced Online Tutoring/${viewPath}`;
+                                      }
+                                    }
+
+                                    return (
+                                      <div key={idx} className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-300 truncate" title={filepath}>
+                                          📄 {filename}
+                                        </span>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="text-xs h-6 px-2 hover:bg-cyan-500/20"
+                                          onClick={() => {
+                                            console.log('Viewing file:', viewPath);
+                                            setViewingFile(viewPath);
+                                          }}
+                                        >
+                                          <Eye className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    );
+                                  })}
                                 {plan.results.files_created.length > 3 && (
                                   <p className="text-xs text-gray-500">
                                     +{plan.results.files_created.length - 3} more files
@@ -1381,43 +1637,36 @@ export default function IncomeBuilder() {
                             >
                               {plan.expanded ? 'Hide' : 'View'} Details
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => {
-                                // Download results
-                                let content = `Income Builder - Completed Action Plan\n`;
-                                content += `========================================\n\n`;
-                                content += `Opportunity: ${plan.opportunity_title}\n`;
-                                content += `Completed: ${new Date(plan.completed_at || Date.now()).toLocaleString()}\n\n`;
-
-                                if (plan.results.files_created) {
-                                  content += `Generated Files:\n`;
-                                  plan.results.files_created.forEach((file: string) => {
-                                    content += `  ✓ ${file}\n`;
-                                  });
-                                  content += `\n`;
-                                }
-
-                                if (plan.results.ml_score) {
-                                  content += `AI Success Score: ${(plan.results.ml_score * 100).toFixed(1)}%\n\n`;
-                                }
-
-                                content += `Full Results:\n`;
-                                content += JSON.stringify(plan.results, null, 2);
-
-                                const blob = new Blob([content], { type: 'text/plain' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `${plan.opportunity_title.replace(/\s+/g, '_')}_completed.txt`;
-                                a.click();
-                              }}
-                            >
-                              <Download className="h-3 w-3 mr-1" />
-                              Export
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Export
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => exportAsPDF(plan)}>
+                                  <File className="mr-2 h-4 w-4" />
+                                  PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => exportAsMarkdown(plan)}>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Markdown
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => exportAsCSV(plan)}>
+                                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                  CSV
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => exportAsJSON(plan)}>
+                                  <FileJson className="mr-2 h-4 w-4" />
+                                  JSON
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       )}

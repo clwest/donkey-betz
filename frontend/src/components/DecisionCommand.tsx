@@ -77,15 +77,53 @@ const DecisionCommand: React.FC = () => {
   const [selectedOpportunity, setSelectedOpportunity] = useState<IncomeOpportunity | null>(null);
   const [projections, setProjections] = useState<EarningsProjection | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiInsights, setAiInsights] = useState<any[]>([]);
 
-  const { sendMessage, lastMessage } = useWebSocket({
-    url: '/ws/decision/',
+  const { sendMessage, lastMessage, isConnected } = useWebSocket({
+    url: '/ws/decision-command/',
     onMessage: (data) => {
-      console.log('Decision Command received:', data);
+      console.log('Decision Command received from unified hub:', data);
       if (data.type === 'opportunities_analysis') {
         setOpportunities(data.top_opportunities || []);
         setProjections(data.earnings_projection || null);
+        setLoading(false);
+      } else if (data.type === 'decision_update') {
+        // Handle decision updates
+        console.log('Decision updates:', data.decisions);
+        if (data.decisions && data.decisions.length > 0) {
+          // Convert decisions to opportunities format
+          const convertedOpportunities = data.decisions.map((decision: any) => ({
+            id: decision.id,
+            title: decision.title,
+            stream_type: decision.category || 'ai_automation',
+            description: decision.description,
+            time_to_income: decision.timeframe || '1-2 weeks',
+            potential_monthly: decision.potential || '$1,000-$5,000',
+            difficulty: decision.priority === 'high' ? 'beginner' : decision.priority === 'medium' ? 'intermediate' : 'advanced',
+            success_probability: decision.confidence || 75,
+            required_skills: decision.requirements || [],
+            resources_needed: decision.resources || []
+          }));
+          setOpportunities(convertedOpportunities);
+          setLoading(false);
+        }
+        if (data.ai_insights) {
+          // Store AI insights for display
+          setAiInsights(data.ai_insights);
+        }
+      } else if (data.type === 'connection') {
+        console.log('Decision Command connected to bridge');
+        setLoading(false);
       }
+    },
+    onOpen: () => {
+      console.log('Decision Command connected to WebSocket');
+
+      // Request initial data with action trigger to ensure we get data
+      sendMessage({ type: 'get_data', component: 'decision_command' });
+      sendMessage({ action: 'analyze_opportunities' });
+      sendMessage({ type: 'get_opportunities' });
+      console.log('📤 Sent data requests with action triggers on connection');
     }
   });
 
@@ -320,22 +358,24 @@ const DecisionCommand: React.FC = () => {
                                 <p className="font-medium">{opp.time_to_income}</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Match Score</span>
-                                <p className="font-medium">{(opp.score * 100).toFixed(0)}%</p>
+                                <span className="text-gray-500">Success Rate</span>
+                                <p className="font-medium">{opp.success_probability || 75}%</p>
                               </div>
                             </div>
 
-                            <div className="mt-3">
-                              <p className="text-sm text-gray-600 mb-1">Why this matches:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {opp.match_reasons.map((reason, i) => (
-                                  <Badge key={i} variant="outline" className="text-xs">
-                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                    {reason}
-                                  </Badge>
-                                ))}
+                            {opp.required_skills && opp.required_skills.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-sm text-gray-600 mb-1">Required Skills:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {opp.required_skills.map((skill, i) => (
+                                    <Badge key={i} variant="outline" className="text-xs">
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            )}
 
                             {selectedOpportunity?.id === opp.id && (
                               <motion.div

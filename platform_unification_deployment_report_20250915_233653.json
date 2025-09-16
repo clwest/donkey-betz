@@ -1,0 +1,34 @@
+{
+  "deployment_timestamp": "2025-09-15T23:36:53.458655",
+  "configuration": {
+    "test_mode": true,
+    "component": "spider_content",
+    "start_immediately": false
+  },
+  "orchestrator_status": "deployed",
+  "platform_status": "deployed",
+  "components": {
+    "spider_army": "deployed",
+    "agent_factory": "deployed",
+    "advisor_streams": "deployed",
+    "neural_orchestra": "deployed",
+    "semantic_search": "deployed",
+    "revenue_pipelines": "deployed"
+  },
+  "websocket_endpoints": [
+    "ws://localhost:8000/ws/platform-orchestrator/",
+    "ws://localhost:8000/ws/content-intelligence-pipeline/",
+    "ws://localhost:8000/ws/agent-content-factory/",
+    "ws://localhost:8000/ws/advisor-content-streams/",
+    "ws://localhost:8000/ws/semantic-search/",
+    "ws://localhost:8000/ws/revenue-pipeline-monitor/"
+  ],
+  "integration_points": {
+    "spider_to_content": "active",
+    "agents_to_workflows": "active",
+    "advisors_to_streams": "active",
+    "neural_realtime": "active",
+    "semantic_search": "active",
+    "revenue_tracking": "active"
+  }
+}

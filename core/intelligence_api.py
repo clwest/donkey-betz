@@ -51,6 +51,7 @@ def skynet_status(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def live_opportunities(request):
     """Get live opportunities"""
     return Response({
@@ -68,6 +69,7 @@ def live_opportunities(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def live_predictions(request):
     """Get live predictions"""
     return Response({

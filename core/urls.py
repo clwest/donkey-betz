@@ -316,6 +316,10 @@ urlpatterns = [
     path('api/v1/mythology/', include('mythology.urls')),  # Mythology/Hallucination Review module
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
+    path('api/v1/persistence/', include('persistence.urls')),  # Data Persistence Infrastructure
+
+    # System Reality Self-Awareness Engine
+    path('truth/', include('core.truth_urls')),  # Truth Dashboard and Reality APIs
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),

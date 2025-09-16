@@ -1,5 +1,5 @@
-import { createContext, forwardRef, useContext, useState, useRef, useEffect } from 'react';
-import type { HTMLAttributes, ReactNode } from 'react';
+import { createContext, forwardRef, useContext, useState, useRef, useEffect, cloneElement, isValidElement } from 'react';
+import type { HTMLAttributes, ReactNode, ReactElement } from 'react';
 import clsx from 'clsx';
 
 interface DropdownMenuContextValue {
@@ -21,7 +21,7 @@ export const DropdownMenu = ({ children }: DropdownMenuProps) => {
 
   return (
     <DropdownMenuContext.Provider value={{ open, setOpen }}>
-      <div className="relative inline-block text-left">
+      <div className="relative inline-block text-left z-50">
         {children}
       </div>
     </DropdownMenuContext.Provider>
@@ -41,10 +41,12 @@ export const DropdownMenuTrigger = forwardRef<HTMLButtonElement, DropdownMenuTri
       setOpen(!open);
     };
 
-    if (asChild) {
-      // In a full implementation, this would clone the child element and add event handlers
-      // For simplicity, we'll just render the children
-      return <>{children}</>;
+    if (asChild && isValidElement(children)) {
+      // Clone the child element and add the click handler
+      return cloneElement(children as ReactElement<any>, {
+        onClick: handleClick,
+        ref
+      });
     }
     
     return (
@@ -90,7 +92,7 @@ export const DropdownMenuContent = forwardRef<HTMLDivElement, DropdownMenuConten
       <div
         ref={contentRef}
         className={clsx(
-          'absolute z-50 min-w-32 overflow-hidden rounded-lg border-2 border-cyan-500/50 bg-black p-1 shadow-[0_0_20px_rgba(0,255,255,0.3)]',
+          'absolute z-[100] min-w-32 overflow-hidden rounded-lg border-2 border-cyan-500/50 bg-black p-1 shadow-[0_0_20px_rgba(0,255,255,0.3)]',
           'animate-in fade-in-0 zoom-in-95',
           'before:absolute before:inset-0 before:border-2 before:border-cyan-500/30 before:rounded-lg before:animate-pulse',
           {

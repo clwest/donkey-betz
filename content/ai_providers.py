@@ -138,9 +138,12 @@ class OpenAIProvider(BaseAIProvider):
                 if 'gpt-5' in model.lower():
                     # GPT-5-mini has very strict parameter limitations
                     if 'gpt-5-mini' in model.lower():
-                        # GPT-5-mini ONLY supports max_completion_tokens - no temperature or other params
+                        # GPT-5-mini specific parameters
                         completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 1000))
-                        # DO NOT add temperature - GPT-5-mini only supports default (1.0)
+                        # GPT-5 always uses temperature 1.0 (implicit, don't set)
+                        # Add reasoning_effort for GPT-5-mini
+                        if config.get('reasoning_effort'):
+                            completion_params["reasoning_effort"] = config.get('reasoning_effort', 'medium')
                     elif 'gpt-5-nano' in model.lower():
                         # GPT-5-nano similar restrictions
                         completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 500))
