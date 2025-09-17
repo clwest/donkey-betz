@@ -18,6 +18,9 @@ from core.intelligence_api import (
     monetization_opportunities, create_monetization_plan,
     content_automation_plan, track_revenue
 )
+
+# Import opportunity aggregator
+from backend.api.opportunity_aggregator import get_opportunities, get_actionable
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
@@ -145,6 +148,10 @@ urlpatterns = [
     path('api/v1/monetization/plan/', create_monetization_plan, name='create-monetization-plan'),
     path('api/v1/monetization/content-automation/', content_automation_plan, name='content-automation'),
     path('api/v1/monetization/track-revenue/', track_revenue, name='track-revenue'),
+
+    # Opportunity Aggregator endpoints
+    path('api/opportunities/', get_opportunities, name='get-opportunities'),
+    path('api/opportunities/actionable/', get_actionable, name='get-actionable'),
 
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     

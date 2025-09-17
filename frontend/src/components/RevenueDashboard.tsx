@@ -108,7 +108,17 @@ const RevenueDashboard: React.FC = () => {
   // Fetch opportunities from aggregator
   const fetchOpportunities = async () => {
     try {
-      // Request opportunities via WebSocket
+      // Fetch directly from API endpoint
+      const response = await fetch('/api/opportunities/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log('📊 Opportunities loaded from API:', data.data);
+          setOpportunities(data.data);
+        }
+      }
+
+      // Also request via WebSocket for real-time updates
       if (wsConnected) {
         sendMessage({ type: 'get_opportunities' });
       }
@@ -171,6 +181,11 @@ const RevenueDashboard: React.FC = () => {
     fetchMetrics();
     fetchOpportunities();
   }, [timeframe, wsConnected]);
+
+  // Fetch opportunities on component mount
+  useEffect(() => {
+    fetchOpportunities();
+  }, []);
 
   // Calculate growth percentages
   const calculateGrowth = (current: number, previous: number): number => {

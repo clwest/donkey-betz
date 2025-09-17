@@ -730,6 +730,21 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
 
             logger.info(f"✅ Execution completed for plan {plan_id}")
 
+            # Import opportunity aggregator to send data to Revenue Dashboard
+            from backend.api.opportunity_aggregator import OpportunityAggregator
+
+            # Get all aggregated opportunities
+            all_opportunities = OpportunityAggregator.get_all_opportunities()
+
+            # Send opportunities data to Revenue Dashboard
+            await self.send(text_data=json.dumps({
+                'type': 'opportunities_data',
+                'data': all_opportunities,
+                'timestamp': datetime.now().isoformat()
+            }))
+
+            logger.info(f"📊 Sent {all_opportunities['statistics']['total_jobs_found']} jobs and {all_opportunities['statistics']['total_content_created']} content pieces to Revenue Dashboard")
+
         except Exception as e:
             logger.error(f"❌ Execution failed for plan {plan_id}: {str(e)}")
             await self.send(text_data=json.dumps({
