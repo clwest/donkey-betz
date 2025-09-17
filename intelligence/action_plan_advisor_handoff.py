@@ -307,8 +307,8 @@ class ActionPlanAdvisorHandoff:
                 "Competition from established players"
             ],
 
-            # Success probability based on advisor's expertise
-            success_probability=0.75 if advisor.expertise_level.value in ["master", "legend"] else 0.65,
+            # Success probability based on advisor's expertise and plan complexity
+            success_probability=self._calculate_success_probability(advisor, action_plan),
 
             # Strategic recommendations
             strategic_adjustments=[
@@ -330,8 +330,8 @@ class ActionPlanAdvisorHandoff:
             # Timeline adjustment
             timeline_adjustment="Consider extending Phase 1 by one week for market validation",
 
-            # Budget estimate
-            budget_estimate=1500.0,
+            # Budget estimate based on plan complexity
+            budget_estimate=self._calculate_budget(action_plan),
 
             # Team recommendations
             recommended_agents=self._select_agents_for_plan(action_plan),
@@ -358,6 +358,58 @@ class ActionPlanAdvisorHandoff:
         )
 
         return review
+
+    def _calculate_success_probability(self, advisor: Advisor, action_plan: Dict[str, Any]) -> float:
+        """Calculate success probability based on advisor expertise and plan complexity"""
+        import random
+
+        # Base probability from advisor expertise
+        base_prob = 0.7 if advisor.expertise_level.value in ["master", "legend"] else 0.6
+
+        # Adjust based on plan complexity
+        opportunity = action_plan.get('opportunity_title', '').lower()
+        if 'ai' in opportunity or 'freelance' in opportunity:
+            base_prob += 0.1  # Higher success for trending areas
+        elif 'crypto' in opportunity or 'trading' in opportunity:
+            base_prob -= 0.15  # Lower success for high-risk areas
+
+        # Add some variation based on advisor
+        advisor_adjustment = {
+            "Warren Buffett": 0.05,  # Conservative, higher success
+            "Cathie Wood": -0.05,  # Higher risk, lower initial success
+            "Ray Dalio": 0.1,  # Systematic approach
+            "Peter Lynch": 0.08,  # Good at picking winners
+            "George Soros": -0.1,  # High risk/reward
+        }.get(advisor.name, 0)
+
+        # Add small random variation
+        random_factor = random.uniform(-0.05, 0.05)
+
+        final_prob = base_prob + advisor_adjustment + random_factor
+        return max(0.45, min(0.95, final_prob))  # Clamp between 45% and 95%
+
+    def _calculate_budget(self, action_plan: Dict[str, Any]) -> float:
+        """Calculate budget based on action plan scope"""
+        import random
+
+        opportunity = action_plan.get('opportunity_title', '').lower()
+
+        # Base budget varies by opportunity type
+        if 'content' in opportunity or 'writing' in opportunity:
+            base_budget = 500  # Low budget for content
+        elif 'ecommerce' in opportunity or 'shop' in opportunity:
+            base_budget = 2500  # Higher for e-commerce
+        elif 'software' in opportunity or 'app' in opportunity:
+            base_budget = 3000  # Highest for software
+        elif 'trading' in opportunity or 'crypto' in opportunity:
+            base_budget = 5000  # Capital needed for trading
+        else:
+            base_budget = 1500  # Default
+
+        # Add variation
+        variation = random.uniform(0.8, 1.2)
+
+        return round(base_budget * variation, -2)  # Round to nearest 100
 
     def _select_agents_for_plan(self, action_plan: Dict[str, Any]) -> List[str]:
         """Select appropriate agents based on the action plan requirements"""

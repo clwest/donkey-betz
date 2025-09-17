@@ -1,36 +1,82 @@
 {
   "step_number": 4,
   "step_description": "Week 3: List on Gumroad, Etsy, Creative Market",
-  "execution_timestamp": "2025-09-16T22:27:27.519296",
+  "execution_timestamp": "2025-09-17T04:30:33.418775",
   "real_data_collected": {
     "search_results": [],
     "api_calls": {
       "jobs_api": {
-        "url": "https://api.github.com/search/repositories?q=hiring+remote+jobs&sort=updated&per_page=5",
-        "results_count": 3,
+        "url": "https://remoteok.io/api",
+        "results_count": 5,
         "data": [
           {
-            "title": "idimetrix",
-            "description": "\ud83d\udcbb ALWAYS HIRING | \ud83c\udf0d REMOTE JOBS | \ud83d\udcbc HR | \ud83d\ude80 CTO | \ud83c\udfd7\ufe0f Software Architect | \ud83e\uddd1\u200d\ud83d\udcbb Technical Lead | \ud83d\udc68\u200d\ud83d\udcbc 3X Founder. Connecting companies with top tech talents @ElevanceIT. With extensive experience in leadership, architecture, and hiring for technical roles, I\u2019m committed to shaping teams that drive impactful solutions.",
-            "url": "https://github.com/idimetrix/idimetrix",
-            "updated": "2025-09-16T18:15:35Z",
-            "stars": 87
+            "title": "Generalist Data Annotator No Exp Required",
+            "company": "HelixRecruit",
+            "description": "<h2 class=\"mb-2 mt-6 font-medium\"><strong class=\"font-medium text-black\">Role Overview</strong></h2><p class=\"mb-2 mt-2 text-base text-gray-600\">Our patner is hiring for detail-oriented generalists fo",
+            "url": "https://remoteOK.com/remote-jobs/remote-generalist-data-annotator-no-exp-required-helixrecruit-1115488",
+            "salary": 40000,
+            "tags": [
+              "writing",
+              "ai"
+            ],
+            "date": "2025-09-14T21:56:30+00:00",
+            "location": ""
           },
           {
-            "title": "job_market_analyzer",
-            "description": "A comprehensive job market analysis platform that scrapes job postings from major job sites (LinkedIn, Indeed, Glassdoor) and provides real-time insights into the Kenyan job market including salary trends, skill demand, remote work opportunities, and hiring patterns.",
-            "url": "https://github.com/riwogerald/job_market_analyzer",
-            "updated": "2025-09-13T18:32:14Z",
-            "stars": 2
+            "title": "Global Operations Manager Fashion",
+            "company": "Rosie Etienne",
+            "description": "<p class=\"p1\"><strong>About Us</strong><br />We are an international bridal fashion brand, creating made-to-order gowns and selected stock pieces. With warehouses in the UK and US, factories in worldw",
+            "url": "https://remoteOK.com/remote-jobs/remote-global-operations-manager-fashion-rosie-etienne-1113309",
+            "salary": 80000,
+            "tags": [
+              "other",
+              "ops"
+            ],
+            "date": "2025-09-13T09:07:25+00:00",
+            "location": ""
           },
           {
-            "title": "remote-pt",
-            "description": "This is a repository listing companies which offer full-time remote jobs with Portuguese \ud83c\uddf5\ud83c\uddf9 contracts",
-            "url": "https://github.com/thatmlopsguy/remote-pt",
-            "updated": "2025-09-09T16:00:33Z",
-            "stars": 6
+            "title": "Senior Full stack Developer",
+            "company": "Lemon.io",
+            "description": "<p>Are you a talented Senior Developer looking for a remote job that lets you show your skills and get decent compensation? Look no further than <a href=\"https://lemon.io/for-developers/?utm_source=re",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-full-stack-developer-lemon-io-1112254",
+            "salary": 80000,
+            "tags": [
+              "engineer",
+              "dev",
+              "senior"
+            ],
+            "date": "2025-09-12T15:19:46+00:00",
+            "location": ""
+          },
+          {
+            "title": "LLM Data Engineer",
+            "company": "Sanctuary Computer",
+            "description": "<p><strong>Original job post link:</strong></p><p><a href=\"https://garden3d.notion.site/Machine-Learning-LLM-Data-Engineer-26b131fea2c780219ae8deef5fa2aec0\">LLM Data Engineer Original Job Post Link</a",
+            "url": "https://remoteOK.com/remote-jobs/remote-llm-data-engineer-sanctuary-computer-1112042",
+            "salary": 150000,
+            "tags": [
+              "dev",
+              "senior",
+              "backend"
+            ],
+            "date": "2025-09-12T11:44:56+00:00",
+            "location": ""
+          },
+          {
+            "title": "Client Success Manager",
+            "company": "Venus",
+            "description": "<p dir=\"ltr\">We\u00e2\u0080\u0099re looking for a female Client Success Manager to join our team. You will be the primary point of contact for our creators, ensuring they feel supported, guided, and motivated. From ",
+            "url": "https://remoteOK.com/remote-jobs/remote-client-success-manager-venus-1109273",
+            "salary": 30000,
+            "tags": [
+              "marketing"
+            ],
+            "date": "2025-09-09T23:58:18+00:00",
+            "location": ""
           }
-        ]
+        ],
+        "source": "real_job_boards"
       }
     },
     "tools_used": [
