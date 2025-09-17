@@ -13,12 +13,28 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables
 load_dotenv(BASE_DIR / '.env')
+
+# SECURITY ENHANCEMENT: Load secrets from secure vault in production
+try:
+    # Only load from secure vault if not in development/testing
+    if not os.environ.get('DEBUG', 'False') == 'True':
+        secrets_loader_path = BASE_DIR / 'secrets' / 'loader.py'
+        if secrets_loader_path.exists():
+            sys.path.insert(0, str(BASE_DIR / 'secrets'))
+            import loader  # This auto-loads secrets from vault
+            print("✅ Loaded secrets from secure vault")
+    else:
+        print("🔧 Development mode: Using .env file for configuration")
+except Exception as e:
+    print(f"⚠️  Could not load secrets from vault: {e}")
+    print("   Falling back to environment variables")
 
 
 # Quick-start development settings - unsuitable for production
@@ -257,8 +273,7 @@ SPECTACULAR_SETTINGS = {
 # Channels Configuration (for WebSocket)
 ASGI_APPLICATION = 'backend.asgi.application'
 
-# Channels Layer Configuration
-# Use in-memory layer for development if Redis channels not available
+# Production-Grade Channels Layer Configuration
 try:
     import channels_redis
     CHANNEL_LAYERS = {
@@ -266,11 +281,12 @@ try:
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
                 'hosts': [os.environ.get('REDIS_CHANNELS_URL', 'redis://localhost:6379/3')],
-                'capacity': 300,
-                'expiry': 60,
+                'capacity': 1000,  # Increased for production
+                'expiry': 300,     # 5 minutes for production stability
             },
         },
     }
+    print("✅ Production-grade Redis Channels Layer configured")
 except ImportError:
     # Fallback to in-memory channel layer
     CHANNEL_LAYERS = {
@@ -278,6 +294,7 @@ except ImportError:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
+    print("⚠️  Using in-memory channels (Redis not available)")
 
 # CORS Configuration - SECURE IMPLEMENTATION
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001,http://localhost:8080,http://localhost:8081,http://localhost:5173,http://127.0.0.1:5173').split(',')
