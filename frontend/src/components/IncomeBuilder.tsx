@@ -30,7 +30,8 @@ import {
   FileText,
   FileSpreadsheet,
   FileJson,
-  File
+  File,
+  Users
 } from 'lucide-react';
 
 // Use API configuration

@@ -704,6 +704,56 @@ class SystemIntegrationBridge:
         """Aggregate results from multiple agents"""
         pass
 
+    def activate_spider_swarm(self, plan_id: str, requirements: list) -> Dict[str, Any]:
+        """
+        Activate spider swarm for plan execution
+
+        Args:
+            plan_id: The plan ID
+            requirements: List of requirements/actions for spiders
+
+        Returns:
+            Status of spider activation
+        """
+        try:
+            logger.info(f"🕷️ Activating spider swarm for plan {plan_id}")
+
+            # Determine spider types based on requirements
+            spider_types = []
+            for req in requirements:
+                if 'market' in req.lower() or 'analyze' in req.lower():
+                    spider_types.append('market_spider')
+                if 'content' in req.lower() or 'create' in req.lower():
+                    spider_types.append('content_spider')
+                if 'job' in req.lower() or 'opportunity' in req.lower():
+                    spider_types.append('job_spider')
+                if 'freelance' in req.lower() or 'client' in req.lower():
+                    spider_types.append('freelance_spider')
+
+            # Default spiders if none detected
+            if not spider_types:
+                spider_types = ['job_spider', 'content_spider']
+
+            # Activate spiders through orchestrator
+            result = self.spider_orchestrator.activate_spiders(spider_types)
+
+            logger.info(f"✅ Spider swarm activated: {result}")
+
+            return {
+                'status': 'success',
+                'plan_id': plan_id,
+                'spider_types': spider_types,
+                'spider_count': len(spider_types),
+                'message': f"Activated {len(spider_types)} spider types for plan execution"
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Failed to activate spider swarm: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+
 
 # ===============================
 # SINGLETON BRIDGE INSTANCE
