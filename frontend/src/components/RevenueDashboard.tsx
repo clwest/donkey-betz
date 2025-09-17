@@ -42,6 +42,7 @@ const RevenueDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetric[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
+  const [opportunities, setOpportunities] = useState<any>(null);
 
   // Use Production WebSocket with enhanced reliability
   const { sendMessage, lastMessage, isConnected } = useWebSocket({
@@ -72,6 +73,15 @@ const RevenueDashboard: React.FC = () => {
       } else if (data.type === 'error') {
         console.error('WebSocket error:', data.message);
         // Handle errors gracefully
+      } else if (data.type === 'opportunities_data') {
+        console.log('📊 Opportunities data received:', data.data);
+        setOpportunities(data.data);
+      } else if (data.type === 'execution_results') {
+        console.log('✅ Execution results received:', data.results);
+        // Load opportunities from execution results
+        if (data.results?.real_opportunities || data.results?.content_created) {
+          fetchOpportunities(); // Refresh opportunities from aggregator
+        }
       }
     },
     onOpen: () => {
@@ -94,6 +104,18 @@ const RevenueDashboard: React.FC = () => {
   useEffect(() => {
     setWsConnected(isConnected);
   }, [isConnected]);
+
+  // Fetch opportunities from aggregator
+  const fetchOpportunities = async () => {
+    try {
+      // Request opportunities via WebSocket
+      if (wsConnected) {
+        sendMessage({ type: 'get_opportunities' });
+      }
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+    }
+  };
 
   // Request metrics update via Production WebSocket
   const fetchMetrics = () => {
@@ -147,6 +169,7 @@ const RevenueDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchMetrics();
+    fetchOpportunities();
   }, [timeframe, wsConnected]);
 
   // Calculate growth percentages
@@ -497,6 +520,179 @@ const RevenueDashboard: React.FC = () => {
                 ${(metrics.total_revenue * 3).toFixed(2)}
               </p>
               <Progress value={45} className="h-2" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Real Opportunities Found - NEW SECTION! */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>🎯 Real Job Opportunities</span>
+            <Badge variant="outline" className="ml-2">
+              Live Opportunities
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {opportunities?.jobs?.slice(0, 5).map((job: any, idx: number) => (
+              <div key={idx} className="p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{job.title}</h4>
+                    <p className="text-sm text-muted-foreground">{job.company}</p>
+                    {job.salary_max && (
+                      <p className="text-sm font-medium text-green-600 mt-1">
+                        ${job.salary_min || 0} - ${job.salary_max}/year
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(job.url, '_blank')}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600"
+                      onClick={() => {
+                        // TODO: Trigger application agent
+                        console.log('Apply to:', job.title);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!opportunities?.jobs?.length && (
+              <p className="text-center text-muted-foreground py-4">
+                No opportunities found yet. Run an execution to discover jobs.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Content Created - NEW SECTION! */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>📝 Content Ready to Sell</span>
+            <Badge variant="outline" className="ml-2">
+              ${opportunities?.content?.reduce((sum: number, c: any) => sum + (c.value || 0), 0).toFixed(2) || '0.00'} Value
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {opportunities?.content?.map((content: any, idx: number) => (
+              <div key={idx} className="p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <Badge variant="secondary">{content.type}</Badge>
+                  <span className="text-sm font-bold text-green-600">
+                    ${content.value?.toFixed(2) || '0.00'}
+                  </span>
+                </div>
+                <h4 className="font-semibold text-sm mb-1">{content.title}</h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {content.word_count} words • Created {new Date(content.created_at).toLocaleDateString()}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      // TODO: Preview content
+                      console.log('Preview:', content.title);
+                    }}
+                  >
+                    Preview
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600"
+                    onClick={() => {
+                      // TODO: List on marketplace
+                      console.log('List for sale:', content.title);
+                    }}
+                  >
+                    List for Sale
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {!opportunities?.content?.length && (
+              <p className="col-span-2 text-center text-muted-foreground py-4">
+                No content created yet. Run an execution to generate content.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Summary - NEW SECTION! */}
+      <Card>
+        <CardHeader>
+          <CardTitle>🚀 Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 border rounded-lg">
+              <div className="text-3xl font-bold text-blue-600">
+                {opportunities?.statistics?.total_jobs_found || 0}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Jobs Found</p>
+              <Button
+                size="sm"
+                className="mt-2 w-full"
+                variant="outline"
+                onClick={() => {
+                  // TODO: Apply to all
+                  console.log('Batch apply');
+                }}
+              >
+                Apply to All
+              </Button>
+            </div>
+            <div className="text-center p-4 border rounded-lg">
+              <div className="text-3xl font-bold text-green-600">
+                {opportunities?.statistics?.total_content_created || 0}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Content Created</p>
+              <Button
+                size="sm"
+                className="mt-2 w-full"
+                variant="outline"
+                onClick={() => {
+                  // TODO: List all content
+                  console.log('List all content');
+                }}
+              >
+                List All
+              </Button>
+            </div>
+            <div className="text-center p-4 border rounded-lg">
+              <div className="text-3xl font-bold text-purple-600">
+                ${opportunities?.total_potential_revenue?.toFixed(0) || 0}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Potential Revenue</p>
+              <Button
+                size="sm"
+                className="mt-2 w-full bg-gradient-to-r from-purple-600 to-indigo-600"
+                onClick={() => {
+                  window.location.href = '/neural-orchestra';
+                }}
+              >
+                Run New Execution
+              </Button>
             </div>
           </div>
         </CardContent>
