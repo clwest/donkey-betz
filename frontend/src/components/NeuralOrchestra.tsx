@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Brain,
   Network,
@@ -148,6 +149,7 @@ interface SystemMetrics {
 }
 
 const NeuralOrchestra: React.FC = () => {
+  const navigate = useNavigate();
   const svgRef = useRef<SVGSVGElement>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [advisors, setAdvisors] = useState<Advisor[]>([]);
@@ -276,6 +278,12 @@ const NeuralOrchestra: React.FC = () => {
           execution_message: data.message,
           execution_results: data.results
         }));
+
+        // Navigate to Decision Command after 3 seconds
+        setTimeout(() => {
+          console.log('🚀 Navigating to Decision Command to review opportunities...');
+          navigate('/decision-command');
+        }, 3000);
       } else if (data.type === 'execution_error') {
         console.error('❌ Execution error:', data.error);
         setPlanReview(prev => ({
@@ -724,9 +732,14 @@ const NeuralOrchestra: React.FC = () => {
       {planReview?.execution_status === 'completed' && planReview?.execution_results && (
         <Card className="mb-6 border-green-500/50 shadow-lg shadow-green-500/20">
           <CardHeader className="bg-gradient-to-r from-green-900/50 to-emerald-900/50">
-            <CardTitle className="flex items-center gap-2 text-green-300">
-              <CheckCircle className="w-5 h-5" />
-              Execution Complete - Results
+            <CardTitle className="flex items-center justify-between text-green-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Execution Complete - Results
+              </div>
+              <Badge className="bg-blue-600 text-white animate-pulse">
+                → Redirecting to Decision Command...
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
