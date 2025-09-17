@@ -1,0 +1,625 @@
+"""
+Unified Personal Assistant
+=========================
+
+Combines neural intelligence, agent orchestration, and personal learning
+into a single, coherent assistant that remembers which agents work best.
+"""
+
+import json
+import logging
+import asyncio
+from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional, Tuple
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.db.models import Q, Count, Avg
+
+# Core imports
+from core.models import ExtendedUserProfile, EnhancedUserProfile, JobApplication, UserEmbedding
+from core.agent_context_middleware import AgentContextMiddleware
+from core.llm_enforcer import LLMEnforcer
+from core.unified_memory_manager import UnifiedMemoryManager, get_memory_manager
+from core.models_agent_memory import AgentExecutionMemory, AgentRecommendation, AgentPerformanceStats
+
+# Agent and AI imports
+from agents.registry import get_agent_registry
+from advisors.registry import get_advisor_registry
+from core.personal_assistant_agent_integration import personal_assistant_agent_integration
+
+# AI Provider imports
+from content.ai_providers import AIProviderManager
+from mythology.services import MythologyPreventionService
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+
+class UnifiedPersonalAssistant:
+    """
+    The One True Assistant™ - combines all the best features:
+    - Neural intelligence with agent orchestration
+    - Personal learning and memory
+    - Agent performance tracking
+    - Reality-aware responses
+    """
+
+    def __init__(self, user: User):
+        self.user = user
+        self.profile = self._get_or_create_profile()
+
+        # Core components (lazy-loaded to avoid serialization issues)
+        self._context_middleware = None
+        self._agent_registry = None
+        self._advisor_registry = None
+        self._llm_enforcer = None
+        self._memory_manager = None
+        self._ai_provider = None
+        self._mythology_service = None
+
+        # Session state
+        self.session_context = {}
+        self.conversation_history = []
+
+        logger.info(f"✅ Unified Personal Assistant initialized for {user.username}")
+
+    def _get_or_create_profile(self) -> ExtendedUserProfile:
+        """Get or create extended user profile."""
+        profile, created = ExtendedUserProfile.objects.get_or_create(
+            user=self.user,
+            defaults={
+                'full_name': f"{self.user.first_name} {self.user.last_name}".strip() or self.user.username,
+                'metadata': {'unified_assistant': {'initialized': datetime.now().isoformat()}}
+            }
+        )
+        if created:
+            logger.info(f"Created new extended profile for {self.user.username}")
+        return profile
+
+    # Lazy loading properties to avoid serialization issues
+    @property
+    def context_middleware(self):
+        if not self._context_middleware:
+            self._context_middleware = AgentContextMiddleware()
+        return self._context_middleware
+
+    @property
+    def agent_registry(self):
+        if not self._agent_registry:
+            self._agent_registry = get_agent_registry()
+        return self._agent_registry
+
+    @property
+    def advisor_registry(self):
+        if not self._advisor_registry:
+            self._advisor_registry = get_advisor_registry()
+        return self._advisor_registry
+
+    @property
+    def llm_enforcer(self):
+        if not self._llm_enforcer:
+            self._llm_enforcer = LLMEnforcer()
+        return self._llm_enforcer
+
+    @property
+    def memory_manager(self):
+        if not self._memory_manager:
+            self._memory_manager = get_memory_manager(self.user)
+        return self._memory_manager
+
+    @property
+    def ai_provider(self):
+        if not self._ai_provider:
+            self._ai_provider = AIProviderManager()
+        return self._ai_provider
+
+    @property
+    def mythology_service(self):
+        if not self._mythology_service:
+            self._mythology_service = MythologyPreventionService()
+        return self._mythology_service
+
+    def process_message(self, message: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Process user message with full intelligence:
+        1. Analyze intent and check for agent needs
+        2. Route to appropriate agents if needed
+        3. Remember agent performance
+        4. Provide intelligent response with recommendations
+        """
+        try:
+            # Get comprehensive context
+            user_context = self.get_personalized_context()
+            full_context = {**user_context, **(context or {})}
+
+            # Check if this should be routed to agents
+            if personal_assistant_agent_integration.should_route_to_agents(message):
+                return self._handle_agent_routing(message, full_context)
+            else:
+                return self._handle_direct_response(message, full_context)
+
+        except Exception as e:
+            logger.error(f"Error processing message: {e}")
+            return self._create_error_response(str(e))
+
+    def _handle_agent_routing(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle messages that should be routed to agents."""
+        try:
+            # Get agent recommendations based on past performance
+            recommendations = self.get_agent_recommendations(message)
+
+            # Check if user is asking for a specific agent or if we should recommend
+            if self._is_agent_request(message):
+                return self._execute_requested_agent(message, context)
+            else:
+                return self._suggest_agents_with_memory(message, recommendations, context)
+
+        except Exception as e:
+            logger.error(f"Error in agent routing: {e}")
+            return self._handle_direct_response(message, context)
+
+    def _handle_direct_response(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle messages with direct AI response."""
+        try:
+            # Get AI response using the working AI provider pattern
+            from content.ai_providers import AIProviderManager
+            ai_provider = AIProviderManager()
+
+            # Get available agents information
+            try:
+                agents = self.agent_registry.list_agents()
+                agent_count = len(agents)
+                agent_names = [agent.get('name', 'Unknown') for agent in agents[:10]]  # First 10 agent names
+
+                agent_context = f"""
+IMPORTANT: You have access to {agent_count} specialized AI agents including: {', '.join(agent_names)}, and many more.
+
+When users ask about agents, you should:
+1. Tell them you have access to {agent_count} specialized agents
+2. List some examples: {', '.join(agent_names[:5])}
+3. Offer to execute specific agents or provide recommendations
+4. Mention you track which agents work best for different tasks
+"""
+            except Exception as e:
+                logger.error(f"Error accessing agent registry: {e}")
+                agent_context = "You have access to a large number of specialized AI agents for various tasks."
+
+            # Get platform component knowledge
+            platform_context = self._get_platform_component_knowledge()
+
+            # Check if user is asking about platform components
+            message_lower = message.lower()
+            is_platform_question = any(component in message_lower for component in [
+                'neural orchestra', 'revenue dashboard', 'decision command',
+                'income builder', 'control center', 'monetization hub'
+            ])
+
+            if is_platform_question:
+                enhanced_prompt = f"""You are a unified personal assistant for {self.user.username or 'the user'}.
+
+The user is asking about their ACTUAL platform components. Here is the specific information:
+
+{platform_context}
+
+User question: {message}
+
+CRITICAL: Answer about THEIR specific platform component, not generic concepts. For example, if they ask about "Neural Orchestra", explain THEIR real-time AI collaboration visualization system, not music AI."""
+                logger.info(f"🎯 Platform question detected! Using specialized prompt for: {message}")
+                logger.info(f"📝 Enhanced prompt (first 500 chars): {enhanced_prompt[:500]}")
+            else:
+                logger.info(f"💬 General question detected: {message}")
+                enhanced_prompt = f"""You are a unified personal assistant for {self.user.username or 'the user'}.
+
+{agent_context}
+
+Context: {context.get('page', 'unknown')} page
+Task type: {self._detect_task_type(message)}
+
+User message: {message}
+
+Provide a helpful, personalized response. If this seems like it needs an agent, mention that you can recommend agents based on past performance."""
+
+            response = ai_provider.generate_content(
+                provider='openai',
+                model='gpt-4',
+                system_prompt=enhanced_prompt,
+                user_prompt=message,
+                config={'max_tokens': 500, 'temperature': 0.7}
+            )
+
+            # Learn from this interaction
+            self._learn_from_interaction(message, response, context)
+
+            return {
+                'response': response.content if response.success else 'I encountered an issue generating a response.',
+                'suggestions': self._generate_contextual_suggestions(message, context),
+                'actions': self._determine_available_actions(context),
+                'confidence': 0.8 if response.success else 0.3,
+                'ai_generated': True,
+                'model': response.model_used,
+                'agent_suggestions': self.get_agent_recommendations(message)[:3],  # Top 3 relevant agents
+                'metadata': {
+                    'intent': self._detect_intent(message),
+                    'context_used': True,
+                    'learning_applied': True,
+                    'tokens_used': response.token_usage.get('total_tokens', 0) if response.token_usage else 0,
+                    'generation_time_ms': response.generation_time_ms
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error in direct response: {e}")
+            return self._create_error_response(str(e))
+
+    def get_agent_recommendations(self, message: str) -> List[Dict[str, Any]]:
+        """
+        Get agent recommendations based on past performance and current message.
+        This is the magic - remembering which agents worked for similar tasks.
+        """
+        try:
+            # Detect task type from message
+            task_type = self._detect_task_type(message)
+
+            # Get user's historical preferences
+            user_recs = AgentRecommendation.objects.filter(
+                user=self.user,
+                task_type=task_type
+            ).order_by('-confidence_score')[:3]
+
+            recommendations = []
+            for rec in user_recs:
+                recommendations.append({
+                    'agent_name': rec.recommended_agent,
+                    'confidence': rec.confidence_score,
+                    'success_rate': rec.avg_success_rate,
+                    'past_success': rec.best_outcome_description,
+                    'total_uses': rec.total_executions,
+                    'reason': f"Previously achieved {rec.avg_success_rate:.1%} success rate for {task_type}"
+                })
+
+            # If no user history, get global best performers
+            if not recommendations:
+                global_stats = AgentPerformanceStats.objects.filter(
+                    task_type_stats__has_key=task_type
+                ).order_by('-avg_success_rate')[:3]
+
+                for stat in global_stats:
+                    task_stats = stat.task_type_stats.get(task_type, {})
+                    recommendations.append({
+                        'agent_name': stat.agent_name,
+                        'confidence': task_stats.get('success_rate', 0.5),
+                        'success_rate': task_stats.get('success_rate', 0.5),
+                        'reason': f"Top performer for {task_type} globally",
+                        'total_uses': task_stats.get('executions', 0)
+                    })
+
+            return recommendations
+
+        except Exception as e:
+            logger.error(f"Error getting agent recommendations: {e}")
+            return []
+
+    def execute_agent_with_memory(self, agent_name: str, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute an agent and record the performance for future recommendations.
+        """
+        start_time = datetime.now()
+
+        try:
+            # Execute agent through the integration system (handle async)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(
+                    personal_assistant_agent_integration.execute_through_agents(
+                        message=task,
+                        selected_agents=[agent_name]
+                    )
+                )
+            finally:
+                loop.close()
+
+            execution_time = (datetime.now() - start_time).total_seconds()
+
+            # Determine success score based on result
+            success_score = self._calculate_success_score(result)
+
+            # Record this execution for future recommendations
+            AgentExecutionMemory.objects.create(
+                user=self.user,
+                agent_name=agent_name,
+                task_type=self._detect_task_type(task),
+                task_description=task,
+                original_prompt=task,
+                success_score=success_score,
+                execution_time_seconds=execution_time,
+                outcome_description=result.get('summary', 'Agent execution completed'),
+                outcome_metrics=result.get('metrics', {}),
+                page_context=context.get('page', ''),
+                conversation_id=context.get('conversation_id', '')
+            )
+
+            # Update recommendations cache
+            self._update_agent_recommendations(agent_name, self._detect_task_type(task), success_score)
+
+            # Enhanced response with memory context
+            enhanced_result = {
+                **result,
+                'agent_performance': {
+                    'execution_time': execution_time,
+                    'success_score': success_score,
+                    'will_remember': True
+                },
+                'learning_note': f"I'll remember that {agent_name} worked well for this type of task."
+            }
+
+            return enhanced_result
+
+        except Exception as e:
+            logger.error(f"Error executing agent with memory: {e}")
+            # Still record the failure for learning
+            AgentExecutionMemory.objects.create(
+                user=self.user,
+                agent_name=agent_name,
+                task_type=self._detect_task_type(task),
+                task_description=task,
+                original_prompt=task,
+                success_score=0.0,
+                execution_time_seconds=(datetime.now() - start_time).total_seconds(),
+                outcome_description=f"Execution failed: {str(e)}",
+                outcome_metrics={}
+            )
+
+            return {
+                'success': False,
+                'error': str(e),
+                'agent_name': agent_name,
+                'learning_note': "I'll remember this didn't work and try a different approach next time."
+            }
+
+    def get_personalized_context(self) -> Dict[str, Any]:
+        """Get comprehensive personalized context including agent memories."""
+        base_context = self.context_middleware.get_user_context(self.user)
+
+        # Add agent memory context
+        recent_successes = AgentExecutionMemory.objects.filter(
+            user=self.user,
+            success_score__gte=0.7
+        ).order_by('-execution_date')[:5]
+
+        successful_agents = {}
+        for memory in recent_successes:
+            task_type = memory.task_type
+            if task_type not in successful_agents:
+                successful_agents[task_type] = []
+            successful_agents[task_type].append({
+                'agent': memory.agent_name,
+                'outcome': memory.outcome_description,
+                'score': memory.success_score
+            })
+
+        return {
+            **base_context,
+            'agent_memory': {
+                'successful_agents': successful_agents,
+                'total_agent_uses': AgentExecutionMemory.objects.filter(user=self.user).count(),
+                'favorite_agents': self._get_favorite_agents()
+            }
+        }
+
+    def _get_favorite_agents(self) -> List[Dict[str, Any]]:
+        """Get user's most successful agents."""
+        from django.db.models import Avg, Count
+
+        favorites = AgentExecutionMemory.objects.filter(
+            user=self.user
+        ).values('agent_name').annotate(
+            avg_score=Avg('success_score'),
+            usage_count=Count('id')
+        ).filter(
+            usage_count__gte=2,  # At least 2 uses
+            avg_score__gte=0.6   # At least 60% success
+        ).order_by('-avg_score', '-usage_count')[:5]
+
+        return list(favorites)
+
+    # Helper methods
+    def _detect_task_type(self, message: str) -> str:
+        """Detect the type of task from the message."""
+        message_lower = message.lower()
+
+        if any(word in message_lower for word in ['blog', 'article', 'write', 'content']):
+            return 'content_writing'
+        elif any(word in message_lower for word in ['analyze', 'data', 'report', 'metrics']):
+            return 'data_analysis'
+        elif any(word in message_lower for word in ['research', 'find', 'search', 'investigate']):
+            return 'research'
+        elif any(word in message_lower for word in ['social', 'tweet', 'post', 'marketing']):
+            return 'social_media'
+        elif any(word in message_lower for word in ['design', 'image', 'visual', 'graphics']):
+            return 'design'
+        else:
+            return 'general'
+
+    def _detect_intent(self, message: str) -> str:
+        """Detect user intent from message."""
+        message_lower = message.lower()
+
+        if any(word in message_lower for word in ['execute', 'run', 'use agent']):
+            return 'agent_execution'
+        elif any(word in message_lower for word in ['recommend', 'suggest', 'which agent']):
+            return 'agent_recommendation'
+        elif any(word in message_lower for word in ['help', 'how', 'what', 'explain']):
+            return 'help'
+        else:
+            return 'general'
+
+    def _calculate_success_score(self, result: Dict[str, Any]) -> float:
+        """Calculate success score from agent execution result."""
+        if not result.get('success', True):
+            return 0.0
+
+        # Start with base score
+        score = 0.7
+
+        # Boost based on specific indicators
+        if result.get('quality_score'):
+            score = max(score, result['quality_score'])
+
+        if result.get('user_satisfaction'):
+            score = max(score, result['user_satisfaction'])
+
+        # Boost for successful metrics
+        metrics = result.get('metrics', {})
+        if metrics.get('views', 0) > 1000:
+            score += 0.1
+        if metrics.get('engagement_rate', 0) > 0.05:
+            score += 0.1
+
+        return min(score, 1.0)
+
+    def _create_error_response(self, error: str) -> Dict[str, Any]:
+        """Create standardized error response."""
+        return {
+            'response': f"I encountered an issue: {error}. Let me try a different approach.",
+            'success': False,
+            'error': error,
+            'suggestions': ['Try again', 'Use a different approach', 'Ask for help'],
+            'confidence': 0.3
+        }
+
+    def _is_agent_request(self, message: str) -> bool:
+        """Check if user is specifically requesting an agent."""
+        message_lower = message.lower()
+        return any(phrase in message_lower for phrase in [
+            'execute agent', 'run agent', 'use agent', 'agent for'
+        ])
+
+    def _execute_requested_agent(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a specifically requested agent."""
+        # Extract agent name from message (simplified)
+        # In production, this would use NLP to extract agent name
+        agent_name = "Content Writer"  # Default for now
+        return self.execute_agent_with_memory(agent_name, message, context)
+
+    def _suggest_agents_with_memory(self, message: str, recommendations: List[Dict], context: Dict) -> Dict[str, Any]:
+        """Suggest agents based on memory and past performance."""
+        if not recommendations:
+            return {
+                'response': "I'd be happy to help, but I don't have enough history to recommend the best agent for this task yet. Would you like me to suggest some general agents that might work?",
+                'suggestions': ['Show all agents', 'Try Content Writer', 'Try Data Analyst'],
+                'confidence': 0.5
+            }
+
+        top_agent = recommendations[0]
+        return {
+            'response': f"Based on your past results, I recommend the **{top_agent['agent_name']}** for this task. It has a {top_agent['success_rate']:.1%} success rate for similar work. {top_agent.get('past_success', 'It has worked well before.')} Should I execute it?",
+            'agent_recommendations': recommendations[:3],
+            'suggestions': [
+                f"Execute {top_agent['agent_name']}",
+                "Show other options",
+                "Tell me more about this agent",
+                "Do it yourself instead"
+            ],
+            'confidence': top_agent['confidence'],
+            'actions': ['execute_agent', 'show_alternatives']
+        }
+
+    def _generate_contextual_suggestions(self, message: str, context: Dict) -> List[str]:
+        """Generate contextual suggestions based on message and context."""
+        suggestions = []
+
+        # Add page-specific suggestions
+        page = context.get('page', '')
+        if '/profile' in page:
+            suggestions.extend(['Update my profile', 'Find job matches', 'Show my skills'])
+        elif '/dashboard' in page:
+            suggestions.extend(['Show my stats', 'Recent activity', 'Revenue insights'])
+
+        # Add general suggestions
+        suggestions.extend(['Get agent recommendations', 'Help me decide', 'Tell me more'])
+
+        return suggestions[:4]  # Limit to 4
+
+    def _determine_available_actions(self, context: Dict) -> List[str]:
+        """Determine available actions based on context."""
+        actions = ['help', 'show_options']
+
+        # Add context-specific actions
+        if context.get('page', '').startswith('/profile'):
+            actions.extend(['edit_profile', 'view_profile'])
+
+        return actions
+
+    def _learn_from_interaction(self, message: str, response: Dict, context: Dict):
+        """Learn from user interactions for better future responses."""
+        try:
+            # Store interaction pattern in memory manager
+            if hasattr(self, '_memory_manager') and self._memory_manager:
+                self.memory_manager.store_interaction_pattern({
+                    'user_message': message,
+                    'response_type': 'direct',
+                    'context': context.get('page', ''),
+                    'timestamp': datetime.now().isoformat()
+                })
+        except Exception as e:
+            logger.error(f"Error learning from interaction: {e}")
+
+    def _update_agent_recommendations(self, agent_name: str, task_type: str, success_score: float):
+        """Update cached agent recommendations based on new execution."""
+        try:
+            # Update or create recommendation
+            rec, created = AgentRecommendation.objects.get_or_create(
+                user=self.user,
+                task_type=task_type,
+                recommended_agent=agent_name,
+                defaults={
+                    'confidence_score': success_score,
+                    'avg_success_rate': success_score,
+                    'total_executions': 1,
+                    'best_outcome_description': 'Recent execution completed'
+                }
+            )
+
+            if not created:
+                # Update existing recommendation
+                total_execs = rec.total_executions + 1
+                new_avg = ((rec.avg_success_rate * rec.total_executions) + success_score) / total_execs
+
+                rec.avg_success_rate = new_avg
+                rec.total_executions = total_execs
+                rec.confidence_score = min(new_avg + (total_execs * 0.01), 1.0)  # Boost confidence with usage
+
+                if success_score > rec.avg_success_rate:
+                    rec.best_outcome_description = f"Recent high-performing execution (score: {success_score:.1f})"
+
+                rec.save()
+
+        except Exception as e:
+            logger.error(f"Error updating recommendations: {e}")
+
+    def _get_platform_component_knowledge(self) -> str:
+        """Get comprehensive knowledge about the user's platform components."""
+        return """
+The user has a unified AI platform with these specific components:
+
+🎭 NEURAL ORCHESTRA - Their real-time AI collaboration visualization system that:
+- Shows all 149 specialized agents in an interactive network graph with D3.js
+- Displays 25 legendary advisors (Warren Buffett, Cathie Wood, Ray Dalio, etc.)
+- Visualizes live connections, consultations, and collaborations between agents/advisors
+- Tracks workflow orchestration with progress indicators
+- Shows system health metrics, revenue tracking, ML learning loop stats
+- Provides action plan execution with "Start Execution" buttons
+- Uses WebSocket for real-time updates across 800x400 interactive visualizations
+- Has 3 view modes: Network, Workflow, Performance
+
+💰 REVENUE DASHBOARD - Revenue tracking and monetization analytics
+💼 DECISION COMMAND - Opportunity analysis and decision support system
+🏗️ INCOME BUILDER - AI-powered income opportunity generation
+🎯 CONTROL CENTER - System monitoring and management interface
+📊 MONETIZATION HUB - Revenue optimization and financial management
+
+The Neural Orchestra is NOT a music AI - it's their sophisticated mission control center for coordinating their entire AI ecosystem, showing which agents are working on what, how they collaborate with advisors, and what revenue opportunities are being generated in real-time.
+
+When users ask about ANY of these components, explain their ACTUAL platform features, not generic explanations.
+"""

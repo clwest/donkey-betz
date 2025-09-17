@@ -35,33 +35,53 @@ class PersonalAssistantAgentIntegration:
         """
         Determine if a message should be routed through the agent system
         """
-        # Keywords that indicate agent tasks
+        message_lower = message.lower()
+
+        # FIRST: Check if this is a QUESTION ABOUT agents (should NOT be routed)
+        agent_question_patterns = [
+            'recommend', 'suggest', 'which agent', 'what agent', 'best agent',
+            'can you', 'help me find', 'tell me about', 'show me', 'list',
+            'who should', 'advice on', 'guidance on'
+        ]
+
+        if 'agent' in message_lower and any(pattern in message_lower for pattern in agent_question_patterns):
+            return False  # Don't route questions about agents
+
+        # Check for greeting/conversational patterns that should not be routed
+        greeting_patterns = ['hi', 'hello', 'hey', 'how are you', 'what can you do']
+        if any(pattern in message_lower for pattern in greeting_patterns):
+            return False
+
+        # Keywords that indicate agent tasks (actual work to be done)
         agent_keywords = [
             'create', 'generate', 'analyze', 'optimize', 'schedule', 'post',
             'write', 'design', 'research', 'automate', 'execute', 'build',
             'deploy', 'monitor', 'track', 'calculate', 'process', 'extract'
         ]
 
-        # Task-specific patterns
+        # Task-specific patterns (actual deliverables)
         task_patterns = [
             'content creation', 'image generation', 'seo optimization',
             'social media', 'email campaign', 'market research',
             'data analysis', 'automation', 'publishing'
         ]
 
-        message_lower = message.lower()
-
-        # Check for direct agent keywords
-        if any(keyword in message_lower for keyword in agent_keywords):
-            return True
-
-        # Check for task patterns
-        if any(pattern in message_lower for pattern in task_patterns):
-            return True
-
-        # Check for agent references
+        # Check for direct agent execution requests
         if 'agent' in message_lower and any(word in message_lower for word in ['use', 'run', 'execute']):
             return True
+
+        # Check for action keywords (but not in questions)
+        question_words = ['what', 'how', 'who', 'where', 'when', 'why', 'which', 'can you', 'could you', 'would you']
+        is_question = any(q in message_lower for q in question_words)
+
+        if not is_question:
+            # Check for direct agent keywords only if it's not a question
+            if any(keyword in message_lower for keyword in agent_keywords):
+                return True
+
+            # Check for task patterns only if it's not a question
+            if any(pattern in message_lower for pattern in task_patterns):
+                return True
 
         return False
 
