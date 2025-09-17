@@ -133,13 +133,14 @@ const DecisionCommand: React.FC = () => {
             description: job.description?.substring(0, 200) + '...',
             company: job.company,
             url: job.url,
-            time_to_income: '1-2 weeks',
+            time_to_income: job.salary_max > 100000 ? '2-4 weeks' : job.salary_max > 60000 ? '1-3 weeks' : '1-2 weeks',
             potential_monthly: `$${Math.floor((job.salary_max || 60000) / 12)}`,
             difficulty: job.salary_max > 100000 ? 'advanced' : job.salary_max > 60000 ? 'intermediate' : 'beginner',
-            success_probability: 75,
+            success_probability: job.salary_max > 100000 ? 60 : job.salary_max > 60000 ? 70 : 85,
             required_skills: job.tags || [],
             resources_needed: ['Resume', 'Portfolio'],
             salary_range: `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
+            score: (job.salary_max > 100000 ? 0.6 : job.salary_max > 60000 ? 0.7 : 0.85),
             is_real: true
           })) || [];
 
@@ -156,6 +157,7 @@ const DecisionCommand: React.FC = () => {
             required_skills: ['Content Marketing'],
             resources_needed: ['Sales Platform'],
             value: content.value,
+            score: 0.9,
             is_real: true
           })) || [];
 
@@ -228,13 +230,14 @@ const DecisionCommand: React.FC = () => {
             description: job.description?.substring(0, 200) + '...',
             company: job.company,
             url: job.url,
-            time_to_income: '1-2 weeks',
+            time_to_income: job.salary_max > 100000 ? '2-4 weeks' : job.salary_max > 60000 ? '1-3 weeks' : '1-2 weeks',
             potential_monthly: `$${Math.floor((job.salary_max || 60000) / 12)}`,
             difficulty: job.salary_max > 100000 ? 'advanced' : job.salary_max > 60000 ? 'intermediate' : 'beginner',
-            success_probability: 75,
+            success_probability: job.salary_max > 100000 ? 60 : job.salary_max > 60000 ? 70 : 85,
             required_skills: job.tags || [],
             resources_needed: ['Resume', 'Portfolio'],
             salary_range: `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
+            score: (job.salary_max > 100000 ? 0.6 : job.salary_max > 60000 ? 0.7 : 0.85),
             is_real: true
           })) || [];
 
@@ -251,6 +254,7 @@ const DecisionCommand: React.FC = () => {
             required_skills: ['Content Marketing'],
             resources_needed: ['Sales Platform'],
             value: content.value,
+            score: 0.9,
             is_real: true
           })) || [];
 
@@ -562,13 +566,13 @@ const DecisionCommand: React.FC = () => {
                                   stroke="currentColor"
                                   strokeWidth="4"
                                   fill="none"
-                                  strokeDasharray={`${opp.score * 176} 176`}
+                                  strokeDasharray={`${(opp.score || 0.75) * 176} 176`}
                                   className="text-purple-600"
                                 />
                               </svg>
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <span className="text-sm font-bold">
-                                  {(opp.score * 100).toFixed(0)}%
+                                  {((opp.score || 0.75) * 100).toFixed(0)}%
                                 </span>
                               </div>
                             </div>
