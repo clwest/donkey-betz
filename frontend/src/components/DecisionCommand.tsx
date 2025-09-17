@@ -43,9 +43,16 @@ interface IncomeOpportunity {
   potential_monthly: string;
   time_to_income: string;
   difficulty: string;
-  score: number;
-  match_reasons: string[];
-  action_steps: string[];
+  score?: number;
+  match_reasons?: string[];
+  action_steps?: string[];
+  // Real opportunity fields
+  company?: string;
+  url?: string;
+  salary_range?: string;
+  is_real?: boolean;
+  is_mock?: boolean;
+  value?: number;
 }
 
 interface UserProfile {
@@ -78,6 +85,7 @@ const DecisionCommand: React.FC = () => {
   const [projections, setProjections] = useState<EarningsProjection | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<any[]>([]);
+  const [hasRealData, setHasRealData] = useState(false);
 
   const { sendMessage, lastMessage, isConnected } = useWebSocket({
     url: '/ws/decision-command/',
@@ -88,10 +96,10 @@ const DecisionCommand: React.FC = () => {
         setProjections(data.earnings_projection || null);
         setLoading(false);
       } else if (data.type === 'decision_update') {
-        // Handle decision updates
+        // Handle decision updates - but don't overwrite real opportunities
         console.log('Decision updates:', data.decisions);
-        if (data.decisions && data.decisions.length > 0) {
-          // Convert decisions to opportunities format
+        if (data.decisions && data.decisions.length > 0 && !hasRealData) {
+          // Only use mock data if we don't have real opportunities
           const convertedOpportunities = data.decisions.map((decision: any) => ({
             id: decision.id,
             title: decision.title,
@@ -102,7 +110,8 @@ const DecisionCommand: React.FC = () => {
             difficulty: decision.priority === 'high' ? 'beginner' : decision.priority === 'medium' ? 'intermediate' : 'advanced',
             success_probability: decision.confidence || 75,
             required_skills: decision.requirements || [],
-            resources_needed: decision.resources || []
+            resources_needed: decision.resources || [],
+            is_mock: true // Mark as mock data
           }));
           setOpportunities(convertedOpportunities);
           setLoading(false);
@@ -152,7 +161,9 @@ const DecisionCommand: React.FC = () => {
 
           const allOpportunities = [...realOpportunities, ...contentOpportunities];
           if (allOpportunities.length > 0) {
+            console.log('✅ Setting real opportunities from WebSocket:', allOpportunities);
             setOpportunities(allOpportunities);
+            setHasRealData(true);
             setLoading(false);
           }
         }
@@ -174,6 +185,7 @@ const DecisionCommand: React.FC = () => {
 
   useEffect(() => {
     // Load user opportunities on mount
+    console.log('🚀 DecisionCommand mounting, fetching real opportunities...');
     analyzeOpportunities();
   }, []);
 
@@ -193,12 +205,18 @@ const DecisionCommand: React.FC = () => {
 
   const analyzeOpportunities = async () => {
     setLoading(true);
+    console.log('🔍 analyzeOpportunities called - fetching from API...');
 
     // First try to fetch real opportunities from the API
     try {
+      console.log('📡 Fetching from /api/opportunities/...');
       const response = await fetch('/api/opportunities/');
+      console.log('📡 API Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('📡 API Response data:', data);
+
         if (data.success && data.data) {
           console.log('📊 Loaded real opportunities from API:', data.data);
 
@@ -238,7 +256,9 @@ const DecisionCommand: React.FC = () => {
 
           const allOpportunities = [...realOpportunities, ...contentOpportunities];
           if (allOpportunities.length > 0) {
+            console.log('✅ Setting real opportunities:', allOpportunities);
             setOpportunities(allOpportunities);
+            setHasRealData(true);
             setLoading(false);
             return;
           }
@@ -495,7 +515,7 @@ const DecisionCommand: React.FC = () => {
                               >
                                 <h4 className="font-medium mb-2">Quick Start Steps:</h4>
                                 <ol className="space-y-1">
-                                  {opp.action_steps.slice(0, 3).map((step, i) => (
+                                  {(opp.action_steps || ['View opportunity', 'Prepare application', 'Submit']).slice(0, 3).map((step, i) => (
                                     <li key={i} className="text-sm flex items-start gap-2">
                                       <span className="font-medium text-purple-600">
                                         {i + 1}.
