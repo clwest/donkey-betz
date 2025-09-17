@@ -149,7 +149,7 @@ const DecisionCommand: React.FC = () => {
             id: content.id,
             title: content.title || 'Content for Sale',
             stream_type: 'content_sales',
-            description: `${content.type} - ${content.word_count} words`,
+            description: `${content.type} - ${content.word_count} words. Ready to list on marketplaces for immediate sale.`,
             time_to_income: 'Immediate',
             potential_monthly: `$${content.value}`,
             difficulty: 'beginner',
@@ -246,7 +246,7 @@ const DecisionCommand: React.FC = () => {
             id: content.id,
             title: content.title || 'Content for Sale',
             stream_type: 'content_sales',
-            description: `${content.type} - ${content.word_count} words`,
+            description: `${content.type} - ${content.word_count} words. Ready to list on marketplaces for immediate sale.`,
             time_to_income: 'Immediate',
             potential_monthly: `$${content.value}`,
             difficulty: 'beginner',
@@ -535,12 +535,16 @@ const DecisionCommand: React.FC = () => {
                                     if (opp.url) {
                                       // Open real job URL in new tab
                                       window.open(opp.url, '_blank');
+                                    } else if (opp.stream_type === 'content_sales') {
+                                      // Navigate to Revenue Dashboard to list content
+                                      console.log('📝 Navigating to list content:', opp.title);
+                                      window.location.href = '/revenue-dashboard';
                                     } else {
                                       console.log('Starting opportunity:', opp.title);
                                     }
                                   }}
                                 >
-                                  {opp.url ? 'Apply Now' : 'Start This Opportunity'}
+                                  {opp.url ? 'Apply Now' : opp.stream_type === 'content_sales' ? 'List for Sale' : 'Start This Opportunity'}
                                   <ChevronRight className="w-4 h-4 ml-1" />
                                 </Button>
                               </motion.div>
