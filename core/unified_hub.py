@@ -511,16 +511,35 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         plan_id = data.get('plan_id')
         logger.info(f"🎯 Neural Orchestra requesting plan review for: {plan_id}")
 
-        # Get the stored plan review from the localStorage data
-        # For now, we'll send the review that was created earlier
+        # Generate dynamic values based on plan_id (for demo)
+        import random
+        random.seed(hash(plan_id) % 1000)  # Use plan_id for consistent randomness
+
+        # Select a random advisor
+        advisors = ['Warren Buffett', 'Cathie Wood', 'Ray Dalio', 'Mark Cuban', 'Sal Khan']
+        advisor_name = random.choice(advisors)
+
+        # Calculate dynamic success probability based on advisor
+        if advisor_name == 'Warren Buffett':
+            success_prob = 0.85 + random.uniform(-0.1, 0.1)  # 75-95%
+        elif advisor_name == 'Cathie Wood':
+            success_prob = 0.65 + random.uniform(-0.1, 0.15)  # 55-80%
+        elif advisor_name == 'Ray Dalio':
+            success_prob = 0.80 + random.uniform(-0.05, 0.1)  # 75-90%
+        else:
+            success_prob = 0.70 + random.uniform(-0.15, 0.2)  # 55-90%
+
+        # Calculate dynamic budget
+        budget = random.choice([500, 1000, 1500, 2000, 2500, 3000, 5000])
+
         review_data = {
             'type': 'plan_review',
             'plan_id': plan_id,
             'review': {
-                'advisor': 'Sal Khan (AI Model)',
-                'advisor_id': 'sal_khan_advisor',
-                'success_probability': 0.75,
-                'budget_estimate': 1500,
+                'advisor': advisor_name,
+                'advisor_id': advisor_name.lower().replace(' ', '_'),
+                'success_probability': success_prob,
+                'budget_estimate': budget,
                 'immediate_actions': [
                     'Validate target market assumptions',
                     'Set up tracking and analytics',

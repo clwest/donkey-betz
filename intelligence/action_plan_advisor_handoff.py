@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 # Import existing components
-from advisors.registry import advisor_registry, AdvisorDomain, AdvisorConsultation
+from advisors.registry import advisor_registry, AdvisorDomain, AdvisorConsultation, AdvisorProfile
 from agents.registry import agent_registry
 from intelligence.action_plan_formatter import ActionPlanFormatter
 
@@ -359,7 +359,7 @@ class ActionPlanAdvisorHandoff:
 
         return review
 
-    def _calculate_success_probability(self, advisor: Advisor, action_plan: Dict[str, Any]) -> float:
+    def _calculate_success_probability(self, advisor: AdvisorProfile, action_plan: Dict[str, Any]) -> float:
         """Calculate success probability based on advisor expertise and plan complexity"""
         import random
 
