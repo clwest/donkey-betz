@@ -101,6 +101,9 @@ router = DefaultRouter()
 urlpatterns = [
     # Django admin
     path('admin/', admin.site.urls),
+
+    # Real data endpoints for demo/recording
+    path('', include('core.urls_real_data')),
     
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),

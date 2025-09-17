@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neural Orchestra WebSocket Test</title>
+</head>
+<body>
+    <h1>Neural Orchestra WebSocket Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+
+    <button onclick="testConnection()">Test Connection</button>
+    <button onclick="sendPlanReview()">Send Plan Review Request</button>
+
+    <script>
+        let ws;
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8000/ws/neural-orchestra/');
+
+            ws.onopen = function(e) {
+                statusDiv.innerHTML = '<span style="color: green;">✅ Connected!</span>';
+                console.log('Connected to Neural Orchestra WebSocket');
+                addMessage('Connected successfully!');
+            };
+
+            ws.onmessage = function(e) {
+                console.log('Received:', e.data);
+                addMessage('Received: ' + e.data);
+            };
+
+            ws.onerror = function(e) {
+                statusDiv.innerHTML = '<span style="color: red;">❌ Connection Error</span>';
+                console.error('WebSocket error:', e);
+                addMessage('Error: ' + e);
+            };
+
+            ws.onclose = function(e) {
+                statusDiv.innerHTML = '<span style="color: orange;">⚠️ Disconnected</span>';
+                console.log('WebSocket closed');
+                addMessage('Connection closed');
+            };
+        }
+
+        function testConnection() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'test',
+                    message: 'Hello Neural Orchestra!'
+                }));
+                addMessage('Sent test message');
+            } else {
+                addMessage('Not connected!');
+            }
+        }
+
+        function sendPlanReview() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'get_plan_review',
+                    plan_id: 'test_plan_123'
+                }));
+                addMessage('Sent plan review request');
+            } else {
+                addMessage('Not connected!');
+            }
+        }
+
+        function addMessage(msg) {
+            const msgDiv = document.createElement('div');
+            msgDiv.textContent = new Date().toLocaleTimeString() + ': ' + msg;
+            messagesDiv.appendChild(msgDiv);
+        }
+
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>

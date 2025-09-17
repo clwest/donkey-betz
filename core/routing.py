@@ -3,9 +3,12 @@ WebSocket routing configuration for unified-donkey-betz platform.
 Migrated from DBAO tools-manifest WebSocket capabilities.
 """
 
+import json
 from django.urls import re_path
+from channels.db import database_sync_to_async
 from . import consumers
 from . import orchestra_consumers
+from .unified_hub import UnifiedWebSocketHub
 
 # Import sports routing if available
 try:
@@ -25,7 +28,7 @@ websocket_urlpatterns = [
 
     # Orchestra and Control Panel WebSockets
     re_path(r'^ws/orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
-    re_path(r'^ws/neural-orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
+    re_path(r'^ws/neural-orchestra/$', UnifiedWebSocketHub.as_asgi()),
     re_path(r'^ws/control/$', orchestra_consumers.ControlConsumer.as_asgi()),
 
     # Command Center & Intelligence WebSockets
@@ -85,10 +88,6 @@ websocket_urlpatterns.extend(sports_ws_patterns)
 
 # Add intelligence WebSocket patterns for new UI components
 websocket_urlpatterns.extend(intelligence_ws_patterns)
-
-# Unified Platform Hub - Real Data Integration
-# Central hub providing real data flow for all platform components
-from .unified_hub import UnifiedWebSocketHub
 
 # Reality Checking WebSocket Consumer
 class RealityCheckConsumer(UnifiedWebSocketHub):
@@ -161,7 +160,7 @@ class RealityCheckConsumer(UnifiedWebSocketHub):
         from .truth_dashboard import truth_dashboard
 
         try:
-            dashboard_data = await sync_to_async(truth_dashboard.generate_dashboard_data)()
+            dashboard_data = await database_sync_to_async(truth_dashboard.generate_dashboard_data)()
 
             await self.send(text_data=json.dumps({
                 'type': 'dashboard_data',
@@ -175,11 +174,15 @@ class RealityCheckConsumer(UnifiedWebSocketHub):
 
 # Production WebSocket endpoints with enhanced reliability
 from .production_websocket import ProductionRevenueConsumer
+from .revenue_dashboard_consumer import RevenueDashboardConsumer
 
 unified_endpoints = [
     # Production Revenue Dashboard with real-time updates
-    re_path(r'^ws/revenue-dashboard/$', ProductionRevenueConsumer.as_asgi()),
-    re_path(r'^ws/revenue/$', ProductionRevenueConsumer.as_asgi()),
+    re_path(r'^ws/revenue-dashboard/$', RevenueDashboardConsumer.as_asgi()),
+    re_path(r'^ws/revenue/$', RevenueDashboardConsumer.as_asgi()),
+
+    # Fallback to production consumer
+    re_path(r'^ws/revenue-production/$', ProductionRevenueConsumer.as_asgi()),
 
     # Other component endpoints (will upgrade to production one by one)
     re_path(r'^ws/income-builder/$', UnifiedWebSocketHub.as_asgi()),

@@ -24,7 +24,8 @@ import {
   Shield,
   Globe,
   Database,
-  Cloud
+  Cloud,
+  PlayCircle
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -152,6 +153,8 @@ const NeuralOrchestra: React.FC = () => {
   const [viewMode, setViewMode] = useState<'network' | 'workflow' | 'performance'>('network');
   const [connectionTypes, setConnectionTypes] = useState<Record<string, any>>({});
   const [isAnimating, setIsAnimating] = useState(true);
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [planReview, setPlanReview] = useState<any>(null);
 
   const { sendMessage, lastMessage, isConnected } = useWebSocket({
     url: '/ws/neural-orchestra/',
@@ -214,6 +217,36 @@ const NeuralOrchestra: React.FC = () => {
           setAdvisors(data.data.advisors || []);
           setConnections(data.data.connections || []);
         }
+      } else if (data.type === 'plan_review') {
+        // Handle plan review data
+        console.log('📋 Plan review received:', data);
+        setPlanReview(data.review);
+
+        // Highlight the advisor and agents involved
+        if (data.review?.advisor_id) {
+          setSelectedNode(data.review.advisor_id);
+        }
+
+        // Show the team formation if available
+        if (data.review?.team) {
+          console.log('👥 Team formed:', data.review.team);
+          // Highlight team members
+          const teamAgentIds = [
+            data.review.team.lead_agent,
+            ...(data.review.team.core_agents || []),
+            ...(data.review.team.specialists || [])
+          ];
+
+          // Create connections between advisor and team
+          const newConnections = teamAgentIds.map(agentId => ({
+            source: data.review.advisor_id,
+            target: agentId,
+            type: 'team_formation',
+            strength: 0.8
+          }));
+
+          setConnections(prev => [...prev, ...newConnections]);
+        }
       } else if (data.type === 'connection_status') {
         console.log('Neural Orchestra connection status:', data.message);
       } else if (data.type === 'heartbeat') {
@@ -231,6 +264,24 @@ const NeuralOrchestra: React.FC = () => {
       console.log('📤 Sent multiple data requests on connection');
     }
   });
+
+  // Check for plan parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const plan = urlParams.get('plan');
+    if (plan) {
+      console.log('📋 Neural Orchestra received plan ID:', plan);
+      setPlanId(plan);
+
+      // Request the plan review data
+      if (isConnected) {
+        sendMessage({
+          type: 'get_plan_review',
+          plan_id: plan
+        });
+      }
+    }
+  }, [isConnected]);
 
   useEffect(() => {
     // Only initialize with mock data if no real data after 5 seconds
@@ -489,6 +540,81 @@ const NeuralOrchestra: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Plan Review Section - PROMINENTLY AT TOP */}
+      {planReview && (
+        <Card className="bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-purple-500/50 shadow-2xl mb-6">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2 text-purple-100">
+              <Sparkles className="w-6 h-6 text-yellow-400" />
+              Action Plan Review from {planReview.advisor || 'Advisor'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Success & Budget */}
+              <div className="space-y-4">
+                <div>
+                  <span className="text-sm text-purple-200">Success Probability</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Progress value={(planReview.success_probability || 0.75) * 100} className="flex-1 h-3" />
+                    <span className="text-lg font-bold text-green-400">
+                      {((planReview.success_probability || 0.75) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm text-purple-200">Estimated Budget</span>
+                  <div className="text-2xl font-bold text-purple-100 mt-1">
+                    ${planReview.budget_estimate?.toLocaleString() || '2,500'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Immediate Actions */}
+              <div className="space-y-2">
+                <h5 className="font-semibold text-purple-100">Immediate Actions</h5>
+                <ul className="space-y-1">
+                  {(planReview.immediate_actions || []).slice(0, 5).map((action: string, idx: number) => (
+                    <li key={idx} className="text-sm text-purple-50 flex items-start">
+                      <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
+                      {action}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Team Formation */}
+              <div className="space-y-2">
+                <h5 className="font-semibold text-purple-100">Your AI Team</h5>
+                <div className="space-y-2">
+                  {planReview.team && (
+                    <>
+                      <Badge className="bg-purple-600 text-white">
+                        <Users className="w-3 h-3 mr-1" />
+                        Lead: {planReview.team.lead_agent || 'orchestrator'}
+                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {(planReview.team.core_agents || []).map((agent: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="text-xs text-blue-200 border-blue-400">
+                            {agent}
+                          </Badge>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-purple-400/30">
+                  <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Start Execution
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

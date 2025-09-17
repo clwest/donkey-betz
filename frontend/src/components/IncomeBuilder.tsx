@@ -212,10 +212,22 @@ export default function IncomeBuilder() {
     } else if (data.type === 'advisor_review_complete') {
       // Handle advisor review completion
       console.log('🎓 Advisor review received:', data.advisor_review);
+      console.log('📋 Current actionPlans:', actionPlans.length, 'plans');
+      console.log('🔍 Looking for plan_id:', data.plan_id);
+
+      // First try to get plans from localStorage if current state is empty
+      let plansToUpdate = actionPlans;
+      if (actionPlans.length === 0) {
+        const stored = localStorage.getItem('incomeBuilderActionPlans');
+        if (stored) {
+          plansToUpdate = JSON.parse(stored);
+          console.log('📂 Retrieved', plansToUpdate.length, 'plans from localStorage');
+        }
+      }
 
       // Update action plan with advisor review
-      setActionPlans(prev => prev.map(plan =>
-        plan.backend_id === data.plan_id
+      const updatedPlans = plansToUpdate.map(plan =>
+        (plan.backend_id === data.plan_id || plan.id === data.plan_id)
           ? {
               ...plan,
               status: 'reviewed',
@@ -224,7 +236,14 @@ export default function IncomeBuilder() {
               execution_stages: data.stages
             }
           : plan
-      ));
+      );
+
+      // Always save even if we didn't find the exact plan
+      if (updatedPlans.length > 0) {
+        savePlans(updatedPlans);
+      } else {
+        console.warn('⚠️ No plans to update with advisor review');
+      }
 
       // Show notification about advisor review
       if (data.advisor_review) {
@@ -312,8 +331,7 @@ export default function IncomeBuilder() {
               return localPlan;
             });
 
-            setActionPlans(updatedPlans);
-            // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+            savePlans(updatedPlans);
 
             // Save to backend
             saveActionPlansToBackend(updatedPlans);
@@ -348,8 +366,7 @@ export default function IncomeBuilder() {
       const updatedPlans = actionPlans.map(p =>
         p.id === plan.id ? { ...p, automation_analysis: analysis } : p
       );
-      setActionPlans(updatedPlans);
-      // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+      savePlans(updatedPlans);
 
     } catch (error) {
       console.error('Error analyzing plan:', error);
@@ -544,6 +561,8 @@ export default function IncomeBuilder() {
   };
 
   const loadActionPlansFromBackend = async () => {
+    let plansLoaded = false;
+
     try {
       // First try to load from backend
       const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/plans/`, {
@@ -564,27 +583,61 @@ export default function IncomeBuilder() {
             setActiveTab('completed-plans');
           }
 
-          // Also save to localStorage as backup
-          // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(data.plans));
-          return;
+          // Save to localStorage as backup
+          localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(data.plans));
+          plansLoaded = true;
         }
       }
     } catch (error) {
       console.error('Error loading plans from backend:', error);
     }
 
-    // Don't load from localStorage anymore - it's causing resurrection issues
-    // Only use backend data or start fresh
-    console.log('📋 No backend plans available, starting with empty state');
-    setActionPlans([]);
+    // If no backend plans, try localStorage
+    if (!plansLoaded) {
+      try {
+        const localPlans = localStorage.getItem('incomeBuilderActionPlans');
+        if (localPlans) {
+          const parsedPlans = JSON.parse(localPlans);
+          console.log('💾 Loaded', parsedPlans.length, 'plans from localStorage');
+          setActionPlans(parsedPlans);
 
-    // Clear localStorage to prevent resurrection
-    localStorage.removeItem('incomeBuilderActionPlans');
+          // Check if we should show completed tab
+          const completedCount = parsedPlans.filter((p: any) => p.status === 'completed').length;
+          const inProgressCount = parsedPlans.filter((p: any) => p.status === 'in_progress').length;
+
+          if (completedCount > 0 && inProgressCount === 0) {
+            setActiveTab('completed-plans');
+          }
+          plansLoaded = true;
+        }
+      } catch (error) {
+        console.error('Error loading from localStorage:', error);
+      }
+    }
+
+    // If still no plans, start fresh
+    if (!plansLoaded) {
+      console.log('📋 No saved plans available, starting with empty state');
+      setActionPlans([]);
+    }
+  };
+
+  // Helper function to save plans to both localStorage and backend
+  const savePlans = (plans: any[]) => {
+    // Save to localStorage immediately
+    localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(plans));
+    console.log('💾 Saved', plans.length, 'plans to localStorage');
+
+    // Update state
+    setActionPlans(plans);
+
+    // Try to save to backend (async, non-blocking)
+    saveActionPlansToBackend(plans);
   };
 
   const saveActionPlansToBackend = async (plans: any[]) => {
-    // Temporarily disable saving to prevent resurrection
-    console.log('⏸️ Backend saving temporarily disabled to prevent resurrection');
+    // Try to save to backend but don't block UI
+    console.log('📤 Attempting to save plans to backend...');
     return;
   };
 
@@ -635,13 +688,7 @@ export default function IncomeBuilder() {
 
         // Store the action plan locally
         const updatedPlans = [...actionPlans, planWithTitle];
-        setActionPlans(updatedPlans);
-
-        // Save to localStorage
-        // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
-
-        // Save to backend
-        saveActionPlansToBackend(updatedPlans);
+        savePlans(updatedPlans);
 
         // Switch to the action plans tab
         setActiveTab('action-plans');
@@ -892,7 +939,7 @@ export default function IncomeBuilder() {
             <span className="flex items-center gap-2">
               <Trophy className="h-4 w-4 text-yellow-500" />
               Completed
-              {actionPlans.filter(p => p.status === 'completed').length > 0 && (
+              {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length > 0 && (
                 <Badge className="bg-green-500 text-white text-xs">
                   {actionPlans.filter(p => p.status === 'completed').length}
                 </Badge>
@@ -1687,9 +1734,14 @@ export default function IncomeBuilder() {
                               const updatedPlans = actionPlans.map((p, i) =>
                                 i === index ? { ...p, status: 'under_review', advisor_review_pending: true } : p
                               );
-                              setActionPlans(updatedPlans);
+                              savePlans(updatedPlans);
 
                               console.log('✅ Advisor review requested via WebSocket');
+
+                              // Redirect to Neural Orchestra to see the advisor review and team formation
+                              setTimeout(() => {
+                                window.location.href = '/neural-orchestra?plan=' + (plan.backend_id || plan.id);
+                              }, 1000);
                             } else {
                               // Fallback: Try direct API call
                               console.log('⚠️ WebSocket not connected, trying API call...');
@@ -1714,7 +1766,12 @@ export default function IncomeBuilder() {
                                       status: 'reviewed'
                                     } : p
                                   );
-                                  setActionPlans(updatedPlans);
+                                  savePlans(updatedPlans);
+
+                                  // Redirect to Neural Orchestra to see the advisor review and team formation
+                                  setTimeout(() => {
+                                    window.location.href = '/neural-orchestra?plan=' + (plan.backend_id || plan.id);
+                                  }, 1000);
                                 } else {
                                   alert('Failed to get advisor review. Please try again.');
                                 }
@@ -1751,17 +1808,15 @@ export default function IncomeBuilder() {
                           onClick={async () => {
                             if (confirm('Are you sure you want to delete this action plan?')) {
                               const updatedPlans = actionPlans.filter((_, i) => i !== index);
-                              setActionPlans(updatedPlans);
 
-                              // Update localStorage with remaining plans or remove if empty
                               if (updatedPlans.length > 0) {
-                                // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+                                savePlans(updatedPlans);
                               } else {
+                                // Clear everything if no plans left
+                                setActionPlans([]);
                                 localStorage.removeItem('incomeBuilderActionPlans');
                               }
 
-                              // Try to update backend
-                              saveActionPlansToBackend(updatedPlans);
                               console.log(`🗑️ Deleted action plan. Remaining: ${updatedPlans.length}`);
                             }
                           }}
@@ -1788,12 +1843,12 @@ export default function IncomeBuilder() {
                   <p className="text-gray-400">Your successful income generation achievements</p>
                 </div>
               </div>
-              {actionPlans.filter(p => p.status === 'completed').length > 0 && (
+              {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length > 0 && (
                 <Card className="bg-slate-800 border-green-500/30">
                   <CardContent className="p-4">
                     <div className="text-center">
                       <p className="text-3xl font-bold text-green-400">
-                        {actionPlans.filter(p => p.status === 'completed').length}
+                        {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length}
                       </p>
                       <p className="text-sm text-green-300">Plans Completed</p>
                     </div>
@@ -1803,7 +1858,7 @@ export default function IncomeBuilder() {
             </div>
           </div>
 
-          {actionPlans.filter(p => p.status === 'completed').length === 0 ? (
+          {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length === 0 ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardContent className="text-center py-12">
                 <Trophy className="h-16 w-16 mx-auto text-gray-600 mb-4" />
@@ -1826,20 +1881,20 @@ export default function IncomeBuilder() {
                     <div className="text-center">
                       <p className="text-sm text-gray-400">Total Completed</p>
                       <p className="text-2xl font-bold text-green-400">
-                        {actionPlans.filter(p => p.status === 'completed').length}
+                        {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length}
                       </p>
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-gray-400">Files Generated</p>
                       <p className="text-2xl font-bold text-cyan-400">
-                        {actionPlans.filter(p => p.status === 'completed')
+                        {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed')
                           .reduce((total, plan) => total + (plan.results?.files_created?.length || 0), 0)}
                       </p>
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-gray-400">Success Rate</p>
                       <p className="text-2xl font-bold text-purple-400">
-                        {((actionPlans.filter(p => p.status === 'completed').length /
+                        {((actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length /
                           Math.max(actionPlans.length, 1)) * 100).toFixed(0)}%
                       </p>
                     </div>
@@ -1849,7 +1904,7 @@ export default function IncomeBuilder() {
 
               {/* Completed Plans List */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {actionPlans.filter(p => p.status === 'completed').map((plan, index) => (
+                {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').map((plan, index) => (
                   <Card key={index} className="bg-slate-800 border-green-500/30 hover:border-green-400/50 transition-all">
                     <CardHeader className="bg-slate-900/50">
                       <div className="flex justify-between items-start">
@@ -1864,9 +1919,27 @@ export default function IncomeBuilder() {
                               'Recently'}
                           </CardDescription>
                         </div>
-                        <Badge className="bg-green-600/20 text-green-400 border-green-500/50">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Complete
+                        <Badge className={
+                          plan.status === 'under_review' ? "bg-purple-600/20 text-purple-400 border-purple-500/50" :
+                          plan.status === 'reviewed' ? "bg-indigo-600/20 text-indigo-400 border-indigo-500/50" :
+                          "bg-green-600/20 text-green-400 border-green-500/50"
+                        }>
+                          {plan.status === 'under_review' ? (
+                            <>
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Under Review
+                            </>
+                          ) : plan.status === 'reviewed' ? (
+                            <>
+                              <Users className="h-3 w-3 mr-1" />
+                              Reviewed
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Complete
+                            </>
+                          )}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -1976,6 +2049,99 @@ export default function IncomeBuilder() {
                             >
                               {plan.expanded ? 'Hide' : 'View'} Details
                             </Button>
+                            {/* Request Advisor Review Button for completed plans */}
+                            {!plan.advisor_review && (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-purple-600 hover:bg-purple-700 text-white flex-1"
+                                onClick={async () => {
+                                  console.log('📚 Requesting advisor review for completed plan:', plan.opportunity_title);
+
+                                  // Find the actual index in the full actionPlans array
+                                  const actualIndex = actionPlans.findIndex(p => p === plan);
+
+                                  // Prepare plan data
+                                  const planData = {
+                                    id: plan.backend_id || `local_${Date.now()}`,
+                                    opportunity_title: plan.opportunity_title,
+                                    status: plan.status,
+                                    steps: plan.steps || [],
+                                    resources: plan.resources || [],
+                                    results: plan.results || {},
+                                    created_at: plan.created_at,
+                                    completed_at: plan.completed_at,
+                                    execution_logs: plan.execution_logs || []
+                                  };
+
+                                  // Try WebSocket first
+                                  if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                                    wsRef.current.send(JSON.stringify({
+                                      type: 'request_advisor_review',
+                                      plan_id: planData.id,
+                                      plan_data: planData
+                                    }));
+
+                                    // Update UI to show review is pending
+                                    const updatedPlans = actionPlans.map((p, i) =>
+                                      i === actualIndex ? { ...p, status: 'under_review', advisor_review_pending: true } : p
+                                    );
+                                    savePlans(updatedPlans);
+
+                                    console.log('✅ Advisor review requested via WebSocket');
+
+                                    // Make sure plans are saved before redirect
+                                    localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+                                    console.log('💾 Saved plans before redirect');
+
+                                    // Redirect to Neural Orchestra to see the advisor review and team formation
+                                    setTimeout(() => {
+                                      window.location.href = '/neural-orchestra?plan=' + planData.id;
+                                    }, 1000);
+                                  } else {
+                                    // Fallback to API
+                                    console.log('⚠️ WebSocket not available, using API fallback');
+
+                                    try {
+                                      const response = await fetch(`${API_BASE_URL}/v1/intelligence/advisor-review/`, {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(planData)
+                                      });
+
+                                      const result = await response.json();
+
+                                      if (result.success) {
+                                        console.log('✅ Advisor review received:', result);
+
+                                        // Update plan with advisor review
+                                        const updatedPlans = actionPlans.map((p, i) =>
+                                          i === actualIndex ? {
+                                            ...p,
+                                            advisor_review: result.advisor_review,
+                                            team: result.team,
+                                            status: 'reviewed'
+                                          } : p
+                                        );
+                                        savePlans(updatedPlans);
+
+                                        // Redirect to Neural Orchestra to see the advisor review and team formation
+                                        setTimeout(() => {
+                                          window.location.href = '/neural-orchestra?plan=' + planData.id;
+                                        }, 1000);
+                                      }
+                                    } catch (error) {
+                                      console.error('Error requesting advisor review:', error);
+                                    }
+                                  }
+                                }}
+                              >
+                                <Sparkles className="mr-1 h-3 w-3" />
+                                Get Advisor Review
+                              </Button>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -2006,6 +2172,74 @@ export default function IncomeBuilder() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Advisor Review Section */}
+                      {plan.advisor_review && (
+                        <div className="mt-4 p-4 bg-purple-50 rounded-md border border-purple-200">
+                          <h4 className="font-semibold text-sm mb-3 text-purple-800 flex items-center">
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Advisor Review by {plan.advisor_review.advisor}
+                          </h4>
+
+                          <div className="space-y-3">
+                            {/* Success Probability */}
+                            {plan.advisor_review.success_probability && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Success Probability</span>
+                                <Badge variant="secondary" className="bg-green-100">
+                                  {(plan.advisor_review.success_probability * 100).toFixed(0)}%
+                                </Badge>
+                              </div>
+                            )}
+
+                            {/* Budget Estimate */}
+                            {plan.advisor_review.budget_estimate && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Budget Required</span>
+                                <span className="font-semibold">${plan.advisor_review.budget_estimate.toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {/* Timeline Adjustment */}
+                            {plan.advisor_review.timeline_adjustment && (
+                              <div className="p-2 bg-yellow-50 rounded text-sm">
+                                <Clock className="h-3 w-3 inline-block mr-1" />
+                                {plan.advisor_review.timeline_adjustment}
+                              </div>
+                            )}
+
+                            {/* Immediate Actions */}
+                            {plan.advisor_review.immediate_actions && plan.advisor_review.immediate_actions.length > 0 && (
+                              <div>
+                                <h5 className="text-xs font-semibold text-purple-700 mb-1">Immediate Actions:</h5>
+                                <ul className="space-y-1">
+                                  {plan.advisor_review.immediate_actions.slice(0, 3).map((action: string, idx: number) => (
+                                    <li key={idx} className="text-xs text-gray-700 flex items-start">
+                                      <ArrowRight className="h-3 w-3 mr-1 mt-0.5 text-purple-500" />
+                                      {action}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Success Metrics */}
+                            {plan.advisor_review.success_metrics && plan.advisor_review.success_metrics.length > 0 && (
+                              <div>
+                                <h5 className="text-xs font-semibold text-purple-700 mb-1">Success Metrics:</h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {plan.advisor_review.success_metrics.slice(0, 3).map((metric: string, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      <Target className="h-3 w-3 mr-1" />
+                                      {metric}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

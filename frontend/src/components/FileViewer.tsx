@@ -22,8 +22,23 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
   const fetchFileContent = async () => {
     try {
       setLoading(true);
-      // Properly encode the filename for URL (handles spaces and special characters)
-      const encodedFilename = encodeURIComponent(filename);
+      // Extract just the filename without the directory prefix
+      let cleanFilename = filename;
+      if (filename.includes('/')) {
+        // Get the last part after the last slash
+        const parts = filename.split('/');
+        cleanFilename = parts[parts.length - 1];
+      }
+
+      // If the filename ends with .md, use it directly
+      // Otherwise, convert it to the expected format
+      if (!cleanFilename.endsWith('.md')) {
+        cleanFilename = cleanFilename.replace(/ /g, '_') + '.md';
+      }
+
+      // Encode for URL
+      const encodedFilename = encodeURIComponent(cleanFilename);
+      console.log('Fetching file:', cleanFilename, 'from URL:', `http://localhost:8000/api/v1/intelligence/income-builder/file/${encodedFilename}/`);
       const response = await fetch(`http://localhost:8000/api/v1/intelligence/income-builder/file/${encodedFilename}/`);
       const data = await response.json();
 

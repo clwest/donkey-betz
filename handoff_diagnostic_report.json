@@ -1,0 +1,93 @@
+{
+  "total": 12,
+  "connected": 7,
+  "broken": 3,
+  "mock": 2,
+  "unknown": 0,
+  "details": [
+    {
+      "source": "Income Builder",
+      "destination": "Agent Parser",
+      "type": "direct",
+      "status": "connected",
+      "message": "Parser imported and functional"
+    },
+    {
+      "source": "Agent Parser",
+      "destination": "Execution Pipeline",
+      "type": "direct",
+      "status": "broken",
+      "message": "Import error: cannot import name 'AgentExecution' from 'intelligence.models' (/Users/donkeyking/development/unified-donkey-betz/intelligence/models/__init__.py)"
+    },
+    {
+      "source": "Execution Pipeline",
+      "destination": "Agent Network (149 agents)",
+      "type": "celery",
+      "status": "connected",
+      "message": "Celery broker connected"
+    },
+    {
+      "source": "Spider Army",
+      "destination": "PostgreSQL/Redis",
+      "type": "api",
+      "status": "connected",
+      "message": "API endpoint responding (200)"
+    },
+    {
+      "source": "Spider Data",
+      "destination": "Income Builder",
+      "type": "api",
+      "status": "broken",
+      "message": "No endpoint mapped"
+    },
+    {
+      "source": "React Frontend",
+      "destination": "Django WebSocket",
+      "type": "websocket",
+      "status": "connected",
+      "message": "WebSocket configured (not tested)"
+    },
+    {
+      "source": "Django Backend",
+      "destination": "Redis PubSub",
+      "type": "redis",
+      "status": "connected",
+      "message": "Redis connected"
+    },
+    {
+      "source": "Celery Tasks",
+      "destination": "Agent Execution",
+      "type": "celery",
+      "status": "connected",
+      "message": "Celery broker connected"
+    },
+    {
+      "source": "Agent Results",
+      "destination": "ActionPlan Results",
+      "type": "direct",
+      "status": "mock",
+      "message": "Direct connection not implemented"
+    },
+    {
+      "source": "ML Pipeline",
+      "destination": "Prediction Service",
+      "type": "api",
+      "status": "connected",
+      "message": "API endpoint responding (200)"
+    },
+    {
+      "source": "Advisor Network (25)",
+      "destination": "Strategy Engine",
+      "type": "api",
+      "status": "broken",
+      "message": "API returned 404"
+    },
+    {
+      "source": "Revenue Engine",
+      "destination": "Revenue Dashboard",
+      "type": "websocket",
+      "status": "mock",
+      "message": "WebSocket not configured"
+    }
+  ]
+}

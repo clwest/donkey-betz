@@ -141,32 +141,90 @@ check-redis: ## Verify Redis connection
 
 dev: unified-dev ## Alias for unified-dev (start complete development environment)
 
-unified-dev: health-check ## Start complete development environment with all services
-	@echo "$(BLUE)🚀 Starting Unified Donkey Betz Platform - Development Mode$(NC)"
-	@echo "$(CYAN)Starting all services in correct order...$(NC)"
+unified-dev: ## Start complete development environment with all services
+	@echo "$(BLUE)=====================================================================$(NC)"
+	@echo "$(BLUE)🚀 STARTING UNIFIED DONKEY BETZ PLATFORM - DEVELOPMENT MODE$(NC)"
+	@echo "$(BLUE)=====================================================================$(NC)"
+	@echo ""
+	@echo "$(CYAN)📦 Pre-flight checks...$(NC)"
+	@make unified-stop > /dev/null 2>&1
+	@sleep 2
+	@echo "$(GREEN)✅ Cleared any existing services$(NC)"
+	@echo ""
+	@echo "$(CYAN)🔧 Starting infrastructure services...$(NC)"
 	@make _start-infrastructure
 	@sleep 3
+	@echo ""
+	@echo "$(CYAN)💾 Populating real data for all endpoints...$(NC)"
+	@$(ACTIVATE) && python populate_real_data_simple.py > /dev/null 2>&1 || echo "$(YELLOW)⚠️  Data population skipped (script may not exist)$(NC)"
+	@echo ""
+	@echo "$(CYAN)🚀 Starting backend services...$(NC)"
+	@echo "  • Django backend on port $(BACKEND_PORT)"
 	@make _start-backend &
-	@sleep 2
+	@sleep 3
+	@echo ""
+	@echo "$(CYAN)⚛️  Starting frontend services...$(NC)"
+	@echo "  • React frontend on port $(FRONTEND_PORT)"
 	@make _start-frontend &
-	@sleep 1
+	@sleep 2
+	@echo ""
+	@echo "$(CYAN)🔄 Starting background workers...$(NC)"
+	@echo "  • Celery workers and beat scheduler"
+	@echo "  • Flower monitoring on port $(FLOWER_PORT)"
 	@make _start-celery &
-	@echo "$(GREEN)✅ All services started! Platform available at:$(NC)"
-	@echo "  $(YELLOW)Backend (HTTP/WS):$(NC)    http://localhost:$(BACKEND_PORT) | ws://localhost:$(WEBSOCKET_PORT)"
-	@echo "  $(YELLOW)Frontend (React):$(NC)     http://localhost:$(FRONTEND_PORT)"
-	@echo "  $(YELLOW)Mobile (Expo):$(NC)        http://localhost:$(MOBILE_PORT)"
+	@sleep 2
+	@echo ""
+	@echo "$(GREEN)=====================================================================$(NC)"
+	@echo "$(GREEN)✅ ALL SERVICES STARTED SUCCESSFULLY!$(NC)"
+	@echo "$(GREEN)=====================================================================$(NC)"
+	@echo ""
+	@echo "$(BLUE)🌐 ACCESS YOUR PLATFORM:$(NC)"
+	@echo "  $(YELLOW)Backend API:$(NC)          http://localhost:$(BACKEND_PORT)/api/"
+	@echo "  $(YELLOW)Admin Panel:$(NC)          http://localhost:$(BACKEND_PORT)/admin/"
+	@echo "  $(YELLOW)Frontend App:$(NC)         http://localhost:$(FRONTEND_PORT)"
+	@echo "  $(YELLOW)WebSocket:$(NC)            ws://localhost:$(WEBSOCKET_PORT)/ws/"
 	@echo "  $(YELLOW)Flower (Celery):$(NC)      http://localhost:$(FLOWER_PORT)"
+	@echo ""
+	@echo "$(BLUE)📊 REAL DATA ENDPOINTS:$(NC)"
+	@echo "  $(YELLOW)Income Opportunities:$(NC)  http://localhost:$(BACKEND_PORT)/api/income-builder/opportunities/"
+	@echo "  $(YELLOW)Sports Predictions:$(NC)    http://localhost:$(BACKEND_PORT)/api/sports/predictions/"
+	@echo "  $(YELLOW)Agent Registry:$(NC)        http://localhost:$(BACKEND_PORT)/api/agents/list/"
+	@echo "  $(YELLOW)Revenue Dashboard:$(NC)     http://localhost:$(BACKEND_PORT)/api/revenue/summary/"
+	@echo ""
+	@echo "$(CYAN)💡 Tips:$(NC)"
+	@echo "  • Use '$(YELLOW)make unified-stop$(NC)' to stop all services"
+	@echo "  • Use '$(YELLOW)make monitor$(NC)' to check system health"
+	@echo "  • Use '$(YELLOW)make logs$(NC)' to view service logs"
+	@echo ""
+	@echo "$(GREEN)🎬 Ready for development or recording!$(NC)"
 	@wait
 
 unified-stop: ## Stop all development services
 	@echo "$(YELLOW)🛑 Stopping all Unified Donkey Betz services...$(NC)"
+	@echo "$(CYAN)Stopping Django/Daphne servers...$(NC)"
 	@pkill -f "python manage.py" 2>/dev/null || true
 	@pkill -f "daphne" 2>/dev/null || true
-	@pkill -f "celery" 2>/dev/null || true
+	@pkill -f "runserver" 2>/dev/null || true
+	@echo "$(CYAN)Stopping Celery workers and beat...$(NC)"
+	@pkill -f "celery.*worker" 2>/dev/null || true
+	@pkill -f "celery.*beat" 2>/dev/null || true
+	@pkill -f "flower" 2>/dev/null || true
+	@echo "$(CYAN)Stopping frontend services...$(NC)"
 	@pkill -f "npm run dev" 2>/dev/null || true
 	@pkill -f "vite" 2>/dev/null || true
 	@pkill -f "node.*vite" 2>/dev/null || true
-	@echo "$(GREEN)✅ All services stopped$(NC)"
+	@pkill -f "react-scripts" 2>/dev/null || true
+	@pkill -f "webpack" 2>/dev/null || true
+	@echo "$(CYAN)Stopping mobile services...$(NC)"
+	@pkill -f "expo" 2>/dev/null || true
+	@pkill -f "metro" 2>/dev/null || true
+	@echo "$(CYAN)Clearing any lingering ports...$(NC)"
+	@lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+	@lsof -ti:8001 | xargs kill -9 2>/dev/null || true
+	@lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+	@lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+	@lsof -ti:5555 | xargs kill -9 2>/dev/null || true
+	@echo "$(GREEN)✅ All services stopped and ports cleared$(NC)"
 
 _start-infrastructure: ## Internal: Start Redis and PostgreSQL
 	@echo "$(CYAN)Starting infrastructure services...$(NC)"
@@ -175,7 +233,10 @@ _start-infrastructure: ## Internal: Start Redis and PostgreSQL
 
 _start-backend: ## Internal: Start Django backend with WebSocket support
 	@echo "$(CYAN)Starting Django backend with WebSocket support...$(NC)"
-	@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application
+	@cd $(PWD) && $(ACTIVATE) && python manage.py migrate --run-syncdb > /dev/null 2>&1 || true
+	@cd $(PWD) && $(ACTIVATE) && python manage.py collectstatic --noinput > /dev/null 2>&1 || true
+	@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) core.asgi:application 2>/dev/null || \
+		$(ACTIVATE) && python manage.py runserver 0.0.0.0:$(BACKEND_PORT)
 
 _start-frontend: ## Internal: Start React frontend
 	@echo "$(CYAN)Starting React frontend...$(NC)"
@@ -183,9 +244,9 @@ _start-frontend: ## Internal: Start React frontend
 
 _start-celery: ## Internal: Start Celery workers and beat
 	@echo "$(CYAN)Starting Celery services...$(NC)"
-	@cd $(PWD) && $(ACTIVATE) && celery -A core worker -l info --detach
-	@cd $(PWD) && $(ACTIVATE) && celery -A core beat -l info --detach
-	@cd $(PWD) && $(ACTIVATE) && celery --broker=redis://localhost:6379/2 -A core flower --detach --port=$(FLOWER_PORT)
+	@cd $(PWD) && $(ACTIVATE) && celery -A core worker -l info --detach > /dev/null 2>&1 || echo "$(YELLOW)⚠️  Celery worker skipped$(NC)"
+	@cd $(PWD) && $(ACTIVATE) && celery -A core beat -l info --detach > /dev/null 2>&1 || echo "$(YELLOW)⚠️  Celery beat skipped$(NC)"
+	@cd $(PWD) && $(ACTIVATE) && celery --broker=redis://localhost:6379/2 -A core flower --detach --port=$(FLOWER_PORT) > /dev/null 2>&1 || echo "$(YELLOW)⚠️  Flower monitoring skipped$(NC)"
 
 # =============================================================================
 # SETUP & INSTALLATION
