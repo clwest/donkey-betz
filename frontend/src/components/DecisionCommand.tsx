@@ -111,6 +111,51 @@ const DecisionCommand: React.FC = () => {
           // Store AI insights for display
           setAiInsights(data.ai_insights);
         }
+      } else if (data.type === 'opportunities_data') {
+        // Handle opportunities data from execution
+        console.log('📊 Received opportunities data from execution:', data.data);
+
+        if (data.data) {
+          // Convert real opportunities to Decision Command format
+          const realOpportunities = data.data.jobs?.map((job: any) => ({
+            id: job.id || Math.random().toString(36).substr(2, 9),
+            title: job.title,
+            stream_type: 'employment',
+            description: job.description?.substring(0, 200) + '...',
+            company: job.company,
+            url: job.url,
+            time_to_income: '1-2 weeks',
+            potential_monthly: `$${Math.floor((job.salary_max || 60000) / 12)}`,
+            difficulty: job.salary_max > 100000 ? 'advanced' : job.salary_max > 60000 ? 'intermediate' : 'beginner',
+            success_probability: 75,
+            required_skills: job.tags || [],
+            resources_needed: ['Resume', 'Portfolio'],
+            salary_range: `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
+            is_real: true
+          })) || [];
+
+          // Add any created content as opportunities
+          const contentOpportunities = data.data.content?.map((content: any) => ({
+            id: content.id,
+            title: content.title || 'Content for Sale',
+            stream_type: 'content_sales',
+            description: `${content.type} - ${content.word_count} words`,
+            time_to_income: 'Immediate',
+            potential_monthly: `$${content.value}`,
+            difficulty: 'beginner',
+            success_probability: 90,
+            required_skills: ['Content Marketing'],
+            resources_needed: ['Sales Platform'],
+            value: content.value,
+            is_real: true
+          })) || [];
+
+          const allOpportunities = [...realOpportunities, ...contentOpportunities];
+          if (allOpportunities.length > 0) {
+            setOpportunities(allOpportunities);
+            setLoading(false);
+          }
+        }
       } else if (data.type === 'connection') {
         console.log('Decision Command connected to bridge');
         setLoading(false);
@@ -148,6 +193,62 @@ const DecisionCommand: React.FC = () => {
 
   const analyzeOpportunities = async () => {
     setLoading(true);
+
+    // First try to fetch real opportunities from the API
+    try {
+      const response = await fetch('/api/opportunities/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          console.log('📊 Loaded real opportunities from API:', data.data);
+
+          // Convert real opportunities to Decision Command format
+          const realOpportunities = data.data.jobs?.map((job: any) => ({
+            id: job.id || Math.random().toString(36).substr(2, 9),
+            title: job.title,
+            stream_type: 'employment',
+            description: job.description?.substring(0, 200) + '...',
+            company: job.company,
+            url: job.url,
+            time_to_income: '1-2 weeks',
+            potential_monthly: `$${Math.floor((job.salary_max || 60000) / 12)}`,
+            difficulty: job.salary_max > 100000 ? 'advanced' : job.salary_max > 60000 ? 'intermediate' : 'beginner',
+            success_probability: 75,
+            required_skills: job.tags || [],
+            resources_needed: ['Resume', 'Portfolio'],
+            salary_range: `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
+            is_real: true
+          })) || [];
+
+          // Add any created content as opportunities
+          const contentOpportunities = data.data.content?.map((content: any) => ({
+            id: content.id,
+            title: content.title || 'Content for Sale',
+            stream_type: 'content_sales',
+            description: `${content.type} - ${content.word_count} words`,
+            time_to_income: 'Immediate',
+            potential_monthly: `$${content.value}`,
+            difficulty: 'beginner',
+            success_probability: 90,
+            required_skills: ['Content Marketing'],
+            resources_needed: ['Sales Platform'],
+            value: content.value,
+            is_real: true
+          })) || [];
+
+          const allOpportunities = [...realOpportunities, ...contentOpportunities];
+          if (allOpportunities.length > 0) {
+            setOpportunities(allOpportunities);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching real opportunities:', error);
+    }
+
+    // Fallback to WebSocket request
     sendMessage(JSON.stringify({
       action: 'analyze_opportunities',
       profile: userProfile
@@ -341,12 +442,21 @@ const DecisionCommand: React.FC = () => {
                             <div className="flex items-center gap-2">
                               {getIconForStream(opp.stream_type)}
                               <h3 className="font-semibold">{opp.title}</h3>
+                              {opp.is_real && <Badge className="bg-green-600 text-white">REAL</Badge>}
                               <Badge
                                 className={`${getDifficultyColor(opp.difficulty)} text-white`}
                               >
                                 {opp.difficulty}
                               </Badge>
                             </div>
+
+                            {opp.company && (
+                              <p className="text-sm text-gray-500 mt-1">at {opp.company}</p>
+                            )}
+
+                            {opp.salary_range && (
+                              <p className="text-sm font-semibold text-green-600 mt-1">{opp.salary_range}/year</p>
+                            )}
 
                             <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
                               <div>
@@ -394,8 +504,19 @@ const DecisionCommand: React.FC = () => {
                                     </li>
                                   ))}
                                 </ol>
-                                <Button className="mt-3 w-full" size="sm">
-                                  Start This Opportunity
+                                <Button
+                                  className="mt-3 w-full"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (opp.url) {
+                                      // Open real job URL in new tab
+                                      window.open(opp.url, '_blank');
+                                    } else {
+                                      console.log('Starting opportunity:', opp.title);
+                                    }
+                                  }}
+                                >
+                                  {opp.url ? 'Apply Now' : 'Start This Opportunity'}
                                   <ChevronRight className="w-4 h-4 ml-1" />
                                 </Button>
                               </motion.div>
