@@ -192,3 +192,14 @@ models/
 *.tar.gz
 *.tgz
 *.7z
+
+# Enhanced Security Rules
+# Secrets Management - NEVER COMMIT THESE
+secrets/
+vault/
+.env.backup.*
+master.key
+# API Key Files
+*_api_key.txt
+*_secret.txt
+*_token.txt

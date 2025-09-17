@@ -121,6 +121,10 @@ class AgentInstructionParser:
         tool_pattern = r'- \*\*Tool:\*\* (.*?)(?=- \*\*|$)'
         outcome_pattern = r'- \*\*Expected Outcome:\*\* (.*?)(?=- \*\*|###|$)'
 
+        # ALSO look for bold agent references in GPT-5 format
+        # Pattern: **Agent Name** or **Agent Name Agent**
+        bold_agent_pattern = r'\*\*([^*]+(?:Agent|agent)[^*]*)\*\*'
+
         # Find all actions in the content
         action_matches = re.finditer(action_pattern, step_content, re.DOTALL)
 
@@ -133,13 +137,38 @@ class AgentInstructionParser:
             tool_match = re.search(tool_pattern, remaining_text)
             outcome_match = re.search(outcome_pattern, remaining_text)
 
+            # If no tool found, try to extract from bold text in action
+            tool_name = tool_match.group(1).strip() if tool_match else ''
+            if not tool_name:
+                bold_match = re.search(bold_agent_pattern, action_text)
+                if bold_match:
+                    tool_name = bold_match.group(1).strip()
+                    logger.info(f"Found agent in bold text: {tool_name}")
+
             action_dict = {
                 'action': action_text,
-                'tool': tool_match.group(1).strip() if tool_match else '',
+                'tool': tool_name,
                 'outcome': outcome_match.group(1).strip() if outcome_match else ''
             }
 
             actions.append(action_dict)
+
+        # ALSO scan for any lines with "Utilize" or "Use" followed by bold agents
+        utilize_pattern = r'(?:Utilize|Use|Deploy|Leverage|Activate)\s+.*?\*\*([^*]+Agent[^*]*)\*\*'
+        utilize_matches = re.finditer(utilize_pattern, step_content, re.IGNORECASE)
+
+        for match in utilize_matches:
+            agent_name = match.group(1).strip()
+            full_line = step_content[match.start():match.end()]
+
+            # Create an action from this
+            action_dict = {
+                'action': full_line,
+                'tool': agent_name,
+                'outcome': f"Successfully executed {agent_name}"
+            }
+            actions.append(action_dict)
+            logger.info(f"Found GPT-5 style agent reference: {agent_name}")
 
         return actions
 

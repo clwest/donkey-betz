@@ -25,6 +25,7 @@ from .assistant_prompt_enhanced import (
     apply_mythology_guards
 )
 from .personal_assistant_integration import personal_assistant_integration
+from .personal_assistant_agent_integration import personal_assistant_agent_integration
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -122,8 +123,21 @@ def assistant_chat_intelligent(request):
                 'routing': system_awareness_context.get('routing', {})
             }
         
-        # Determine routing strategy
-        if force_direct or not use_intelligent_routing:
+        # Check if this should be routed through our 149-agent system
+        use_agent_execution = request.data.get('use_agent_execution', True)
+        if use_agent_execution and personal_assistant_agent_integration.should_route_to_agents(message):
+            logger.info("Routing through 149-agent system for task execution")
+            # Handle async execution in Django-safe way
+            import asyncio
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(_process_with_agent_execution(
+                    user, message, context, response_metadata, system_awareness_context
+                ))
+            finally:
+                loop.close()
+        elif force_direct or not use_intelligent_routing:
             # Direct processing without agent routing
             logger.info("Using direct processing (routing disabled)")
             result = _process_direct(user, message, context, response_metadata, system_awareness_context)
@@ -202,6 +216,80 @@ def assistant_chat_intelligent(request):
             'error': str(e),
             'routing_used': False
         }, status=500)
+
+
+async def _process_with_agent_execution(user, message: str, context: str,
+                                      response_metadata: Dict[str, Any],
+                                      system_awareness_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Process message through the 149-agent system for task execution
+    """
+    try:
+        logger.info("Processing through 149-agent system")
+
+        # Check if user wants to select specific agents
+        selected_agents = None  # Could be extracted from message or context
+
+        # Execute through agents
+        execution_result = await personal_assistant_agent_integration.execute_through_agents(
+            message, selected_agents
+        )
+
+        if execution_result.get('success'):
+            # Create response message
+            if execution_result.get('execution_type') == 'selected_agents':
+                agent_summary = execution_result.get('summary', '')
+                response_text = f"I executed your request through {len(execution_result['agents_used'])} specialized agents:\n\n{agent_summary}"
+            else:
+                primary_agent = execution_result.get('primary_agent', 'agent')
+                result = execution_result.get('result', {})
+
+                if result.get('success'):
+                    response_text = f"I completed your request using the **{primary_agent}**.\n\n"
+
+                    # Add specific result details
+                    agent_result = result.get('result', {})
+                    if 'file_created' in agent_result:
+                        response_text += f"✅ Created: {agent_result['file_created']}\n"
+                    if 'content_generated' in agent_result:
+                        response_text += f"✅ Generated content successfully\n"
+                    if 'image_generated' in agent_result:
+                        response_text += f"✅ Generated image successfully\n"
+
+                    # Add preview if available
+                    if 'content_preview' in agent_result:
+                        response_text += f"\nPreview: {agent_result['content_preview'][:200]}..."
+                else:
+                    response_text = f"I attempted to process your request through **{primary_agent}**, but encountered an issue: {result.get('error', 'Unknown error')}"
+
+            # Add agent system info
+            response_metadata.update({
+                'agent_execution_used': True,
+                'agents_involved': execution_result.get('agents_used', [execution_result.get('primary_agent')]),
+                'execution_type': execution_result.get('execution_type'),
+                'agent_results': execution_result
+            })
+
+            return {
+                'message': response_text,
+                'provider': 'agent_system',
+                'model': 'multi_agent_execution',
+                'execution_details': execution_result
+            }
+        else:
+            # Agent execution failed, provide recommendations
+            recommendation = personal_assistant_agent_integration.create_agent_recommendation(message)
+            agent_summary = personal_assistant_agent_integration.get_available_agent_summary()
+
+            response_text = f"I couldn't execute your request directly through agents. {recommendation}\n\nI have access to {agent_summary['active_agents']} active agents across different specializations."
+
+            # Fall back to regular processing
+            return _process_direct(user, message, context, response_metadata, system_awareness_context)
+
+    except Exception as e:
+        logger.error(f"Error in agent execution: {str(e)}")
+        # Fall back to regular processing
+        return _process_direct(user, message, context, response_metadata, system_awareness_context)
 
 
 def _process_with_intelligent_routing(user, message: str, context: str,
@@ -467,11 +555,11 @@ When relevant to the user's question, briefly mention system status."""
             sentence_count = len([s for s in validated_content.split('.') if s.strip()])
             logger.info(f"Response metrics - Characters: {char_count}, Sentences: {sentence_count}")
             
-            # Save conversation to memory for learning
+            # Save conversation to CHAT memory (not document embeddings)
             try:
-                logger.info(f"Attempting to save conversation in intelligent assistant...")
-                from core.conversation_memory import conversation_memory
-                saved = conversation_memory.save_conversation(
+                logger.info(f"Saving to chat memory (separate from document embeddings)...")
+                from core.conversation_memory_fixed import conversation_memory_fixed
+                saved = conversation_memory_fixed.save_conversation(
                     user_id=str(user.id),  # Convert UUID to string
                     user_message=message,
                     assistant_response=result.content,
@@ -480,12 +568,15 @@ When relevant to the user's question, briefly mention system status."""
                         'provider': provider,
                         'model': result.model_used or model,
                         'rag_used': response_metadata.get('rag_used', False),
-                        'routing': 'direct'
+                        'rag_context': context[:200] if context else None,  # Summary of RAG context used
+                        'routing': 'direct',
+                        'generation_time_ms': result.generation_time_ms,
+                        'data_type': 'chat_conversation'  # Clear distinction
                     }
                 )
-                logger.info(f"Conversation save result in intelligent assistant: {saved}")
+                logger.info(f"Chat conversation saved (not as document embedding): {saved}")
             except Exception as e:
-                logger.error(f"Failed to save conversation in intelligent assistant: {e}")
+                logger.error(f"Failed to save chat conversation: {e}")
             
             return {
                 'message': result.content,

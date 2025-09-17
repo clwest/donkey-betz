@@ -497,3 +497,42 @@ def create_user_profile_and_stats(sender, instance, created, **kwargs):
         # Ensure profile and stats exist for existing users
         UserProfile.objects.get_or_create(user=instance)
         UserStatistics.objects.get_or_create(user=instance)
+
+
+class ChatConversation(models.Model):
+    """
+    Model for storing chat conversations separately from document embeddings
+    Fixes the confusion between chat memory and RAG document embeddings
+    """
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    conversation_id = models.CharField(max_length=255, db_index=True)
+    user_message = models.TextField()
+    assistant_response = models.TextField()
+
+    # Context and metadata
+    context_used = models.JSONField(default=dict)  # RAG context if any
+    metadata = models.JSONField(default=dict)
+
+    # Performance metrics
+    response_time_ms = models.IntegerField(null=True, blank=True)
+    model_used = models.CharField(max_length=100, blank=True)
+    provider_used = models.CharField(max_length=50, blank=True)
+
+    # Agent execution info
+    agents_used = models.JSONField(default=list)
+    agent_results = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'chat_conversations'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['conversation_id']),
+        ]
+        verbose_name = 'Chat Conversation'
+        verbose_name_plural = 'Chat Conversations'
+
+    def __str__(self):
+        return f"{self.user.username}: {self.user_message[:50]}..."

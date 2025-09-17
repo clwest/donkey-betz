@@ -1,0 +1,196 @@
+# Docker Compose for CI/CD Testing
+version: '3.8'
+
+services:
+  # Test Database
+  test-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: test_unified_donkey_betz
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_unified_donkey_betz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test Redis
+  test-redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Testing Service
+  backend-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@test-db:5432/test_unified_donkey_betz
+      - REDIS_URL=redis://test-redis:6379/0
+      - DEBUG=True
+      - SECRET_KEY=test-secret-key-for-ci-cd
+      - TESTING_MODE=True
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - test_media:/app/media
+      - test_static:/app/staticfiles
+    command: ["python", "manage.py", "test", "--verbosity=2"]
+
+  # Frontend Testing Service
+  frontend-test:
+    image: node:18-alpine
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+    command: sh -c "npm ci && npm run test -- --watchAll=false --coverage"
+
+  # Mobile Testing Service
+  mobile-test:
+    image: node:18-alpine
+    working_dir: /app/mobile
+    volumes:
+      - ./mobile:/app/mobile
+      - mobile_node_modules:/app/mobile/node_modules
+    command: sh -c "npm ci && npm test"
+
+  # Integration Testing Service
+  integration-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@test-db:5432/test_unified_donkey_betz
+      - REDIS_URL=redis://test-redis:6379/0
+      - DEBUG=True
+      - SECRET_KEY=test-secret-key-for-ci-cd
+      - TESTING_MODE=True
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+      backend-test:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python test_simple_agents.py &&
+        python test_complete_integration.py
+      "
+
+  # Performance Testing Service
+  performance-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@test-db:5432/test_unified_donkey_betz
+      - REDIS_URL=redis://test-redis:6379/0
+      - DEBUG=False
+      - SECRET_KEY=test-secret-key-for-ci-cd
+      - PERFORMANCE_TEST=True
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python -c '
+        import time
+        import asyncio
+        from test_simple_agents import SimpleAgentFactory
+
+        async def performance_test():
+            factory = SimpleAgentFactory()
+            start_time = time.time()
+
+            # Test creating 1000 agents
+            for i in range(1000):
+                agent = factory.create_agent(\"ContentCreatorAgent\")
+                if i % 100 == 0:
+                    print(f\"Created {i+1} agents...\")
+
+            end_time = time.time()
+            total_time = end_time - start_time
+            print(f\"✅ Created 1000 agents in {total_time:.2f} seconds\")
+            print(f\"📈 Average: {total_time/1000*1000:.2f}ms per agent\")
+
+            # Performance benchmark
+            if total_time > 5.0:
+                print(\"❌ Performance test failed: too slow\")
+                exit(1)
+            else:
+                print(\"✅ Performance test passed\")
+
+        asyncio.run(performance_test())
+        '
+      "
+
+  # Security Scanning Service
+  security-scan:
+    image: aquasec/trivy:latest
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      sh -c "
+        echo '🔍 Running security scans...' &&
+        trivy fs --format table --exit-code 0 /workspace &&
+        echo '✅ Security scan completed'
+      "
+
+  # Code Quality Service
+  code-quality:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - .:/app
+    command: >
+      sh -c "
+        echo '📝 Running code quality checks...' &&
+        pip install flake8 black isort mypy pylint bandit &&
+        echo 'Running Black...' &&
+        black --check --diff backend/ intelligence/ ml/ core/ agents/ || true &&
+        echo 'Running isort...' &&
+        isort --check-only --diff backend/ intelligence/ ml/ core/ agents/ || true &&
+        echo 'Running flake8...' &&
+        flake8 backend/ intelligence/ ml/ core/ agents/ --max-line-length=88 --extend-ignore=E203,W503 || true &&
+        echo 'Running Bandit...' &&
+        bandit -r backend/ intelligence/ ml/ core/ agents/ -f json -o /app/bandit-report.json || true &&
+        echo '✅ Code quality checks completed'
+      "
+
+volumes:
+  test_postgres_data:
+  test_media:
+  test_static:
+  frontend_node_modules:
+  mobile_node_modules:

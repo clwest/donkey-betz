@@ -25,11 +25,11 @@ except ImportError:
     openai_client = None
     OPENAI_AVAILABLE = False
 
-# Temporarily comment out complex dependencies for testing
-# from agents.registry import agent_registry
-# from advisors.registry import advisor_registry
-# from orchestration import orchestrator, WorkflowStep, StepType
-# from ml_pipeline.pipeline import MLPipeline
+# Import real dependencies for full system integration
+from agents.registry import agent_registry
+# from advisors.registry import advisor_registry  # TODO: Create if needed
+# from orchestration import orchestrator, WorkflowStep, StepType  # TODO: Create if needed
+# from ml_pipeline.pipeline import MLPipeline  # Using embedded MLPipeline instead
 
 # Simple mock classes for now
 class WorkflowStep:
@@ -44,40 +44,146 @@ class StepType:
     CONDITIONAL = "conditional"
 
 class MLPipeline:
-    """Enhanced ML Pipeline with real machine learning models"""
+    """Enhanced ML Pipeline with REAL machine learning models"""
 
     def __init__(self):
         self.enhanced_ml_available = False
+        self.real_ml_engine = None
+
         try:
-            # Try to import enhanced ML pipeline
+            # Import real ML components
             import sys
             ml_path = '/Users/donkeyking/development/unified-donkey-betz'
             if ml_path not in sys.path:
                 sys.path.append(ml_path)
 
-            from ml_revenue_pipeline import ml_revenue_pipeline
-            self.enhanced_ml = ml_revenue_pipeline
+            # Try to use the actual ML revenue pipeline
+            from ml_revenue_pipeline import EnhancedMLRevenuePipeline
+            self.enhanced_ml = EnhancedMLRevenuePipeline()
             self.enhanced_ml_available = True
-            logger.info("Enhanced ML Pipeline connected successfully")
+            logger.info("REAL Enhanced ML Pipeline connected successfully")
+
+            # Also try to connect to the core ML engine
+            try:
+                from ml.core.ml_engine import MLEngine
+                self.real_ml_engine = MLEngine()
+                logger.info("Core ML Engine connected successfully")
+            except Exception as ml_e:
+                logger.warning(f"Core ML Engine not available: {ml_e}")
+
         except Exception as e:
             logger.warning(f"Enhanced ML Pipeline not available, using fallback: {e}")
             self.enhanced_ml = None
 
     async def predict_opportunity_fit(self, user_dict, opp_dict):
         """
-        Calculate opportunity fit using real ML models or enhanced heuristics
+        Calculate opportunity fit using REAL ML models or enhanced heuristics
         """
         if self.enhanced_ml_available and self.enhanced_ml:
             try:
-                # Use real ML pipeline
+                # Use REAL ML pipeline with actual models
+                logger.info("Using REAL ML Pipeline for opportunity fit prediction")
                 result = await self.enhanced_ml.predict_opportunity_fit(user_dict, opp_dict)
-                result["ml_engine"] = "enhanced_ml_models"
+                result["ml_engine"] = "real_enhanced_ml_models"
+                result["ml_pipeline_used"] = True
+                logger.info(f"Real ML prediction completed with fit_score: {result.get('fit_score', 'unknown')}")
                 return result
             except Exception as e:
                 logger.warning(f"Enhanced ML prediction failed, falling back to heuristics: {e}")
 
+        # Try core ML engine as secondary option
+        if self.real_ml_engine:
+            try:
+                logger.info("Using Core ML Engine for opportunity fit prediction")
+
+                # Prepare features for core ML engine
+                features = self._prepare_ml_features(user_dict, opp_dict)
+
+                # Use core ML engine for prediction
+                prediction = await self.real_ml_engine.predict(
+                    model_name="opportunity_fit",
+                    features=features
+                )
+
+                # Convert core ML engine result to our format
+                result = {
+                    "fit_score": prediction.get('score', 0.5),
+                    "confidence": prediction.get('confidence', 0.8),
+                    "ml_engine": "core_ml_engine",
+                    "ml_pipeline_used": True,
+                    "prediction_details": prediction
+                }
+
+                logger.info(f"Core ML prediction completed with fit_score: {result.get('fit_score')}")
+                return result
+
+            except Exception as e:
+                logger.warning(f"Core ML Engine prediction failed: {e}")
+
         # Enhanced fallback heuristics
-        return await self._enhanced_heuristic_prediction(user_dict, opp_dict)
+        logger.info("Using enhanced heuristic prediction (no ML available)")
+        result = await self._enhanced_heuristic_prediction(user_dict, opp_dict)
+        result["ml_pipeline_used"] = False
+        return result
+
+    def _prepare_ml_features(self, user_dict, opp_dict) -> Dict[str, Any]:
+        """Prepare features for ML engine prediction"""
+        features = {}
+
+        # User features
+        features.update({
+            'user_current_balance': user_dict.get('current_balance', 0),
+            'user_available_hours': user_dict.get('available_hours_per_week', 0),
+            'user_skill_count': len(user_dict.get('skills', [])),
+            'user_skill_level_numeric': self._encode_skill_level(user_dict.get('skill_level', 'beginner')),
+            'user_total_earned': user_dict.get('total_earned', 0),
+            'user_reputation': user_dict.get('reputation_score', 0)
+        })
+
+        # Opportunity features
+        features.update({
+            'opp_initial_investment': opp_dict.get('initial_investment', 0),
+            'opp_success_rate': opp_dict.get('success_rate', 0.5),
+            'opp_market_demand': opp_dict.get('market_demand', 0.5),
+            'opp_competition_level': opp_dict.get('competition_level', 0.5),
+            'opp_scalability': opp_dict.get('scalability', 0.5),
+            'opp_required_skills_count': len(opp_dict.get('skills_required', [])),
+            'opp_tools_needed_count': len(opp_dict.get('tools_needed', [])),
+            'opp_difficulty_numeric': self._encode_difficulty(opp_dict.get('difficulty', 'beginner'))
+        })
+
+        # Skill matching features
+        user_skills = set(user_dict.get('skills', []))
+        required_skills = set(opp_dict.get('skills_required', []))
+        features.update({
+            'skill_overlap_count': len(user_skills & required_skills),
+            'skill_overlap_ratio': len(user_skills & required_skills) / max(len(required_skills), 1) if required_skills else 0,
+            'skill_gap_count': len(required_skills - user_skills)
+        })
+
+        # Economic features
+        budget = opp_dict.get('budget', 0)
+        features.update({
+            'budget_numeric': float(str(budget).replace('$', '').replace(',', '')) if budget else 0,
+            'investment_feasible': 1 if features['opp_initial_investment'] <= features['user_current_balance'] else 0,
+            'time_adequate': 1 if features['user_available_hours'] >= 10 else 0
+        })
+
+        return features
+
+    def _encode_skill_level(self, skill_level) -> int:
+        """Encode skill level to numeric value"""
+        level_map = {'beginner': 1, 'intermediate': 2, 'advanced': 3, 'expert': 4}
+        if hasattr(skill_level, 'value'):
+            skill_level = skill_level.value
+        return level_map.get(str(skill_level).lower(), 1)
+
+    def _encode_difficulty(self, difficulty) -> int:
+        """Encode difficulty to numeric value"""
+        difficulty_map = {'beginner': 1, 'intermediate': 2, 'advanced': 3, 'expert': 4}
+        if hasattr(difficulty, 'value'):
+            difficulty = difficulty.value
+        return difficulty_map.get(str(difficulty).lower(), 1)
 
     async def _enhanced_heuristic_prediction(self, user_dict, opp_dict):
         """Enhanced heuristic prediction with improved analysis"""

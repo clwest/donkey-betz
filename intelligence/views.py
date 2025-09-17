@@ -182,26 +182,31 @@ class ActionPlanPersistenceView(APIView):
     def get(self, request):
         """Get all action plans for the current user/session"""
         try:
-            # Get user or use session ID for anonymous users
-            if request.user.is_authenticated:
-                user = request.user
-                plans = ActionPlan.objects.filter(user=user).order_by('-created_at')
-            else:
-                # Use session-based storage for anonymous users
-                session_id = request.session.session_key
-                if not session_id:
-                    request.session.create()
-                    session_id = request.session.session_key
+            # TEMPORARILY DISABLED: Return empty list to clear frontend
+            # This prevents old action plans from resurrecting
+            plans = []
 
-                # For anonymous users, get all anonymous plans (last 50)
-                # We'll filter by recent ones to avoid showing ALL anonymous plans
-                from datetime import timedelta
-                from django.utils import timezone
-                cutoff = timezone.now() - timedelta(days=7)  # Last 7 days
-                plans = ActionPlan.objects.filter(
-                    user=None,
-                    created_at__gte=cutoff
-                ).order_by('-created_at')[:50]  # Limit to 50 most recent
+            # Original code commented out to prevent loading old plans
+            # # Get user or use session ID for anonymous users
+            # if request.user.is_authenticated:
+            #     user = request.user
+            #     plans = ActionPlan.objects.filter(user=user).order_by('-created_at')
+            # else:
+            #     # Use session-based storage for anonymous users
+            #     session_id = request.session.session_key
+            #     if not session_id:
+            #         request.session.create()
+            #         session_id = request.session.session_key
+
+            #     # For anonymous users, get all anonymous plans (last 50)
+            #     # We'll filter by recent ones to avoid showing ALL anonymous plans
+            #     from datetime import timedelta
+            #     from django.utils import timezone
+            #     cutoff = timezone.now() - timedelta(days=7)  # Last 7 days
+            #     plans = ActionPlan.objects.filter(
+            #         user=None,
+            #         created_at__gte=cutoff
+            #     ).order_by('-created_at')[:50]  # Limit to 50 most recent
 
             # Serialize plans
             serialized_plans = []
