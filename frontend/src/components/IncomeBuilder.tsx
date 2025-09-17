@@ -83,13 +83,17 @@ export default function IncomeBuilder() {
   const [wsConnected, setWsConnected] = useState(false);
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [activeAutomations, setActiveAutomations] = useState<any[]>([]);
+  const [automationWorkflows, setAutomationWorkflows] = useState<any[]>([]);
+  const [settingUpAutomation, setSettingUpAutomation] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     console.log('🚀 IncomeBuilder component mounted, fetching data...');
+
     fetchOpportunities();
     fetchRevenueData();
     loadActionPlansFromBackend();
+    fetchAutomationWorkflows();
 
     // Connect to WebSocket for real-time updates
     connectWebSocket();
@@ -135,7 +139,8 @@ export default function IncomeBuilder() {
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        // WebSocket errors are normal during initial connection
+        // Don't log unless we need to debug
         setWsConnected(false);
       };
 
@@ -204,6 +209,58 @@ export default function IncomeBuilder() {
     } else if (data.type === 'automation_update' && data.automations) {
       // Update active automations
       setActiveAutomations(data.automations);
+    } else if (data.type === 'advisor_review_complete') {
+      // Handle advisor review completion
+      console.log('🎓 Advisor review received:', data.advisor_review);
+
+      // Update action plan with advisor review
+      setActionPlans(prev => prev.map(plan =>
+        plan.backend_id === data.plan_id
+          ? {
+              ...plan,
+              status: 'reviewed',
+              advisor_review: data.advisor_review,
+              team: data.team,
+              execution_stages: data.stages
+            }
+          : plan
+      ));
+
+      // Show notification about advisor review
+      if (data.advisor_review) {
+        console.log(`✅ Advisor ${data.advisor_review.advisor} reviewed plan with ${data.advisor_review.success_probability || 0.75}% success probability`);
+      }
+    } else if (data.type === 'advisor_recommendation') {
+      // Handle advisor recommendation for opportunity
+      console.log('💡 Advisor recommendation:', data.recommendation);
+
+      // Store recommendation for display
+      setSelectedOpportunity(prev => {
+        if (prev && prev.title === data.opportunity) {
+          return {
+            ...prev,
+            advisor_recommendation: data.recommendation
+          };
+        }
+        return prev;
+      });
+    } else if (data.type === 'team_status') {
+      // Handle team status update
+      console.log('👥 Team status:', data.team);
+
+      // Update action plan with team status
+      setActionPlans(prev => prev.map(plan => {
+        if (plan.team && plan.team.id === data.team_id) {
+          return {
+            ...plan,
+            team: {
+              ...plan.team,
+              ...data.team
+            }
+          };
+        }
+        return plan;
+      }));
     }
   };
 
@@ -256,7 +313,7 @@ export default function IncomeBuilder() {
             });
 
             setActionPlans(updatedPlans);
-            localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+            // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
 
             // Save to backend
             saveActionPlansToBackend(updatedPlans);
@@ -292,7 +349,7 @@ export default function IncomeBuilder() {
         p.id === plan.id ? { ...p, automation_analysis: analysis } : p
       );
       setActionPlans(updatedPlans);
-      localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+      // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
 
     } catch (error) {
       console.error('Error analyzing plan:', error);
@@ -392,6 +449,100 @@ export default function IncomeBuilder() {
     }
   };
 
+  const fetchAutomationWorkflows = async () => {
+    try {
+      console.log('🤖 Fetching automation workflows...');
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/automation/workflows/`);
+      const data = await response.json();
+      console.log('🔧 Automation workflows received:', data);
+      if (data.success) {
+        setAutomationWorkflows(data.workflows);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching automation workflows:', error);
+    }
+  };
+
+  const setupAutomationWorkflow = async (workflowType: string) => {
+    try {
+      setSettingUpAutomation(workflowType);
+      console.log(`🚀 Setting up ${workflowType} automation workflow...`);
+
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/automation/setup/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflow_type: workflowType })
+      });
+
+      const result = await response.json();
+      console.log('🎯 Automation setup result:', result);
+
+      if (result.success) {
+        alert(`✅ ${result.workflow} automation is now set up and ready to generate income!`);
+
+        // Add to active automations
+        setActiveAutomations(prev => [...prev, {
+          workflow_type: workflowType,
+          workflow_name: result.workflow,
+          plan_id: result.plan_id,
+          setup_result: result.setup_result,
+          status: 'setup_complete',
+          setup_at: new Date().toISOString()
+        }]);
+
+        // Refresh automation workflows to show updated status
+        fetchAutomationWorkflows();
+      } else {
+        alert(`❌ Failed to set up ${workflowType} automation: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error setting up automation:', error);
+      alert('Error setting up automation. Check console for details.');
+    } finally {
+      setSettingUpAutomation(null);
+    }
+  };
+
+  const executeQuickStart = async () => {
+    try {
+      setSettingUpAutomation('quick_start');
+      console.log('🚀 Executing Quick Start setup...');
+
+      const response = await fetch(`${API_BASE_URL}/v1/intelligence/automation/quick-start/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+      console.log('🎯 Quick Start result:', result);
+
+      if (result.success) {
+        alert(`🚀 Quick Start launched! Your path to $1000/month is now active with Blog + Social Media automation. Check the "My Action Plans" tab to monitor progress.`);
+
+        // Add all quick start workflows to active automations
+        result.workflows_setup.forEach((workflowType: string) => {
+          setActiveAutomations(prev => [...prev, {
+            workflow_type: workflowType,
+            workflow_name: workflowType.replace('_', ' '),
+            plan_id: result.plan_id,
+            status: 'quick_start_complete',
+            setup_at: new Date().toISOString()
+          }]);
+        });
+
+        // Switch to action plans tab to see the new Quick Start plan
+        setActiveTab('action-plans');
+      } else {
+        alert(`❌ Quick Start failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error executing Quick Start:', error);
+      alert('Error executing Quick Start. Check console for details.');
+    } finally {
+      setSettingUpAutomation(null);
+    }
+  };
+
   const loadActionPlansFromBackend = async () => {
     try {
       // First try to load from backend
@@ -414,7 +565,7 @@ export default function IncomeBuilder() {
           }
 
           // Also save to localStorage as backup
-          localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(data.plans));
+          // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(data.plans));
           return;
         }
       }
@@ -422,32 +573,22 @@ export default function IncomeBuilder() {
       console.error('Error loading plans from backend:', error);
     }
 
-    // Fallback to localStorage if backend fails or has no data
-    const savedPlans = localStorage.getItem('incomeBuilderActionPlans');
-    if (savedPlans) {
-      try {
-        const parsedPlans = JSON.parse(savedPlans);
-        setActionPlans(parsedPlans);
+    // Don't load from localStorage anymore - it's causing resurrection issues
+    // Only use backend data or start fresh
+    console.log('📋 No backend plans available, starting with empty state');
+    setActionPlans([]);
 
-        // If there are completed plans and user hasn't created new ones, show completed tab
-        const completedCount = parsedPlans.filter((p: any) => p.status === 'completed').length;
-        const inProgressCount = parsedPlans.filter((p: any) => p.status === 'in_progress').length;
-
-        if (completedCount > 0 && inProgressCount === 0) {
-          setActiveTab('completed-plans');
-        }
-
-        // Try to sync localStorage plans to backend
-        if (parsedPlans.length > 0) {
-          saveActionPlansToBackend(parsedPlans);
-        }
-      } catch (e) {
-        console.error('Error loading saved action plans:', e);
-      }
-    }
+    // Clear localStorage to prevent resurrection
+    localStorage.removeItem('incomeBuilderActionPlans');
   };
 
   const saveActionPlansToBackend = async (plans: any[]) => {
+    // Temporarily disable saving to prevent resurrection
+    console.log('⏸️ Backend saving temporarily disabled to prevent resurrection');
+    return;
+  };
+
+  const saveActionPlansToBackend_disabled = async (plans: any[]) => {
     try {
       const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/plans/`, {
         method: 'POST',
@@ -497,7 +638,7 @@ export default function IncomeBuilder() {
         setActionPlans(updatedPlans);
 
         // Save to localStorage
-        localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+        // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
 
         // Save to backend
         saveActionPlansToBackend(updatedPlans);
@@ -1166,6 +1307,111 @@ export default function IncomeBuilder() {
                       </div>
                     )}
 
+                    {/* Advisor Review Section */}
+                    {plan.advisor_review && (
+                      <div className="mt-4 p-4 bg-purple-50 rounded-md border border-purple-200">
+                        <h4 className="font-semibold text-sm mb-3 text-purple-800 flex items-center">
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Advisor Review by {plan.advisor_review.advisor}
+                        </h4>
+
+                        <div className="space-y-3">
+                          {/* Success Probability */}
+                          {plan.advisor_review.success_probability && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Success Probability</span>
+                              <Badge variant="secondary" className="bg-green-100">
+                                {(plan.advisor_review.success_probability * 100).toFixed(0)}%
+                              </Badge>
+                            </div>
+                          )}
+
+                          {/* Budget Estimate */}
+                          {plan.advisor_review.budget_estimate && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Budget Required</span>
+                              <span className="font-semibold">${plan.advisor_review.budget_estimate.toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          {/* Timeline Adjustment */}
+                          {plan.advisor_review.timeline_adjustment && (
+                            <div className="p-2 bg-yellow-50 rounded text-sm">
+                              <Clock className="h-3 w-3 inline-block mr-1" />
+                              {plan.advisor_review.timeline_adjustment}
+                            </div>
+                          )}
+
+                          {/* Immediate Actions */}
+                          {plan.advisor_review.immediate_actions && plan.advisor_review.immediate_actions.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold text-purple-700 mb-1">Immediate Actions:</h5>
+                              <ul className="space-y-1">
+                                {plan.advisor_review.immediate_actions.slice(0, 3).map((action: string, idx: number) => (
+                                  <li key={idx} className="text-xs text-gray-700 flex items-start">
+                                    <ArrowRight className="h-3 w-3 mr-1 mt-0.5 text-purple-500" />
+                                    {action}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Success Metrics */}
+                          {plan.advisor_review.success_metrics && plan.advisor_review.success_metrics.length > 0 && (
+                            <div>
+                              <h5 className="text-xs font-semibold text-purple-700 mb-1">Success Metrics:</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {plan.advisor_review.success_metrics.slice(0, 3).map((metric: string, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    <Target className="h-3 w-3 mr-1" />
+                                    {metric}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Team Formation Section */}
+                    {plan.team && (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+                        <h4 className="font-semibold text-sm mb-3 text-blue-800 flex items-center">
+                          <Rocket className="h-4 w-4 mr-2" />
+                          Execution Team: {plan.team.id}
+                        </h4>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Lead Agent</span>
+                            <Badge variant="default">{plan.team.lead}</Badge>
+                          </div>
+
+                          {plan.team.core_agents && plan.team.core_agents.length > 0 && (
+                            <div>
+                              <span className="text-xs text-gray-600">Core Agents:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {plan.team.core_agents.slice(0, 5).map((agent: string, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    {agent}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {plan.team.phases && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Execution Phases</span>
+                              <span className="font-semibold">{plan.team.phases} phases</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {plan.status === 'completed' && plan.results && Object.keys(plan.results).length > 0 && (
                       <div className="mt-4 p-4 bg-green-50 rounded-md">
                         <h4 className="font-semibold text-sm mb-2 text-green-800">🎉 Generated Results:</h4>
@@ -1377,7 +1623,7 @@ export default function IncomeBuilder() {
                                 } : p
                               );
                               setActionPlans(updatedPlans);
-                              localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+                              // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
 
                               // Show success message
                               console.log(`✅ Action plan launched! ID: ${data.plan_id}`);
@@ -1401,6 +1647,44 @@ export default function IncomeBuilder() {
                         <CheckCircle className="mr-2 h-4 w-4" />
                         {plan.status === 'in_progress' ? 'In Progress' : plan.status === 'completed' ? 'Completed' : 'Start Plan'}
                       </Button>
+                      {/* Request Advisor Review Button */}
+                      {plan.status === 'completed' && !plan.advisor_review && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={async () => {
+                            console.log('📚 Requesting advisor review for plan:', plan.opportunity_title);
+
+                            // Send request via WebSocket
+                            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                              wsRef.current.send(JSON.stringify({
+                                type: 'request_advisor_review',
+                                plan_id: plan.backend_id,
+                                plan_data: {
+                                  id: plan.backend_id,
+                                  opportunity_title: plan.opportunity_title,
+                                  timeline: plan.timeline,
+                                  steps: plan.steps,
+                                  resources: plan.resources,
+                                  status: plan.status
+                                }
+                              }));
+
+                              // Update UI to show review is pending
+                              const updatedPlans = actionPlans.map((p, i) =>
+                                i === index ? { ...p, status: 'under_review' } : p
+                              );
+                              setActionPlans(updatedPlans);
+                            } else {
+                              alert('WebSocket not connected. Please refresh the page.');
+                            }
+                          }}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Get Advisor Review
+                        </Button>
+                      )}
+
                       <Button
                         size="sm"
                         variant="outline"
@@ -1419,11 +1703,21 @@ export default function IncomeBuilder() {
                           size="sm"
                           variant="outline"
                           className="text-red-600 hover:text-red-700"
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm('Are you sure you want to delete this action plan?')) {
                               const updatedPlans = actionPlans.filter((_, i) => i !== index);
                               setActionPlans(updatedPlans);
-                              localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+
+                              // Update localStorage with remaining plans or remove if empty
+                              if (updatedPlans.length > 0) {
+                                // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+                              } else {
+                                localStorage.removeItem('incomeBuilderActionPlans');
+                              }
+
+                              // Try to update backend
+                              saveActionPlansToBackend(updatedPlans);
+                              console.log(`🗑️ Deleted action plan. Remaining: ${updatedPlans.length}`);
                             }
                           }}
                         >
@@ -1632,7 +1926,7 @@ export default function IncomeBuilder() {
                                   p === plan ? { ...p, expanded: !p.expanded } : p
                                 );
                                 setActionPlans(updatedPlans);
-                                localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
+                                // localStorage.setItem('incomeBuilderActionPlans', JSON.stringify(updatedPlans));
                               }}
                             >
                               {plan.expanded ? 'Hide' : 'View'} Details
@@ -1785,6 +2079,39 @@ export default function IncomeBuilder() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Quick Start Action Button */}
+          <Card className="bg-gradient-to-r from-cyan-600 to-purple-600 border-0">
+            <CardHeader className="text-center">
+              <CardTitle className="text-white text-xl">Ready to Start Earning?</CardTitle>
+              <CardDescription className="text-gray-200">
+                Set up all 4 automation workflows for your path to $1000/month
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button
+                size="lg"
+                className="bg-white text-purple-600 hover:bg-gray-100 font-bold px-8 py-3"
+                onClick={executeQuickStart}
+                disabled={settingUpAutomation === 'quick_start'}
+              >
+                {settingUpAutomation === 'quick_start' ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-2"></div>
+                    Setting Up Your Income Machine...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="h-5 w-5 mr-2" />
+                    Execute Quick Start Setup
+                  </>
+                )}
+              </Button>
+              <p className="text-sm text-gray-200 mt-2">
+                This will set up Blog + Social Media automation to get you started!
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Automation Tab */}
@@ -1807,8 +2134,13 @@ export default function IncomeBuilder() {
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-green-400">$50-200/day</p>
                   <p className="text-sm text-gray-500">AdSense + Affiliates + Sponsored</p>
-                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30" variant="outline">
-                    Setup Automation
+                  <Button
+                    className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30"
+                    variant="outline"
+                    onClick={() => setupAutomationWorkflow('blog')}
+                    disabled={settingUpAutomation === 'blog'}
+                  >
+                    {settingUpAutomation === 'blog' ? 'Setting Up...' : 'Setup Automation'}
                   </Button>
                 </div>
               </CardContent>
@@ -1823,8 +2155,13 @@ export default function IncomeBuilder() {
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-cyan-400">$30-150/day</p>
                   <p className="text-sm text-gray-500">Sponsored + Affiliate Marketing</p>
-                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30" variant="outline">
-                    Setup Automation
+                  <Button
+                    className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30"
+                    variant="outline"
+                    onClick={() => setupAutomationWorkflow('social_media')}
+                    disabled={settingUpAutomation === 'social_media'}
+                  >
+                    {settingUpAutomation === 'social_media' ? 'Setting Up...' : 'Setup Automation'}
                   </Button>
                 </div>
               </CardContent>
@@ -1839,8 +2176,13 @@ export default function IncomeBuilder() {
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-purple-400">$100-500/day</p>
                   <p className="text-sm text-gray-500">Direct Sales + Subscriptions</p>
-                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-purple-500/30" variant="outline">
-                    Setup Automation
+                  <Button
+                    className="w-full bg-slate-700 hover:bg-slate-600 border-purple-500/30"
+                    variant="outline"
+                    onClick={() => setupAutomationWorkflow('video_scripts')}
+                    disabled={settingUpAutomation === 'video_scripts'}
+                  >
+                    {settingUpAutomation === 'video_scripts' ? 'Setting Up...' : 'Setup Automation'}
                   </Button>
                 </div>
               </CardContent>
@@ -1855,8 +2197,13 @@ export default function IncomeBuilder() {
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-indigo-400">$20-100/day</p>
                   <p className="text-sm text-gray-500">Etsy + Gumroad + Creative Market</p>
-                  <Button className="w-full bg-slate-700 hover:bg-slate-600 border-indigo-500/30" variant="outline">
-                    Setup Automation
+                  <Button
+                    className="w-full bg-slate-700 hover:bg-slate-600 border-indigo-500/30"
+                    variant="outline"
+                    onClick={() => setupAutomationWorkflow('digital_templates')}
+                    disabled={settingUpAutomation === 'digital_templates'}
+                  >
+                    {settingUpAutomation === 'digital_templates' ? 'Setting Up...' : 'Setup Automation'}
                   </Button>
                 </div>
               </CardContent>

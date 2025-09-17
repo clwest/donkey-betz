@@ -110,6 +110,39 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer):
                 subreddit = data.get('subreddit', 'Entrepreneur+sidehustle+forhire')
                 await self.search_reddit_opportunities(query, subreddit)
 
+            elif message_type == 'start_bridge':
+                # Start the spider-agent bridge for real-time data
+                await self.start_spider_bridge()
+
+            elif message_type == 'get_bridge_status':
+                # Get current bridge status
+                await self.send_bridge_status()
+
+            elif message_type == 'trigger_spider_deployment':
+                # Trigger spider deployment for specific intelligence
+                user_request = data.get('request', 'Find income opportunities')
+                domains = data.get('domains', ['freelance', 'opportunities'])
+                await self.trigger_spider_deployment(user_request, domains)
+
+            elif message_type == 'request_advisor_review':
+                # Request advisor review for a completed action plan
+                plan_id = data.get('plan_id')
+                plan_data = data.get('plan_data')
+                if plan_id or plan_data:
+                    await self.request_advisor_review(plan_id, plan_data)
+
+            elif message_type == 'get_advisor_recommendation':
+                # Get advisor recommendation for an opportunity
+                opportunity = data.get('opportunity')
+                if opportunity:
+                    await self.get_advisor_recommendation(opportunity)
+
+            elif message_type == 'get_team_status':
+                # Get status of execution team
+                team_id = data.get('team_id')
+                if team_id:
+                    await self.get_team_status(team_id)
+
         except json.JSONDecodeError:
             logger.error(f"Invalid JSON received: {text_data}")
             await self.send(text_data=json.dumps({
@@ -222,8 +255,21 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer):
         return []
 
     async def send_initial_data(self):
-        """Send initial opportunities and revenue data to frontend"""
+        """Send initial opportunities and revenue data to frontend with REAL-TIME integration"""
         try:
+            # Connect to spider-agent bridge for real-time data
+            from .spider_agent_bridge import get_spider_agent_bridge
+
+            bridge = get_spider_agent_bridge()
+            bridge_status = bridge.get_bridge_status()
+
+            # Send bridge status
+            await self.send(text_data=json.dumps({
+                'type': 'bridge_status',
+                'status': bridge_status,
+                'real_time_enabled': bridge_status.get('is_running', False)
+            }))
+
             # Always send consistent base opportunities first (immediately)
             base_opportunities = [
                 {
@@ -524,6 +570,265 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer):
                 'type': 'error',
                 'message': f'Failed to update profile: {str(e)}'
             }))
+
+    async def start_spider_bridge(self):
+        """Start the spider-agent bridge for real-time data processing"""
+        try:
+            from .spider_agent_bridge import get_spider_agent_bridge
+
+            bridge = get_spider_agent_bridge()
+
+            # Check if bridge is already running
+            if bridge.is_running:
+                await self.send(text_data=json.dumps({
+                    'type': 'bridge_status',
+                    'status': 'already_running',
+                    'message': 'Spider-Agent bridge is already active'
+                }))
+                return
+
+            # Start bridge in background task
+            import asyncio
+            asyncio.create_task(bridge.start_bridge())
+
+            await self.send(text_data=json.dumps({
+                'type': 'bridge_started',
+                'status': 'starting',
+                'message': 'Spider-Agent bridge is starting up for real-time intelligence'
+            }))
+
+            # Subscribe to bridge updates
+            await self.subscribe_to_bridge_updates()
+
+        except Exception as e:
+            logger.error(f"Error starting spider bridge: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to start spider bridge: {str(e)}'
+            }))
+
+    async def send_bridge_status(self):
+        """Send current bridge status"""
+        try:
+            from .spider_agent_bridge import get_spider_agent_bridge
+
+            bridge = get_spider_agent_bridge()
+            status = bridge.get_bridge_status()
+
+            await self.send(text_data=json.dumps({
+                'type': 'bridge_status',
+                'status': status,
+                'real_time_processing': status.get('is_running', False),
+                'metrics': status.get('metrics', {}),
+                'queue_sizes': status.get('queue_sizes', {})
+            }))
+
+        except Exception as e:
+            logger.error(f"Error getting bridge status: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to get bridge status: {str(e)}'
+            }))
+
+    async def trigger_spider_deployment(self, user_request: str, domains: list):
+        """Trigger spider deployment for specific intelligence gathering"""
+        try:
+            from .spider_agent_bridge import get_spider_agent_bridge
+
+            bridge = get_spider_agent_bridge()
+            deployment = await bridge.trigger_spider_deployment(user_request, domains)
+
+            await self.send(text_data=json.dumps({
+                'type': 'spider_deployment',
+                'deployment': deployment,
+                'user_request': user_request,
+                'domains': domains
+            }))
+
+            # Start monitoring for results
+            await self.monitor_spider_results(deployment.get('deployment_id'))
+
+        except Exception as e:
+            logger.error(f"Error triggering spider deployment: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to trigger spider deployment: {str(e)}'
+            }))
+
+    async def subscribe_to_bridge_updates(self):
+        """Subscribe to bridge updates for real-time data"""
+        try:
+            # Subscribe to Redis channels for bridge updates
+            import redis
+            import asyncio
+            import json
+
+            redis_client = redis.Redis(host='localhost', port=6379, db=0)
+            pubsub = redis_client.pubsub()
+
+            # Subscribe to relevant channels
+            pubsub.subscribe('agent_results_bridge')
+            pubsub.subscribe('bridge_metrics')
+            pubsub.subscribe('spider_intelligence_bridge')
+
+            # Create background task to listen for updates
+            asyncio.create_task(self._bridge_update_listener(pubsub))
+
+            logger.info("Subscribed to bridge updates")
+
+        except Exception as e:
+            logger.error(f"Error subscribing to bridge updates: {e}")
+
+    async def _bridge_update_listener(self, pubsub):
+        """Listen for bridge updates and forward to WebSocket"""
+        try:
+            while True:
+                message = pubsub.get_message(timeout=1.0)
+                if message and message['type'] == 'message':
+                    try:
+                        data = json.loads(message['data'].decode('utf-8'))
+                        channel = message['channel'].decode('utf-8')
+
+                        # Forward bridge data to frontend
+                        await self.send(text_data=json.dumps({
+                            'type': 'real_time_update',
+                            'channel': channel,
+                            'data': data,
+                            'source': 'bridge'
+                        }))
+
+                    except Exception as e:
+                        logger.error(f"Error processing bridge message: {e}")
+
+                await asyncio.sleep(0.1)
+
+        except Exception as e:
+            logger.error(f"Error in bridge update listener: {e}")
+
+    async def monitor_spider_results(self, deployment_id: str):
+        """Monitor spider deployment results"""
+        try:
+            # This would monitor the specific deployment
+            # For now, send a mock monitoring update
+            await asyncio.sleep(2)  # Simulate processing time
+
+            await self.send(text_data=json.dumps({
+                'type': 'spider_results',
+                'deployment_id': deployment_id,
+                'status': 'processing',
+                'estimated_completion': '2-5 minutes',
+                'spiders_deployed': 50
+            }))
+
+        except Exception as e:
+            logger.error(f"Error monitoring spider results: {e}")
+
+    async def request_advisor_review(self, plan_id, plan_data):
+        """Request advisor review for a completed action plan"""
+        try:
+            from intelligence.action_plan_orchestrator import action_plan_orchestrator
+
+            # Get plan data if only plan_id provided
+            if plan_id and not plan_data:
+                plan_data = await self.get_plan_data(plan_id)
+
+            if not plan_data:
+                await self.send(text_data=json.dumps({
+                    'type': 'error',
+                    'message': 'Plan data not found'
+                }))
+                return
+
+            # Process through orchestrator
+            result = await action_plan_orchestrator.process_action_plan_completion(plan_data)
+
+            # Send results to frontend
+            await self.send(text_data=json.dumps({
+                'type': 'advisor_review_complete',
+                'plan_id': result.get('plan_id'),
+                'status': result.get('status'),
+                'advisor_review': result.get('advisor_review'),
+                'team': result.get('team'),
+                'stages': result.get('stages')
+            }))
+
+        except Exception as e:
+            logger.error(f"Error requesting advisor review: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to get advisor review: {str(e)}'
+            }))
+
+    async def get_advisor_recommendation(self, opportunity):
+        """Get advisor recommendation for an opportunity"""
+        try:
+            from intelligence.action_plan_orchestrator import action_plan_orchestrator
+
+            recommendation = await action_plan_orchestrator.get_advisor_recommendation_for_opportunity(opportunity)
+
+            await self.send(text_data=json.dumps({
+                'type': 'advisor_recommendation',
+                'opportunity': opportunity,
+                'recommendation': recommendation
+            }))
+
+        except Exception as e:
+            logger.error(f"Error getting advisor recommendation: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to get advisor recommendation: {str(e)}'
+            }))
+
+    async def get_team_status(self, team_id):
+        """Get status of execution team"""
+        try:
+            from intelligence.action_plan_orchestrator import action_plan_orchestrator
+
+            # Get all active teams
+            active_teams = action_plan_orchestrator.get_active_teams()
+
+            # Find the specific team
+            team_info = None
+            for team in active_teams:
+                if team['team_id'] == team_id:
+                    team_info = team
+                    break
+
+            if team_info:
+                await self.send(text_data=json.dumps({
+                    'type': 'team_status',
+                    'team_id': team_id,
+                    'team': team_info
+                }))
+            else:
+                await self.send(text_data=json.dumps({
+                    'type': 'error',
+                    'message': f'Team {team_id} not found'
+                }))
+
+        except Exception as e:
+            logger.error(f"Error getting team status: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to get team status: {str(e)}'
+            }))
+
+    @database_sync_to_async
+    def get_plan_data(self, plan_id):
+        """Get action plan data from database"""
+        from intelligence.models import ActionPlan
+        try:
+            plan = ActionPlan.objects.get(id=plan_id)
+            return {
+                'id': str(plan.id),
+                'opportunity_title': plan.opportunity_title,
+                'timeline': plan.timeline,
+                'steps': plan.steps,
+                'resources': plan.resources,
+                'status': plan.status
+            }
+        except ActionPlan.DoesNotExist:
+            return None
 
 
 class RevenueIncomeConsumer(AsyncWebsocketConsumer):
