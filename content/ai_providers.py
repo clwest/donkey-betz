@@ -135,26 +135,24 @@ class OpenAIProvider(BaseAIProvider):
             
             # Handle GPT-5 models differently - they have different parameters
             try:
-                if 'gpt-5' in model.lower():
-                    # GPT-5-mini has very strict parameter limitations
-                    if 'gpt-5-mini' in model.lower():
-                        # GPT-5-mini specific parameters
-                        completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 1000))
-                        # GPT-5 always uses temperature 1.0 (implicit, don't set)
-                        # Add reasoning_effort for GPT-5-mini
-                        if config.get('reasoning_effort'):
-                            completion_params["reasoning_effort"] = config.get('reasoning_effort', 'medium')
-                    elif 'gpt-5-nano' in model.lower():
-                        # GPT-5-nano similar restrictions
-                        completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 500))
-                        # DO NOT add temperature for nano either
-                    else:
-                        # Full GPT-5 has limited parameter support
-                        if config.get('max_completion_tokens') or config.get('max_tokens'):
-                            completion_params["max_completion_tokens"] = config.get('max_completion_tokens', config.get('max_tokens', 2000))
-                        # Full GPT-5 doesn't support temperature and other parameters
+                if 'gpt-4o' in model.lower():
+                    # GPT-4o models use standard parameters
+                    completion_params["max_tokens"] = config.get('max_tokens', 4000)
+                    completion_params["temperature"] = config.get('temperature', 0.7)
+                    # Add other standard parameters if needed
+                    if config.get('top_p') is not None:
+                        completion_params["top_p"] = config.get('top_p')
+                    if config.get('frequency_penalty') is not None:
+                        completion_params["frequency_penalty"] = config.get('frequency_penalty')
+                    if config.get('presence_penalty') is not None:
+                        completion_params["presence_penalty"] = config.get('presence_penalty')
+                elif 'gpt-5' in model.lower():
+                    # GPT-5 models (for future use when available)
+                    # For now, treat them like GPT-4o
+                    completion_params["max_tokens"] = config.get('max_tokens', 4000)
+                    completion_params["temperature"] = config.get('temperature', 0.7)
                 else:
-                    # Non-GPT-5 models use standard parameters
+                    # Other models use standard parameters
                     completion_params["max_tokens"] = config.get('max_tokens', 2000)
                     completion_params["temperature"] = config.get('temperature', 0.7)
                     completion_params["top_p"] = config.get('top_p', 1.0)
@@ -198,7 +196,7 @@ class OpenAIProvider(BaseAIProvider):
                         retry_response = self.client.chat.completions.create(
                             model=model,
                             messages=simple_messages,
-                            max_completion_tokens=config.get('max_completion_tokens', config.get('max_tokens', 300))
+                            max_completion_tokens=config.get('max_completion_tokens', config.get('max_tokens', 4000))
                         )
                         content = retry_response.choices[0].message.content or ""
                         if content:
@@ -238,10 +236,10 @@ class OpenAIProvider(BaseAIProvider):
             if not content or len(str(content).strip()) == 0:
                 logger.warning(f"Empty content after all processing for {model}")
 
-                # For GPT-5-mini specifically, provide specific guidance
-                if 'gpt-5-mini' in model.lower():
-                    logger.error(f"GPT-5-mini failed even after retries - prompt incompatible")
-                    content = "GPT-5-mini Error: This prompt pattern is not compatible. Try: complete sentences, avoid single words, use clear questions."
+                # For GPT-4o models, provide helpful guidance
+                if 'gpt-4o' in model.lower():
+                    logger.error(f"GPT-4o failed to generate content - retrying with fallback")
+                    content = ""  # Don't show error message, let fallback handle it
                 else:
                     # Try a simpler retry for other models
                     try:
