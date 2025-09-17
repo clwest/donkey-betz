@@ -25,7 +25,12 @@ import {
   Globe,
   Database,
   Cloud,
-  PlayCircle
+  PlayCircle,
+  CheckCircle,
+  Target,
+  DollarSign,
+  ArrowRight,
+  Rocket
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -247,6 +252,37 @@ const NeuralOrchestra: React.FC = () => {
 
           setConnections(prev => [...prev, ...newConnections]);
         }
+      } else if (data.type === 'execution_started') {
+        console.log('🚀 Execution started:', data);
+        setPlanReview(prev => ({
+          ...prev,
+          execution_status: 'running',
+          execution_message: data.message
+        }));
+      } else if (data.type === 'execution_update') {
+        console.log('📊 Execution update:', data);
+        setPlanReview(prev => ({
+          ...prev,
+          execution_progress: data.progress,
+          agents_active: data.agents_active,
+          execution_message: data.message || prev.execution_message
+        }));
+      } else if (data.type === 'execution_complete') {
+        console.log('✅ Execution complete:', data);
+        setPlanReview(prev => ({
+          ...prev,
+          execution_status: 'completed',
+          execution_progress: 1.0,
+          execution_message: data.message,
+          execution_results: data.results
+        }));
+      } else if (data.type === 'execution_error') {
+        console.error('❌ Execution error:', data.error);
+        setPlanReview(prev => ({
+          ...prev,
+          execution_status: 'error',
+          execution_error: data.error
+        }));
       } else if (data.type === 'connection_status') {
         console.log('Neural Orchestra connection status:', data.message);
       } else if (data.type === 'heartbeat') {
@@ -264,6 +300,37 @@ const NeuralOrchestra: React.FC = () => {
       console.log('📤 Sent multiple data requests on connection');
     }
   });
+
+  // Handle Start Execution button click
+  const handleStartExecution = () => {
+    if (!planReview || !planId) {
+      console.warn('No plan review or plan ID available for execution');
+      return;
+    }
+
+    const executionData = {
+      plan_id: planId,
+      team: planReview.team,
+      advisor_id: planReview.advisor || 'unknown',
+      budget_estimate: planReview.budget_estimate,
+      success_probability: planReview.success_probability,
+      immediate_actions: planReview.immediate_actions
+    };
+
+    console.log('🚀 Starting execution with data:', executionData);
+
+    // Send via WebSocket
+    sendMessage({
+      type: 'start_execution',
+      data: executionData
+    });
+
+    // Update UI to show execution started
+    setPlanReview(prev => ({
+      ...prev,
+      execution_status: 'starting'
+    }));
+  };
 
   // Check for plan parameter in URL
   useEffect(() => {
@@ -605,12 +672,188 @@ const NeuralOrchestra: React.FC = () => {
                   )}
                 </div>
                 <div className="mt-3 pt-3 border-t border-purple-400/30">
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+                  <Button
+                    onClick={handleStartExecution}
+                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                    disabled={planReview?.execution_status === 'starting' || planReview?.execution_status === 'running' || planReview?.execution_status === 'completed'}
+                  >
                     <PlayCircle className="w-4 h-4 mr-2" />
-                    Start Execution
+                    {planReview?.execution_status === 'starting' ? 'Starting...' :
+                     planReview?.execution_status === 'running' ? 'Executing...' :
+                     planReview?.execution_status === 'completed' ? 'Execution Complete' :
+                     planReview?.execution_status === 'error' ? 'Retry Execution' :
+                     'Start Execution'}
                   </Button>
+                  {(planReview?.execution_progress || planReview?.execution_status) && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 text-xs text-purple-400">
+                        <span>Progress:</span>
+                        <Progress value={(planReview.execution_progress || 0) * 100} className="flex-1 h-2" />
+                        <span>{((planReview.execution_progress || 0) * 100).toFixed(0)}%</span>
+                      </div>
+                      {planReview?.execution_message && (
+                        <div className="mt-1 text-xs text-purple-300">
+                          {planReview.execution_message}
+                        </div>
+                      )}
+                      {planReview?.agents_active && (
+                        <div className="mt-1 text-xs text-purple-400">
+                          Active agents: {planReview.agents_active.join(', ')}
+                        </div>
+                      )}
+                      {planReview?.execution_results && (
+                        <div className="mt-2 p-2 bg-purple-900/20 rounded text-xs">
+                          <div className="text-purple-300 mb-1">✅ Execution Complete!</div>
+                          <div className="text-purple-400">
+                            • Tasks: {planReview.execution_results.tasks_completed}<br/>
+                            • Opportunities: {planReview.execution_results.opportunities_found}<br/>
+                            • Revenue Potential: ${planReview.execution_results.revenue_potential}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Results Card */}
+      {planReview?.execution_status === 'completed' && planReview?.execution_results && (
+        <Card className="mb-6 border-green-500/50 shadow-lg shadow-green-500/20">
+          <CardHeader className="bg-gradient-to-r from-green-900/50 to-emerald-900/50">
+            <CardTitle className="flex items-center gap-2 text-green-300">
+              <CheckCircle className="w-5 h-5" />
+              Execution Complete - Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Tasks Completed */}
+              <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400">Tasks Completed</span>
+                </div>
+                <div className="text-2xl font-bold text-green-300">
+                  {planReview.execution_results.tasks_completed}
+                </div>
+                <div className="text-xs text-green-400 mt-1">Successfully executed</div>
+              </div>
+
+              {/* Opportunities Found */}
+              <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-blue-400">Opportunities Found</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-300">
+                  {planReview.execution_results.opportunities_found}
+                </div>
+                <div className="text-xs text-blue-400 mt-1">Ready to pursue</div>
+              </div>
+
+              {/* Revenue Potential */}
+              <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm text-purple-400">Revenue Potential</span>
+                </div>
+                <div className="text-2xl font-bold text-purple-300">
+                  ${(planReview.execution_results.revenue_potential || 0).toLocaleString()}
+                </div>
+                <div className="text-xs text-purple-400 mt-1">Real earning potential</div>
+              </div>
+            </div>
+
+            {/* Real Opportunities Found */}
+            {planReview.execution_results.real_opportunities && (
+              <div className="mt-4 p-4 bg-blue-900/20 rounded-lg border border-blue-500/30">
+                <h4 className="text-sm font-semibold text-blue-300 mb-3">🎯 Real Opportunities Found</h4>
+                <div className="space-y-2">
+                  {planReview.execution_results.real_opportunities.map((opp, idx) => (
+                    <div key={idx} className="bg-blue-900/30 p-2 rounded">
+                      <div className="text-sm text-blue-200">{opp.title}</div>
+                      <div className="text-xs text-blue-400">{opp.company}</div>
+                      {opp.url && opp.url !== '#' && (
+                        <a href={opp.url} target="_blank" rel="noopener noreferrer"
+                           className="text-xs text-blue-300 hover:text-blue-200 underline">
+                          View opportunity →
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Content Created */}
+            {planReview.execution_results.content_created && (
+              <div className="mt-4 p-4 bg-green-900/20 rounded-lg border border-green-500/30">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm text-green-300">Content Created</div>
+                    <div className="text-xs text-green-400">{planReview.execution_results.content_created} pieces</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-green-300">
+                      ${(planReview.execution_results.content_value || 0).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-green-400">Ready to sell</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Next Steps */}
+            <div className="mt-6 p-4 bg-gray-900/30 rounded-lg">
+              <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                <ArrowRight className="w-4 h-4" />
+                Next Steps
+              </h4>
+              <div className="space-y-2">
+                {planReview.execution_results.next_steps.map((step, idx) => (
+                  <div key={idx} className="flex items-start gap-2">
+                    <CheckCircle className="w-3 h-3 text-green-400 mt-0.5" />
+                    <span className="text-xs text-gray-400">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Agents */}
+            {planReview?.agents_active && (
+              <div className="mt-4 p-3 bg-indigo-900/20 rounded-lg">
+                <div className="text-xs text-indigo-400 mb-2">Agents that participated:</div>
+                <div className="flex flex-wrap gap-2">
+                  {planReview.agents_active.map((agent, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs border-indigo-500/50 text-indigo-300">
+                      {agent}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex gap-3">
+              <Button
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                onClick={() => window.location.href = '/revenue-dashboard'}
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                View Revenue Dashboard
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 border-purple-500/50 text-purple-300 hover:bg-purple-900/30"
+                onClick={() => window.location.href = '/income-builder'}
+              >
+                <Rocket className="w-4 h-4 mr-2" />
+                Create New Plan
+              </Button>
             </div>
           </CardContent>
         </Card>

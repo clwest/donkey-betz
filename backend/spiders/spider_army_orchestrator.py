@@ -908,6 +908,89 @@ class SpiderArmyOrchestrator:
         except Exception as e:
             logger.error(f"❌ BRIDGE: Error publishing to bridge: {e}")
 
+    def activate_spiders(self, spider_types: List[str]) -> Dict[str, Any]:
+        """
+        Activate specific spider types for execution
+
+        Args:
+            spider_types: List of spider type names to activate
+
+        Returns:
+            Dict with activation status and details
+        """
+        try:
+            activated_spiders = []
+
+            for spider_type_name in spider_types:
+                # Map string names to spider types
+                spider_type = self._get_spider_type_from_name(spider_type_name)
+                if spider_type:
+                    # Get spiders of this type from registry
+                    spiders = self.active_spiders.get(spider_type, [])
+
+                    # If no active spiders, create some
+                    if not spiders:
+                        swarm_config = self._get_swarm_config_for_type(spider_type)
+                        if swarm_config:
+                            # Deploy a small swarm for this type
+                            asyncio.create_task(self._deploy_swarm(swarm_config))
+                            activated_spiders.append({
+                                'type': spider_type_name,
+                                'status': 'deploying',
+                                'count': swarm_config.spider_count
+                            })
+                    else:
+                        activated_spiders.append({
+                            'type': spider_type_name,
+                            'status': 'active',
+                            'count': len(spiders)
+                        })
+
+            logger.info(f"🕷️ Activated {len(activated_spiders)} spider types")
+
+            return {
+                'status': 'success',
+                'activated': activated_spiders,
+                'total_types': len(activated_spiders),
+                'message': f"Activated {len(activated_spiders)} spider types"
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Failed to activate spiders: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+
+    def _get_spider_type_from_name(self, name: str) -> Optional[SpiderType]:
+        """Map string name to SpiderType enum"""
+        type_mapping = {
+            'job_spider': SpiderType.JOB_BOARD,
+            'freelance_spider': SpiderType.FREELANCE,
+            'content_spider': SpiderType.CONTENT,
+            'market_spider': SpiderType.MARKET_TREND,
+            'real_estate': SpiderType.REAL_ESTATE,
+            'ecommerce': SpiderType.ECOMMERCE,
+            'social_media': SpiderType.SOCIAL_MEDIA,
+            'academic': SpiderType.ACADEMIC,
+            'finance': SpiderType.FINANCIAL
+        }
+        return type_mapping.get(name)
+
+    def _get_swarm_config_for_type(self, spider_type: SpiderType) -> Optional[SpiderSwarmConfig]:
+        """Get swarm configuration for a spider type"""
+        try:
+            return SpiderSwarmConfig(
+                swarm_id=f"{spider_type.value.lower()}_swarm",
+                spider_count=5,  # Start small
+                spider_type=spider_type,
+                target_entities=["execution_agent"],
+                collection_frequency_ms=5000,
+                priority=SwarmPriority.HIGH
+            )
+        except:
+            return None
+
     def get_bridge_status(self) -> Dict[str, Any]:
         """Get bridge integration status"""
         return {

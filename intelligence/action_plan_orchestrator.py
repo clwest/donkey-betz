@@ -143,6 +143,92 @@ class ActionPlanOrchestrator:
 
         return result
 
+    def begin_execution(self, plan_id: str, team: Dict[str, Any], advisor_id: str = None) -> Dict[str, Any]:
+        """
+        Begin execution of an action plan with the assigned team
+
+        Args:
+            plan_id: The ID of the plan to execute
+            team: The team configuration
+            advisor_id: The advisor who reviewed the plan
+
+        Returns:
+            Execution status and progress information
+        """
+        try:
+            self.logger.info(f"🚀 Beginning execution for plan {plan_id}")
+
+            # Store execution status
+            self.execution_status[plan_id] = {
+                "status": "running",
+                "started_at": datetime.now().isoformat(),
+                "team": team,
+                "advisor_id": advisor_id,
+                "progress": 0.1,
+                "agents_active": []
+            }
+
+            # Activate team agents
+            lead_agent = team.get('lead_agent', 'orchestrator')
+            core_agents = team.get('core_agents', [])
+            specialist_agents = team.get('specialist_agents', [])
+
+            all_agents = [lead_agent] + core_agents + specialist_agents
+            self.execution_status[plan_id]["agents_active"] = all_agents[:5]  # Start with first 5
+
+            # Connect to spider network for data gathering
+            from backend.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
+            spider_orchestrator = SpiderArmyOrchestrator()
+
+            # Activate relevant spiders based on plan requirements
+            spider_types = self._determine_spider_types(plan_id)
+            spider_orchestrator.activate_spiders(spider_types)
+
+            self.logger.info(f"✅ Activated {len(all_agents)} agents and {len(spider_types)} spider types")
+
+            # Create execution tasks
+            execution_tasks = self._create_execution_tasks(plan_id, team)
+            self.execution_status[plan_id]["total_tasks"] = len(execution_tasks)
+            self.execution_status[plan_id]["completed_tasks"] = 0
+
+            # Update progress
+            self.execution_status[plan_id]["progress"] = 0.25
+
+            return {
+                "status": "success",
+                "plan_id": plan_id,
+                "execution_status": "running",
+                "agents_active": self.execution_status[plan_id]["agents_active"],
+                "progress": self.execution_status[plan_id]["progress"],
+                "message": f"Execution started with {len(all_agents)} agents"
+            }
+
+        except Exception as e:
+            self.logger.error(f"❌ Failed to begin execution for plan {plan_id}: {str(e)}")
+            return {
+                "status": "error",
+                "plan_id": plan_id,
+                "error": str(e)
+            }
+
+    def _determine_spider_types(self, plan_id: str) -> list:
+        """Determine which spider types to activate based on plan"""
+        # For now, activate a default set of spiders
+        return ['job_spider', 'freelance_spider', 'content_spider', 'market_spider']
+
+    def _create_execution_tasks(self, plan_id: str, team: Dict[str, Any]) -> list:
+        """Create execution tasks for the team"""
+        tasks = []
+
+        # Create tasks based on team configuration
+        if team.get('lead_agent'):
+            tasks.append({"agent": team['lead_agent'], "task": "Coordinate team", "status": "pending"})
+
+        for agent in team.get('core_agents', [])[:3]:
+            tasks.append({"agent": agent, "task": f"Execute core function", "status": "pending"})
+
+        return tasks
+
     async def get_plan_status(self, plan_id: str) -> Dict[str, Any]:
         """
         Get the current status of a plan
