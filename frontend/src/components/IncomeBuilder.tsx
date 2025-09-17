@@ -1226,7 +1226,14 @@ export default function IncomeBuilder() {
                   {actionPlans.filter(p => p.status === 'in_progress').length} in progress
                 </Badge>
               </div>
-              {actionPlans.filter(p => p.status !== 'completed').map((plan, index) => (
+              {actionPlans.filter(p => p.status !== 'completed').map((plan, index) => {
+                console.log(`📋 Rendering plan ${index}:`, {
+                  title: plan.opportunity_title,
+                  status: plan.status,
+                  hasAdvisorReview: !!plan.advisor_review,
+                  backend_id: plan.backend_id
+                });
+                return (
                 <Card key={index} className={plan.status === 'in_progress' ? 'border-blue-500' : ''}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -1647,36 +1654,74 @@ export default function IncomeBuilder() {
                         <CheckCircle className="mr-2 h-4 w-4" />
                         {plan.status === 'in_progress' ? 'In Progress' : plan.status === 'completed' ? 'Completed' : 'Start Plan'}
                       </Button>
-                      {/* Request Advisor Review Button */}
-                      {plan.status === 'completed' && !plan.advisor_review && (
+                      {/* Request Advisor Review Button - Always show if no review yet */}
+                      {!plan.advisor_review && plan.status !== 'in_progress' && (
                         <Button
                           size="sm"
-                          variant="secondary"
+                          variant="default"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
                           onClick={async () => {
                             console.log('📚 Requesting advisor review for plan:', plan.opportunity_title);
 
-                            // Send request via WebSocket
+                            // Prepare plan data
+                            const planData = {
+                              id: plan.backend_id || `local_${Date.now()}`,
+                              opportunity_title: plan.opportunity_title,
+                              timeline: plan.timeline || '4 weeks',
+                              steps: plan.steps || [],
+                              resources: plan.resources || [],
+                              status: plan.status || 'created'
+                            };
+
+                            console.log('📤 Sending plan for advisor review:', planData);
+
+                            // Try WebSocket first
                             if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                               wsRef.current.send(JSON.stringify({
                                 type: 'request_advisor_review',
-                                plan_id: plan.backend_id,
-                                plan_data: {
-                                  id: plan.backend_id,
-                                  opportunity_title: plan.opportunity_title,
-                                  timeline: plan.timeline,
-                                  steps: plan.steps,
-                                  resources: plan.resources,
-                                  status: plan.status
-                                }
+                                plan_id: planData.id,
+                                plan_data: planData
                               }));
 
                               // Update UI to show review is pending
                               const updatedPlans = actionPlans.map((p, i) =>
-                                i === index ? { ...p, status: 'under_review' } : p
+                                i === index ? { ...p, status: 'under_review', advisor_review_pending: true } : p
                               );
                               setActionPlans(updatedPlans);
+
+                              console.log('✅ Advisor review requested via WebSocket');
                             } else {
-                              alert('WebSocket not connected. Please refresh the page.');
+                              // Fallback: Try direct API call
+                              console.log('⚠️ WebSocket not connected, trying API call...');
+
+                              try {
+                                const response = await fetch(`${API_BASE_URL}/v1/intelligence/advisor-review/`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify(planData)
+                                });
+
+                                if (response.ok) {
+                                  const result = await response.json();
+                                  console.log('✅ Advisor review received:', result);
+
+                                  // Update plan with review
+                                  const updatedPlans = actionPlans.map((p, i) =>
+                                    i === index ? {
+                                      ...p,
+                                      advisor_review: result.advisor_review,
+                                      team: result.team,
+                                      status: 'reviewed'
+                                    } : p
+                                  );
+                                  setActionPlans(updatedPlans);
+                                } else {
+                                  alert('Failed to get advisor review. Please try again.');
+                                }
+                              } catch (error) {
+                                console.error('Error getting advisor review:', error);
+                                alert('Error connecting to advisor system. Please check console.');
+                              }
                             }
                           }}
                         >
@@ -1727,7 +1772,7 @@ export default function IncomeBuilder() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );})}
             </div>
           )}
         </TabsContent>
