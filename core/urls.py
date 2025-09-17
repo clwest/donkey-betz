@@ -48,6 +48,25 @@ from core.auth_views_enhanced import (
 from core.profile_views import (
     upload_avatar_view, delete_avatar_view, update_profile_view, generate_avatar_view
 )
+# Import Personal Assistant views
+from core.views_personal_assistant import (
+    chat_with_assistant, get_assistant_context, get_learning_summary,
+    provide_feedback, reset_assistant
+)
+from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
+from core.views_assistant_bypass import assistant_chat_bypass
+from core.views_assistant_minimal import chat_minimal_dev, context_minimal_dev
+from core.simple_ping import ping_dev
+# Import Unified Assistant
+from core.views_unified_assistant import (
+    unified_assistant_chat, unified_assistant_context, execute_agent_with_memory,
+    get_agent_recommendations, rate_agent_execution, unified_assistant_chat_dev
+)
+# Import Enhanced Profile views
+from core.views_enhanced_profile import (
+    get_enhanced_profile, update_enhanced_profile,
+    get_user_memories, get_profile_suggestions
+)
 from agents.views import orchestrations_list
 
 # Import migrated API views
@@ -96,6 +115,15 @@ from core.views_advanced_workflows import (
     create_advanced_workflow, execute_advanced_workflow, get_workflow_execution_status,
     list_workflow_templates, create_workflow_from_template, workflow_analytics,
     schedule_workflow, workflow_collaboration
+)
+
+# Import new profile management and job application system views
+from core.views_profile_management import (
+    ExtendedProfileView, ProfileCompletionView, ResumeUploadView,
+    UserContextView, JobApplicationsView
+)
+from core.views_job_application_system import (
+    JobOpportunityView, QuickApplyView, ApplicationStatusView
 )
 
 # Create API router
@@ -182,9 +210,32 @@ urlpatterns = [
     path('api/v1/feedback/analytics/', feedback_analytics, name='feedback-analytics'),
     path('api/v1/feedback/history/', feedback_history, name='feedback-history'),
     
-    # Assistant endpoints
+    # Assistant endpoints (existing)
     path('api/v1/assistant/context/', assistant_context, name='assistant-context'),
     path('api/v1/assistant/chat/', assistant_chat, name='assistant-chat'),
+
+    # Personal AI Assistant endpoints (new learning system)
+    path('api/assistant/chat/', chat_with_assistant, name='personal-assistant-chat'),
+    path('api/assistant/context/', get_assistant_context, name='personal-assistant-context'),
+    path('api/assistant/learning/', get_learning_summary, name='personal-assistant-learning'),
+
+    # Development assistant endpoints (no auth required)
+    path('api/assistant/dev/chat/', chat_with_assistant_dev, name='personal-assistant-chat-dev'),
+    path('api/assistant/dev/context/', get_assistant_context_dev, name='personal-assistant-context-dev'),
+    path('api/assistant/minimal/chat/', chat_minimal_dev, name='personal-assistant-chat-minimal'),
+    path('api/assistant/minimal/context/', context_minimal_dev, name='personal-assistant-context-minimal'),
+    path('api/assistant/bypass/', assistant_chat_bypass, name='assistant-chat-bypass'),
+    path('api/ping/', ping_dev, name='ping-dev'),
+    path('api/assistant/feedback/', provide_feedback, name='personal-assistant-feedback'),
+    path('api/assistant/reset/', reset_assistant, name='personal-assistant-reset'),
+
+    # Unified Assistant endpoints (The One True Assistant™)
+    path('api/unified/chat/', unified_assistant_chat, name='unified-assistant-chat'),
+    path('api/unified/context/', unified_assistant_context, name='unified-assistant-context'),
+    path('api/unified/execute-agent/', execute_agent_with_memory, name='unified-execute-agent'),
+    path('api/unified/recommendations/', get_agent_recommendations, name='unified-agent-recommendations'),
+    path('api/unified/rate/', rate_agent_execution, name='unified-rate-execution'),
+    path('api/unified/dev/chat/', unified_assistant_chat_dev, name='unified-assistant-chat-dev'),
     
     # Research endpoints
     path('api/v1/research/books/', research_books, name='research-books'),
@@ -216,13 +267,35 @@ urlpatterns = [
     path('api/v1/ebooks/', ebooks_list, name='ebooks-list'),
     path('api/v1/voice/history/', voice_history, name='voice-history'),
     
-    # Profile endpoints
+    # Profile endpoints (legacy)
     path('api/v1/profile/', user_profile, name='user-profile'),
     path('api/v1/profile/stats/', profile_stats, name='profile-stats'),
     path('api/v1/profile/update/', update_profile_view, name='profile-update'),
     path('api/v1/profile/avatar/', upload_avatar_view, name='avatar-upload'),
     path('api/v1/profile/avatar/delete/', delete_avatar_view, name='avatar-delete'),
     path('api/v1/profile/avatar/generate/', generate_avatar_view, name='avatar-generate'),
+
+    # Extended Profile Management System (NEW)
+    # path('api/profile/extended/', ExtendedProfileView.as_view(), name='extended-profile'),  # Commented out - using enhanced profile instead
+    path('api/profile/completion/', ProfileCompletionView.as_view(), name='profile-completion'),
+    path('api/profile/resume/', ResumeUploadView.as_view(), name='resume-upload'),
+    path('api/profile/context/', UserContextView.as_view(), name='user-context'),
+    path('api/profile/applications/', JobApplicationsView.as_view(), name='job-applications'),
+
+    # Enhanced Profile System with Memory (ENHANCED)
+    path('api/profile/enhanced/', get_enhanced_profile, name='enhanced-profile-get'),
+    path('api/profile/enhanced/update/', update_enhanced_profile, name='enhanced-profile-update'),
+    path('api/profile/memories/', get_user_memories, name='user-memories'),
+    path('api/profile/suggestions/', get_profile_suggestions, name='profile-suggestions'),
+
+    # Aliases for extended profile (used by ProfessionalProfile component)
+    path('api/profile/extended/', get_enhanced_profile, name='extended-profile'),
+    path('api/profile/extended/update/', update_enhanced_profile, name='extended-profile-update'),
+
+    # Job Application System (NEW)
+    path('api/jobs/opportunities/', JobOpportunityView.as_view(), name='job-opportunities'),
+    path('api/jobs/quick-apply/', QuickApplyView.as_view(), name='quick-apply'),
+    path('api/jobs/applications/<uuid:application_id>/status/', ApplicationStatusView.as_view(), name='application-status'),
     
     # API router
     path('api/v1/', include(router.urls)),
