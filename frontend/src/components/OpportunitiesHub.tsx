@@ -420,19 +420,20 @@ export const OpportunitiesHub: React.FC = () => {
 
       setOpportunities(opportunities);
 
-      // Try to get application statuses
-      try {
-        const appRes = await apiClient.get('/api/jobs/applications/status/');
-        if (appRes.data && appRes.data.applications) {
-          const appMap = new Map();
-          appRes.data.applications.forEach((app: ApplicationStatus) => {
-            appMap.set(app.opportunity_id, app);
-          });
-          setApplications(appMap);
-        }
-      } catch (e) {
-        console.log('No application data available');
-      }
+      // Application status endpoint not yet implemented
+      // Will be added when job application tracking is built
+      // try {
+      //   const appRes = await apiClient.get('/api/jobs/applications/status/');
+      //   if (appRes.data && appRes.data.applications) {
+      //     const appMap = new Map();
+      //     appRes.data.applications.forEach((app: ApplicationStatus) => {
+      //       appMap.set(app.opportunity_id, app);
+      //     });
+      //     setApplications(appMap);
+      //   }
+      // } catch (e) {
+      //   console.log('No application data available');
+      // }
 
       setLoading(false);
     } catch (error) {
