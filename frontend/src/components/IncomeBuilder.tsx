@@ -99,9 +99,7 @@ export default function IncomeBuilder() {
     loadActionPlansFromBackend();
     fetchAutomationWorkflows();
 
-    // Connect to WebSocket for real-time updates
-    connectWebSocket();
-    // Also connect to Unified Platform for enhanced data
+    // Connect to Unified Platform for all WebSocket communication
     connectToPlatform();
 
     return () => {
@@ -121,62 +119,8 @@ export default function IncomeBuilder() {
     console.log('💳 Revenue data state updated:', revenueData);
   }, [revenueData]);
 
-  const connectWebSocket = () => {
-    try {
-      const ws = new WebSocket(`${WS_BASE_URL}/ws/income-builder/`);
-
-      ws.onopen = () => {
-        console.log('✅ WebSocket connected for Income Builder');
-        setWsConnected(true);
-        setLoading(false); // Stop loading when connected
-
-        // Immediately request data when connected
-        ws.send(JSON.stringify({"action": "get_opportunities"}));
-        console.log('📤 Sent data request on connection');
-
-        // Also trigger analyze_opportunities with a default profile
-        const defaultProfile = {
-          id: 'user_' + Date.now(),
-          skills: ['python', 'ai', 'automation', 'content writing', 'data analysis'],
-          skill_level: 'intermediate',
-          current_balance: 0,
-          available_hours: 20
-        };
-        ws.send(JSON.stringify({
-          type: 'analyze_opportunities',
-          profile: defaultProfile
-        }));
-        console.log('📤 Sent analyze_opportunities request with profile');
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleWebSocketMessage(data);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      ws.onerror = (error) => {
-        // WebSocket errors are normal during initial connection
-        // Don't log unless we need to debug
-        setWsConnected(false);
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setWsConnected(false);
-        // Attempt to reconnect after 5 seconds
-        setTimeout(connectWebSocket, 5000);
-      };
-
-      wsRef.current = ws;
-    } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
-      setWsConnected(false);
-    }
-  };
+  // Direct WebSocket connection removed - now using UnifiedPlatformConnector
+  // This prevents duplicate connections and consolidates all WebSocket communication
 
   const connectToPlatform = async () => {
     try {
@@ -186,6 +130,8 @@ export default function IncomeBuilder() {
 
       if (connected) {
         console.log('✅ Income Builder connected to platform');
+        setWsConnected(true);
+        setLoading(false); // Stop loading when connected
 
         // Set up platform message handlers
         unifiedConnector.connectIncomeBuilder((data) => {
@@ -198,9 +144,25 @@ export default function IncomeBuilder() {
           type: 'get_opportunities',
           source: 'income_builder'
         });
+
+        // Also trigger analyze_opportunities with a default profile
+        const defaultProfile = {
+          id: 'user_' + Date.now(),
+          skills: ['python', 'ai', 'automation', 'content writing', 'data analysis'],
+          skill_level: 'intermediate',
+          current_balance: 0,
+          available_hours: 20
+        };
+        unifiedConnector.send({
+          type: 'analyze_opportunities',
+          profile: defaultProfile,
+          source: 'income_builder'
+        });
+        console.log('📤 Sent analyze_opportunities request with profile');
       }
     } catch (error) {
       console.error('Failed to connect to platform:', error);
+      setWsConnected(false);
     }
   };
 

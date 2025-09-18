@@ -70,7 +70,7 @@ import { AuthGuard } from './components/auth/AuthGuard';
 // Features
 // Removed ChatWidget - now using UnifiedAIAssistant
 import { LifeConvictionsPage } from './pages/life-convictions/LifeConvictionsPage';
-import IncomeBuilder from './components/IncomeBuilder';
+import OpportunitiesHub from './components/OpportunitiesHub'; // Unified hub replacing Income Builder, Job Tracker, Decision Command
 import MonetizationDashboard from './pages/MonetizationDashboard';
 import RevenueOpportunities from './components/RevenueOpportunities';
 import RevenueDashboard from './components/RevenueDashboard';
@@ -189,12 +189,17 @@ function App() {
             <Route path="connectivity" element={<ConnectivityPage />} />
             {/* <Route path="sports/board" element={<SportsBoardPage />} /> DISABLED - NO SPORTS */}
             <Route path="life-convictions" element={<LifeConvictionsPage />} />
-            <Route path="income-builder" element={<IncomeBuilder />} />
+
+            {/* Unified Opportunities Hub - combines Income Builder, Job Tracker, and Decision Command */}
+            <Route path="opportunities" element={<OpportunitiesHub />} />
+            <Route path="income-builder" element={<Navigate to="/opportunities" replace />} />
+            <Route path="ai-job-tracker" element={<Navigate to="/opportunities" replace />} />
+            <Route path="decision-command" element={<Navigate to="/opportunities" replace />} />
+
             <Route path="monetization" element={<UnifiedCommandCenter />} />
             <Route path="revenue-opportunities" element={<RevenueCommandCenter />} />
             <Route path="revenue-dashboard" element={<RevenueCommandCenter />} />
             <Route path="revenue" element={<RevenueCommandCenter />} />
-            <Route path="ai-job-tracker" element={<AIJobTrackerPage />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>

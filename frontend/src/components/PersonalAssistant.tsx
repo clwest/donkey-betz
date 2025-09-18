@@ -85,12 +85,21 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [interviewResponse, setInterviewResponse] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [showIntroduction, setShowIntroduction] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if ((isOpen || embedded) && messages.length === 0) {
       if (!embedded) loadContext();
       connectToPlatform();
+
+      // Check if this is first visit (no localStorage flag)
+      const hasSeenIntro = localStorage.getItem('hasSeenAssistantIntro');
+      if (!hasSeenIntro && !embedded) {
+        setShowIntroduction(true);
+        localStorage.setItem('hasSeenAssistantIntro', 'true');
+      }
+
       // Check for interview mode first
       if (shouldStartInterview()) {
         connectToInterviewSystem();
@@ -326,13 +335,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
 
     const welcomeMessage: Message = {
       id: 'welcome',
-      text: initialMessage || `Hi! I'm your personal AI assistant with real-time access to job opportunities and income streams. ${platformStatus}. How can I help you today?`,
+      text: initialMessage || `Hi! I'm your personal AI assistant with real-time access to job opportunities and income streams. ${platformStatus}. Click the ❓ button above to learn more about what I can do, or just start chatting!`,
       sender: 'assistant',
       timestamp: new Date(),
       confidence: 1,
       suggestions: embedded && externalContext?.missingFields?.length > 0
         ? ['Help me with my professional summary', 'Add my work experience', 'List my skills', 'Complete my profile']
-        : ['Find job opportunities', 'Find income streams', 'Analyze my profile', 'Get personalized recommendations', 'Connect to live job data']
+        : ['Find job opportunities', 'Find income streams', 'Start my interview', 'Get personalized recommendations', 'Learn what you can do']
     };
     setMessages([welcomeMessage]);
   };
@@ -462,6 +471,21 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    // Handle special suggestion for learning about the assistant
+    if (suggestion === 'Learn what you can do') {
+      setShowIntroduction(true);
+      return;
+    }
+
+    // Handle special suggestion for starting interview
+    if (suggestion === 'Start my interview') {
+      setShowIntroduction(false);
+      if (!interviewMode && !externalContext?.interview_completed) {
+        connectToInterviewSystem();
+      }
+      return;
+    }
+
     if (interviewMode && currentQuestion) {
       handleInterviewSuggestion(suggestion);
     } else {
@@ -683,6 +707,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowIntroduction(true)}
+            className="text-white/80 hover:text-white"
+            title="Learn About Your AI Assistant"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          <button
             onClick={resetAssistant}
             className="text-white/80 hover:text-white"
             title="Reset Learning"
@@ -703,6 +734,141 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
           </button>
         </div>
       </div>
+      )}
+
+      {/* Introduction Modal */}
+      {showIntroduction && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowIntroduction(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-purple-500/30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Your Personal AI Assistant</h2>
+                  <p className="text-purple-400">Powered by Neural Intelligence</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowIntroduction(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  What I Can Do For You
+                </h3>
+                <ul className="space-y-2 text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <span>Find personalized income opportunities across 100+ sources</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <span>Analyze your skills and match them to high-paying opportunities</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <span>Create action plans and apply to opportunities automatically</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <span>Learn and adapt to your preferences over time</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-400" />
+                  Getting Started
+                </h3>
+                <div className="space-y-3 text-gray-300">
+                  <div>
+                    <span className="text-purple-400 font-medium">Step 1: Complete Your Profile</span>
+                    <p className="text-sm mt-1">I'll guide you through a 10-minute interview to understand your skills, experience, and goals.</p>
+                  </div>
+                  <div>
+                    <span className="text-purple-400 font-medium">Step 2: Explore Opportunities</span>
+                    <p className="text-sm mt-1">I'll analyze thousands of opportunities and present the best matches for you.</p>
+                  </div>
+                  <div>
+                    <span className="text-purple-400 font-medium">Step 3: Take Action</span>
+                    <p className="text-sm mt-1">Click "Quick Apply" to automatically submit applications with personalized cover letters.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                  How I Learn About You
+                </h3>
+                <p className="text-gray-300 text-sm">
+                  Through our conversational interview, I discover:
+                </p>
+                <ul className="mt-2 space-y-1 text-gray-400 text-sm">
+                  <li>• Your professional background and expertise</li>
+                  <li>• Hidden talents and monetizable skills</li>
+                  <li>• Income goals and work preferences</li>
+                  <li>• Available time and commitment level</li>
+                  <li>• Deal-breakers and constraints</li>
+                </ul>
+              </div>
+
+              <div className="bg-purple-600/20 rounded-lg p-4 border border-purple-500/30">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-yellow-400" />
+                  Pro Tips
+                </h3>
+                <ul className="space-y-2 text-gray-300 text-sm">
+                  <li>💡 Be specific about your skills - the more I know, the better matches I find</li>
+                  <li>💡 Set realistic income goals to get achievable opportunities</li>
+                  <li>💡 Check back daily - I find new opportunities every hour</li>
+                  <li>💡 Use the feedback buttons to help me learn your preferences</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowIntroduction(false);
+                    if (!interviewMode && !externalContext?.interview_completed) {
+                      connectToInterviewSystem();
+                    }
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-colors"
+                >
+                  Start Interview (10 min)
+                </button>
+                <button
+                  onClick={() => setShowIntroduction(false)}
+                  className="flex-1 py-3 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                >
+                  Explore First
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Recommendations Bar */}

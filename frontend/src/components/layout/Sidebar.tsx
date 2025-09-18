@@ -53,12 +53,10 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
-  { name: 'AI Job Tracker', href: '/ai-job-tracker', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: '🎯 JOBS' },
+  { name: 'Opportunities Hub', href: '/opportunities', icon: CurrencyDollarIcon, iconActive: CurrencyDollarIconSolid, badge: '🚀 UNIFIED' },
   { name: 'Profile', href: '/profile', icon: UserCircleIcon, iconActive: UserCircleIconSolid },
-  { name: 'Income Builder', href: '/income-builder', icon: CurrencyDollarIcon, iconActive: CurrencyDollarIconSolid, badge: '🔥 START HERE' },
-  { name: 'Revenue Command', href: '/revenue', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 UNIFIED' },
+  { name: 'Revenue Command', href: '/revenue', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 TRACK' },
   { name: 'Command & Control', href: '/control-center', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: '🎯 SYSTEM' },
-  { name: 'Decision Command', href: '/decision-command', icon: ChartBarIcon, iconActive: ChartBarIconSolid, badge: 'AI DECISIONS' },
   { name: 'Neural Orchestra', href: '/neural-orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'LIVE' },
   { name: 'Agent Hub', href: '/agent-hub', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
   { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },
