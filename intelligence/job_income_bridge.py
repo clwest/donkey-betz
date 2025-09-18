@@ -47,8 +47,8 @@ class JobIncomeBridge:
                 'time_to_income': '1-2 weeks',
                 'difficulty': 'intermediate',
                 'initial_investment': 0,
-                'success_rate': job.get('aiScore', 0.75) * 100,
-                'market_demand': 85,
+                'success_rate': min(1.0, job.get('aiScore', 0.75) if job.get('aiScore', 0.75) <= 1 else job.get('aiScore', 75) / 100),
+                'market_demand': 0.85,
                 'required_skills': job.get('tags', [])[:5] if job.get('tags') else ['communication', 'problem-solving'],
                 'action_steps': [
                     'Review job requirements',
@@ -61,7 +61,7 @@ class JobIncomeBridge:
                     {'name': f"{job.get('source', 'Job Board').title()} Platform", 'url': '#'}
                 ],
                 'match_reasons': [
-                    f"AI Match Score: {job.get('aiScore', 0.75)*100:.0f}%",
+                    f"AI Match Score: {(job.get('aiScore', 0.75) * 100 if job.get('aiScore', 0.75) <= 1 else job.get('aiScore', 75)):.0f}%",
                     f"Company: {job.get('company', 'Remote')}",
                     f"Source: {job.get('source', 'Job Board')}"
                 ],
@@ -84,8 +84,8 @@ class JobIncomeBridge:
                 'potential_monthly': '$2,000-$5,000',
                 'time_to_income': '3-5 days',
                 'difficulty': 'intermediate',
-                'success_rate': 85,
-                'market_demand': 95,
+                'success_rate': 0.85,
+                'market_demand': 0.95,
                 'required_skills': ['AI knowledge', 'writing', 'testing'],
                 'action_steps': [
                     'Create prompt templates',
@@ -112,8 +112,8 @@ class JobIncomeBridge:
                 'potential_monthly': '$1,500-$4,000',
                 'time_to_income': '1 week',
                 'difficulty': 'beginner',
-                'success_rate': 75,
-                'market_demand': 85,
+                'success_rate': 0.75,
+                'market_demand': 0.85,
                 'required_skills': ['logic', 'process mapping', 'communication'],
                 'action_steps': [
                     'Learn Zapier basics',
@@ -156,7 +156,7 @@ class JobIncomeBridge:
                 'income_streams': total_income_streams,
                 'avg_monthly_potential': avg_monthly_potential,
                 'top_category': 'AI Services' if all_opportunities else 'None',
-                'success_rate': sum(opp.get('success_rate', 0) for opp in all_opportunities[:5]) / 5 if all_opportunities else 0
+                'avg_success_rate': sum(opp.get('success_rate', 0) for opp in all_opportunities[:5]) / 5 if all_opportunities else 0
             },
             'source': 'unified_bridge',
             'timestamp': datetime.now().isoformat()

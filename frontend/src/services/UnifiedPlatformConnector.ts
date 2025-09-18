@@ -112,7 +112,7 @@ class UnifiedPlatformConnector {
 
   private getWebSocketUrl(component: string): string {
     const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-    return `${baseUrl}/ws/unified-hub/${component}/`;
+    return `${baseUrl}/ws/unified/${component}/`;
   }
 
   private updateComponentStatus(component: string, connected: boolean) {
