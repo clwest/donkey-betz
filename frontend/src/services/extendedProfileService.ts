@@ -27,6 +27,14 @@ export interface ExtendedUserProfile {
   remote_preference: 'remote' | 'hybrid' | 'onsite' | 'no_preference';
   willing_to_relocate: boolean;
   profile_completeness: number;
+  // AI Job Application Fields
+  professional_summary?: string;
+  key_achievements?: string[];
+  languages?: { language: string; proficiency: string }[];
+  availability?: 'immediate' | '2_weeks' | '1_month' | 'flexible';
+  contract_preference?: 'full_time' | 'part_time' | 'contract' | 'any';
+  visa_status?: string;
+  security_clearance?: string;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +68,12 @@ export interface JobPreferences {
   job_types: string[];
   company_sizes: string[];
   cultures: string[];
+  // AI Job Application Settings
+  auto_apply?: boolean;
+  min_match_score?: number;
+  application_tone?: 'professional' | 'friendly' | 'enthusiastic' | 'formal';
+  max_applications_per_day?: number;
+  preferred_platforms?: string[];
 }
 
 export interface ProfileCompletion {

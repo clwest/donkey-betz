@@ -1,0 +1,13 @@
+{
+  "job_id": "job_001",
+  "application_id": "app_20250918_015050",
+  "status": "submitted",
+  "generated_files": {
+    "resume": "income_builder_outputs/application_job_001_resume_20250918_015050.txt",
+    "proposal": "income_builder_outputs/application_job_001_proposal_20250918_015050.txt",
+    "cover_letter": "income_builder_outputs/application_job_001_cover_20250918_015050.txt"
+  },
+  "timestamp": "20250918_015050",
+  "ai_score": 0.92,
+  "success_probability": 0.85
+}

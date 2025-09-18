@@ -379,11 +379,183 @@ export const ProfessionalProfile: React.FC = () => {
         )}
       </div>
 
+      {/* AI Job Application Settings */}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Target className="w-5 h-5 text-purple-500" />
+            AI Job Application Settings
+          </h3>
+          <button
+            onClick={() => setEditingSection(editingSection === 'ai_settings' ? null : 'ai_settings')}
+            className="text-purple-400 hover:text-purple-300"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Auto Apply Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-medium">Auto Apply</p>
+              <p className="text-gray-400 text-sm">Automatically apply to matched jobs</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.job_preferences?.auto_apply || false}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  job_preferences: {
+                    ...formData.job_preferences,
+                    auto_apply: e.target.checked
+                  }
+                })}
+                disabled={editingSection !== 'ai_settings'}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          {/* Match Score Threshold */}
+          <div>
+            <p className="text-white font-medium mb-2">Min Match Score</p>
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={(formData.job_preferences?.min_match_score || 0.7) * 100}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  job_preferences: {
+                    ...formData.job_preferences,
+                    min_match_score: parseInt(e.target.value) / 100
+                  }
+                })}
+                disabled={editingSection !== 'ai_settings'}
+                className="flex-1"
+              />
+              <span className="text-purple-400 font-medium w-12">
+                {Math.round((formData.job_preferences?.min_match_score || 0.7) * 100)}%
+              </span>
+            </div>
+          </div>
+
+          {/* Application Tone */}
+          <div>
+            <p className="text-white font-medium mb-2">Application Tone</p>
+            <select
+              value={formData.job_preferences?.application_tone || 'professional'}
+              onChange={(e) => setFormData({
+                ...formData,
+                job_preferences: {
+                  ...formData.job_preferences,
+                  application_tone: e.target.value as any
+                }
+              })}
+              disabled={editingSection !== 'ai_settings'}
+              className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+            >
+              <option value="professional">Professional</option>
+              <option value="friendly">Friendly</option>
+              <option value="enthusiastic">Enthusiastic</option>
+              <option value="formal">Formal</option>
+            </select>
+          </div>
+
+          {/* Max Applications Per Day */}
+          <div>
+            <p className="text-white font-medium mb-2">Max Applications/Day</p>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={formData.job_preferences?.max_applications_per_day || 10}
+              onChange={(e) => setFormData({
+                ...formData,
+                job_preferences: {
+                  ...formData.job_preferences,
+                  max_applications_per_day: parseInt(e.target.value)
+                }
+              })}
+              disabled={editingSection !== 'ai_settings'}
+              className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {editingSection === 'ai_settings' && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => handleSave('AI Settings')}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save Settings
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Professional Summary */}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Award className="w-5 h-5 text-yellow-500" />
+            Professional Summary
+          </h3>
+          <button
+            onClick={() => setEditingSection(editingSection === 'summary' ? null : 'summary')}
+            className="text-purple-400 hover:text-purple-300"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        {editingSection === 'summary' ? (
+          <div>
+            <textarea
+              value={formData.professional_summary || ''}
+              onChange={(e) => setFormData({ ...formData, professional_summary: e.target.value })}
+              placeholder="Write a compelling professional summary that highlights your key strengths and career objectives..."
+              rows={6}
+              className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setEditingSection(null)}
+                className="px-4 py-2 text-gray-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSave('Professional Summary')}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-300">
+            {formData.professional_summary ||
+            <span className="text-gray-500 italic">Add a professional summary to make your profile stand out to potential employers.</span>}
+          </p>
+        )}
+      </div>
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button className="p-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+        <button
+          onClick={() => window.location.href = '/ai-job-tracker'}
+          className="p-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+        >
           <Target className="w-5 h-5" />
-          Find Job Matches
+          Go to AI Job Tracker
         </button>
         <button className="p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
           <TrendingUp className="w-5 h-5" />
@@ -391,7 +563,7 @@ export const ProfessionalProfile: React.FC = () => {
         </button>
         <button className="p-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
           <Users className="w-5 h-5" />
-          Network Insights
+          Export Resume
         </button>
       </div>
     </div>

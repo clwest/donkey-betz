@@ -53,6 +53,8 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
+  { name: 'AI Job Tracker', href: '/ai-job-tracker', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: '🎯 JOBS' },
+  { name: 'Profile', href: '/profile', icon: UserCircleIcon, iconActive: UserCircleIconSolid },
   { name: 'Income Builder', href: '/income-builder', icon: CurrencyDollarIcon, iconActive: CurrencyDollarIconSolid, badge: '🔥 START HERE' },
   { name: 'Revenue Command', href: '/revenue', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 UNIFIED' },
   { name: 'Command & Control', href: '/control-center', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: '🎯 SYSTEM' },

@@ -48,6 +48,9 @@ from core.auth_views_enhanced import (
 from core.profile_views import (
     upload_avatar_view, delete_avatar_view, update_profile_view, generate_avatar_view
 )
+from core.views_profile import (
+    ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
+)
 # Import Personal Assistant views
 from core.views_personal_assistant import (
     chat_with_assistant, get_assistant_context, get_learning_summary,
@@ -276,7 +279,9 @@ urlpatterns = [
     path('api/v1/profile/avatar/generate/', generate_avatar_view, name='avatar-generate'),
 
     # Extended Profile Management System (NEW)
-    # path('api/profile/extended/', ExtendedProfileView.as_view(), name='extended-profile'),  # Commented out - using enhanced profile instead
+    path('api/v1/user/profile/', ExtendedProfileView.as_view(), name='extended-profile'),
+    path('api/v1/user/profile/skills/', ProfileSkillsView.as_view(), name='profile-skills'),
+    path('api/v1/user/profile/for-application/', ProfileForApplicationView.as_view(), name='profile-for-application'),
     path('api/profile/completion/', ProfileCompletionView.as_view(), name='profile-completion'),
     path('api/profile/resume/', ResumeUploadView.as_view(), name='resume-upload'),
     path('api/profile/context/', UserContextView.as_view(), name='user-context'),

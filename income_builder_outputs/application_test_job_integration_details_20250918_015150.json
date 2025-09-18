@@ -1,0 +1,13 @@
+{
+  "job_id": "test_job_integration",
+  "application_id": "app_20250918_015150",
+  "status": "submitted",
+  "generated_files": {
+    "resume": "income_builder_outputs/application_test_job_integration_resume_20250918_015150.txt",
+    "proposal": "income_builder_outputs/application_test_job_integration_proposal_20250918_015150.txt",
+    "cover_letter": "income_builder_outputs/application_test_job_integration_cover_20250918_015150.txt"
+  },
+  "timestamp": "20250918_015150",
+  "ai_score": 0.92,
+  "success_probability": 0.85
+}
