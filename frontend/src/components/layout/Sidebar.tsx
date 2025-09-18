@@ -53,9 +53,7 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
-  { name: 'Opportunities Hub', href: '/opportunities', icon: CurrencyDollarIcon, iconActive: CurrencyDollarIconSolid, badge: '🚀 UNIFIED' },
-  { name: 'Profile & Control', href: '/profile', icon: UserCircleIcon, iconActive: UserCircleIconSolid, badge: '🎯 ALL-IN-ONE' },
-  { name: 'Revenue Command', href: '/revenue', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 TRACK' },
+  { name: 'Command Center', href: '/command-center', icon: UserCircleIcon, iconActive: UserCircleIconSolid, badge: '🎯 UNIFIED' },
   { name: 'Neural Orchestra', href: '/neural-orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'LIVE' },
   { name: 'Agent Hub', href: '/agent-hub', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
   { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },

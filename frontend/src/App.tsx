@@ -48,7 +48,7 @@ import DecisionCommand from './components/DecisionCommand';
 import NeuralOrchestra from './components/NeuralOrchestra';
 import ControlCenter from './components/ControlCenter';
 import { UnifiedAIAssistant } from './components/UnifiedAIAssistant';
-import UnifiedCommandCenter from './components/UnifiedCommandCenter';
+import UserCommandCenter from './components/UserCommandCenter';
 
 // Debug Page
 import DebugPage from './pages/DebugPage';
@@ -146,7 +146,7 @@ function App() {
               <Route path=":id" element={<WorkflowBuilderPage />} />
             </Route>
             <Route path="agents" element={<AgentsPage />} />
-            <Route path="command-center" element={<UnifiedCommandCenter />} />
+            <Route path="command-center" element={<UserCommandCenter defaultTab="profile" />} />
             <Route path="decision/:domain/:decisionId" element={<DecisionDetailPage />} />
 
             {/* New Enhanced UI/UX Components */}
@@ -158,7 +158,7 @@ function App() {
             <Route path="ebooks" element={<EbooksPage />} />
             <Route path="voice" element={<VoicePage />} />
             <Route path="character" element={<CharacterPage />} />
-            <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile" element={<Navigate to="/command-center" state={{ tab: 'profile' }} />} />
             <Route path="ai-settings" element={<AISettingsPageUnified />} />
             
             {/* Unified Agent Orchestra Hub - replaces all individual agent pages */}
@@ -184,16 +184,16 @@ function App() {
             {/* <Route path="sports/board" element={<SportsBoardPage />} /> DISABLED - NO SPORTS */}
             <Route path="life-convictions" element={<LifeConvictionsPage />} />
 
-            {/* Unified Opportunities Hub - combines Income Builder, Job Tracker, and Decision Command */}
-            <Route path="opportunities" element={<OpportunitiesHub />} />
-            <Route path="income-builder" element={<Navigate to="/opportunities" replace />} />
-            <Route path="ai-job-tracker" element={<Navigate to="/opportunities" replace />} />
-            <Route path="decision-command" element={<Navigate to="/opportunities" replace />} />
+            {/* Unified Command Center Redirects */}
+            <Route path="opportunities" element={<Navigate to="/command-center" state={{ tab: 'opportunities' }} />} />
+            <Route path="income-builder" element={<Navigate to="/command-center" state={{ tab: 'opportunities' }} />} />
+            <Route path="ai-job-tracker" element={<Navigate to="/command-center" state={{ tab: 'opportunities' }} />} />
+            <Route path="decision-command" element={<Navigate to="/command-center" state={{ tab: 'opportunities' }} />} />
 
-            <Route path="monetization" element={<UnifiedCommandCenter />} />
-            <Route path="revenue-opportunities" element={<RevenueCommandCenter />} />
-            <Route path="revenue-dashboard" element={<RevenueCommandCenter />} />
-            <Route path="revenue" element={<RevenueCommandCenter />} />
+            <Route path="monetization" element={<Navigate to="/command-center" state={{ tab: 'revenue' }} />} />
+            <Route path="revenue-opportunities" element={<Navigate to="/command-center" state={{ tab: 'revenue' }} />} />
+            <Route path="revenue-dashboard" element={<Navigate to="/command-center" state={{ tab: 'revenue' }} />} />
+            <Route path="revenue" element={<Navigate to="/command-center" state={{ tab: 'revenue' }} />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>

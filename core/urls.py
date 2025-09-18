@@ -29,6 +29,10 @@ from core.views import (
     assistant_context, research_books, research_documents, prompting_test,
     personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
 )
+from core.views_dashboard_stats import (
+    dashboard_stats, live_agent_activity, advisor_insights
+)
+from core.views_public_stats import public_system_stats
 # Import agent instance views
 from agents.views_instances import (
     list_instances, get_instance_status, delete_instance, delete_multiple_instances
@@ -47,6 +51,9 @@ from core.auth_views_enhanced import (
 )
 from core.profile_views import (
     upload_avatar_view, delete_avatar_view, update_profile_view, generate_avatar_view
+)
+from core.views_user_profile import (
+    profile_extended, ai_configuration, agents_assigned, execute_command
 )
 from core.views_profile import (
     ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
@@ -169,6 +176,12 @@ urlpatterns = [
     path('api/v1/metrics/', record_metric, name='record-metric'),
     path('api/v1/health/', health_check, name='health-check'),
 
+    # User Profile and AI Configuration APIs
+    path('api/profile/extended/', profile_extended, name='profile-extended'),
+    path('api/ai/configuration/', ai_configuration, name='ai-configuration'),
+    path('api/agents/assigned/', agents_assigned, name='agents-assigned'),
+    path('api/commands/execute/', execute_command, name='execute-command'),
+
     # Intelligence endpoints (temporary fix)
     path('api/v1/intelligence/skynet/status/', skynet_status, name='skynet-status'),
     path('api/v1/intelligence/opportunities/', live_opportunities, name='live-opportunities'),
@@ -198,6 +211,12 @@ urlpatterns = [
     # Opportunity Aggregator endpoints
     path('api/opportunities/', get_opportunities, name='get-opportunities'),
     path('api/opportunities/actionable/', get_actionable, name='get-actionable'),
+
+    # Dashboard Statistics - The Heart of Everything!
+    path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),
+    path('api/dashboard/agents/', live_agent_activity, name='live-agent-activity'),
+    path('api/dashboard/advisors/', advisor_insights, name='advisor-insights'),
+    path('api/public/system-stats/', public_system_stats, name='public-system-stats'),
 
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     

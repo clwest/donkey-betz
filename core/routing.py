@@ -69,8 +69,11 @@ websocket_urlpatterns = [
     # Assistant chat WebSocket (from ai-content-studio)
     re_path(r'^ws/assistant/$', consumers.AssistantChatConsumer.as_asgi()),
 
+    # Enhanced AI Assistant with full personalization
+    re_path(r'^ws/ai-assistant/$', consumers.AssistantChatConsumer.as_asgi()),
+
     # Personal Assistant Interview WebSocket
-    re_path(r'^ws/interview/$', consumers.InterviewConsumer.as_asgi() if consumers.InterviewConsumer else consumers.AssistantChatConsumer.as_asgi()),
+    re_path(r'^ws/interview/$', consumers.AssistantChatConsumer.as_asgi()),
     
     # Multi-agent orchestration updates
     re_path(r'^ws/orchestration/(?P<orchestration_id>[^/]+)/$', consumers.OrchestrationConsumer.as_asgi()),

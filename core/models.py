@@ -5,6 +5,9 @@ These models provide the foundation for the unified mega-platform,
 including base classes that will be inherited by all other apps.
 """
 
+# Import unified system models
+from .models_unified_system import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -370,6 +373,23 @@ class UserProfile(models.Model):
     occupation = models.CharField(max_length=100, blank=True, default='')
     location = models.CharField(max_length=100, blank=True, default='')
     
+    # Professional information
+    skills = models.JSONField(default=list, blank=True, null=True)
+    experience_years = models.IntegerField(default=0)
+    current_role = models.CharField(max_length=200, blank=True, default='')
+    industries = models.JSONField(default=list, blank=True, null=True)
+    portfolio_url = models.URLField(blank=True, default='')
+    linkedin_url = models.URLField(blank=True, default='')
+    github_url = models.URLField(blank=True, default='')
+    resume_id = models.CharField(max_length=100, blank=True, null=True)
+
+    # Job preferences
+    remote_only = models.BooleanField(default=True)
+    contract_work = models.BooleanField(default=True)
+    full_time = models.BooleanField(default=True)
+    hourly_rate_min = models.IntegerField(default=50)
+    salary_min = models.IntegerField(default=50000)
+
     # Preferences
     preferred_ai_model = models.CharField(max_length=20, default='gpt-5-mini')
     default_content_tone = models.CharField(max_length=20, default='professional')
@@ -379,8 +399,8 @@ class UserProfile(models.Model):
     default_citation_style = models.CharField(max_length=10, default='APA')
     preferred_book_length = models.CharField(max_length=10, default='medium')
     research_topics = ArrayField(
-        models.CharField(max_length=100), 
-        default=list, 
+        models.CharField(max_length=100),
+        default=list,
         blank=True
     )
     
@@ -432,6 +452,60 @@ class UserProfile(models.Model):
             return f"{self.user.first_name} {self.user.last_name}".strip()
         else:
             return self.user.username
+
+
+class UserPreferences(models.Model):
+    """
+    User AI preferences and configuration settings
+    """
+    user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='ai_preferences')
+
+    # AI Configuration
+    default_model = models.CharField(max_length=50, default='gpt-5')
+    reasoning_level = models.CharField(max_length=20, default='medium')
+    automation_level = models.CharField(max_length=20, default='semi-auto')
+    daily_token_limit = models.IntegerField(default=100000)
+    monthly_spending_limit = models.FloatField(default=500.0)
+    memory_retention_days = models.IntegerField(default=30)
+    share_memory_across_agents = models.BooleanField(default=True)
+
+    # Assigned agents
+    assigned_agents = models.JSONField(default=list, blank=True, null=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_userpreferences'
+        verbose_name = 'User Preferences'
+        verbose_name_plural = 'User Preferences'
+
+    def __str__(self):
+        return f"{self.user.username}'s preferences"
+
+
+class ConversationMemory(models.Model):
+    """
+    Store conversation history for personalization
+    """
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='conversation_memories')
+    message = models.TextField()
+    response = models.TextField()
+    agents_used = models.JSONField(default=list)
+    intent = models.CharField(max_length=100, blank=True)
+    success = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'core_conversation_memory'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.created_at}"
 
 
 class UserStatistics(models.Model):
