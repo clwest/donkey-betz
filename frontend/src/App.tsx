@@ -15,8 +15,6 @@ import { AgentsPage } from './pages/agents/AgentsPage';
 // import { GameBettingPage } from './pages/betting/GameBettingPage'; // DISABLED - NO SPORTS
 import { StudioPage } from './pages/studio/StudioPage';
 import { GalleryPage } from './pages/gallery/GalleryPage';
-import { CampaignsPage } from './pages/campaigns/CampaignsPage';
-import { CampaignDetailPage } from './pages/campaigns/CampaignDetailPage';
 import { EbooksPage } from './pages/ebooks/EbooksPage';
 import { VoicePage } from './pages/voice/VoicePage';
 import { CharacterPage } from './pages/character/CharacterPage';
@@ -156,11 +154,6 @@ function App() {
             <Route path="control-center" element={<UnifiedCommandCenter />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
-            <Route path="campaigns">
-              <Route index element={<CampaignsPage />} />
-              <Route path=":id" element={<CampaignDetailPage />} />
-              <Route path="new" element={<CampaignsPage />} />
-            </Route>
             <Route path="ebooks" element={<EbooksPage />} />
             <Route path="voice" element={<VoicePage />} />
             <Route path="character" element={<CharacterPage />} />

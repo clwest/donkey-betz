@@ -63,7 +63,6 @@ const navigation = [
   { name: 'Content Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
   { name: 'Media Vault', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },
   // { name: 'Characters', href: '/character', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' }, // Hidden - on backburner
-  { name: 'Campaign Manager', href: '/campaigns', icon: MegaphoneIcon, iconActive: MegaphoneIconSolid },
   { name: 'Library', href: '/ebooks', icon: BookOpenIcon, iconActive: BookOpenIconSolid },
   { name: 'Voice Studio', href: '/voice', icon: MicrophoneIcon, iconActive: MicrophoneIconSolid },
   { name: 'AI Config', href: '/ai-settings', icon: Cog6ToothIcon, iconActive: Cog6ToothIconSolid },

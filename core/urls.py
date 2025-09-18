@@ -72,6 +72,12 @@ from core.views_enhanced_profile import (
 )
 from agents.views import orchestrations_list
 
+# Import ecosystem activation views
+from core.views_ecosystem_activation import (
+    activate_ecosystem, ecosystem_status, get_live_opportunities,
+    process_opportunity, get_agent_status, get_advisor_network, get_revenue_tracking
+)
+
 # Import migrated API views
 from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
@@ -167,6 +173,15 @@ urlpatterns = [
     path('api/v1/intelligence/skynet/status/', skynet_status, name='skynet-status'),
     path('api/v1/intelligence/opportunities/', live_opportunities, name='live-opportunities'),
     path('api/v1/intelligence/predictions/', live_predictions, name='live-predictions'),
+
+    # Real Data Ecosystem Activation
+    path('api/v1/ecosystem/activate/', activate_ecosystem, name='ecosystem-activate'),
+    path('api/v1/ecosystem/status/', ecosystem_status, name='ecosystem-status'),
+    path('api/v1/ecosystem/opportunities/', get_live_opportunities, name='ecosystem-opportunities'),
+    path('api/v1/ecosystem/process/', process_opportunity, name='ecosystem-process'),
+    path('api/v1/ecosystem/agents/', get_agent_status, name='ecosystem-agents'),
+    path('api/v1/ecosystem/advisors/', get_advisor_network, name='ecosystem-advisors'),
+    path('api/v1/ecosystem/revenue/', get_revenue_tracking, name='ecosystem-revenue'),
 
     # AI Income Builder - Start from $0
     path('api/v1/intelligence/income-builder/', income_builder_analysis, name='income-builder'),
