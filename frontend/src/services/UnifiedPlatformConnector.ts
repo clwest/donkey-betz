@@ -112,7 +112,24 @@ class UnifiedPlatformConnector {
 
   private getWebSocketUrl(component: string): string {
     const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-    return `${baseUrl}/ws/unified/${component}/`;
+
+    // Map component names to actual WebSocket endpoints
+    const endpointMap: { [key: string]: string } = {
+      'opportunities_hub': '/ws/income-builder/', // Unified hub uses income-builder endpoint
+      'income_builder': '/ws/income-builder/',
+      'revenue_dashboard': '/ws/revenue-dashboard/',
+      'decision_command': '/ws/decision-command/',
+      'neural_orchestra': '/ws/neural-orchestra/',
+      'control_center': '/ws/control-center/',
+      'revenue_opportunities': '/ws/revenue-opportunities/',
+      'monetization_hub': '/ws/monetization-hub/',
+      'personal_assistant': '/ws/assistant/',
+      'job_tracker': '/ws/agent-progress/',
+      'spider_network': '/ws/agent-updates/'
+    };
+
+    const endpoint = endpointMap[component] || `/ws/${component.replace('_', '-')}/`;
+    return `${baseUrl}${endpoint}`;
   }
 
   private updateComponentStatus(component: string, connected: boolean) {
@@ -150,7 +167,8 @@ class UnifiedPlatformConnector {
     const handlers = this.messageHandlers.get(message.type) || [];
     handlers.forEach(handler => {
       try {
-        handler(message.data);
+        // Pass the entire message if data is undefined, otherwise pass data
+        handler(message.data || message);
       } catch (error) {
         console.error(`Error in message handler for ${message.type}:`, error);
       }
@@ -247,6 +265,27 @@ class UnifiedPlatformConnector {
       }, delay);
     } else {
       console.error(`❌ Failed to reconnect ${component} after ${this.maxReconnectAttempts} attempts`);
+    }
+  }
+
+  /**
+   * Register an event handler for specific message types
+   */
+  public on(eventType: string, handler: (data: any) => void): void {
+    const handlers = this.messageHandlers.get(eventType) || [];
+    handlers.push(handler);
+    this.messageHandlers.set(eventType, handlers);
+  }
+
+  /**
+   * Remove an event handler
+   */
+  public off(eventType: string, handler: (data: any) => void): void {
+    const handlers = this.messageHandlers.get(eventType) || [];
+    const index = handlers.indexOf(handler);
+    if (index > -1) {
+      handlers.splice(index, 1);
+      this.messageHandlers.set(eventType, handlers);
     }
   }
 
