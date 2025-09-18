@@ -117,8 +117,9 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
   const connectToInterviewSystem = async () => {
     try {
       // Connect to interview WebSocket
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/interview/`;
+      const isDev = import.meta.env.MODE !== 'production';
+      const wsUrl = isDev ? 'ws://localhost:8000/ws/interview/' :
+        (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/ws/interview/';
 
       const interviewSocket = new WebSocket(wsUrl);
 

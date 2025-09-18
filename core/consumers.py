@@ -25,6 +25,12 @@ try:
 except ImportError:
     InterviewConsumer = None
 
+# Import enhanced AI consumer
+try:
+    from .consumers_enhanced_ai import EnhancedAIAssistantConsumer
+except ImportError:
+    EnhancedAIAssistantConsumer = None
+
 
 class SafeWebSocketMixin:
     """Mixin for safe WebSocket send operations"""
