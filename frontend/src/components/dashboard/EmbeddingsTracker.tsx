@@ -38,7 +38,7 @@ const EmbeddingsTracker: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await apiClient.get('/v1/dashboard/embeddings-stats/');
+      const response = await apiClient.get('/api/v1/dashboard/embeddings-stats/');
       setStats(response.data);
       setError(null);
     } catch (err) {

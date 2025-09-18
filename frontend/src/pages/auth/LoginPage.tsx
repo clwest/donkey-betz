@@ -55,7 +55,7 @@ const LoginPage: React.FC = () => {
       
       console.log('Sending login data:', loginData);
       
-      const response = await api.post('/v1/auth/login/', loginData);
+      const response = await api.post('/api/v1/auth/login/', loginData);
       console.log('Login response:', response.data);
 
       const { token, user } = response.data;

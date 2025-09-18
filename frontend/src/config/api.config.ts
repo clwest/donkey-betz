@@ -46,9 +46,9 @@ export const API_CONFIG = {
   endpoints: {
     // Authentication
     auth: {
-      login: '/v1/auth/login/',
-      logout: '/v1/auth/logout/',
-      register: '/v1/auth/register/',
+      login: '/api/v1/auth/login/',
+      logout: '/api/v1/auth/logout/',
+      register: '/api/v1/auth/register/',
       refresh: '/v1/auth/refresh/',
       profile: '/v1/auth/profile/',
       forgotPassword: '/v1/auth/forgot-password/',
