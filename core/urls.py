@@ -177,7 +177,7 @@ urlpatterns = [
     path('api/v1/health/', health_check, name='health-check'),
 
     # User Profile and AI Configuration APIs
-    path('api/profile/extended/', profile_extended, name='profile-extended'),
+    # path('api/profile/extended/', profile_extended, name='profile-extended'),  # Commented out - using enhanced profile instead
     path('api/ai/configuration/', ai_configuration, name='ai-configuration'),
     path('api/agents/assigned/', agents_assigned, name='agents-assigned'),
     path('api/commands/execute/', execute_command, name='execute-command'),
