@@ -58,10 +58,16 @@ class ImageGenerationService:
     """Service for generating images using various AI providers"""
     
     def __init__(self):
-        # Get API keys from settings
-        self.openai_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY', '')
-        self.stability_key = settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY', '')
-        self.replicate_key = settings.AI_PROVIDERS.get('REPLICATE_API_KEY', '')
+        # Get API keys from settings - check AI_PROVIDERS dict first
+        if hasattr(settings, 'AI_PROVIDERS'):
+            self.openai_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY', '')
+            self.stability_key = settings.AI_PROVIDERS.get('STABILITY_API_KEY', '')
+            self.replicate_key = settings.AI_PROVIDERS.get('REPLICATE_API_KEY', '')
+        else:
+            # Fallback to direct attributes
+            self.openai_key = getattr(settings, 'OPENAI_API_KEY', '')
+            self.stability_key = getattr(settings, 'STABILITY_API_KEY', '')
+            self.replicate_key = getattr(settings, 'REPLICATE_API_KEY', '')
         
         # Initialize OpenAI client if available
         if HAS_OPENAI and self.openai_key:
@@ -107,14 +113,14 @@ class ImageGenerationService:
         """
         start_time = time.time()
         
-        # Auto-select provider based on availability
+        # Auto-select provider based on availability (Stable Diffusion priority)
         if provider == 'auto':
             if self.stability_key:
-                provider = 'stability'
-            elif self.openai_client:
-                provider = 'openai'
+                provider = 'stability'  # First priority: Stable Diffusion
             elif self.replicate_client:
-                provider = 'replicate'
+                provider = 'replicate'  # Second priority: Replicate (for SDXL)
+            elif self.openai_client:
+                provider = 'openai'     # Last priority: DALL-E
             else:
                 return ImageGenerationResult(
                     success=False,
@@ -146,20 +152,98 @@ class ImageGenerationService:
             )
     
     def _apply_style_to_prompt(self, prompt: str, style: str) -> str:
-        """Apply a visual style to the prompt"""
+        """Apply a visual style to the prompt - optimized for Stable Diffusion"""
+        # Stable Diffusion optimized style prompts - 50+ styles!
         style_mappings = {
-            'photorealistic': f"{prompt}, photorealistic, high quality, detailed photography",
-            'digital_art': f"{prompt}, digital art, trending on artstation, highly detailed",
-            'oil_painting': f"{prompt}, oil painting, masterpiece, classical art style",
-            'watercolor': f"{prompt}, watercolor painting, soft colors, artistic",
-            'anime': f"{prompt}, anime style, manga, cel shaded",
-            'cyberpunk': f"{prompt}, cyberpunk style, neon lights, futuristic",
-            '3d_render': f"{prompt}, 3D render, octane render, unreal engine",
-            'pixel_art': f"{prompt}, pixel art, 8-bit style, retro gaming",
-            'pop_art': f"{prompt}, pop art style, Andy Warhol style, bold colors",
-            'van_gogh': f"{prompt}, Van Gogh style, post-impressionist, swirling brushstrokes",
-            'pixar': f"{prompt}, Pixar style, 3D animated movie, Disney Pixar",
-            'south_park': f"{prompt}, South Park style, simple cartoon, cut-out animation"
+            # Photography Styles
+            'photorealistic': f"{prompt}, photorealistic, ultra detailed, professional photography, 8k uhd, dslr, high quality, film grain, Fujifilm XT3",
+            'photographic': f"{prompt}, photorealistic, ultra detailed, professional photography, 8k uhd, dslr, high quality",
+            'portrait': f"{prompt}, portrait photography, 85mm lens, f/1.8, shallow depth of field, studio lighting, professional headshot",
+            'landscape': f"{prompt}, landscape photography, wide angle, golden hour, dramatic sky, national geographic quality",
+            'macro': f"{prompt}, macro photography, extreme close-up, detailed texture, shallow depth of field, nature photography",
+            'street': f"{prompt}, street photography, candid, urban, documentary style, henri cartier-bresson inspired",
+            'fashion': f"{prompt}, fashion photography, vogue style, high fashion, editorial, studio lighting, professional model",
+            'architectural': f"{prompt}, architectural photography, clean lines, modern architecture, professional real estate photo",
+            'black_white': f"{prompt}, black and white photography, high contrast, dramatic lighting, ansel adams style",
+            'vintage': f"{prompt}, vintage photography, retro, old film camera, grainy, sepia tones, 1950s style",
+
+            # Digital Art Styles
+            'digital-art': f"{prompt}, digital art, trending on artstation, highly detailed, concept art, sharp focus, illustration",
+            'digital_art': f"{prompt}, digital art, trending on artstation, highly detailed, concept art, sharp focus, illustration",
+            'concept_art': f"{prompt}, concept art, professional, detailed, game art, cinematic, artstation showcase",
+            'matte_painting': f"{prompt}, matte painting, cinematic, epic scale, detailed environment, movie concept art",
+            'vector': f"{prompt}, vector art, clean lines, flat design, adobe illustrator style, minimalist",
+            'low_poly': f"{prompt}, low poly art, geometric, faceted, 3d modeling, polygon art style",
+            'voxel': f"{prompt}, voxel art, 3d pixels, minecraft style, cubic, blocky aesthetic",
+            'isometric': f"{prompt}, isometric art, 3d illustration, technical drawing, architectural visualization",
+
+            # Traditional Art Styles
+            'oil_painting': f"{prompt}, oil painting on canvas, masterpiece, classical art style, detailed brushstrokes, museum quality",
+            'watercolor': f"{prompt}, watercolor painting, soft colors, artistic, wet on wet technique, paper texture",
+            'acrylic': f"{prompt}, acrylic painting, vibrant colors, textured canvas, contemporary art",
+            'gouache': f"{prompt}, gouache painting, opaque watercolor, illustration, children's book art style",
+            'ink': f"{prompt}, ink drawing, pen and ink, crosshatching, detailed linework, traditional illustration",
+            'charcoal': f"{prompt}, charcoal drawing, dramatic shadows, sketch, artistic study, fine art",
+            'pencil': f"{prompt}, pencil drawing, detailed sketch, graphite, realistic shading, academic drawing",
+            'pastel': f"{prompt}, pastel painting, soft colors, impressionist style, textured paper",
+
+            # Animation & Comic Styles
+            'anime': f"{prompt}, anime style, manga art, cel shaded, by makoto shinkai, studio ghibli style",
+            'manga': f"{prompt}, manga style, black and white, japanese comic art, detailed linework, shounen style",
+            'pixar': f"{prompt}, Pixar 3D animation style, Disney Pixar movie quality, subsurface scattering, detailed",
+            'disney': f"{prompt}, Disney animation style, classic cartoon, hand-drawn animation quality",
+            'comic': f"{prompt}, comic book style, marvel comics, detailed ink lines, dynamic pose, action scene",
+            'cartoon': f"{prompt}, cartoon style, simple, colorful, animated series quality, nickelodeon style",
+            'chibi': f"{prompt}, chibi style, super deformed, cute, kawaii, big head small body",
+
+            # Artistic Movements
+            'impressionist': f"{prompt}, impressionist painting, monet style, loose brushwork, light and color focus",
+            'expressionist': f"{prompt}, expressionist art, emotional, bold colors, distorted forms, german expressionism",
+            'surreal': f"{prompt}, surrealism, salvador dali inspired, dreamlike, impossible geometry, melting objects",
+            'abstract': f"{prompt}, abstract art, non-representational, modern art, kandinsky style, geometric shapes",
+            'cubist': f"{prompt}, cubist style, pablo picasso inspired, geometric fragmentation, multiple perspectives",
+            'art_nouveau': f"{prompt}, art nouveau style, alphonse mucha inspired, decorative, flowing lines, ornamental",
+            'art_deco': f"{prompt}, art deco style, 1920s aesthetic, geometric patterns, luxury, great gatsby era",
+            'pop_art': f"{prompt}, pop art style, Andy Warhol inspired, Roy Lichtenstein, bold colors, halftone dots",
+            'minimalist': f"{prompt}, minimalist style, simple composition, clean lines, negative space, modern art",
+            'baroque': f"{prompt}, baroque style painting, dramatic lighting, rich colors, ornate details, caravaggio inspired",
+            'renaissance': f"{prompt}, renaissance style painting, leonardo da vinci inspired, classical, realistic, sfumato technique",
+
+            # Genre Styles
+            'fantasy': f"{prompt}, fantasy art, magical, ethereal, epic composition, dramatic lighting, artstation winner",
+            'scifi': f"{prompt}, science fiction art, futuristic, space art, technological, alien worlds, star wars style",
+            'cyberpunk': f"{prompt}, cyberpunk style, neon lights, futuristic city, blade runner 2049, high tech low life",
+            'steampunk': f"{prompt}, steampunk style, victorian era, brass and copper, gears and clockwork, industrial",
+            'gothic': f"{prompt}, gothic art style, dark atmosphere, medieval, cathedral architecture, dark fantasy",
+            'horror': f"{prompt}, horror art style, dark, scary, atmospheric, lovecraftian, disturbing imagery",
+            'retro': f"{prompt}, retro style, 80s aesthetic, synthwave, neon colors, miami vice, nostalgic",
+            'vaporwave': f"{prompt}, vaporwave aesthetic, 90s nostalgia, purple and pink, glitch art, japanese text",
+
+            # 3D & Rendering Styles
+            '3d_render': f"{prompt}, 3D render, octane render, unreal engine 5, ray tracing, physically based rendering, 4k",
+            'clay_render': f"{prompt}, clay render, 3d sculpture, zbrush, soft lighting, subsurface scattering",
+            'wireframe': f"{prompt}, wireframe render, 3d mesh, technical visualization, CAD model, blueprint style",
+
+            # Special Effects
+            'neon': f"{prompt}, neon lights, glowing effects, cyberpunk aesthetic, dark background, vibrant colors",
+            'holographic': f"{prompt}, holographic effect, iridescent, rainbow reflections, futuristic, prismatic",
+            'glitch': f"{prompt}, glitch art, digital distortion, corrupted data, pixel sorting, databending",
+
+            # Cultural Styles
+            'japanese': f"{prompt}, traditional japanese art, ukiyo-e style, woodblock print, hokusai inspired",
+            'chinese': f"{prompt}, traditional chinese painting, ink wash, mountain water, calligraphy, sung dynasty style",
+            'indian': f"{prompt}, indian art style, vibrant colors, intricate patterns, mandala, rajasthani miniature",
+            'african': f"{prompt}, african art style, tribal patterns, bold geometric shapes, traditional masks",
+            'aztec': f"{prompt}, aztec art style, pre-columbian, geometric patterns, gold and turquoise, temple art",
+
+            # Other Unique Styles
+            'pixel_art': f"{prompt}, pixel art, 16-bit style, retro gaming aesthetic, sprite art",
+            'graffiti': f"{prompt}, graffiti art, street art, spray paint, urban, banksy style, wall mural",
+            'collage': f"{prompt}, collage art, mixed media, paper cutouts, layered composition, contemporary art",
+            'mosaic': f"{prompt}, mosaic art, tile work, byzantine style, colored glass pieces, ancient roman",
+            'stained_glass': f"{prompt}, stained glass window, cathedral art, translucent colors, lead lines, religious art",
+            'origami': f"{prompt}, origami art, paper folding, geometric shapes, japanese paper art, minimalist",
+            'psychedelic': f"{prompt}, psychedelic art, trippy, swirling colors, 1960s style, kaleidoscope patterns"
         }
         
         # Use style mapping or append style directly

@@ -125,7 +125,7 @@ class ExtendedProfileService {
   }
 
   async updateExtendedProfile(data: Partial<ExtendedUserProfile>): Promise<ExtendedUserProfile> {
-    const response = await apiClient.patch('/profile/extended/', data);
+    const response = await apiClient.post('/profile/extended/update/', data);
     return response.data;
   }
 
@@ -136,15 +136,15 @@ class ExtendedProfileService {
 
   // Skills Management
   async addSkill(skill: string, proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert'): Promise<void> {
-    await apiClient.post('/profile/skills/', { skill, proficiency });
+    await apiClient.post('/api/v1/user/profile/skills/', { skill, proficiency });
   }
 
   async removeSkill(skill: string): Promise<void> {
-    await apiClient.delete(`/api/profile/skills/${encodeURIComponent(skill)}/`);
+    await apiClient.delete(`/api/v1/user/profile/skills/`, { data: { skill } });
   }
 
   async updateSkills(skills: string[]): Promise<void> {
-    await apiClient.put('/profile/skills/', { skills });
+    await apiClient.post('/api/v1/user/profile/skills/', { skills });
   }
 
   // Work History

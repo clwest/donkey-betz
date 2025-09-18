@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 import {
   Bot,
   Activity,
@@ -129,21 +130,79 @@ export default function AIJobTrackerPage() {
 
   const applyToJob = async (jobId: string) => {
     try {
+      // Update UI to show applying state
+      setJobs(prev => prev.map(job =>
+        job.id === jobId ? { ...job, status: 'applying' } : job
+      ));
+
+      toast.info('Generating personalized application...');
+
+      console.log('Applying to job:', jobId);
+      const requestBody = { job_id: jobId };
+      console.log('Request body:', requestBody);
+
       const res = await fetch('http://localhost:8000/api/v1/intelligence/ai-jobs/apply/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ job_id: jobId })
+        body: JSON.stringify(requestBody)
       });
+
+      console.log('Response status:', res.status);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
+      console.log('Response data:', data);
+
       if (data.success) {
+        // Find the job to get its title
+        const job = jobs.find(j => j.id === jobId);
+        const jobTitle = job ? job.title : 'the position';
+        console.log('Job found:', job);
+
+        // Update job status to applied
         setJobs(prev => prev.map(job =>
-          job.id === jobId ? { ...job, status: 'applying' } : job
+          job.id === jobId ? { ...job, status: 'applied' } : job
         ));
+
+        // Show success message with details
+        if (data.result?.personalized) {
+          const matchScore = data.result.match_score || 0;
+          toast.success(
+            `Successfully applied to ${jobTitle}! ` +
+            `Match score: ${(matchScore * 100).toFixed(0)}%`
+          );
+          console.log('Personalized application with match score:', matchScore);
+        } else {
+          toast.success(`Applied to ${jobTitle}!`);
+          console.log('Standard application completed');
+        }
+
+        // Log additional details if available
+        if (data.result) {
+          console.log('Application result:', data.result);
+        }
+
+        // Refresh data after a short delay
         setTimeout(loadData, 2000);
+      } else {
+        console.error('Application failed:', data.message);
+        throw new Error(data.message || 'Application failed');
       }
     } catch (error) {
       console.error('Error applying to job:', error);
+
+      // Reset job status on error
+      setJobs(prev => prev.map(job =>
+        job.id === jobId ? { ...job, status: 'new' } : job
+      ));
+
+      toast.error(`Failed to apply: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

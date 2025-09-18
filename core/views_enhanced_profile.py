@@ -141,6 +141,48 @@ def update_enhanced_profile(request):
         profile.save()
         completeness = profile.calculate_completeness()
 
+        # Also save to session for compatibility with AI job system
+        from datetime import datetime as dt
+        session_key = f'extended_profile_{request.user.id}'
+
+        # Create comprehensive session data with ALL profile fields
+        session_data = {
+            # Basic Info
+            'full_name': getattr(profile, 'full_name', '') or f"{request.user.first_name} {request.user.last_name}".strip(),
+            'professional_summary': getattr(profile, 'professional_summary', ''),
+            'skills': getattr(profile, 'skills', []),
+            'work_history': getattr(profile, 'work_history', []),
+            'years_experience': getattr(profile, 'years_experience', 0),
+            'job_preferences': getattr(profile, 'job_preferences', {}),
+
+            # Roles & Goals
+            'primary_role': getattr(profile, 'primary_role', ''),
+            'secondary_roles': getattr(profile, 'secondary_roles', []),
+            'long_term_goals': getattr(profile, 'long_term_goals', []),
+            'current_projects': getattr(profile, 'current_projects', []),
+
+            # Communication
+            'communication_style': getattr(profile, 'communication_style', ''),
+            'preferred_channels': getattr(profile, 'preferred_channels', []),
+
+            # Skills & Learning
+            'core_competencies': getattr(profile, 'core_competencies', []),
+            'learning_style': getattr(profile, 'learning_style', ''),
+            'certifications': getattr(profile, 'certifications', []),
+
+            # Application preferences
+            'application_tone': getattr(profile, 'application_tone', 'professional'),
+
+            # Metadata
+            'updated_at': dt.now().isoformat(),
+            'is_complete': completeness >= 50  # Mark as complete if >50% filled
+        }
+
+        # Save to session with force update
+        request.session[session_key] = session_data
+        request.session.modified = True
+        request.session.save()  # Force immediate save
+
         return Response({
             'success': True,
             'message': f'Profile updated successfully',

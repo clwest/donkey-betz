@@ -3,10 +3,12 @@ import { motion } from 'framer-motion';
 import {
   Briefcase, MapPin, DollarSign, Clock, Award,
   Plus, X, Edit2, Save, ChevronRight, Target,
-  TrendingUp, Users, Building, Globe, Star
+  TrendingUp, Users, Building, Globe, Star,
+  MessageSquare, Sparkles
 } from 'lucide-react';
 import { extendedProfileService, type ExtendedUserProfile, type WorkHistoryItem } from '../../services/extendedProfileService';
 import { toast } from 'sonner';
+import PersonalAssistant from '../PersonalAssistant';
 
 export const ProfessionalProfile: React.FC = () => {
   const [profile, setProfile] = useState<ExtendedUserProfile | null>(null);
@@ -16,6 +18,7 @@ export const ProfessionalProfile: React.FC = () => {
   const [formData, setFormData] = useState<Partial<ExtendedUserProfile>>({});
   const [newSkill, setNewSkill] = useState('');
   const [showSkillInput, setShowSkillInput] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -62,10 +65,11 @@ export const ProfessionalProfile: React.FC = () => {
     if (!newSkill.trim()) return;
 
     const updatedSkills = [...(formData.skills || []), newSkill.trim()];
-    setFormData({ ...formData, skills: updatedSkills });
+    const updatedData = { ...formData, skills: updatedSkills };
+    setFormData(updatedData);
 
     try {
-      await extendedProfileService.updateSkills(updatedSkills);
+      await extendedProfileService.updateExtendedProfile({ skills: updatedSkills });
       toast.success('Skill added');
       setNewSkill('');
       setShowSkillInput(false);
@@ -79,7 +83,7 @@ export const ProfessionalProfile: React.FC = () => {
     setFormData({ ...formData, skills: updatedSkills });
 
     try {
-      await extendedProfileService.removeSkill(skill);
+      await extendedProfileService.updateExtendedProfile({ skills: updatedSkills });
       toast.success('Skill removed');
     } catch (error) {
       toast.error('Failed to remove skill');
@@ -133,6 +137,31 @@ export const ProfessionalProfile: React.FC = () => {
             className={`h-3 rounded-full transition-all duration-500 ${getCompletionColor(profile?.profile_completeness || 0)}`}
             style={{ width: `${profile?.profile_completeness || 0}%` }}
           />
+        </div>
+      </motion.div>
+
+      {/* AI Assistant Helper */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-4 border border-blue-500/30"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-blue-400" />
+            <div>
+              <h4 className="text-white font-medium">Need help building your profile?</h4>
+              <p className="text-gray-400 text-sm">Let our AI assistant help you create a compelling professional profile</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAssistant(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Chat with Assistant
+          </button>
         </div>
       </motion.div>
 
@@ -566,6 +595,59 @@ export const ProfessionalProfile: React.FC = () => {
           Export Resume
         </button>
       </div>
+
+      {/* Personal Assistant Modal */}
+      {showAssistant && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-blue-400" />
+                <h3 className="text-white font-semibold">AI Profile Assistant</h3>
+              </div>
+              <button
+                onClick={() => setShowAssistant(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <PersonalAssistant
+                embedded={true}
+                initialMessage="Hi Chris! I'm your AI profile coach. I see you're transitioning from car sales to tech - that's an amazing journey!
+
+Let me help you craft a compelling professional profile that showcases your unique path. Based on what you tell me, I can:
+
+📝 **Professional Summary** - Highlight your sales skills + self-taught coding journey
+💼 **Work Experience** - Frame your car dealer experience for tech roles
+🎯 **Key Skills** - Identify transferable skills (negotiation, customer relations, problem-solving)
+🚀 **Project Showcase** - Describe this AI platform you've built
+💡 **Unique Value** - Emphasize your business acumen + technical skills combo
+
+Tell me about your journey - what sparked your interest in coding? What technologies have you learned? What's this platform you've built?"
+                context={{
+                  currentProfile: formData,
+                  completeness: profile?.profile_completeness || 0,
+                  missingFields: Object.entries(formData)
+                    .filter(([key, value]) => !value || (Array.isArray(value) && value.length === 0))
+                    .map(([key]) => key),
+                  profileType: 'professional',
+                  purpose: 'job_application'
+                }}
+                onSuggestion={(field: string, value: any) => {
+                  // Handle AI suggestions for profile fields
+                  setFormData(prev => ({
+                    ...prev,
+                    [field]: value
+                  }));
+                  toast.success(`Updated ${field.replace(/_/g, ' ')}`);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

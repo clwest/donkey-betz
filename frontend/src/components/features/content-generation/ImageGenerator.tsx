@@ -879,8 +879,14 @@ export function ImageGenerator() {
                       type="number"
                       className="input"
                       placeholder="Random seed for reproducible results"
-                      value={params.seed || ''}
-                      onChange={(e) => setParams({ ...params, seed: e.target.value ? parseInt(e.target.value) : undefined })}
+                      value={params.seed?.toString() || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setParams({
+                          ...params,
+                          seed: value === '' ? undefined : parseInt(value)
+                        });
+                      }}
                     />
                   </div>
                 </div>

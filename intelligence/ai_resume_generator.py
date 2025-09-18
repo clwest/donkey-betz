@@ -16,11 +16,16 @@ Key Features:
 
 import json
 import random
+import sys
+import os
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
+# Add path for core imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.llm_enforcer import get_llm_enforcer
 from .ai_job_matcher import AIJobCategory
 
 
@@ -219,37 +224,46 @@ class AIResumeGenerator:
         return random.choice(titles)
 
     def _generate_summary(self, category: AIJobCategory, profile: Dict) -> str:
-        """Generate professional summary"""
+        """Generate professional summary using REAL AI"""
 
         years = profile.get('years_experience', 5)
 
-        summaries = {
-            AIJobCategory.CONTENT_WRITING: f"""
-Results-driven AI Content Specialist with {years}+ years of experience leveraging cutting-edge AI tools
-to create compelling, SEO-optimized content. Expert in ChatGPT, Claude, and specialized content AI platforms.
-Proven track record of increasing organic traffic by 200%+ and generating millions in content-driven revenue.
-Passionate about combining human creativity with AI efficiency to deliver exceptional content at scale.
-""",
-            AIJobCategory.DATA_ANALYSIS: f"""
-Innovative AI Data Analyst with {years}+ years of experience transforming complex data into actionable insights
-using advanced AI and machine learning techniques. Proficient in Python, SQL, and cutting-edge AI analytics tools.
-Successfully automated analysis processes saving 100+ hours monthly while improving accuracy by 95%.
-Committed to leveraging AI to drive data-driven decision making and business growth.
-""",
-            AIJobCategory.CODE_GENERATION: f"""
-Full-Stack Developer with {years}+ years specializing in AI-enhanced software development. Expert in leveraging
-GitHub Copilot, ChatGPT, and other AI tools to accelerate development by 3x while maintaining code quality.
-Built 50+ production applications using AI-assisted development. Passionate about pushing the boundaries
-of what's possible with AI in software engineering.
-""",
-            AIJobCategory.PROMPT_ENGINEERING: f"""
-Pioneering Prompt Engineer with {years}+ years of experience designing and optimizing prompts for maximum AI performance.
-Expert in ChatGPT, Claude, and enterprise LLM systems. Developed prompt libraries generating $1M+ in business value.
-Specializes in creating conversational AI experiences that feel genuinely human while delivering consistent results.
-"""
-        }
+        # Use real AI to generate summary
+        enforcer = get_llm_enforcer()
 
-        return summaries.get(category, f"AI Professional with {years}+ years of experience").strip()
+        # Extract profile information for context
+        skills = profile.get('skills', [])
+        experience = profile.get('professional_summary', '')
+
+        prompt = f"""Generate a compelling professional summary for a resume.
+
+Job Category: {category.value}
+Years of Experience: {years}
+Current Skills: {', '.join(skills[:10]) if skills else 'AI tools, automation, analysis'}
+Background: {experience if experience else 'Professional with AI expertise'}
+
+Requirements:
+1. 3-4 sentences maximum
+2. Highlight AI expertise relevant to {category.value}
+3. Include quantifiable achievements (e.g., "increased efficiency by X%")
+4. Professional tone, action-oriented language
+5. Focus on value delivered to clients/employers
+
+Generate ONLY the summary text, no labels or formatting."""
+
+        try:
+            result = enforcer.enforce_real_ai(
+                prompt=prompt,
+                agent_name="AIResumeGenerator",
+                task_type="resume_summary",
+                max_tokens=200,
+                temperature=0.7
+            )
+            return result['content'].strip()
+        except Exception as e:
+            # Fallback to template if AI fails
+            print(f"Failed to generate AI summary: {e}")
+            return f"AI Professional with {years}+ years of experience specializing in {category.value}."
 
     def _generate_skills(self, category: AIJobCategory, requirements: Optional[List[str]]) -> List[str]:
         """Generate relevant skills list"""
@@ -467,9 +481,58 @@ PROFESSIONAL EXPERIENCE
         return text
 
     def generate_cover_letter(self, resume: AIResume, job_title: str, company: str = "your company") -> str:
-        """Generate a matching cover letter"""
+        """Generate a matching cover letter using REAL AI"""
 
-        letter = f"""
+        # Use real AI to generate cover letter
+        enforcer = get_llm_enforcer()
+
+        prompt = f"""Write a compelling cover letter for a job application.
+
+Job Title: {job_title}
+Company: {company}
+Applicant: {resume.name}
+Professional Title: {resume.title}
+Summary: {resume.summary}
+Key Skills: {', '.join(resume.skills[:8])}
+AI Tools: {', '.join(resume.ai_tools[:5])}
+Recent Achievements:
+{chr(10).join('- ' + a for a in resume.achievements[:2])}
+
+Requirements:
+1. Professional yet personable tone
+2. 4-5 paragraphs maximum
+3. Emphasize AI expertise and efficiency gains
+4. Include specific achievements and quantifiable results
+5. Express genuine enthusiasm for the role
+6. End with a clear call to action
+
+Format:
+- Start with "Dear Hiring Manager,"
+- End with contact information
+- Professional sign-off
+
+Generate the complete cover letter."""
+
+        try:
+            result = enforcer.enforce_real_ai(
+                prompt=prompt,
+                agent_name="AIResumeGenerator",
+                task_type="cover_letter",
+                max_tokens=500,
+                temperature=0.8
+            )
+
+            # Add contact info at the end if not already included
+            letter = result['content'].strip()
+            if resume.email not in letter:
+                letter += f"\n\n{resume.name}\n{resume.email}\n{resume.phone}"
+
+            return letter
+
+        except Exception as e:
+            # Fallback to basic template if AI fails
+            print(f"Failed to generate AI cover letter: {e}")
+            letter = f"""
 Dear Hiring Manager,
 
 I am writing to express my strong interest in the {job_title} position at {company}. As an {resume.title} with expertise in cutting-edge AI technologies, I am excited about the opportunity to bring my unique blend of technical skills and AI innovation to your team.
@@ -498,4 +561,4 @@ Best regards,
 Portfolio: Available upon request
 LinkedIn: linkedin.com/in/{resume.name.lower().replace(' ', '-')}
 """
-        return letter
+            return letter
