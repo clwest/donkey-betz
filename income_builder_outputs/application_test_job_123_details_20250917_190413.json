@@ -1,0 +1,17 @@
+{
+  "job_id": "test_job_123",
+  "title": "AI Content Writer for Tech Blog",
+  "category": "content_writing",
+  "ai_score": 1.0,
+  "success_probability": 1.0,
+  "estimated_hours": 1.0,
+  "budget": 500,
+  "ai_tools": [
+    "ChatGPT",
+    "Claude",
+    "Jasper",
+    "Copy.ai"
+  ],
+  "approach": "Use ChatGPT/Claude to generate initial drafts, then refine with human editing for tone and brand voice. Deliver in phases for feedback.",
+  "timestamp": "20250917_190413"
+}

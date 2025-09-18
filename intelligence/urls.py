@@ -32,6 +32,12 @@ from .automation_workflows import (
     quick_start_setup
 )
 from .views_advisor_review import request_advisor_review
+from .views_ai_jobs import (
+    AIJobSpidersView,
+    AIJobOpportunitiesView,
+    AIJobSpiderControlView,
+    AIJobApplicationView
+)
 
 urlpatterns = [
     # Skynet Intelligence Engine
@@ -71,4 +77,10 @@ urlpatterns = [
 
     # Advisor Review Endpoints
     path('advisor-review/', request_advisor_review, name='request_advisor_review'),
+
+    # AI Job System Endpoints
+    path('ai-jobs/spiders/', AIJobSpidersView.as_view(), name='ai_job_spiders'),
+    path('ai-jobs/jobs/', AIJobOpportunitiesView.as_view(), name='ai_job_opportunities'),
+    path('ai-jobs/start-spiders/', AIJobSpiderControlView.as_view(), name='ai_job_start_spiders'),
+    path('ai-jobs/apply/', AIJobApplicationView.as_view(), name='ai_job_apply'),
 ]

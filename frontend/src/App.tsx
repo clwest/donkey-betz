@@ -75,7 +75,7 @@ import MonetizationDashboard from './pages/MonetizationDashboard';
 import RevenueOpportunities from './components/RevenueOpportunities';
 import RevenueDashboard from './components/RevenueDashboard';
 import RevenueCommandCenter from './components/RevenueCommandCenter';
-
+import AIJobTrackerPage from './pages/AIJobTrackerPage';
 
 // Stores
 import { useAuthStore } from './store/authStore';
@@ -194,6 +194,7 @@ function App() {
             <Route path="revenue-opportunities" element={<RevenueCommandCenter />} />
             <Route path="revenue-dashboard" element={<RevenueCommandCenter />} />
             <Route path="revenue" element={<RevenueCommandCenter />} />
+            <Route path="ai-job-tracker" element={<AIJobTrackerPage />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>
