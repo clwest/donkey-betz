@@ -54,9 +54,8 @@ interface SidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, iconActive: HomeIconSolid },
   { name: 'Opportunities Hub', href: '/opportunities', icon: CurrencyDollarIcon, iconActive: CurrencyDollarIconSolid, badge: '🚀 UNIFIED' },
-  { name: 'Profile', href: '/profile', icon: UserCircleIcon, iconActive: UserCircleIconSolid },
+  { name: 'Profile & Control', href: '/profile', icon: UserCircleIcon, iconActive: UserCircleIconSolid, badge: '🎯 ALL-IN-ONE' },
   { name: 'Revenue Command', href: '/revenue', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 TRACK' },
-  { name: 'Command & Control', href: '/control-center', icon: BeakerIcon, iconActive: BeakerIconSolid, badge: '🎯 SYSTEM' },
   { name: 'Neural Orchestra', href: '/neural-orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'LIVE' },
   { name: 'Agent Hub', href: '/agent-hub', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
   { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },
@@ -65,7 +64,6 @@ const navigation = [
   // { name: 'Characters', href: '/character', icon: UserGroupIcon, iconActive: UserGroupIconSolid, badge: 'NEW' }, // Hidden - on backburner
   { name: 'Library', href: '/ebooks', icon: BookOpenIcon, iconActive: BookOpenIconSolid },
   { name: 'Voice Studio', href: '/voice', icon: MicrophoneIcon, iconActive: MicrophoneIconSolid },
-  { name: 'AI Config', href: '/ai-settings', icon: Cog6ToothIcon, iconActive: Cog6ToothIconSolid },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
@@ -164,42 +162,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Gaming Profile and Logout */}
+      {/* Gaming User info and Logout */}
       <div className="px-3 py-4 space-y-2" style={{ borderTop: '1px solid var(--gaming-border)' }}>
-        <NavLink
-          to="/profile"
-          className={({ isActive }) =>
-            clsx(
-              'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-              isActive
-                ? 'text-white'
-                : 'gaming-nav-item'
-            )
-          }
-          style={({ isActive }) => ({
-            background: isActive 
-              ? 'rgba(0, 255, 255, 0.1)' 
-              : 'transparent',
-            borderLeft: isActive 
-              ? '3px solid var(--gaming-neon-cyan)' 
-              : '3px solid transparent',
-            color: isActive 
-              ? 'var(--gaming-text-primary)' 
-              : 'var(--gaming-text-secondary)'
-          })}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive ? (
-                <UserCircleIconSolid className="h-5 w-5 flex-shrink-0" />
-              ) : (
-                <UserCircleIcon className="h-5 w-5 flex-shrink-0" />
-              )}
-              {!collapsed && <span className="flex-1">Profile</span>}
-            </>
-          )}
-        </NavLink>
-
         {/* Gaming User info and logout */}
         {!collapsed && (
           <div className="px-3 py-2 text-xs" style={{ color: 'var(--gaming-text-muted)' }}>
