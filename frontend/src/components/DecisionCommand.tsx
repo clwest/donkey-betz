@@ -18,6 +18,8 @@ import {
   Code,
   PenTool,
   Video,
+  Lock,
+  AlertTriangle,
   Gift,
   Zap,
   Award,
@@ -25,7 +27,8 @@ import {
   Clock,
   Star,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,13 +136,14 @@ const DecisionCommand: React.FC = () => {
             description: job.description?.substring(0, 200) + '...',
             company: job.company,
             url: job.url,
+            source: job.source || 'Unknown', // Add source field
             time_to_income: job.salary_max > 100000 ? '2-4 weeks' : job.salary_max > 60000 ? '1-3 weeks' : '1-2 weeks',
             potential_monthly: `$${Math.floor((job.salary_max || 60000) / 12)}`,
             difficulty: job.salary_max > 100000 ? 'advanced' : job.salary_max > 60000 ? 'intermediate' : 'beginner',
             success_probability: job.salary_max > 100000 ? 60 : job.salary_max > 60000 ? 70 : 85,
             required_skills: job.tags || [],
             resources_needed: ['Resume', 'Portfolio'],
-            salary_range: `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
+            salary_range: job.salary ? job.salary : `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
             score: (job.salary_max > 100000 ? 0.6 : job.salary_max > 60000 ? 0.7 : 0.85),
             is_real: true
           })) || [];
@@ -205,8 +209,43 @@ const DecisionCommand: React.FC = () => {
     }
   }, [lastMessage]);
 
+  const handleDeleteOpportunity = async (oppId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card selection
+
+    console.log('🗑️ Deleting opportunity:', oppId);
+
+    // Remove from local state immediately for UI responsiveness
+    setOpportunities(prevOpps => prevOpps.filter(opp => opp.id !== oppId));
+
+    // Clear selection if deleted item was selected
+    if (selectedOpportunity?.id === oppId) {
+      setSelectedOpportunity(null);
+    }
+
+    // Send delete message to backend via WebSocket
+    sendMessage(JSON.stringify({
+      action: 'delete_opportunity',
+      opportunity_id: oppId
+    }));
+
+    // Also try to delete via API if it's a real opportunity
+    try {
+      const response = await fetch(`/api/opportunities/${oppId}/`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        console.log('✅ Opportunity deleted from backend');
+      }
+    } catch (error) {
+      console.error('Error deleting opportunity from API:', error);
+    }
+  };
+
   const analyzeOpportunities = async () => {
     setLoading(true);
+    setHasRealData(false); // Reset to allow new data
+    setOpportunities([]); // Clear old opportunities
     console.log('🔍 analyzeOpportunities called - fetching from API...');
 
     // First try to fetch real opportunities from the API
@@ -230,13 +269,14 @@ const DecisionCommand: React.FC = () => {
             description: job.description?.substring(0, 200) + '...',
             company: job.company,
             url: job.url,
+            source: job.source || 'Unknown', // Add source field
             time_to_income: job.salary_max > 100000 ? '2-4 weeks' : job.salary_max > 60000 ? '1-3 weeks' : '1-2 weeks',
             potential_monthly: `$${Math.floor((job.salary_max || 60000) / 12)}`,
             difficulty: job.salary_max > 100000 ? 'advanced' : job.salary_max > 60000 ? 'intermediate' : 'beginner',
             success_probability: job.salary_max > 100000 ? 60 : job.salary_max > 60000 ? 70 : 85,
             required_skills: job.tags || [],
             resources_needed: ['Resume', 'Portfolio'],
-            salary_range: `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
+            salary_range: job.salary ? job.salary : `$${job.salary_min?.toLocaleString()}-$${job.salary_max?.toLocaleString()}`,
             score: (job.salary_max > 100000 ? 0.6 : job.salary_max > 60000 ? 0.7 : 0.85),
             is_real: true
           })) || [];
@@ -438,14 +478,15 @@ const DecisionCommand: React.FC = () => {
 
         {/* Middle Column - Opportunities */}
         <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI-Matched Opportunities</CardTitle>
-              <p className="text-sm text-gray-600">
-                Personalized income streams based on your profile
-              </p>
-            </CardHeader>
-            <CardContent>
+          {(activeMode === 'income' || activeMode === 'both') && (
+            <Card>
+              <CardHeader>
+                <CardTitle>AI-Matched Opportunities</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Personalized income streams based on your profile
+                </p>
+              </CardHeader>
+              <CardContent>
               <div className="space-y-3">
                 {opportunities.map((opp, index) => (
                   <motion.div
@@ -551,7 +592,15 @@ const DecisionCommand: React.FC = () => {
                             )}
                           </div>
 
-                          <div className="ml-4">
+                          <div className="ml-4 flex items-start gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500 hover:bg-red-50"
+                              onClick={(e) => handleDeleteOpportunity(opp.id, e)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                             <div className="relative w-16 h-16">
                               <svg className="w-16 h-16 transform -rotate-90">
                                 <circle
@@ -601,8 +650,9 @@ const DecisionCommand: React.FC = () => {
               )}
             </CardContent>
           </Card>
+          )}
 
-          {/* Success Path Timeline */}
+          {/* Success Path Timeline - show in all modes */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -669,17 +719,21 @@ const DecisionCommand: React.FC = () => {
         </div>
       </div>
 
-      {/* Investment Mode (when balance > 0) */}
-      {(activeMode === 'invest' || activeMode === 'both') && userProfile.current_balance > 0 && (
+      {/* Investment Mode */}
+      {(activeMode === 'invest' || activeMode === 'both') && (
         <Card>
           <CardHeader>
             <CardTitle>Investment Opportunities</CardTitle>
             <p className="text-sm text-gray-600">
-              Now that you have capital, let's make it grow
+              {userProfile.current_balance > 0
+                ? "Now that you have capital, let's make it grow"
+                : "Start learning about investing while you build your income"
+              }
             </p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {userProfile.current_balance > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="border-green-200">
                 <CardContent className="p-4">
                   <h3 className="font-semibold">Stocks & ETFs</h3>
@@ -714,6 +768,46 @@ const DecisionCommand: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
+            ) : (
+              <div className="space-y-4">
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <AlertTriangle className="w-4 h-4" />
+                  <AlertDescription>
+                    <strong>Build income first!</strong> Start earning with the opportunities above,
+                    then unlock investment features once you have capital to invest.
+                  </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-50">
+                  <Card className="border-gray-200">
+                    <CardContent className="p-4">
+                      <Lock className="w-5 h-5 mb-2 text-gray-400" />
+                      <h3 className="font-semibold text-gray-600">Stocks & ETFs</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Unlocks at $100+ balance
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-gray-200">
+                    <CardContent className="p-4">
+                      <Lock className="w-5 h-5 mb-2 text-gray-400" />
+                      <h3 className="font-semibold text-gray-600">Crypto DCA</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Unlocks at $50+ balance
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-gray-200">
+                    <CardContent className="p-4">
+                      <Lock className="w-5 h-5 mb-2 text-gray-400" />
+                      <h3 className="font-semibold text-gray-600">AI Trading</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Unlocks at $500+ balance
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

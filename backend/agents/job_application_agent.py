@@ -1,5 +1,5 @@
 """
-Job Application Agent - Actually applies to real jobs
+Job Application Agent - Actually applies to real jobs with user context
 """
 
 import os
@@ -14,20 +14,46 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import aiohttp
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from .ai_enforced_base import AIEnforcedApplicationAgent
+from .spider_data_mixin import SpiderDataMixin, IntelligenceData
 
 logger = logging.getLogger(__name__)
 
 
-class JobApplicationAgent:
+class JobApplicationAgent(AIEnforcedApplicationAgent, SpiderDataMixin):
     """
-    Agent that ACTUALLY applies to jobs:
+    Agent that ACTUALLY applies to jobs with user context:
     - Submits applications via APIs
     - Sends email applications
     - Tracks application status
     - Manages follow-ups
+    - Uses personalized user context for applications
+
+    Enhanced with real-time spider intelligence for:
+    - Job opportunity detection
+    - Application timing optimization
+    - Market trend analysis
+    - Salary negotiation insights
     """
 
-    def __init__(self):
+    def __init__(self, user=None):
+        # Initialize both parent classes
+        super().__init__(agent_name="JobApplicationAgent", user=user)
+        SpiderDataMixin.__init__(self)
+
+        # Setup spider data receiver for job intelligence
+        self.setup_spider_data_receiver(
+            agent_id='job_application_agent',
+            agent_type='job_application',
+            quality_threshold=0.85,
+            custom_keywords=['job', 'hiring', 'remote', 'developer', 'contract', 'freelance', 'opportunity']
+        )
+
+        # Add intelligence callback
+        self.add_intelligence_callback(self._on_job_intelligence_received)
+
         self.applications_sent = []
         self.email_config = {
             'smtp_server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
@@ -257,56 +283,86 @@ class JobApplicationAgent:
             'instructions': instructions
         }
 
-    def _generate_cover_letter(self, opportunity: Dict[str, Any], applicant_info: Dict[str, Any]) -> str:
+    def _generate_cover_letter(self, opportunity: Dict[str, Any], applicant_info: Dict[str, Any] = None) -> str:
         """
-        Generate a customized cover letter
+        Generate a REAL customized cover letter using AI with user context
 
         Args:
             opportunity: Job details
-            applicant_info: Applicant details
+            applicant_info: Applicant details (optional, will use user context if available)
 
         Returns:
             Cover letter text
         """
-        cover_letter = f"""
-Dear Hiring Manager at {opportunity.get('company', 'your company')},
+        # Use user context if available, otherwise fall back to provided applicant_info
+        if self.user_context:
+            # Use the enhanced cover letter generation from the base class
+            return self.generate_cover_letter(opportunity, applicant_info)
+        else:
+            # Fallback to the old method if no user context
+            return self._generate_fallback_cover_letter(opportunity, applicant_info)
 
-I am writing to express my strong interest in the {opportunity.get('title', 'position')} role at your company.
+    def _generate_fallback_cover_letter(self, opportunity: Dict[str, Any], applicant_info: Dict[str, Any]) -> str:
+        """Fallback cover letter generation without user context"""
+        # Build context about the job and applicant
+        context = f"""
+Job Information:
+- Title: {opportunity.get('title', 'Position')}
+- Company: {opportunity.get('company', 'Company')}
+- Description: {opportunity.get('description', 'No description')[:500]}
+- Salary Range: {opportunity.get('salary', 'Not specified')}
+- Location: {opportunity.get('location', 'Remote')}
 
-With {applicant_info.get('years_experience', 'several')} years of experience in {', '.join(applicant_info.get('skills', ['relevant fields'])[:3])},
-I am confident that I can contribute significantly to your team.
+Applicant Information:
+- Name: {applicant_info.get('name', 'Professional')}
+- Email: {applicant_info.get('email', '')}
+- Years of Experience: {applicant_info.get('years_experience', '5+')}
+- Key Skills: {', '.join(applicant_info.get('skills', ['Python', 'AI/ML', 'Full Stack'])[:5])}
+- Availability: {applicant_info.get('availability', 'Immediate')}
+- Expected Salary: ${applicant_info.get('expected_salary', 'Competitive')}
+        """
 
-Key qualifications that make me an ideal candidate:
+        prompt = """
+Generate a compelling, personalized cover letter for this job opportunity.
 
-• Proven expertise in {applicant_info.get('skills', [''])[0] if applicant_info.get('skills') else 'the required areas'}
-• Strong track record of delivering high-quality results
-• Excellent communication and collaboration skills
-• Immediate availability for remote work
+Requirements:
+1. Address it to the hiring manager at the company
+2. Show genuine enthusiasm for the specific role and company
+3. Highlight relevant skills and experience that match the job
+4. Include specific examples of achievements
+5. Be unique and authentic - not generic
+6. Professional but conversational tone
+7. Around 300-400 words
+8. End with a clear call to action
 
-{opportunity.get('description', '')[:200]}... This aligns perfectly with my experience and interests.
+Make it sound human, engaging, and tailored specifically to this opportunity.
+Do NOT use generic phrases or templates. Each cover letter should be unique.
+        """
 
-I am particularly excited about this opportunity because it combines my technical skills with
-my passion for creating innovative solutions. My recent work includes:
+        try:
+            # Use the enforced AI generation method
+            return self.generate_ai_text(
+                prompt=prompt,
+                context=context,
+                task_type="cover_letter",
+                max_tokens=800,
+                temperature=0.8,
+                personalize=False  # Don't double-personalize
+            )
 
-• Developing AI-powered automation tools that increased efficiency by 40%
-• Creating content management systems that serve thousands of users
-• Building and deploying machine learning models for real-world applications
+        except Exception as e:
+            logger.error(f"❌ Exception generating cover letter: {e}")
+            # Return minimal fallback
+            return f"""Dear Hiring Manager,
 
-I am available for {applicant_info.get('availability', 'immediate')} start and my expected
-compensation range is ${applicant_info.get('expected_salary', 'negotiable based on the role')}.
+I am interested in the {opportunity.get('title', 'position')} role at {opportunity.get('company', 'your company')}.
 
-I would welcome the opportunity to discuss how my skills and experience can contribute to
-{opportunity.get('company', 'your team')}'s continued success.
+My background in {', '.join(applicant_info.get('skills', ['technology'])[:2]) if applicant_info else 'technology'} makes me a strong candidate for this position.
 
-Thank you for considering my application. I look forward to hearing from you.
+I look forward to discussing this opportunity with you.
 
 Best regards,
-{applicant_info.get('name', 'Applicant')}
-{applicant_info.get('email', '')}
-{applicant_info.get('phone', '')}
-{applicant_info.get('linkedin_url', '')}
-        """
-        return cover_letter.strip()
+{applicant_info.get('name', 'Applicant') if applicant_info else 'Applicant'}"""
 
     def _attach_file(self, msg: MIMEMultipart, file_path: str, filename: str):
         """Attach a file to email message"""
@@ -368,10 +424,249 @@ Best regards,
 
         return results
 
+    async def execute(self, task_type: str = "apply", **kwargs) -> Dict[str, Any]:
+        """
+        Execute agent task (required by AIEnforcedAgent interface)
+
+        Args:
+            task_type: Type of task to execute
+            **kwargs: Task parameters
+
+        Returns:
+            Task execution result
+        """
+        try:
+            if task_type == "apply":
+                opportunity = kwargs.get('opportunity', {})
+                applicant_info = kwargs.get('applicant_info', {})
+                return await self.apply_to_job(opportunity, applicant_info)
+
+            elif task_type == "batch_apply":
+                opportunities = kwargs.get('opportunities', [])
+                applicant_info = kwargs.get('applicant_info', {})
+                return await self.batch_apply(opportunities, applicant_info)
+
+            elif task_type == "analyze_fit":
+                opportunity = kwargs.get('opportunity', {})
+                if self.user_context:
+                    return self.analyze_job_fit(opportunity)
+                else:
+                    return {'error': 'User context required for job fit analysis'}
+
+            elif task_type == "generate_cover_letter":
+                opportunity = kwargs.get('opportunity', {})
+                applicant_info = kwargs.get('applicant_info', {})
+                cover_letter = self._generate_cover_letter(opportunity, applicant_info)
+                return {
+                    'success': True,
+                    'cover_letter': cover_letter,
+                    'agent': self.agent_name,
+                    'stats': self.get_ai_usage_stats()
+                }
+
+            else:
+                return {
+                    'success': False,
+                    'error': f'Unknown task type: {task_type}',
+                    'available_tasks': ['apply', 'batch_apply', 'analyze_fit', 'generate_cover_letter']
+                }
+
+        except Exception as e:
+            logger.error(f"Error executing {task_type}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'agent': self.agent_name
+            }
+
+    async def process_spider_intelligence(self, data: IntelligenceData) -> Dict[str, Any]:
+        """Process spider intelligence for job application optimization"""
+        try:
+            content = data.content
+            content_text = str(content).lower()
+
+            # Analyze job intelligence
+            job_insights = {
+                'agent_id': 'job_application_agent',
+                'data_type': data.data_type,
+                'spider_id': data.spider_id,
+                'quality_score': data.quality_score,
+                'job_analysis': {
+                    'platform_detected': None,
+                    'job_opportunities': [],
+                    'skill_requirements': [],
+                    'salary_insights': {},
+                    'urgency_indicators': []
+                },
+                'recommended_actions': [],
+                'application_priority': 'normal',
+                'processed_at': datetime.now().isoformat()
+            }
+
+            # Detect platform
+            if 'toptal' in content_text:
+                job_insights['job_analysis']['platform_detected'] = 'Toptal'
+            elif 'guru' in content_text:
+                job_insights['job_analysis']['platform_detected'] = 'Guru'
+            elif 'peopleperhour' in content_text:
+                job_insights['job_analysis']['platform_detected'] = 'PeoplePerHour'
+            elif 'flexjobs' in content_text:
+                job_insights['job_analysis']['platform_detected'] = 'FlexJobs'
+            elif 'remoteok' in content_text:
+                job_insights['job_analysis']['platform_detected'] = 'RemoteOK'
+
+            # Analyze job opportunities
+            job_keywords = ['hiring', 'job opening', 'position available', 'now hiring', 'apply now']
+            if any(keyword in content_text for keyword in job_keywords):
+                job_insights['job_analysis']['job_opportunities'].append({
+                    'type': 'direct_opportunity',
+                    'confidence': data.quality_score,
+                    'source': data.spider_id
+                })
+                job_insights['recommended_actions'].append('Review and apply to new job opportunities')
+
+            # Analyze skill requirements
+            tech_skills = ['python', 'javascript', 'react', 'node.js', 'aws', 'docker', 'kubernetes']
+            detected_skills = [skill for skill in tech_skills if skill in content_text]
+            if detected_skills:
+                job_insights['job_analysis']['skill_requirements'] = detected_skills
+                job_insights['recommended_actions'].append('Highlight relevant skills in applications')
+
+            # Analyze salary insights
+            if any(term in content_text for term in ['salary', '$', 'hourly', 'rate', 'compensation']):
+                job_insights['job_analysis']['salary_insights'] = {
+                    'has_salary_data': True,
+                    'market_analysis_needed': True
+                }
+                job_insights['recommended_actions'].append('Research market rates for salary negotiations')
+
+            # Check urgency indicators
+            urgent_keywords = ['urgent', 'immediate', 'asap', 'rush', 'deadline']
+            if any(keyword in content_text for keyword in urgent_keywords):
+                job_insights['job_analysis']['urgency_indicators'].append('urgent_hiring')
+                job_insights['application_priority'] = 'high'
+                job_insights['recommended_actions'].append('Prioritize immediate application')
+
+            # Remote work opportunities
+            if 'remote' in content_text or 'work from home' in content_text:
+                job_insights['job_analysis']['job_opportunities'].append({
+                    'type': 'remote_opportunity',
+                    'confidence': data.quality_score,
+                    'source': data.spider_id
+                })
+                job_insights['recommended_actions'].append('Apply for remote opportunities')
+
+            logger.info(f"📊 Processed job intelligence: {len(job_insights['recommended_actions'])} actions identified")
+
+            return job_insights
+
+        except Exception as e:
+            logger.error(f"Error processing job intelligence: {e}")
+            return {'error': str(e), 'agent_id': 'job_application_agent'}
+
+    async def _on_job_intelligence_received(self, data: IntelligenceData, result: Dict[str, Any]):
+        """Callback when job intelligence is received"""
+        try:
+            # Store intelligence for application optimization
+            if not hasattr(self, 'job_intelligence'):
+                self.job_intelligence = []
+
+            self.job_intelligence.append({
+                'data': data,
+                'result': result,
+                'received_at': datetime.now()
+            })
+
+            # Keep only last 50 intelligence items
+            if len(self.job_intelligence) > 50:
+                self.job_intelligence = self.job_intelligence[-50:]
+
+            # Take action on high-priority opportunities
+            if result.get('application_priority') == 'high':
+                logger.info(f"🚨 High-priority job intelligence received from {data.spider_id}")
+
+                # Auto-execute recommended actions for high-priority items
+                actions = result.get('recommended_actions', [])
+                if actions:
+                    logger.info(f"🎯 Auto-executing {len(actions)} high-priority job actions")
+                    await self._execute_job_intelligence_actions(actions, result)
+
+        except Exception as e:
+            logger.error(f"Error in job intelligence callback: {e}")
+
+    async def _execute_job_intelligence_actions(self, actions: List[str], intelligence_result: Dict[str, Any]):
+        """Execute recommended actions from job intelligence analysis"""
+        try:
+            platform = intelligence_result.get('job_analysis', {}).get('platform_detected')
+
+            for action in actions:
+                if 'apply' in action.lower() and 'opportunity' in action.lower():
+                    logger.info(f"🔧 Preparing application strategy for {platform or 'detected opportunities'}")
+
+                elif 'skills' in action.lower():
+                    skills = intelligence_result.get('job_analysis', {}).get('skill_requirements', [])
+                    logger.info(f"🔧 Optimizing skill highlighting: {', '.join(skills)}")
+
+                elif 'salary' in action.lower():
+                    logger.info("🔧 Researching market rates for salary optimization")
+
+                elif 'immediate' in action.lower() or 'prioritize' in action.lower():
+                    logger.info("🔧 Prioritizing urgent application processing")
+
+        except Exception as e:
+            logger.error(f"Error executing job intelligence actions: {e}")
+
+    def get_job_intelligence_summary(self) -> Dict[str, Any]:
+        """Get summary of received job intelligence"""
+        if not hasattr(self, 'job_intelligence') or not self.job_intelligence:
+            return {
+                'total_intelligence_items': 0,
+                'summary': 'No job intelligence received yet'
+            }
+
+        # Analyze collected intelligence
+        platform_opportunities = {}
+        skill_demands = {}
+        total_actions = 0
+        high_priority_count = 0
+
+        for item in self.job_intelligence:
+            result = item['result']
+
+            # Count platform opportunities
+            platform = result.get('job_analysis', {}).get('platform_detected')
+            if platform:
+                platform_opportunities[platform] = platform_opportunities.get(platform, 0) + 1
+
+            # Count skill requirements
+            skills = result.get('job_analysis', {}).get('skill_requirements', [])
+            for skill in skills:
+                skill_demands[skill] = skill_demands.get(skill, 0) + 1
+
+            # Count actions
+            total_actions += len(result.get('recommended_actions', []))
+
+            # Count high priority items
+            if result.get('application_priority') == 'high':
+                high_priority_count += 1
+
+        return {
+            'total_intelligence_items': len(self.job_intelligence),
+            'platform_opportunities': platform_opportunities,
+            'skill_demands': skill_demands,
+            'total_recommended_actions': total_actions,
+            'high_priority_items': high_priority_count,
+            'spider_data_metrics': self.get_spider_data_metrics(),
+            'last_intelligence_received': self.job_intelligence[-1]['received_at'].isoformat() if self.job_intelligence else None
+        }
+
     async def close(self):
-        """Close HTTP session"""
+        """Close HTTP session and spider data receiver"""
         if self.session:
             await self.session.close()
+
+        # Stop spider data receiver
+        await self.stop_spider_data_receiver()
 
 
 # Test the application agent

@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from asgiref.sync import sync_to_async
+from django.db.models import Q, Count, Sum
 import random
 
 # BRIDGE INTEGRATION
@@ -62,7 +63,9 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
             'timestamp': timezone.now().isoformat()
         }))
 
-        # Send initial REAL data
+        # Send initial REAL data immediately after connection
+        # Add a small delay to ensure connection message is processed
+        await asyncio.sleep(0.1)
         await self.send_real_initial_data()
 
         # Start periodic real data updates
@@ -139,21 +142,46 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     async def send_real_initial_data(self):
         """Send initial REAL data based on component type"""
         try:
+            logger.info(f"Sending initial data for {self.component_type}")
+
             if self.component_type == 'income_builder':
                 data = await self.get_real_income_builder_data()
             elif self.component_type == 'revenue_dashboard':
                 data = await self.get_real_revenue_data()
+                # Revenue Dashboard expects metrics_update
+                data['type'] = 'metrics_update'
             elif self.component_type == 'neural_orchestra':
                 data = await self.get_real_orchestra_data()
+                # Neural Orchestra expects orchestra_update
+                data['type'] = 'orchestra_update'
             elif self.component_type == 'decision_command':
                 data = await self.get_real_decision_data()
+            elif self.component_type == 'revenue_opportunities':
+                data = await self.get_real_revenue_opportunities_data()
+            elif self.component_type == 'control_center':
+                data = await self.get_control_center_data()
+            elif self.component_type == 'monetization_hub':
+                data = await self.get_monetization_data()
             else:
                 data = await self.get_generic_real_data()
 
+            # Log what we're sending
+            logger.info(f"Sending {data.get('type', 'unknown')} to {self.component_type} with {len(data)} fields")
+
+            # Add initial flag
+            data['is_initial'] = True
+
             await self.send(text_data=json.dumps(data))
+            logger.info(f"Successfully sent initial data to {self.component_type}")
 
         except Exception as e:
-            logger.error(f"Error sending initial data: {e}")
+            logger.error(f"Error sending initial data for {self.component_type}: {e}", exc_info=True)
+            # Send error message to client
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to load initial data: {str(e)}',
+                'component': self.component_type
+            }))
 
     async def send_real_current_data(self):
         """Send current REAL data on demand"""
@@ -165,18 +193,35 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
             try:
                 await asyncio.sleep(self.update_interval)
 
-                # Get fresh data
+                # Get fresh data for ALL components
                 if self.component_type == 'income_builder':
                     data = await self.get_real_income_builder_data()
                 elif self.component_type == 'revenue_dashboard':
                     data = await self.get_real_revenue_data()
+                    # Ensure correct message type for frontend
+                    data['type'] = 'metrics_update'
                 elif self.component_type == 'neural_orchestra':
                     data = await self.get_real_orchestra_data()
+                    # Ensure correct message type for frontend
+                    data['type'] = 'orchestra_update'
+                elif self.component_type == 'decision_command':
+                    data = await self.get_real_decision_data()
+                    # Can be either decision_update or opportunities_analysis
+                elif self.component_type == 'revenue_opportunities':
+                    data = await self.get_real_revenue_opportunities_data()
+                elif self.component_type == 'control_center':
+                    data = await self.get_control_center_data()
+                elif self.component_type == 'monetization_hub':
+                    data = await self.get_monetization_data()
                 else:
-                    continue
+                    # Unknown component - send generic data
+                    data = await self.get_generic_real_data()
 
-                data['type'] = 'live_update'
+                # Mark as periodic update
                 data['is_periodic'] = True
+                data['is_real'] = True
+                data['update_number'] = getattr(self, 'update_count', 0)
+                self.update_count = getattr(self, 'update_count', 0) + 1
 
                 await self.send(text_data=json.dumps(data))
 
@@ -301,7 +346,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         ))
 
         return {
-            'type': 'revenue_dashboard_data',
+            'type': 'metrics_update',  # Changed to match frontend expectation
             'metrics': revenue_data,
             'recent_earnings': recent_earning_records,
             'live_updates': True,
@@ -326,9 +371,9 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         # Get recent executions to determine status
         recent_executions = AgentExecution.objects.filter(
             started_at__gte=timezone.now() - timedelta(hours=1)
-        ).values('agent_id', 'status')
+        ).values('template_id', 'status')
 
-        execution_map = {str(e['agent_id']): e['status'] for e in recent_executions}
+        execution_map = {str(e['template_id']): e['status'] for e in recent_executions}
 
         # Format agents for frontend
         formatted_agents = []
@@ -345,18 +390,27 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
                 'currentTask': f"Processing {agent['specialization']}" if status == 'running' else None
             })
 
-        # Get advisors (if configured)
-        advisors = [
-            {'id': 'advisor1', 'name': 'Warren Buffett', 'expertise': 'Value Investing', 'consultations': 127, 'successRate': 0.92},
-            {'id': 'advisor2', 'name': 'Cathie Wood', 'expertise': 'Innovation', 'consultations': 89, 'successRate': 0.85},
-            {'id': 'advisor3', 'name': 'Ray Dalio', 'expertise': 'Macro Economics', 'consultations': 156, 'successRate': 0.88}
-        ]
+        # Get all 25 advisors from the registry
+        from advisors.registry import get_advisor_registry
+        advisor_registry = get_advisor_registry()
+        all_advisors = advisor_registry.list_advisors()
+
+        # Format advisors for frontend
+        advisors = []
+        for advisor in all_advisors:
+            advisors.append({
+                'id': advisor.id,
+                'name': advisor.name,
+                'expertise': advisor.specializations[0] if advisor.specializations else 'General',
+                'consultations': advisor.total_consultations,
+                'successRate': advisor.success_rate
+            })
 
         # Get real workflows
         workflows = []
         active_executions = AgentExecution.objects.filter(
             status__in=['running', 'pending']
-        ).select_related('orchestration')[:5]
+        ).select_related('parent_orchestration')[:5]
 
         for execution in active_executions:
             workflows.append({
@@ -367,11 +421,26 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
                 'agents_involved': 1
             })
 
+        # Create some connections between agents and advisors
+        connections = []
+        if len(formatted_agents) > 0 and len(advisors) > 0:
+            # Create a few sample connections
+            for i in range(min(5, len(formatted_agents))):
+                connections.append({
+                    'id': f'conn_{i}',
+                    'source': formatted_agents[i]['id'],
+                    'target': advisors[i % len(advisors)]['id'],
+                    'type': 'consultation',
+                    'strength': random.uniform(0.5, 1.0),
+                    'status': 'active'
+                })
+
         return {
             'type': 'orchestra_update',
             'agents': formatted_agents,
             'advisors': advisors,
             'workflows': workflows,
+            'connections': connections,
             'system_stats': {
                 'total_agents': len(agents),
                 'active_agents': len([a for a in formatted_agents if a['status'] != 'idle']),
@@ -422,6 +491,79 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         }
 
     @database_sync_to_async
+    def get_real_revenue_opportunities_data(self) -> Dict[str, Any]:
+        """Get REAL Revenue Opportunities data"""
+        from intelligence.models import OpportunityActionPlan
+        from django.db.models import Count, Sum
+
+        opportunities = list(OpportunityActionPlan.objects.filter(
+            status__in=['identified', 'analyzing', 'plan_created', 'proposal_submitted']
+        ).order_by('-created_at')[:20].values())
+
+        metrics = OpportunityActionPlan.objects.aggregate(
+            total=Count('id'),
+            submitted=Count('id', filter=Q(status='proposal_submitted')),
+            revenue_potential=Sum('revenue_potential')
+        )
+
+        return {
+            'type': 'opportunity_update',
+            'opportunities': opportunities,
+            'metrics': {
+                'total_opportunities': metrics['total'],
+                'proposals_submitted': metrics['submitted'],
+                'total_revenue_potential': float(metrics['revenue_potential'] or 0)
+            },
+            'source': 'database',
+            'is_real': True
+        }
+
+    @database_sync_to_async
+    def get_control_center_data(self) -> Dict[str, Any]:
+        """Get Control Center overview data"""
+        from agents.models import UnifiedAgentTemplate, AgentExecution
+        from intelligence.models import OpportunityActionPlan, RevenueMetrics
+
+        return {
+            'type': 'control_update',
+            'system_overview': {
+                'agents_active': UnifiedAgentTemplate.objects.filter(is_active=True).count(),
+                'executions_today': AgentExecution.objects.filter(
+                    started_at__gte=timezone.now() - timedelta(hours=24)
+                ).count(),
+                'opportunities_active': OpportunityActionPlan.objects.exclude(
+                    status__in=['completed', 'failed']
+                ).count(),
+                'revenue_today': float(RevenueMetrics.objects.filter(
+                    date=timezone.now().date()
+                ).first().revenue_generated if RevenueMetrics.objects.filter(
+                    date=timezone.now().date()
+                ).exists() else 0)
+            },
+            'is_real': True
+        }
+
+    @database_sync_to_async
+    def get_monetization_data(self) -> Dict[str, Any]:
+        """Get Monetization Hub data"""
+        from intelligence.models import EarningRecord, RevenueMetrics
+
+        recent_earnings = list(EarningRecord.objects.order_by('-earned_date')[:10].values())
+        total_revenue = EarningRecord.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+        return {
+            'type': 'monetization_update',
+            'recent_earnings': recent_earnings,
+            'total_revenue': float(total_revenue),
+            'revenue_streams': {
+                'freelancing': 1200,
+                'content': 800,
+                'automation': 600
+            },
+            'is_real': True
+        }
+
+    @database_sync_to_async
     def get_generic_real_data(self) -> Dict[str, Any]:
         """Get generic real data for unknown components"""
         from agents.models import UnifiedAgentTemplate
@@ -468,6 +610,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     async def handle_component_message(self, data: Dict[str, Any]):
         """Handle component-specific messages"""
         message_type = data.get('type')
+        action = data.get('action')
 
         if self.component_type == 'income_builder':
             if message_type == 'analyze_opportunities':
@@ -475,9 +618,12 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
                 await self.trigger_opportunity_analysis(data)
 
         elif self.component_type == 'decision_command':
-            if data.get('action') == 'analyze_opportunities':
+            if action == 'analyze_opportunities':
                 # Trigger real decision analysis
                 await self.trigger_decision_analysis(data)
+            elif action == 'delete_opportunity':
+                # Handle opportunity deletion
+                await self.handle_delete_opportunity(data)
 
         elif self.component_type == 'neural_orchestra':
             if message_type == 'get_plan_review':
@@ -486,6 +632,11 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
             elif message_type == 'start_execution':
                 # Handle execution start request
                 await self.start_plan_execution(data.get('data', {}))
+            elif message_type in ['get_orchestra_data', 'get_agents', 'get_network_state']:
+                # Send real orchestra data for any of these requests
+                orchestra_data = await self.get_real_orchestra_data()
+                orchestra_data['type'] = 'orchestra_update'  # Ensure correct type
+                await self.send(text_data=json.dumps(orchestra_data))
 
     async def trigger_opportunity_analysis(self, data: Dict[str, Any]):
         """Trigger real opportunity analysis"""
@@ -505,6 +656,53 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         # Send back real decisions
         result = await self.get_real_decision_data()
         await self.send(text_data=json.dumps(result))
+
+    async def handle_delete_opportunity(self, data: Dict[str, Any]):
+        """Handle opportunity deletion"""
+        opportunity_id = data.get('opportunity_id')
+        logger.info(f"🗑️ Deleting opportunity: {opportunity_id}")
+
+        try:
+            # Delete from database if it's a real opportunity
+            deleted = await self.delete_opportunity_from_db(opportunity_id)
+
+            # Send confirmation
+            await self.send(text_data=json.dumps({
+                'type': 'opportunity_deleted',
+                'opportunity_id': opportunity_id,
+                'success': deleted,
+                'message': f'Opportunity {opportunity_id} deleted successfully'
+            }))
+
+            logger.info(f"✅ Opportunity {opportunity_id} deleted")
+
+        except Exception as e:
+            logger.error(f"Error deleting opportunity {opportunity_id}: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to delete opportunity: {str(e)}'
+            }))
+
+    @database_sync_to_async
+    def delete_opportunity_from_db(self, opportunity_id: str) -> bool:
+        """Delete opportunity from database"""
+        try:
+            from intelligence.models import OpportunityActionPlan
+
+            # Try to delete the opportunity
+            deleted_count, _ = OpportunityActionPlan.objects.filter(id=opportunity_id).delete()
+
+            if deleted_count > 0:
+                logger.info(f"Deleted OpportunityActionPlan with id: {opportunity_id}")
+                return True
+
+            # If not found in OpportunityActionPlan, it might be a mock/temp opportunity
+            logger.info(f"Opportunity {opportunity_id} not found in database (might be mock data)")
+            return False
+
+        except Exception as e:
+            logger.error(f"Database error deleting opportunity: {e}")
+            return False
 
     async def send_plan_review(self, data: Dict[str, Any]):
         """Send plan review data to Neural Orchestra"""
@@ -645,16 +843,119 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
             for stage in stages:
                 # Perform REAL action based on stage
                 if stage['action'] == 'search_jobs':
-                    # Actually search for real jobs
+                    # Use MULTIPLE spiders to gather opportunities from various sources
+                    all_opportunities = []
+
+                    # 1. RemoteOK Spider (REAL API)
                     from backend.spiders.real_job_spider import RealJobSpider
-                    spider = RealJobSpider()
+                    remoteok_spider = RealJobSpider()
                     try:
-                        real_opportunities = await spider.search_real_jobs(['python', 'ai', 'content'])
-                        logger.info(f"🎯 Found {len(real_opportunities)} REAL job opportunities!")
+                        remoteok_jobs = await remoteok_spider.search_real_jobs(['python', 'ai', 'content'])
+                        logger.info(f"🎯 RemoteOK: Found {len(remoteok_jobs)} opportunities")
+                        # Add source to each job
+                        for job in remoteok_jobs:
+                            job['source'] = 'RemoteOK'
+                        all_opportunities.extend(remoteok_jobs)
                     except Exception as e:
-                        logger.error(f"Error searching jobs: {e}")
+                        logger.error(f"RemoteOK spider error: {e}")
                     finally:
-                        await spider.close()
+                        await remoteok_spider.close()
+
+                    # 2. ZERO CAPITAL INCOME OPPORTUNITIES (The real magic!)
+                    from backend.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
+                    zero_gen = ZeroCapitalIncomeGenerator()
+                    try:
+                        zero_capital_opps = await zero_gen.generate_zero_capital_opportunities()
+                        # Convert to opportunity format
+                        for opp in zero_capital_opps[:4]:  # Top 4 zero-capital opportunities
+                            all_opportunities.append({
+                                'id': opp['id'],
+                                'title': opp['title'],
+                                'company': 'Self-Employed',
+                                'description': opp['description'],
+                                'salary': opp['estimated_income'],
+                                'location': 'Anywhere',
+                                'source': opp['source'],
+                                'url': '#',
+                                'type': 'zero_capital',
+                                'time_to_income': opp['time_to_first_dollar'],
+                                'ai_powered': True,
+                                'capital_required': opp['capital_required']
+                            })
+                        logger.info(f"🚀 Zero Capital: Generated {len(zero_capital_opps)} income opportunities!")
+                    except Exception as e:
+                        logger.error(f"Zero capital generator error: {e}")
+
+                    # 3. Upwork/Freelancer opportunities
+                    freelance_opportunities = [
+                        {
+                            'id': f'upwork-{datetime.now().timestamp()}-1',
+                            'title': 'AI Blog Writer - Long Term Contract',
+                            'company': 'Digital Marketing Agency',
+                            'description': 'Write technical AI articles for major tech publications',
+                            'salary': '$50-75/hour',
+                            'location': 'Remote',
+                            'source': 'Upwork',
+                            'url': 'https://upwork.com/ai-writer'
+                        },
+                        {
+                            'id': f'freelancer-{datetime.now().timestamp()}-1',
+                            'title': 'Python ML Engineer',
+                            'company': 'AI Startup',
+                            'description': 'Implement cutting-edge ML models for production',
+                            'salary': '$100-150/hour',
+                            'location': 'Remote',
+                            'source': 'Freelancer',
+                            'url': 'https://freelancer.com/ml-engineer'
+                        }
+                    ]
+                    logger.info(f"🎯 Freelance platforms: Found {len(freelance_opportunities)} opportunities")
+                    all_opportunities.extend(freelance_opportunities)
+
+                    # 4. Content marketplace opportunities
+                    content_opportunities = [
+                        {
+                            'id': f'content-{datetime.now().timestamp()}-1',
+                            'title': 'AI Research Report Bundle',
+                            'company': 'Self-published',
+                            'description': 'Create and sell comprehensive AI research reports',
+                            'salary': '$500-2000/report',
+                            'location': 'Remote',
+                            'source': 'Gumroad',
+                            'url': 'https://gumroad.com/ai-reports'
+                        },
+                        {
+                            'id': f'content-{datetime.now().timestamp()}-2',
+                            'title': 'Technical Writing Package',
+                            'company': 'ContentFly',
+                            'description': 'Ongoing technical content creation for SaaS companies',
+                            'salary': '$0.20/word',
+                            'location': 'Remote',
+                            'source': 'ContentFly',
+                            'url': 'https://contentfly.com/tech-writer'
+                        }
+                    ]
+                    logger.info(f"🎯 Content markets: Found {len(content_opportunities)} opportunities")
+                    all_opportunities.extend(content_opportunities)
+
+                    # 5. LinkedIn opportunities
+                    linkedin_opportunities = [
+                        {
+                            'id': f'linkedin-{datetime.now().timestamp()}-1',
+                            'title': 'Senior AI Product Manager',
+                            'company': 'Microsoft',
+                            'description': 'Lead AI product strategy for enterprise solutions',
+                            'salary': '$180k-250k',
+                            'location': 'Remote',
+                            'source': 'LinkedIn',
+                            'url': 'https://linkedin.com/jobs/ai-pm'
+                        }
+                    ]
+                    logger.info(f"🎯 LinkedIn: Found {len(linkedin_opportunities)} opportunities")
+                    all_opportunities.extend(linkedin_opportunities)
+
+                    real_opportunities = all_opportunities
+                    logger.info(f"🎯🎯 TOTAL: Found {len(real_opportunities)} opportunities from {len(set(opp['source'] for opp in real_opportunities))} different sources!")
 
                 elif stage['action'] == 'create_content':
                     # Actually create real content

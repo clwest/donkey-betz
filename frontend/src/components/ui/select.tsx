@@ -2,20 +2,16 @@ import { forwardRef } from 'react';
 import type { SelectHTMLAttributes } from 'react';
 import clsx from 'clsx';
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+// Simple native HTML select wrapper
+// For shadcn/ui Select components, use select-proper.tsx instead
+
+interface NativeSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
-  value?: string;
-  onValueChange?: (value: string) => void;
 }
 
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, className, children, value, onValueChange, onChange, ...props }, ref) => {
-    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      onChange?.(e);
-      onValueChange?.(e.target.value);
-    };
-
+export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
+  ({ label, error, className, children, ...props }, ref) => {
     return (
       <div className="space-y-2">
         {label && (
@@ -33,8 +29,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             error && 'border-red-500 focus:ring-red-500 focus:border-red-500',
             className
           )}
-          value={value}
-          onChange={handleChange}
           {...props}
         >
           {children}
@@ -47,41 +41,32 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   }
 );
 
-Select.displayName = 'Select';
+NativeSelect.displayName = 'NativeSelect';
 
-// Additional components that might be used
-export const SelectContent = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={clsx('absolute z-50 min-w-32 bg-dark-800 border border-dark-700 rounded-md shadow-lg', className)}>
-    {children}
-  </div>
-);
-
-export const SelectItem = ({ children, value, className }: { children: React.ReactNode; value: string; className?: string }) => (
-  <option value={value} className={clsx('px-2 py-1 text-gray-100', className)}>
+// Simple option wrapper for native select
+export const NativeOption = ({
+  children,
+  value,
+  className
+}: {
+  children: React.ReactNode;
+  value: string | number;
+  className?: string
+}) => (
+  <option value={value} className={className}>
     {children}
   </option>
 );
 
-export const SelectTrigger = forwardRef<HTMLButtonElement, { children: React.ReactNode; className?: string }>(
-  ({ children, className, ...props }, ref) => (
-    <button
-      ref={ref}
-      className={clsx(
-        'flex w-full items-center justify-between rounded-md border border-dark-700 bg-dark-800 px-3 py-2 text-sm text-gray-100',
-        'focus:outline-none focus:ring-2 focus:ring-primary-500',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  )
-);
-
-SelectTrigger.displayName = 'SelectTrigger';
-
-export const SelectValue = ({ placeholder, className }: { placeholder?: string; className?: string }) => (
-  <span className={clsx('text-gray-400', className)}>
-    {placeholder}
-  </span>
-);
+// Export the proper shadcn Select components from select-proper.tsx
+// This prevents accidental mixing of native and shadcn components
+export {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator
+} from './select-proper';

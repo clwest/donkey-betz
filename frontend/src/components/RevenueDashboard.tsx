@@ -54,6 +54,15 @@ const RevenueDashboard: React.FC = () => {
         setMetrics(data.metrics);
         generateDailyMetrics(timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90, data.metrics);
         setLoading(false);
+      } else if (data.type === 'revenue_data_update' || data.type === 'initial_revenue_data') {
+        // Handle revenue data updates from backend
+        if (data.data) {
+          // Extract metrics from the nested structure
+          const metricsData = data.data.metrics || data.data;
+          setMetrics(metricsData);
+          generateDailyMetrics(timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90, metricsData);
+          setLoading(false);
+        }
       } else if (data.type === 'connection_status') {
         console.log('Production WebSocket status:', data.status);
         if (data.status === 'connected' || data.status === 'reconnected') {
@@ -156,7 +165,7 @@ const RevenueDashboard: React.FC = () => {
   // Generate sample daily metrics for chart
   const generateDailyMetrics = (days: number, metrics: any) => {
     const daily: DailyMetric[] = [];
-    const avgDaily = metrics.total_revenue / days;
+    const avgDaily = (metrics?.total_revenue || 0) / days;
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
@@ -169,8 +178,8 @@ const RevenueDashboard: React.FC = () => {
       daily.push({
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         revenue: Math.max(0, revenue),
-        proposals: Math.floor(metrics.proposals_submitted / days * (1 + variation)),
-        conversions: Math.floor(metrics.conversions / days * (1 + Math.random()))
+        proposals: Math.floor((metrics?.proposals_submitted || 0) / days * (1 + variation)),
+        conversions: Math.floor((metrics?.conversions || 0) / days * (1 + Math.random()))
       });
     }
 
@@ -199,7 +208,7 @@ const RevenueDashboard: React.FC = () => {
 
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-    return Object.entries(metrics.platform_breakdown).map(([name, stats]: [string, any], index) => ({
+    return Object.entries(metrics?.platform_breakdown || {}).map(([name, stats]: [string, any], index) => ({
       name: name.charAt(0).toUpperCase() + name.slice(1),
       revenue: stats.revenue,
       opportunities: stats.count,
@@ -282,7 +291,7 @@ const RevenueDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${metrics.total_revenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${(metrics?.total_revenue || 0).toFixed(2)}</div>
             <div className="flex items-center text-xs text-green-600">
               <TrendingUp className="h-3 w-3 mr-1" />
               {wsConnected ? 'Live Updates' : '+23.5% from last period'}
@@ -296,8 +305,8 @@ const RevenueDashboard: React.FC = () => {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.conversion_rate.toFixed(1)}%</div>
-            <Progress value={metrics.conversion_rate} className="mt-2" />
+            <div className="text-2xl font-bold">{(metrics?.conversion_rate || 0).toFixed(1)}%</div>
+            <Progress value={metrics?.conversion_rate || 0} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -307,9 +316,9 @@ const RevenueDashboard: React.FC = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.proposals_submitted}</div>
+            <div className="text-2xl font-bold">{metrics?.proposals_submitted || 0}</div>
             <div className="text-xs text-muted-foreground">
-              {metrics.responses_received} responses received
+              {metrics?.responses_received || 0} responses received
             </div>
           </CardContent>
         </Card>
@@ -320,7 +329,7 @@ const RevenueDashboard: React.FC = () => {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${metrics.average_deal_size.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${(metrics?.average_deal_size || 0).toFixed(2)}</div>
             <div className="flex items-center text-xs text-green-600">
               <TrendingUp className="h-3 w-3 mr-1" />
               {wsConnected ? 'Real-time' : '+12.3% from last period'}
@@ -408,7 +417,7 @@ const RevenueDashboard: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Opportunities Identified</span>
-                  <Badge>{metrics.total_opportunities}</Badge>
+                  <Badge>{metrics?.total_opportunities || 0}</Badge>
                 </div>
                 <Progress value={100} className="h-8" />
               </div>
@@ -416,11 +425,11 @@ const RevenueDashboard: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Proposals Submitted</span>
-                  <Badge>{metrics.proposals_submitted}</Badge>
+                  <Badge>{metrics?.proposals_submitted || 0}</Badge>
                 </div>
                 <Progress
-                  value={metrics.total_opportunities > 0
-                    ? (metrics.proposals_submitted / metrics.total_opportunities) * 100
+                  value={(metrics?.total_opportunities || 0) > 0
+                    ? ((metrics?.proposals_submitted || 0) / (metrics?.total_opportunities || 1)) * 100
                     : 0}
                   className="h-8"
                 />
@@ -429,11 +438,11 @@ const RevenueDashboard: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Responses Received</span>
-                  <Badge>{metrics.responses_received}</Badge>
+                  <Badge>{metrics?.responses_received || 0}</Badge>
                 </div>
                 <Progress
-                  value={metrics.total_opportunities > 0
-                    ? (metrics.responses_received / metrics.total_opportunities) * 100
+                  value={(metrics?.total_opportunities || 0) > 0
+                    ? ((metrics?.responses_received || 0) / (metrics?.total_opportunities || 1)) * 100
                     : 0}
                   className="h-8"
                 />
@@ -442,11 +451,11 @@ const RevenueDashboard: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Conversions</span>
-                  <Badge variant="default">{metrics.conversions}</Badge>
+                  <Badge variant="default">{metrics?.conversions || 0}</Badge>
                 </div>
                 <Progress
-                  value={metrics.total_opportunities > 0
-                    ? (metrics.conversions / metrics.total_opportunities) * 100
+                  value={(metrics?.total_opportunities || 0) > 0
+                    ? ((metrics?.conversions || 0) / (metrics?.total_opportunities || 1)) * 100
                     : 0}
                   className="h-8 bg-green-100"
                 />
@@ -463,7 +472,7 @@ const RevenueDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Response Rate</p>
-                <p className="text-2xl font-bold">{metrics.response_rate.toFixed(1)}%</p>
+                <p className="text-2xl font-bold">{(metrics?.response_rate || 0).toFixed(1)}%</p>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -475,7 +484,7 @@ const RevenueDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Avg Response Time</p>
-                <p className="text-2xl font-bold">2.3h</p>
+                <p className="text-2xl font-bold">{metrics?.avg_response_time || '0h'}</p>
               </div>
               <Clock className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -487,7 +496,7 @@ const RevenueDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Success Score</p>
-                <p className="text-2xl font-bold">75.5%</p>
+                <p className="text-2xl font-bold">{(metrics?.success_score || 0).toFixed(1)}%</p>
               </div>
               <Zap className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -499,7 +508,7 @@ const RevenueDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Platforms</p>
-                <p className="text-2xl font-bold">{Object.keys(metrics.platform_breakdown || {}).length}</p>
+                <p className="text-2xl font-bold">{Object.keys(metrics?.platform_breakdown || {}).length}</p>
               </div>
               <Activity className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -518,21 +527,21 @@ const RevenueDashboard: React.FC = () => {
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Next 7 Days</p>
               <p className="text-2xl font-bold text-green-600">
-                ${((metrics.total_revenue / 30) * 7).toFixed(2)}
+                ${(((metrics?.total_revenue || 0) / 30) * 7).toFixed(2)}
               </p>
               <Progress value={75} className="h-2" />
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Next 30 Days</p>
               <p className="text-2xl font-bold text-blue-600">
-                ${metrics.total_revenue.toFixed(2)}
+                ${(metrics?.total_revenue || 0).toFixed(2)}
               </p>
               <Progress value={60} className="h-2" />
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Next 90 Days</p>
               <p className="text-2xl font-bold text-purple-600">
-                ${(metrics.total_revenue * 3).toFixed(2)}
+                ${((metrics?.total_revenue || 0) * 3).toFixed(2)}
               </p>
               <Progress value={45} className="h-2" />
             </div>

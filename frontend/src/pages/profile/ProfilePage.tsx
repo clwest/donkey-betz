@@ -27,6 +27,8 @@ interface ProfileUpdateData {
 }
 import { useAuthStore } from '../../store/authStore';
 import { toast } from 'sonner';
+import { ProfessionalProfile } from '../../components/profile/ProfessionalProfile';
+import EnhancedProfile from '../../components/EnhancedProfile';
 
 export const ProfilePage: React.FC = () => {
   const { user, setToken } = useAuthStore();
@@ -34,7 +36,7 @@ export const ProfilePage: React.FC = () => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'settings' | 'stats'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'professional' | 'enhanced' | 'settings' | 'stats'>('profile');
   const [formData, setFormData] = useState<ProfileUpdateData>({});
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
@@ -182,7 +184,7 @@ export const ProfilePage: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="flex space-x-1 mb-8 bg-gray-800/50 p-1 rounded-lg w-fit">
-        {['profile', 'settings', 'stats'].map((tab) => (
+        {['profile', 'professional', 'enhanced', 'settings', 'stats'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -192,7 +194,7 @@ export const ProfilePage: React.FC = () => {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            {tab}
+            {tab === 'enhanced' ? 'AI Profile' : tab}
           </button>
         ))}
       </div>
@@ -382,6 +384,16 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Professional Tab */}
+      {activeTab === 'professional' && (
+        <ProfessionalProfile />
+      )}
+
+      {/* Enhanced Profile Tab */}
+      {activeTab === 'enhanced' && (
+        <EnhancedProfile />
       )}
 
       {/* Settings Tab */}

@@ -118,7 +118,7 @@ def validate_response_for_hallucinations(response_text, available_data):
 
     # Check for specific numbers that don't match reality
     if available_data:
-        total_embeddings = available_data.get('total_embeddings', 16929)
+        total_embeddings = available_data.get('total_embeddings', 0)
         if str(total_embeddings) not in response_text and "embedding" in response_text.lower():
             # Assistant might be making up numbers
             import re
