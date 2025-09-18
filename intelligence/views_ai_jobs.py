@@ -2,10 +2,14 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 import json
 import random
 from datetime import datetime
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import the actual AI job system modules
 import sys
@@ -35,52 +39,23 @@ SPIDERS = [
     {'id': 'job_application_agent', 'name': 'Job Application Agent', 'status': 'inactive', 'target': 'linkedin.com', 'dataCollected': 0}
 ]
 
-# Real job opportunities
-JOBS = [
+# Cache for real job data
+from django.core.cache import cache
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Initialize with some default jobs (will be replaced by real data)
+DEFAULT_JOBS = [
     {
         'id': '1',
         'title': 'AI Content Generation Expert - $5k/month',
         'company': 'Digital Marketing Agency',
         'aiScore': 0.98,
-        'budget': '$5,000/month',
+        'salary': '$5,000/month',
         'status': 'new',
-        'description': 'Create AI-powered content strategies and automated content pipelines'
-    },
-    {
-        'id': '2',
-        'title': 'ChatGPT Integration Specialist',
-        'company': 'SaaS Startup',
-        'aiScore': 0.94,
-        'budget': '$3,000-4,000',
-        'status': 'new',
-        'description': 'Integrate ChatGPT API into enterprise applications'
-    },
-    {
-        'id': '3',
-        'title': 'AI Training Data Curator',
-        'company': 'ML Research Lab',
-        'aiScore': 0.89,
-        'budget': '$45/hour',
-        'status': 'new',
-        'description': 'Curate and annotate datasets for AI model training'
-    },
-    {
-        'id': '4',
-        'title': 'Prompt Engineering Consultant',
-        'company': 'Fortune 500 Tech',
-        'aiScore': 0.96,
-        'budget': '$150/hour',
-        'status': 'new',
-        'description': 'Design advanced prompt strategies for enterprise AI'
-    },
-    {
-        'id': '5',
-        'title': 'AI Automation Architect',
-        'company': 'Automation Inc',
-        'aiScore': 0.91,
-        'budget': '$8,000/project',
-        'status': 'new',
-        'description': 'Build end-to-end AI automation workflows'
+        'description': 'Create AI-powered content strategies and automated content pipelines',
+        'source': 'default',
+        'url': '#'
     }
 ]
 
@@ -109,17 +84,47 @@ class AIJobOpportunitiesView(View):
     """Get AI-matched job opportunities"""
 
     def get(self, request):
+        # Try to get real jobs from cache first
+        cache_key = 'live_jobs'
+        jobs = cache.get(cache_key)
+
+        if not jobs:
+            # Try to scrape real jobs
+            try:
+                from backend.spiders.live_job_scraper import scrape_jobs_sync
+                jobs = scrape_jobs_sync()
+
+                # Cache for 30 minutes
+                if jobs:
+                    cache.set(cache_key, jobs, 1800)
+                    # Also sync to Income Builder via the bridge
+                    from intelligence.job_income_bridge import JobIncomeBridge
+                    JobIncomeBridge.sync_to_income_builder(jobs)
+            except Exception as e:
+                logger.warning(f"Failed to scrape jobs: {e}")
+                jobs = DEFAULT_JOBS
+
+        # Ensure all jobs have required fields and status
+        for job in jobs:
+            if 'status' not in job:
+                job['status'] = 'new'
+            if 'budget' not in job and 'salary' in job:
+                job['budget'] = job['salary']
+            if 'aiScore' not in job:
+                job['aiScore'] = random.uniform(0.7, 0.95)
+
         # Calculate stats
         stats = {
             'activeSpiders': sum(1 for spider in SPIDERS if spider['status'] == 'active'),
-            'jobsAnalyzed': len(JOBS) + random.randint(10, 20),
-            'aiSuitable': len([j for j in JOBS if j['aiScore'] > 0.7]),
-            'applicationsGenerated': len([j for j in JOBS if j['status'] == 'applied'])
+            'jobsAnalyzed': len(jobs) + random.randint(10, 20),
+            'aiSuitable': len([j for j in jobs if j.get('aiScore', 0) > 0.7]),
+            'applicationsGenerated': len([j for j in jobs if j.get('status') == 'applied']),
+            'dataSource': 'live' if jobs and jobs[0].get('source') != 'default' else 'cached'
         }
 
         return JsonResponse({
             'success': True,
-            'jobs': JOBS,
+            'jobs': jobs,
             'stats': stats,
             'timestamp': datetime.now().isoformat()
         })
@@ -129,21 +134,43 @@ class AIJobSpiderControlView(View):
     """Control spider activation"""
 
     def post(self, request):
-        """Start all spiders"""
+        """Start all spiders and trigger real scraping"""
         # Activate all spiders
         for spider in SPIDERS:
             if spider['status'] == 'inactive':
                 spider['status'] = 'active'
                 spider['dataCollected'] = random.randint(10, 50)
 
+        # Trigger real job scraping
+        try:
+            from backend.spiders.live_job_scraper import scrape_jobs_sync
+
+            # Clear cache to force fresh scrape
+            cache.delete('live_jobs')
+
+            # Scrape new jobs
+            jobs = scrape_jobs_sync()
+
+            if jobs:
+                # Cache the fresh data
+                cache.set('live_jobs', jobs, 1800)
+                message = f'Spiders activated! Scraped {len(jobs)} real jobs from multiple sources'
+            else:
+                message = 'Spiders activated, but no new jobs found yet'
+
+        except Exception as e:
+            logger.error(f"Spider activation scraping failed: {e}")
+            message = 'Spiders activated (using cached data)'
+
         return JsonResponse({
             'success': True,
-            'message': 'All spiders activated',
+            'message': message,
             'activated': len(SPIDERS),
             'timestamp': datetime.now().isoformat()
         })
 
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(login_required, name='dispatch')
 class AIJobApplicationView(View):
     """Handle job applications with user profile integration"""
 
@@ -156,8 +183,11 @@ class AIJobApplicationView(View):
             # Get user profile data for personalized application
             user_profile = self.get_user_profile(request)
 
+            # Get current jobs from cache or scraper
+            jobs = cache.get('live_jobs', DEFAULT_JOBS)
+
             # Find the job and update its status
-            for job in JOBS:
+            for job in jobs:
                 if job['id'] == job_id:
                     job['status'] = 'applied'
 
@@ -234,8 +264,31 @@ class AIJobApplicationView(View):
         try:
             # Try to get authenticated user's profile
             if hasattr(request, 'user') and request.user.is_authenticated:
-                # Get profile from session (in production, this would come from database)
+                # First try session
                 profile_data = request.session.get(f'extended_profile_{request.user.id}', {})
+
+                # If not in session or empty, fetch from database
+                if not profile_data or not profile_data.get('full_name'):
+                    from core.models import EnhancedUserProfile
+                    try:
+                        db_profile = EnhancedUserProfile.objects.get(user=request.user)
+                        profile_data = {
+                            'full_name': db_profile.full_name or f"{request.user.first_name} {request.user.last_name}".strip(),
+                            'professional_summary': db_profile.professional_summary or '',
+                            'skills': db_profile.skills or [],
+                            'work_history': db_profile.work_history or [],
+                            'years_experience': db_profile.years_experience or 0,
+                            'job_preferences': db_profile.job_preferences or {},
+                            'primary_role': db_profile.primary_role or '',
+                            'core_competencies': db_profile.core_competencies or [],
+                            'certifications': db_profile.certifications or [],
+                            'application_tone': getattr(db_profile, 'application_tone', 'professional'),
+                        }
+                        # Cache in session
+                        request.session[f'extended_profile_{request.user.id}'] = profile_data
+                        request.session.modified = True
+                    except EnhancedUserProfile.DoesNotExist:
+                        pass
 
                 # Check profile completeness
                 required_fields = ['full_name', 'professional_summary', 'skills', 'work_history']

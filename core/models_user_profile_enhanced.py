@@ -163,7 +163,155 @@ class EnhancedUserProfile(models.Model):
         help_text="Professional certifications with expiry dates"
     )
 
-    # ========== 5. PRIVACY & UPDATE SETTINGS ==========
+    # ========== 5. INTERVIEW-BASED PROFILE DATA ==========
+    interview_completed = models.BooleanField(
+        default=False,
+        help_text="Whether the personal assistant interview has been completed"
+    )
+
+    interview_completion_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the interview was completed"
+    )
+
+    interview_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('quick', 'Quick Start - 2 minutes'),
+            ('full', 'Full Interview - 10 minutes')
+        ],
+        null=True,
+        blank=True
+    )
+
+    current_situation = models.CharField(
+        max_length=100,
+        choices=[
+            ('employed_seeking_more', 'Employed - looking for more income'),
+            ('unemployed_need_asap', 'Unemployed - need income ASAP'),
+            ('student_part_time', 'Student - want part-time work'),
+            ('entrepreneur_scaling', 'Entrepreneur - scaling my business'),
+            ('retired_exploring', 'Retired - exploring opportunities'),
+            ('other', 'Other')
+        ],
+        null=True,
+        blank=True,
+        help_text="Current life/work situation"
+    )
+
+    available_hours_per_week = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(168)],
+        help_text="Hours available per week for income activities"
+    )
+
+    monthly_income_goal = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Target monthly income from new opportunities"
+    )
+
+    strongest_skill = models.TextField(
+        blank=True,
+        help_text="User's description of their strongest skill"
+    )
+
+    skill_example = models.TextField(
+        blank=True,
+        help_text="Specific example of how they've used their strongest skill"
+    )
+
+    professional_background = models.TextField(
+        blank=True,
+        help_text="Professional background and work experience"
+    )
+
+    career_motivation = models.TextField(
+        blank=True,
+        help_text="What motivates career changes or professional drive"
+    )
+
+    professional_achievements = models.TextField(
+        blank=True,
+        help_text="Biggest professional achievement or recent project"
+    )
+
+    recent_learning = models.TextField(
+        blank=True,
+        help_text="Recent courses, certifications, or self-directed learning"
+    )
+
+    work_type_preferences = models.JSONField(
+        default=list,
+        help_text="Preferred work types (project-based, ongoing clients, etc.)"
+    )
+
+    things_to_avoid = models.TextField(
+        blank=True,
+        help_text="Work types or situations they absolutely want to avoid"
+    )
+
+    other_work_preferences = models.TextField(
+        blank=True,
+        help_text="Additional work preferences (remote only, industries, schedule)"
+    )
+
+    hidden_talents = models.JSONField(
+        default=list,
+        help_text="Hobbies, natural strengths, and passion areas that could be monetized"
+    )
+
+    available_assets = models.JSONField(
+        default=list,
+        help_text="Professional assets available (portfolio, LinkedIn, resume, etc.)"
+    )
+
+    commitment_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('very_serious', 'Very serious - Will work on this daily'),
+            ('serious', 'Serious - Will dedicate real time'),
+            ('exploring', 'Exploring - Want to see what\'s possible'),
+            ('just_browsing', 'Just browsing')
+        ],
+        null=True,
+        blank=True,
+        help_text="Level of commitment to income generation"
+    )
+
+    auto_apply_preference = models.CharField(
+        max_length=50,
+        choices=[
+            ('auto_yes', 'Yes - Apply automatically to good matches'),
+            ('ask_first', 'Yes - But ask me first'),
+            ('no_auto', 'No - Just show me opportunities')
+        ],
+        null=True,
+        blank=True,
+        help_text="Preference for automated job applications"
+    )
+
+    interview_insights = models.JSONField(
+        default=list,
+        help_text="AI-generated insights from interview responses"
+    )
+
+    profile_strength_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Overall profile strength score based on completeness and quality"
+    )
+
+    personalized_recommendations = models.JSONField(
+        default=list,
+        help_text="Personalized recommendations generated from interview"
+    )
+
+    # ========== 6. PRIVACY & UPDATE SETTINGS ==========
     privacy_level = models.CharField(
         max_length=20,
         choices=[
@@ -240,7 +388,8 @@ class EnhancedUserProfile(models.Model):
         verbose_name_plural = "Enhanced User Profiles"
 
     def calculate_completeness(self) -> float:
-        """Calculate profile completeness percentage."""
+        """Calculate profile completeness percentage including interview data."""
+        # Core required fields
         required_fields = [
             'primary_role', 'long_term_goals', 'communication_style',
             'work_schedule', 'core_competencies', 'learning_style'
@@ -252,6 +401,7 @@ class EnhancedUserProfile(models.Model):
             if value and (not isinstance(value, (list, dict)) or len(value) > 0):
                 completed += 1
 
+        # Optional profile fields
         optional_fields = [
             'secondary_roles', 'current_projects', 'quarterly_objectives',
             'dietary_preferences', 'travel_preferences', 'certifications'
@@ -262,7 +412,22 @@ class EnhancedUserProfile(models.Model):
             if value and (not isinstance(value, (list, dict)) or len(value) > 0):
                 completed += 0.5
 
-        total_possible = len(required_fields) + (len(optional_fields) * 0.5)
+        # Interview-specific fields (high value for income generation)
+        interview_fields = [
+            'current_situation', 'available_hours_per_week', 'monthly_income_goal',
+            'strongest_skill', 'professional_background', 'commitment_level'
+        ]
+
+        for field in interview_fields:
+            value = getattr(self, field, None)
+            if value and (not isinstance(value, (list, dict)) or len(value) > 0):
+                completed += 1.5  # Higher weight for interview data
+
+        # Bonus points for interview completion
+        if self.interview_completed:
+            completed += 2
+
+        total_possible = len(required_fields) + (len(optional_fields) * 0.5) + (len(interview_fields) * 1.5) + 2
         self.profile_completeness = (completed / total_possible) * 100
         return self.profile_completeness
 
@@ -310,6 +475,27 @@ class EnhancedUserProfile(models.Model):
                 'knowledge_gaps': self.knowledge_gaps,
                 'core_competencies': self.core_competencies,
                 'preferred_learning_resources': self.preferred_learning_resources
+            })
+
+        elif context_type == 'income_opportunities':
+            # Special context for income generation and job matching
+            base_context.update({
+                'current_situation': self.current_situation,
+                'available_hours_per_week': self.available_hours_per_week,
+                'monthly_income_goal': float(self.monthly_income_goal) if self.monthly_income_goal else None,
+                'strongest_skill': self.strongest_skill,
+                'skill_example': self.skill_example,
+                'professional_background': self.professional_background,
+                'career_motivation': self.career_motivation,
+                'work_type_preferences': self.work_type_preferences,
+                'things_to_avoid': self.things_to_avoid,
+                'hidden_talents': self.hidden_talents,
+                'commitment_level': self.commitment_level,
+                'core_competencies': self.core_competencies,
+                'available_assets': self.available_assets,
+                'personalized_recommendations': self.personalized_recommendations,
+                'profile_strength_score': self.profile_strength_score,
+                'interview_completed': self.interview_completed
             })
 
         else:  # general

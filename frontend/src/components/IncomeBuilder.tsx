@@ -38,6 +38,9 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
 
+// Import unified connector
+import { unifiedConnector } from '../services/UnifiedPlatformConnector';
+
 interface Opportunity {
   id: string;
   title: string;
@@ -98,6 +101,8 @@ export default function IncomeBuilder() {
 
     // Connect to WebSocket for real-time updates
     connectWebSocket();
+    // Also connect to Unified Platform for enhanced data
+    connectToPlatform();
 
     return () => {
       if (wsRef.current) {
@@ -128,6 +133,20 @@ export default function IncomeBuilder() {
         // Immediately request data when connected
         ws.send(JSON.stringify({"action": "get_opportunities"}));
         console.log('📤 Sent data request on connection');
+
+        // Also trigger analyze_opportunities with a default profile
+        const defaultProfile = {
+          id: 'user_' + Date.now(),
+          skills: ['python', 'ai', 'automation', 'content writing', 'data analysis'],
+          skill_level: 'intermediate',
+          current_balance: 0,
+          available_hours: 20
+        };
+        ws.send(JSON.stringify({
+          type: 'analyze_opportunities',
+          profile: defaultProfile
+        }));
+        console.log('📤 Sent analyze_opportunities request with profile');
       };
 
       ws.onmessage = (event) => {
@@ -159,10 +178,83 @@ export default function IncomeBuilder() {
     }
   };
 
+  const connectToPlatform = async () => {
+    try {
+      console.log('🔌 Income Builder connecting to Unified Platform...');
+
+      const connected = await unifiedConnector.connect('income_builder');
+
+      if (connected) {
+        console.log('✅ Income Builder connected to platform');
+
+        // Set up platform message handlers
+        unifiedConnector.connectIncomeBuilder((data) => {
+          console.log('📨 Platform data received:', data);
+          handlePlatformMessage(data);
+        });
+
+        // Request initial opportunities through platform
+        unifiedConnector.send({
+          type: 'get_opportunities',
+          source: 'income_builder'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to connect to platform:', error);
+    }
+  };
+
+  const handlePlatformMessage = (data: any) => {
+    console.log('🎯 Income Builder processing platform message:', data);
+
+    // Handle opportunities from unified platform
+    if (data.top_opportunities && data.top_opportunities.length > 0) {
+      console.log(`✅ Received ${data.top_opportunities.length} unified opportunities`);
+
+      // Merge with existing opportunities (avoiding duplicates)
+      setOpportunities(prevOpps => {
+        const existingIds = new Set(prevOpps.map(opp => opp.id));
+        const newOpps = data.top_opportunities.filter((opp: any) => !existingIds.has(opp.id));
+
+        if (newOpps.length > 0) {
+          console.log(`🔄 Adding ${newOpps.length} new opportunities from platform`);
+          return [...prevOpps, ...newOpps];
+        }
+        return prevOpps;
+      });
+    }
+
+    // Handle revenue data from platform
+    if (data.revenue || data.metrics) {
+      const platformRevenue = data.revenue || data.metrics;
+      setRevenueData(prev => ({
+        ...prev,
+        ...platformRevenue
+      }));
+    }
+  };
+
   const handleWebSocketMessage = (data: any) => {
     console.log('📨 Income Builder received WS message:', data);
 
-    if (data.type === 'opportunities_update' && data.opportunities) {
+    if (data.type === 'opportunities_analysis') {
+      // Handle the opportunities_analysis message type from backend
+      if (data.top_opportunities && data.top_opportunities.length > 0) {
+        console.log(`✅ Received ${data.top_opportunities.length} opportunities from analysis`);
+        setOpportunities(data.top_opportunities);
+        setLoading(false);
+
+        // Log additional data
+        if (data.source) {
+          console.log(`📋 Data source: ${data.source}, Real data: ${data.is_real}, Job count: ${data.job_count || 0}`);
+        }
+        if (data.earnings_projection) {
+          console.log('💰 Earnings projection:', data.earnings_projection);
+        }
+      } else {
+        console.log('⚠️ Received empty opportunities in analysis');
+      }
+    } else if (data.type === 'opportunities_update' && data.opportunities) {
       // Only update if we're getting more opportunities or if we have none
       setOpportunities(prev => {
         if (prev.length === 0 || data.opportunities.length >= prev.length) {
@@ -1236,22 +1328,24 @@ export default function IncomeBuilder() {
                   </ol>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold mb-2">Resources:</h3>
-                  <div className="space-y-2">
-                    {selectedOpportunity.resources.map((resource, i) => (
-                      <a
-                        key={i}
-                        href={`https://${resource.url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block p-2 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
-                      >
-                        {resource.name} →
-                      </a>
-                    ))}
+                {selectedOpportunity.resources && selectedOpportunity.resources.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Resources:</h3>
+                    <div className="space-y-2">
+                      {selectedOpportunity.resources.map((resource, i) => (
+                        <a
+                          key={i}
+                          href={`https://${resource.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block p-2 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
+                        >
+                          {resource.name} →
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           )}

@@ -19,6 +19,12 @@ except ImportError:
 # Import sports updates consumer
 from .consumers_sports import SportsUpdatesConsumer
 
+# Import interview consumer
+try:
+    from intelligence.interview_consumer import InterviewConsumer
+except ImportError:
+    InterviewConsumer = None
+
 
 class SafeWebSocketMixin:
     """Mixin for safe WebSocket send operations"""

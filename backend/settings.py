@@ -506,6 +506,7 @@ AI_PROVIDERS = {
     'COHERE_API_KEY': validate_api_key('COHERE_API_KEY', os.environ.get('COHERE_API_KEY', '')),
     'GROQ_API_KEY': validate_api_key('GROQ_API_KEY', os.environ.get('GROQ_API_KEY', '')),
     'DEEPSEEK_API_KEY': validate_api_key('DEEPSEEK_API_KEY', os.environ.get('DEEPSEEK_API_KEY', '')),
+    'STABILITY_API_KEY': validate_api_key('STABILITY_API_KEY', os.environ.get('STABILITY_API_KEY', '')),
 }
 
 # Additional API Keys for External Services
