@@ -57,7 +57,7 @@ export default function EnhancedProfile() {
 
   const fetchProfile = async () => {
     try {
-      const response = await api.get('/profile/enhanced/');
+      const response = await api.get('/api/profile/enhanced/');
       setProfile(response.data.profile);
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -68,7 +68,7 @@ export default function EnhancedProfile() {
 
   const fetchMemories = async () => {
     try {
-      const response = await api.get('/profile/memories/');
+      const response = await api.get('/api/profile/memories/');
       setMemories(response.data.memories);
     } catch (error) {
       console.error('Failed to fetch memories:', error);
@@ -77,7 +77,7 @@ export default function EnhancedProfile() {
 
   const fetchSuggestions = async () => {
     try {
-      const response = await api.get('/profile/suggestions/');
+      const response = await api.get('/api/profile/suggestions/');
       setSuggestions(response.data.suggestions);
     } catch (error) {
       console.error('Failed to fetch suggestions:', error);
@@ -87,7 +87,7 @@ export default function EnhancedProfile() {
   const updateProfile = async (category: string, fields: any) => {
     setSaving(true);
     try {
-      await api.post('/profile/enhanced/update/', {
+      await api.post('/api/profile/enhanced/update/', {
         category,
         fields
       });

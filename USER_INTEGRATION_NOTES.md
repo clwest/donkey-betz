@@ -1,6 +1,8 @@
 # User Integration Notes for Opportunities Hub
 ## Current State Documentation for Future Development
 
+> **📘 Note:** User Profile, AI Configuration, and Command & Control systems have been consolidated into **USER_PROFILE_AND_AI_CONFIG.md**
+
 ### 🔑 Key Connection Points
 
 ## 1. User Profile System

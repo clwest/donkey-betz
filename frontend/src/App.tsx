@@ -19,7 +19,8 @@ import { EbooksPage } from './pages/ebooks/EbooksPage';
 import { VoicePage } from './pages/voice/VoicePage';
 import { CharacterPage } from './pages/character/CharacterPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
-import { AISettingsPage } from './pages/ai-settings/AISettingsPage';
+import { AISettingsPageUnified } from './pages/ai-settings/AISettingsPageUnified';
+import { ControlCenterPage } from './pages/control-center/ControlCenterPage';
 
 // Public Pages
 import { PublicBlogListPage } from './pages/public/PublicBlogListPage';
@@ -151,14 +152,14 @@ function App() {
             {/* New Enhanced UI/UX Components */}
             <Route path="decision-command" element={<DecisionCommand />} />
             <Route path="neural-orchestra" element={<NeuralOrchestra />} />
-            <Route path="control-center" element={<UnifiedCommandCenter />} />
+            <Route path="control-center" element={<ControlCenterPage />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
             <Route path="ebooks" element={<EbooksPage />} />
             <Route path="voice" element={<VoicePage />} />
             <Route path="character" element={<CharacterPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="ai-settings" element={<AISettingsPage />} />
+            <Route path="ai-settings" element={<AISettingsPageUnified />} />
             
             {/* Unified Agent Orchestra Hub - replaces all individual agent pages */}
             <Route path="agent-hub" element={<AgentOrchestraHub />} />
