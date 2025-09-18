@@ -19,13 +19,92 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def get_enhanced_profile(request):
-    """Get the user's enhanced profile."""
+    """Get or update the user's enhanced profile."""
     try:
         profile, created = EnhancedUserProfile.objects.get_or_create(user=request.user)
 
+        if request.method == 'PUT':
+            # Handle profile update
+            data = request.data
+            logger.info(f"Updating enhanced profile for {request.user.username} with data: {data}")
+
+            # Handle interview completion data structure
+            if 'name' in data:
+                # Extract first and last name if provided
+                name_parts = data['name'].split(' ', 1)
+                if len(name_parts) >= 1:
+                    request.user.first_name = name_parts[0]
+                if len(name_parts) >= 2:
+                    request.user.last_name = name_parts[1]
+                request.user.save()
+
+            # Map interview data to profile fields
+            if 'skills' in data:
+                profile.core_competencies = data['skills'] if isinstance(data['skills'], list) else [data['skills']]
+
+            if 'experience_level' in data:
+                profile.learning_style = f"Experience level: {data['experience_level']}"
+
+            if 'income_goal' in data:
+                profile.long_term_goals = profile.long_term_goals or []
+                goal = f"Target income: {data['income_goal']}"
+                if goal not in profile.long_term_goals:
+                    profile.long_term_goals.append(goal)
+
+            if 'work_preferences' in data:
+                profile.preferred_channels = data['work_preferences'] if isinstance(data['work_preferences'], list) else [data['work_preferences']]
+
+            # Handle general profile fields
+            field_mappings = {
+                'primary_role': 'primary_role',
+                'secondary_roles': 'secondary_roles',
+                'long_term_goals': 'long_term_goals',
+                'current_projects': 'current_projects',
+                'quarterly_objectives': 'quarterly_objectives',
+                'communication_style': 'communication_style',
+                'preferred_channels': 'preferred_channels',
+                'optimal_meeting_times': 'optimal_meeting_times',
+                'decision_framework': 'decision_framework',
+                'delegation_preferences': 'delegation_preferences',
+                'work_schedule': 'work_schedule',
+                'time_zone': 'time_zone',
+                'morning_routine': 'morning_routine',
+                'energy_patterns': 'energy_patterns',
+                'dietary_preferences': 'dietary_preferences',
+                'travel_preferences': 'travel_preferences',
+                'personal_values': 'personal_values',
+                'stress_indicators': 'stress_indicators',
+                'core_competencies': 'core_competencies',
+                'learning_style': 'learning_style',
+                'current_learning_goals': 'current_learning_goals',
+                'knowledge_gaps': 'knowledge_gaps',
+                'preferred_learning_resources': 'preferred_learning_resources',
+                'certifications': 'certifications',
+                'privacy_level': 'privacy_level',
+                'sensitive_topics': 'sensitive_topics',
+                'data_retention_days': 'data_retention_days',
+                'update_frequency': 'update_frequency'
+            }
+
+            for data_field, profile_field in field_mappings.items():
+                if data_field in data:
+                    setattr(profile, profile_field, data[data_field])
+
+            # Save the profile
+            profile.save()
+            logger.info(f"Successfully saved enhanced profile for {request.user.username}")
+
+            # Return success response
+            return Response({
+                'success': True,
+                'message': 'Profile updated successfully',
+                'completeness': profile.calculate_completeness()
+            })
+
+        # GET request - return profile data
         if created:
             logger.info(f"Created new enhanced profile for {request.user.username}")
 
@@ -81,9 +160,9 @@ def get_enhanced_profile(request):
         })
 
     except Exception as e:
-        logger.error(f"Error getting enhanced profile: {e}")
+        logger.error(f"Error handling enhanced profile request: {e}")
         return Response({
-            'error': 'Failed to get profile',
+            'error': 'Failed to handle profile request',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

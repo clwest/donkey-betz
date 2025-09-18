@@ -10,6 +10,7 @@ import { apiClient } from '../services/api.config';
 import { assistantService } from '../services/assistant.service';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
+import PersonalAssistantInterview from './PersonalAssistantInterview';
 
 interface Message {
   id: string;
@@ -63,6 +64,7 @@ export const UnifiedAIAssistant: React.FC<UnifiedAssistantProps> = ({ className 
   const [context, setContext] = useState<AssistantContext | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showInterview, setShowInterview] = useState(false);
 
   // Voice recognition state
   const [isListening, setIsListening] = useState(false);
@@ -132,8 +134,8 @@ export const UnifiedAIAssistant: React.FC<UnifiedAssistantProps> = ({ className 
   const initializeAssistant = async () => {
     try {
       // Try to load personal context - first try dev endpoint, then regular
-      const personalResponse = await apiClient.get('/assistant/dev/context/')
-        .catch(() => apiClient.get('/assistant/context/'))
+      const personalResponse = await apiClient.get('/api/assistant/dev/context/')
+        .catch(() => apiClient.get('/api/assistant/context/'))
         .catch(() => null);
 
       if (personalResponse?.data?.context) {
@@ -272,7 +274,7 @@ export const UnifiedAIAssistant: React.FC<UnifiedAssistantProps> = ({ className 
       }));
 
       // Try unified assistant first for full agent integration with memory
-      let response = await apiClient.post('/unified/chat/', {
+      let response = await apiClient.post('/api/unified/chat/', {
         message: inputMessage,
         conversation_history: conversationHistory,
         context: {
@@ -288,7 +290,7 @@ export const UnifiedAIAssistant: React.FC<UnifiedAssistantProps> = ({ className 
 
       // If neural assistant fails, fallback to dev assistant
       if (!response) {
-        response = await apiClient.post('/assistant/dev/chat/', {
+        response = await apiClient.post('/api/assistant/dev/chat/', {
           message: inputMessage,
           conversation_history: conversationHistory,
           context: {
@@ -307,7 +309,7 @@ export const UnifiedAIAssistant: React.FC<UnifiedAssistantProps> = ({ className 
 
       // If both fail, try minimal fallback
       if (!response) {
-        response = await apiClient.post('/assistant/minimal/chat/', {
+        response = await apiClient.post('/api/assistant/minimal/chat/', {
           message: inputMessage,
           conversation_history: conversationHistory,
           session_id: sessionId,
@@ -648,6 +650,12 @@ Would you like to explore any specific feature?`,
               )}
               <div className="mt-4 space-y-2">
                 <button
+                  onClick={() => setShowInterview(true)}
+                  className="w-full px-3 py-2 bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-purple-300 text-sm rounded-lg hover:from-purple-600/40 hover:to-pink-600/40 transition-colors border border-purple-500/30"
+                >
+                  🎙️ Start Personal Interview
+                </button>
+                <button
                   onClick={() => setInputMessage("What income opportunities are available for me?")}
                   className="w-full px-3 py-2 bg-purple-600/20 text-purple-300 text-sm rounded-lg hover:bg-purple-600/30 transition-colors"
                 >
@@ -851,6 +859,70 @@ Would you like to explore any specific feature?`,
           </div>
         </div>
       </div>
+
+      {/* Personal Assistant Interview Modal */}
+      <PersonalAssistantInterview
+        isOpen={showInterview}
+        onClose={() => setShowInterview(false)}
+        onComplete={async (profile) => {
+          console.log('Interview completed with profile:', profile);
+
+          try {
+            // Save profile to backend
+            const response = await apiClient.put('/api/profile/extended/', profile);
+
+            if (response.data.success) {
+              toast.success('Profile setup complete! Your personal AI is now ready.');
+
+              setContext(prev => ({
+                ...prev,
+                personalization_score: 0.8,
+                first_name: profile.name || prev?.first_name,
+                skills: { top_skills: profile.skills || [] }
+              }));
+
+              // Add welcome message with profile
+              const welcomeMessage: Message = {
+                id: `profile-complete-${Date.now()}`,
+                text: `Great! I've saved your profile, ${profile.name}. Based on your ${profile.experience_level} experience and ${profile.income_goal} income goal, I'm ready to help you find opportunities in ${profile.work_preferences?.join(', ') || 'various areas'}. What would you like to work on first?`,
+                sender: 'assistant',
+                timestamp: new Date(),
+                suggestions: ['Find job opportunities', 'Improve my skills', 'Build my portfolio', 'Network and connect'],
+                confidence: 0.9
+              };
+
+              setMessages(prev => [...prev, welcomeMessage]);
+            } else {
+              throw new Error(response.data.error || 'Failed to save profile');
+            }
+          } catch (error) {
+            console.error('Failed to save profile:', error);
+            toast.error('Profile interview completed, but failed to save. You can retry saving later.');
+
+            // Still update local context even if save failed
+            setContext(prev => ({
+              ...prev,
+              personalization_score: 0.7,
+              first_name: profile.name || prev?.first_name,
+              skills: { top_skills: profile.skills || [] }
+            }));
+
+            // Add message with warning
+            const welcomeMessage: Message = {
+              id: `profile-complete-${Date.now()}`,
+              text: `I've completed your interview, ${profile.name}! However, there was an issue saving your profile to the server. Your preferences are saved locally for now. Based on your ${profile.experience_level} experience and ${profile.income_goal} income goal, I'm ready to help you find opportunities. What would you like to work on first?`,
+              sender: 'assistant',
+              timestamp: new Date(),
+              suggestions: ['Find job opportunities', 'Improve my skills', 'Build my portfolio', 'Retry profile save'],
+              confidence: 0.8
+            };
+
+            setMessages(prev => [...prev, welcomeMessage]);
+          }
+
+          setShowInterview(false);
+        }}
+      />
     </motion.div>
   );
 };
