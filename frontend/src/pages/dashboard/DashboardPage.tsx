@@ -226,7 +226,7 @@ export function DashboardPage() {
             <SparklesIcon className="h-4 w-4" />
             Quick Generate
           </Button>
-          <Button onClick={() => navigate('/campaigns/new')}>
+          <Button onClick={() => navigate('/opportunities?tab=campaigns')}>
             <PlusIcon className="h-4 w-4" />
             New Campaign
           </Button>
