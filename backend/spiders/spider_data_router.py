@@ -29,8 +29,8 @@ import uuid
 
 from .spider_army_orchestrator import SpiderArmyOrchestrator, SpiderType
 from .data_pipeline import RealTimeDataPipeline, IntelligenceMessage
-from ..agents.registry import get_agent_registry, AgentRegistry
-from ..advisors.registry import get_advisor_registry, AdvisorRegistry
+# Agent and advisor registries would be imported here if they exist
+# For now, we'll create our own agent discovery system
 
 logger = logging.getLogger(__name__)
 

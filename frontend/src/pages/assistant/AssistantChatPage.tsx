@@ -145,7 +145,7 @@ const AssistantChatPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/assistant/chat/', {
+      const response = await api.post('/assistant/dev/chat/', {
         message: inputMessage,
         model: selectedModel,
         conversation_id: activeConversation

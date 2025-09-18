@@ -42,13 +42,14 @@ import AssistantChatPage from './pages/assistant/AssistantChatPage';
 import AgentOrchestraHub from './pages/AgentOrchestraHub';
 
 // Universal Decision Command Center
-import { UnifiedCommandCenter } from './pages/UnifiedCommandCenter';
 import { DecisionDetailPage } from './pages/DecisionDetailPage';
 
 // New UI/UX Components
 import DecisionCommand from './components/DecisionCommand';
 import NeuralOrchestra from './components/NeuralOrchestra';
 import ControlCenter from './components/ControlCenter';
+import { UnifiedAIAssistant } from './components/UnifiedAIAssistant';
+import UnifiedCommandCenter from './components/UnifiedCommandCenter';
 
 // Debug Page
 import DebugPage from './pages/DebugPage';
@@ -67,12 +68,13 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 
 // Features
-import { ChatWidget } from './components/Assistant';
+// Removed ChatWidget - now using UnifiedAIAssistant
 import { LifeConvictionsPage } from './pages/life-convictions/LifeConvictionsPage';
 import IncomeBuilder from './components/IncomeBuilder';
 import MonetizationDashboard from './pages/MonetizationDashboard';
 import RevenueOpportunities from './components/RevenueOpportunities';
 import RevenueDashboard from './components/RevenueDashboard';
+import RevenueCommandCenter from './components/RevenueCommandCenter';
 
 
 // Stores
@@ -151,7 +153,7 @@ function App() {
             {/* New Enhanced UI/UX Components */}
             <Route path="decision-command" element={<DecisionCommand />} />
             <Route path="neural-orchestra" element={<NeuralOrchestra />} />
-            <Route path="control-center" element={<ControlCenter />} />
+            <Route path="control-center" element={<UnifiedCommandCenter />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
             <Route path="campaigns">
@@ -188,15 +190,16 @@ function App() {
             {/* <Route path="sports/board" element={<SportsBoardPage />} /> DISABLED - NO SPORTS */}
             <Route path="life-convictions" element={<LifeConvictionsPage />} />
             <Route path="income-builder" element={<IncomeBuilder />} />
-            <Route path="monetization" element={<MonetizationDashboard />} />
-            <Route path="revenue-opportunities" element={<RevenueOpportunities />} />
-            <Route path="revenue-dashboard" element={<RevenueDashboard />} />
+            <Route path="monetization" element={<UnifiedCommandCenter />} />
+            <Route path="revenue-opportunities" element={<RevenueCommandCenter />} />
+            <Route path="revenue-dashboard" element={<RevenueCommandCenter />} />
+            <Route path="revenue" element={<RevenueCommandCenter />} />
             <Route path="debug" element={<DebugPage />} />
           </Route>
         </Routes>
         <CommandPalette />
-        <ChatWidget />
-        <Toaster 
+        <UnifiedAIAssistant />
+        <Toaster
           position="bottom-right"
           theme="dark"
           richColors

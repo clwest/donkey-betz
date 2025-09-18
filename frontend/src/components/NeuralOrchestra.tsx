@@ -359,11 +359,11 @@ const NeuralOrchestra: React.FC = () => {
   }, [isConnected]);
 
   useEffect(() => {
-    // Only initialize with mock data if no real data after 5 seconds
+    // Log data status but don't load mock data
     const timer = setTimeout(() => {
       if (agents.length === 0 && advisors.length === 0) {
-        console.log('⚠️ No real data received after 5 seconds, using mock data as fallback');
-        initializeMockData();
+        console.log('⚠️ No real data received after 5 seconds - database may be empty');
+        // Don't load mock data - let the UI show empty states
       } else {
         console.log(`✅ Real data loaded: ${agents.length} agents, ${advisors.length} advisors, ${connections.length} connections`);
       }
@@ -913,7 +913,19 @@ const NeuralOrchestra: React.FC = () => {
 
               {viewMode === 'workflow' && (
                 <div className="space-y-4">
-                  {workflows.map(workflow => (
+                  {workflows.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Layers className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Workflows</h3>
+                      <p className="text-gray-600 mb-4">
+                        Workflows will appear here when agents start collaborating on tasks
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Start by creating opportunities in the Income Builder or Decision Command
+                      </p>
+                    </div>
+                  ) : (
+                    workflows.map(workflow => (
                     <Card key={workflow.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -924,7 +936,7 @@ const NeuralOrchestra: React.FC = () => {
                         </div>
                         <Progress value={workflow.progress} className="mb-3" />
                         <div className="space-y-2">
-                          {workflow.steps.map((step, index) => (
+                          {workflow.steps?.map((step, index) => (
                             <div key={step.id} className="flex items-center gap-3">
                               <div className={`
                                 w-8 h-8 rounded-full flex items-center justify-center text-sm
@@ -948,13 +960,26 @@ const NeuralOrchestra: React.FC = () => {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  ))
+                  )}
                 </div>
               )}
 
               {viewMode === 'performance' && (
                 <div className="grid grid-cols-2 gap-4">
-                  {agents.map(agent => (
+                  {agents.length === 0 ? (
+                    <div className="col-span-2 text-center py-12">
+                      <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Performance Data</h3>
+                      <p className="text-gray-600 mb-4">
+                        Performance metrics will appear here once agents start processing tasks
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Agent activity and efficiency metrics will be displayed in real-time
+                      </p>
+                    </div>
+                  ) : (
+                    agents.map(agent => (
                     <Card key={agent.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -982,7 +1007,8 @@ const NeuralOrchestra: React.FC = () => {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  ))
+                  )}
                 </div>
               )}
             </CardContent>

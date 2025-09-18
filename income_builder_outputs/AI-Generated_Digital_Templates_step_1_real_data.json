@@ -1,7 +1,7 @@
 {
   "step_number": 1,
   "step_description": "Week 1: Research trending templates on Etsy",
-  "execution_timestamp": "2025-09-17T04:27:36.372665",
+  "execution_timestamp": "2025-09-18T00:42:13.827811",
   "real_data_collected": {
     "search_results": {
       "query": "AI-Generated Digital Templates market research trends pricing opportunities",
@@ -17,7 +17,7 @@
           "snippet": "Articles about AI-Generated Digital Templates"
         }
       ],
-      "timestamp": "2025-09-17T04:27:36.015625",
+      "timestamp": "2025-09-18T00:42:13.320043",
       "source": "real_search_api"
     },
     "api_calls": {
@@ -25,6 +25,20 @@
         "url": "https://remoteok.io/api",
         "results_count": 5,
         "data": [
+          {
+            "title": "Support Specialist and Writer",
+            "company": "Interaction Design Foundation",
+            "description": "<p>Imagine waking up each day excited for work, knowing your words, support, and ideas help shape the futures of design learners across the globe. If you<em><strong>'</strong></em>re a\u00c2\u00a0<strong>passio",
+            "url": "https://remoteOK.com/remote-jobs/remote-support-specialist-and-writer-interaction-design-foundation-1117685",
+            "salary": 10000,
+            "tags": [
+              "education",
+              "customer support",
+              "content writing"
+            ],
+            "date": "2025-09-16T11:01:08+00:00",
+            "location": ""
+          },
           {
             "title": "Generalist Data Annotator No Exp Required",
             "company": "HelixRecruit",
@@ -77,18 +91,6 @@
               "backend"
             ],
             "date": "2025-09-12T11:44:56+00:00",
-            "location": ""
-          },
-          {
-            "title": "Client Success Manager",
-            "company": "Venus",
-            "description": "<p dir=\"ltr\">We\u00e2\u0080\u0099re looking for a female Client Success Manager to join our team. You will be the primary point of contact for our creators, ensuring they feel supported, guided, and motivated. From ",
-            "url": "https://remoteOK.com/remote-jobs/remote-client-success-manager-venus-1109273",
-            "salary": 30000,
-            "tags": [
-              "marketing"
-            ],
-            "date": "2025-09-09T23:58:18+00:00",
             "location": ""
           }
         ],

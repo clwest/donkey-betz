@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from django.conf import settings
 
 from .realtime_engine import intelligence_engine
 from .income_builder import income_builder, UserProfile, SkillLevel
@@ -182,56 +183,92 @@ class ActionPlanPersistenceView(APIView):
     def get(self, request):
         """Get all action plans for the current user/session"""
         try:
-            # TEMPORARILY DISABLED: Return empty list to clear frontend
-            # This prevents old action plans from resurrecting
-            plans = []
+            import os
+            import glob
+            from datetime import datetime, timedelta
+            from django.utils import timezone
 
-            # Original code commented out to prevent loading old plans
-            # # Get user or use session ID for anonymous users
-            # if request.user.is_authenticated:
-            #     user = request.user
-            #     plans = ActionPlan.objects.filter(user=user).order_by('-created_at')
-            # else:
-            #     # Use session-based storage for anonymous users
-            #     session_id = request.session.session_key
-            #     if not session_id:
-            #         request.session.create()
-            #         session_id = request.session.session_key
+            # Load plans from filesystem (since database approach was disabled)
+            plans_dir = os.path.join(settings.BASE_DIR, 'income_builder_outputs')
 
-            #     # For anonymous users, get all anonymous plans (last 50)
-            #     # We'll filter by recent ones to avoid showing ALL anonymous plans
-            #     from datetime import timedelta
-            #     from django.utils import timezone
-            #     cutoff = timezone.now() - timedelta(days=7)  # Last 7 days
-            #     plans = ActionPlan.objects.filter(
-            #         user=None,
-            #         created_at__gte=cutoff
-            #     ).order_by('-created_at')[:50]  # Limit to 50 most recent
+            # Find all Complete_Plan.md files (main plans)
+            complete_plans = glob.glob(os.path.join(plans_dir, '*_Complete_Plan.md'))
 
-            # Serialize plans
+            # Filter to recent plans (last 7 days)
+            cutoff = timezone.now() - timedelta(days=7)
+            recent_plans = []
+
+            for plan_file in complete_plans:
+                try:
+                    # Get file modification time
+                    mod_time = datetime.fromtimestamp(os.path.getmtime(plan_file))
+                    mod_time = timezone.make_aware(mod_time)
+
+                    if mod_time >= cutoff:
+                        # Extract opportunity title from filename
+                        filename = os.path.basename(plan_file)
+                        opportunity_title = filename.replace('_Complete_Plan.md', '').replace('_', ' ')
+
+                        # Check for associated QuickStart file
+                        quickstart_file = plan_file.replace('_Complete_Plan.md', '_QuickStart.md')
+                        has_quickstart = os.path.exists(quickstart_file)
+
+                        # Count associated step files
+                        step_pattern = plan_file.replace('_Complete_Plan.md', '_step_*.md')
+                        step_files = glob.glob(step_pattern)
+
+                        recent_plans.append({
+                            'file_path': plan_file,
+                            'opportunity_title': opportunity_title,
+                            'created_at': mod_time,
+                            'has_quickstart': has_quickstart,
+                            'step_count': len(step_files),
+                            'quickstart_path': quickstart_file if has_quickstart else None
+                        })
+                except Exception as e:
+                    continue
+
+            # Sort by creation time (newest first)
+            recent_plans.sort(key=lambda x: x['created_at'], reverse=True)
+
+            # Serialize plans for frontend
             serialized_plans = []
-            for plan in plans:
+            for i, plan in enumerate(recent_plans[:10]):  # Limit to 10 most recent
+                # Create a unique ID based on the filename and timestamp
+                plan_id = f"file_{hash(plan['file_path'])}_{int(plan['created_at'].timestamp())}"
+
                 serialized_plans.append({
-                    'id': str(plan.id),
-                    'backend_id': str(plan.id),
-                    'opportunity_id': plan.opportunity_id,
-                    'opportunity_title': plan.opportunity_title,
-                    'opportunity_data': plan.opportunity_data,
-                    'plan_data': plan.plan_data,
-                    'steps': plan.steps,
-                    'resources': plan.resources,
-                    'timeline': plan.timeline,
-                    'expected_outcome': plan.expected_outcome,
-                    'status': plan.status,
-                    'progress': plan.progress,
-                    'current_step': plan.current_step,
-                    'completed_steps': plan.completed_steps,
-                    'execution_logs': plan.execution_logs,
-                    'results': plan.results,
-                    'created_at': plan.created_at.isoformat(),
-                    'started_at': plan.started_at.isoformat() if plan.started_at else None,
-                    'completed_at': plan.completed_at.isoformat() if plan.completed_at else None,
-                    'celery_task_id': plan.celery_task_id
+                    'id': plan_id,
+                    'backend_id': plan_id,
+                    'opportunity_id': plan['opportunity_title'].lower().replace(' ', '_'),
+                    'opportunity_title': plan['opportunity_title'],
+                    'opportunity_data': {
+                        'title': plan['opportunity_title'],
+                        'description': f"AI-generated action plan for {plan['opportunity_title']}",
+                        'file_path': plan['file_path'],
+                        'step_count': plan['step_count']
+                    },
+                    'plan_data': {
+                        'file_path': plan['file_path'],
+                        'quickstart_path': plan.get('quickstart_path'),
+                        'has_quickstart': plan['has_quickstart']
+                    },
+                    'steps': [f"Step {i+1}" for i in range(plan['step_count'])],
+                    'resources': [],
+                    'timeline': '4 weeks',
+                    'expected_outcome': f"Complete {plan['opportunity_title']} implementation",
+                    'status': 'completed',
+                    'progress': 100,
+                    'current_step': plan['step_count'],
+                    'completed_steps': list(range(1, plan['step_count'] + 1)),
+                    'execution_logs': [],
+                    'results': {},
+                    'created_at': plan['created_at'].isoformat(),
+                    'started_at': plan['created_at'].isoformat(),
+                    'completed_at': plan['created_at'].isoformat(),
+                    'celery_task_id': None,
+                    'file_path': f"/static/{os.path.basename(plan['file_path'])}",
+                    'quickstart_file_path': f"/static/{os.path.basename(plan['quickstart_path'])}" if plan.get('quickstart_path') else None
                 })
 
             return Response({

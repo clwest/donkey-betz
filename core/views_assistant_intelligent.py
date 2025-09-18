@@ -530,7 +530,7 @@ When relevant to the user's question, briefly mention system status."""
 
             # Check for hallucinations
             available_data = {
-                'total_embeddings': response_metadata.get('total_embeddings_available', 16929),
+                'total_embeddings': response_metadata.get('total_embeddings_available', 0),
                 'knowledge_base_size': response_metadata.get('knowledge_base_size', 0)
             }
             hallucination_check = validate_response_for_hallucinations(validated_content, available_data)
