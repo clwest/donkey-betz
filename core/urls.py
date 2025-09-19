@@ -29,14 +29,7 @@ from backend.ai_opportunity_api import (
     get_generated_projects
 )
 from core.views import (
-    platform_status, platform_info, record_metric,
-# Import health check from the new module
-try:
-    from core.health import health_check as health_check_ws, websocket_test
-except ImportError:
-    from core.views import health_check as health_check_ws
-    websocket_test = None
-from core.views import health_check,
+    platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
     agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
     feedback_analytics, feedback_history, feedback_submit, prompting_stats,
@@ -188,7 +181,7 @@ urlpatterns = [
     path('api/v1/status/', platform_status, name='platform-status'),
     path('api/v1/info/', platform_info, name='platform-info'),
     path('api/v1/metrics/', record_metric, name='record-metric'),
-    path('api/v1/health/', health_check_ws if 'health_check_ws' in locals() else health_check, name='health-check'),
+    path('api/v1/health/', health_check, name='health-check'),
 
     # User Profile and AI Configuration APIs
     # path('api/profile/extended/', profile_extended, name='profile-extended'),  # Commented out - using enhanced profile instead
