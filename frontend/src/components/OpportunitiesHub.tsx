@@ -625,7 +625,9 @@ export const OpportunitiesHub: React.FC = () => {
       const response = await apiClient.get('/api/v1/ai-opportunities/projects/');
       if (response.data.success && response.data.projects.length > 0) {
         // Transform the data to match our format
-        const projects = response.data.projects.map((p: any) => {
+        const projectsMap = new Map();
+
+        response.data.projects.forEach((p: any) => {
           // Extract the real title from the folder name
           let title = p.name;
           if (title.startsWith('ai_project_')) {
@@ -639,13 +641,16 @@ export const OpportunitiesHub: React.FC = () => {
             ).join(' ');
           }
 
-          return {
+          // Use title as key to deduplicate - keep the newest one
+          const existingProject = projectsMap.get(title);
+          const currentProject = {
             success: true,
             project_path: p.path,
             files_created: p.files,
             revenue_potential: p.revenue_potential || '$1,000-10,000/month',
             project_type: 'ai_application',
             ready_to_launch: p.has_readme && p.has_requirements,
+            created_at: p.created || '',
             strategy: {
               title: title,
               description: title.includes('LLM') || title.includes('Llms') ?
@@ -658,8 +663,18 @@ export const OpportunitiesHub: React.FC = () => {
               difficulty: 'Beginner to Intermediate'
             }
           };
+
+          // Only add if it's the first one or newer than existing
+          if (!existingProject || currentProject.created_at > existingProject.created_at) {
+            projectsMap.set(title, currentProject);
+          }
         });
-        setGeneratedProjects(projects);
+
+        // Convert map back to array (unique projects only)
+        const uniqueProjects = Array.from(projectsMap.values());
+        setGeneratedProjects(uniqueProjects);
+
+        console.log(`Loaded ${uniqueProjects.length} unique projects (deduplicated from ${response.data.projects.length})`);
       }
     } catch (error) {
       console.log('No previous projects found');
