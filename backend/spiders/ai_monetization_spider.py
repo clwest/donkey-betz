@@ -55,6 +55,14 @@ class AIMonetizationSpider:
             elif isinstance(result, Exception):
                 logger.warning(f"AI monetization scraper failed: {result}")
 
+        # If we have too few real results, add diverse fallback strategies
+        if len(strategies) < 10:
+            logger.info(f"Found only {len(strategies)} real strategies, adding diverse fallback options")
+            # Add diverse fallback strategies
+            needed = 10 - len(strategies)
+            fallback_strategies = self._generate_fallback_strategies('mixed', needed)
+            strategies.extend(fallback_strategies)
+
         # Deduplicate and score strategies
         unique_strategies = self._deduplicate_strategies(strategies)
         scored_strategies = self._score_strategies(unique_strategies)
@@ -579,35 +587,76 @@ class AIMonetizationSpider:
         """Generate fallback strategies when scraping fails"""
         fallback_strategies = [
             {
-                'title': 'AI-Powered Content Writing Service',
+                'title': 'AI Resume Optimizer & Job Matcher',
+                'strategy_type': 'career_tools',
+                'difficulty': 'beginner',
+                'potential_revenue': '$2,000-10,000/month'
+            },
+            {
+                'title': 'AI Social Media Content Generator',
                 'strategy_type': 'content_generation',
                 'difficulty': 'beginner',
-                'potential_revenue': '$2,000-15,000/month'
+                'potential_revenue': '$1,500-8,000/month'
             },
             {
-                'title': 'Custom ChatGPT Business Assistant',
+                'title': 'AI Email Marketing Campaign Builder',
+                'strategy_type': 'marketing_automation',
+                'difficulty': 'intermediate',
+                'potential_revenue': '$3,000-15,000/month'
+            },
+            {
+                'title': 'AI Code Review and Documentation Tool',
+                'strategy_type': 'developer_tools',
+                'difficulty': 'advanced',
+                'potential_revenue': '$5,000-25,000/month'
+            },
+            {
+                'title': 'AI Personal Finance Advisor',
+                'strategy_type': 'fintech',
+                'difficulty': 'intermediate',
+                'potential_revenue': '$4,000-20,000/month'
+            },
+            {
+                'title': 'AI Language Learning Tutor',
+                'strategy_type': 'education',
+                'difficulty': 'beginner',
+                'potential_revenue': '$2,000-12,000/month'
+            },
+            {
+                'title': 'AI SEO Content Optimizer',
+                'strategy_type': 'seo_tools',
+                'difficulty': 'intermediate',
+                'potential_revenue': '$3,000-18,000/month'
+            },
+            {
+                'title': 'AI Customer Support Chatbot Builder',
                 'strategy_type': 'ai_assistant',
                 'difficulty': 'intermediate',
-                'potential_revenue': '$3,000-25,000/month'
+                'potential_revenue': '$4,000-22,000/month'
             },
             {
-                'title': 'AI Automation Tools for Small Business',
-                'strategy_type': 'automation_tool',
-                'difficulty': 'intermediate',
-                'potential_revenue': '$4,000-30,000/month'
+                'title': 'AI Video Script Generator',
+                'strategy_type': 'video_tools',
+                'difficulty': 'beginner',
+                'potential_revenue': '$2,500-14,000/month'
             },
             {
-                'title': 'AI-Enhanced SaaS Platform',
-                'strategy_type': 'saas_development',
+                'title': 'AI Legal Document Analyzer',
+                'strategy_type': 'legal_tech',
                 'difficulty': 'advanced',
-                'potential_revenue': '$5,000-50,000/month'
+                'potential_revenue': '$6,000-30,000/month'
             }
         ]
 
+        # Shuffle and select random strategies for variety
+        import random
+        random.shuffle(fallback_strategies)
+        selected = fallback_strategies[:count]
+
         strategies = []
-        for i, template in enumerate(fallback_strategies[:count]):
+        for i, template in enumerate(selected):
             strategy = {
-                'id': hashlib.md5(f"{source}_fallback_{i}".encode()).hexdigest()[:8],
+                'id': hashlib.md5(f"{source}_{template['title']}_{datetime.now().isoformat()}".encode()).hexdigest()[:8],
                 'title': template['title'],
                 'source': source,
                 'url': f"https://example.com/{source}/fallback/{i}",
