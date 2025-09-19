@@ -625,15 +625,40 @@ export const OpportunitiesHub: React.FC = () => {
       const response = await apiClient.get('/api/v1/ai-opportunities/projects/');
       if (response.data.success && response.data.projects.length > 0) {
         // Transform the data to match our format
-        const projects = response.data.projects.map((p: any) => ({
-          success: true,
-          project_path: p.path,
-          files_created: p.files,
-          revenue_potential: p.revenue_potential || 'Unknown',
-          project_type: 'ai_application',
-          ready_to_launch: p.has_readme && p.has_requirements,
-          strategy: { title: p.name }
-        }));
+        const projects = response.data.projects.map((p: any) => {
+          // Extract the real title from the folder name
+          let title = p.name;
+          if (title.startsWith('ai_project_')) {
+            // Remove prefix and timestamp suffix
+            title = title.replace('ai_project_', '').replace(/_\d{10}$/, '');
+            // Replace underscores with spaces and capitalize
+            title = title.replace(/_/g, ' ');
+            // Capitalize each word
+            title = title.split(' ').map((word: string) =>
+              word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+          }
+
+          return {
+            success: true,
+            project_path: p.path,
+            files_created: p.files,
+            revenue_potential: p.revenue_potential || '$1,000-10,000/month',
+            project_type: 'ai_application',
+            ready_to_launch: p.has_readme && p.has_requirements,
+            strategy: {
+              title: title,
+              description: title.includes('LLM') || title.includes('Llms') ?
+                'Build a custom HTTP client for integrating with Large Language Models. Create AI-powered applications that can communicate with GPT, Claude, and other LLMs.' :
+                title.includes('Roop') ?
+                'Face swapping AI application using the Roop model. Create deepfake videos, virtual avatars, or entertainment content with AI face replacement technology.' :
+                'AI-powered application for automated content generation and monetization.',
+              potential_revenue: p.revenue_potential || '$1,000-10,000/month',
+              time_to_implement: '1-4 weeks',
+              difficulty: 'Beginner to Intermediate'
+            }
+          };
+        });
         setGeneratedProjects(projects);
       }
     } catch (error) {
@@ -1522,25 +1547,8 @@ LAUNCH CHECKLIST:
         <div className="flex justify-center">
           <button
             onClick={async () => {
-              try {
-                const response = await apiClient.get('/api/v1/ai-opportunities/projects/');
-                if (response.data.success && response.data.projects.length > 0) {
-                  // Transform the data to match our format
-                  const projects = response.data.projects.map((p: any) => ({
-                    success: true,
-                    project_path: p.path,
-                    files_created: p.files,
-                    revenue_potential: p.revenue_potential || 'Unknown',
-                    project_type: 'ai_application',
-                    ready_to_launch: p.has_readme && p.has_requirements,
-                    strategy: { title: p.name }
-                  }));
-                  setGeneratedProjects(projects);
-                  toast.success(`Loaded ${projects.length} previous projects`);
-                }
-              } catch (error) {
-                console.error('Failed to load projects:', error);
-              }
+              await loadGeneratedProjects();
+              toast.success(`Refreshed project list`);
             }}
             className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
