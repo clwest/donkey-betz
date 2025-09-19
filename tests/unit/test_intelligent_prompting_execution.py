@@ -33,7 +33,7 @@ execution = AgentExecution.objects.create(
     task_type="prompt_optimization",
     input_data={
         "original_prompt": "Write a blog post about AI",
-        "target_model": "gpt-4",
+        "target_model": "gpt-5-mini",
         "desired_outcome": "Comprehensive, engaging blog post with technical depth"
     },
     context={

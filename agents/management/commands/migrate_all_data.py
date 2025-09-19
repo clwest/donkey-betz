@@ -236,7 +236,7 @@ class Command(BaseCommand):
                         'detail_level': 'comprehensive'
                     },
                     'llm_provider': 'openai',
-                    'llm_model': 'gpt-4',
+                    'llm_model': 'gpt-5-mini',
                     'routing_keywords': [agent.get('specialization', 'research')],
                     'domain_tags': self.extract_domain_tags_from_specialization(
                         agent.get('specialization', 'research')
@@ -297,7 +297,7 @@ class Command(BaseCommand):
                     'system_prompt': agent.get('system_prompt', ''),
                     'personality_traits': agent.get('personality_traits', {}),
                     'llm_provider': agent.get('llm_provider', 'openai'),
-                    'llm_model': agent.get('llm_model', 'gpt-4'),
+                    'llm_model': agent.get('llm_model', 'gpt-5-mini'),
                     'routing_keywords': [agent.get('specialization', 'research')],
                     'domain_tags': self.extract_domain_tags_from_specialization(
                         agent.get('specialization', 'research')
@@ -366,7 +366,7 @@ class Command(BaseCommand):
             system_prompt=agent_data.get('system_prompt', ''),
             personality_traits=agent_data.get('personality_traits', {}),
             llm_provider=agent_data.get('llm_provider', 'openai'),
-            llm_model=agent_data.get('llm_model', 'gpt-4'),
+            llm_model=agent_data.get('llm_model', 'gpt-5-mini'),
             llm_config={},
             routing_keywords=agent_data.get('routing_keywords', []),
             routing_patterns=[],

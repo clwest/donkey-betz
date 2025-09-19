@@ -317,13 +317,13 @@ Make it personal, not generic. Show personality while remaining professional.
             logger.info(f"🤖 {job_match.agent_name} is using OpenAI to write cover letter...")
 
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-5-nano",
                 messages=[
                     {"role": "system", "content": "You are an expert cover letter writer. Create compelling, personalized applications."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.8,
-                max_tokens=500
+                max_completion_tokens=500
             )
 
             cover_letter = response.choices[0].message.content.strip()

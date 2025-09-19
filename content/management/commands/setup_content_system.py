@@ -123,7 +123,7 @@ Please provide a detailed analysis covering the game flow, standout performances
                 'category': 'sports',
                 'tags': ['sports', 'analysis', 'games', 'summary'],
                 'llm_provider': 'openai',
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'generation_config': {
                     'temperature': 0.7,
                     'max_tokens': 2000,
@@ -184,7 +184,7 @@ Please provide a detailed analysis including value assessment, recommended bets 
                 'category': 'betting',
                 'tags': ['betting', 'analysis', 'odds', 'sports'],
                 'llm_provider': 'openai',
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'generation_config': {
                     'temperature': 0.3,
                     'max_tokens': 2500,
@@ -231,7 +231,7 @@ Please create an engaging, well-structured article that covers the topic thoroug
                 'category': 'general',
                 'tags': ['article', 'content', 'writing'],
                 'llm_provider': 'openai',
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'generation_config': {
                     'temperature': 0.7,
                     'max_tokens': 3000,

@@ -95,7 +95,7 @@ Always prioritize accuracy, provide context for statistics, and create content t
                     'analytical': 'high'
                 },
                 'llm_provider': LLMProvider.OPENAI,
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'llm_config': {
                     'temperature': 0.7,
                     'max_tokens': 2500,
@@ -158,7 +158,7 @@ Always emphasize responsible gambling, provide clear risk assessments, and base 
                     'objectivity': 'very_high'
                 },
                 'llm_provider': LLMProvider.OPENAI,
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'llm_config': {
                     'temperature': 0.3,
                     'max_tokens': 2800,
@@ -221,7 +221,7 @@ Always provide comprehensive research context, highlight the most relevant findi
                     'critical_thinking': 'high'
                 },
                 'llm_provider': LLMProvider.OPENAI,
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'llm_config': {
                     'temperature': 0.4,
                     'max_tokens': 3000,
@@ -284,7 +284,7 @@ You excel at taking high-level content requirements and translating them into de
                     'adaptability': 'high'
                 },
                 'llm_provider': LLMProvider.OPENAI,
-                'llm_model': 'gpt-4-turbo-preview',
+                'llm_model': 'gpt-5-mini',
                 'llm_config': {
                     'temperature': 0.5,
                     'max_tokens': 2000,

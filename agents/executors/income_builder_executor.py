@@ -330,14 +330,14 @@ class IncomeBuilderExecutor(BaseAgentExecutor):
         try:
             ai_response = await self.call_openai_api(
                 prompt=prompt,
-                model="gpt-4",
-                max_tokens=1000,
+                model="gpt-5-mini",  # Income opportunity analysis
+                max_completion_tokens=1000,
                 temperature=0.7
             )
 
             return {
                 'ai_analysis': ai_response.get('content', ''),
-                'model_used': 'gpt-4',
+                'model_used': 'gpt-5-mini',
                 'analysis_timestamp': datetime.now().isoformat(),
                 'tokens_used': ai_response.get('usage', {})
             }
@@ -642,8 +642,8 @@ Once you've successfully completed your first project:
         try:
             ai_plan = await self.call_openai_api(
                 prompt=action_plan_prompt,
-                model="gpt-4",
-                max_tokens=2000,
+                model="gpt-5-mini",  # Income opportunity analysis
+                max_completion_tokens=2000,
                 temperature=0.7
             )
 

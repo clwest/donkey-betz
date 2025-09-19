@@ -186,6 +186,7 @@ export const OpportunitiesHub: React.FC = () => {
   const [actionPlans, setActionPlans] = useState<Map<string, ActionPlan>>(new Map());
   const [loading, setLoading] = useState(true);
   const [wsConnected, setWsConnected] = useState(false);
+  const [generatingProjects, setGeneratingProjects] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     type: 'all',
@@ -209,6 +210,8 @@ export const OpportunitiesHub: React.FC = () => {
   const [campaignContent, setCampaignContent] = useState<Map<string, CampaignContent[]>>(new Map());
   const [ecosystemStatus, setEcosystemStatus] = useState<any>(null);
   const [activatingEcosystem, setActivatingEcosystem] = useState(false);
+  const [generatedProjects, setGeneratedProjects] = useState<any[]>([]);
+  const [showGeneratedProjects, setShowGeneratedProjects] = useState(false);
 
   // WebSocket reference
   const wsRef = useRef<WebSocket | null>(null);
@@ -217,6 +220,7 @@ export const OpportunitiesHub: React.FC = () => {
   const tabs: TabConfig[] = [
     { id: 'discover', label: 'Discover', icon: Search, badge: opportunities.length },
     { id: 'evaluate', label: 'Evaluate', icon: Brain, badge: actionPlans.size },
+    { id: 'ai-projects', label: 'AI Projects', icon: Sparkles, badge: generatedProjects.length },
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone, badge: campaigns.length },
     { id: 'applications', label: 'Applications', icon: FileText, badge: applications.size },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 }
@@ -228,6 +232,7 @@ export const OpportunitiesHub: React.FC = () => {
     connectToUnifiedHub();
     fetchInitialData();
     loadCampaigns();
+    loadGeneratedProjects();
 
     return () => {
       if (wsRef.current) {
@@ -615,6 +620,71 @@ export const OpportunitiesHub: React.FC = () => {
     }
   };
 
+  const loadGeneratedProjects = async () => {
+    try {
+      const response = await apiClient.get('/api/v1/ai-opportunities/projects/');
+      if (response.data.success && response.data.projects.length > 0) {
+        // Transform the data to match our format
+        const projects = response.data.projects.map((p: any) => ({
+          success: true,
+          project_path: p.path,
+          files_created: p.files,
+          revenue_potential: p.revenue_potential || 'Unknown',
+          project_type: 'ai_application',
+          ready_to_launch: p.has_readme && p.has_requirements,
+          strategy: { title: p.name }
+        }));
+        setGeneratedProjects(projects);
+      }
+    } catch (error) {
+      console.log('No previous projects found');
+    }
+  };
+
+  const generateAIProjects = async () => {
+    setGeneratingProjects(true);
+    try {
+      // Call the AI opportunity pipeline API
+      const response = await apiClient.post('/api/v1/ai-opportunities/execute/', {
+        preference: searchTerm || '', // Use search term as preference
+        strategies_count: 3
+      });
+
+      if (response.data.success) {
+        const { summary, projects, strategies } = response.data;
+
+        // Store the generated projects
+        setGeneratedProjects(projects);
+        setShowGeneratedProjects(true);
+
+        // Switch to AI Projects tab to show results
+        setActiveTab('ai-projects');
+
+        // Show success notification
+        toast.success(
+          `🚀 Generated ${summary.projects_successful} AI Projects!`,
+          {
+            description: `Revenue potential: ${summary.total_revenue_potential}`,
+            duration: 5000
+          }
+        );
+
+        // Refresh opportunities to show any new data
+        await fetchInitialData();
+      }
+    } catch (error: any) {
+      console.error('AI project generation failed:', error);
+      toast.error(
+        'Failed to generate AI projects',
+        {
+          description: error.response?.data?.error || 'Please try again later'
+        }
+      );
+    } finally {
+      setGeneratingProjects(false);
+    }
+  };
+
   // Campaign management functions
   const loadCampaigns = async () => {
     try {
@@ -770,6 +840,24 @@ export const OpportunitiesHub: React.FC = () => {
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
+            </button>
+
+            <button
+              onClick={generateAIProjects}
+              disabled={generatingProjects}
+              className="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+            >
+              {generatingProjects ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  AI Generate Projects
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1123,6 +1211,280 @@ export const OpportunitiesHub: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
+  );
+
+  const renderAIProjectsTab = () => (
+    <div className="space-y-6">
+      {/* Header with Generate Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-semibold text-white">Generated AI Projects</h3>
+          <p className="text-gray-400 mt-1">
+            AI-powered business opportunities ready to launch
+          </p>
+        </div>
+        <button
+          onClick={generateAIProjects}
+          disabled={generatingProjects}
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+        >
+          {generatingProjects ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5" />
+              Generate New Projects
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Projects Grid */}
+      {generatedProjects.length === 0 ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center">
+          <Sparkles className="w-16 h-16 text-purple-500 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">No AI Projects Yet</h3>
+          <p className="text-gray-400 mb-6">
+            Click "Generate New Projects" to research and build AI monetization opportunities
+          </p>
+          <button
+            onClick={generateAIProjects}
+            disabled={generatingProjects}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Sparkles className="w-5 h-5 inline-block mr-2" />
+            Generate Your First Projects
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {generatedProjects.map((project, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 transition-colors"
+            >
+              {/* Project Header with Type */}
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="px-3 py-1 text-xs bg-white/20 text-white rounded-full">
+                    {project.project_type === 'ai_application' ? 'AI App' : project.project_type || 'AI Business'}
+                  </span>
+                  {project.success && (
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  )}
+                </div>
+                <h4 className="text-lg font-bold text-white">
+                  {project.strategy?.title || 'AI Project'}
+                </h4>
+              </div>
+
+              <div className="p-6">
+                {/* What It Does */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-semibold text-gray-400 mb-2">What It Does:</h5>
+                  <p className="text-white text-sm">
+                    {project.strategy?.description ||
+                     (project.strategy?.title?.includes('LLM') ?
+                      'Build a custom HTTP client for integrating with Large Language Models. Create AI-powered applications that can communicate with GPT, Claude, and other LLMs.' :
+                      project.strategy?.title?.includes('Roop') ?
+                      'Face swapping AI application using the Roop model. Create deepfake videos, virtual avatars, or entertainment content with AI face replacement technology.' :
+                      'AI-powered application for automated content generation and monetization.')}
+                  </p>
+                </div>
+
+                {/* How It Makes Money */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-semibold text-gray-400 mb-2">Monetization Strategy:</h5>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <DollarSign className="w-4 h-4 text-green-400 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="text-green-400 font-semibold text-sm">
+                          {project.revenue_potential || project.strategy?.potential_revenue || '$1,000-10,000/month'}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {project.strategy?.title?.includes('LLM') ?
+                           'SaaS subscriptions, API access fees, enterprise licenses' :
+                           project.strategy?.title?.includes('Roop') ?
+                           'Content creation services, video editing tools, entertainment apps' :
+                           'Subscription model, usage-based pricing, premium features'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Implementation Time */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-semibold text-gray-400 mb-2">Time to Market:</h5>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-400" />
+                    <span className="text-white text-sm">
+                      {project.strategy?.time_to_implement || '1-4 weeks'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      • {project.strategy?.difficulty || 'Beginner to Intermediate'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Key Features */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-semibold text-gray-400 mb-2">Key Features:</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {(project.strategy?.actionable_steps || [
+                      'AI Integration',
+                      'Automated Processing',
+                      'User Dashboard',
+                      'Payment System'
+                    ]).slice(0, 4).map((step: string, i: number) => (
+                      <span key={i} className="text-xs bg-purple-600/20 text-purple-300 px-2 py-1 rounded">
+                        {step.split(' ').slice(0, 3).join(' ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="mb-4 p-3 bg-gray-900 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Status:</span>
+                    <span className={`font-semibold ${project.ready_to_launch ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {project.ready_to_launch ? '✅ Ready to Launch' : '⚠️ Needs API Keys'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      // Open README in new window
+                      const readmePath = `${project.project_path}/README.md`;
+                      toast.info('Opening project documentation...', {
+                        description: 'Check your file explorer'
+                      });
+                      // You could also fetch and display the README content
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    <FileText className="w-4 h-4 inline-block mr-1" />
+                    View Docs
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const setupInstructions = `
+cd ${project.project_path}
+pip install -r requirements.txt
+# Add your OpenAI API key to .env
+python ai_app.py
+                      `.trim();
+                      navigator.clipboard.writeText(setupInstructions);
+                      toast.success('Setup instructions copied!', {
+                        description: 'Paste in terminal to get started'
+                      });
+                    }}
+                    className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                  >
+                    <Zap className="w-4 h-4 inline-block mr-1" />
+                    Quick Start
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(project.project_path);
+                      toast.success('Project path copied!');
+                    }}
+                    className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                  >
+                    <Building className="w-4 h-4 inline-block mr-1" />
+                    Open Folder
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const businessPlan = `
+PROJECT: ${project.strategy?.title || 'AI Application'}
+
+REVENUE MODEL:
+${project.revenue_potential || '$1,000-10,000/month'}
+
+TARGET MARKET:
+${project.strategy?.title?.includes('LLM') ? 'Developers, AI startups, enterprises needing LLM integration' :
+  project.strategy?.title?.includes('Roop') ? 'Content creators, video editors, entertainment industry' :
+  'Businesses seeking AI automation'}
+
+PRICING STRATEGY:
+- Starter: $29/month (100 API calls)
+- Pro: $99/month (1,000 API calls)
+- Enterprise: $499/month (unlimited)
+
+LAUNCH CHECKLIST:
+1. Add API keys to .env file
+2. Test core functionality
+3. Set up payment processing (Stripe)
+4. Create landing page
+5. Launch on Product Hunt
+6. Run Google/Facebook ads
+7. Reach out to target customers
+                      `.trim();
+                      navigator.clipboard.writeText(businessPlan);
+                      toast.success('Business plan copied!', {
+                        description: 'Ready to launch your AI business'
+                      });
+                    }}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    <TrendingUp className="w-4 h-4 inline-block mr-1" />
+                    Biz Plan
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Load Previous Projects Button */}
+      {generatedProjects.length > 0 && (
+        <div className="flex justify-center">
+          <button
+            onClick={async () => {
+              try {
+                const response = await apiClient.get('/api/v1/ai-opportunities/projects/');
+                if (response.data.success && response.data.projects.length > 0) {
+                  // Transform the data to match our format
+                  const projects = response.data.projects.map((p: any) => ({
+                    success: true,
+                    project_path: p.path,
+                    files_created: p.files,
+                    revenue_potential: p.revenue_potential || 'Unknown',
+                    project_type: 'ai_application',
+                    ready_to_launch: p.has_readme && p.has_requirements,
+                    strategy: { title: p.name }
+                  }));
+                  setGeneratedProjects(projects);
+                  toast.success(`Loaded ${projects.length} previous projects`);
+                }
+              } catch (error) {
+                console.error('Failed to load projects:', error);
+              }
+            }}
+            className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4 inline-block mr-2" />
+            Load Previous Projects
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -1523,6 +1885,7 @@ export const OpportunitiesHub: React.FC = () => {
           >
             {activeTab === 'discover' && renderDiscoverTab()}
             {activeTab === 'evaluate' && renderEvaluateTab()}
+            {activeTab === 'ai-projects' && renderAIProjectsTab()}
             {activeTab === 'campaigns' && renderCampaignsTab()}
             {activeTab === 'applications' && renderApplicationsTab()}
             {activeTab === 'analytics' && renderAnalyticsTab()}

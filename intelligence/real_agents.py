@@ -48,19 +48,18 @@ class ContentCreatorAgent(BaseAgent):
         self.agent_type = "content-creator"
 
     async def execute(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate REAL content using GPT-4o-mini"""
+        """Generate REAL content using GPT-5-mini"""
         try:
             action = instruction.get('action', '')
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are a professional content creator. Generate high-quality, engaging content. Think through your approach carefully."},
                     {"role": "user", "content": f"Create content for: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             content = response.choices[0].message.content
@@ -92,14 +91,13 @@ class MLAnalyticsAgent(BaseAgent):
 
             # Use GPT to generate analytics insights
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are an ML analytics expert. Provide data-driven insights and predictions."},
                     {"role": "user", "content": f"Analyze and predict: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             analysis = response.choices[0].message.content
@@ -217,14 +215,13 @@ class PublishingAutomationAgent(BaseAgent):
 
             # Generate platform-specific content
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are a social media expert. Optimize content for each platform."},
                     {"role": "user", "content": f"Create platform-specific posts for {platforms} based on: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             scheduled_content = response.choices[0].message.content
@@ -263,14 +260,13 @@ class DataAnalystAgent(BaseAgent):
             action = instruction.get('action', '')
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are a data analyst. Provide detailed data analysis and actionable insights."},
                     {"role": "user", "content": f"Analyze data for: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             analysis = response.choices[0].message.content
@@ -316,14 +312,13 @@ class SEOOptimizerAgent(BaseAgent):
             action = instruction.get('action', '')
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are an SEO expert. Optimize content for search engines while maintaining quality."},
                     {"role": "user", "content": f"SEO optimize: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             optimized_content = response.choices[0].message.content
@@ -363,14 +358,13 @@ class EmailMarketingAgent(BaseAgent):
             action = instruction.get('action', '')
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are an email marketing expert. Create compelling email campaigns that convert."},
                     {"role": "user", "content": f"Create email campaign for: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             email_content = response.choices[0].message.content
@@ -414,14 +408,13 @@ class SocialMediaSchedulerAgent(BaseAgent):
             action = instruction.get('action', '')
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are a social media manager. Create engaging posts optimized for each platform."},
                     {"role": "user", "content": f"Create social media posts for: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             posts = response.choices[0].message.content
@@ -471,14 +464,13 @@ class MarketResearchAgent(BaseAgent):
             action = instruction.get('action', '')
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Using GPT-4o-mini (stable and reliable)
+                model="gpt-5-mini",  # Using GPT-5-mini
                 messages=[
                     {"role": "system", "content": "You are a market research expert. Provide comprehensive market analysis and competitive insights."},
                     {"role": "user", "content": f"Research market for: {action}"}
-                ],
-                temperature=0.7,  # Optimal for GPT-4o-mini
-                max_tokens=2000,  # GPT-4o-mini token parameter
-                # GPT-4o-mini - no special reasoning parameters needed
+                ],  # Optimal for GPT-5-mini
+                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                # GPT-5-mini parameters
             )
 
             research = response.choices[0].message.content

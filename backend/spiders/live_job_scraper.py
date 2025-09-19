@@ -104,7 +104,10 @@ class LiveJobScraper:
             logger.error(f"RemoteOK scraping failed: {e}")
 
         # Return mock data if API fails
-        return self._generate_mock_jobs('remoteok', 3)
+        logger.warning(f"Failed to fetch from remoteok, using cached/mock data as last resort")
+        # TODO: Implement retry logic with exponential backoff
+        # TODO: Try alternative sources before falling back to mock
+        return self._generate_mock_jobs('remoteok', 3)  # TEMPORARY FALLBACK - Replace with retry logic
 
     async def scrape_weworkremotely(self) -> List[Dict]:
         """Scrape WeWorkRemotely for remote jobs"""
@@ -143,7 +146,10 @@ class LiveJobScraper:
         except Exception as e:
             logger.error(f"WeWorkRemotely scraping failed: {e}")
 
-        return self._generate_mock_jobs('weworkremotely', 3)
+        logger.warning(f"Failed to fetch from weworkremotely, using cached/mock data as last resort")
+        # TODO: Implement retry logic with exponential backoff
+        # TODO: Try alternative sources before falling back to mock
+        return self._generate_mock_jobs('weworkremotely', 3)  # TEMPORARY FALLBACK - Replace with retry logic
 
     async def scrape_github_jobs(self) -> List[Dict]:
         """Scrape GitHub trending repositories for contributor opportunities"""
@@ -174,7 +180,10 @@ class LiveJobScraper:
         except Exception as e:
             logger.error(f"GitHub scraping failed: {e}")
 
-        return self._generate_mock_jobs('github', 2)
+        logger.warning(f"Failed to fetch from github, using cached/mock data as last resort")
+        # TODO: Implement retry logic with exponential backoff
+        # TODO: Try alternative sources before falling back to mock
+        return self._generate_mock_jobs('github', 2)  # TEMPORARY FALLBACK - Replace with retry logic
 
     async def scrape_hackernews_hiring(self) -> List[Dict]:
         """Scrape HackerNews Who's Hiring thread"""
@@ -206,7 +215,10 @@ class LiveJobScraper:
         except Exception as e:
             logger.error(f"HackerNews scraping failed: {e}")
 
-        return self._generate_mock_jobs('hackernews', 2)
+        logger.warning(f"Failed to fetch from hackernews, using cached/mock data as last resort")
+        # TODO: Implement retry logic with exponential backoff
+        # TODO: Try alternative sources before falling back to mock
+        return self._generate_mock_jobs('hackernews', 2)  # TEMPORARY FALLBACK - Replace with retry logic
 
     async def _parse_hn_comment(self, comment_id: int) -> Optional[Dict]:
         """Parse a single HackerNews comment as a job posting"""

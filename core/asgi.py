@@ -12,7 +12,6 @@ This ASGI configuration supports:
 import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
 from django.urls import path
 
 # Set Django settings module
@@ -24,11 +23,12 @@ django_asgi_app = get_asgi_application()
 # Import WebSocket routing configuration
 # This imports all the WebSocket URL patterns including the bridges and new UI components
 from core.routing import websocket_urlpatterns
+from core.ws_auth_middleware import TokenAuthMiddlewareStack
 
 # ASGI application with WebSocket support
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
-    'websocket': AuthMiddlewareStack(
+    'websocket': TokenAuthMiddlewareStack(
         URLRouter(websocket_urlpatterns)
     ),
 })

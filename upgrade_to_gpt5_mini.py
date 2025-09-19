@@ -24,13 +24,13 @@ def upgrade_file(file_path):
     # 2. Update temperature values (GPT-5 uses different scale)
     # GPT-4: 0.0-2.0, GPT-5: 0.0-1.5 with different distribution
     content = re.sub(
-        r'temperature=1\.0',
-        'temperature=1.2',
+        r'# temperature=1  # GPT-5 only supports default temperature\.0',
+        '# temperature=1.2  # GPT-5 only supports default temperature',
         content
     )
     content = re.sub(
-        r'temperature=0\.7',
-        'temperature=0.9',
+        r'# temperature=0  # GPT-5 only supports default temperature\.7',
+        '# temperature=0.9  # GPT-5 only supports default temperature',
         content
     )
 
@@ -145,14 +145,14 @@ def upgrade_agent_factory():
         if 'temperature=' in line and 'thought=' not in ''.join(lines[max(0,i-5):min(i+5,len(lines))]):
             # Add thought parameter after temperature
             new_lines.append(new_line)
-            if 'temperature=0.7' in line:
-                new_lines.append('                        temperature=0.9,  # GPT-5 enhanced temperature\n')
+            if '# temperature=0.7  # GPT-5 only supports default temperature' in line:
+                new_lines.append('                        # temperature=0.9  # GPT-5 only supports default temperature,  # GPT-5 enhanced temperature\n')
                 new_lines.append('                        thought=True,  # Enable GPT-5 reasoning\n')
                 new_lines.append('                        reasoning_steps=3,  # Multi-step reasoning\n')
                 modified = True
                 continue
-            elif 'temperature=1.0' in line:
-                new_lines.append('                        temperature=1.2,  # GPT-5 creative temperature\n')
+            elif '# temperature=1.0  # GPT-5 only supports default temperature' in line:
+                new_lines.append('                        # temperature=1.2  # GPT-5 only supports default temperature,  # GPT-5 creative temperature\n')
                 new_lines.append('                        thought=True,  # Enable GPT-5 reasoning\n')
                 new_lines.append('                        reasoning_steps=5,  # Deep reasoning\n')
                 modified = True

@@ -35,9 +35,9 @@ try:
 
     # Simple test call
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-5-nano",
         messages=[{"role": "user", "content": "Say 'API key works!'"}],
-        max_tokens=10
+        max_completion_tokens=10
     )
 
     print(f"✅ API Response: {response.choices[0].message.content}")

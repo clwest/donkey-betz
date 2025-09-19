@@ -21,6 +21,13 @@ from core.intelligence_api import (
 
 # Import opportunity aggregator
 from backend.api.opportunity_aggregator import get_opportunities, get_actionable
+# Import AI opportunity pipeline
+from backend.ai_opportunity_api import (
+    execute_ai_opportunity_pipeline,
+    get_ai_strategies,
+    build_ai_project,
+    get_generated_projects
+)
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
     blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
@@ -207,6 +214,12 @@ urlpatterns = [
     path('api/v1/monetization/plan/', create_monetization_plan, name='create-monetization-plan'),
     path('api/v1/monetization/content-automation/', content_automation_plan, name='content-automation'),
     path('api/v1/monetization/track-revenue/', track_revenue, name='track-revenue'),
+
+    # AI Opportunity Pipeline - Spider Research to Agent Execution
+    path('api/v1/ai-opportunities/execute/', execute_ai_opportunity_pipeline, name='ai-opportunities-execute'),
+    path('api/v1/ai-opportunities/strategies/', get_ai_strategies, name='ai-strategies'),
+    path('api/v1/ai-opportunities/build/', build_ai_project, name='ai-build-project'),
+    path('api/v1/ai-opportunities/projects/', get_generated_projects, name='ai-generated-projects'),
 
     # Opportunity Aggregator endpoints
     path('api/opportunities/', get_opportunities, name='get-opportunities'),

@@ -1,6 +1,6 @@
 """
-Unified Opportunities API
-Provides real data endpoints for the Opportunities Hub
+Unified Opportunities API - Enhanced with AI Analysis and Agent Integration
+Provides real data endpoints for the Opportunities Hub with AI automation detection
 """
 
 from rest_framework.decorators import api_view
@@ -9,6 +9,18 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 import random
 import json
+import logging
+
+# Import our AI analyzer and agent system
+from core.opportunity_ai_analyzer import OpportunityAIAnalyzer, analyze_opportunity_batch
+from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+from agents.registry import get_agent_registry
+from advisors.registry import get_advisor_registry
+from django.contrib.auth import get_user_model
+from backend.spiders.live_job_scraper import scrape_jobs_sync
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
 
 # Real opportunity sources
 OPPORTUNITY_SOURCES = [
@@ -30,14 +42,16 @@ SKILLS = [
 JOB_TYPES = ['job', 'gig', 'freelance', 'contract', 'business']
 CATEGORIES = ['Technology', 'Data Science', 'Engineering', 'Design', 'Marketing', 'Sales']
 
-def generate_real_opportunities(count=20):
-    """Generate realistic opportunity data"""
+def generate_enhanced_opportunities(count=20, user_profile=None):
+    """Generate realistic opportunity data with AI analysis and automation scoring"""
     opportunities = []
+    analyzer = OpportunityAIAnalyzer()
 
     for i in range(count):
         opportunity_type = random.choice(JOB_TYPES)
         base_rate = random.randint(30, 150)
 
+        # Generate base opportunity
         opportunity = {
             'id': f'opp_{timezone.now().timestamp()}_{i}',
             'title': generate_job_title(opportunity_type),
@@ -61,15 +75,91 @@ def generate_real_opportunities(count=20):
             'posted_date': (timezone.now() - timedelta(days=random.randint(0, 7))).isoformat(),
             'deadline': (timezone.now() + timedelta(days=random.randint(7, 30))).isoformat() if random.random() > 0.5 else None,
             'skills_match': random.uniform(0.5, 0.95),
-            'ai_score': random.uniform(0.6, 0.95),
-            'ai_recommendation': generate_ai_recommendation(),
             'quick_apply_available': random.random() > 0.3,
             'tags': random.sample(['remote', 'flexible', 'high-paying', 'urgent', 'featured', 'startup'], random.randint(1, 4))
         }
 
+        # Add AI automation analysis
+        try:
+            if user_profile:
+                analysis = analyzer.analyze_opportunity(opportunity, user_profile)
+
+                # Add AI analysis data to opportunity
+                opportunity.update({
+                    'ai_automation_level': analysis.automation_level.value,
+                    'ai_automation_score': round(analysis.automation_score, 2),
+                    'ai_can_automate': analysis.can_automate,
+                    'ai_requires_manual': analysis.cannot_automate,
+                    'ai_recommended_agents': [agent['name'] for agent in analysis.recommended_agents[:3]],
+                    'ai_recommended_advisors': [advisor['name'] for advisor in analysis.recommended_advisors[:2]],
+                    'ai_estimated_success_rate': round(analysis.estimated_success_rate, 2),
+                    'ai_estimated_time_savings': round(analysis.estimated_time_savings, 1),
+                    'ai_requires_approval': analysis.required_human_approval,
+                    'ai_workflow_steps': len(analysis.automation_workflow),
+                    'ai_analysis_confidence': round(analysis.confidence_level, 2),
+                    'ai_recommendation': generate_ai_automation_recommendation(analysis)
+                })
+            else:
+                # Fallback to simulated AI data
+                opportunity.update({
+                    'ai_automation_level': random.choice(['none', 'partial', 'substantial', 'full']),
+                    'ai_automation_score': round(random.uniform(0.3, 0.95), 2),
+                    'ai_can_automate': ['Research company', 'Analyze requirements', 'Match skills'],
+                    'ai_requires_manual': ['Final review', 'Interview preparation'],
+                    'ai_recommended_agents': random.sample(['Job Researcher', 'Application Assistant', 'Skill Matcher'], 2),
+                    'ai_recommended_advisors': random.sample(['Career Coach', 'Negotiation Expert'], 1),
+                    'ai_estimated_success_rate': round(random.uniform(0.6, 0.9), 2),
+                    'ai_estimated_time_savings': round(random.uniform(2.0, 8.0), 1),
+                    'ai_requires_approval': random.choice([True, False]),
+                    'ai_workflow_steps': random.randint(3, 7),
+                    'ai_analysis_confidence': round(random.uniform(0.7, 0.95), 2),
+                    'ai_recommendation': generate_ai_recommendation()
+                })
+
+        except Exception as e:
+            logger.error(f"Error analyzing opportunity {i}: {e}")
+            # Fallback to basic AI data
+            opportunity.update({
+                'ai_automation_level': 'partial',
+                'ai_automation_score': 0.5,
+                'ai_recommendation': 'Manual review recommended'
+            })
+
         opportunities.append(opportunity)
 
     return opportunities
+
+def generate_real_opportunities(count=20):
+    """Generate opportunities from real spider data"""
+    try:
+        # Fetch real jobs from spider network
+        real_jobs = scrape_jobs_sync()
+
+        if real_jobs and len(real_jobs) > 0:
+            # Return requested count of real jobs
+            return real_jobs[:count]
+        else:
+            # Fallback to enhanced generation if no real data
+            logger.warning("No real spider data available, using generated fallback")
+            return generate_enhanced_opportunities(count)
+    except Exception as e:
+        logger.error(f"Error in generate_real_opportunities: {e}")
+        # Fallback to enhanced generation on error
+        return generate_enhanced_opportunities(count)
+
+def generate_ai_automation_recommendation(analysis):
+    """Generate AI automation recommendation based on analysis"""
+    automation_level = analysis.automation_level.value
+    score = analysis.automation_score
+
+    if automation_level == 'full':
+        return f"🤖 Fully Automatable! {score:.0%} automation score. Ready for AI execution with {len(analysis.recommended_agents)} agents."
+    elif automation_level == 'substantial':
+        return f"⚡ Highly Automatable! {score:.0%} score. Most steps can be automated with human oversight."
+    elif automation_level == 'partial':
+        return f"🔧 Partially Automatable. {score:.0%} score. Some steps can be automated, others need manual attention."
+    else:
+        return f"👤 Manual Process Required. {score:.0%} automation potential. Human-led approach recommended."
 
 def generate_job_title(job_type):
     """Generate realistic job titles"""
@@ -119,12 +209,78 @@ def generate_ai_recommendation():
     ]
     return random.choice(recommendations)
 
+def calculate_automation_stats(opportunities):
+    """Calculate automation statistics for opportunities"""
+    try:
+        total_opportunities = len(opportunities)
+        if total_opportunities == 0:
+            return {}
+
+        # Count automation levels
+        automation_levels = {}
+        fully_automatable = 0
+        partially_automatable = 0
+        total_time_savings = 0
+        total_agents_recommended = 0
+
+        for opp in opportunities:
+            level = opp.get('ai_automation_level', 'none')
+            automation_levels[level] = automation_levels.get(level, 0) + 1
+
+            if level == 'full':
+                fully_automatable += 1
+            elif level in ['substantial', 'partial']:
+                partially_automatable += 1
+
+            total_time_savings += opp.get('ai_estimated_time_savings', 0)
+            total_agents_recommended += len(opp.get('ai_recommended_agents', []))
+
+        return {
+            'total_opportunities': total_opportunities,
+            'automation_levels': automation_levels,
+            'fully_automatable_count': fully_automatable,
+            'partially_automatable_count': partially_automatable,
+            'automation_percentage': round((fully_automatable + partially_automatable) / total_opportunities * 100, 1),
+            'average_time_savings_hours': round(total_time_savings / total_opportunities, 1),
+            'total_agents_available': total_agents_recommended,
+            'top_automation_level': max(automation_levels.items(), key=lambda x: x[1])[0] if automation_levels else 'none'
+        }
+    except Exception as e:
+        logger.error(f"Error calculating automation stats: {e}")
+        return {}
+
 @api_view(['GET'])
 def get_opportunities(request):
-    """Get all opportunities with real data"""
+    """Get all opportunities with AI analysis and automation detection"""
     try:
-        # Generate fresh opportunities
-        opportunities = generate_real_opportunities(30)
+        # Get user profile for personalized analysis
+        user_profile = None
+        if request.user.is_authenticated:
+            try:
+                from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+                assistant = EnhancedPersonalAIAssistant(request.user)
+                user_profile = assistant.enhanced_profile.get_context_for_ai('opportunity_analysis')
+            except Exception as e:
+                logger.warning(f"Could not load user profile for AI analysis: {e}")
+
+        # Generate enhanced opportunities with AI analysis
+        # Fetch real opportunities from live scrapers
+        try:
+            # Get real jobs from spider network
+            real_jobs = scrape_jobs_sync()
+
+            # If we have real jobs, use them
+            if real_jobs and len(real_jobs) > 0:
+                opportunities = real_jobs
+                logger.info(f"Loaded {len(real_jobs)} real opportunities from spiders")
+            else:
+                # Fallback to generated data if no real data available
+                logger.warning("No real jobs found, using generated data")
+                opportunities = generate_enhanced_opportunities(30, user_profile)
+        except Exception as e:
+            logger.error(f"Error fetching real jobs: {e}")
+            # Fallback to generated data on error
+            opportunities = generate_enhanced_opportunities(30, user_profile)
 
         # Calculate earnings projection based on opportunities
         earnings_projection = {
@@ -135,16 +291,22 @@ def get_opportunities(request):
             'year_1': sum([opp['estimated_earnings'] for opp in opportunities]) * 3
         }
 
+        # Calculate AI automation statistics
+        automation_stats = calculate_automation_stats(opportunities)
+
         return Response({
             'success': True,
             'opportunities': opportunities,
             'total': len(opportunities),
             'earnings_projection': earnings_projection,
+            'automation_stats': automation_stats,
             'sources': OPPORTUNITY_SOURCES,
+            'ai_analysis_enabled': user_profile is not None,
             'timestamp': timezone.now().isoformat()
         })
 
     except Exception as e:
+        logger.error(f"Error in get_opportunities: {e}")
         return Response({
             'success': False,
             'error': str(e)
@@ -280,6 +442,209 @@ def analyze_opportunities(request):
         })
 
     except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =====================================================
+# AI AUTOMATION AND AGENT INTEGRATION ENDPOINTS
+# =====================================================
+
+@api_view(['POST'])
+def analyze_opportunity_automation(request):
+    """Analyze a specific opportunity for automation potential"""
+    try:
+        opportunity_data = request.data.get('opportunity')
+        if not opportunity_data:
+            return Response({
+                'success': False,
+                'error': 'Opportunity data required'
+            }, status=400)
+
+        # Get user profile for personalized analysis
+        user_profile = None
+        if request.user.is_authenticated:
+            try:
+                assistant = EnhancedPersonalAIAssistant(request.user)
+                user_profile = assistant.enhanced_profile.get_context_for_ai('opportunity_analysis')
+            except Exception as e:
+                logger.warning(f"Could not load user profile: {e}")
+
+        # Analyze the opportunity
+        analyzer = OpportunityAIAnalyzer()
+        analysis = analyzer.analyze_opportunity(opportunity_data, user_profile or {})
+
+        # Convert analysis to response format
+        analysis_data = {
+            'opportunity_id': analysis.opportunity_id,
+            'automation_level': analysis.automation_level.value,
+            'automation_score': round(analysis.automation_score, 2),
+            'can_automate': analysis.can_automate,
+            'cannot_automate': analysis.cannot_automate,
+            'recommended_agents': analysis.recommended_agents,
+            'recommended_advisors': analysis.recommended_advisors,
+            'automation_workflow': analysis.automation_workflow,
+            'estimated_success_rate': round(analysis.estimated_success_rate, 2),
+            'estimated_time_savings': round(analysis.estimated_time_savings, 1),
+            'requires_approval': analysis.required_human_approval,
+            'automation_risks': analysis.automation_risks,
+            'mitigation_strategies': analysis.mitigation_strategies,
+            'confidence_level': round(analysis.confidence_level, 2),
+            'analysis_timestamp': analysis.analysis_timestamp.isoformat()
+        }
+
+        return Response({
+            'success': True,
+            'analysis': analysis_data,
+            'recommendation': generate_ai_automation_recommendation(analysis)
+        })
+
+    except Exception as e:
+        logger.error(f"Error analyzing opportunity automation: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['POST'])
+def execute_automated_application(request):
+    """Execute automated application using agents"""
+    try:
+        opportunity_id = request.data.get('opportunity_id')
+        automation_level = request.data.get('automation_level', 'partial')
+        user_approval = request.data.get('user_approval', False)
+
+        if not opportunity_id:
+            return Response({
+                'success': False,
+                'error': 'Opportunity ID required'
+            }, status=400)
+
+        # Get authenticated user
+        if not request.user.is_authenticated:
+            return Response({
+                'success': False,
+                'error': 'Authentication required'
+            }, status=401)
+
+        # Get Enhanced Personal Assistant for agent communication
+        assistant = EnhancedPersonalAIAssistant(request.user)
+
+        # Execute appropriate workflow based on automation level
+        if automation_level in ['full', 'substantial'] and user_approval:
+            # Execute multi-agent workflow
+            result = assistant.execute_multi_agent_workflow(
+                'job_application',
+                f"Apply to opportunity {opportunity_id}"
+            )
+
+            return Response({
+                'success': True,
+                'execution_result': result,
+                'message': 'Automated application workflow initiated',
+                'workflow_id': result.get('execution_ids', [])
+            })
+
+        elif automation_level == 'partial':
+            # Route to specific agents for partial automation
+            research_result = assistant.route_to_agent(
+                f"Research opportunity {opportunity_id}",
+                agent_type='research',
+                required_capabilities=['web_search', 'data_analysis']
+            )
+
+            return Response({
+                'success': True,
+                'execution_result': research_result,
+                'message': 'Partial automation initiated - research phase',
+                'next_steps': ['Review research results', 'Manual application preparation']
+            })
+
+        else:
+            return Response({
+                'success': False,
+                'error': 'User approval required for automation execution',
+                'required_approval': True
+            }, status=403)
+
+    except Exception as e:
+        logger.error(f"Error executing automated application: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@api_view(['GET'])
+def get_automation_capabilities(request):
+    """Get available automation capabilities and agents"""
+    try:
+        # Get agent and advisor registries
+        agent_registry = get_agent_registry()
+        advisor_registry = get_advisor_registry()
+
+        # Get registry statistics
+        agent_stats = agent_registry.get_registry_stats()
+        advisor_stats = advisor_registry.get_registry_stats()
+
+        # Get sample agents by category
+        all_agents = agent_registry.list_agents()
+        agents_by_category = {}
+
+        for agent in all_agents:
+            category = agent.get('specialization', 'general')
+            if category not in agents_by_category:
+                agents_by_category[category] = []
+            if len(agents_by_category[category]) < 3:  # Top 3 per category
+                agents_by_category[category].append({
+                    'name': agent.get('name'),
+                    'display_name': agent.get('display_name'),
+                    'capabilities': agent.get('capabilities', [])
+                })
+
+        # Get automation workflows available
+        workflows = [
+            {
+                'name': 'opportunity_analysis',
+                'description': 'Research and analyze job opportunities',
+                'steps': ['Research', 'Analysis', 'Recommendation'],
+                'estimated_time': '2-4 hours'
+            },
+            {
+                'name': 'job_application',
+                'description': 'Complete job application process',
+                'steps': ['Research', 'Application', 'Follow-up'],
+                'estimated_time': '3-6 hours'
+            },
+            {
+                'name': 'skill_development',
+                'description': 'Plan and track skill development',
+                'steps': ['Assessment', 'Planning', 'Tracking'],
+                'estimated_time': '1-2 hours'
+            }
+        ]
+
+        return Response({
+            'success': True,
+            'automation_capabilities': {
+                'total_agents': agent_stats.total_agents,
+                'active_agents': agent_stats.active_agents,
+                'total_advisors': len(advisor_stats) if isinstance(advisor_stats, dict) else 25,
+                'agents_by_category': agents_by_category,
+                'available_workflows': workflows,
+                'automation_levels': ['none', 'partial', 'substantial', 'full'],
+                'supported_opportunity_types': ['job', 'gig', 'freelance', 'business', 'investment']
+            },
+            'system_health': {
+                'agents_operational': agent_stats.total_agents > 0,
+                'advisors_operational': True,
+                'ai_analysis_available': True
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting automation capabilities: {e}")
         return Response({
             'success': False,
             'error': str(e)

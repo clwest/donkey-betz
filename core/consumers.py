@@ -31,6 +31,23 @@ try:
 except ImportError:
     EnhancedAIAssistantConsumer = None
 
+# Import personal assistant interviewer
+try:
+    from intelligence.personal_assistant_interviewer import personal_assistant_interviewer
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("✅ Personal Assistant Interviewer loaded successfully")
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"❌ Failed to import Personal Assistant Interviewer: {e}")
+    personal_assistant_interviewer = None
+except Exception as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"❌ Unexpected error importing Personal Assistant Interviewer: {e}")
+    personal_assistant_interviewer = None
+
 
 class SafeWebSocketMixin:
     """Mixin for safe WebSocket send operations"""
@@ -401,10 +418,17 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message_type = text_data_json.get('type', 'chat_message')
-        
-        if message_type == 'chat_message':
+
+        # Handle interview protocol messages
+        if message_type == 'start_interview':
+            await self.handle_start_interview(text_data_json)
+        elif message_type == 'interview_response':
+            await self.handle_interview_response(text_data_json)
+        elif message_type == 'complete_interview':
+            await self.handle_complete_interview(text_data_json)
+        elif message_type == 'chat_message':
             message = text_data_json.get('message', '')
-            
+
             # Echo back for demo (in real implementation, this would process with AI)
             await self.safe_send({
                 'type': 'assistant_response',
@@ -413,7 +437,316 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                     'timestamp': datetime.now().isoformat()
                 }
             })
-    
+
+    async def handle_start_interview(self, data):
+        """Handle interview start request using AI-powered interview system"""
+        try:
+            # Lazy import to ensure Django is ready
+            global personal_assistant_interviewer
+            if personal_assistant_interviewer is None:
+                try:
+                    from intelligence.personal_assistant_interviewer import personal_assistant_interviewer as pai
+                    personal_assistant_interviewer = pai
+                except Exception as e:
+                    await self.safe_send({
+                        'type': 'error',
+                        'data': {'message': f'Failed to load interview system: {str(e)}'}
+                    })
+                    return
+
+            if not personal_assistant_interviewer:
+                # Fallback to basic response if AI interviewer not available
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': 'AI interview system not available'}
+                })
+                return
+
+            # Require authentication for interview
+            if not self.is_authenticated:
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': 'Authentication required for interview. Please log in to continue.'}
+                })
+                return
+
+            user_id = str(self.user.id)
+
+            interview_data = data.get('data', {})
+            interview_type = interview_data.get('interview_type', 'full')
+            quick_start = interview_type == 'quick'
+
+            # Start AI-powered interview
+            result = await personal_assistant_interviewer.start_interview(
+                user_id=user_id,
+                quick_start=quick_start
+            )
+
+            if result.get('success'):
+                await self.safe_send({
+                    'type': 'interview_started',
+                    'data': {
+                        'session_id': f'ai-interview-{self.user.id}',
+                        'interview_type': interview_type,
+                        'estimated_time': result.get('estimated_time'),
+                        'message': f'Starting {interview_type} interview with AI assistance...',
+                        'timestamp': datetime.now().isoformat(),
+                        'is_interview': True  # Flag to identify interview messages
+                    }
+                })
+
+                # Send first AI-generated question with full data
+                question_data = result.get('question', {})
+                await self.safe_send({
+                    'type': 'interview_question',
+                    'data': {
+                        'question': question_data,  # Send the full question object including options
+                        'state': result.get('state', {}),
+                        'is_interview': True  # Flag to identify interview messages
+                    }
+                })
+            else:
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': result.get('error', 'Failed to start AI interview')}
+                })
+
+        except Exception as e:
+            print(f"Error in AI interview start: {e}")
+            await self.safe_send({
+                'type': 'error',
+                'data': {'message': f'Interview system error: {str(e)}'}
+            })
+
+    async def handle_interview_response(self, data):
+        """Handle user's interview response using AI-powered interview system"""
+        try:
+            if not personal_assistant_interviewer:
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': 'AI interview system not available'}
+                })
+                return
+
+            # Require authentication for interview
+            if not self.is_authenticated:
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': 'Authentication required for interview. Please log in to continue.'}
+                })
+                return
+
+            user_id = str(self.user.id)
+
+            response_data = data.get('data', {})
+            response = response_data.get('response', '')
+
+            # Process response with AI interviewer
+            result = await personal_assistant_interviewer.process_response(
+                user_id=user_id,
+                response=response
+            )
+
+            if result.get('success'):
+                if result.get('interview_complete'):
+                    # Interview completed - save profile and send summary
+                    profile = result.get('profile')
+                    # Always save to database (authentication is now required)
+                    await self.save_completed_interview_profile(profile)
+
+                    await self.safe_send({
+                        'type': 'interview_completed',
+                        'data': {
+                            'profile': profile,
+                            'session_id': f'ai-interview-{self.user.id}',
+                            'completion_timestamp': datetime.now().isoformat(),
+                            'message': 'Excellent! Your profile is complete. I now understand your goals and can provide personalized recommendations.',
+                            'next_steps': [
+                                'Find personalized opportunities',
+                                'Get income recommendations',
+                                'Start applying to matches'
+                            ],
+                            'is_interview': True  # Flag to identify interview messages
+                        }
+                    })
+
+                    # Notify other systems about completed profile
+                    await self.notify_profile_completion(profile)
+
+                else:
+                    # Send next AI-generated question with full data
+                    question_data = result.get('question', {})
+                    await self.safe_send({
+                        'type': 'interview_question',
+                        'data': {
+                            'question': question_data,  # Send the full question object including options
+                            'state': result.get('state', {}),
+                            'insights': result.get('insights', []),
+                            'is_interview': True  # Flag to identify interview messages
+                        }
+                    })
+
+            else:
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': result.get('error', 'Failed to process response')}
+                })
+
+        except Exception as e:
+            print(f"Error in AI interview response: {e}")
+            await self.safe_send({
+                'type': 'error',
+                'data': {'message': f'Interview processing error: {str(e)}'}
+            })
+
+    @database_sync_to_async
+    def save_completed_interview_profile(self, profile_data):
+        """Save completed interview profile to database"""
+        try:
+            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from decimal import Decimal
+
+            # Get or create enhanced profile
+            enhanced_profile, created = EnhancedUserProfile.objects.get_or_create(
+                user=self.user,
+                defaults={
+                    'primary_role': profile_data.get('strongest_skill', 'Professional')[:200]
+                }
+            )
+
+            # Update with interview data
+            enhanced_profile.interview_completed = True
+            enhanced_profile.interview_completion_date = datetime.now()
+            enhanced_profile.interview_type = profile_data.get('interview_type', 'full')
+
+            # Basic interview data
+            if profile_data.get('current_situation'):
+                situation_mapping = {
+                    'Employed - looking for more income': 'employed_seeking_more',
+                    'Unemployed - need income ASAP': 'unemployed_need_asap',
+                    'Student - want part-time work': 'student_part_time',
+                    'Entrepreneur - scaling my business': 'entrepreneur_scaling',
+                    'Retired - exploring opportunities': 'retired_exploring'
+                }
+                enhanced_profile.current_situation = situation_mapping.get(
+                    profile_data['current_situation'], 'other'
+                )
+
+            enhanced_profile.available_hours_per_week = profile_data.get('available_hours_per_week', 0)
+
+            if profile_data.get('monthly_income_goal'):
+                enhanced_profile.monthly_income_goal = Decimal(str(profile_data['monthly_income_goal']))
+
+            enhanced_profile.strongest_skill = profile_data.get('strongest_skill', '')
+            enhanced_profile.skill_example = profile_data.get('skill_example', '')
+            enhanced_profile.professional_background = profile_data.get('professional_background', '')
+            enhanced_profile.career_motivation = profile_data.get('career_motivation', '')
+            enhanced_profile.professional_achievements = profile_data.get('achievements', '')
+            enhanced_profile.recent_learning = profile_data.get('learning_activity', '')
+
+            enhanced_profile.work_type_preferences = profile_data.get('work_preferences', [])
+            enhanced_profile.things_to_avoid = profile_data.get('things_to_avoid', '')
+            enhanced_profile.other_work_preferences = profile_data.get('other_preferences', '')
+            enhanced_profile.hidden_talents = profile_data.get('hidden_talents', [])
+            enhanced_profile.available_assets = profile_data.get('available_assets', [])
+            enhanced_profile.commitment_level = profile_data.get('commitment_level', '')
+
+            if profile_data.get('auto_apply_preference'):
+                auto_apply_mapping = {
+                    'Yes - Apply automatically to good matches': 'auto_yes',
+                    'Yes - But ask me first': 'ask_first',
+                    'No - Just show me opportunities': 'no_auto'
+                }
+                enhanced_profile.auto_apply_preference = auto_apply_mapping.get(
+                    profile_data['auto_apply_preference'], 'no_auto'
+                )
+
+            # AI insights and recommendations
+            enhanced_profile.interview_insights = profile_data.get('ai_insights', [])
+            enhanced_profile.profile_strength_score = profile_data.get('profile_strength_score', 0.0)
+            enhanced_profile.personalized_recommendations = profile_data.get('recommendations', [])
+
+            # Update skills from interview
+            skills_data = profile_data.get('skills_by_category', {})
+            if skills_data:
+                competencies = {}
+                for category, skills in skills_data.items():
+                    for skill in skills:
+                        if skill != 'None of these':
+                            competencies[skill] = 5  # Default proficiency level
+
+                enhanced_profile.core_competencies = competencies
+
+            # Recalculate completeness
+            enhanced_profile.calculate_completeness()
+            enhanced_profile.save()
+
+            print(f"Saved completed interview profile for user {self.user.username}")
+
+        except Exception as e:
+            print(f"Error saving profile: {e}")
+            raise
+
+    async def notify_profile_completion(self, profile_data):
+        """Notify other platform systems about completed profile"""
+        try:
+            # Notify the unified platform connector
+            from frontend.src.services.UnifiedPlatformConnector import unifiedConnector
+
+            # Send profile completion to income builder and job matching systems
+            await self.channel_layer.group_send(
+                'income_income_builder',
+                {
+                    'type': 'profile_completed',
+                    'user_id': str(self.user.id),
+                    'profile': profile_data
+                }
+            )
+
+            # Notify personal assistant system
+            await self.channel_layer.group_send(
+                'personal_assistant',
+                {
+                    'type': 'profile_ready',
+                    'user_id': str(self.user.id),
+                    'profile': profile_data,
+                    'message': 'Profile completed via interview - ready for personalized assistance'
+                }
+            )
+
+            print(f"Notified platform systems of profile completion for user {self.user.username}")
+
+        except Exception as e:
+            print(f"Error notifying profile completion: {e}")
+
+    async def handle_complete_interview(self, data):
+        """Handle interview completion"""
+        interview_data = data.get('data', {})
+        session_id = interview_data.get('session_id')
+
+        # Build final profile
+        profile = {
+            'name': self.user.first_name if self.is_authenticated else 'User',
+            'email': self.user.email if self.is_authenticated else '',
+            'skills': ['General skills'],
+            'experience_level': 'Beginner',
+            'income_goal': '$1,000-$2,500',
+            'work_preferences': ['Remote work'],
+            'completed_via': 'interview',
+            'profile_strength_score': 75,
+            'completeness_percentage': 100,
+            'setup_completed': True
+        }
+
+        await self.safe_send({
+            'type': 'interview_completed',
+            'data': {
+                'profile': profile,
+                'session_id': session_id,
+                'completion_timestamp': datetime.now().isoformat()
+            }
+        })
+
     async def assistant_response(self, event):
         """Send assistant response to WebSocket"""
         await self.safe_send({

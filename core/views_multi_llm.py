@@ -63,7 +63,7 @@ def available_llm_providers(request):
                     'recommended_for': ['simple text generation', 'basic Q&A', 'data formatting']
                 },
                 {
-                    'id': 'gpt-4',
+                    'id': 'gpt-5-mini',
                     'name': 'GPT-4 (Legacy)',
                     'max_tokens': 8192,
                     'cost_per_1k_input': 0.03,
@@ -72,7 +72,7 @@ def available_llm_providers(request):
                     'recommended_for': ['complex reasoning', 'creative writing', 'analysis']
                 },
                 {
-                    'id': 'gpt-4-turbo',
+                    'id': 'gpt-5-mini',
                     'name': 'GPT-4 Turbo (Legacy)',
                     'max_tokens': 128000,
                     'cost_per_1k_input': 0.01,
@@ -81,7 +81,7 @@ def available_llm_providers(request):
                     'recommended_for': ['large documents', 'comprehensive analysis', 'multimodal tasks']
                 },
                 {
-                    'id': 'gpt-3.5-turbo',
+                    'id': 'gpt-5-nano',
                     'name': 'GPT-3.5 Turbo (Legacy)',
                     'max_tokens': 4096,
                     'cost_per_1k_input': 0.0015,
@@ -222,7 +222,7 @@ def intelligent_model_selection(request):
             'performance_score': 9.8
         })
         recommendations.append({
-            'model': 'gpt-4',
+            'model': 'gpt-5-mini',
             'provider': 'openai',
             'confidence': 0.92,
             'reasoning': 'Proven analytical capabilities (legacy fallback)',
@@ -247,7 +247,7 @@ def intelligent_model_selection(request):
             'performance_score': 8.2
         })
         recommendations.append({
-            'model': 'gpt-3.5-turbo',
+            'model': 'gpt-5-nano',
             'provider': 'openai',
             'confidence': 0.82,
             'reasoning': 'Legacy cost-effective option for simple tasks',
@@ -324,7 +324,7 @@ def multi_model_comparison(request):
     data = json.loads(request.body)
     
     prompt = data.get('prompt', '')
-    models = data.get('models', ['gpt-5', 'gpt-5-mini', 'gpt-4', 'claude-3-sonnet'])
+    models = data.get('models', ['gpt-5', 'gpt-5-mini', 'gpt-5-mini', 'claude-3-sonnet'])
     parameters = data.get('parameters', {'temperature': 0.7, 'max_tokens': 1000})
     
     if not prompt:
@@ -350,7 +350,7 @@ def multi_model_comparison(request):
             quality_score = 8.8
             speed_ms = 1600
             cost = 0.018
-        elif 'gpt-4' in model:
+        elif 'gpt-5-mini' in model:
             response_text = f"GPT-4 Response: This is a comprehensive analysis of your prompt. The model provides detailed reasoning and structured insights with high accuracy and creativity."
             quality_score = 9.5
             speed_ms = 2800
@@ -448,7 +448,7 @@ def model_performance_analytics(request):
                 'cost': 89.45,
                 'avg_response_time_ms': 2100,
                 'success_rate': 0.98,
-                'models_used': ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo']
+                'models_used': ['gpt-5-mini', 'gpt-5-mini', 'gpt-5-nano']
             },
             'anthropic': {
                 'requests': 280,
@@ -468,7 +468,7 @@ def model_performance_analytics(request):
             }
         },
         'model_performance': {
-            'gpt-4': {
+            'gpt-5-mini': {
                 'requests': 180,
                 'avg_quality_score': 9.5,
                 'avg_cost_per_request': 0.47,
@@ -529,7 +529,7 @@ def set_model_preferences(request):
     
     preferences = {
         'default_model': data.get('default_model', 'claude-3-sonnet'),
-        'fallback_model': data.get('fallback_model', 'gpt-3.5-turbo'),
+        'fallback_model': data.get('fallback_model', 'gpt-5-nano'),
         'budget_limit_daily': data.get('budget_limit_daily', 50.0),
         'quality_threshold': data.get('quality_threshold', 8.0),
         'speed_priority': data.get('speed_priority', 'balanced'),  # speed, quality, cost, balanced
@@ -537,7 +537,7 @@ def set_model_preferences(request):
         'preferred_providers': data.get('preferred_providers', ['anthropic', 'openai']),
         'task_specific_models': data.get('task_specific_models', {
             'analysis': 'claude-3-opus',
-            'coding': 'gpt-4',
+            'coding': 'gpt-5-mini',
             'creative': 'claude-3-sonnet',
             'simple': 'claude-3-haiku'
         })

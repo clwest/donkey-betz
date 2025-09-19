@@ -378,20 +378,20 @@ AI_CONFIG = {
         'gpt-5': 272000,
         'gpt-5-mini': 272000,
         'gpt-5-nano': 272000,
-        'gpt-4': 128000,
-        'gpt-3.5-turbo': 16385
+        'gpt-5-mini': 128000,
+        'gpt-5-nano': 16385
     },
     'MAX_OUTPUT_TOKENS': {
         'gpt-5': 128000,
         'gpt-5-mini': 128000,
         'gpt-5-nano': 128000,
-        'gpt-4': 4096,
-        'gpt-3.5-turbo': 4096
+        'gpt-5-mini': 4096,
+        'gpt-5-nano': 4096
     },
     # Prompt Caching
     'ENABLE_PROMPT_CACHING': True,
     'PROMPT_CACHE_TTL': 300,
-    'GPT5_FALLBACK_MODEL': 'gpt-4',
+    'GPT5_FALLBACK_MODEL': 'gpt-5-mini',
     'ENABLE_GPT5_MIGRATION': True,
 }
 

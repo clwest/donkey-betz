@@ -60,8 +60,7 @@ Please generate the requested content now."""
                 messages=[
                     {"role": "system", "content": "You are a professional content creator agent. Generate high-quality content based on the instructions."},
                     {"role": "user", "content": prompt}
-                ],
-                temperature=1.0,  # GPT-5 always uses 1.0
+                ],  # GPT-5 always uses 1.0
                 max_completion_tokens=2000,  # GPT-5-mini completion tokens
                 reasoning_effort="medium"  # GPT-5-mini reasoning capability
             )
@@ -334,7 +333,7 @@ Use your expertise in {self.agent_info.get('specialization')} to provide a compr
                                     {"role": "system", "content": system_prompt},
                                     {"role": "user", "content": user_prompt}
                                 ],
-                                temperature=1.2,
+                                # temperature=1.2  # GPT-5 only supports default temperature,
                                 max_tokens=self.agent_info.get('llm_config', {}).get('max_tokens', 2000)
                             )
 

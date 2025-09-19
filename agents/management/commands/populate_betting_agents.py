@@ -26,7 +26,7 @@ class Command(BaseCommand):
                     {'name': 'sentiment_tracking', 'description': 'Public vs sharp money analysis'}
                 ]),
                 'routing_keywords': json.dumps(['betting intelligence', 'kelly criterion', 'market sentiment', 'advanced analytics']),
-                'llm_model': 'gpt-4'
+                'llm_model': 'gpt-5-mini'
             },
             {
                 'name': 'market_value_analyzer',
@@ -39,7 +39,7 @@ class Command(BaseCommand):
                     {'name': 'implied_probability', 'description': 'Calculate true probabilities'}
                 ]),
                 'routing_keywords': json.dumps(['market value', 'line value', 'market efficiency', 'implied probability']),
-                'llm_model': 'gpt-4'
+                'llm_model': 'gpt-5-mini'
             },
             {
                 'name': 'public_sentiment_analyzer',
@@ -52,7 +52,7 @@ class Command(BaseCommand):
                     {'name': 'contrarian_opportunities', 'description': 'Find contrarian betting spots'}
                 ]),
                 'routing_keywords': json.dumps(['public sentiment', 'sharp money', 'contrarian', 'reverse line movement']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'situational_analyzer',
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                     {'name': 'historical_performance', 'description': 'Historical situational trends'}
                 ]),
                 'routing_keywords': json.dumps(['situational analysis', 'rest advantage', 'travel factors', 'situational edge']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'weather_analyzer',
@@ -78,7 +78,7 @@ class Command(BaseCommand):
                     {'name': 'precipitation_effects', 'description': 'Rain/snow impact on totals'}
                 ]),
                 'routing_keywords': json.dumps(['weather', 'conditions', 'wind', 'precipitation', 'weather impact']),
-                'llm_model': 'gpt-3.5-turbo',
+                'llm_model': 'gpt-5-nano',
             },
             {
                 'name': 'injury_analyzer',
@@ -91,7 +91,7 @@ class Command(BaseCommand):
                     {'name': 'injury_trends', 'description': 'Track injury patterns and recovery'}
                 ]),
                 'routing_keywords': json.dumps(['injuries', 'injury report', 'player health', 'injury intelligence']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'kelly_bet_sizing',
@@ -104,7 +104,7 @@ class Command(BaseCommand):
                     {'name': 'bankroll_optimization', 'description': 'Optimize bankroll allocation'}
                 ]),
                 'routing_keywords': json.dumps(['kelly criterion', 'bet sizing', 'bankroll', 'risk management']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'odds_calculation',
@@ -117,7 +117,7 @@ class Command(BaseCommand):
                     {'name': 'value_identification', 'description': 'Identify value betting opportunities'}
                 ]),
                 'routing_keywords': json.dumps(['odds', 'probability', 'value betting', 'odds conversion']),
-                'llm_model': 'gpt-3.5-turbo',
+                'llm_model': 'gpt-5-nano',
             },
             {
                 'name': 'line_movement_analyzer',
@@ -130,7 +130,7 @@ class Command(BaseCommand):
                     {'name': 'movement_prediction', 'description': 'Predict future line movement'}
                 ]),
                 'routing_keywords': json.dumps(['line movement', 'line tracking', 'sharp action', 'line prediction']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'arbitrage_hunter',
@@ -143,7 +143,7 @@ class Command(BaseCommand):
                     {'name': 'sportsbook_comparison', 'description': 'Compare odds across books'}
                 ]),
                 'routing_keywords': json.dumps(['arbitrage', 'sure bet', 'guaranteed profit', 'sportsbook comparison']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'value_betting_agent',
@@ -156,7 +156,7 @@ class Command(BaseCommand):
                     {'name': 'confidence_rating', 'description': 'Rate bet confidence levels'}
                 ]),
                 'routing_keywords': json.dumps(['value betting', 'positive ev', 'betting edge', 'expected value']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             },
             {
                 'name': 'contrarian_betting',
@@ -169,7 +169,7 @@ class Command(BaseCommand):
                     {'name': 'reverse_movement', 'description': 'Analyze reverse line movement'}
                 ]),
                 'routing_keywords': json.dumps(['contrarian', 'fade public', 'reverse line', 'contrarian betting']),
-                'llm_model': 'gpt-4',
+                'llm_model': 'gpt-5-mini',
             }
         ]
         

@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""
+AI Project Builder
+Simplified version for testing the AI opportunity pipeline
+"""
+
+import json
+import logging
+import os
+import uuid
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from pathlib import Path
+
+from core.llm_enforcer import get_llm_enforcer
+from backend.spiders.ai_monetization_spider import research_ai_monetization_sync
+
+logger = logging.getLogger(__name__)
+
+
+class AIProjectBuilder:
+    """
+    Simplified AI project builder for testing
+    """
+
+    def __init__(self):
+        self.llm_enforcer = get_llm_enforcer()
+        self.project_workspace = Path("/Users/donkeyking/development/unified-donkey-betz/generated_projects")
+        self.project_workspace.mkdir(exist_ok=True)
+
+    def build_project(self, task: str, strategy: Dict = None) -> Dict[str, Any]:
+        """
+        Build an AI project based on task and strategy
+
+        Args:
+            task: Task description
+            strategy: Optional strategy from spider research
+
+        Returns:
+            Build result with project details
+        """
+        try:
+            logger.info(f"🚀 Building AI project: {task}")
+
+            # If no strategy provided, research one
+            if not strategy:
+                strategies = research_ai_monetization_sync()
+                if strategies:
+                    strategy = strategies[0]  # Use first strategy
+                else:
+                    return {'success': False, 'error': 'No strategies found'}
+
+            # Create project directory
+            project_name = self._generate_project_name(strategy.get('title', 'ai_project'))
+            project_path = self.project_workspace / project_name
+            project_path.mkdir(exist_ok=True)
+
+            logger.info(f"📁 Creating project at: {project_path}")
+
+            # Determine project type
+            strategy_type = strategy.get('strategy_type', 'ai_application')
+
+            if strategy_type == 'content_generation':
+                result = self._build_content_generator(project_path, strategy)
+            elif strategy_type == 'ai_assistant':
+                result = self._build_ai_assistant(project_path, strategy)
+            else:
+                result = self._build_generic_ai_app(project_path, strategy)
+
+            if result['success']:
+                result.update({
+                    'strategy_used': strategy,
+                    'estimated_revenue': strategy.get('potential_revenue', 'Unknown'),
+                    'project_type': strategy_type,
+                    'ready_to_launch': True
+                })
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to build project: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _generate_project_name(self, title: str) -> str:
+        """Generate project directory name"""
+        import re
+        name = re.sub(r'[^\w\s-]', '', title.lower())
+        name = re.sub(r'[-\s]+', '_', name)
+        return f"ai_project_{name}_{int(datetime.now().timestamp())}"
+
+    def _build_content_generator(self, project_path: Path, strategy: Dict) -> Dict:
+        """Build AI content generator"""
+        try:
+            # Create main application
+            app_code = '''#!/usr/bin/env python3
+"""
+AI Content Generator
+"""
+
+import streamlit as st
+import openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+st.title('🖋️ AI Content Generator')
+
+topic = st.text_input('Enter your topic:')
+content_type = st.selectbox('Content Type', ['Blog Post', 'Social Media', 'Email'])
+
+if st.button('Generate Content'):
+    if topic and openai.api_key:
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": "You are a professional content writer."},
+                    {"role": "user", "content": f"Create a {content_type.lower()} about {topic}"}
+                ],
+                max_completion_tokens=500
+            )
+
+            content = response.choices[0].message.content
+            st.write(content)
+
+        except Exception as e:
+            st.error(f"Error: {e}")
+    else:
+        st.warning('Please enter a topic and configure OpenAI API key')
+
+st.sidebar.write("💰 Revenue: $2,000-15,000/month")
+'''
+            (project_path / "content_generator.py").write_text(app_code)
+
+            # Create requirements
+            requirements = "streamlit==1.29.0\nopenai==1.52.0\npython-dotenv==1.0.0"
+            (project_path / "requirements.txt").write_text(requirements)
+
+            # Create README
+            readme = f"""# {strategy.get('title', 'AI Content Generator')}
+
+## Quick Start
+1. `pip install -r requirements.txt`
+2. Add OPENAI_API_KEY to .env file
+3. `streamlit run content_generator.py`
+
+## Revenue Potential
+{strategy.get('potential_revenue', '$2,000-15,000/month')}
+
+Generated by AI Project Builder
+"""
+            (project_path / "README.md").write_text(readme)
+
+            return {
+                'success': True,
+                'project_path': str(project_path),
+                'files_created': ['content_generator.py', 'requirements.txt', 'README.md'],
+                'launch_command': 'streamlit run content_generator.py',
+                'monetization_ready': True
+            }
+
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def _build_ai_assistant(self, project_path: Path, strategy: Dict) -> Dict:
+        """Build AI assistant"""
+        try:
+            # Create Flask API
+            api_code = '''#!/usr/bin/env python3
+"""
+AI Assistant API
+"""
+
+from flask import Flask, request, jsonify
+import openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+app = Flask(__name__)
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        message = request.json.get('message')
+
+        response = openai.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": message}
+            ],
+            max_completion_tokens=300
+        )
+
+        return jsonify({
+            'success': True,
+            'reply': response.choices[0].message.content
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+'''
+            (project_path / "assistant_api.py").write_text(api_code)
+
+            # Create requirements
+            requirements = "flask==3.0.0\nopenai==1.52.0\npython-dotenv==1.0.0"
+            (project_path / "requirements.txt").write_text(requirements)
+
+            # Create README
+            readme = f"""# {strategy.get('title', 'AI Assistant')}
+
+## Quick Start
+1. `pip install -r requirements.txt`
+2. Add OPENAI_API_KEY to .env file
+3. `python assistant_api.py`
+4. POST to http://localhost:5000/chat
+
+## Revenue Potential
+{strategy.get('potential_revenue', '$3,000-25,000/month')}
+
+Generated by AI Project Builder
+"""
+            (project_path / "README.md").write_text(readme)
+
+            return {
+                'success': True,
+                'project_path': str(project_path),
+                'files_created': ['assistant_api.py', 'requirements.txt', 'README.md'],
+                'launch_command': 'python assistant_api.py',
+                'monetization_ready': True
+            }
+
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def _build_generic_ai_app(self, project_path: Path, strategy: Dict) -> Dict:
+        """Build generic AI application"""
+        try:
+            # Create main app
+            app_code = f'''#!/usr/bin/env python3
+"""
+{strategy.get('title', 'AI Application')}
+"""
+
+import openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+def main():
+    print("🤖 {strategy.get('title', 'AI Application')}")
+    print("💰 Revenue Potential: {strategy.get('potential_revenue', 'Unknown')}")
+
+    while True:
+        user_input = input("\\nEnter your input (or 'quit'): ")
+        if user_input.lower() == 'quit':
+            break
+
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[
+                    {{"role": "system", "content": "You are an AI assistant."}},
+                    {{"role": "user", "content": user_input}}
+                ],
+                max_completion_tokens=300
+            )
+
+            print("\\nAI:", response.choices[0].message.content)
+
+        except Exception as e:
+            print(f"Error: {{e}}")
+
+if __name__ == "__main__":
+    main()
+'''
+            (project_path / "ai_app.py").write_text(app_code)
+
+            # Create requirements
+            requirements = "openai==1.52.0\npython-dotenv==1.0.0"
+            (project_path / "requirements.txt").write_text(requirements)
+
+            # Create README
+            readme = f"""# {strategy.get('title', 'AI Application')}
+
+## Quick Start
+1. `pip install -r requirements.txt`
+2. Add OPENAI_API_KEY to .env file
+3. `python ai_app.py`
+
+## Revenue Potential
+{strategy.get('potential_revenue', 'Unknown')}
+
+Generated by AI Project Builder
+"""
+            (project_path / "README.md").write_text(readme)
+
+            return {
+                'success': True,
+                'project_path': str(project_path),
+                'files_created': ['ai_app.py', 'requirements.txt', 'README.md'],
+                'launch_command': 'python ai_app.py',
+                'monetization_ready': True
+            }
+
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+
+if __name__ == "__main__":
+    # Test the builder
+    builder = AIProjectBuilder()
+    result = builder.build_project("build ai content generator")
+    print(json.dumps(result, indent=2))

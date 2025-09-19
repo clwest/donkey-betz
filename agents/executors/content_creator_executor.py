@@ -244,10 +244,8 @@ class ContentCreatorExecutor(BaseAgentExecutor):
         try:
             ai_response = await self.call_openai_api(
                 prompt=prompt,
-                model="gpt-4",
-                max_tokens=300,
-                temperature=0.7
-            )
+                model="gpt-5-mini",  # High-quality content generation
+                max_completion_tokens=300)
 
             keywords_text = ai_response.get('content', '')
             keywords = [kw.strip('- ').strip() for kw in keywords_text.split('\n') if kw.strip()]
@@ -298,10 +296,8 @@ class ContentCreatorExecutor(BaseAgentExecutor):
         try:
             ai_response = await self.call_openai_api(
                 prompt=outline_prompt,
-                model="gpt-4",
-                max_tokens=800,
-                temperature=0.7
-            )
+                model="gpt-5-mini",  # High-quality content generation
+                max_completion_tokens=800)
 
             return {
                 'outline_content': ai_response.get('content', ''),
@@ -351,10 +347,8 @@ class ContentCreatorExecutor(BaseAgentExecutor):
         try:
             ai_response = await self.call_openai_api(
                 prompt=content_prompt,
-                model="gpt-4",
-                max_tokens=2500,
-                temperature=0.7
-            )
+                model="gpt-5-mini",  # High-quality content generation
+                max_completion_tokens=2500)
 
             blog_content = ai_response.get('content', '')
 
@@ -367,7 +361,7 @@ class ContentCreatorExecutor(BaseAgentExecutor):
                 'content': blog_content,
                 'word_count': len(blog_content.split()),
                 'generated_at': datetime.now().isoformat(),
-                'model_used': 'gpt-4'
+                'model_used': 'gpt-5-mini'
             }
 
         except Exception as e:
@@ -404,10 +398,8 @@ class ContentCreatorExecutor(BaseAgentExecutor):
         try:
             ai_response = await self.call_openai_api(
                 prompt=seo_prompt,
-                model="gpt-3.5-turbo",
-                max_tokens=400,
-                temperature=0.7
-            )
+                model="gpt-5-nano",  # Fast content generation
+                max_completion_tokens=400)
 
             # Parse the response (simplified)
             seo_content = ai_response.get('content', '')
@@ -578,10 +570,8 @@ Track these metrics after publishing:
         try:
             ai_response = await self.call_openai_api(
                 prompt=prompt,
-                model="gpt-3.5-turbo",
-                max_tokens=800,
-                temperature=0.8
-            )
+                model="gpt-5-nano",  # Fast content generation
+                max_completion_tokens=800)
 
             social_content = f"""# Social Media Promotion: {blog_content.get('title', topic)}
 

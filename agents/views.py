@@ -459,7 +459,7 @@ def execute_agent(request):
             specialization='general',
             system_prompt="You are a helpful AI assistant.",
             llm_provider='openai',
-            llm_model='gpt-3.5-turbo',
+            llm_model='gpt-5-nano',
             is_active=True,
             is_public=True
         )

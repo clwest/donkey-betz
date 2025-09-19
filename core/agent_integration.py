@@ -563,7 +563,7 @@ class IntelligentPromptOptimizer:
         Optimize a prompt using the Intelligent Prompting Agent
         """
         optimization_context = {
-            'target_model': target_model or 'gpt-4',
+            'target_model': target_model or 'gpt-5-mini',
             'optimization_type': 'general_improvement',
             'user_preferences': context or {}
         }

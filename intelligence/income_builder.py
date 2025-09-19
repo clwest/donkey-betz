@@ -1684,8 +1684,7 @@ I'm ready to discuss the project details and answer any questions you might have
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=1.0,  # GPT-5 always uses temperature 1.0
+                    ],  # GPT-5 always uses temperature 1.0
                     max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens instead of max_tokens
                     reasoning_effort="medium"  # GPT-5-mini supports reasoning tokens
                 )

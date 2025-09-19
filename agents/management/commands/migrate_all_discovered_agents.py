@@ -125,7 +125,7 @@ Always:
 Focus on accuracy, depth, and practical insights.""",
                 "routing_keywords": ["research", "analyze", "investigate", "market", "competitor", "trend", "data", "study", "report", "insight"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.7, "max_tokens": 2000}
             },
             {
@@ -160,7 +160,7 @@ Approach:
 Deliver practical, actionable business guidance.""",
                 "routing_keywords": ["business", "strategy", "planning", "growth", "revenue", "model", "market", "partnership", "scale"],
                 "llm_provider": "openai", 
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.6, "max_tokens": 2000}
             },
             {
@@ -195,7 +195,7 @@ Content principles:
 Create content that educates, engages, and converts.""",
                 "routing_keywords": ["content", "writing", "blog", "article", "copy", "social", "seo", "marketing"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.8, "max_tokens": 2500}
             },
             {
@@ -230,7 +230,7 @@ Technical approach:
 Provide practical, implementable technical guidance.""",
                 "routing_keywords": ["technical", "code", "architecture", "performance", "security", "implementation", "development"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.5, "max_tokens": 2000}
             },
             {
@@ -265,7 +265,7 @@ Creative process:
 Deliver inspiring, effective creative solutions.""",
                 "routing_keywords": ["creative", "design", "branding", "visual", "campaign", "user", "experience"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.9, "max_tokens": 2000}
             },
             {
@@ -300,7 +300,7 @@ Marketing approach:
 Drive growth through strategic, creative marketing.""",
                 "routing_keywords": ["marketing", "growth", "acquisition", "brand", "campaign", "customer", "social"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.7, "max_tokens": 2000}
             },
             {
@@ -335,7 +335,7 @@ Financial approach:
 Provide sound, data-driven financial guidance.""",
                 "routing_keywords": ["financial", "finance", "budget", "investment", "analysis", "modeling", "risk"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -370,7 +370,7 @@ Communication principles:
 Build trust through authentic, strategic communication.""",
                 "routing_keywords": ["communication", "messaging", "outreach", "relations", "stakeholder", "crisis"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.6, "max_tokens": 2000}
             },
             {
@@ -405,7 +405,7 @@ Legal approach:
 Deliver sound legal guidance that protects and enables business.""",
                 "routing_keywords": ["legal", "compliance", "regulatory", "contract", "law", "risk", "policy"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.3, "max_tokens": 2000}
             },
             {
@@ -440,7 +440,7 @@ Career development approach:
 Empower professionals to achieve their career aspirations.""",
                 "routing_keywords": ["career", "professional", "development", "skills", "resume", "interview", "networking"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.7, "max_tokens": 2000}
             },
             # BETTING & ANALYTICS SPECIALISTS
@@ -476,7 +476,7 @@ Risk management principles:
 Protect capital while maximizing long-term growth.""",
                 "routing_keywords": ["risk", "bankroll", "kelly", "bet sizing", "variance", "drawdown", "money management"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.3, "max_tokens": 2000}
             },
             {
@@ -511,7 +511,7 @@ Analytics approach:
 Turn data into actionable betting insights.""",
                 "routing_keywords": ["sports", "analytics", "modeling", "prediction", "performance", "statistics", "data"],
                 "llm_provider": "openai", 
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -546,7 +546,7 @@ RAG optimization approach:
 Ensure RAG systems deliver accurate, relevant information.""",
                 "routing_keywords": ["rag", "retrieval", "embedding", "knowledge", "diagnostics", "optimization"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -581,7 +581,7 @@ Odds analysis approach:
 Find profitable betting opportunities through mathematical analysis.""",
                 "routing_keywords": ["odds", "lines", "arbitrage", "value", "probability", "closing line", "movement"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.3, "max_tokens": 2000}
             },
             {
@@ -616,7 +616,7 @@ Implementation approach:
 Build production-ready sports betting platforms.""",
                 "routing_keywords": ["implementation", "django", "backend", "platform", "architecture", "development"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.5, "max_tokens": 2500}
             },
             {
@@ -651,7 +651,7 @@ Token optimization approach:
 Maximize AI system efficiency while maintaining quality.""",
                 "routing_keywords": ["token", "optimization", "context", "cost", "efficiency", "prompt"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             # SPECIALIZED ORCHESTRATION AGENTS
@@ -687,7 +687,7 @@ Curation approach:
 Create well-structured, searchable knowledge bases.""",
                 "routing_keywords": ["glossary", "curation", "knowledge", "semantic", "organization", "rag"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -722,7 +722,7 @@ Memory coordination approach:
 Enable seamless collaboration between agents.""",
                 "routing_keywords": ["memory", "coordination", "context", "shared", "synchronization", "handoff"],
                 "llm_provider": "openai", 
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -757,7 +757,7 @@ Orchestration approach:
 Enable powerful multi-agent collaboration.""",
                 "routing_keywords": ["orchestration", "coordination", "workflow", "multi-agent", "collaboration"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.5, "max_tokens": 2000}
             },
             # ADVANCED AI AGENTS
@@ -793,7 +793,7 @@ Narrative analysis approach:
 Turn storytelling insights into betting advantages.""",
                 "routing_keywords": ["narrative", "storyline", "sentiment", "media", "public", "bias"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.6, "max_tokens": 2000}
             },
             {
@@ -828,7 +828,7 @@ Empire building approach:
 Build sustainable, profitable betting empires.""",
                 "routing_keywords": ["empire", "strategy", "scaling", "growth", "operations", "diversification"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.5, "max_tokens": 2000}
             },
             {
@@ -863,7 +863,7 @@ Correlation hunting approach:
 Uncover hidden edges through data correlation.""",
                 "routing_keywords": ["correlation", "patterns", "data", "relationships", "statistical", "hidden"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -898,7 +898,7 @@ Motivational approach:
 Turn psychological pressure into competitive advantage.""",
                 "routing_keywords": ["motivation", "mindset", "mental", "competitive", "toughness", "challenge"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.8, "max_tokens": 2000}
             },
             {
@@ -933,7 +933,7 @@ Evolution approach:
 Enable systems that learn, adapt, and improve autonomously.""",
                 "routing_keywords": ["evolution", "learning", "autonomous", "self-improving", "adaptive", "knowledge"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.5, "max_tokens": 2000}
             }
         ]
@@ -973,7 +973,7 @@ Building approach:
 Build complete applications from ideas.""",
                 "routing_keywords": ["builder", "generator", "application", "development", "architecture", "template"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.5, "max_tokens": 3000}
             },
             {
@@ -1008,7 +1008,7 @@ Coordination approach:
 Orchestrate powerful multi-agent collaborations.""",
                 "routing_keywords": ["orchestra", "coordination", "workflow", "agents", "collaboration", "system"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.5, "max_tokens": 2000}
             }
         ]
@@ -1048,7 +1048,7 @@ Research methodology:
 Deliver thorough, accurate, and actionable research.""",
                 "routing_keywords": ["research", "web search", "analysis", "data", "investigation", "sources"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.6, "max_tokens": 2500}
             },
             {
@@ -1083,7 +1083,7 @@ Assistant approach:
 Be the ultimate intelligent personal assistant.""",
                 "routing_keywords": ["assistant", "personal", "help", "memory", "learning", "personalized"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.7, "max_tokens": 2000}
             },
             {
@@ -1118,7 +1118,7 @@ Prompting approach:
 Master the art and science of AI prompting.""",
                 "routing_keywords": ["prompting", "prompt engineering", "optimization", "AI", "context", "generation"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.5, "max_tokens": 2000}
             },
             {
@@ -1153,7 +1153,7 @@ Memory approach:
 Build intelligent memory systems that learn and remember.""",
                 "routing_keywords": ["memory", "storage", "retrieval", "knowledge", "architecture", "continuity"],
                 "llm_provider": "openai", 
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             },
             {
@@ -1188,7 +1188,7 @@ Embeddings approach:
 Transform data into meaningful vector representations.""",
                 "routing_keywords": ["embeddings", "vectors", "semantic", "search", "similarity", "database"],
                 "llm_provider": "openai",
-                "llm_model": "gpt-4", 
+                "llm_model": "gpt-5-mini", 
                 "llm_config": {"temperature": 0.4, "max_tokens": 2000}
             }
         ]
@@ -1226,7 +1226,7 @@ Transform data into meaningful vector representations.""",
                 system_prompt=agent_def.get('system_prompt', ''),
                 personality_traits=agent_def.get('personality_traits', {}),
                 llm_provider=self.map_llm_provider(agent_def.get('llm_provider', 'openai')),
-                llm_model=agent_def.get('llm_model', 'gpt-4'),
+                llm_model=agent_def.get('llm_model', 'gpt-5-mini'),
                 llm_config=agent_def.get('llm_config', {}),
                 routing_keywords=agent_def.get('routing_keywords', []),
                 confidence_score=0.8,  # Default confidence

@@ -180,7 +180,7 @@ class ContentTemplate(UnifiedBaseModel):
     
     llm_model = models.CharField(
         max_length=100,
-        default='gpt-4-turbo-preview',
+        default='gpt-5-mini',
         help_text="Specific AI model to use"
     )
     

@@ -39,8 +39,7 @@ async def test_gpt5_mini():
             model="gpt-5-mini",
             messages=[
                 {"role": "user", "content": "Write a 3-step plan to learn Python"}
-            ],
-            temperature=1.0,  # GPT-5 always uses 1.0
+            ],  # GPT-5 always uses 1.0
             max_completion_tokens=500,  # GPT-5 uses max_completion_tokens
             reasoning_effort="medium"  # GPT-5-mini supports reasoning tokens
         )

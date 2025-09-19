@@ -78,7 +78,7 @@ class AgentConsolidator:
                     system_prompt=agent_data.get('system_prompt', ''),
                     creator=self.chris_user,
                     llm_provider='openai',
-                    llm_model='gpt-4',
+                    llm_model='gpt-5-mini',
                     is_active=True,
                     is_public=True
                 )
@@ -147,7 +147,7 @@ class AgentConsolidator:
                         capabilities=agent_data.get('capabilities', []),
                         creator=self.chris_user,
                         llm_provider='openai',
-                        llm_model='gpt-4',
+                        llm_model='gpt-5-mini',
                         is_active=True,
                         is_public=True
                     )
@@ -196,7 +196,7 @@ class AgentConsolidator:
                     specialization=specialization,
                     creator=self.chris_user,
                     llm_provider='openai',
-                    llm_model='gpt-4',
+                    llm_model='gpt-5-mini',
                     is_active=True,
                     is_public=True
                 )
