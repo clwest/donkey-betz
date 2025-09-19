@@ -1313,9 +1313,14 @@ export const OpportunitiesHub: React.FC = () => {
               {/* Project Header with Type */}
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="px-3 py-1 text-xs bg-white/20 text-white rounded-full">
-                    {project.project_type === 'ai_application' ? 'AI App' : project.project_type || 'AI Business'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 text-xs bg-white/20 text-white rounded-full">
+                      {project.project_type === 'ai_application' ? 'AI App' : project.project_type || 'AI Business'}
+                    </span>
+                    <span className="px-2 py-1 text-xs bg-black/20 text-white/80 rounded">
+                      {project.strategy?.source || 'Dev.to'}
+                    </span>
+                  </div>
                   {project.success && (
                     <CheckCircle className="w-5 h-5 text-white" />
                   )}
@@ -1323,6 +1328,11 @@ export const OpportunitiesHub: React.FC = () => {
                 <h4 className="text-lg font-bold text-white">
                   {project.strategy?.title || 'AI Project'}
                 </h4>
+                {project.strategy?.url && project.strategy.url !== '#' && (
+                  <div className="text-xs text-white/60 mt-1">
+                    Source: {project.strategy.url}
+                  </div>
+                )}
               </div>
 
               <div className="p-6">
@@ -1347,10 +1357,10 @@ export const OpportunitiesHub: React.FC = () => {
                       <DollarSign className="w-4 h-4 text-green-400 mt-0.5" />
                       <div className="flex-1">
                         <div className="text-green-400 font-semibold text-sm">
-                          {project.revenue_potential || project.strategy?.potential_revenue || '$1,000-10,000/month'}
+                          {project.strategy?.potential_revenue || project.revenue_potential || '$1,000-10,000/month'}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
-                          {project.strategy?.title?.includes('LLM') ?
+                          {project.strategy?.title?.includes('LLM') || project.strategy?.title?.includes('Llms') ?
                            'SaaS subscriptions, API access fees, enterprise licenses' :
                            project.strategy?.title?.includes('Roop') ?
                            'Content creation services, video editing tools, entertainment apps' :
