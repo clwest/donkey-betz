@@ -1,0 +1,47 @@
+{
+  "profile_schema": {
+    "skills": {
+      "programming": [
+        "python",
+        "javascript",
+        "typescript"
+      ],
+      "ai_ml": [
+        "openai",
+        "langchain",
+        "tensorflow"
+      ],
+      "frameworks": [
+        "django",
+        "react",
+        "fastapi"
+      ],
+      "databases": [
+        "postgresql",
+        "redis",
+        "mongodb"
+      ]
+    },
+    "experience_level": "intermediate",
+    "interests": [
+      "ai_automation",
+      "saas",
+      "content_generation"
+    ],
+    "goals": {
+      "monthly_revenue": 10000,
+      "project_types": [
+        "saas",
+        "api",
+        "automation"
+      ],
+      "time_commitment": "part_time"
+    },
+    "past_projects": [],
+    "success_metrics": {}
+  },
+  "matching_algorithm": "cosine_similarity",
+  "recommendation_engine": "collaborative_filtering",
+  "learning_rate": 0.1,
+  "update_frequency": "daily"
+}

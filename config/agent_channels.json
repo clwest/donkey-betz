@@ -1,0 +1,12 @@
+{
+  "channels": [
+    "agent_research_channel",
+    "agent_development_channel",
+    "agent_marketing_channel",
+    "agent_finance_channel",
+    "agent_execution_channel"
+  ],
+  "message_queue": "redis://localhost:6379/0",
+  "max_messages": 1000,
+  "ttl": 3600
+}

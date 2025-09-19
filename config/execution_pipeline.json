@@ -1,0 +1,69 @@
+{
+  "stages": [
+    {
+      "name": "validation",
+      "steps": [
+        "syntax_check",
+        "dependency_scan",
+        "security_audit"
+      ]
+    },
+    {
+      "name": "testing",
+      "steps": [
+        "unit_tests",
+        "integration_tests",
+        "load_tests"
+      ]
+    },
+    {
+      "name": "deployment",
+      "steps": [
+        "docker_build",
+        "cloud_deploy",
+        "domain_setup"
+      ]
+    },
+    {
+      "name": "monetization",
+      "steps": [
+        "payment_setup",
+        "pricing_config",
+        "subscription_tiers"
+      ]
+    },
+    {
+      "name": "marketing",
+      "steps": [
+        "landing_page",
+        "product_hunt",
+        "social_media"
+      ]
+    }
+  ],
+  "deployment_targets": {
+    "vercel": {
+      "api_key_env": "VERCEL_TOKEN"
+    },
+    "heroku": {
+      "api_key_env": "HEROKU_API_KEY"
+    },
+    "aws": {
+      "profile": "default"
+    },
+    "digitalocean": {
+      "api_key_env": "DO_API_TOKEN"
+    }
+  },
+  "payment_processors": {
+    "stripe": {
+      "public_key_env": "STRIPE_PUBLISHABLE_KEY"
+    },
+    "paddle": {
+      "vendor_id_env": "PADDLE_VENDOR_ID"
+    },
+    "lemonsqueezy": {
+      "api_key_env": "LEMONSQUEEZY_API_KEY"
+    }
+  }
+}

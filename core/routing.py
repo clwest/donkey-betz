@@ -9,6 +9,7 @@ from channels.db import database_sync_to_async
 from . import consumers
 from . import orchestra_consumers
 from .unified_hub import UnifiedWebSocketHub
+from . import generic_consumer
 
 # Import sports routing if available
 try:
@@ -23,6 +24,9 @@ except ImportError:
     intelligence_ws_patterns = []
 
 websocket_urlpatterns = [
+    # Generic WebSocket endpoint for basic connections
+    re_path(r'^ws/$', generic_consumer.GenericWebSocketConsumer.as_asgi()),
+    
     # Test endpoints
     re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
 
@@ -200,8 +204,6 @@ unified_endpoints = [
 
     # Alternative paths for component access
     re_path(r'^ws/decision/$', UnifiedWebSocketHub.as_asgi()),
-    re_path(r'^ws/orchestra/$', UnifiedWebSocketHub.as_asgi()),
-    re_path(r'^ws/control/$', UnifiedWebSocketHub.as_asgi()),
     re_path(r'^ws/opportunities/$', UnifiedWebSocketHub.as_asgi()),
     re_path(r'^ws/monetization/$', UnifiedWebSocketHub.as_asgi()),
 
