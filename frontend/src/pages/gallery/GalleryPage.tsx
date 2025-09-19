@@ -896,35 +896,35 @@ export function GalleryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Loading your content...</div>
+        <div className="text-muted-foreground">Loading your content...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8" style={{ backgroundColor: 'var(--gaming-bg-primary)', minHeight: '100vh' }}>
+    <div className="space-y-8" style={{ backgroundColor: 'hsl(var(--muted))', minHeight: '100vh' }}>
       {/* Header - Gaming Style */}
-      <div className="gaming-neural-card p-6">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card p-6">
+        <div className="bg-card"></div>
         <div className="relative z-10 flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-black font-mono uppercase tracking-wider" 
                 style={{ 
-                  color: 'var(--gaming-neon-cyan)',
+                  color: 'hsl(var(--muted))',
                   textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
                 }}>NEURAL CONTENT MATRIX</h1>
-            <p className="mt-3 font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+            <p className="mt-3 font-mono" style={{ color: 'hsl(var(--muted))' }}>
               NEURAL ARCHIVE • AI-GENERATED CONTENT REPOSITORY
             </p>
           </div>
           {!bulkDeleteMode && (
             <button
               onClick={() => setBulkDeleteMode(true)}
-              className="gaming-btn-secondary px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all duration-300 hover:scale-105"
+              className="bg-card px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all duration-300 hover:scale-105"
               style={{
-                background: 'var(--gaming-bg-elevated)',
-                border: '1px solid var(--gaming-neon-purple)',
-                color: 'var(--gaming-neon-purple)'
+                background: 'hsl(var(--muted))',
+                border: '1px solid hsl(var(--muted))',
+                color: 'hsl(var(--muted))'
               }}
             >
               <TrashIcon className="h-4 w-4" />
@@ -936,32 +936,32 @@ export function GalleryPage() {
 
       {/* Bulk Actions Bar */}
       {bulkDeleteMode && (
-        <div className="gaming-neural-card p-4">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card p-4">
+          <div className="bg-card"></div>
           <div className="relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-mono uppercase tracking-wider" style={{ color: 'var(--gaming-text-primary)' }}>
+                <span className="text-sm font-mono uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
                   {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
                 </span>
                 <button
                   onClick={selectAll}
-                  className="px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider gaming-btn-secondary rounded transition-all duration-200 hover:scale-105"
+                  className="px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider bg-card rounded transition-all duration-200 hover:scale-105"
                   style={{ 
-                    background: 'var(--gaming-bg-elevated)',
-                    border: '1px solid var(--gaming-neon-cyan)',
-                    color: 'var(--gaming-neon-cyan)'
+                    background: 'hsl(var(--muted))',
+                    border: '1px solid hsl(var(--muted))',
+                    color: 'hsl(var(--muted))'
                   }}
                 >
                   Select All
                 </button>
                 <button
                   onClick={clearSelection}
-                  className="px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider gaming-btn-secondary rounded transition-all duration-200 hover:scale-105"
+                  className="px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider bg-card rounded transition-all duration-200 hover:scale-105"
                   style={{ 
-                    background: 'var(--gaming-bg-elevated)',
-                    border: '1px solid var(--gaming-text-secondary)',
-                    color: 'var(--gaming-text-secondary)'
+                    background: 'hsl(var(--muted))',
+                    border: '1px solid hsl(var(--muted))',
+                    color: 'hsl(var(--muted))'
                   }}
                 >
                   Clear Selection
@@ -980,7 +980,7 @@ export function GalleryPage() {
                 disabled={selectedItems.size === 0}
                 className={`px-6 py-2 text-sm font-mono font-bold uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center gap-2 ${
                   selectedItems.size > 0
-                    ? 'gaming-btn-danger hover:scale-105'
+                    ? 'bg-card hover:scale-105'
                     : 'opacity-50 cursor-not-allowed'
                 }`}
                 style={selectedItems.size > 0 ? {
@@ -998,11 +998,11 @@ export function GalleryPage() {
                   setBulkDeleteMode(false);
                   clearSelection();
                 }}
-                className="px-6 py-2 text-sm font-mono font-bold uppercase tracking-wider gaming-btn-secondary rounded-xl transition-all duration-200 hover:scale-105"
+                className="px-6 py-2 text-sm font-mono font-bold uppercase tracking-wider bg-card rounded-xl transition-all duration-200 hover:scale-105"
                 style={{
-                  background: 'var(--gaming-bg-elevated)',
-                  border: '1px solid var(--gaming-text-secondary)',
-                  color: 'var(--gaming-text-secondary)'
+                  background: 'hsl(var(--muted))',
+                  border: '1px solid hsl(var(--muted))',
+                  color: 'hsl(var(--muted))'
                 }}
               >
                 CANCEL
@@ -1014,166 +1014,166 @@ export function GalleryPage() {
       )}
 
       {/* Neural Tab Matrix */}
-      <div className="gaming-neural-card p-6">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card p-6">
+        <div className="bg-card"></div>
         <div className="relative z-10">
           <h2 className="text-xl font-bold font-mono uppercase tracking-wider mb-4" 
-              style={{ color: 'var(--gaming-neon-cyan)' }}>
+              style={{ color: 'hsl(var(--muted))' }}>
             CONTENT TYPE SELECTOR
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             <div
-              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 activeTab === 'blogs' ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: activeTab === 'blogs' ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
-                boxShadow: activeTab === 'blogs' ? 'var(--gaming-glow-primary)' : undefined,
-                background: activeTab === 'blogs' ? 'var(--gaming-gradient-primary)' : undefined
+                borderColor: activeTab === 'blogs' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                boxShadow: activeTab === 'blogs' ? 'hsl(var(--muted))' : undefined,
+                background: activeTab === 'blogs' ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab('blogs')}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <DocumentTextIcon className="h-6 w-6 mx-auto mb-2" 
                   style={{ 
-                    color: activeTab === 'blogs' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: activeTab === 'blogs' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: activeTab === 'blogs' ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))' : undefined
                   }} />
                 <p className="font-bold font-mono uppercase tracking-wider text-xs" 
-                   style={{ color: activeTab === 'blogs' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                   style={{ color: activeTab === 'blogs' ? 'hsl(var(--muted))' : 'hsl(var(--muted))' }}>
                   BLOGS
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({blogs.length})</p>
+                <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>({blogs.length})</p>
               </div>
             </div>
             <div
-              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 activeTab === 'social' ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: activeTab === 'social' ? 'var(--gaming-neon-purple)' : 'var(--gaming-border)',
+                borderColor: activeTab === 'social' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                 boxShadow: activeTab === 'social' ? '0 0 20px rgba(157, 78, 221, 0.3)' : undefined,
-                background: activeTab === 'social' ? 'var(--gaming-gradient-secondary)' : undefined
+                background: activeTab === 'social' ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab('social')}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <HashtagIcon className="h-6 w-6 mx-auto mb-2" 
                   style={{ 
-                    color: activeTab === 'social' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: activeTab === 'social' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: activeTab === 'social' ? 'drop-shadow(0 0 8px rgba(157, 78, 221, 0.6))' : undefined
                   }} />
                 <p className="font-bold font-mono uppercase tracking-wider text-xs" 
-                   style={{ color: activeTab === 'social' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                   style={{ color: activeTab === 'social' ? 'hsl(var(--muted))' : 'hsl(var(--muted))' }}>
                   SOCIAL
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({socialPosts.length})</p>
+                <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>({socialPosts.length})</p>
               </div>
             </div>
 
             <div
-              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 activeTab === 'videos' ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: activeTab === 'videos' ? 'var(--gaming-neon-green)' : 'var(--gaming-border)',
+                borderColor: activeTab === 'videos' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                 boxShadow: activeTab === 'videos' ? '0 0 20px rgba(57, 255, 20, 0.3)' : undefined,
-                background: activeTab === 'videos' ? 'var(--gaming-gradient-tertiary)' : undefined
+                background: activeTab === 'videos' ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab('videos')}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <PlayIcon className="h-6 w-6 mx-auto mb-2" 
                   style={{ 
-                    color: activeTab === 'videos' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: activeTab === 'videos' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: activeTab === 'videos' ? 'drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))' : undefined
                   }} />
                 <p className="font-bold font-mono uppercase tracking-wider text-xs" 
-                   style={{ color: activeTab === 'videos' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                   style={{ color: activeTab === 'videos' ? 'hsl(var(--muted))' : 'hsl(var(--muted))' }}>
                   VIDEOS
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({videos.length})</p>
+                <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>({videos.length})</p>
               </div>
             </div>
 
             <div
-              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 activeTab === 'images' ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: activeTab === 'images' ? 'var(--gaming-neon-orange)' : 'var(--gaming-border)',
+                borderColor: activeTab === 'images' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                 boxShadow: activeTab === 'images' ? '0 0 20px rgba(255, 165, 0, 0.3)' : undefined,
-                background: activeTab === 'images' ? 'var(--gaming-gradient-quaternary)' : undefined
+                background: activeTab === 'images' ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab('images')}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <PhotoIcon className="h-6 w-6 mx-auto mb-2" 
                   style={{ 
-                    color: activeTab === 'images' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: activeTab === 'images' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: activeTab === 'images' ? 'drop-shadow(0 0 8px rgba(255, 165, 0, 0.6))' : undefined
                   }} />
                 <p className="font-bold font-mono uppercase tracking-wider text-xs" 
-                   style={{ color: activeTab === 'images' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                   style={{ color: activeTab === 'images' ? 'hsl(var(--muted))' : 'hsl(var(--muted))' }}>
                   IMAGES
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({images.length})</p>
+                <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>({images.length})</p>
               </div>
             </div>
 
             <div
-              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 activeTab === 'voice' ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: activeTab === 'voice' ? 'var(--gaming-neon-purple)' : 'var(--gaming-border)',
+                borderColor: activeTab === 'voice' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                 boxShadow: activeTab === 'voice' ? '0 0 20px rgba(157, 78, 221, 0.3)' : undefined,
-                background: activeTab === 'voice' ? 'var(--gaming-gradient-secondary)' : undefined
+                background: activeTab === 'voice' ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab('voice')}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <MicrophoneIcon className="h-6 w-6 mx-auto mb-2" 
                   style={{ 
-                    color: activeTab === 'voice' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: activeTab === 'voice' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: activeTab === 'voice' ? 'drop-shadow(0 0 8px rgba(157, 78, 221, 0.6))' : undefined
                   }} />
                 <p className="font-bold font-mono uppercase tracking-wider text-xs" 
-                   style={{ color: activeTab === 'voice' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                   style={{ color: activeTab === 'voice' ? 'hsl(var(--muted))' : 'hsl(var(--muted))' }}>
                   VOICE
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({voiceTranscripts.length})</p>
+                <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>({voiceTranscripts.length})</p>
               </div>
             </div>
 
             <div
-              className={`gaming-neural-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 activeTab === 'podcasts' ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: activeTab === 'podcasts' ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
-                boxShadow: activeTab === 'podcasts' ? 'var(--gaming-glow-primary)' : undefined,
-                background: activeTab === 'podcasts' ? 'var(--gaming-gradient-primary)' : undefined
+                borderColor: activeTab === 'podcasts' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                boxShadow: activeTab === 'podcasts' ? 'hsl(var(--muted))' : undefined,
+                background: activeTab === 'podcasts' ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab('podcasts')}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <SpeakerWaveIcon className="h-6 w-6 mx-auto mb-2" 
                   style={{ 
-                    color: activeTab === 'podcasts' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: activeTab === 'podcasts' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: activeTab === 'podcasts' ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))' : undefined
                   }} />
                 <p className="font-bold font-mono uppercase tracking-wider text-xs" 
-                   style={{ color: activeTab === 'podcasts' ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)' }}>
+                   style={{ color: activeTab === 'podcasts' ? 'hsl(var(--muted))' : 'hsl(var(--muted))' }}>
                   PODCASTS
                 </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>({podcasts.length})</p>
+                <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>({podcasts.length})</p>
               </div>
             </div>
           </div>
@@ -1186,7 +1186,7 @@ export function GalleryPage() {
               disabled={loading}
               style={{
                 background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                border: '1px solid var(--gaming-neon-green)',
+                border: '1px solid hsl(var(--muted))',
                 color: 'white',
                 boxShadow: '0 0 20px rgba(57, 255, 20, 0.3)'
               }}
@@ -1252,7 +1252,7 @@ export function GalleryPage() {
         <div className="space-y-4">
           {blogs.length === 0 ? (
             <Card>
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <DocumentTextIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No blog posts saved yet.</p>
                 <p className="text-sm">Generate and save a blog post to see it here!</p>
@@ -1274,7 +1274,7 @@ export function GalleryPage() {
                   )}
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-white">
+                      <h3 className="text-lg font-semibold text-foreground">
                         {stripMarkdown(blog.title)}
                       </h3>
                       
@@ -1286,10 +1286,10 @@ export function GalleryPage() {
                         {blog.is_live ? 'Published' : 'Draft'}
                       </span>
                     </div>
-                    <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                    <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
                       {stripMarkdown(blog.preview)}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>{blog.word_count} words</span>
                       <span className="capitalize">{blog.tone} tone</span>
                       <span className="capitalize">{blog.length} length</span>
@@ -1311,7 +1311,7 @@ export function GalleryPage() {
                   <div className="flex gap-2 ml-4">
                     <button
                       onClick={() => viewBlog(blog.id)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
+                      className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                       title="View full blog post"
                     >
                       <EyeIcon className="h-4 w-4" />
@@ -1319,7 +1319,7 @@ export function GalleryPage() {
                     
                     <button
                       onClick={() => setTransformingBlog(blog)}
-                      className="p-2 text-gray-400 hover:text-primary-400 transition-colors"
+                      className="p-2 text-muted-foreground hover:text-primary-400 transition-colors"
                       title="Transform to Social Posts, Podcast, or eBook"
                     >
                       <SparklesIcon className="h-4 w-4" />
@@ -1329,8 +1329,8 @@ export function GalleryPage() {
                       onClick={(e) => toggleBlogLiveStatus(blog, e)}
                       className={`p-2 transition-colors ${
                         blog.is_live 
-                          ? 'text-green-400 hover:text-green-300' 
-                          : 'text-gray-400 hover:text-white'
+                          ? 'text-green-500 hover:text-green-300' 
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                       title={blog.is_live ? 'Published - Click to unpublish' : 'Draft - Click to publish'}
                     >
@@ -1339,7 +1339,7 @@ export function GalleryPage() {
                     
                     <button
                       onClick={(e) => deleteBlog(blog, e)}
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                       title="Delete blog post"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -1356,7 +1356,7 @@ export function GalleryPage() {
         <div className="space-y-4">
           {socialPosts.length === 0 ? (
             <Card>
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <HashtagIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No social media posts saved yet.</p>
                 <p className="text-sm">Generate social posts to see them here!</p>
@@ -1367,13 +1367,13 @@ export function GalleryPage() {
               <Card key={social.id}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-2">
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
                       {social.topic}
                     </h3>
-                    <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                    <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
                       {social.preview}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="capitalize">{social.tone} tone</span>
                       <span>{social.total_posts} posts</span>
                       <span>{formatDate(social.created_at)}</span>
@@ -1392,7 +1392,7 @@ export function GalleryPage() {
                   <div className="flex gap-2 ml-4">
                     <button
                       onClick={() => viewSocialPost(social.id)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
+                      className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                       title="View social posts"
                     >
                       <EyeIcon className="h-4 w-4" />
@@ -1409,7 +1409,7 @@ export function GalleryPage() {
         <div className="space-y-4">
           {videos.length === 0 ? (
             <Card>
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <PlayIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No videos saved yet.</p>
                 <p className="text-sm">Generate videos to see them here!</p>
@@ -1422,27 +1422,27 @@ export function GalleryPage() {
                   {/* Video Preview */}
                   <div className="lg:w-1/3">
                     {expiredVideoUrls.has(video.id) ? (
-                      <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-card flex items-center justify-center">
                         <div className="text-center p-4">
-                          <PlayIcon className="h-12 w-12 text-gray-500 mx-auto mb-2" />
-                          <p className="text-gray-400 text-sm">Video expired</p>
-                          <p className="text-gray-500 text-xs mt-1">Runway ML URLs expire after 30 days</p>
+                          <PlayIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm">Video expired</p>
+                          <p className="text-muted-foreground text-xs mt-1">Runway ML URLs expire after 30 days</p>
                         </div>
                       </div>
                     ) : video.thumbnail_url ? (
-                      <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-800">
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-card">
                         <img
                           src={video.thumbnail_url}
                           alt={video.title}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors cursor-pointer">
-                          <PlayIcon className="h-12 w-12 text-white opacity-80" />
+                          <PlayIcon className="h-12 w-12 text-foreground opacity-80" />
                         </div>
                       </div>
                     ) : (
                       <div className="aspect-video rounded-lg bg-gradient-to-br from-blue-900/20 to-purple-900/20 flex items-center justify-center">
-                        <PlayIcon className="h-12 w-12 text-gray-400" />
+                        <PlayIcon className="h-12 w-12 text-muted-foreground" />
                       </div>
                     )}
                   </div>
@@ -1450,7 +1450,7 @@ export function GalleryPage() {
                   {/* Video Details */}
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-semibold text-white">{video.title}</h3>
+                      <h3 className="text-lg font-semibold text-foreground">{video.title}</h3>
                       <div className="flex items-center gap-2">
                         <span className="px-2 py-1 bg-primary-500/20 text-primary-300 text-xs rounded-full">
                           {video.duration}s
@@ -1462,20 +1462,20 @@ export function GalleryPage() {
                     </div>
 
                     {video.description && (
-                      <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                      <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
                         {video.description}
                       </p>
                     )}
 
                     <div className="space-y-2 mb-4">
                       <div className="text-sm">
-                        <span className="text-gray-400">Prompt: </span>
-                        <span className="text-gray-300">{video.original_prompt}</span>
+                        <span className="text-muted-foreground">Prompt: </span>
+                        <span className="text-muted-foreground">{video.original_prompt}</span>
                       </div>
                       {video.motion_prompt && (
                         <div className="text-sm">
-                          <span className="text-gray-400">Motion: </span>
-                          <span className="text-gray-300">{video.motion_prompt}</span>
+                          <span className="text-muted-foreground">Motion: </span>
+                          <span className="text-muted-foreground">{video.motion_prompt}</span>
                         </div>
                       )}
                     </div>
@@ -1485,7 +1485,7 @@ export function GalleryPage() {
                         {video.tags.map((tag, index) => (
                           <span
                             key={index}
-                            className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full"
+                            className="px-2 py-1 bg-gray-700 text-muted-foreground text-xs rounded-full"
                           >
                             {tag}
                           </span>
@@ -1494,7 +1494,7 @@ export function GalleryPage() {
                     )}
 
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-muted-foreground">
                         Saved {formatDate(video.saved_at)}
                       </span>
                       <div className="flex items-center gap-2">
@@ -1507,7 +1507,7 @@ export function GalleryPage() {
                             }
                           }}
                           disabled={expiredVideoUrls.has(video.id)}
-                          className={`px-3 py-2 text-white text-sm rounded-lg transition-colors flex items-center gap-1 ${
+                          className={`px-3 py-2 text-foreground text-sm rounded-lg transition-colors flex items-center gap-1 ${
                             expiredVideoUrls.has(video.id) 
                               ? 'bg-gray-600 cursor-not-allowed opacity-50' 
                               : 'bg-primary-600 hover:bg-primary-700'
@@ -1523,14 +1523,14 @@ export function GalleryPage() {
                             link.download = `${video.title}.mp4`;
                             link.click();
                           }}
-                          className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors flex items-center gap-1"
+                          className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-foreground text-sm rounded-lg transition-colors flex items-center gap-1"
                         >
                           <ArrowDownTrayIcon className="h-4 w-4" />
                           Download
                         </button>
                         <button
                           onClick={() => deleteVideo(video.id)}
-                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors flex items-center gap-1"
+                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-foreground text-sm rounded-lg transition-colors flex items-center gap-1"
                           title="Delete video"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -1551,7 +1551,7 @@ export function GalleryPage() {
           {images.length === 0 ? (
             <div className="col-span-full">
               <Card>
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-muted-foreground">
                   <PhotoIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No images saved yet.</p>
                   <p className="text-sm">Generate and save images to see them here!</p>
@@ -1587,14 +1587,14 @@ export function GalleryPage() {
                     className="w-full h-48 object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                    <EyeIcon className="h-5 w-5 text-white" />
+                    <EyeIcon className="h-5 w-5 text-foreground" />
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="text-sm font-semibold text-white truncate">
+                  <h3 className="text-sm font-semibold text-foreground truncate">
                     {image.title}
                   </h3>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {formatDate(image.saved_at)}
                   </p>
                   {image.tags && image.tags.length > 0 && (
@@ -1602,7 +1602,7 @@ export function GalleryPage() {
                       {image.tags.slice(0, 3).map((tag, idx) => (
                         <span
                           key={idx}
-                          className="px-1 py-0.5 text-xs bg-gray-700 text-gray-300 rounded"
+                          className="px-1 py-0.5 text-xs bg-gray-700 text-muted-foreground rounded"
                         >
                           {tag}
                         </span>
@@ -1621,7 +1621,7 @@ export function GalleryPage() {
         <div className="space-y-4">
           {voiceTranscripts.length === 0 ? (
             <Card>
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <MicrophoneIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No voice transcripts yet.</p>
                 <p className="text-sm">Record or upload audio to see transcripts here!</p>
@@ -1634,16 +1634,16 @@ export function GalleryPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <SpeakerWaveIcon className="h-5 w-5 text-primary-400" />
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         {transcript.metadata?.output_type === 'conversation' ? 'Conversation' :
                          transcript.metadata?.output_type === 'command' ? 'Voice Command' :
                          'Voice Transcript'}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {formatDate(transcript.created_at)}
                       </span>
                       {transcript.metadata?.duration && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           • {Math.round(transcript.metadata.duration / 60)}:{String(transcript.metadata.duration % 60).padStart(2, '0')}
                         </span>
                       )}
@@ -1651,7 +1651,7 @@ export function GalleryPage() {
                     <div className="relative">
                       <p 
                         id={`transcript-${transcript.id}`} 
-                        className={`text-sm ${transcript.content_text ? 'text-gray-300' : 'text-gray-500 italic'} ${expandedTranscripts.has(transcript.id) ? '' : 'line-clamp-3'}`}
+                        className={`text-sm ${transcript.content_text ? 'text-muted-foreground' : 'text-muted-foreground italic'} ${expandedTranscripts.has(transcript.id) ? '' : 'line-clamp-3'}`}
                       >
                         {transcript.content_text || 'No transcript content available (empty or failed to load)'}
                       </p>
@@ -1664,7 +1664,7 @@ export function GalleryPage() {
                         {transcript.tags.map((tag, idx) => (
                           <span
                             key={idx}
-                            className="px-2 py-1 text-xs bg-dark-700 text-gray-300 rounded-full"
+                            className="px-2 py-1 text-xs bg-dark-700 text-muted-foreground rounded-full"
                           >
                             {tag}
                           </span>
@@ -1682,7 +1682,7 @@ export function GalleryPage() {
                       {isCreatingContent ? (
                         <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <NewspaperIcon className="h-4 w-4 text-gray-400" />
+                        <NewspaperIcon className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
                     <button
@@ -1694,7 +1694,7 @@ export function GalleryPage() {
                       {isCreatingContent ? (
                         <div className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <HashtagIcon className="h-4 w-4 text-gray-400" />
+                        <HashtagIcon className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
                     <button
@@ -1705,7 +1705,7 @@ export function GalleryPage() {
                       className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
                       title="Copy transcript"
                     >
-                      <DocumentTextIcon className="h-4 w-4 text-gray-400" />
+                      <DocumentTextIcon className="h-4 w-4 text-muted-foreground" />
                     </button>
                     <button
                       onClick={() => {
@@ -1722,14 +1722,14 @@ export function GalleryPage() {
                       className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
                       title={expandedTranscripts.has(transcript.id) ? "Collapse" : "Expand"}
                     >
-                      <EyeIcon className={`h-4 w-4 ${expandedTranscripts.has(transcript.id) ? 'text-primary-400' : 'text-gray-400'}`} />
+                      <EyeIcon className={`h-4 w-4 ${expandedTranscripts.has(transcript.id) ? 'text-primary-400' : 'text-muted-foreground'}`} />
                     </button>
                     <button
                       onClick={() => deleteVoiceTranscript(transcript.id)}
                       className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
                       title="Delete voice transcript"
                     >
-                      <TrashIcon className="h-4 w-4 text-gray-400 hover:text-red-400" />
+                      <TrashIcon className="h-4 w-4 text-muted-foreground hover:text-red-500" />
                     </button>
                   </div>
                 </div>
@@ -1744,7 +1744,7 @@ export function GalleryPage() {
         <div className="space-y-4">
           {podcasts.length === 0 ? (
             <Card>
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <SpeakerWaveIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No podcast episodes yet.</p>
                 <p className="text-sm">Create podcast scripts to see them here!</p>
@@ -1758,7 +1758,7 @@ export function GalleryPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <SpeakerWaveIcon className="h-5 w-5 text-primary-400" />
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold text-white">
+                        <span className="text-lg font-semibold text-foreground">
                           {podcast.title}
                         </span>
                         <span className={`px-2 py-1 text-xs rounded-full ${
@@ -1771,8 +1771,8 @@ export function GalleryPage() {
                       </div>
                     </div>
                     
-                    <div className="text-sm text-gray-400 mb-2">
-                      <span className="font-medium text-white">{podcast.show_name}</span>
+                    <div className="text-sm text-muted-foreground mb-2">
+                      <span className="font-medium text-foreground">{podcast.show_name}</span>
                       <span className="mx-2">•</span>
                       <span>S{podcast.season}E{podcast.episode}</span>
                       <span className="mx-2">•</span>
@@ -1785,7 +1785,7 @@ export function GalleryPage() {
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>Created {formatDate(podcast.created_at)}</span>
                     </div>
                   </div>
@@ -1795,7 +1795,7 @@ export function GalleryPage() {
                       className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
                       title="View podcast details"
                     >
-                      <EyeIcon className="h-4 w-4 text-gray-400" />
+                      <EyeIcon className="h-4 w-4 text-muted-foreground" />
                     </button>
                     <button
                       onClick={async () => {
@@ -1835,7 +1835,7 @@ export function GalleryPage() {
                       className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
                       title="Copy podcast script"
                     >
-                      <DocumentDuplicateIcon className="h-4 w-4 text-gray-400" />
+                      <DocumentDuplicateIcon className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
                 </div>
@@ -1893,13 +1893,13 @@ export function GalleryPage() {
             {/* Close Button */}
             <button
               onClick={closeVideoPlayer}
-              className="absolute -top-12 right-0 text-white/80 hover:text-white p-2 z-10"
+              className="absolute -top-12 right-0 text-foreground/80 hover:text-foreground p-2 z-10"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
             
             {/* Video Title */}
-            <div className="text-white text-xl font-semibold mb-4 text-center">
+            <div className="text-foreground text-xl font-semibold mb-4 text-center">
               {selectedVideo.title}
             </div>
             
@@ -1930,26 +1930,26 @@ export function GalleryPage() {
             </div>
             
             {/* Video Details */}
-            <div className="mt-4 text-white space-y-2">
-              <div className="flex items-center gap-4 text-sm text-gray-300">
+            <div className="mt-4 text-foreground space-y-2">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>Duration: {selectedVideo.duration}s</span>
                 <span className="capitalize">{selectedVideo.source_type.replace('_', ' ')}</span>
                 <span>Saved {formatDate(selectedVideo.saved_at)}</span>
               </div>
               
               {selectedVideo.description && (
-                <p className="text-gray-300 text-sm">{selectedVideo.description}</p>
+                <p className="text-muted-foreground text-sm">{selectedVideo.description}</p>
               )}
               
               <div className="space-y-1 text-sm">
                 <div>
-                  <span className="text-gray-400">Prompt: </span>
-                  <span className="text-gray-200">{selectedVideo.original_prompt}</span>
+                  <span className="text-muted-foreground">Prompt: </span>
+                  <span className="text-foreground">{selectedVideo.original_prompt}</span>
                 </div>
                 {selectedVideo.motion_prompt && (
                   <div>
-                    <span className="text-gray-400">Motion: </span>
-                    <span className="text-gray-200">{selectedVideo.motion_prompt}</span>
+                    <span className="text-muted-foreground">Motion: </span>
+                    <span className="text-foreground">{selectedVideo.motion_prompt}</span>
                   </div>
                 )}
               </div>
@@ -1959,7 +1959,7 @@ export function GalleryPage() {
                   {selectedVideo.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-full"
+                      className="px-2 py-1 bg-gray-700 text-muted-foreground text-xs rounded-full"
                     >
                       {tag}
                     </span>
@@ -1975,15 +1975,15 @@ export function GalleryPage() {
       {podcastViewerOpen && selectedPodcastId && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
           <div className="relative max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-dark-800 rounded-xl border border-gray-700">
+            <div className="bg-card rounded-xl border border-gray-700">
               {/* Header */}
               <div className="flex items-start justify-between p-6 border-b border-gray-700">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-white mb-2">
+                  <h2 className="text-2xl font-bold text-foreground mb-2">
                     {podcasts.find(p => p.id === selectedPodcastId)?.title || 'Podcast Episode'}
                   </h2>
                   {podcasts.find(p => p.id === selectedPodcastId)?.metadata && (
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       {podcasts.find(p => p.id === selectedPodcastId)?.metadata.show_name && (
                         <span>Show: {podcasts.find(p => p.id === selectedPodcastId)?.metadata.show_name}</span>
                       )}
@@ -2000,14 +2000,14 @@ export function GalleryPage() {
                   onClick={closePodcastViewer}
                   className="ml-4 p-2 hover:bg-dark-700 rounded-lg transition-colors"
                 >
-                  <XMarkIcon className="h-5 w-5 text-gray-400" />
+                  <XMarkIcon className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
               
               {/* Content */}
               <div className="p-6 max-h-[60vh] overflow-y-auto">
                 <div className="prose prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap font-sans text-gray-200">
+                  <pre className="whitespace-pre-wrap font-sans text-foreground">
                     {podcastContent}
                   </pre>
                 </div>
@@ -2020,7 +2020,7 @@ export function GalleryPage() {
                     navigator.clipboard.writeText(podcastContent);
                     toast.success('Podcast script copied to clipboard!');
                   }}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-foreground rounded-lg transition-colors flex items-center gap-2"
                 >
                   <DocumentDuplicateIcon className="h-4 w-4" />
                   Copy Script
@@ -2036,7 +2036,7 @@ export function GalleryPage() {
                     URL.revokeObjectURL(url);
                     toast.success('Podcast script downloaded!');
                   }}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-foreground rounded-lg transition-colors flex items-center gap-2"
                 >
                   <ArrowDownTrayIcon className="h-4 w-4" />
                   Download

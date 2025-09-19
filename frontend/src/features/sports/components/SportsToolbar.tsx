@@ -196,8 +196,8 @@ export function SportsToolbar({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">Sports Betting Board</h2>
-            <p className="text-sm text-gray-400 mt-1">
+            <h2 className="text-lg font-semibold text-foreground">Sports Betting Board</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               {gameCount} games • Bankroll: ${(parseFloat(bankrollStr) || 0).toLocaleString()} • Win Rate: {winPercentageStr}%
             </p>
           </div>
@@ -227,14 +227,14 @@ export function SportsToolbar({
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* League */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               League
             </label>
             <select
               value={selectedLeague}
               onChange={handleLeagueChange}
               disabled={leaguesLoading || leagueOptions.length === 0}
-              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {leaguesLoading ? (
                 <option value="" className="bg-dark-700">Loading leagues...</option>
@@ -252,7 +252,7 @@ export function SportsToolbar({
 
           {/* Date */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               Date
             </label>
             <div className="relative">
@@ -260,15 +260,15 @@ export function SportsToolbar({
                 type="date"
                 value={selectedDate}
                 onChange={handleDateChange}
-                className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               />
-              <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
 
           {/* Team Search */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               Team (Optional)
             </label>
             <div className="relative">
@@ -277,15 +277,15 @@ export function SportsToolbar({
                 value={selectedTeam}
                 onChange={handleTeamChange}
                 placeholder="Search teams..."
-                className="w-full px-3 py-2 pl-9 bg-dark-700/50 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                className="w-full px-3 py-2 pl-9 bg-dark-700/50 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               />
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             </div>
           </div>
 
           {/* Bankroll */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               Bankroll ($)
             </label>
             <input
@@ -294,14 +294,14 @@ export function SportsToolbar({
               onChange={handleBankrollChange}
               min="0"
               step="100"
-              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               placeholder="4000"
             />
           </div>
 
           {/* Win Probability */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               Win Rate (%)
             </label>
             <input
@@ -311,7 +311,7 @@ export function SportsToolbar({
               min="0"
               max="100"
               step="1"
-              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               placeholder="55"
             />
           </div>
@@ -320,13 +320,13 @@ export function SportsToolbar({
         {/* Kelly Fraction */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               Kelly Fraction
             </label>
             <select
               value={fractionalKelly}
               onChange={handleFractionalKellyChange}
-              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+              className="w-full px-3 py-2 bg-dark-700/50 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
             >
               {FRACTIONAL_KELLY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value} className="bg-dark-700">

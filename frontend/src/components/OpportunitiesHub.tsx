@@ -893,17 +893,17 @@ export const OpportunitiesHub: React.FC = () => {
   const renderDiscoverTab = () => (
     <div className="space-y-6">
       {/* Search and Filters */}
-      <div className="bg-gray-800 rounded-xl p-6">
+      <div className="bg-card rounded-xl p-6">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search opportunities..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-4 py-3 bg-gray-700 text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
@@ -912,7 +912,7 @@ export const OpportunitiesHub: React.FC = () => {
             <select
               value={filters.type}
               onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              className="px-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none"
+              className="px-4 py-3 bg-gray-700 text-foreground rounded-lg focus:outline-none"
             >
               <option value="all">All Types</option>
               <option value="job">Jobs</option>
@@ -923,7 +923,7 @@ export const OpportunitiesHub: React.FC = () => {
 
             <button
               onClick={refreshOpportunities}
-              className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+              className="px-4 py-3 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
@@ -936,7 +936,7 @@ export const OpportunitiesHub: React.FC = () => {
                 generateAIProjects();
               }}
               disabled={generatingProjects}
-              className="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+              className="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-foreground rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
             >
               {generatingProjects ? (
                 <>
@@ -957,19 +957,19 @@ export const OpportunitiesHub: React.FC = () => {
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             onClick={() => setFilters({ ...filters, successRate: 0.7 })}
-            className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm hover:bg-gray-600"
+            className="px-3 py-1 bg-gray-700 text-muted-foreground rounded-full text-sm hover:bg-gray-600"
           >
             High Success Rate (70%+)
           </button>
           <button
             onClick={() => setFilters({ ...filters, skills_match: 0.8 })}
-            className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm hover:bg-gray-600"
+            className="px-3 py-1 bg-gray-700 text-muted-foreground rounded-full text-sm hover:bg-gray-600"
           >
             Best Match (80%+)
           </button>
           <button
             onClick={() => setFilters({ ...filters, minCompensation: 1000 })}
-            className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm hover:bg-gray-600"
+            className="px-3 py-1 bg-gray-700 text-muted-foreground rounded-full text-sm hover:bg-gray-600"
           >
             $1000+ Earnings
           </button>
@@ -984,7 +984,7 @@ export const OpportunitiesHub: React.FC = () => {
           </div>
         ) : filteredOpportunities.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <p className="text-gray-400">No opportunities found. Try adjusting your filters.</p>
+            <p className="text-muted-foreground">No opportunities found. Try adjusting your filters.</p>
           </div>
         ) : (
           filteredOpportunities.map(opportunity => (
@@ -992,22 +992,22 @@ export const OpportunitiesHub: React.FC = () => {
               key={opportunity.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-800 rounded-xl p-6 hover:bg-gray-750 transition-colors cursor-pointer"
+              className="bg-card rounded-xl p-6 hover:bg-gray-750 transition-colors cursor-pointer"
               onClick={() => setSelectedOpportunity(opportunity)}
             >
               {/* Opportunity Header */}
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h3 className="text-white font-semibold text-lg line-clamp-1">
+                  <h3 className="text-foreground font-semibold text-lg line-clamp-1">
                     {opportunity.title}
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <Building className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400 text-sm">{opportunity.company}</span>
+                    <Building className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground text-sm">{opportunity.company}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400 text-sm">{opportunity.location}</span>
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground text-sm">{opportunity.location}</span>
                   </div>
                 </div>
 
@@ -1025,18 +1025,18 @@ export const OpportunitiesHub: React.FC = () => {
               <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-green-400" />
-                    <span className="text-white font-medium">
+                    <DollarSign className="w-4 h-4 text-green-500" />
+                    <span className="text-foreground font-medium">
                       ${opportunity.estimated_earnings.toLocaleString()}
                     </span>
-                    <span className="text-gray-400 text-sm">
+                    <span className="text-muted-foreground text-sm">
                       / {opportunity.compensation.type}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Activity className="w-4 h-4 text-blue-400" />
-                    <span className="text-blue-400 text-sm">
+                    <Activity className="w-4 h-4 text-blue-500" />
+                    <span className="text-blue-500 text-sm">
                       {Math.round(opportunity.success_rate * 100)}% success
                     </span>
                   </div>
@@ -1046,8 +1046,8 @@ export const OpportunitiesHub: React.FC = () => {
               {/* Skills Match */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-400 text-sm">Skills Match</span>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-muted-foreground text-sm">Skills Match</span>
+                  <span className="text-foreground text-sm font-medium">
                     {Math.round(opportunity.skills_match * 100)}%
                   </span>
                 </div>
@@ -1064,13 +1064,13 @@ export const OpportunitiesHub: React.FC = () => {
                 {opportunity.tags.slice(0, 3).map((tag, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-gray-700 text-gray-300 rounded-full text-xs"
+                    className="px-2 py-1 bg-gray-700 text-muted-foreground rounded-full text-xs"
                   >
                     {tag}
                   </span>
                 ))}
                 {opportunity.tags.length > 3 && (
-                  <span className="text-gray-400 text-xs">
+                  <span className="text-muted-foreground text-xs">
                     +{opportunity.tags.length - 3} more
                   </span>
                 )}
@@ -1079,8 +1079,8 @@ export const OpportunitiesHub: React.FC = () => {
               {/* Application Status */}
               {applications.has(opportunity.id) && (
                 <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400 text-sm">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-green-500 text-sm">
                     {applications.get(opportunity.id)?.status}
                   </span>
                 </div>
@@ -1094,7 +1094,7 @@ export const OpportunitiesHub: React.FC = () => {
                     handleQuickApply(opportunity);
                   }}
                   disabled={applications.has(opportunity.id)}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
                   {applications.has(opportunity.id) ? 'Applied' : 'Quick Apply'}
@@ -1105,7 +1105,7 @@ export const OpportunitiesHub: React.FC = () => {
                     e.stopPropagation();
                     createActionPlan(opportunity);
                   }}
-                  className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  className="px-3 py-2 bg-gray-700 text-foreground rounded-lg hover:bg-gray-600 transition-colors"
                   title="Create Action Plan"
                 >
                   <Brain className="w-4 h-4" />
@@ -1116,7 +1116,7 @@ export const OpportunitiesHub: React.FC = () => {
                     e.stopPropagation();
                     createCampaignForOpportunity(opportunity);
                   }}
-                  className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-3 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 transition-colors"
                   title="Create Campaign"
                 >
                   <Megaphone className="w-4 h-4" />
@@ -1131,13 +1131,13 @@ export const OpportunitiesHub: React.FC = () => {
 
   const renderEvaluateTab = () => (
     <div className="space-y-6">
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-white text-xl font-semibold mb-4">AI Analysis & Recommendations</h3>
+      <div className="bg-card rounded-xl p-6">
+        <h3 className="text-foreground text-xl font-semibold mb-4">AI Analysis & Recommendations</h3>
 
         {isAnalyzing ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-4" />
-            <p className="text-gray-400">Analyzing opportunities with AI...</p>
+            <p className="text-muted-foreground">Analyzing opportunities with AI...</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -1149,14 +1149,14 @@ export const OpportunitiesHub: React.FC = () => {
                 <div key={plan.id} className="bg-gray-700 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h4 className="text-white font-medium">{opportunity.title}</h4>
-                      <p className="text-gray-400 text-sm">{opportunity.company}</p>
+                      <h4 className="text-foreground font-medium">{opportunity.title}</h4>
+                      <p className="text-muted-foreground text-sm">{opportunity.company}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm">
                         {Math.round(plan.success_probability * 100)}% success
                       </span>
-                      <span className="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm">
+                      <span className="px-2 py-1 bg-green-600/20 text-green-500 rounded text-sm">
                         ${plan.revenue_potential.toLocaleString()}
                       </span>
                     </div>
@@ -1177,20 +1177,20 @@ export const OpportunitiesHub: React.FC = () => {
                       >
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
                           step.status === 'completed'
-                            ? 'bg-green-600 text-white'
+                            ? 'bg-green-600 text-foreground'
                             : step.status === 'in_progress'
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-gray-600 text-gray-400'
+                            ? 'bg-yellow-600 text-foreground'
+                            : 'bg-gray-600 text-muted-foreground'
                         }`}>
                           {idx + 1}
                         </div>
                         <div className="flex-1">
-                          <p className="text-white text-sm">{step.title}</p>
+                          <p className="text-foreground text-sm">{step.title}</p>
                           {step.automated && (
                             <span className="text-purple-400 text-xs">Automated</span>
                           )}
                         </div>
-                        <span className="text-gray-400 text-xs">{step.duration}</span>
+                        <span className="text-muted-foreground text-xs">{step.duration}</span>
                       </div>
                     ))}
                   </div>
@@ -1198,12 +1198,12 @@ export const OpportunitiesHub: React.FC = () => {
                   {/* Actions */}
                   <div className="flex gap-2 mt-4">
                     <button
-                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      className="flex-1 px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       Start Plan
                     </button>
                     <button
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
+                      className="px-4 py-2 bg-gray-600 text-foreground rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       Modify
                     </button>
@@ -1214,7 +1214,7 @@ export const OpportunitiesHub: React.FC = () => {
 
             {actionPlans.size === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-400">No action plans yet. Select opportunities to analyze.</p>
+                <p className="text-muted-foreground">No action plans yet. Select opportunities to analyze.</p>
               </div>
             )}
           </div>
@@ -1225,32 +1225,32 @@ export const OpportunitiesHub: React.FC = () => {
 
   const renderApplicationsTab = () => (
     <div className="space-y-6">
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-white text-xl font-semibold mb-4">Application Pipeline</h3>
+      <div className="bg-card rounded-xl p-6">
+        <h3 className="text-foreground text-xl font-semibold mb-4">Application Pipeline</h3>
 
         {/* Pipeline Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Submitted</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Submitted</p>
+            <p className="text-foreground text-2xl font-bold">
               {Array.from(applications.values()).filter(app => app.status === 'submitted').length}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">In Review</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">In Review</p>
+            <p className="text-foreground text-2xl font-bold">
               {Array.from(applications.values()).filter(app => app.status === 'in_review').length}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Interviewed</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Interviewed</p>
+            <p className="text-foreground text-2xl font-bold">
               {Array.from(applications.values()).filter(app => app.status === 'interviewed').length}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Offers</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Offers</p>
+            <p className="text-foreground text-2xl font-bold">
               {Array.from(applications.values()).filter(app => app.status === 'offered').length}
             </p>
           </div>
@@ -1266,14 +1266,14 @@ export const OpportunitiesHub: React.FC = () => {
               <div key={app.id} className="bg-gray-700 rounded-lg p-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h4 className="text-white font-medium">{opportunity.title}</h4>
-                    <p className="text-gray-400 text-sm">{opportunity.company}</p>
+                    <h4 className="text-foreground font-medium">{opportunity.title}</h4>
+                    <p className="text-muted-foreground text-sm">{opportunity.company}</p>
                     <div className="flex items-center gap-4 mt-2">
-                      <span className="text-gray-400 text-sm">
+                      <span className="text-muted-foreground text-sm">
                         Applied: {new Date(app.submitted_at || app.updated_at).toLocaleDateString()}
                       </span>
                       {app.next_step && (
-                        <span className="text-yellow-400 text-sm">
+                        <span className="text-yellow-500 text-sm">
                           Next: {app.next_step}
                         </span>
                       )}
@@ -1282,10 +1282,10 @@ export const OpportunitiesHub: React.FC = () => {
 
                   <div className="flex items-center gap-2">
                     <span className={`px-3 py-1 rounded-full text-sm ${
-                      app.status === 'offered' ? 'bg-green-600/20 text-green-400' :
-                      app.status === 'rejected' ? 'bg-red-600/20 text-red-400' :
-                      app.status === 'interviewed' ? 'bg-blue-600/20 text-blue-400' :
-                      'bg-gray-600/20 text-gray-400'
+                      app.status === 'offered' ? 'bg-green-600/20 text-green-500' :
+                      app.status === 'rejected' ? 'bg-red-600/20 text-red-500' :
+                      app.status === 'interviewed' ? 'bg-blue-600/20 text-blue-500' :
+                      'bg-gray-600/20 text-muted-foreground'
                     }`}>
                       {app.status}
                     </span>
@@ -1297,7 +1297,7 @@ export const OpportunitiesHub: React.FC = () => {
 
           {applications.size === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-400">No applications yet. Start applying to opportunities!</p>
+              <p className="text-muted-foreground">No applications yet. Start applying to opportunities!</p>
             </div>
           )}
         </div>
@@ -1310,8 +1310,8 @@ export const OpportunitiesHub: React.FC = () => {
       {/* Header with Generate Button */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-semibold text-white">Generated AI Projects</h3>
-          <p className="text-gray-400 mt-1">
+          <h3 className="text-xl font-semibold text-foreground">Generated AI Projects</h3>
+          <p className="text-muted-foreground mt-1">
             AI-powered business opportunities ready to launch
           </p>
         </div>
@@ -1322,7 +1322,7 @@ export const OpportunitiesHub: React.FC = () => {
             generateAIProjects();
           }}
           disabled={generatingProjects}
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-foreground rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
         >
           {generatingProjects ? (
             <>
@@ -1340,10 +1340,10 @@ export const OpportunitiesHub: React.FC = () => {
 
       {/* Projects Grid */}
       {generatedProjects.length === 0 ? (
-        <div className="bg-gray-800 rounded-xl p-12 text-center">
+        <div className="bg-card rounded-xl p-12 text-center">
           <Sparkles className="w-16 h-16 text-purple-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No AI Projects Yet</h3>
-          <p className="text-gray-400 mb-6">
+          <h3 className="text-xl font-semibold text-foreground mb-2">No AI Projects Yet</h3>
+          <p className="text-muted-foreground mb-6">
             Click "Generate New Projects" to research and build AI monetization opportunities
           </p>
           <button
@@ -1353,7 +1353,7 @@ export const OpportunitiesHub: React.FC = () => {
               generateAIProjects();
             }}
             disabled={generatingProjects}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-6 py-3 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 transition-colors"
           >
             <Sparkles className="w-5 h-5 inline-block mr-2" />
             Generate Your First Projects
@@ -1367,7 +1367,7 @@ export const OpportunitiesHub: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 transition-colors cursor-pointer group"
+              className="bg-card rounded-xl overflow-hidden hover:bg-gray-750 transition-colors cursor-pointer group"
               onClick={() => {
                 setSelectedProject(project);
                 setViewingProject(true);
@@ -1377,22 +1377,22 @@ export const OpportunitiesHub: React.FC = () => {
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 text-xs bg-white/20 text-white rounded-full">
+                    <span className="px-3 py-1 text-xs bg-white/20 text-foreground rounded-full">
                       {project.project_type === 'ai_application' ? 'AI App' : project.project_type || 'AI Business'}
                     </span>
-                    <span className="px-2 py-1 text-xs bg-black/20 text-white/80 rounded">
+                    <span className="px-2 py-1 text-xs bg-black/20 text-foreground/80 rounded">
                       {project.strategy?.source || 'Dev.to'}
                     </span>
                   </div>
                   {project.success && (
-                    <CheckCircle className="w-5 h-5 text-white" />
+                    <CheckCircle className="w-5 h-5 text-foreground" />
                   )}
                 </div>
-                <h4 className="text-lg font-bold text-white">
+                <h4 className="text-lg font-bold text-foreground">
                   {project.strategy?.title || 'AI Project'}
                 </h4>
                 {project.strategy?.url && project.strategy.url !== '#' && (
-                  <div className="text-xs text-white/60 mt-1">
+                  <div className="text-xs text-foreground/60 mt-1">
                     Source: {project.strategy.url}
                   </div>
                 )}
@@ -1401,8 +1401,8 @@ export const OpportunitiesHub: React.FC = () => {
               <div className="p-6">
                 {/* What It Does */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-gray-400 mb-2">What It Does:</h5>
-                  <p className="text-white text-sm">
+                  <h5 className="text-sm font-semibold text-muted-foreground mb-2">What It Does:</h5>
+                  <p className="text-foreground text-sm">
                     {project.strategy?.description ||
                      (project.strategy?.title?.includes('LLM') ?
                       'Build a custom HTTP client for integrating with Large Language Models. Create AI-powered applications that can communicate with GPT, Claude, and other LLMs.' :
@@ -1414,15 +1414,15 @@ export const OpportunitiesHub: React.FC = () => {
 
                 {/* How It Makes Money */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-gray-400 mb-2">Monetization Strategy:</h5>
+                  <h5 className="text-sm font-semibold text-muted-foreground mb-2">Monetization Strategy:</h5>
                   <div className="space-y-2">
                     <div className="flex items-start gap-2">
-                      <DollarSign className="w-4 h-4 text-green-400 mt-0.5" />
+                      <DollarSign className="w-4 h-4 text-green-500 mt-0.5" />
                       <div className="flex-1">
-                        <div className="text-green-400 font-semibold text-sm">
+                        <div className="text-green-500 font-semibold text-sm">
                           {project.strategy?.potential_revenue || project.revenue_potential || '$1,000-10,000/month'}
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           {project.strategy?.title?.includes('LLM') || project.strategy?.title?.includes('Llms') ?
                            'SaaS subscriptions, API access fees, enterprise licenses' :
                            project.strategy?.title?.includes('Roop') ?
@@ -1436,13 +1436,13 @@ export const OpportunitiesHub: React.FC = () => {
 
                 {/* Implementation Time */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-gray-400 mb-2">Time to Market:</h5>
+                  <h5 className="text-sm font-semibold text-muted-foreground mb-2">Time to Market:</h5>
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-blue-400" />
-                    <span className="text-white text-sm">
+                    <Clock className="w-4 h-4 text-blue-500" />
+                    <span className="text-foreground text-sm">
                       {project.strategy?.time_to_implement || '1-4 weeks'}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       • {project.strategy?.difficulty || 'Beginner to Intermediate'}
                     </span>
                   </div>
@@ -1450,7 +1450,7 @@ export const OpportunitiesHub: React.FC = () => {
 
                 {/* Key Features */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-gray-400 mb-2">Key Features:</h5>
+                  <h5 className="text-sm font-semibold text-muted-foreground mb-2">Key Features:</h5>
                   <div className="flex flex-wrap gap-2">
                     {(project.strategy?.actionable_steps || [
                       'AI Integration',
@@ -1468,21 +1468,21 @@ export const OpportunitiesHub: React.FC = () => {
                 {/* Advisor Insights */}
                 {project.advisor_insights && project.advisor_insights.length > 0 ? (
                   <div className="mb-4 p-3 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-lg border border-blue-800/30">
-                    <h5 className="text-sm font-semibold text-blue-400 mb-2 flex items-center gap-2">
+                    <h5 className="text-sm font-semibold text-blue-500 mb-2 flex items-center gap-2">
                       <Brain className="w-4 h-4" />
                       Advisor Insights
                     </h5>
                     {project.advisor_insights.slice(0, 1).map((insight: any, i: number) => (
                       <div key={i} className="text-xs">
-                        <div className="text-yellow-400 font-semibold mb-1">
+                        <div className="text-yellow-500 font-semibold mb-1">
                           {insight.advisor?.replace(' (AI Model)', '')}:
                         </div>
-                        <p className="text-gray-300 mb-1 line-clamp-2">
+                        <p className="text-muted-foreground mb-1 line-clamp-2">
                           "{insight.advice?.substring(0, 150)}..."
                         </p>
                         <div className="mt-1">
-                          <span className="text-blue-400">Top tip:</span>
-                          <span className="text-gray-400 ml-1">
+                          <span className="text-blue-500">Top tip:</span>
+                          <span className="text-muted-foreground ml-1">
                             {insight.action_items?.[0] || 'Validate market demand first'}
                           </span>
                         </div>
@@ -1490,7 +1490,7 @@ export const OpportunitiesHub: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="mb-4 p-3 bg-gray-900 rounded-lg border border-gray-800">
+                  <div className="mb-4 p-3 bg-background rounded-lg border border-gray-800">
                     <button
                       onClick={async () => {
                         toast.info('🎯 Getting advisor insights...', {
@@ -1502,7 +1502,7 @@ export const OpportunitiesHub: React.FC = () => {
                           toast.success('Advisor insights will be available in the next generation!');
                         }, 2000);
                       }}
-                      className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm font-medium flex items-center justify-center gap-2"
+                      className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-foreground rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm font-medium flex items-center justify-center gap-2"
                     >
                       <Brain className="w-4 h-4" />
                       Get Advisor Insights
@@ -1511,10 +1511,10 @@ export const OpportunitiesHub: React.FC = () => {
                 )}
 
                 {/* Status */}
-                <div className="mb-4 p-3 bg-gray-900 rounded-lg">
+                <div className="mb-4 p-3 bg-background rounded-lg">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Status:</span>
-                    <span className={`font-semibold ${project.ready_to_launch ? 'text-green-400' : 'text-yellow-400'}`}>
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className={`font-semibold ${project.ready_to_launch ? 'text-green-500' : 'text-yellow-500'}`}>
                       {project.ready_to_launch ? '✅ Ready to Launch' : '⚠️ Needs API Keys'}
                     </span>
                   </div>
@@ -1542,7 +1542,7 @@ export const OpportunitiesHub: React.FC = () => {
               await loadGeneratedProjects();
               toast.success(`Refreshed project list`);
             }}
-            className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            className="px-6 py-2 bg-gray-700 text-foreground rounded-lg hover:bg-gray-600 transition-colors"
           >
             <RefreshCw className="w-4 h-4 inline-block mr-2" />
             Load Previous Projects
@@ -1555,37 +1555,37 @@ export const OpportunitiesHub: React.FC = () => {
   const renderAnalyticsTab = () => (
     <div className="space-y-6">
       {/* Earnings Projection */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-white text-xl font-semibold mb-4">Earnings Projection</h3>
+      <div className="bg-card rounded-xl p-6">
+        <h3 className="text-foreground text-xl font-semibold mb-4">Earnings Projection</h3>
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Week 1</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Week 1</p>
+            <p className="text-foreground text-2xl font-bold">
               ${earningsProjection.week_1.toLocaleString()}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Month 1</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Month 1</p>
+            <p className="text-foreground text-2xl font-bold">
               ${earningsProjection.month_1.toLocaleString()}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Month 3</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Month 3</p>
+            <p className="text-foreground text-2xl font-bold">
               ${earningsProjection.month_3.toLocaleString()}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Month 6</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Month 6</p>
+            <p className="text-foreground text-2xl font-bold">
               ${earningsProjection.month_6.toLocaleString()}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Year 1</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Year 1</p>
+            <p className="text-foreground text-2xl font-bold">
               ${earningsProjection.year_1.toLocaleString()}
             </p>
           </div>
@@ -1593,16 +1593,16 @@ export const OpportunitiesHub: React.FC = () => {
       </div>
 
       {/* Performance Metrics */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-white text-xl font-semibold mb-4">Performance Metrics</h3>
+      <div className="bg-card rounded-xl p-6">
+        <h3 className="text-foreground text-xl font-semibold mb-4">Performance Metrics</h3>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-green-400" />
-              <p className="text-gray-400 text-sm">Success Rate</p>
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              <p className="text-muted-foreground text-sm">Success Rate</p>
             </div>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-foreground text-2xl font-bold">
               {applications.size > 0
                 ? Math.round((Array.from(applications.values()).filter(app =>
                     ['offered', 'accepted'].includes(app.status)).length / applications.size) * 100)
@@ -1612,10 +1612,10 @@ export const OpportunitiesHub: React.FC = () => {
 
           <div className="bg-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Target className="w-5 h-5 text-blue-400" />
-              <p className="text-gray-400 text-sm">Avg Match</p>
+              <Target className="w-5 h-5 text-blue-500" />
+              <p className="text-muted-foreground text-sm">Avg Match</p>
             </div>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-foreground text-2xl font-bold">
               {opportunities.length > 0
                 ? Math.round(opportunities.reduce((acc, opp) => acc + opp.skills_match, 0) / opportunities.length * 100)
                 : 0}%
@@ -1625,31 +1625,31 @@ export const OpportunitiesHub: React.FC = () => {
           <div className="bg-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-5 h-5 text-purple-400" />
-              <p className="text-gray-400 text-sm">Response Time</p>
+              <p className="text-muted-foreground text-sm">Response Time</p>
             </div>
-            <p className="text-white text-2xl font-bold">24h</p>
+            <p className="text-foreground text-2xl font-bold">24h</p>
           </div>
 
           <div className="bg-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Award className="w-5 h-5 text-yellow-400" />
-              <p className="text-gray-400 text-sm">Top Category</p>
+              <Award className="w-5 h-5 text-yellow-500" />
+              <p className="text-muted-foreground text-sm">Top Category</p>
             </div>
-            <p className="text-white text-lg font-bold">Tech</p>
+            <p className="text-foreground text-lg font-bold">Tech</p>
           </div>
         </div>
       </div>
 
       {/* Automation Status */}
-      <div className="bg-gray-800 rounded-xl p-6">
+      <div className="bg-card rounded-xl p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-white text-xl font-semibold">Automation</h3>
+          <h3 className="text-foreground text-xl font-semibold">Automation</h3>
           <button
             onClick={() => setAutomationEnabled(!automationEnabled)}
             className={`px-4 py-2 rounded-lg transition-colors ${
               automationEnabled
-                ? 'bg-purple-600 text-white hover:bg-purple-700'
-                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                ? 'bg-purple-600 text-foreground hover:bg-purple-700'
+                : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
             }`}
           >
             {automationEnabled ? (
@@ -1670,15 +1670,15 @@ export const OpportunitiesHub: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-gray-400">Auto-applying to matched opportunities</span>
+              <span className="text-muted-foreground">Auto-applying to matched opportunities</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-gray-400">Generating personalized cover letters</span>
+              <span className="text-muted-foreground">Generating personalized cover letters</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-gray-400">Tracking application status</span>
+              <span className="text-muted-foreground">Tracking application status</span>
             </div>
           </div>
         )}
@@ -1689,15 +1689,15 @@ export const OpportunitiesHub: React.FC = () => {
   const renderCampaignsTab = () => (
     <div className="space-y-6">
       {/* Campaigns Header */}
-      <div className="bg-gray-800 rounded-xl p-6">
+      <div className="bg-card rounded-xl p-6">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-white text-2xl font-bold">Campaign Manager</h2>
-            <p className="text-gray-400">Create content campaigns to pursue opportunities</p>
+            <h2 className="text-foreground text-2xl font-bold">Campaign Manager</h2>
+            <p className="text-muted-foreground">Create content campaigns to pursue opportunities</p>
           </div>
           <button
             onClick={createNewCampaign}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
           >
             <Edit3 className="w-4 h-4" />
             New Campaign
@@ -1707,66 +1707,66 @@ export const OpportunitiesHub: React.FC = () => {
         {/* Quick Stats */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Total Campaigns</p>
-            <p className="text-white text-2xl font-bold">{campaigns.length}</p>
+            <p className="text-muted-foreground text-sm">Total Campaigns</p>
+            <p className="text-foreground text-2xl font-bold">{campaigns.length}</p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Active</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Active</p>
+            <p className="text-foreground text-2xl font-bold">
               {campaigns.filter(c => c.status === 'active').length}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Content Created</p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-muted-foreground text-sm">Content Created</p>
+            <p className="text-foreground text-2xl font-bold">
               {campaigns.reduce((sum, c) => sum + c.content.length, 0)}
             </p>
           </div>
           <div className="bg-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">Success Rate</p>
-            <p className="text-white text-2xl font-bold">85%</p>
+            <p className="text-muted-foreground text-sm">Success Rate</p>
+            <p className="text-foreground text-2xl font-bold">85%</p>
           </div>
         </div>
       </div>
 
       {/* Campaign Templates */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-white text-lg font-semibold mb-4">Quick Start Templates</h3>
+      <div className="bg-card rounded-xl p-6">
+        <h3 className="text-foreground text-lg font-semibold mb-4">Quick Start Templates</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
             onClick={() => createCampaignFromTemplate('job_application')}
             className="bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-600 transition-colors"
           >
-            <Mail className="w-8 h-8 text-blue-400 mb-2" />
-            <h4 className="text-white font-medium">Job Application Kit</h4>
-            <p className="text-gray-400 text-sm">Cover letter, resume, follow-up emails</p>
+            <Mail className="w-8 h-8 text-blue-500 mb-2" />
+            <h4 className="text-foreground font-medium">Job Application Kit</h4>
+            <p className="text-muted-foreground text-sm">Cover letter, resume, follow-up emails</p>
           </div>
           <div
             onClick={() => createCampaignFromTemplate('freelance_pitch')}
             className="bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-600 transition-colors"
           >
-            <PenTool className="w-8 h-8 text-green-400 mb-2" />
-            <h4 className="text-white font-medium">Freelance Pitch</h4>
-            <p className="text-gray-400 text-sm">Proposals, portfolios, client outreach</p>
+            <PenTool className="w-8 h-8 text-green-500 mb-2" />
+            <h4 className="text-foreground font-medium">Freelance Pitch</h4>
+            <p className="text-muted-foreground text-sm">Proposals, portfolios, client outreach</p>
           </div>
           <div
             onClick={() => createCampaignFromTemplate('social_presence')}
             className="bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-600 transition-colors"
           >
             <MessageSquare className="w-8 h-8 text-purple-400 mb-2" />
-            <h4 className="text-white font-medium">Social Presence</h4>
-            <p className="text-gray-400 text-sm">LinkedIn posts, Twitter content, networking</p>
+            <h4 className="text-foreground font-medium">Social Presence</h4>
+            <p className="text-muted-foreground text-sm">LinkedIn posts, Twitter content, networking</p>
           </div>
         </div>
       </div>
 
       {/* Active Campaigns */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-white text-lg font-semibold mb-4">Your Campaigns</h3>
+      <div className="bg-card rounded-xl p-6">
+        <h3 className="text-foreground text-lg font-semibold mb-4">Your Campaigns</h3>
         {campaigns.length === 0 ? (
           <div className="text-center py-8">
-            <Layout className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-400">No campaigns yet. Create your first campaign to get started!</p>
+            <Layout className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No campaigns yet. Create your first campaign to get started!</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -1780,15 +1780,15 @@ export const OpportunitiesHub: React.FC = () => {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h4 className="text-white font-medium">{campaign.title}</h4>
-                    <p className="text-gray-400 text-sm">{campaign.description}</p>
+                    <h4 className="text-foreground font-medium">{campaign.title}</h4>
+                    <p className="text-muted-foreground text-sm">{campaign.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      campaign.status === 'active' ? 'bg-green-600/20 text-green-400' :
-                      campaign.status === 'draft' ? 'bg-yellow-600/20 text-yellow-400' :
-                      campaign.status === 'paused' ? 'bg-gray-600/20 text-gray-400' :
-                      'bg-blue-600/20 text-blue-400'
+                      campaign.status === 'active' ? 'bg-green-600/20 text-green-500' :
+                      campaign.status === 'draft' ? 'bg-yellow-600/20 text-yellow-500' :
+                      campaign.status === 'paused' ? 'bg-gray-600/20 text-muted-foreground' :
+                      'bg-blue-600/20 text-blue-500'
                     }`}>
                       {campaign.status}
                     </span>
@@ -1796,7 +1796,7 @@ export const OpportunitiesHub: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{campaign.content.length} content pieces</span>
                     <span>Created {new Date(campaign.created_at).toLocaleDateString()}</span>
                   </div>
@@ -1806,7 +1806,7 @@ export const OpportunitiesHub: React.FC = () => {
                         e.stopPropagation();
                         generateCampaignContent(campaign);
                       }}
-                      className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                      className="px-3 py-1 bg-purple-600 text-foreground rounded hover:bg-purple-700 transition-colors"
                     >
                       Generate Content
                     </button>
@@ -1816,7 +1816,7 @@ export const OpportunitiesHub: React.FC = () => {
                           e.stopPropagation();
                           launchCampaign(campaign.id);
                         }}
-                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1"
+                        className="px-3 py-1 bg-green-600 text-foreground rounded hover:bg-green-700 transition-colors flex items-center gap-1"
                       >
                         <Play className="w-3 h-3" />
                         Launch
@@ -1833,14 +1833,14 @@ export const OpportunitiesHub: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-background">
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">Opportunities Hub</h1>
-              <p className="text-gray-400 mt-1">
+              <h1 className="text-3xl font-bold text-foreground">Opportunities Hub</h1>
+              <p className="text-muted-foreground mt-1">
                 Discover, evaluate, and apply to income opportunities
               </p>
             </div>
@@ -1848,17 +1848,17 @@ export const OpportunitiesHub: React.FC = () => {
             {/* Ecosystem Status Indicator */}
             <div className="flex items-center gap-4">
               {ecosystemStatus && (
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <Database className={`w-4 h-4 ${ecosystemStatus.status === 'active' ? 'text-green-400' : 'text-gray-400'}`} />
+                    <Database className={`w-4 h-4 ${ecosystemStatus.status === 'active' ? 'text-green-500' : 'text-muted-foreground'}`} />
                     <span>{ecosystemStatus.components?.spiders?.active || 0} Spiders</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Brain className={`w-4 h-4 ${ecosystemStatus.status === 'active' ? 'text-blue-400' : 'text-gray-400'}`} />
+                    <Brain className={`w-4 h-4 ${ecosystemStatus.status === 'active' ? 'text-blue-500' : 'text-muted-foreground'}`} />
                     <span>{ecosystemStatus.components?.agents?.connected || 0} Agents</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Star className={`w-4 h-4 ${ecosystemStatus.status === 'active' ? 'text-purple-400' : 'text-gray-400'}`} />
+                    <Star className={`w-4 h-4 ${ecosystemStatus.status === 'active' ? 'text-purple-400' : 'text-muted-foreground'}`} />
                     <span>{ecosystemStatus.components?.advisors?.active || 0} Advisors</span>
                   </div>
                 </div>
@@ -1869,8 +1869,8 @@ export const OpportunitiesHub: React.FC = () => {
                 disabled={activatingEcosystem || ecosystemStatus?.status === 'active'}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                   ecosystemStatus?.status === 'active'
-                    ? 'bg-green-600/20 text-green-400 cursor-default'
-                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                    ? 'bg-green-600/20 text-green-500 cursor-default'
+                    : 'bg-purple-600 text-foreground hover:bg-purple-700'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {activatingEcosystem ? (
@@ -1896,22 +1896,22 @@ export const OpportunitiesHub: React.FC = () => {
               {/* Connection Status */}
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-                <span className="text-gray-400 text-sm">
+                <span className="text-muted-foreground text-sm">
                   {wsConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
 
               {/* Quick Stats */}
-              <div className="bg-gray-800 rounded-lg px-4 py-2">
-                <span className="text-gray-400 text-sm">Active: </span>
-                <span className="text-white font-medium">{opportunities.length}</span>
+              <div className="bg-card rounded-lg px-4 py-2">
+                <span className="text-muted-foreground text-sm">Active: </span>
+                <span className="text-foreground font-medium">{opportunities.length}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="bg-gray-800 rounded-xl p-1 mb-6">
+        <div className="bg-card rounded-xl p-1 mb-6">
           <div className="flex gap-1">
             {tabs.map(tab => {
               const Icon = tab.icon;
@@ -1921,14 +1921,14 @@ export const OpportunitiesHub: React.FC = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                      ? 'bg-purple-600 text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-gray-700'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium">{tab.label}</span>
                   {tab.badge && tab.badge > 0 && (
-                    <span className="ml-2 px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full">
+                    <span className="ml-2 px-2 py-0.5 bg-gray-700 text-foreground text-xs rounded-full">
                       {tab.badge}
                     </span>
                   )}
@@ -1963,16 +1963,16 @@ export const OpportunitiesHub: React.FC = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            className="bg-card rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
           >
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-white">{selectedOpportunity.title}</h2>
-                <p className="text-gray-400">{selectedOpportunity.company}</p>
+                <h2 className="text-2xl font-bold text-foreground">{selectedOpportunity.title}</h2>
+                <p className="text-muted-foreground">{selectedOpportunity.company}</p>
               </div>
               <button
                 onClick={() => setSelectedOpportunity(null)}
-                className="text-gray-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <XCircle className="w-6 h-6" />
               </button>
@@ -1980,16 +1980,16 @@ export const OpportunitiesHub: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <h3 className="text-white font-semibold mb-2">Description</h3>
-                <p className="text-gray-300">{selectedOpportunity.description}</p>
+                <h3 className="text-foreground font-semibold mb-2">Description</h3>
+                <p className="text-muted-foreground">{selectedOpportunity.description}</p>
               </div>
 
               <div>
-                <h3 className="text-white font-semibold mb-2">Requirements</h3>
+                <h3 className="text-foreground font-semibold mb-2">Requirements</h3>
                 <ul className="space-y-1">
                   {selectedOpportunity.requirements.map((req, idx) => (
-                    <li key={idx} className="text-gray-300 flex items-start gap-2">
-                      <ChevronRight className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <li key={idx} className="text-muted-foreground flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 text-muted-foreground mt-0.5" />
                       <span>{req}</span>
                     </li>
                   ))}
@@ -2000,9 +2000,9 @@ export const OpportunitiesHub: React.FC = () => {
                 <div className="bg-purple-600/10 rounded-lg p-4 border border-purple-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <Brain className="w-5 h-5 text-purple-400" />
-                    <h3 className="text-white font-semibold">AI Recommendation</h3>
+                    <h3 className="text-foreground font-semibold">AI Recommendation</h3>
                   </div>
-                  <p className="text-gray-300">{selectedOpportunity.ai_recommendation}</p>
+                  <p className="text-muted-foreground">{selectedOpportunity.ai_recommendation}</p>
                 </div>
               )}
 
@@ -2012,7 +2012,7 @@ export const OpportunitiesHub: React.FC = () => {
                     handleQuickApply(selectedOpportunity);
                     setSelectedOpportunity(null);
                   }}
-                  className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="flex-1 px-6 py-3 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 transition-colors"
                 >
                   Quick Apply
                 </button>
@@ -2021,7 +2021,7 @@ export const OpportunitiesHub: React.FC = () => {
                     createActionPlan(selectedOpportunity);
                     setSelectedOpportunity(null);
                   }}
-                  className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  className="px-6 py-3 bg-gray-700 text-foreground rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   Create Action Plan
                 </button>

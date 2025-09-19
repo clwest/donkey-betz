@@ -51,27 +51,27 @@ export function StudioPage() {
   };
 
   return (
-    <div className="space-y-8" style={{ backgroundColor: 'var(--gaming-bg-primary)', minHeight: '100vh' }}>
+    <div className="space-y-8" style={{ backgroundColor: 'hsl(var(--muted))', minHeight: '100vh' }}>
       {/* Header - Gaming Style */}
-      <div className="gaming-neural-card p-6">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card p-6">
+        <div className="bg-card"></div>
         <div className="relative z-10 flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-black font-mono uppercase tracking-wider" 
                 style={{ 
-                  color: 'var(--gaming-neon-cyan)',
+                  color: 'hsl(var(--muted))',
                   textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
                 }}>NEURAL CREATION STUDIO</h1>
-            <p className="mt-3 font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+            <p className="mt-3 font-mono" style={{ color: 'hsl(var(--muted))' }}>
               PROFESSIONAL AI-POWERED CONTENT FORGE
             </p>
           </div>
           <button
-            className="gaming-btn-secondary px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all duration-300 hover:scale-105"
+            className="bg-card px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2 transition-all duration-300 hover:scale-105"
             style={{
-              background: 'var(--gaming-bg-elevated)',
-              border: '1px solid var(--gaming-neon-purple)',
-              color: 'var(--gaming-neon-purple)'
+              background: 'hsl(var(--muted))',
+              border: '1px solid hsl(var(--muted))',
+              color: 'hsl(var(--muted))'
             }}
           >
             <PlusIcon className="h-4 w-4" />
@@ -87,32 +87,32 @@ export function StudioPage() {
           return (
             <div
               key={tab.id}
-              className={`gaming-neural-card p-6 cursor-pointer transition-all duration-300 hover:scale-105 ${
+              className={`bg-card p-6 cursor-pointer transition-all duration-300 hover:scale-105 ${
                 isActive ? 'ring-2' : ''
               }`}
               style={{
-                borderColor: isActive ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
-                boxShadow: isActive ? 'var(--gaming-glow-primary)' : undefined,
-                background: isActive ? 'var(--gaming-gradient-primary)' : undefined
+                borderColor: isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                boxShadow: isActive ? 'hsl(var(--muted))' : undefined,
+                background: isActive ? 'hsl(var(--muted))' : undefined
               }}
               onClick={() => setActiveTab(tab.id)}
             >
-              <div className="gaming-border-glow"></div>
+              <div className="bg-card"></div>
               <div className="relative z-10 text-center">
                 <tab.icon className={`h-8 w-8 mx-auto mb-3`} 
                   style={{ 
-                    color: isActive ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)',
+                    color: isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     filter: isActive ? 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))' : undefined
                   }} />
                 <h3 className={`font-bold font-mono uppercase tracking-wider text-sm mb-2`}
                     style={{ 
-                      color: isActive ? 'var(--gaming-text-primary)' : 'var(--gaming-text-secondary)'
+                      color: isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))'
                     }}>
                   {tab.label}
                 </h3>
                 <p className={`text-xs font-mono`}
                    style={{ 
-                     color: isActive ? 'var(--gaming-text-secondary)' : 'var(--gaming-text-muted)'
+                     color: isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))'
                    }}>
                   {tab.description.toUpperCase()}
                 </p>

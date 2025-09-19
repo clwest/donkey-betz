@@ -57,17 +57,17 @@ const EmbeddingsTracker: React.FC = () => {
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'healthy': return 'text-green-400';
-      case 'warning': return 'text-yellow-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-gray-400';
+      case 'healthy': return 'text-green-500';
+      case 'warning': return 'text-yellow-500';
+      case 'error': return 'text-red-500';
+      default: return 'text-muted-foreground';
     }
   };
 
   const getStatusIndicator = (status?: string) => {
     const color = status === 'healthy' ? 'bg-green-500' : 
                   status === 'warning' ? 'bg-yellow-500' : 
-                  status === 'error' ? 'bg-red-500' : 'bg-gray-500';
+                  status === 'error' ? 'bg-red-500' : 'bg-muted/50';
     
     return (
       <div className={`w-2 h-2 ${color} rounded-full animate-pulse`} />
@@ -117,11 +117,11 @@ const EmbeddingsTracker: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-gray-900/50 backdrop-blur-xl rounded-xl p-6 border border-gray-800">
+      <div className="bg-card/95 backdrop-blur-sm rounded-xl p-6 border border-border/50 shadow-dark-lg">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="h-8 bg-gray-700 rounded w-1/2 mb-2"></div>
-          <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+          <div className="h-4 bg-muted/50 rounded w-1/3 mb-4"></div>
+          <div className="h-8 bg-muted/50 rounded w-1/2 mb-2"></div>
+          <div className="h-4 bg-muted/50 rounded w-2/3"></div>
         </div>
       </div>
     );
@@ -129,8 +129,8 @@ const EmbeddingsTracker: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-gray-900/50 backdrop-blur-xl rounded-xl p-6 border border-red-800">
-        <div className="flex items-center gap-2 text-red-400">
+      <div className="bg-card/95 backdrop-blur-sm rounded-xl p-6 border border-destructive/30 shadow-dark-lg">
+        <div className="flex items-center gap-2 text-destructive">
           <Brain className="w-5 h-5" />
           <span>{error}</span>
         </div>
@@ -139,20 +139,22 @@ const EmbeddingsTracker: React.FC = () => {
   }
 
   return (
-    <div 
-      className={`bg-gray-900/50 backdrop-blur-xl rounded-xl p-6 border border-gray-800 cursor-pointer transition-all ${
+    <div
+      className={`bg-card/95 backdrop-blur-sm rounded-xl p-6 border border-border/50 shadow-dark-lg cursor-pointer transition-all duration-300 hover:border-primary/30 hover:shadow-glow-subtle ${
         expanded ? 'col-span-2' : ''
       }`}
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-lg">
-            <Brain className="w-6 h-6 text-purple-400" />
+          <div className="p-3 bg-gradient-to-br from-primary/10 to-accent/5 rounded-xl border border-primary/20">
+            <Brain className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Embeddings Tracker</h3>
-            <p className="text-sm text-gray-400">Vector Database Status</p>
+            <h3 className="text-lg font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Embeddings Tracker
+            </h3>
+            <p className="text-sm text-muted-foreground">Vector Database Status</p>
           </div>
         </div>
         {getStatusIndicator(stats?.health_status?.status)}
@@ -161,18 +163,18 @@ const EmbeddingsTracker: React.FC = () => {
       <div className="space-y-4">
         {/* Main Stats */}
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold text-white">
+          <span className="text-3xl font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-mono">
             {stats?.total_embeddings?.toLocaleString() || '0'}
           </span>
-          <span className="text-sm text-gray-400">total vectors</span>
+          <span className="text-sm text-muted-foreground font-medium">total vectors</span>
         </div>
 
         {/* Breakdown */}
         <div className="space-y-2">
           {Object.entries(stats?.breakdown || {}).map(([name, data]) => (
             <div key={name} className="flex justify-between items-center">
-              <span className="text-sm text-gray-400">{name}:</span>
-              <span className="text-sm text-white font-medium">
+              <span className="text-sm text-muted-foreground">{name}:</span>
+              <span className="text-sm text-foreground font-medium">
                 {data.with_embeddings !== undefined ? 
                   `${data.with_embeddings?.toLocaleString()} / ${data.total?.toLocaleString()}` :
                   `${data.documents?.toLocaleString()} docs`
@@ -185,8 +187,8 @@ const EmbeddingsTracker: React.FC = () => {
         {/* Sparkline */}
         <div className="pt-2">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-xs text-gray-500">7-day trend</span>
-            <span className="text-xs text-blue-400">
+            <span className="text-xs text-muted-foreground">7-day trend</span>
+            <span className="text-xs text-blue-500">
               {stats?.recent_activity?.created_today || 0} today
             </span>
           </div>
@@ -195,23 +197,23 @@ const EmbeddingsTracker: React.FC = () => {
 
         {/* Expanded Details */}
         {expanded && (
-          <div className="pt-4 border-t border-gray-800 space-y-3">
+          <div className="pt-4 border-t border-border/30 space-y-3">
             {/* Recent Activity */}
             <div>
-              <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
                 Recent Activity
               </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Last embedding:</span>
-                  <span className="text-gray-300">
+                  <span className="text-muted-foreground">Last embedding:</span>
+                  <span className="text-muted-foreground">
                     {formatTime(stats?.recent_activity?.last_created)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Created today:</span>
-                  <span className="text-gray-300">
+                  <span className="text-muted-foreground">Created today:</span>
+                  <span className="text-muted-foreground">
                     {stats?.recent_activity?.created_today || 0}
                   </span>
                 </div>
@@ -220,37 +222,37 @@ const EmbeddingsTracker: React.FC = () => {
 
             {/* Health Status */}
             <div>
-              <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 System Health
               </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">pgvector:</span>
-                  <span className="text-gray-300">
+                  <span className="text-muted-foreground">pgvector:</span>
+                  <span className="text-muted-foreground">
                     v{stats?.health_status?.pgvector_version || 'Unknown'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Index type:</span>
-                  <span className="text-gray-300">
+                  <span className="text-muted-foreground">Index type:</span>
+                  <span className="text-muted-foreground">
                     {stats?.health_status?.index_type || 'Unknown'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Indexes:</span>
-                  <span className="text-gray-300">
+                  <span className="text-muted-foreground">Indexes:</span>
+                  <span className="text-muted-foreground">
                     {stats?.health_status?.index_count || 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Search speed:</span>
+                  <span className="text-muted-foreground">Search speed:</span>
                   <span className={getStatusColor(stats?.health_status?.status)}>
                     {stats?.health_status?.avg_search_ms?.toFixed(2) || '0'} ms
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Status:</span>
+                  <span className="text-muted-foreground">Status:</span>
                   <span className={`capitalize ${getStatusColor(stats?.health_status?.status)}`}>
                     {stats?.health_status?.status || 'Unknown'}
                   </span>

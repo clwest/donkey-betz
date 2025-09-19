@@ -20,7 +20,7 @@ import {
 const nodeCategories = {
   input: {
     label: 'Inputs',
-    color: 'text-blue-400',
+    color: 'text-blue-500',
     bgColor: 'bg-blue-500/20',
     nodes: [
       { type: 'research-input', name: 'Research', icon: DocumentTextIcon },
@@ -47,7 +47,7 @@ const nodeCategories = {
   },
   output: {
     label: 'Outputs',
-    color: 'text-green-400',
+    color: 'text-green-500',
     bgColor: 'bg-green-500/20',
     nodes: [
       { type: 'social-media', name: 'Social', icon: ShareIcon },
@@ -68,7 +68,7 @@ export function WorkflowNodeLibrary() {
 
   return (
     <div className="w-64 glass-dark border-r border-white/5 p-4 overflow-y-auto">
-      <h3 className="text-white font-semibold mb-4">Node Library</h3>
+      <h3 className="text-foreground font-semibold mb-4">Node Library</h3>
       
       {Object.entries(nodeCategories).map(([category, { label, color, bgColor, nodes }]) => (
         <div key={category} className="mb-6">
@@ -82,7 +82,7 @@ export function WorkflowNodeLibrary() {
                 className={`flex items-center gap-2 px-3 py-2 ${bgColor} border border-white/10 rounded-lg cursor-move hover:bg-white/10 transition-colors`}
               >
                 <node.icon className="h-4 w-4" />
-                <span className="text-sm text-white">{node.name}</span>
+                <span className="text-sm text-foreground">{node.name}</span>
               </div>
             ))}
           </div>

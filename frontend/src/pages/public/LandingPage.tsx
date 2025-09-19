@@ -69,32 +69,32 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 backdrop-blur-lg bg-gray-900/70 border-b border-gray-700">
+      <nav className="sticky top-0 z-50 backdrop-blur-lg bg-background/70 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Sparkles className="h-8 w-8 text-purple-500" />
-              <span className="text-xl font-bold text-white">Unified Donkey Betz</span>
+              <span className="text-xl font-bold text-foreground">Unified Donkey Betz</span>
             </div>
             <div className="flex items-center space-x-4">
               <Button 
                 variant="ghost" 
                 onClick={() => navigate('/blogs')}
-                className="text-gray-300 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Blog
               </Button>
               <Button 
                 variant="ghost" 
                 onClick={() => navigate('/api-docs')}
-                className="text-gray-300 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 API Docs
               </Button>
               <Button 
                 variant="ghost" 
                 onClick={() => navigate('/login')}
-                className="text-gray-300 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Login
               </Button>
@@ -117,11 +117,11 @@ const LandingPage: React.FC = () => {
             <span className="text-sm text-purple-300">Powered by GPT-5 & Claude</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
             AI-Powered Content & Sports Intelligence
           </h1>
           
-          <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
             Harness the power of 100+ specialized AI agents for content creation, sports analytics, 
             and intelligent betting strategies. Your all-in-one platform for AI-driven insights.
           </p>
@@ -139,7 +139,7 @@ const LandingPage: React.FC = () => {
               size="lg" 
               variant="outline"
               onClick={() => navigate('/demo')}
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              className="border-gray-600 text-muted-foreground hover:bg-card"
             >
               Watch Demo
             </Button>
@@ -159,8 +159,8 @@ const LandingPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-white mb-2">{stat.value}</div>
-                <div className="text-gray-400">{stat.label}</div>
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">{stat.value}</div>
+                <div className="text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -171,10 +171,10 @@ const LandingPage: React.FC = () => {
       <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Everything You Need in One Platform
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               From content generation to sports analytics, our platform provides comprehensive AI solutions
             </p>
           </div>
@@ -183,13 +183,13 @@ const LandingPage: React.FC = () => {
             {features.map((feature, index) => (
               <Card 
                 key={index}
-                className="bg-gray-800/50 border-gray-700 hover:bg-gray-800/70 transition-all hover:scale-105 cursor-pointer"
+                className="bg-card/50 border-gray-700 hover:bg-card/70 transition-all hover:scale-105 cursor-pointer"
                 onClick={() => navigate('/features')}
               >
                 <div className="p-6">
                   <feature.icon className={`h-12 w-12 ${feature.color} mb-4`} />
-                  <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-400">{feature.description}</p>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground">{feature.description}</p>
                 </div>
               </Card>
             ))}
@@ -198,11 +198,11 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Use Cases */}
-      <section className="py-20 px-4 bg-gray-800/30">
+      <section className="py-20 px-4 bg-card/30">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
                 Built for Professionals
               </h2>
               <div className="space-y-4">
@@ -215,7 +215,7 @@ const LandingPage: React.FC = () => {
                 ].map((item, index) => (
                   <div key={index} className="flex items-center space-x-3">
                     <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span className="text-gray-300">{item}</span>
+                    <span className="text-muted-foreground">{item}</span>
                   </div>
                 ))}
               </div>
@@ -231,29 +231,29 @@ const LandingPage: React.FC = () => {
               <Card className="bg-gradient-to-br from-purple-900/50 to-purple-800/30 border-purple-700">
                 <div className="p-6">
                   <Globe className="h-8 w-8 text-purple-400 mb-3" />
-                  <h4 className="font-semibold text-white mb-2">Global Reach</h4>
-                  <p className="text-sm text-gray-300">Access data from worldwide sources</p>
+                  <h4 className="font-semibold text-foreground mb-2">Global Reach</h4>
+                  <p className="text-sm text-muted-foreground">Access data from worldwide sources</p>
                 </div>
               </Card>
               <Card className="bg-gradient-to-br from-blue-900/50 to-blue-800/30 border-blue-700">
                 <div className="p-6">
-                  <BarChart3 className="h-8 w-8 text-blue-400 mb-3" />
-                  <h4 className="font-semibold text-white mb-2">Real-time Analytics</h4>
-                  <p className="text-sm text-gray-300">Live data and instant insights</p>
+                  <BarChart3 className="h-8 w-8 text-blue-500 mb-3" />
+                  <h4 className="font-semibold text-foreground mb-2">Real-time Analytics</h4>
+                  <p className="text-sm text-muted-foreground">Live data and instant insights</p>
                 </div>
               </Card>
               <Card className="bg-gradient-to-br from-green-900/50 to-green-800/30 border-green-700">
                 <div className="p-6">
-                  <Shield className="h-8 w-8 text-green-400 mb-3" />
-                  <h4 className="font-semibold text-white mb-2">Enterprise Security</h4>
-                  <p className="text-sm text-gray-300">Bank-level encryption</p>
+                  <Shield className="h-8 w-8 text-green-500 mb-3" />
+                  <h4 className="font-semibold text-foreground mb-2">Enterprise Security</h4>
+                  <p className="text-sm text-muted-foreground">Bank-level encryption</p>
                 </div>
               </Card>
               <Card className="bg-gradient-to-br from-orange-900/50 to-orange-800/30 border-orange-700">
                 <div className="p-6">
                   <Zap className="h-8 w-8 text-orange-400 mb-3" />
-                  <h4 className="font-semibold text-white mb-2">Lightning Fast</h4>
-                  <p className="text-sm text-gray-300">Optimized for speed</p>
+                  <h4 className="font-semibold text-foreground mb-2">Lightning Fast</h4>
+                  <p className="text-sm text-muted-foreground">Optimized for speed</p>
                 </div>
               </Card>
             </div>
@@ -264,10 +264,10 @@ const LandingPage: React.FC = () => {
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Ready to Transform Your Workflow?
           </h2>
-          <p className="text-xl text-gray-300 mb-8">
+          <p className="text-xl text-muted-foreground mb-8">
             Join thousands of professionals using AI to accelerate their success
           </p>
           <div className="flex justify-center space-x-4">
@@ -282,12 +282,12 @@ const LandingPage: React.FC = () => {
               size="lg"
               variant="outline"
               onClick={() => navigate('/contact')}
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              className="border-gray-600 text-muted-foreground hover:bg-card"
             >
               Contact Sales
             </Button>
           </div>
-          <p className="mt-4 text-sm text-gray-400">
+          <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • 14-day free trial • Cancel anytime
           </p>
         </div>
@@ -300,44 +300,44 @@ const LandingPage: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Sparkles className="h-6 w-6 text-purple-500" />
-                <span className="font-semibold text-white">Unified Donkey Betz</span>
+                <span className="font-semibold text-foreground">Unified Donkey Betz</span>
               </div>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 AI-powered platform for content creation and sports intelligence
               </p>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="/features" className="hover:text-white">Features</a></li>
-                <li><a href="/pricing" className="hover:text-white">Pricing</a></li>
-                <li><a href="/api-docs" className="hover:text-white">API</a></li>
-                <li><a href="/integrations" className="hover:text-white">Integrations</a></li>
+              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/features" className="hover:text-foreground">Features</a></li>
+                <li><a href="/pricing" className="hover:text-foreground">Pricing</a></li>
+                <li><a href="/api-docs" className="hover:text-foreground">API</a></li>
+                <li><a href="/integrations" className="hover:text-foreground">Integrations</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="/about" className="hover:text-white">About</a></li>
-                <li><a href="/blogs" className="hover:text-white">Blog</a></li>
-                <li><a href="/careers" className="hover:text-white">Careers</a></li>
-                <li><a href="/contact" className="hover:text-white">Contact</a></li>
+              <h4 className="font-semibold text-foreground mb-4">Company</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/about" className="hover:text-foreground">About</a></li>
+                <li><a href="/blogs" className="hover:text-foreground">Blog</a></li>
+                <li><a href="/careers" className="hover:text-foreground">Careers</a></li>
+                <li><a href="/contact" className="hover:text-foreground">Contact</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="/privacy" className="hover:text-white">Privacy Policy</a></li>
-                <li><a href="/terms" className="hover:text-white">Terms of Service</a></li>
-                <li><a href="/security" className="hover:text-white">Security</a></li>
+              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="/privacy" className="hover:text-foreground">Privacy Policy</a></li>
+                <li><a href="/terms" className="hover:text-foreground">Terms of Service</a></li>
+                <li><a href="/security" className="hover:text-foreground">Security</a></li>
               </ul>
             </div>
           </div>
           
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-muted-foreground">
             © 2025 Unified Donkey Betz. All rights reserved.
           </div>
         </div>

@@ -226,13 +226,13 @@ export function VoicePage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white">Voice Studio</h1>
-        <p className="text-gray-400 mt-1">Record, transcribe, and manage voice content</p>
+        <h1 className="text-3xl font-bold text-foreground">Voice Studio</h1>
+        <p className="text-muted-foreground mt-1">Record, transcribe, and manage voice content</p>
       </div>
 
       {/* Recording Controls */}
       <Card>
-        <h2 className="text-xl font-semibold text-white mb-4">New Recording</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-4">New Recording</h2>
         
         <div className="space-y-4">
           {/* Recording Buttons */}
@@ -268,11 +268,11 @@ export function VoicePage() {
 
           {/* Audio Preview */}
           {audioUrl && (
-            <div className="bg-dark-800 rounded-lg p-4">
+            <div className="bg-card rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <SpeakerWaveIcon className="h-5 w-5 text-primary-400" />
-                  <span className="text-sm text-gray-300">
+                  <span className="text-sm text-muted-foreground">
                     {selectedFile ? selectedFile.name : 'New Recording'}
                   </span>
                 </div>
@@ -314,7 +314,7 @@ export function VoicePage() {
 
           {/* Recording Status */}
           {recording && (
-            <div className="flex items-center gap-2 text-red-400">
+            <div className="flex items-center gap-2 text-red-500">
               <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse" />
               <span className="text-sm">Recording in progress...</span>
             </div>
@@ -324,7 +324,7 @@ export function VoicePage() {
 
       {/* Recordings List */}
       <div>
-        <h2 className="text-xl font-semibold text-white mb-4">
+        <h2 className="text-xl font-semibold text-foreground mb-4">
           Voice Recordings ({recordings.length})
         </h2>
 
@@ -332,8 +332,8 @@ export function VoicePage() {
           <Card>
             <div className="text-center py-8">
               <MicrophoneIcon className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">No recordings yet</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-muted-foreground">No recordings yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Start recording or upload an audio file to get started
               </p>
             </div>
@@ -351,16 +351,16 @@ export function VoicePage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium text-white">
+                          <span className="text-sm font-medium text-foreground">
                             Recording #{recording.id.slice(-6)}
                           </span>
                           {recording.duration && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {formatDuration(recording.duration)}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <ClockIcon className="h-3 w-3" />
                             {formatDate(recording.created_at || recording.timestamp)}
@@ -417,7 +417,7 @@ export function VoicePage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => deleteRecording(recording.id)}
-                        className="text-red-400 hover:text-red-300"
+                        className="text-red-500 hover:text-red-300"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </Button>
@@ -426,15 +426,15 @@ export function VoicePage() {
 
                   {/* Transcript */}
                   {expandedRecording === recording.id && (
-                    <div className="bg-dark-800 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-gray-400 mb-2">Transcript</h4>
-                      <div className="text-sm text-gray-300 whitespace-pre-wrap">
+                    <div className="bg-card rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Transcript</h4>
+                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                         {recording.transcript || 'No transcript available'}
                       </div>
                       
                       {recording.speaker_labels && recording.speaker_labels.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-dark-700">
-                          <h4 className="text-sm font-medium text-gray-400 mb-2">
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <h4 className="text-sm font-medium text-muted-foreground mb-2">
                             Speaker Breakdown
                           </h4>
                           {recording.speaker_labels.map((speaker: any, idx: number) => (
@@ -442,7 +442,7 @@ export function VoicePage() {
                               <span className="text-xs text-primary-400">
                                 {speaker.speaker}:
                               </span>
-                              <p className="text-sm text-gray-300 ml-4">
+                              <p className="text-sm text-muted-foreground ml-4">
                                 {speaker.text}
                               </p>
                             </div>

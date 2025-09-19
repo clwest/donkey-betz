@@ -110,7 +110,7 @@ const InvoiceHistory: React.FC<Props> = ({ invoices }) => {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No Invoices</h3>
           <p className="text-muted-foreground">
             Your invoice history will appear here once you have a subscription
@@ -238,7 +238,7 @@ const InvoiceHistory: React.FC<Props> = ({ invoices }) => {
           {selectedInvoice && (
             <div className="space-y-6">
               {/* Invoice Header */}
-              <div className="grid grid-cols-2 gap-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="grid grid-cols-2 gap-6 p-4 bg-muted/5 dark:bg-card rounded-lg">
                 <div>
                   <h4 className="font-semibold mb-2">Invoice Information</h4>
                   <div className="space-y-1 text-sm">

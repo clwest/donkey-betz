@@ -633,7 +633,7 @@ const NeuralOrchestra: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
-      'idle': 'bg-gray-500',
+      'idle': 'bg-muted/50',
       'working': 'bg-yellow-500',
       'consulting': 'bg-purple-500',
       'pending': 'bg-gray-400',
@@ -641,7 +641,7 @@ const NeuralOrchestra: React.FC = () => {
       'completed': 'bg-green-500',
       'failed': 'bg-red-500'
     };
-    return colors[status] || 'bg-gray-500';
+    return colors[status] || 'bg-muted/50';
   };
 
   return (
@@ -687,7 +687,7 @@ const NeuralOrchestra: React.FC = () => {
         <Card className="bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-purple-500/50 shadow-2xl mb-6">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2 text-purple-100">
-              <Sparkles className="w-6 h-6 text-yellow-400" />
+              <Sparkles className="w-6 h-6 text-yellow-500" />
               Action Plan Review from {planReview.advisor || 'Advisor'}
             </CardTitle>
           </CardHeader>
@@ -699,7 +699,7 @@ const NeuralOrchestra: React.FC = () => {
                   <span className="text-sm text-purple-200">Success Probability</span>
                   <div className="flex items-center gap-2 mt-1">
                     <Progress value={(planReview.success_probability || 0.75) * 100} className="flex-1 h-3" />
-                    <span className="text-lg font-bold text-green-400">
+                    <span className="text-lg font-bold text-green-500">
                       {((planReview.success_probability || 0.75) * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -731,7 +731,7 @@ const NeuralOrchestra: React.FC = () => {
                 <div className="space-y-2">
                   {planReview.team && (
                     <>
-                      <Badge className="bg-purple-600 text-white">
+                      <Badge className="bg-purple-600 text-foreground">
                         <Users className="w-3 h-3 mr-1" />
                         Lead: {planReview.team.lead_agent || 'orchestrator'}
                       </Badge>
@@ -803,7 +803,7 @@ const NeuralOrchestra: React.FC = () => {
                 <CheckCircle className="w-5 h-5" />
                 Execution Complete - Results
               </div>
-              <Badge className="bg-blue-600 text-white animate-pulse">
+              <Badge className="bg-blue-600 text-foreground animate-pulse">
                 → Redirecting to Decision Command...
               </Badge>
             </CardTitle>
@@ -813,25 +813,25 @@ const NeuralOrchestra: React.FC = () => {
               {/* Tasks Completed */}
               <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-green-400" />
-                  <span className="text-sm text-green-400">Tasks Completed</span>
+                  <Target className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-green-500">Tasks Completed</span>
                 </div>
                 <div className="text-2xl font-bold text-green-300">
                   {planReview.execution_results.tasks_completed}
                 </div>
-                <div className="text-xs text-green-400 mt-1">Successfully executed</div>
+                <div className="text-xs text-green-500 mt-1">Successfully executed</div>
               </div>
 
               {/* Opportunities Found */}
               <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-blue-400">Opportunities Found</span>
+                  <Sparkles className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-blue-500">Opportunities Found</span>
                 </div>
                 <div className="text-2xl font-bold text-blue-300">
                   {planReview.execution_results.opportunities_found}
                 </div>
-                <div className="text-xs text-blue-400 mt-1">Ready to pursue</div>
+                <div className="text-xs text-blue-500 mt-1">Ready to pursue</div>
               </div>
 
               {/* Revenue Potential */}
@@ -855,7 +855,7 @@ const NeuralOrchestra: React.FC = () => {
                   {planReview.execution_results.real_opportunities.map((opp, idx) => (
                     <div key={idx} className="bg-blue-900/30 p-2 rounded">
                       <div className="text-sm text-blue-200">{opp.title}</div>
-                      <div className="text-xs text-blue-400">{opp.company}</div>
+                      <div className="text-xs text-blue-500">{opp.company}</div>
                       {opp.url && opp.url !== '#' && (
                         <a href={opp.url} target="_blank" rel="noopener noreferrer"
                            className="text-xs text-blue-300 hover:text-blue-200 underline">
@@ -874,29 +874,29 @@ const NeuralOrchestra: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="text-sm text-green-300">Content Created</div>
-                    <div className="text-xs text-green-400">{planReview.execution_results.content_created} pieces</div>
+                    <div className="text-xs text-green-500">{planReview.execution_results.content_created} pieces</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold text-green-300">
                       ${(planReview.execution_results.content_value || 0).toFixed(2)}
                     </div>
-                    <div className="text-xs text-green-400">Ready to sell</div>
+                    <div className="text-xs text-green-500">Ready to sell</div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Next Steps */}
-            <div className="mt-6 p-4 bg-gray-900/30 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <div className="mt-6 p-4 bg-background/30 rounded-lg">
+              <h4 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                 <ArrowRight className="w-4 h-4" />
                 Next Steps
               </h4>
               <div className="space-y-2">
                 {planReview.execution_results.next_steps.map((step, idx) => (
                   <div key={idx} className="flex items-start gap-2">
-                    <CheckCircle className="w-3 h-3 text-green-400 mt-0.5" />
-                    <span className="text-xs text-gray-400">{step}</span>
+                    <CheckCircle className="w-3 h-3 text-green-500 mt-0.5" />
+                    <span className="text-xs text-muted-foreground">{step}</span>
                   </div>
                 ))}
               </div>
@@ -981,12 +981,12 @@ const NeuralOrchestra: React.FC = () => {
                 <div className="space-y-4">
                   {workflows.length === 0 ? (
                     <div className="text-center py-12">
-                      <Layers className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Workflows</h3>
                       <p className="text-gray-600 mb-4">
                         Workflows will appear here when agents start collaborating on tasks
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         Start by creating opportunities in the Income Builder or Decision Command
                       </p>
                     </div>
@@ -1008,13 +1008,13 @@ const NeuralOrchestra: React.FC = () => {
                                 w-8 h-8 rounded-full flex items-center justify-center text-sm
                                 ${step.status === 'completed' ? 'bg-green-100 text-green-600' :
                                   step.status === 'running' ? 'bg-blue-100 text-blue-600' :
-                                  'bg-gray-100 text-gray-400'}
+                                  'bg-muted/10 text-muted-foreground'}
                               `}>
                                 {index + 1}
                               </div>
                               <div className="flex-1">
                                 <p className="text-sm font-medium">{step.name}</p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-muted-foreground">
                                   {step.agents?.join(', ') || step.advisors?.join(', ')}
                                 </p>
                               </div>
@@ -1035,12 +1035,12 @@ const NeuralOrchestra: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   {agents.length === 0 ? (
                     <div className="col-span-2 text-center py-12">
-                      <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No Performance Data</h3>
                       <p className="text-gray-600 mb-4">
                         Performance metrics will appear here once agents start processing tasks
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         Agent activity and efficiency metrics will be displayed in real-time
                       </p>
                     </div>
@@ -1094,7 +1094,7 @@ const NeuralOrchestra: React.FC = () => {
             <CardContent>
               <div className="space-y-2">
                 {agents.filter(a => a.status !== 'idle').map(agent => (
-                  <div key={agent.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                  <div key={agent.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/5">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${getStatusColor(agent.status)}`}></div>
                       <span className="text-sm">{agent.name}</span>
@@ -1122,7 +1122,7 @@ const NeuralOrchestra: React.FC = () => {
                   <div key={advisor.id} className="space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{advisor.name}</span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {advisor.consultations} consults
                       </span>
                     </div>
@@ -1130,7 +1130,7 @@ const NeuralOrchestra: React.FC = () => {
                       <Progress value={advisor.successRate * 100} className="flex-1 h-2" />
                       <span className="text-xs">{(advisor.successRate * 100).toFixed(0)}%</span>
                     </div>
-                    <p className="text-xs text-gray-500">{advisor.expertise}</p>
+                    <p className="text-xs text-muted-foreground">{advisor.expertise}</p>
                   </div>
                 ))}
               </div>

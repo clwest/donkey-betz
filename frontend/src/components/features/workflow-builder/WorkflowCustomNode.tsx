@@ -42,11 +42,11 @@ export const WorkflowCustomNode = memo(({ data, selected }: NodeProps) => {
       
       <div className="flex items-center gap-2">
         <div className={clsx('w-2 h-2 rounded-full', colors.handle)} />
-        <span className="text-sm font-medium text-white">{data.label}</span>
+        <span className="text-sm font-medium text-foreground">{data.label}</span>
       </div>
       
       {data.config?.prompt && (
-        <div className="mt-2 text-xs text-gray-400 truncate max-w-[150px]">
+        <div className="mt-2 text-xs text-muted-foreground truncate max-w-[150px]">
           {data.config.prompt}
         </div>
       )}

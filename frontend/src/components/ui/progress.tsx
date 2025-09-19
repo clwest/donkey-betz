@@ -15,7 +15,7 @@ export const Progress = forwardRef<HTMLDivElement, ProgressProps>(
       <div
         ref={ref}
         className={clsx(
-          'relative h-4 w-full overflow-hidden rounded-lg bg-gray-900 border border-cyan-500/30',
+          'relative h-4 w-full overflow-hidden rounded-lg bg-background border border-cyan-500/30',
           className
         )}
         {...props}

@@ -190,8 +190,8 @@ export function CommandCenter() {
       case 'pending': return 'bg-yellow-500';
       case 'analyzing': return 'bg-blue-500 animate-pulse';
       case 'ready': return 'bg-green-500';
-      case 'executed': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+      case 'executed': return 'bg-muted/50';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -210,7 +210,7 @@ export function CommandCenter() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
               Universal Decision Command Center
             </h1>
-            <p className="text-gray-400 mt-2">
+            <p className="text-muted-foreground mt-2">
               AI-powered decision intelligence across all domains
             </p>
           </div>
@@ -227,10 +227,10 @@ export function CommandCenter() {
 
         {/* Portfolio Overview */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Portfolio Value</span>
+                <span className="text-sm text-muted-foreground">Portfolio Value</span>
                 <DollarSign className="h-4 w-4 text-green-500" />
               </div>
               <p className="text-2xl font-bold mt-2">
@@ -242,10 +242,10 @@ export function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Win Rate</span>
+                <span className="text-sm text-muted-foreground">Win Rate</span>
                 <Trophy className="h-4 w-4 text-yellow-500" />
               </div>
               <p className="text-2xl font-bold mt-2">
@@ -255,21 +255,21 @@ export function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Active Positions</span>
+                <span className="text-sm text-muted-foreground">Active Positions</span>
                 <Activity className="h-4 w-4 text-blue-500" />
               </div>
               <p className="text-2xl font-bold mt-2">{portfolio.activePositions}</p>
-              <p className="text-sm text-gray-400 mt-1">Across 5 domains</p>
+              <p className="text-sm text-muted-foreground mt-1">Across 5 domains</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Risk Score</span>
+                <span className="text-sm text-muted-foreground">Risk Score</span>
                 <Shield className="h-4 w-4 text-orange-500" />
               </div>
               <p className={`text-2xl font-bold mt-2 ${getRiskColor(portfolio.riskScore)}`}>
@@ -279,21 +279,21 @@ export function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Pattern Matches</span>
+                <span className="text-sm text-muted-foreground">Pattern Matches</span>
                 <Brain className="h-4 w-4 text-purple-500" />
               </div>
               <p className="text-2xl font-bold mt-2">247</p>
-              <p className="text-sm text-gray-400 mt-1">This week</p>
+              <p className="text-sm text-muted-foreground mt-1">This week</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Agent Consensus</span>
+                <span className="text-sm text-muted-foreground">Agent Consensus</span>
                 <Zap className="h-4 w-4 text-yellow-500" />
               </div>
               <p className="text-2xl font-bold mt-2">82%</p>
@@ -359,7 +359,7 @@ export function CommandCenter() {
               const Icon = domainConfig.icon;
 
               return (
-                <Card key={decision.id} className={`gaming-card border ${domainConfig.borderColor}`}>
+                <Card key={decision.id} className={`bg-card border ${domainConfig.borderColor}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -368,27 +368,27 @@ export function CommandCenter() {
                         </div>
                         <div>
                           <h3 className="font-semibold">{decision.entity}</h3>
-                          <p className="text-xs text-gray-400">{domainConfig.name}</p>
+                          <p className="text-xs text-muted-foreground">{domainConfig.name}</p>
                         </div>
                       </div>
-                      <Badge className={`${getStatusColor(decision.status)} text-white`}>
+                      <Badge className={`${getStatusColor(decision.status)} text-foreground`}>
                         {decision.status}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-gray-300">{decision.description}</p>
+                    <p className="text-sm text-muted-foreground">{decision.description}</p>
 
                     {decision.intelligence && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-400">Action</span>
+                          <span className="text-sm text-muted-foreground">Action</span>
                           <Badge variant="outline">
                             {decision.intelligence.primary_action}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-400">Confidence</span>
+                          <span className="text-sm text-muted-foreground">Confidence</span>
                           <span className="text-sm font-bold">
                             {(decision.intelligence.confidence * 100).toFixed(0)}%
                           </span>
@@ -397,7 +397,7 @@ export function CommandCenter() {
 
                         {decision.intelligence.position_sizing && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-400">Recommended</span>
+                            <span className="text-muted-foreground">Recommended</span>
                             <span className="font-bold text-green-500">
                               ${decision.intelligence.position_sizing.recommended_stake}
                             </span>
@@ -438,7 +438,7 @@ export function CommandCenter() {
                       {decision.status === 'analyzing' && (
                         <div className="flex-1 text-center">
                           <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
-                          <p className="text-xs text-gray-400 mt-1">Analyzing...</p>
+                          <p className="text-xs text-muted-foreground mt-1">Analyzing...</p>
                         </div>
                       )}
                     </div>
@@ -446,7 +446,7 @@ export function CommandCenter() {
                     {decision.outcome && (
                       <div className="pt-3 border-t border-gray-700">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-400">Outcome</span>
+                          <span className="text-sm text-muted-foreground">Outcome</span>
                           <Badge
                             variant={decision.outcome === 'success' ? 'default' : 'destructive'}
                           >
@@ -478,9 +478,9 @@ export function CommandCenter() {
                 </AlertDescription>
               </Alert>
               {/* Placeholder for intelligence panel */}
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardContent className="p-6">
-                  <p className="text-center text-gray-400">
+                  <p className="text-center text-muted-foreground">
                     Select a decision to analyze with Universal Intelligence
                   </p>
                 </CardContent>
@@ -501,7 +501,7 @@ export function CommandCenter() {
             </div>
             <div>
               <h2 className="text-xl font-semibold mb-4">Pattern Visualization</h2>
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     {/* Pattern correlation matrix */}
@@ -525,7 +525,7 @@ export function CommandCenter() {
                         </div>
                       ))}
                     </div>
-                    <p className="text-sm text-center text-gray-400 mt-4">
+                    <p className="text-sm text-center text-muted-foreground mt-4">
                       Pattern correlation matrix across domains
                     </p>
                   </div>
@@ -539,7 +539,7 @@ export function CommandCenter() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <h2 className="text-xl font-semibold mb-4">Portfolio Allocation</h2>
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     {Object.entries(DOMAINS).map(([key, config]) => {
@@ -566,23 +566,23 @@ export function CommandCenter() {
             </div>
             <div>
               <h2 className="text-xl font-semibold mb-4">Risk Management</h2>
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardContent className="p-6 space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">Kelly Allocation</span>
+                      <span className="text-sm text-muted-foreground">Kelly Allocation</span>
                       <span className="font-bold">2.8%</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">Max Drawdown</span>
+                      <span className="text-sm text-muted-foreground">Max Drawdown</span>
                       <span className="font-bold text-red-500">-12.4%</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">Sharpe Ratio</span>
+                      <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
                       <span className="font-bold text-green-500">2.31</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">Value at Risk</span>
+                      <span className="text-sm text-muted-foreground">Value at Risk</span>
                       <span className="font-bold">$3,200</span>
                     </div>
                   </div>

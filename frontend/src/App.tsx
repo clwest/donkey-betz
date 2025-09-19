@@ -47,7 +47,7 @@ import { DecisionDetailPage } from './pages/DecisionDetailPage';
 import DecisionCommand from './components/DecisionCommand';
 import NeuralOrchestra from './components/NeuralOrchestra';
 import ControlCenter from './components/ControlCenter';
-import { UnifiedAIAssistant } from './components/UnifiedAIAssistant';
+// UnifiedAIAssistant now wrapped in SafeAIAssistant
 import UserCommandCenter from './components/UserCommandCenter';
 
 // Debug Page
@@ -67,7 +67,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 
 // Features
-// Removed ChatWidget - now using UnifiedAIAssistant
+// Removed ChatWidget - now using SafeAIAssistant
 import { LifeConvictionsPage } from './pages/life-convictions/LifeConvictionsPage';
 import OpportunitiesHub from './components/OpportunitiesHub'; // Unified hub replacing Income Builder, Job Tracker, Decision Command
 import MonetizationDashboard from './pages/MonetizationDashboard';
@@ -79,6 +79,7 @@ import AIJobTrackerPage from './pages/AIJobTrackerPage';
 // Stores
 import { useAuthStore } from './store/authStore';
 import { CommandPalette } from './components/common/CommandPalette';
+import { SafeAIAssistant } from './components/SafeAIAssistant';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -198,7 +199,7 @@ function App() {
           </Route>
         </Routes>
         <CommandPalette />
-        <UnifiedAIAssistant />
+        <SafeAIAssistant />
         <Toaster
           position="bottom-right"
           theme="dark"

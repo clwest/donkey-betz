@@ -194,7 +194,7 @@ export function PublicBlogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
       </div>
     );
@@ -202,14 +202,14 @@ export function PublicBlogPage() {
 
   if (!blog) {
     return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
-        <div className="text-center text-gray-400">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
           <DocumentTextIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
           <h1 className="text-2xl font-bold mb-2">Blog post not found</h1>
           <p className="mb-4">The blog post you're looking for doesn't exist or has been removed.</p>
           <button
             onClick={() => navigate('/blog')}
-            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="px-6 py-3 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
           >
             Browse All Blogs
           </button>
@@ -235,22 +235,22 @@ export function PublicBlogPage() {
         />
       )}
     
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-dark-800 border-b border-dark-700">
+      <header className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/blog')}
-                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ArrowLeftIcon className="h-4 w-4" />
                 Back to Blogs
               </button>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex items-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <DocumentTextIcon className="h-4 w-4" />
                 Donkey Betz
@@ -265,14 +265,14 @@ export function PublicBlogPage() {
                 {liked ? (
                   <HeartSolidIcon className="h-5 w-5 text-red-500" />
                 ) : (
-                  <HeartIcon className="h-5 w-5 text-gray-400" />
+                  <HeartIcon className="h-5 w-5 text-muted-foreground" />
                 )}
-                <span className="text-sm text-gray-300">{likesCount}</span>
+                <span className="text-sm text-muted-foreground">{likesCount}</span>
               </button>
               
               <button
                 onClick={handleShare}
-                className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white rounded-lg hover:bg-dark-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-dark-700 transition-colors"
               >
                 <ShareIcon className="h-5 w-5" />
                 <span className="text-sm">Share</span>
@@ -287,17 +287,17 @@ export function PublicBlogPage() {
         <article>
           {/* Title and Meta */}
           <header className="mb-8">
-            <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+            <h1 className="text-4xl font-bold text-foreground leading-tight mb-4">
               {blog.title}
             </h1>
             
             {blog.meta_description && (
-              <p className="text-xl text-gray-300 mb-6 leading-relaxed">
+              <p className="text-xl text-muted-foreground mb-6 leading-relaxed">
                 {blog.meta_description}
               </p>
             )}
             
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-6">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
               <div className="flex items-center gap-1">
                 <CalendarIcon className="h-4 w-4" />
                 {formatDate(blog.created_at)}
@@ -318,7 +318,7 @@ export function PublicBlogPage() {
 
             {blog.tags && blog.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
-                <TagIcon className="h-4 w-4 text-gray-400 mt-1" />
+                <TagIcon className="h-4 w-4 text-muted-foreground mt-1" />
                 {blog.tags.map((tag, index) => (
                   <span
                     key={index}
@@ -349,22 +349,22 @@ export function PublicBlogPage() {
                   );
                 },
                 p: ({ node, ...props }) => (
-                  <p {...props} className="mb-4 text-gray-100 leading-relaxed" />
+                  <p {...props} className="mb-4 text-foreground leading-relaxed" />
                 ),
                 h1: ({ node, ...props }) => (
-                  <h1 {...props} className="text-3xl font-bold mb-4 text-white mt-8" />
+                  <h1 {...props} className="text-3xl font-bold mb-4 text-foreground mt-8" />
                 ),
                 h2: ({ node, ...props }) => (
-                  <h2 {...props} className="text-2xl font-bold mb-3 text-white mt-6" />
+                  <h2 {...props} className="text-2xl font-bold mb-3 text-foreground mt-6" />
                 ),
                 h3: ({ node, ...props }) => (
-                  <h3 {...props} className="text-xl font-semibold mb-2 text-white mt-5" />
+                  <h3 {...props} className="text-xl font-semibold mb-2 text-foreground mt-5" />
                 ),
                 em: ({ node, ...props }) => (
-                  <em {...props} className="italic text-gray-100" />
+                  <em {...props} className="italic text-foreground" />
                 ),
                 strong: ({ node, ...props }) => (
-                  <strong {...props} className="font-bold text-white" />
+                  <strong {...props} className="font-bold text-foreground" />
                 ),
               }}
             >
@@ -373,31 +373,31 @@ export function PublicBlogPage() {
           </div>
 
           {/* Footer */}
-          <footer className="mt-12 pt-8 border-t border-dark-700">
+          <footer className="mt-12 pt-8 border-t border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleLike}
-                  className="flex items-center gap-2 px-4 py-2 bg-dark-800 rounded-lg hover:bg-dark-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-card rounded-lg hover:bg-dark-700 transition-colors"
                 >
                   {liked ? (
                     <HeartSolidIcon className="h-5 w-5 text-red-500" />
                   ) : (
-                    <HeartIcon className="h-5 w-5 text-gray-400" />
+                    <HeartIcon className="h-5 w-5 text-muted-foreground" />
                   )}
-                  <span className="text-white">{liked ? 'Liked' : 'Like'}</span>
+                  <span className="text-foreground">{liked ? 'Liked' : 'Like'}</span>
                 </button>
                 
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2 bg-dark-800 rounded-lg hover:bg-dark-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-card rounded-lg hover:bg-dark-700 transition-colors"
                 >
-                  <ShareIcon className="h-5 w-5 text-gray-400" />
-                  <span className="text-white">Share</span>
+                  <ShareIcon className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-foreground">Share</span>
                 </button>
               </div>
               
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Published on {formatDate(blog.created_at)}
               </div>
             </div>
@@ -406,10 +406,10 @@ export function PublicBlogPage() {
 
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
-          <section className="mt-16 pt-12 border-t border-dark-700">
+          <section className="mt-16 pt-12 border-t border-border">
             <div className="flex items-center gap-2 mb-8">
               <SparklesIcon className="h-6 w-6 text-primary-400" />
-              <h2 className="text-2xl font-bold text-white">Related Posts</h2>
+              <h2 className="text-2xl font-bold text-foreground">Related Posts</h2>
             </div>
             
             {loadingRelated ? (
@@ -422,18 +422,18 @@ export function PublicBlogPage() {
                   <article
                     key={post.id}
                     onClick={() => navigate(`/blog/${post.id}`)}
-                    className="bg-dark-800 rounded-lg overflow-hidden hover:bg-dark-700 transition-all cursor-pointer group border border-dark-700 hover:border-primary-500/50"
+                    className="bg-card rounded-lg overflow-hidden hover:bg-dark-700 transition-all cursor-pointer group border border-border hover:border-primary-500/50"
                   >
                     <div className="p-6">
-                      <h3 className="text-lg font-semibold text-white mb-3 group-hover:text-primary-300 transition-colors line-clamp-2">
+                      <h3 className="text-lg font-semibold text-foreground mb-3 group-hover:text-primary-300 transition-colors line-clamp-2">
                         {post.title}
                       </h3>
                       
-                      <p className="text-gray-300 text-sm mb-4 line-clamp-2 leading-relaxed">
+                      <p className="text-muted-foreground text-sm mb-4 line-clamp-2 leading-relaxed">
                         {post.meta_description || post.preview}
                       </p>
 
-                      <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <ClockIcon className="h-3 w-3" />
                           {calculateReadingTime(post.content || post.preview || '').text}
@@ -457,7 +457,7 @@ export function PublicBlogPage() {
                         </div>
                       )}
 
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted-foreground">
                         {formatSimilarityReasons(post.similarity_reasons)}
                       </div>
                     </div>

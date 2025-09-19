@@ -62,8 +62,8 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
         <div className="flex items-center gap-3">
           <span className="text-3xl">{platform.icon}</span>
           <div>
-            <span className="font-medium text-white">{platform.name}</span>
-            <span className="ml-2 text-xs text-gray-400">
+            <span className="font-medium text-foreground">{platform.name}</span>
+            <span className="ml-2 text-xs text-muted-foreground">
               Variation {index + 1}
             </span>
           </div>
@@ -71,7 +71,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
         
         {/* Character Count */}
         <div className="text-right">
-          <div className={`text-sm font-medium ${isOverLimit ? 'text-red-400' : 'text-gray-300'}`}>
+          <div className={`text-sm font-medium ${isOverLimit ? 'text-red-500' : 'text-muted-foreground'}`}>
             {characterCount.toLocaleString()} / {platform.charLimit.toLocaleString()}
           </div>
           {/* Progress Bar */}
@@ -92,7 +92,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
           <textarea
             value={editedContent}
             onChange={(e) => setEditedContent(e.target.value)}
-            className={`w-full p-3 bg-dark-800/50 border rounded-lg resize-none text-white 
+            className={`w-full p-3 bg-card/50 border rounded-lg resize-none text-foreground 
                      placeholder-gray-500 focus:ring-2 focus:ring-primary-500 ${
               isOverLimit ? 'border-red-500/50' : 'border-dark-600'
             }`}
@@ -100,7 +100,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
           />
         </div>
       ) : (
-        <p className="mb-4 text-gray-100 whitespace-pre-wrap leading-relaxed">
+        <p className="mb-4 text-foreground whitespace-pre-wrap leading-relaxed">
           {editedContent}
         </p>
       )}
@@ -118,7 +118,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
             </span>
           ))}
           {hashtags.length > platform.hashtagLimit && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               +{hashtags.length - platform.hashtagLimit} more
             </span>
           )}
@@ -130,13 +130,13 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
         <button
           onClick={copyToClipboard}
           className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
-                   bg-dark-800/50 hover:bg-dark-700/50 text-gray-300 hover:text-white 
+                   bg-card/50 hover:bg-dark-700/50 text-muted-foreground hover:text-foreground 
                    rounded-lg transition-all border border-dark-600"
         >
           {copied ? (
             <>
-              <CheckIcon className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-green-400">Copied!</span>
+              <CheckIcon className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-green-500">Copied!</span>
             </>
           ) : (
             <>
@@ -150,7 +150,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
           <button
             onClick={handleSave}
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
-                     bg-gradient-to-r from-primary-500 to-primary-600 text-white 
+                     bg-gradient-to-r from-primary-500 to-primary-600 text-foreground 
                      rounded-lg hover:shadow-lg hover:shadow-primary-500/25 transition-all"
           >
             <CheckIcon className="w-4 h-4" />
@@ -160,7 +160,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
           <button
             onClick={() => setIsEditing(true)}
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
-                     bg-dark-800/50 hover:bg-dark-700/50 text-gray-300 hover:text-white 
+                     bg-card/50 hover:bg-dark-700/50 text-muted-foreground hover:text-foreground 
                      rounded-lg transition-all border border-dark-600"
           >
             <PencilIcon className="w-4 h-4" />
@@ -172,7 +172,7 @@ const SocialPostCard: React.FC<SocialPostCardProps> = ({
           <button
             onClick={onSave}
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
-                     bg-dark-800/50 hover:bg-dark-700/50 text-gray-300 hover:text-white 
+                     bg-card/50 hover:bg-dark-700/50 text-muted-foreground hover:text-foreground 
                      rounded-lg transition-all border border-dark-600"
           >
             <BookmarkIcon className="w-4 h-4" />

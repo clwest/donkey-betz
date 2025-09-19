@@ -228,8 +228,8 @@ export function CharacterCollections() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Character Collections</h2>
-          <p className="text-gray-400 mt-1">Organize your characters into themed collections</p>
+          <h2 className="text-2xl font-bold text-foreground">Character Collections</h2>
+          <p className="text-muted-foreground mt-1">Organize your characters into themed collections</p>
         </div>
         <Button onClick={() => openCreateModal()}>
           <PlusIcon className="h-4 w-4" />
@@ -240,7 +240,7 @@ export function CharacterCollections() {
       {/* Collection Templates */}
       <Card>
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Start Templates</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Quick Start Templates</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {collectionTemplates.map((template, index) => (
               <button
@@ -249,13 +249,13 @@ export function CharacterCollections() {
                 className="p-4 border border-gray-700 rounded-lg hover:border-primary-500/50 transition-all text-left group"
               >
                 <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${getThemeColors(template.color_theme)} flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}>
-                  <FolderIcon className="h-6 w-6 text-white" />
+                  <FolderIcon className="h-6 w-6 text-foreground" />
                 </div>
-                <div className="font-medium text-white mb-1">{template.name}</div>
-                <div className="text-sm text-gray-400 mb-2">{template.description}</div>
+                <div className="font-medium text-foreground mb-1">{template.name}</div>
+                <div className="text-sm text-muted-foreground mb-2">{template.description}</div>
                 <div className="flex flex-wrap gap-1">
                   {template.tags.map((tag, tagIndex) => (
-                    <span key={tagIndex} className="px-2 py-1 bg-gray-800 text-xs text-gray-300 rounded">
+                    <span key={tagIndex} className="px-2 py-1 bg-card text-xs text-muted-foreground rounded">
                       {tag}
                     </span>
                   ))}
@@ -271,15 +271,15 @@ export function CharacterCollections() {
         <Card>
           <div className="p-8 text-center">
             <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <div className="text-gray-400">Loading collections...</div>
+            <div className="text-muted-foreground">Loading collections...</div>
           </div>
         </Card>
       ) : collections.length === 0 ? (
         <Card>
           <div className="p-8 text-center">
             <FolderIcon className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No Collections Yet</h3>
-            <p className="text-gray-400 max-w-md mx-auto mb-6">
+            <h3 className="text-xl font-semibold text-foreground mb-2">No Collections Yet</h3>
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
               Create your first character collection to organize your characters by theme, project, or any criteria you like.
             </p>
             <Button onClick={() => openCreateModal()}>
@@ -295,18 +295,18 @@ export function CharacterCollections() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${getThemeColors(collection.color_theme)} flex items-center justify-center`}>
-                    <FolderIcon className="h-6 w-6 text-white" />
+                    <FolderIcon className="h-6 w-6 text-foreground" />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEditModal(collection)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
+                      className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteCollection(collection)}
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -315,16 +315,16 @@ export function CharacterCollections() {
 
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-white truncate">{collection.name}</h3>
+                    <h3 className="font-semibold text-foreground truncate">{collection.name}</h3>
                     {collection.is_public && (
-                      <StarIcon className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+                      <StarIcon className="h-4 w-4 text-yellow-500 flex-shrink-0" />
                     )}
                   </div>
-                  <p className="text-sm text-gray-400 line-clamp-2">{collection.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{collection.description}</p>
                 </div>
 
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <UsersIcon className="h-4 w-4" />
                     <span>{collection.character_count} characters</span>
                   </div>
@@ -360,18 +360,18 @@ export function CharacterCollections() {
                           />
                         ) : null}
                         <div 
-                          className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-xs font-bold text-white border-2 border-gray-900"
+                          className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-xs font-bold text-foreground border-2 border-gray-900"
                           style={{ display: character.thumbnail_url && character.thumbnail_url.trim() !== '' ? 'none' : 'flex' }}
                         >
                           {character.name.slice(0, 2).toUpperCase()}
                         </div>
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-card text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                           {character.name}
                         </div>
                       </div>
                     ))}
                     {collection.character_count > 4 && (
-                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 border-2 border-gray-900">
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-muted-foreground border-2 border-gray-900">
                         +{collection.character_count - 4}
                       </div>
                     )}
@@ -386,12 +386,12 @@ export function CharacterCollections() {
       {/* Create/Edit Collection Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-foreground">
                 {editingCollection ? 'Edit Collection' : 'Create New Collection'}
               </h3>
-              <button onClick={closeModal} className="text-gray-400 hover:text-white">
+              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground">
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
@@ -400,7 +400,7 @@ export function CharacterCollections() {
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Collection Name *
                   </label>
                   <input
@@ -408,17 +408,17 @@ export function CharacterCollections() {
                     value={createData.name}
                     onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
                     placeholder="Enter collection name..."
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Color Theme
                   </label>
                   <select
                     value={createData.color_theme}
                     onChange={(e) => setCreateData({ ...createData, color_theme: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     {colorThemes.map((theme) => (
                       <option key={theme.value} value={theme.value}>
@@ -430,7 +430,7 @@ export function CharacterCollections() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Description
                 </label>
                 <textarea
@@ -438,7 +438,7 @@ export function CharacterCollections() {
                   onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
                   placeholder="Describe this collection..."
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -449,7 +449,7 @@ export function CharacterCollections() {
                   onChange={(e) => setCreateData({ ...createData, is_public: e.target.checked })}
                   className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-sm font-medium text-muted-foreground">
                   Make this collection public (others can view)
                 </label>
               </div>
@@ -457,14 +457,14 @@ export function CharacterCollections() {
               {/* Character Selection */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Characters ({selectedCharacterIds.length} selected)
                   </label>
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto border border-gray-700 rounded-lg p-4">
                   {characters.map((character) => (
-                    <label key={character.id} className="flex items-center gap-2 p-2 hover:bg-gray-800 rounded cursor-pointer">
+                    <label key={character.id} className="flex items-center gap-2 p-2 hover:bg-card rounded cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedCharacterIds.includes(character.id)}
@@ -477,10 +477,10 @@ export function CharacterCollections() {
                         }}
                         className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-xs font-bold text-white">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-xs font-bold text-foreground">
                         {character.name.slice(0, 1).toUpperCase()}
                       </div>
-                      <span className="text-sm text-white truncate">{character.name}</span>
+                      <span className="text-sm text-foreground truncate">{character.name}</span>
                     </label>
                   ))}
                 </div>
@@ -502,12 +502,12 @@ export function CharacterCollections() {
       {/* Character Selector Modal */}
       {showCharacterSelector && activeCollectionId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-background rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">Add Characters to Collection</h3>
+              <h3 className="text-xl font-semibold text-foreground">Add Characters to Collection</h3>
               <button
                 onClick={() => setShowCharacterSelector(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -534,14 +534,14 @@ export function CharacterCollections() {
                         />
                       ) : null}
                       <div 
-                        className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-sm font-bold text-white"
+                        className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-sm font-bold text-foreground"
                         style={{ display: character.thumbnail_url && character.thumbnail_url.trim() !== '' ? 'none' : 'flex' }}
                       >
                         {character.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-white truncate">{character.name}</div>
-                        <div className="text-sm text-gray-400 truncate">{character.category}</div>
+                        <div className="font-medium text-foreground truncate">{character.name}</div>
+                        <div className="text-sm text-muted-foreground truncate">{character.category}</div>
                       </div>
                     </div>
                     

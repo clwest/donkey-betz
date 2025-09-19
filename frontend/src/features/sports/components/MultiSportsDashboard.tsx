@@ -22,7 +22,6 @@ import { toast } from 'sonner';
 // import { GameOddsCard } from './GameOddsCard';
 import { GamingGameCard } from './GamingGameCard';
 import { useWebSocket } from '../../../hooks/useWebSocket';
-import '../../../styles/gaming-theme.css';
 import { 
   RefreshCw, 
   Calendar, 
@@ -489,10 +488,10 @@ export default function MultiSportsDashboard() {
       <div
         key={game.id}
         className={`
-          gaming-card gaming-fade-in cursor-pointer
-          ${isLive ? 'gaming-bet-hot' : ''}
-          ${isFinished ? 'border-gaming-neon-green' : ''}
-          ${isScheduled ? 'border-gaming-border-bright' : ''}
+          bg-card bg-card cursor-pointer
+          ${isLive ? 'bg-card' : ''}
+          ${isFinished ? 'border-bg-card' : ''}
+          ${isScheduled ? 'border-bg-card' : ''}
           transition-all duration-300
         `}
         style={{
@@ -509,13 +508,13 @@ export default function MultiSportsDashboard() {
         onClick={handleGameClick}
       >
         {/* Subtle Border Glow Effect */}
-        <div className="gaming-border-glow" style={{ opacity: 0.1 }}></div>
+        <div className="bg-card" style={{ opacity: 0.1 }}></div>
         {/* Clean status indicator - only for truly live games */}
         {isLive && game.status === 'live' && (
           <div className="absolute top-3 right-3 z-10">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 border border-red-500/50 rounded-full backdrop-blur-sm">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-semibold text-red-400">LIVE</span>
+              <span className="text-xs font-semibold text-red-500">LIVE</span>
             </div>
           </div>
         )}
@@ -529,7 +528,7 @@ export default function MultiSportsDashboard() {
               
               {/* Venue if available */}
               {game.venue_name && (
-                <div className="flex items-center gap-1 text-xs text-gray-500">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="w-3 h-3" />
                   <span>{game.venue_name}</span>
                 </div>
@@ -537,21 +536,21 @@ export default function MultiSportsDashboard() {
             </div>
             
             {/* Clean time display */}
-            <div className="text-xs text-gray-400 font-mono">
+            <div className="text-xs text-muted-foreground font-mono">
               {formatGameTime(game.scheduled_start)}
             </div>
           </div>
 
           {/* Gaming Team Matchup */}
-          <div className="gaming-matchup">
+          <div className="bg-card">
             {/* Away Team */}
-            <div className="gaming-team" style={{
+            <div className="bg-card" style={{
               padding: '8px',
               borderRadius: '8px',
               background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.05), transparent)',
               transition: 'background 0.3s ease'
             }}>
-              <div className="gaming-team-avatar">
+              <div className="bg-card">
                 {game.away_team?.logo_url ? (
                   <img 
                     src={game.away_team.logo_url} 
@@ -567,16 +566,16 @@ export default function MultiSportsDashboard() {
                   {game.away_team_abbreviation || game.away_team_name.substring(0, 2).toUpperCase()}
                 </div>
               </div>
-              <div className="gaming-team-info">
+              <div className="bg-card">
                 <div className="flex flex-col">
-                  <div className="gaming-team-name text-sm font-bold">
+                  <div className="bg-card text-sm font-bold">
                     {getTeamDisplayName(game.away_team?.abbreviation, game.away_team_name, sportType)}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {getTeamNickname(game.away_team?.abbreviation, game.away_team_name, sportType)}
                   </div>
                 </div>
-                <div className="gaming-team-record space-y-1 mt-1">
+                <div className="bg-card space-y-1 mt-1">
                   <div className="text-xs">
                     {game.away_team?.current_record?.wins !== undefined ?
                       `${game.away_team.current_record.wins}-${game.away_team.current_record.losses}` :
@@ -584,15 +583,15 @@ export default function MultiSportsDashboard() {
                     }
                   </div>
                   {game.away_team?.ats_record?.wins && (
-                    <div className="text-xs gaming-text-accent">
+                    <div className="text-xs bg-card">
                       ATS: {game.away_team.ats_record.wins}-{game.away_team.ats_record.losses}
                     </div>
                   )}
                 </div>
               </div>
               {game.away_score !== null && (
-                <div className={`gaming-score ${
-                  game.away_score > (game.home_score || 0) ? 'gaming-score-leading' : 'gaming-score-trailing'
+                <div className={`bg-card ${
+                  game.away_score > (game.home_score || 0) ? 'bg-card' : 'bg-card'
                 }`}>
                   {game.away_score}
                 </div>
@@ -600,8 +599,8 @@ export default function MultiSportsDashboard() {
             </div>
 
             {/* Gaming VS Divider with Live Game Info */}
-            <div className="gaming-vs-divider">
-              <div className="gaming-vs-text">VS</div>
+            <div className="bg-card">
+              <div className="bg-card">VS</div>
               {/* Live Game State Display */}
               {isLive && (
                 <div className="mt-2 space-y-1">
@@ -609,7 +608,7 @@ export default function MultiSportsDashboard() {
                   {(game.current_period || game.time_remaining) && (
                     <div className="flex items-center justify-center gap-2 text-xs">
                       {game.current_period && (
-                        <span className="gaming-text-accent font-bold">
+                        <span className="bg-card font-bold">
                           {sportType === 'nfl' || sportType === 'ncaaf' ? `Q${game.current_period}` :
                            sportType === 'nba' || sportType === 'ncaab' ? `P${game.current_period}` :
                            sportType === 'mlb' ? `Inning ${game.current_period}` :
@@ -618,7 +617,7 @@ export default function MultiSportsDashboard() {
                         </span>
                       )}
                       {game.time_remaining && (
-                        <span className="gaming-text-neon-green font-mono">
+                        <span className="bg-card500 font-mono">
                           {game.time_remaining}
                         </span>
                       )}
@@ -627,7 +626,7 @@ export default function MultiSportsDashboard() {
 
                   {/* Football-specific: Down and Distance */}
                   {game.live_stats?.down_distance_text && (sportType === 'nfl' || sportType === 'ncaaf') && (
-                    <div className="text-xs text-center gaming-text-secondary">
+                    <div className="text-xs text-center bg-card">
                       {game.live_stats.down_distance_text}
                     </div>
                   )}
@@ -635,8 +634,8 @@ export default function MultiSportsDashboard() {
                   {/* Possession Indicator */}
                   {game.live_stats?.possession && (
                     <div className="flex items-center justify-center gap-1 text-xs">
-                      <span className="text-yellow-400">🏈</span>
-                      <span className="gaming-text-accent">
+                      <span className="text-yellow-500">🏈</span>
+                      <span className="bg-card">
                         {game.live_stats.possession === game.home_team?.abbreviation ? 'HOME' : 'AWAY'}
                       </span>
                     </div>
@@ -645,24 +644,24 @@ export default function MultiSportsDashboard() {
                   {/* Red Zone Indicator */}
                   {game.live_stats?.is_red_zone && (
                     <div className="flex items-center justify-center">
-                      <span className="px-2 py-0.5 bg-red-500/20 border border-red-500/50 rounded-full text-xs font-semibold text-red-400">
+                      <span className="px-2 py-0.5 bg-red-500/20 border border-red-500/50 rounded-full text-xs font-semibold text-red-500">
                         RED ZONE
                       </span>
                     </div>
                   )}
                 </div>
               )}
-              <div className="gaming-progress-bar"></div>
+              <div className="bg-card"></div>
             </div>
 
             {/* Home Team */}
-            <div className="gaming-team" style={{
+            <div className="bg-card" style={{
               padding: '8px',
               borderRadius: '8px',
               background: 'linear-gradient(135deg, rgba(157, 78, 221, 0.05), transparent)',
               transition: 'background 0.3s ease'
             }}>
-              <div className="gaming-team-avatar gaming-home">
+              <div className="bg-card bg-card">
                 {game.home_team?.logo_url ? (
                   <img 
                     src={game.home_team.logo_url} 
@@ -678,16 +677,16 @@ export default function MultiSportsDashboard() {
                   {game.home_team_abbreviation || game.home_team_name.substring(0, 2).toUpperCase()}
                 </div>
               </div>
-              <div className="gaming-team-info">
+              <div className="bg-card">
                 <div className="flex flex-col">
-                  <div className="gaming-team-name text-sm font-bold">
+                  <div className="bg-card text-sm font-bold">
                     {getTeamDisplayName(game.home_team?.abbreviation, game.home_team_name, sportType)}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {getTeamNickname(game.home_team?.abbreviation, game.home_team_name, sportType)}
                   </div>
                 </div>
-                <div className="gaming-team-record space-y-1 mt-1">
+                <div className="bg-card space-y-1 mt-1">
                   <div className="text-xs">
                     {game.home_team?.current_record?.wins !== undefined ?
                       `${game.home_team.current_record.wins}-${game.home_team.current_record.losses}` :
@@ -695,15 +694,15 @@ export default function MultiSportsDashboard() {
                     }
                   </div>
                   {game.home_team?.ats_record?.wins && (
-                    <div className="text-xs gaming-text-accent">
+                    <div className="text-xs bg-card">
                       ATS: {game.home_team.ats_record.wins}-{game.home_team.ats_record.losses}
                     </div>
                   )}
                 </div>
               </div>
               {game.home_score !== null && (
-                <div className={`gaming-score ${
-                  game.home_score > (game.away_score || 0) ? 'gaming-score-leading' : 'gaming-score-trailing'
+                <div className={`bg-card ${
+                  game.home_score > (game.away_score || 0) ? 'bg-card' : 'bg-card'
                 }`}>
                   {game.home_score}
                 </div>
@@ -712,13 +711,13 @@ export default function MultiSportsDashboard() {
           </div>
 
           {/* Simplified Footer */}
-          <div className="pt-4 mt-4 border-t border-gaming-border/30">
+          <div className="pt-4 mt-4 border-t border-bg-card/30">
             
             {/* Enhanced Betting Info with Real Odds */}
             <div className="space-y-3">
               {/* Weather info for outdoor games */}
               {game.weather_data && (game.weather_data.temperature || game.weather_data.condition) && (
-                <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/30 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card/30 rounded-lg px-3 py-2">
                   {game.weather_data.temperature && (
                     <>
                       <span>🌡️ {game.weather_data.temperature}°F</span>
@@ -739,15 +738,15 @@ export default function MultiSportsDashboard() {
 
               {/* Timeouts display for live games */}
               {isLive && (game.live_stats?.timeouts_home !== undefined || game.live_stats?.timeouts_away !== undefined) && (
-                <div className="flex items-center justify-between text-xs bg-gray-800/30 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between text-xs bg-card/30 rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400">Timeouts:</span>
-                    <span className="gaming-text-secondary">
+                    <span className="text-muted-foreground">Timeouts:</span>
+                    <span className="bg-card">
                       Away: {game.live_stats?.timeouts_away || 0}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="gaming-text-secondary">
+                    <span className="bg-card">
                       Home: {game.live_stats?.timeouts_home || 0}
                     </span>
                   </div>
@@ -756,8 +755,8 @@ export default function MultiSportsDashboard() {
 
               {/* Last Play for live games */}
               {isLive && game.live_stats?.last_play && (
-                <div className="text-xs text-gray-400 bg-gray-800/30 rounded-lg px-3 py-2">
-                  <span className="font-semibold text-gray-300">Last Play: </span>
+                <div className="text-xs text-muted-foreground bg-card/30 rounded-lg px-3 py-2">
+                  <span className="font-semibold text-muted-foreground">Last Play: </span>
                   {game.live_stats.last_play}
                 </div>
               )}
@@ -791,7 +790,7 @@ export default function MultiSportsDashboard() {
                               </div>
                             )}
                             {totalMarket && (
-                              <div className="flex flex-col bg-green-500/10 text-green-400 rounded px-2 py-1">
+                              <div className="flex flex-col bg-green-500/10 text-green-500 rounded px-2 py-1">
                                 <span className="text-[10px] opacity-70">O/U</span>
                                 <span className="text-xs font-bold">
                                   {totalMarket.total || 'N/A'}
@@ -804,13 +803,13 @@ export default function MultiSportsDashboard() {
                     </>
                   ) : (
                     <div className="flex gap-2">
-                      <span className="text-xs px-3 py-1.5 bg-gray-800/50 text-gray-500 rounded">
+                      <span className="text-xs px-3 py-1.5 bg-card/50 text-muted-foreground rounded">
                         No odds available
                       </span>
                     </div>
                   )}
                 </div>
-                <button className="text-xs text-gray-400 hover:text-cyan-400 transition-colors flex items-center gap-1">
+                <button className="text-xs text-muted-foreground hover:text-cyan-400 transition-colors flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
                   Analyze
                 </button>
@@ -830,9 +829,9 @@ export default function MultiSportsDashboard() {
         <div 
           key={sport.sport_type}
           className={`
-            gaming-card gaming-hover-lift cursor-pointer gaming-fade-in
+            bg-card bg-card cursor-pointer bg-card
             ${selectedSport === sport.sport_type 
-              ? 'gaming-bet-hot border-gaming-neon-cyan' 
+              ? 'bg-card border-bg-card' 
               : ''
             }
           `}
@@ -843,24 +842,24 @@ export default function MultiSportsDashboard() {
           }}
         >
           {/* Gaming Border Glow */}
-          <div className="gaming-border-glow"></div>
-          {selectedSport === sport.sport_type && <div className="gaming-bet-glow"></div>}
+          <div className="bg-card"></div>
+          {selectedSport === sport.sport_type && <div className="bg-card"></div>}
           
           <div className="text-center space-y-4">
             <div className="text-5xl transform transition-all duration-300 hover:scale-125 hover:text-shadow-lg">
               {getSportEmoji(sport.sport_type)}
             </div>
-            <div className="gaming-team-name text-sm">
+            <div className="bg-card text-sm">
               {getSportDisplayName(sport.sport_type)}
             </div>
             <div className="flex items-center justify-center">
-              <div className="gaming-status text-xs px-3 py-1">
+              <div className="bg-card text-xs px-3 py-1">
                 {sport.count} LEAGUE{sport.count !== 1 ? 'S' : ''}
               </div>
             </div>
             {selectedSport === sport.sport_type && (
               <div className="flex justify-center">
-                <div className="gaming-pulse-dot bg-gaming-neon-cyan"></div>
+                <div className="bg-card bg-bg-card"></div>
               </div>
             )}
           </div>
@@ -878,29 +877,29 @@ export default function MultiSportsDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <Zap className="w-8 h-8 gaming-text-danger animate-pulse" />
-            <h3 className="text-3xl font-black gaming-text-primary">LIVE GAMES</h3>
+            <Zap className="w-8 h-8 bg-card animate-pulse" />
+            <h3 className="text-3xl font-black bg-card">LIVE GAMES</h3>
           </div>
-          <div className="gaming-status gaming-status-live text-lg px-4 py-2">
-            <div className="gaming-pulse-dot"></div>
+          <div className="bg-card bg-card text-lg px-4 py-2">
+            <div className="bg-card"></div>
             {liveGames.length} GAMES LIVE
           </div>
         </div>
         
         {/* Gaming Real-time indicator */}
-        <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green px-4 py-2">
+        <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card px-4 py-2">
           <Signal className="w-4 h-4" />
           REAL-TIME STREAM
-          <div className="gaming-pulse-dot"></div>
+          <div className="bg-card"></div>
         </div>
       </div>
       
       {liveGames.length === 0 ? (
-        <div className="gaming-card text-center py-12">
-          <div className="gaming-border-glow"></div>
-          <Activity className="w-16 h-16 gaming-text-muted mx-auto mb-6" />
-          <h4 className="text-2xl font-bold gaming-text-primary mb-4">NO GAMES LIVE</h4>
-          <p className="gaming-text-secondary text-lg">[STANDBY MODE] &gt;&gt; Waiting for live action...</p>
+        <div className="bg-card text-center py-12">
+          <div className="bg-card"></div>
+          <Activity className="w-16 h-16 bg-card mx-auto mb-6" />
+          <h4 className="text-2xl font-bold bg-card mb-4">NO GAMES LIVE</h4>
+          <p className="bg-card text-lg">[STANDBY MODE] &gt;&gt; Waiting for live action...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -919,17 +918,17 @@ export default function MultiSportsDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 gaming-text-matrix animate-pulse" />
-            <h3 className="text-3xl font-black gaming-text-primary">TRENDING GAMES</h3>
+            <TrendingUp className="w-8 h-8 bg-card animate-pulse" />
+            <h3 className="text-3xl font-black bg-card">TRENDING GAMES</h3>
           </div>
-          <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green px-4 py-2">
+          <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card px-4 py-2">
             <FireIcon className="w-4 h-4 mr-2" />
             {trendingGames.filter(game => game.status !== 'final').length} HOT MATCHES
           </div>
         </div>
 
         {/* Gaming Data Source */}
-        <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple px-4 py-2">
+        <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card px-4 py-2">
           <Database className="w-4 h-4 mr-2" />
           ESPN + ODDS STREAM
         </div>
@@ -959,14 +958,14 @@ export default function MultiSportsDashboard() {
 
     // Define league display order and icons
     const leagueConfig: Record<string, { name: string; icon: string; color: string }> = {
-      'NFL': { name: 'NFL', icon: '🏈', color: 'gaming-neon-cyan' },
-      'NCAAF': { name: 'NCAAF', icon: '🏈', color: 'gaming-neon-purple' },
-      'NBA': { name: 'NBA', icon: '🏀', color: 'gaming-neon-orange' },
-      'NCAAB': { name: 'NCAAB', icon: '🏀', color: 'gaming-neon-yellow' },
-      'MLB': { name: 'MLB', icon: '⚾', color: 'gaming-neon-green' },
-      'NHL': { name: 'NHL', icon: '🏒', color: 'gaming-neon-blue' },
-      'MMA': { name: 'MMA/UFC', icon: '🥊', color: 'gaming-neon-red' },
-      'SOCCER': { name: 'Soccer', icon: '⚽', color: 'gaming-neon-green' },
+      'NFL': { name: 'NFL', icon: '🏈', color: 'bg-card' },
+      'NCAAF': { name: 'NCAAF', icon: '🏈', color: 'bg-card' },
+      'NBA': { name: 'NBA', icon: '🏀', color: 'bg-card' },
+      'NCAAB': { name: 'NCAAB', icon: '🏀', color: 'bg-card' },
+      'MLB': { name: 'MLB', icon: '⚾', color: 'bg-card' },
+      'NHL': { name: 'NHL', icon: '🏒', color: 'bg-card' },
+      'MMA': { name: 'MMA/UFC', icon: '🥊', color: 'bg-card' },
+      'SOCCER': { name: 'Soccer', icon: '⚽', color: 'bg-card' },
     };
 
     const orderedLeagues = ['NFL', 'NCAAF', 'NBA', 'NCAAB', 'MLB', 'NHL', 'MMA', 'SOCCER'];
@@ -977,7 +976,7 @@ export default function MultiSportsDashboard() {
           const games = gamesByLeague[league];
           if (!games || games.length === 0) return null;
 
-          const config = leagueConfig[league] || { name: league, icon: '🎮', color: 'gaming-neon-cyan' };
+          const config = leagueConfig[league] || { name: league, icon: '🎮', color: 'bg-card' };
           const activeGames = games.filter(g => !isGameFinished(g));
           const liveGames = games.filter(g => isGameLive(g));
           const upcomingGames = games.filter(g => !isGameLive(g) && !isGameFinished(g));
@@ -985,16 +984,16 @@ export default function MultiSportsDashboard() {
           return (
             <div key={league} className="space-y-6">
               {/* League Section Header */}
-              <div className="flex items-center justify-between border-b border-gaming-border pb-4">
+              <div className="flex items-center justify-between border-b border-bg-card pb-4">
                 <div className="flex items-center gap-4">
                   <span className="text-3xl">{config.icon}</span>
-                  <h2 className="text-2xl font-black gaming-text-primary">{config.name}</h2>
-                  <div className={`gaming-status bg-${config.color}/20 border-${config.color} text-${config.color} px-3 py-1`}>
+                  <h2 className="text-2xl font-black bg-card">{config.name}</h2>
+                  <div className={`bg-card bg-${config.color}/20 border-${config.color} text-${config.color} px-3 py-1`}>
                     {activeGames.length} GAMES
                   </div>
                   {liveGames.length > 0 && (
-                    <div className="gaming-status gaming-status-live">
-                      <div className="gaming-pulse-dot"></div>
+                    <div className="bg-card bg-card">
+                      <div className="bg-card"></div>
                       {liveGames.length} LIVE
                     </div>
                   )}
@@ -1003,7 +1002,7 @@ export default function MultiSportsDashboard() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectedSport(league as SportType)}
-                    className="gaming-button-secondary px-4 py-2 text-sm"
+                    className="bg-card px-4 py-2 text-sm"
                   >
                     View All {config.name}
                   </button>
@@ -1014,8 +1013,8 @@ export default function MultiSportsDashboard() {
               {liveGames.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <Zap className="w-5 h-5 gaming-text-danger animate-pulse" />
-                    <h3 className="text-lg font-bold gaming-text-danger">LIVE NOW</h3>
+                    <Zap className="w-5 h-5 bg-card animate-pulse" />
+                    <h3 className="text-lg font-bold bg-card">LIVE NOW</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {liveGames.slice(0, 6).map(renderGameCard)}
@@ -1028,8 +1027,8 @@ export default function MultiSportsDashboard() {
                 <div className="space-y-4">
                   {liveGames.length > 0 && (
                     <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 gaming-text-accent" />
-                      <h3 className="text-lg font-bold gaming-text-primary">UPCOMING</h3>
+                      <Calendar className="w-5 h-5 bg-card" />
+                      <h3 className="text-lg font-bold bg-card">UPCOMING</h3>
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1043,7 +1042,7 @@ export default function MultiSportsDashboard() {
                 <div className="text-center">
                   <button
                     onClick={() => setSelectedSport(league as SportType)}
-                    className="gaming-button-primary px-6 py-3"
+                    className="bg-card px-6 py-3"
                   >
                     Show All {activeGames.length} {config.name} Games →
                   </button>
@@ -1055,11 +1054,11 @@ export default function MultiSportsDashboard() {
 
         {/* Empty State if no games */}
         {Object.keys(gamesByLeague).length === 0 && (
-          <div className="gaming-card text-center py-16">
-            <div className="gaming-border-glow"></div>
-            <Gamepad2 className="w-20 h-20 gaming-text-muted mx-auto mb-6" />
-            <h3 className="text-2xl font-bold gaming-text-primary mb-4">NO GAMES AVAILABLE</h3>
-            <p className="gaming-text-secondary">Check back later for upcoming matches</p>
+          <div className="bg-card text-center py-16">
+            <div className="bg-card"></div>
+            <Gamepad2 className="w-20 h-20 bg-card mx-auto mb-6" />
+            <h3 className="text-2xl font-bold bg-card mb-4">NO GAMES AVAILABLE</h3>
+            <p className="bg-card">Check back later for upcoming matches</p>
           </div>
         )}
       </div>
@@ -1069,19 +1068,19 @@ export default function MultiSportsDashboard() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] space-y-8">
-        <div className="gaming-card p-16 text-center">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card p-16 text-center">
+          <div className="bg-card"></div>
           <div className="relative mb-8">
-            <div className="gaming-loading w-16 h-16 mx-auto"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-gaming-neon-cyan/20 border-t-gaming-neon-cyan rounded-full animate-spin mx-auto"></div>
+            <div className="bg-card w-16 h-16 mx-auto"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-bg-card/20 border-t-bg-card rounded-full animate-spin mx-auto"></div>
           </div>
           <div className="text-center space-y-4">
-            <h3 className="text-2xl font-bold gaming-text-primary">LOADING GAMING ARENA</h3>
-            <p className="gaming-text-accent text-lg font-mono">[INITIALIZING] &gt;&gt; ESPN + THESPORTSDB + ODDS API</p>
+            <h3 className="text-2xl font-bold bg-card">LOADING GAMING ARENA</h3>
+            <p className="bg-card text-lg font-mono">[INITIALIZING] &gt;&gt; ESPN + THESPORTSDB + ODDS API</p>
             <div className="flex items-center justify-center gap-2 mt-4">
-              <div className="gaming-pulse-dot bg-gaming-neon-cyan"></div>
-              <div className="gaming-pulse-dot bg-gaming-neon-purple" style={{animationDelay: '0.2s'}}></div>
-              <div className="gaming-pulse-dot bg-gaming-neon-green" style={{animationDelay: '0.4s'}}></div>
+              <div className="bg-card bg-bg-card"></div>
+              <div className="bg-card bg-bg-card" style={{animationDelay: '0.2s'}}></div>
+              <div className="bg-card bg-bg-card" style={{animationDelay: '0.4s'}}></div>
             </div>
           </div>
         </div>
@@ -1094,19 +1093,19 @@ export default function MultiSportsDashboard() {
       <div className="space-y-8">
 
         {/* Unified Sports Command Center */}
-        <div className="gaming-card">
-          <div className="gaming-border-glow"></div>
-          <div className="p-6 border-b border-gaming-border">
+        <div className="bg-card">
+          <div className="bg-card"></div>
+          <div className="p-6 border-b border-bg-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Trophy className="w-6 h-6 gaming-text-neon animate-pulse" />
-                <span className="text-2xl gaming-text-primary font-bold">SPORTS COMMAND CENTER</span>
-                <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green">
+                <Trophy className="w-6 h-6 bg-card animate-pulse" />
+                <span className="text-2xl bg-card font-bold">SPORTS COMMAND CENTER</span>
+                <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                   {trendingGames.filter(g => g.status !== 'final').length} ACTIVE GAMES
                 </div>
                 {liveGames.length > 0 && (
-                  <div className="gaming-status gaming-status-live">
-                    <div className="gaming-pulse-dot"></div>
+                  <div className="bg-card bg-card">
+                    <div className="bg-card"></div>
                     {liveGames.length} LIVE NOW
                   </div>
                 )}
@@ -1116,11 +1115,11 @@ export default function MultiSportsDashboard() {
               <div className="flex items-center gap-4 text-sm">
                 {/* Date Selector */}
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 gaming-text-accent" />
+                  <Calendar className="w-4 h-4 bg-card" />
                   <select
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="gaming-card px-3 py-1.5 border border-gaming-border rounded gaming-text-primary font-mono text-xs focus:border-gaming-neon-cyan focus:outline-none transition-colors cursor-pointer"
+                    className="bg-card px-3 py-1.5 border border-bg-card rounded bg-card font-mono text-xs focus:border-bg-card focus:outline-none transition-colors cursor-pointer"
                   >
                     <option value="thisweek">This Week</option>
                     <option value="upcoming">Next 7 Days</option>
@@ -1130,7 +1129,7 @@ export default function MultiSportsDashboard() {
                 </div>
 
                 {lastSyncTime && (
-                  <div className="flex items-center gap-2 gaming-text-muted text-xs">
+                  <div className="flex items-center gap-2 bg-card text-xs">
                     <Clock className="w-3 h-3" />
                     <span>Last sync: {lastSyncTime.toLocaleTimeString()}</span>
                   </div>
@@ -1144,7 +1143,7 @@ export default function MultiSportsDashboard() {
                       onChange={(e) => setAutoSyncEnabled(e.target.checked)}
                       className="w-4 h-4"
                     />
-                    <span className="text-xs gaming-text-secondary">Auto-sync</span>
+                    <span className="text-xs bg-card">Auto-sync</span>
                   </label>
                 </div>
 
@@ -1152,7 +1151,7 @@ export default function MultiSportsDashboard() {
                   onClick={() => handleSyncData(false)}
                   disabled={syncing}
                   variant="secondary"
-                  className="px-4 py-2 border-gaming-border hover:border-gaming-neon-cyan hover:text-gaming-neon-cyan"
+                  className="px-4 py-2 border-bg-card hover:border-bg-card hover:text-bg-card"
                 >
                   {syncing ? (
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -1166,7 +1165,7 @@ export default function MultiSportsDashboard() {
           </div>
 
           {/* Sport Filter Tabs */}
-          <div className="p-4 border-b border-gaming-border bg-gaming-bg/50">
+          <div className="p-4 border-b border-bg-card bg-bg-card/50">
             <div className="flex items-center gap-3 overflow-x-auto">
               {/* All Sports Tab */}
               <button
@@ -1174,8 +1173,8 @@ export default function MultiSportsDashboard() {
                 className={`
                   px-4 py-2 rounded-lg font-bold text-sm transition-all
                   ${!selectedSport
-                    ? 'bg-gaming-neon-cyan/20 border border-gaming-neon-cyan text-gaming-neon-cyan'
-                    : 'gaming-card border border-gaming-border hover:border-gaming-neon-cyan/50 gaming-text-secondary hover:gaming-text-primary'
+                    ? 'bg-bg-card/20 border border-bg-card text-bg-card'
+                    : 'bg-card border border-bg-card hover:border-bg-card/50 bg-card hover:bg-card'
                   }
                 `}
               >
@@ -1197,8 +1196,8 @@ export default function MultiSportsDashboard() {
                   className={`
                     px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap
                     ${selectedSport === sport.sport_type
-                      ? 'bg-gaming-neon-cyan/20 border border-gaming-neon-cyan text-gaming-neon-cyan'
-                      : 'gaming-card border border-gaming-border hover:border-gaming-neon-cyan/50 gaming-text-secondary hover:gaming-text-primary'
+                      ? 'bg-bg-card/20 border border-bg-card text-bg-card'
+                      : 'bg-card border border-bg-card hover:border-bg-card/50 bg-card hover:bg-card'
                     }
                   `}
                 >
@@ -1221,8 +1220,8 @@ export default function MultiSportsDashboard() {
                   renderGamesByLeague()
                 ) : (
                   <div className="text-center py-12">
-                    <Activity className="w-12 h-12 gaming-text-muted mx-auto mb-4" />
-                    <p className="gaming-text-secondary text-lg">[NO GAMES] &gt;&gt; Try syncing data or adjusting date filter.</p>
+                    <Activity className="w-12 h-12 bg-card mx-auto mb-4" />
+                    <p className="bg-card text-lg">[NO GAMES] &gt;&gt; Try syncing data or adjusting date filter.</p>
                   </div>
                 )}
               </div>
@@ -1233,43 +1232,43 @@ export default function MultiSportsDashboard() {
                   <div className="flex items-center gap-4">
                     <span className="text-4xl transform hover:scale-110 transition-transform">{getSportEmoji(selectedSport)}</span>
                     <div>
-                      <h3 className="text-2xl font-black gaming-text-primary">
+                      <h3 className="text-2xl font-black bg-card">
                         {getSportDisplayName(selectedSport)} GAMES
                       </h3>
-                      <p className="gaming-text-accent font-bold font-mono">[FILTERED RESULTS] &gt;&gt; {selectedDate}</p>
+                      <p className="bg-card font-bold font-mono">[FILTERED RESULTS] &gt;&gt; {selectedDate}</p>
                     </div>
-                    <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-3 py-2">
+                    <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card px-3 py-2">
                       {games.length} GAMES LOADED
                     </div>
 
-                    <div className={`gaming-status px-3 py-2 ${
+                    <div className={`bg-card px-3 py-2 ${
                       wsConnected
-                        ? 'gaming-status-live'
-                        : 'bg-red-500/20 border-red-500 text-red-400'
+                        ? 'bg-card'
+                        : 'bg-red-500/20 border-red-500 text-red-500'
                     }`}>
                       <Wifi className="w-4 h-4 mr-2" />
                       {wsConnected ? 'LIVE WS' : 'WS OFF'}
-                      {wsConnected && <div className="gaming-pulse-dot ml-2"></div>}
+                      {wsConnected && <div className="bg-card ml-2"></div>}
                     </div>
                   </div>
                 </div>
 
                   {games.length === 0 ? (
-                    <div className="gaming-card text-center py-12">
-                      <div className="gaming-border-glow"></div>
-                      <div className="text-6xl gaming-text-muted mb-6">{getSportEmoji(selectedSport)}</div>
+                    <div className="bg-card text-center py-12">
+                      <div className="bg-card"></div>
+                      <div className="text-6xl bg-card mb-6">{getSportEmoji(selectedSport)}</div>
                       <div className="space-y-4">
-                        <h4 className="text-xl font-bold gaming-text-primary">
+                        <h4 className="text-xl font-bold bg-card">
                           NO GAMES FOUND
                         </h4>
-                        <p className="gaming-text-secondary">
+                        <p className="bg-card">
                           [EMPTY QUEUE] &gt;&gt; Try different date or sync data
                         </p>
                       </div>
                       <Button 
                         onClick={handleSyncData} 
                         variant="outline" 
-                        className="gaming-btn-active mt-6 px-6 py-3"
+                        className="bg-card mt-6 px-6 py-3"
                         disabled={syncing}
                       >
                         {syncing ? (
@@ -1285,15 +1284,15 @@ export default function MultiSportsDashboard() {
                       {/* In-Progress Games Section */}
                       {inProgressGames.length > 0 && (
                         <div className="space-y-4">
-                          <div className="flex items-center gap-4 border-b border-gaming-neon-red pb-2">
+                          <div className="flex items-center gap-4 border-b border-bg-card pb-2">
                             <div className="flex items-center gap-3">
-                              <Zap className="w-6 h-6 gaming-text-danger animate-pulse" />
-                              <h4 className="text-2xl font-black gaming-text-danger">
+                              <Zap className="w-6 h-6 bg-card animate-pulse" />
+                              <h4 className="text-2xl font-black bg-card">
                                 GAMES IN PROGRESS
                               </h4>
                             </div>
-                            <div className="gaming-status gaming-status-live px-3 py-1">
-                              <div className="gaming-pulse-dot"></div>
+                            <div className="bg-card bg-card px-3 py-1">
+                              <div className="bg-card"></div>
                               {inProgressGames.length} LIVE NOW
                             </div>
                           </div>
@@ -1306,14 +1305,14 @@ export default function MultiSportsDashboard() {
                       {/* Upcoming Games Section */}
                       {upcomingGames.length > 0 && (
                         <div className="space-y-4">
-                          <div className="flex items-center gap-4 border-b border-gaming-border pb-2">
+                          <div className="flex items-center gap-4 border-b border-bg-card pb-2">
                             <div className="flex items-center gap-3">
-                              <Timer className="w-6 h-6 gaming-text-accent" />
-                              <h4 className="text-2xl font-black gaming-text-primary">
+                              <Timer className="w-6 h-6 bg-card" />
+                              <h4 className="text-2xl font-black bg-card">
                                 UPCOMING GAMES
                               </h4>
                             </div>
-                            <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan px-3 py-1">
+                            <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card px-3 py-1">
                               {upcomingGames.length} SCHEDULED
                             </div>
                           </div>
@@ -1346,16 +1345,16 @@ export default function MultiSportsDashboard() {
                               
                               return (
                                 <div key={date} className="space-y-4">
-                                  <div className="flex items-center gap-4 border-b border-gaming-border/50 pb-2">
+                                  <div className="flex items-center gap-4 border-b border-bg-card/50 pb-2">
                                     <div className="flex items-center gap-3">
-                                      <Calendar className="w-5 h-5 gaming-text-accent" />
-                                      <h5 className="text-lg font-bold gaming-text-primary">
+                                      <Calendar className="w-5 h-5 bg-card" />
+                                      <h5 className="text-lg font-bold bg-card">
                                         {isToday ? 'TODAY' : dayName.toUpperCase()}
                                       </h5>
-                                      <span className="gaming-text-secondary font-mono">{dateStr}</span>
+                                      <span className="bg-card font-mono">{dateStr}</span>
                                     </div>
-                                    <div className={`gaming-status ${
-                                      isToday ? 'bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green' : 'bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple'
+                                    <div className={`bg-card ${
+                                      isToday ? 'bg-bg-card/20 border-bg-card text-bg-card' : 'bg-bg-card/20 border-bg-card text-bg-card'
                                     } px-3 py-1 text-xs`}>
                                       {dateGames.length} {dateGames.length === 1 ? 'GAME' : 'GAMES'}
                                     </div>
@@ -1373,14 +1372,14 @@ export default function MultiSportsDashboard() {
                       {/* Other Status Games (Postponed, Suspended, etc.) */}
                       {otherGames.length > 0 && (
                         <div className="space-y-4">
-                          <div className="flex items-center gap-4 border-b border-gaming-border pb-2">
+                          <div className="flex items-center gap-4 border-b border-bg-card pb-2">
                             <div className="flex items-center gap-3">
-                              <Activity className="w-6 h-6 gaming-text-muted" />
-                              <h4 className="text-xl font-bold gaming-text-muted">
+                              <Activity className="w-6 h-6 bg-card" />
+                              <h4 className="text-xl font-bold bg-card">
                                 OTHER STATUS
                               </h4>
                             </div>
-                            <div className="gaming-status bg-gray-500/20 border-gray-500 text-gray-400 px-3 py-1">
+                            <div className="bg-card bg-muted/50/20 border-gray-500 text-muted-foreground px-3 py-1">
                               {otherGames.length} GAMES
                             </div>
                           </div>
@@ -1392,16 +1391,16 @@ export default function MultiSportsDashboard() {
 
                       {/* Show message if all games are completed */}
                       {upcomingGames.length === 0 && inProgressGames.length === 0 && completedGames.length > 0 && (
-                        <div className="gaming-card text-center py-12">
-                          <div className="gaming-border-glow"></div>
-                          <Trophy className="w-16 h-16 gaming-text-neon-green mx-auto mb-6" />
-                          <h4 className="text-2xl font-bold gaming-text-primary mb-4">
+                        <div className="bg-card text-center py-12">
+                          <div className="bg-card"></div>
+                          <Trophy className="w-16 h-16 bg-card500 mx-auto mb-6" />
+                          <h4 className="text-2xl font-bold bg-card mb-4">
                             ALL GAMES COMPLETED
                           </h4>
-                          <p className="gaming-text-secondary text-lg mb-2">
+                          <p className="bg-card text-lg mb-2">
                             {completedGames.length} games finished for {selectedDate}
                           </p>
-                          <p className="gaming-text-accent">
+                          <p className="bg-card">
                             [TIP] &gt;&gt; Try selecting a different date or sync for new games
                           </p>
                         </div>

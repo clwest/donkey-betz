@@ -232,7 +232,7 @@ export function BlockEditor({
         }`}>
           <button
             onClick={() => handleMoveBlock(block.id, 'up')}
-            className="p-1 text-gray-400 hover:text-white hover:bg-dark-700 rounded transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground hover:bg-dark-700 rounded transition-colors"
             title="Move up"
             disabled={index === 0}
           >
@@ -240,7 +240,7 @@ export function BlockEditor({
           </button>
           <button
             onClick={() => handleMoveBlock(block.id, 'down')}
-            className="p-1 text-gray-400 hover:text-white hover:bg-dark-700 rounded transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground hover:bg-dark-700 rounded transition-colors"
             title="Move down"
             disabled={index === blocks.length - 1}
           >
@@ -248,7 +248,7 @@ export function BlockEditor({
           </button>
           <button
             onClick={() => handleDeleteBlock(block.id)}
-            className="p-1 text-gray-400 hover:text-red-400 hover:bg-dark-700 rounded transition-colors"
+            className="p-1 text-muted-foreground hover:text-red-500 hover:bg-dark-700 rounded transition-colors"
             title="Delete block"
           >
             <TrashIcon className="h-4 w-4" />
@@ -263,7 +263,7 @@ export function BlockEditor({
               onChange={(e) => handleBlockChange(block.id, e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, block.id, index)}
               placeholder={index === 0 ? placeholder : "Continue writing..."}
-              className="w-full px-2 py-2 bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none leading-relaxed"
+              className="w-full px-2 py-2 bg-transparent text-foreground placeholder-gray-500 resize-none focus:outline-none leading-relaxed"
               style={{ minHeight: '2rem' }}
               rows={1}
               onInput={(e) => {
@@ -280,7 +280,7 @@ export function BlockEditor({
               value={block.content}
               onChange={(e) => handleBlockChange(block.id, e.target.value)}
               placeholder="Heading..."
-              className={`w-full px-2 py-2 bg-transparent text-white placeholder-gray-500 focus:outline-none font-bold ${
+              className={`w-full px-2 py-2 bg-transparent text-foreground placeholder-gray-500 focus:outline-none font-bold ${
                 block.metadata?.level === 1 ? 'text-3xl' : 'text-2xl'
               }`}
             />
@@ -298,7 +298,7 @@ export function BlockEditor({
                 value={block.content}
                 onChange={(e) => handleBlockChange(block.id, e.target.value)}
                 placeholder="Image caption..."
-                className="w-full px-2 py-2 mt-2 bg-transparent text-sm text-gray-400 placeholder-gray-600 focus:outline-none text-center"
+                className="w-full px-2 py-2 mt-2 bg-transparent text-sm text-muted-foreground placeholder-gray-600 focus:outline-none text-center"
               />
             </div>
           )}
@@ -313,28 +313,28 @@ export function BlockEditor({
               <div className="flex items-center gap-2 bg-dark-700 rounded-lg p-2 shadow-lg">
                 <button
                   onClick={() => handleAddBlock(block.id, 'text')}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-dark-600 rounded transition-colors"
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-dark-600 rounded transition-colors"
                   title="Add text"
                 >
                   <Bars3Icon className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleAddBlock(block.id, 'heading')}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-dark-600 rounded transition-colors"
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-dark-600 rounded transition-colors"
                   title="Add heading"
                 >
                   <span className="font-bold text-sm">H</span>
                 </button>
                 <button
                   onClick={() => handleAddBlock(block.id, 'image')}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-dark-600 rounded transition-colors"
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-dark-600 rounded transition-colors"
                   title="Add image"
                 >
                   <PhotoIcon className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setShowAddMenu(null)}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-dark-600 rounded transition-colors"
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-dark-600 rounded transition-colors"
                 >
                   <XMarkIcon className="h-4 w-4" />
                 </button>
@@ -342,7 +342,7 @@ export function BlockEditor({
             ) : (
               <button
                 onClick={() => setShowAddMenu(block.id)}
-                className="p-2 bg-dark-700 hover:bg-dark-600 rounded-full text-gray-400 hover:text-white transition-all transform hover:scale-110"
+                className="p-2 bg-dark-700 hover:bg-dark-600 rounded-full text-muted-foreground hover:text-foreground transition-all transform hover:scale-110"
                 title="Add block"
               >
                 <PlusIcon className="h-4 w-4" />
@@ -365,7 +365,7 @@ export function BlockEditor({
         <div className="text-center py-12">
           <button
             onClick={() => handleAddBlock('', 'text')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-foreground rounded-lg transition-colors"
           >
             <PlusIcon className="h-5 w-5" />
             Start Writing

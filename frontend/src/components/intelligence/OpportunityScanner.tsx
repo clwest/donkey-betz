@@ -159,10 +159,10 @@ export function OpportunityScanner() {
   };
 
   const getEdgeColor = (edge: number) => {
-    if (edge >= 10) return 'text-green-400';
+    if (edge >= 10) return 'text-green-500';
     if (edge >= 5) return 'text-green-500';
     if (edge >= 2) return 'text-blue-500';
-    return 'text-gray-400';
+    return 'text-muted-foreground';
   };
 
   const filteredOpportunities = opportunities.filter(opp => {
@@ -272,7 +272,7 @@ export function OpportunityScanner() {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
             Real-Time Opportunity Scanner
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             AI continuously scanning ALL markets for profitable opportunities
           </p>
         </div>
@@ -300,45 +300,45 @@ export function OpportunityScanner() {
 
       {/* Scanner Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Scanned</span>
+              <span className="text-sm text-muted-foreground">Scanned</span>
               <Radar className="h-4 w-4 text-blue-500" />
             </div>
             <p className="text-2xl font-bold mt-2">{metrics.totalScanned.toLocaleString()}</p>
-            <p className="text-sm text-gray-400 mt-1">Total markets</p>
+            <p className="text-sm text-muted-foreground mt-1">Total markets</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Found</span>
+              <span className="text-sm text-muted-foreground">Found</span>
               <Target className="h-4 w-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold mt-2">{metrics.opportunitiesFound}</p>
-            <p className="text-sm text-gray-400 mt-1">Opportunities</p>
+            <p className="text-sm text-muted-foreground mt-1">Opportunities</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Avg Edge</span>
+              <span className="text-sm text-muted-foreground">Avg Edge</span>
               <TrendingUp className="h-4 w-4 text-purple-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-purple-500">
               {metrics.avgEdge.toFixed(1)}%
             </p>
-            <p className="text-sm text-gray-400 mt-1">Expected</p>
+            <p className="text-sm text-muted-foreground mt-1">Expected</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Execution</span>
+              <span className="text-sm text-muted-foreground">Execution</span>
               <Activity className="h-4 w-4 text-yellow-500" />
             </div>
             <p className="text-2xl font-bold mt-2">
@@ -348,23 +348,23 @@ export function OpportunityScanner() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Profit</span>
+              <span className="text-sm text-muted-foreground">Profit</span>
               <DollarSign className="h-4 w-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-green-500">
               ${metrics.profitGenerated.toLocaleString()}
             </p>
-            <p className="text-sm text-gray-400 mt-1">Generated</p>
+            <p className="text-sm text-muted-foreground mt-1">Generated</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Settings Panel */}
       {showSettings && (
-        <Card className="gaming-card border-blue-500/20">
+        <Card className="bg-card border-blue-500/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
@@ -384,7 +384,7 @@ export function OpportunityScanner() {
                     step={0.5}
                     className="mt-2"
                   />
-                  <p className="text-sm text-gray-400 mt-1">{settings.minEdge}% minimum edge</p>
+                  <p className="text-sm text-muted-foreground mt-1">{settings.minEdge}% minimum edge</p>
                 </div>
 
                 <div>
@@ -397,7 +397,7 @@ export function OpportunityScanner() {
                     step={5}
                     className="mt-2"
                   />
-                  <p className="text-sm text-gray-400 mt-1">{(settings.minConfidence * 100).toFixed(0)}% confidence</p>
+                  <p className="text-sm text-muted-foreground mt-1">{(settings.minConfidence * 100).toFixed(0)}% confidence</p>
                 </div>
 
                 <div>
@@ -410,7 +410,7 @@ export function OpportunityScanner() {
                     step={5}
                     className="mt-2"
                   />
-                  <p className="text-sm text-gray-400 mt-1">{(settings.maxRisk * 100).toFixed(0)}% maximum risk</p>
+                  <p className="text-sm text-muted-foreground mt-1">{(settings.maxRisk * 100).toFixed(0)}% maximum risk</p>
                 </div>
               </div>
 
@@ -423,7 +423,7 @@ export function OpportunityScanner() {
                       checked={settings.audioAlerts}
                       onCheckedChange={(checked) => setSettings(prev => ({ ...prev, audioAlerts: checked }))}
                     />
-                    {settings.audioAlerts ? <Volume2 className="h-4 w-4 text-green-500" /> : <VolumeX className="h-4 w-4 text-gray-400" />}
+                    {settings.audioAlerts ? <Volume2 className="h-4 w-4 text-green-500" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
                   </div>
                 </div>
 
@@ -435,7 +435,7 @@ export function OpportunityScanner() {
                       checked={settings.pushNotifications}
                       onCheckedChange={(checked) => setSettings(prev => ({ ...prev, pushNotifications: checked }))}
                     />
-                    {settings.pushNotifications ? <Bell className="h-4 w-4 text-green-500" /> : <BellOff className="h-4 w-4 text-gray-400" />}
+                    {settings.pushNotifications ? <Bell className="h-4 w-4 text-green-500" /> : <BellOff className="h-4 w-4 text-muted-foreground" />}
                   </div>
                 </div>
 
@@ -449,7 +449,7 @@ export function OpportunityScanner() {
                     step={5}
                     className="mt-2"
                   />
-                  <p className="text-sm text-gray-400 mt-1">Scan every {settings.scanInterval}s</p>
+                  <p className="text-sm text-muted-foreground mt-1">Scan every {settings.scanInterval}s</p>
                 </div>
               </div>
             </div>
@@ -459,7 +459,7 @@ export function OpportunityScanner() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Filter className="h-4 w-4 text-gray-400" />
+        <Filter className="h-4 w-4 text-muted-foreground" />
         <Button
           variant={filter === 'all' ? 'default' : 'outline'}
           size="sm"
@@ -504,7 +504,7 @@ export function OpportunityScanner() {
       {opportunities.some(opp => opp.alertLevel === 'critical' && opp.status === 'active') && (
         <Alert className="border-red-500/50 bg-red-500/5">
           <AlertTriangle className="h-4 w-4 text-red-500" />
-          <AlertDescription className="text-red-400">
+          <AlertDescription className="text-red-500">
             <strong>CRITICAL OPPORTUNITIES DETECTED!</strong> {' '}
             {opportunities.filter(opp => opp.alertLevel === 'critical' && opp.status === 'active').length} high-value opportunities require immediate attention.
           </AlertDescription>
@@ -517,7 +517,7 @@ export function OpportunityScanner() {
           const TypeIcon = OPPORTUNITY_TYPES[opportunity.type]?.icon || Target;
 
           return (
-            <Card key={opportunity.id} className="gaming-card hover:border-blue-500/50 transition-colors">
+            <Card key={opportunity.id} className="bg-card hover:border-blue-500/50 transition-colors">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
@@ -535,44 +535,44 @@ export function OpportunityScanner() {
                             {opportunity.domain.replace('_', ' ')}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Timer className="h-3 w-3" />
                           {getTimeRemaining(opportunity.timeWindow)}
                         </div>
                       </div>
 
                       <h3 className="font-semibold mb-1">{opportunity.entity}</h3>
-                      <p className="text-sm text-gray-300 mb-3">{opportunity.description}</p>
+                      <p className="text-sm text-muted-foreground mb-3">{opportunity.description}</p>
 
                       {/* Key Metrics */}
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                         <div className="text-center">
-                          <p className="text-xs text-gray-400">Edge</p>
+                          <p className="text-xs text-muted-foreground">Edge</p>
                           <p className={`font-bold ${getEdgeColor(opportunity.edge)}`}>
                             {opportunity.edge.toFixed(1)}%
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400">Profit</p>
+                          <p className="text-xs text-muted-foreground">Profit</p>
                           <p className="font-bold text-green-500">
                             ${opportunity.profitPotential.toLocaleString()}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400">Confidence</p>
+                          <p className="text-xs text-muted-foreground">Confidence</p>
                           <p className="font-bold text-blue-500">
                             {(opportunity.confidence * 100).toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400">Risk</p>
+                          <p className="text-xs text-muted-foreground">Risk</p>
                           <p className={`font-bold ${opportunity.riskLevel <= 0.3 ? 'text-green-500' : opportunity.riskLevel <= 0.6 ? 'text-yellow-500' : 'text-red-500'}`}>
                             {(opportunity.riskLevel * 100).toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400">Capital</p>
-                          <p className="font-bold text-gray-300">
+                          <p className="text-xs text-muted-foreground">Capital</p>
+                          <p className="font-bold text-muted-foreground">
                             ${(opportunity.requiredCapital / 1000).toFixed(0)}K
                           </p>
                         </div>
@@ -582,15 +582,15 @@ export function OpportunityScanner() {
                       <div className="grid grid-cols-2 gap-4 mb-3">
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-gray-400">Confidence</span>
-                            <span className="text-gray-300">{(opportunity.confidence * 100).toFixed(0)}%</span>
+                            <span className="text-muted-foreground">Confidence</span>
+                            <span className="text-muted-foreground">{(opportunity.confidence * 100).toFixed(0)}%</span>
                           </div>
                           <Progress value={opportunity.confidence * 100} className="h-1" />
                         </div>
                         <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-gray-400">Liquidity</span>
-                            <span className="text-gray-300">{(opportunity.liquidityScore * 100).toFixed(0)}%</span>
+                            <span className="text-muted-foreground">Liquidity</span>
+                            <span className="text-muted-foreground">{(opportunity.liquidityScore * 100).toFixed(0)}%</span>
                           </div>
                           <Progress value={opportunity.liquidityScore * 100} className="h-1" />
                         </div>
@@ -598,20 +598,20 @@ export function OpportunityScanner() {
 
                       {/* Market Data */}
                       {opportunity.marketData.currentPrice && (
-                        <div className="bg-dark-800 rounded-lg p-2 mb-3">
+                        <div className="bg-card rounded-lg p-2 mb-3">
                           <div className="grid grid-cols-3 gap-3 text-xs">
                             <div>
-                              <p className="text-gray-400">Current</p>
+                              <p className="text-muted-foreground">Current</p>
                               <p className="font-bold">{opportunity.marketData.currentPrice.toLocaleString()}</p>
                             </div>
                             <div>
-                              <p className="text-gray-400">Target</p>
+                              <p className="text-muted-foreground">Target</p>
                               <p className="font-bold text-green-500">
                                 {opportunity.marketData.targetPrice?.toLocaleString()}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400">24h Volume</p>
+                              <p className="text-muted-foreground">24h Volume</p>
                               <p className="font-bold">
                                 ${(opportunity.marketData.volume24h! / 1000000).toFixed(1)}M
                               </p>
@@ -636,7 +636,7 @@ export function OpportunityScanner() {
 
                       {/* Exchanges */}
                       {opportunity.exchanges && (
-                        <div className="text-xs text-gray-400 mb-3">
+                        <div className="text-xs text-muted-foreground mb-3">
                           <span>Available on: {opportunity.exchanges.join(', ')}</span>
                         </div>
                       )}
@@ -662,11 +662,11 @@ export function OpportunityScanner() {
       </div>
 
       {filteredOpportunities.length === 0 && (
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="text-center py-12">
             <Radar className="h-12 w-12 mx-auto mb-4 text-blue-500 opacity-50" />
             <h3 className="text-lg font-semibold mb-2">No Opportunities Found</h3>
-            <p className="text-gray-400">
+            <p className="text-muted-foreground">
               Scanner is actively monitoring markets. New opportunities will appear here in real-time.
             </p>
           </CardContent>

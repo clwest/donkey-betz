@@ -122,14 +122,14 @@ export const ProfessionalProfile: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-xl font-semibold text-white mb-2">Profile Completion</h3>
-            <p className="text-gray-400">Complete your profile to get better job matches</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Profile Completion</h3>
+            <p className="text-muted-foreground">Complete your profile to get better job matches</p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-white mb-1">
+            <div className="text-3xl font-bold text-foreground mb-1">
               {Math.round(profile?.profile_completeness || 0)}%
             </div>
-            <p className="text-sm text-gray-400">Complete</p>
+            <p className="text-sm text-muted-foreground">Complete</p>
           </div>
         </div>
         <div className="w-full bg-gray-700 rounded-full h-3">
@@ -149,15 +149,15 @@ export const ProfessionalProfile: React.FC = () => {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-blue-400" />
+            <Sparkles className="w-5 h-5 text-blue-500" />
             <div>
-              <h4 className="text-white font-medium">Need help building your profile?</h4>
-              <p className="text-gray-400 text-sm">Let our AI assistant help you create a compelling professional profile</p>
+              <h4 className="text-foreground font-medium">Need help building your profile?</h4>
+              <p className="text-muted-foreground text-sm">Let our AI assistant help you create a compelling professional profile</p>
             </div>
           </div>
           <button
             onClick={() => setShowAssistant(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-foreground rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
             <MessageSquare className="w-4 h-4" />
             Chat with Assistant
@@ -166,9 +166,9 @@ export const ProfessionalProfile: React.FC = () => {
       </motion.div>
 
       {/* Professional Summary */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white">Professional Summary</h3>
+          <h3 className="text-lg font-semibold text-foreground">Professional Summary</h3>
           {editingSection !== 'summary' ? (
             <button
               onClick={() => setEditingSection('summary')}
@@ -179,7 +179,7 @@ export const ProfessionalProfile: React.FC = () => {
           ) : (
             <button
               onClick={() => handleSave('summary')}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700"
             >
               <Save className="w-4 h-4" />
               Save
@@ -189,47 +189,47 @@ export const ProfessionalProfile: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-gray-400 mb-2">Current Title</label>
+            <label className="block text-muted-foreground mb-2">Current Title</label>
             <input
               type="text"
               value={formData.current_title || ''}
               onChange={(e) => setFormData({ ...formData, current_title: e.target.value })}
               disabled={editingSection !== 'summary'}
               placeholder="e.g., Senior Software Engineer"
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white disabled:opacity-50"
+              className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground disabled:opacity-50"
             />
           </div>
 
           <div>
-            <label className="block text-gray-400 mb-2">Years of Experience</label>
+            <label className="block text-muted-foreground mb-2">Years of Experience</label>
             <input
               type="number"
               value={formData.years_experience || 0}
               onChange={(e) => setFormData({ ...formData, years_experience: parseInt(e.target.value) || 0 })}
               disabled={editingSection !== 'summary'}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white disabled:opacity-50"
+              className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground disabled:opacity-50"
             />
           </div>
 
           <div>
-            <label className="block text-gray-400 mb-2">Location</label>
+            <label className="block text-muted-foreground mb-2">Location</label>
             <input
               type="text"
               value={formData.location || ''}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               disabled={editingSection !== 'summary'}
               placeholder="e.g., San Francisco, CA"
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white disabled:opacity-50"
+              className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground disabled:opacity-50"
             />
           </div>
 
           <div>
-            <label className="block text-gray-400 mb-2">Remote Preference</label>
+            <label className="block text-muted-foreground mb-2">Remote Preference</label>
             <select
               value={formData.remote_preference || 'no_preference'}
               onChange={(e) => setFormData({ ...formData, remote_preference: e.target.value as any })}
               disabled={editingSection !== 'summary'}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white disabled:opacity-50"
+              className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground disabled:opacity-50"
             >
               <option value="remote">Remote Only</option>
               <option value="hybrid">Hybrid</option>
@@ -243,7 +243,7 @@ export const ProfessionalProfile: React.FC = () => {
         <div className="mt-6 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-yellow-500" />
-            <span className="text-gray-400">Experience Level:</span>
+            <span className="text-muted-foreground">Experience Level:</span>
             <span className="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-sm font-semibold">
               {getExperienceLevel(formData.years_experience || 0)}
             </span>
@@ -252,9 +252,9 @@ export const ProfessionalProfile: React.FC = () => {
       </div>
 
       {/* Salary Expectations */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-green-500" />
             Salary Expectations
           </h3>
@@ -268,7 +268,7 @@ export const ProfessionalProfile: React.FC = () => {
           ) : (
             <button
               onClick={() => handleSave('salary')}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700"
             >
               <Save className="w-4 h-4" />
               Save
@@ -278,40 +278,40 @@ export const ProfessionalProfile: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-gray-400 mb-2">Minimum Salary (Annual)</label>
+            <label className="block text-muted-foreground mb-2">Minimum Salary (Annual)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
               <input
                 type="number"
                 value={formData.desired_salary_min || ''}
                 onChange={(e) => setFormData({ ...formData, desired_salary_min: parseInt(e.target.value) || null })}
                 disabled={editingSection !== 'salary'}
                 placeholder="120000"
-                className="w-full pl-8 pr-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white disabled:opacity-50"
+                className="w-full pl-8 pr-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground disabled:opacity-50"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-gray-400 mb-2">Maximum Salary (Annual)</label>
+            <label className="block text-muted-foreground mb-2">Maximum Salary (Annual)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
               <input
                 type="number"
                 value={formData.desired_salary_max || ''}
                 onChange={(e) => setFormData({ ...formData, desired_salary_max: parseInt(e.target.value) || null })}
                 disabled={editingSection !== 'salary'}
                 placeholder="160000"
-                className="w-full pl-8 pr-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white disabled:opacity-50"
+                className="w-full pl-8 pr-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground disabled:opacity-50"
               />
             </div>
           </div>
         </div>
 
         {formData.desired_salary_min && formData.desired_salary_max && (
-          <div className="mt-4 p-4 bg-gray-900/50 rounded-lg">
-            <p className="text-gray-400 text-sm">Expected Range:</p>
-            <p className="text-xl font-semibold text-white">
+          <div className="mt-4 p-4 bg-background/50 rounded-lg">
+            <p className="text-muted-foreground text-sm">Expected Range:</p>
+            <p className="text-xl font-semibold text-foreground">
               ${formData.desired_salary_min?.toLocaleString()} - ${formData.desired_salary_max?.toLocaleString()}
             </p>
           </div>
@@ -319,15 +319,15 @@ export const ProfessionalProfile: React.FC = () => {
       </div>
 
       {/* Skills Section */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Star className="w-5 h-5 text-yellow-500" />
             Skills & Expertise
           </h3>
           <button
             onClick={() => setShowSkillInput(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700"
           >
             <Plus className="w-4 h-4" />
             Add Skill
@@ -342,12 +342,12 @@ export const ProfessionalProfile: React.FC = () => {
               onChange={(e) => setNewSkill(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
               placeholder="Enter a skill..."
-              className="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white"
+              className="flex-1 px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground"
               autoFocus
             />
             <button
               onClick={handleAddSkill}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-4 py-2 bg-green-600 text-foreground rounded-lg hover:bg-green-700"
             >
               Add
             </button>
@@ -356,7 +356,7 @@ export const ProfessionalProfile: React.FC = () => {
                 setShowSkillInput(false);
                 setNewSkill('');
               }}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              className="px-4 py-2 bg-gray-700 text-foreground rounded-lg hover:bg-gray-600"
             >
               Cancel
             </button>
@@ -374,26 +374,26 @@ export const ProfessionalProfile: React.FC = () => {
               {skill}
               <button
                 onClick={() => handleRemoveSkill(skill)}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
               >
                 <X className="w-3 h-3" />
               </button>
             </motion.div>
           ))}
           {(!formData.skills || formData.skills.length === 0) && (
-            <p className="text-gray-500 italic">No skills added yet. Add your skills to improve job matching!</p>
+            <p className="text-muted-foreground italic">No skills added yet. Add your skills to improve job matching!</p>
           )}
         </div>
       </div>
 
       {/* Work History */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Briefcase className="w-5 h-5 text-blue-500" />
             Work History
           </h3>
-          <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+          <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700">
             <Plus className="w-4 h-4" />
             Add Position
           </button>
@@ -402,16 +402,16 @@ export const ProfessionalProfile: React.FC = () => {
         {(!formData.work_history || formData.work_history.length === 0) && (
           <div className="text-center py-8">
             <Briefcase className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500">No work history added yet</p>
+            <p className="text-muted-foreground">No work history added yet</p>
             <p className="text-gray-600 text-sm mt-1">Add your work experience to strengthen your profile</p>
           </div>
         )}
       </div>
 
       {/* AI Job Application Settings */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Target className="w-5 h-5 text-purple-500" />
             AI Job Application Settings
           </h3>
@@ -427,8 +427,8 @@ export const ProfessionalProfile: React.FC = () => {
           {/* Auto Apply Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-white font-medium">Auto Apply</p>
-              <p className="text-gray-400 text-sm">Automatically apply to matched jobs</p>
+              <p className="text-foreground font-medium">Auto Apply</p>
+              <p className="text-muted-foreground text-sm">Automatically apply to matched jobs</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -450,7 +450,7 @@ export const ProfessionalProfile: React.FC = () => {
 
           {/* Match Score Threshold */}
           <div>
-            <p className="text-white font-medium mb-2">Min Match Score</p>
+            <p className="text-foreground font-medium mb-2">Min Match Score</p>
             <div className="flex items-center gap-4">
               <input
                 type="range"
@@ -475,7 +475,7 @@ export const ProfessionalProfile: React.FC = () => {
 
           {/* Application Tone */}
           <div>
-            <p className="text-white font-medium mb-2">Application Tone</p>
+            <p className="text-foreground font-medium mb-2">Application Tone</p>
             <select
               value={formData.job_preferences?.application_tone || 'professional'}
               onChange={(e) => setFormData({
@@ -486,7 +486,7 @@ export const ProfessionalProfile: React.FC = () => {
                 }
               })}
               disabled={editingSection !== 'ai_settings'}
-              className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-gray-700 text-foreground rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
             >
               <option value="professional">Professional</option>
               <option value="friendly">Friendly</option>
@@ -497,7 +497,7 @@ export const ProfessionalProfile: React.FC = () => {
 
           {/* Max Applications Per Day */}
           <div>
-            <p className="text-white font-medium mb-2">Max Applications/Day</p>
+            <p className="text-foreground font-medium mb-2">Max Applications/Day</p>
             <input
               type="number"
               min="1"
@@ -511,7 +511,7 @@ export const ProfessionalProfile: React.FC = () => {
                 }
               })}
               disabled={editingSection !== 'ai_settings'}
-              className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-gray-700 text-foreground rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none"
             />
           </div>
         </div>
@@ -520,7 +520,7 @@ export const ProfessionalProfile: React.FC = () => {
           <div className="mt-4 flex justify-end">
             <button
               onClick={() => handleSave('AI Settings')}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+              className="px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
               Save Settings
@@ -530,9 +530,9 @@ export const ProfessionalProfile: React.FC = () => {
       </div>
 
       {/* Professional Summary */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Award className="w-5 h-5 text-yellow-500" />
             Professional Summary
           </h3>
@@ -551,18 +551,18 @@ export const ProfessionalProfile: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, professional_summary: e.target.value })}
               placeholder="Write a compelling professional summary that highlights your key strengths and career objectives..."
               rows={6}
-              className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
+              className="w-full px-3 py-2 bg-gray-700 text-foreground rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => setEditingSection(null)}
-                className="px-4 py-2 text-gray-400 hover:text-white"
+                className="px-4 py-2 text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleSave('Professional Summary')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                className="px-4 py-2 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 Save
@@ -570,9 +570,9 @@ export const ProfessionalProfile: React.FC = () => {
             </div>
           </div>
         ) : (
-          <p className="text-gray-300">
+          <p className="text-muted-foreground">
             {formData.professional_summary ||
-            <span className="text-gray-500 italic">Add a professional summary to make your profile stand out to potential employers.</span>}
+            <span className="text-muted-foreground italic">Add a professional summary to make your profile stand out to potential employers.</span>}
           </p>
         )}
       </div>
@@ -581,16 +581,16 @@ export const ProfessionalProfile: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button
           onClick={() => window.location.href = '/ai-job-tracker'}
-          className="p-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          className="p-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl text-foreground font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
         >
           <Target className="w-5 h-5" />
           Go to AI Job Tracker
         </button>
-        <button className="p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+        <button className="p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-foreground font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
           <TrendingUp className="w-5 h-5" />
           Optimize Profile
         </button>
-        <button className="p-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+        <button className="p-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl text-foreground font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
           <Users className="w-5 h-5" />
           Export Resume
         </button>
@@ -599,15 +599,15 @@ export const ProfessionalProfile: React.FC = () => {
       {/* Personal Assistant Modal */}
       {showAssistant && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-4xl h-[80vh] flex flex-col">
+          <div className="bg-background rounded-xl border border-gray-700 w-full max-w-4xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-blue-400" />
-                <h3 className="text-white font-semibold">AI Profile Assistant</h3>
+                <Sparkles className="w-5 h-5 text-blue-500" />
+                <h3 className="text-foreground font-semibold">AI Profile Assistant</h3>
               </div>
               <button
                 onClick={() => setShowAssistant(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

@@ -104,58 +104,58 @@ const ProfileWizard: React.FC = () => {
   const PersonalInfoStep: React.FC = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-white mb-2">Personal Information</h2>
-        <p className="text-gray-300">Let's start with your basic information</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Personal Information</h2>
+        <p className="text-muted-foreground">Let's start with your basic information</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Full Name *
           </label>
           <input
             type="text"
             value={profileData.full_name}
             onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="Enter your full name"
           />
         </div>
 
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Phone Number *
           </label>
           <input
             type="tel"
             value={profileData.phone}
             onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="+1 (555) 123-4567"
           />
         </div>
 
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Location *
           </label>
           <input
             type="text"
             value={profileData.location}
             onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="City, State/Province, Country"
           />
         </div>
 
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Timezone
           </label>
           <select
             value={profileData.timezone}
             onChange={(e) => setProfileData({ ...profileData, timezone: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             <option value="">Select timezone</option>
             <option value="America/New_York">Eastern Time (ET)</option>
@@ -174,27 +174,27 @@ const ProfileWizard: React.FC = () => {
   const ProfessionalInfoStep: React.FC = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-white mb-2">Professional Background</h2>
-        <p className="text-gray-300">Tell us about your career and experience</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Professional Background</h2>
+        <p className="text-muted-foreground">Tell us about your career and experience</p>
       </div>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Current Job Title *
           </label>
           <input
             type="text"
             value={profileData.current_title}
             onChange={(e) => setProfileData({ ...profileData, current_title: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="e.g., Senior Software Engineer"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
+            <label className="block text-foreground text-sm font-medium mb-2">
               Years of Experience *
             </label>
             <input
@@ -203,18 +203,18 @@ const ProfileWizard: React.FC = () => {
               max="50"
               value={profileData.years_experience}
               onChange={(e) => setProfileData({ ...profileData, years_experience: parseInt(e.target.value) || 0 })}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
+            <label className="block text-foreground text-sm font-medium mb-2">
               Experience Level
             </label>
             <select
               value={profileData.experience_level}
               onChange={(e) => setProfileData({ ...profileData, experience_level: e.target.value })}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="entry">Entry Level (0-2 years)</option>
               <option value="junior">Junior (2-4 years)</option>
@@ -228,7 +228,7 @@ const ProfileWizard: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
+            <label className="block text-foreground text-sm font-medium mb-2">
               Desired Salary (Min)
             </label>
             <input
@@ -240,13 +240,13 @@ const ProfileWizard: React.FC = () => {
                 ...profileData,
                 desired_salary_min: e.target.value ? parseInt(e.target.value) : null
               })}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="50000"
             />
           </div>
 
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
+            <label className="block text-foreground text-sm font-medium mb-2">
               Desired Salary (Max)
             </label>
             <input
@@ -258,7 +258,7 @@ const ProfileWizard: React.FC = () => {
                 ...profileData,
                 desired_salary_max: e.target.value ? parseInt(e.target.value) : null
               })}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="80000"
             />
           </div>
@@ -290,19 +290,19 @@ const ProfileWizard: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Skills & Expertise</h2>
-          <p className="text-gray-300">Add your technical and professional skills</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Skills & Expertise</h2>
+          <p className="text-muted-foreground">Add your technical and professional skills</p>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Add New Skill</h3>
+        <div className="bg-card rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Add New Skill</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
               <input
                 type="text"
                 value={newSkill.name}
                 onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-blue-500"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-foreground placeholder-gray-400 focus:border-blue-500"
                 placeholder="Skill name (e.g., Python, Project Management)"
               />
             </div>
@@ -310,7 +310,7 @@ const ProfileWizard: React.FC = () => {
               <select
                 value={newSkill.proficiency}
                 onChange={(e) => setNewSkill({ ...newSkill, proficiency: e.target.value })}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-foreground focus:border-blue-500"
               >
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
@@ -325,12 +325,12 @@ const ProfileWizard: React.FC = () => {
                 max="30"
                 value={newSkill.years}
                 onChange={(e) => setNewSkill({ ...newSkill, years: parseInt(e.target.value) || 1 })}
-                className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500"
+                className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-foreground focus:border-blue-500"
                 placeholder="Years"
               />
               <button
                 onClick={addSkill}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-foreground px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -339,25 +339,25 @@ const ProfileWizard: React.FC = () => {
         </div>
 
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-white">Your Skills</h3>
+          <h3 className="text-lg font-semibold text-foreground">Your Skills</h3>
           {profileData.skills.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No skills added yet. Add your first skill above!</p>
+            <p className="text-muted-foreground text-center py-8">No skills added yet. Add your first skill above!</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {profileData.skills.map((skill, index) => (
                 <div
                   key={index}
-                  className="bg-gray-800 rounded-lg p-4 flex justify-between items-center"
+                  className="bg-card rounded-lg p-4 flex justify-between items-center"
                 >
                   <div>
-                    <h4 className="text-white font-medium">{skill.name}</h4>
-                    <p className="text-gray-400 text-sm">
+                    <h4 className="text-foreground font-medium">{skill.name}</h4>
+                    <p className="text-muted-foreground text-sm">
                       {skill.proficiency} • {skill.years} year{skill.years !== 1 ? 's' : ''}
                     </p>
                   </div>
                   <button
                     onClick={() => removeSkill(index)}
-                    className="text-red-400 hover:text-red-300 transition-colors"
+                    className="text-red-500 hover:text-red-300 transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -373,19 +373,19 @@ const ProfileWizard: React.FC = () => {
   const PreferencesStep: React.FC = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-white mb-2">Job Preferences</h2>
-        <p className="text-gray-300">Help us find the perfect opportunities for you</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Job Preferences</h2>
+        <p className="text-muted-foreground">Help us find the perfect opportunities for you</p>
       </div>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Remote Work Preference
           </label>
           <select
             value={profileData.remote_preference}
             onChange={(e) => setProfileData({ ...profileData, remote_preference: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             <option value="no_preference">No Preference</option>
             <option value="remote">Remote Only</option>
@@ -400,49 +400,49 @@ const ProfileWizard: React.FC = () => {
             id="willing_to_relocate"
             checked={profileData.willing_to_relocate}
             onChange={(e) => setProfileData({ ...profileData, willing_to_relocate: e.target.checked })}
-            className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+            className="w-4 h-4 text-blue-600 bg-card border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
           />
-          <label htmlFor="willing_to_relocate" className="ml-2 text-white">
+          <label htmlFor="willing_to_relocate" className="ml-2 text-foreground">
             I'm willing to relocate for the right opportunity
           </label>
         </div>
 
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-foreground text-sm font-medium mb-2">
             Portfolio URL
           </label>
           <input
             type="url"
             value={profileData.portfolio_url}
             onChange={(e) => setProfileData({ ...profileData, portfolio_url: e.target.value })}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="https://your-portfolio.com"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
+            <label className="block text-foreground text-sm font-medium mb-2">
               LinkedIn Profile
             </label>
             <input
               type="url"
               value={profileData.linkedin_url}
               onChange={(e) => setProfileData({ ...profileData, linkedin_url: e.target.value })}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="https://linkedin.com/in/yourprofile"
             />
           </div>
 
           <div>
-            <label className="block text-white text-sm font-medium mb-2">
+            <label className="block text-foreground text-sm font-medium mb-2">
               GitHub Username
             </label>
             <input
               type="text"
               value={profileData.github_username}
               onChange={(e) => setProfileData({ ...profileData, github_username: e.target.value })}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-card border border-gray-600 rounded-lg px-4 py-3 text-foreground placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="yourusername"
             />
           </div>
@@ -480,16 +480,16 @@ const ProfileWizard: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Documents & Resume</h2>
-          <p className="text-gray-300">Upload your resume to enable AI-powered applications</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Documents & Resume</h2>
+          <p className="text-muted-foreground">Upload your resume to enable AI-powered applications</p>
         </div>
 
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Resume Upload</h3>
+        <div className="bg-card rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Resume Upload</h3>
           <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-white mb-2">Upload your resume</p>
-            <p className="text-gray-400 text-sm mb-4">PDF, DOC, or DOCX files only</p>
+            <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-foreground mb-2">Upload your resume</p>
+            <p className="text-muted-foreground text-sm mb-4">PDF, DOC, or DOCX files only</p>
 
             <input
               type="file"
@@ -500,17 +500,17 @@ const ProfileWizard: React.FC = () => {
             />
             <label
               htmlFor="resume-upload"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer transition-colors inline-block"
+              className="bg-blue-600 hover:bg-blue-700 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-colors inline-block"
             >
               Choose File
             </label>
 
             {resumeFile && (
               <div className="mt-4">
-                <p className="text-green-400">Selected: {resumeFile.name}</p>
+                <p className="text-green-500">Selected: {resumeFile.name}</p>
                 <button
                   onClick={handleResumeUpload}
-                  className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="mt-2 bg-green-600 hover:bg-green-700 text-foreground px-4 py-2 rounded-lg transition-colors"
                 >
                   Upload Resume
                 </button>
@@ -525,13 +525,13 @@ const ProfileWizard: React.FC = () => {
   const IntegrationsStep: React.FC = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-white mb-2">Platform Integrations</h2>
-        <p className="text-gray-300">Connect your professional accounts for better job matching</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Platform Integrations</h2>
+        <p className="text-muted-foreground">Connect your professional accounts for better job matching</p>
       </div>
 
       <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-6 text-center">
-        <CheckCircle className="w-16 h-16 text-white mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-white mb-2">Profile Complete!</h3>
+        <CheckCircle className="w-16 h-16 text-foreground mx-auto mb-4" />
+        <h3 className="text-2xl font-bold text-foreground mb-2">Profile Complete!</h3>
         <p className="text-green-100 mb-4">
           Your profile is {completionPercentage}% complete and ready for AI-powered job matching.
         </p>
@@ -614,8 +614,8 @@ const ProfileWizard: React.FC = () => {
         {/* Progress Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-white">Profile Setup</h1>
-            <div className="text-white text-sm">
+            <h1 className="text-3xl font-bold text-foreground">Profile Setup</h1>
+            <div className="text-foreground text-sm">
               Step {currentStep + 1} of {steps.length}
             </div>
           </div>
@@ -632,10 +632,10 @@ const ProfileWizard: React.FC = () => {
                   <div
                     className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
                       isCompleted
-                        ? 'bg-green-500 text-white'
+                        ? 'bg-green-500 text-foreground'
                         : isCurrent
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-700 text-gray-400'
+                        ? 'bg-blue-500 text-foreground'
+                        : 'bg-gray-700 text-muted-foreground'
                     }`}
                   >
                     {isCompleted ? (
@@ -646,7 +646,7 @@ const ProfileWizard: React.FC = () => {
                   </div>
                   <span
                     className={`ml-2 text-sm font-medium ${
-                      isCompleted || isCurrent ? 'text-white' : 'text-gray-400'
+                      isCompleted || isCurrent ? 'text-foreground' : 'text-muted-foreground'
                     }`}
                   >
                     {step.title}
@@ -669,7 +669,7 @@ const ProfileWizard: React.FC = () => {
         </div>
 
         {/* Step Content */}
-        <div className="bg-gray-900 rounded-lg p-8 mb-8">
+        <div className="bg-background rounded-lg p-8 mb-8">
           <CurrentStepComponent />
         </div>
 
@@ -680,8 +680,8 @@ const ProfileWizard: React.FC = () => {
             disabled={currentStep === 0}
             className={`flex items-center px-6 py-3 rounded-lg transition-colors ${
               currentStep === 0
-                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-700 text-white hover:bg-gray-600'
+                ? 'bg-gray-700 text-muted-foreground cursor-not-allowed'
+                : 'bg-gray-700 text-foreground hover:bg-gray-600'
             }`}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -693,8 +693,8 @@ const ProfileWizard: React.FC = () => {
             disabled={currentStep === steps.length - 1 || isLoading}
             className={`flex items-center px-6 py-3 rounded-lg transition-colors ${
               currentStep === steps.length - 1
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-green-600 text-foreground hover:bg-green-700'
+                : 'bg-blue-600 text-foreground hover:bg-blue-700'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isLoading ? (

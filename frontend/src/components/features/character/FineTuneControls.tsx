@@ -247,8 +247,8 @@ export function FineTuneControls() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Fine-Tune Controls</h2>
-          <p className="text-gray-400 mt-1">Precise control over character variations and generation parameters</p>
+          <h2 className="text-2xl font-bold text-foreground">Fine-Tune Controls</h2>
+          <p className="text-muted-foreground mt-1">Precise control over character variations and generation parameters</p>
         </div>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={generatePreview} disabled={!selectedCharacter}>
@@ -265,7 +265,7 @@ export function FineTuneControls() {
       {/* Character Selection */}
       <Card>
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Select Character</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Select Character</h3>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {characters.map((character) => (
@@ -276,7 +276,7 @@ export function FineTuneControls() {
                   p-4 rounded-lg border text-left transition-all
                   ${selectedCharacter?.id === character.id
                     ? 'border-primary-500 bg-primary-500/10'
-                    : 'border-gray-700 hover:border-primary-500/50 bg-gray-800/50 hover:bg-gray-700/50'
+                    : 'border-gray-700 hover:border-primary-500/50 bg-card/50 hover:bg-gray-700/50'
                   }
                 `}
               >
@@ -294,18 +294,18 @@ export function FineTuneControls() {
                     />
                   ) : null}
                   <div 
-                    className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-sm font-bold text-white"
+                    className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-sm font-bold text-foreground"
                     style={{ display: character.thumbnail_url && character.thumbnail_url.trim() !== '' ? 'none' : 'flex' }}
                   >
                     {character.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-white truncate">{character.name}</div>
-                    <div className="text-sm text-gray-400 truncate">{character.category}</div>
+                    <div className="font-medium text-foreground truncate">{character.name}</div>
+                    <div className="text-sm text-muted-foreground truncate">{character.category}</div>
                   </div>
                 </div>
                 
-                <div className="text-xs text-gray-500 space-y-1">
+                <div className="text-xs text-muted-foreground space-y-1">
                   <div>Seed: {character.seed}</div>
                   <div>CFG: {character.cfg_scale}</div>
                   <div>Used: {character.usage_count} times</div>
@@ -322,12 +322,12 @@ export function FineTuneControls() {
           {/* Scene & Basic Settings */}
           <Card>
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Scene & Variation</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Scene & Variation</h3>
               
               <div className="space-y-4">
                 {/* Scene Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Scene Description
                   </label>
                   <input
@@ -335,14 +335,14 @@ export function FineTuneControls() {
                     value={settings.scene}
                     onChange={(e) => updateSetting('scene', e.target.value)}
                     placeholder="Enter scene description..."
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                   <div className="flex flex-wrap gap-2 mt-2">
                     {presetScenes.slice(0, 5).map((scene) => (
                       <button
                         key={scene}
                         onClick={() => updateSetting('scene', scene)}
-                        className="px-2 py-1 bg-gray-700 text-xs text-gray-300 rounded hover:bg-gray-600 transition-colors"
+                        className="px-2 py-1 bg-gray-700 text-xs text-muted-foreground rounded hover:bg-gray-600 transition-colors"
                       >
                         {scene}
                       </button>
@@ -353,7 +353,7 @@ export function FineTuneControls() {
                 {/* Variation Strength */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-300">Variation Strength</label>
+                    <label className="text-sm font-medium text-muted-foreground">Variation Strength</label>
                     <span className="text-sm text-primary-400">{settings.variation_strength}x</span>
                   </div>
                   <input
@@ -365,7 +365,7 @@ export function FineTuneControls() {
                     onChange={(e) => updateSetting('variation_strength', parseFloat(e.target.value))}
                     className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>Subtle</span>
                     <span>Normal</span>
                     <span>Strong</span>
@@ -374,13 +374,13 @@ export function FineTuneControls() {
 
                 {/* Style Mix */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Style Mix
                   </label>
                   <select
                     value={settings.style_mix}
                     onChange={(e) => updateSetting('style_mix', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     {styleMixes.map((style) => (
                       <option key={style.value} value={style.value}>
@@ -396,13 +396,13 @@ export function FineTuneControls() {
           {/* Advanced Parameters */}
           <Card>
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Advanced Parameters</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Advanced Parameters</h3>
               
               <div className="space-y-4">
                 {/* Seed Offset */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-300">Seed Offset</label>
+                    <label className="text-sm font-medium text-muted-foreground">Seed Offset</label>
                     <span className="text-sm text-primary-400">
                       {selectedCharacter.seed} {settings.seed_offset > 0 ? '+' : ''}{settings.seed_offset !== 0 ? settings.seed_offset : ''}
                     </span>
@@ -416,7 +416,7 @@ export function FineTuneControls() {
                     onChange={(e) => updateSetting('seed_offset', parseInt(e.target.value))}
                     className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>-1000</span>
                     <span>0</span>
                     <span>+1000</span>
@@ -426,7 +426,7 @@ export function FineTuneControls() {
                 {/* CFG Scale Adjustment */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-300">CFG Scale Adjustment</label>
+                    <label className="text-sm font-medium text-muted-foreground">CFG Scale Adjustment</label>
                     <span className="text-sm text-primary-400">
                       {selectedCharacter.cfg_scale} {settings.cfg_scale_adjustment > 0 ? '+' : ''}{settings.cfg_scale_adjustment !== 0 ? settings.cfg_scale_adjustment : ''}
                     </span>
@@ -440,7 +440,7 @@ export function FineTuneControls() {
                     onChange={(e) => updateSetting('cfg_scale_adjustment', parseFloat(e.target.value))}
                     className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>-5</span>
                     <span>0</span>
                     <span>+5</span>
@@ -469,8 +469,8 @@ export function FineTuneControls() {
       {selectedCharacter && (
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Feature Overrides</h3>
-            <p className="text-gray-400 text-sm mb-4">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Feature Overrides</h3>
+            <p className="text-muted-foreground text-sm mb-4">
               Override specific character features. Leave blank to keep original.
             </p>
             
@@ -485,16 +485,16 @@ export function FineTuneControls() {
                 expression: selectedCharacter.features.expression || 'Neutral'
               }).map(([feature, originalValue]) => (
                 <div key={feature}>
-                  <label className="block text-sm font-medium text-gray-300 mb-1 capitalize">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1 capitalize">
                     {feature}
                   </label>
-                  <div className="text-xs text-gray-500 mb-2">Original: {originalValue}</div>
+                  <div className="text-xs text-muted-foreground mb-2">Original: {originalValue}</div>
                   <input
                     type="text"
                     value={settings.feature_overrides[feature as keyof typeof settings.feature_overrides] || ''}
                     onChange={(e) => updateFeatureOverride(feature, e.target.value)}
                     placeholder={`Override ${feature}...`}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                   />
                 </div>
               ))}
@@ -509,8 +509,8 @@ export function FineTuneControls() {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-white">Generate Fine-Tuned Variation</h3>
-                <p className="text-gray-400 text-sm">Create a precisely controlled variation of your character</p>
+                <h3 className="text-lg font-semibold text-foreground">Generate Fine-Tuned Variation</h3>
+                <p className="text-muted-foreground text-sm">Create a precisely controlled variation of your character</p>
               </div>
               <Button
                 onClick={generateFineTunedVariation}
@@ -530,28 +530,28 @@ export function FineTuneControls() {
       {generationHistory.length > 0 && (
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Recent Fine-Tuned Generations</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Recent Fine-Tuned Generations</h3>
             
             <div className="space-y-3">
               {generationHistory.map((item) => (
                 <div key={item.id} className="border border-gray-700 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-foreground">
                         <Cog6ToothIcon className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="font-medium text-white">{item.character_name}</div>
-                        <div className="text-sm text-gray-400">{item.scene_description || 'No scene specified'}</div>
+                        <div className="font-medium text-foreground">{item.character_name}</div>
+                        <div className="text-sm text-muted-foreground">{item.scene_description || 'No scene specified'}</div>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
                       <ClockIcon className="h-3 w-3" />
                       {new Date(item.created_at).toLocaleString()}
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-400 mb-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground mb-3">
                     <div>Variation: {item.variation_strength}x</div>
                     <div>Seed Offset: {item.modifications?.seed_offset || 0}</div>
                     <div>CFG Adj: {item.modifications?.cfg_adjustment || 0}</div>
@@ -582,20 +582,20 @@ export function FineTuneControls() {
       {/* Preview Modal */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4">
+          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Fine-Tune Preview</h3>
+              <h3 className="text-lg font-semibold text-foreground">Fine-Tune Preview</h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <span className="sr-only">Close</span>
                 ×
               </button>
             </div>
             
-            <div className="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap">{previewData}</pre>
+            <div className="bg-card rounded-lg p-4 max-h-96 overflow-y-auto">
+              <pre className="text-sm text-muted-foreground whitespace-pre-wrap">{previewData}</pre>
             </div>
             
             <div className="flex justify-end gap-3 mt-4">

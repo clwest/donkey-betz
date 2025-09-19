@@ -351,28 +351,28 @@ const PersonalKnowledge: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen p-6" style={{ background: 'var(--gaming-bg-primary)', color: 'var(--gaming-text-primary)' }}>
+    <div className="min-h-screen p-6" style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted))' }}>
       <div className="max-w-7xl mx-auto">
         {/* Gaming Neural Header */}
         <div className="mb-8 relative">
-          <div className="gaming-matrix-header p-8 text-center relative overflow-hidden">
+          <div className="bg-card p-8 text-center relative overflow-hidden">
             <div className="relative z-10">
-              <h1 className="text-5xl font-bold mb-3 gaming-text-gradient font-mono uppercase tracking-widest">
+              <h1 className="text-5xl font-bold mb-3 bg-card font-mono uppercase tracking-widest">
                 NEURAL KNOWLEDGE BASE
               </h1>
               <div className="flex items-center justify-center gap-4 mb-4">
                 <div className="h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent flex-1"></div>
-                <span className="text-sm font-mono tracking-[0.3em] px-4" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                <span className="text-sm font-mono tracking-[0.3em] px-4" style={{ color: 'hsl(var(--muted))' }}>
                   &gt;&gt;&gt; ACCESSING MEMORY CORES
                 </span>
                 <div className="h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent flex-1"></div>
               </div>
-              <p className="text-lg font-mono" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <p className="text-lg font-mono" style={{ color: 'hsl(var(--muted))' }}>
                 KNOWLEDGE MATRIX ONLINE • NEURAL PATHWAYS SYNCHRONIZED
               </p>
             </div>
             {/* Animated background grid */}
-            <div className="absolute inset-0 gaming-matrix-grid opacity-30"></div>
+            <div className="absolute inset-0 bg-card opacity-30"></div>
           </div>
         </div>
 
@@ -380,65 +380,65 @@ const PersonalKnowledge: React.FC = () => {
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {/* Total Entries - Cyan Theme */}
-            <div className="gaming-neural-card p-6 group">
-              <div className="gaming-border-glow"></div>
+            <div className="bg-card p-6 group">
+              <div className="bg-card"></div>
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'hsl(var(--muted))' }}>
                     NEURAL ENTRIES
                   </p>
-                  <p className="text-3xl font-bold font-mono gaming-text-neon">{stats.total_entries}</p>
+                  <p className="text-3xl font-bold font-mono bg-card">{stats.total_entries}</p>
                 </div>
-                <div className="p-3 rounded-lg" style={{ background: 'rgba(0, 255, 255, 0.1)', border: '1px solid var(--gaming-neon-cyan)' }}>
-                  <FileText className="w-8 h-8" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(0, 255, 255, 0.1)', border: '1px solid hsl(var(--muted))' }}>
+                  <FileText className="w-8 h-8" style={{ color: 'hsl(var(--muted))' }} />
                 </div>
               </div>
             </div>
             
             {/* Total Words - Matrix Green */}
-            <div className="gaming-neural-card p-6 group">
-              <div className="gaming-border-glow"></div>
+            <div className="bg-card p-6 group">
+              <div className="bg-card"></div>
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'hsl(var(--muted))' }}>
                     DATA VOLUME
                   </p>
-                  <p className="text-3xl font-bold font-mono gaming-text-matrix">{stats.total_words.toLocaleString()}</p>
+                  <p className="text-3xl font-bold font-mono bg-card">{stats.total_words.toLocaleString()}</p>
                 </div>
-                <div className="p-3 rounded-lg" style={{ background: 'rgba(57, 255, 20, 0.1)', border: '1px solid var(--gaming-neon-green)' }}>
-                  <Hash className="w-8 h-8" style={{ color: 'var(--gaming-neon-green)' }} />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(57, 255, 20, 0.1)', border: '1px solid hsl(var(--muted))' }}>
+                  <Hash className="w-8 h-8" style={{ color: 'hsl(var(--muted))' }} />
                 </div>
               </div>
             </div>
             
             {/* Categories - Purple Theme */}
-            <div className="gaming-neural-card p-6 group">
-              <div className="gaming-border-glow"></div>
+            <div className="bg-card p-6 group">
+              <div className="bg-card"></div>
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'hsl(var(--muted))' }}>
                     CATEGORIES
                   </p>
-                  <p className="text-3xl font-bold font-mono" style={{ color: 'var(--gaming-neon-purple)' }}>{stats.categories.length}</p>
+                  <p className="text-3xl font-bold font-mono" style={{ color: 'hsl(var(--muted))' }}>{stats.categories.length}</p>
                 </div>
-                <div className="p-3 rounded-lg" style={{ background: 'rgba(157, 78, 221, 0.1)', border: '1px solid var(--gaming-neon-purple)' }}>
-                  <Folder className="w-8 h-8" style={{ color: 'var(--gaming-neon-purple)' }} />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(157, 78, 221, 0.1)', border: '1px solid hsl(var(--muted))' }}>
+                  <Folder className="w-8 h-8" style={{ color: 'hsl(var(--muted))' }} />
                 </div>
               </div>
             </div>
             
             {/* Embeddings - Orange Theme */}
-            <div className="gaming-neural-card p-6 group">
-              <div className="gaming-border-glow"></div>
+            <div className="bg-card p-6 group">
+              <div className="bg-card"></div>
               <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'var(--gaming-text-muted)' }}>
+                  <p className="text-sm font-mono uppercase tracking-wider mb-2" style={{ color: 'hsl(var(--muted))' }}>
                     NEURAL LINKS
                   </p>
-                  <p className="text-3xl font-bold font-mono" style={{ color: 'var(--gaming-neon-orange)' }}>{stats.total_embeddings || 0}</p>
+                  <p className="text-3xl font-bold font-mono" style={{ color: 'hsl(var(--muted))' }}>{stats.total_embeddings || 0}</p>
                 </div>
-                <div className="p-3 rounded-lg" style={{ background: 'rgba(255, 107, 0, 0.1)', border: '1px solid var(--gaming-neon-orange)' }}>
-                  <Brain className="w-8 h-8" style={{ color: 'var(--gaming-neon-orange)' }} />
+                <div className="p-3 rounded-lg" style={{ background: 'rgba(255, 107, 0, 0.1)', border: '1px solid hsl(var(--muted))' }}>
+                  <Brain className="w-8 h-8" style={{ color: 'hsl(var(--muted))' }} />
                 </div>
               </div>
             </div>
@@ -450,11 +450,11 @@ const PersonalKnowledge: React.FC = () => {
           {/* Add Neural Data Button */}
           <button
             onClick={() => setShowUploadModal(true)}
-            className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-3 transition-all duration-300 hover:scale-105"
+            className="bg-card px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-3 transition-all duration-300 hover:scale-105"
             style={{
-              background: 'var(--gaming-gradient-primary)',
-              border: '1px solid var(--gaming-neon-cyan)',
-              boxShadow: 'var(--gaming-glow-primary)'
+              background: 'hsl(var(--muted))',
+              border: '1px solid hsl(var(--muted))',
+              boxShadow: 'hsl(var(--muted))'
             }}
           >
             <Plus className="w-5 h-5" />
@@ -466,18 +466,18 @@ const PersonalKnowledge: React.FC = () => {
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 via-purple-400/20 to-cyan-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'hsl(var(--muted))' }} />
                 <input
                   type="text"
                   placeholder=">>> SEARCH NEURAL DATABASE..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="gaming-neural-input w-full pl-12 pr-4 py-4 text-sm font-mono placeholder:font-mono"
+                  className="bg-card w-full pl-12 pr-4 py-4 text-sm font-mono placeholder:font-mono"
                   style={{
-                    background: 'var(--gaming-bg-elevated)',
-                    border: '1px solid var(--gaming-border)',
+                    background: 'hsl(var(--muted))',
+                    border: '1px solid hsl(var(--muted))',
                     borderRadius: '12px',
-                    color: 'var(--gaming-text-primary)'
+                    color: 'hsl(var(--muted))'
                   }}
                 />
               </div>
@@ -491,17 +491,17 @@ const PersonalKnowledge: React.FC = () => {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="gaming-neural-input relative px-4 py-4 font-mono text-sm min-w-[200px] cursor-pointer"
+                className="bg-card relative px-4 py-4 font-mono text-sm min-w-[200px] cursor-pointer"
                 style={{
-                  background: 'var(--gaming-bg-elevated)',
-                  border: '1px solid var(--gaming-border)',
+                  background: 'hsl(var(--muted))',
+                  border: '1px solid hsl(var(--muted))',
                   borderRadius: '12px',
-                  color: 'var(--gaming-text-primary)'
+                  color: 'hsl(var(--muted))'
                 }}
               >
-                <option value="" style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>ALL CATEGORIES</option>
+                <option value="" style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted))' }}>ALL CATEGORIES</option>
                 {stats.categories.map((cat, index) => (
-                  <option key={`${cat}-${index}`} value={cat} style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>
+                  <option key={`${cat}-${index}`} value={cat} style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted))' }}>
                     {(cat || 'UNCATEGORIZED').toUpperCase()}
                   </option>
                 ))}
@@ -513,27 +513,27 @@ const PersonalKnowledge: React.FC = () => {
         {/* Neural Knowledge Grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center h-64">
-            <div className="gaming-loading-matrix mb-4"></div>
-            <p className="font-mono text-sm" style={{ color: 'var(--gaming-neon-cyan)' }}>ACCESSING NEURAL NETWORK...</p>
+            <div className="bg-card mb-4"></div>
+            <p className="font-mono text-sm" style={{ color: 'hsl(var(--muted))' }}>ACCESSING NEURAL NETWORK...</p>
           </div>
         ) : knowledge.length === 0 ? (
-          <div className="text-center py-20 gaming-neural-card relative">
-            <div className="gaming-border-glow"></div>
+          <div className="text-center py-20 bg-card relative">
+            <div className="bg-card"></div>
             <div className="relative z-10">
-              <Brain className="w-20 h-20 mx-auto mb-6" style={{ color: 'var(--gaming-text-muted)' }} />
-              <h3 className="text-2xl font-bold font-mono mb-3 uppercase tracking-wider" style={{ color: 'var(--gaming-text-primary)' }}>
+              <Brain className="w-20 h-20 mx-auto mb-6" style={{ color: 'hsl(var(--muted))' }} />
+              <h3 className="text-2xl font-bold font-mono mb-3 uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
                 NO NEURAL DATA DETECTED
               </h3>
-              <p className="font-mono mb-6" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <p className="font-mono mb-6" style={{ color: 'hsl(var(--muted))' }}>
                 INITIALIZE KNOWLEDGE MATRIX TO BEGIN
               </p>
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                className="bg-card px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
                 style={{
-                  background: 'var(--gaming-gradient-primary)',
-                  border: '1px solid var(--gaming-neon-cyan)',
-                  boxShadow: 'var(--gaming-glow-primary)'
+                  background: 'hsl(var(--muted))',
+                  border: '1px solid hsl(var(--muted))',
+                  boxShadow: 'hsl(var(--muted))'
                 }}
               >
                 UPLOAD FIRST ENTRY
@@ -549,27 +549,27 @@ const PersonalKnowledge: React.FC = () => {
               return (
                 <div
                   key={entry.id}
-                  className="gaming-neural-card p-6 group relative overflow-hidden"
+                  className="bg-card p-6 group relative overflow-hidden"
                   style={{
-                    borderColor: isActive ? 'var(--gaming-neon-green)' : 'var(--gaming-border)'
+                    borderColor: isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))'
                   }}
                 >
-                  <div className="gaming-border-glow"></div>
+                  <div className="bg-card"></div>
                   
                   {/* Neural Header */}
                   <div className="flex items-start justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="p-2 rounded-lg" style={{ 
                         background: isActive ? 'rgba(57, 255, 20, 0.1)' : 'rgba(0, 255, 255, 0.1)', 
-                        border: `1px solid ${isActive ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-cyan)'}` 
+                        border: `1px solid ${isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))'}` 
                       }}>
                         <Icon className="w-5 h-5" style={{ 
-                          color: isActive ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-cyan)' 
+                          color: isActive ? 'hsl(var(--muted))' : 'hsl(var(--muted))' 
                         }} />
                       </div>
                       <h3 className="font-bold font-mono text-sm uppercase tracking-wide truncate flex-1" 
                           title={entry.title}
-                          style={{ color: 'var(--gaming-text-primary)' }}>
+                          style={{ color: 'hsl(var(--muted))' }}>
                         {entry.title}
                       </h3>
                     </div>
@@ -581,8 +581,8 @@ const PersonalKnowledge: React.FC = () => {
                         className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
                         style={{ 
                           background: 'rgba(0, 255, 255, 0.1)', 
-                          border: '1px solid var(--gaming-neon-cyan)',
-                          color: 'var(--gaming-neon-cyan)'
+                          border: '1px solid hsl(var(--muted))',
+                          color: 'hsl(var(--muted))'
                         }}
                         title="View Neural Data"
                       >
@@ -593,8 +593,8 @@ const PersonalKnowledge: React.FC = () => {
                         className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
                         style={{ 
                           background: 'rgba(157, 78, 221, 0.1)', 
-                          border: '1px solid var(--gaming-neon-purple)',
-                          color: 'var(--gaming-neon-purple)'
+                          border: '1px solid hsl(var(--muted))',
+                          color: 'hsl(var(--muted))'
                         }}
                         title="Modify Data"
                       >
@@ -605,8 +605,8 @@ const PersonalKnowledge: React.FC = () => {
                         className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
                         style={{ 
                           background: 'rgba(255, 20, 147, 0.1)', 
-                          border: '1px solid var(--gaming-neon-pink)',
-                          color: 'var(--gaming-neon-pink)'
+                          border: '1px solid hsl(var(--muted))',
+                          color: 'hsl(var(--muted))'
                         }}
                         title="Delete Entry"
                       >
@@ -617,7 +617,7 @@ const PersonalKnowledge: React.FC = () => {
                   
                   {/* Description */}
                   {entry.description && (
-                    <p className="text-sm font-mono mb-3" style={{ color: 'var(--gaming-text-secondary)' }}>
+                    <p className="text-sm font-mono mb-3" style={{ color: 'hsl(var(--muted))' }}>
                       {entry.description}
                     </p>
                   )}
@@ -625,14 +625,14 @@ const PersonalKnowledge: React.FC = () => {
                   {/* Content Preview */}
                   <div className="mb-4">
                     <p className={`text-sm font-mono leading-relaxed ${!expandedEntries.has(entry.id) ? 'line-clamp-3' : ''}`}
-                       style={{ color: 'var(--gaming-text-secondary)' }}>
+                       style={{ color: 'hsl(var(--muted))' }}>
                       {expandedEntries.has(entry.id) ? (entry.full_content || entry.content) : entry.content_preview}
                     </p>
                     {entry.word_count > 100 && (
                       <button
                         onClick={() => toggleExpanded(entry.id)}
                         className="mt-2 text-sm flex items-center gap-1 transition-all duration-200 hover:scale-105 font-mono"
-                        style={{ color: 'var(--gaming-neon-cyan)' }}
+                        style={{ color: 'hsl(var(--muted))' }}
                       >
                         {expandedEntries.has(entry.id) ? (
                           <>
@@ -660,8 +660,8 @@ const PersonalKnowledge: React.FC = () => {
                           className="px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider"
                           style={{
                             background: 'rgba(0, 255, 255, 0.1)',
-                            border: '1px solid var(--gaming-neon-cyan)',
-                            color: 'var(--gaming-neon-cyan)'
+                            border: '1px solid hsl(var(--muted))',
+                            color: 'hsl(var(--muted))'
                           }}
                           title={tag}
                         >
@@ -669,7 +669,7 @@ const PersonalKnowledge: React.FC = () => {
                         </span>
                       ))}
                     {entry.tags.filter(tag => !['documentation', 'ai-content-studio', 'reference'].includes(tag)).length > 3 && (
-                      <span className="px-3 py-1 text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>
+                      <span className="px-3 py-1 text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>
                         +{entry.tags.filter(tag => !['documentation', 'ai-content-studio', 'reference'].includes(tag)).length - 3} MORE
                       </span>
                     )}
@@ -677,22 +677,22 @@ const PersonalKnowledge: React.FC = () => {
                   
                   {/* Neural Status */}
                   <div className="flex items-center justify-between text-xs font-mono">
-                    <span style={{ color: 'var(--gaming-text-muted)' }}>
+                    <span style={{ color: 'hsl(var(--muted))' }}>
                       {entry.word_count} WORDS
                     </span>
                     <div className="flex items-center gap-3">
                       {entry.use_in_generation ? (
-                        <div className="gaming-status gaming-status-running px-2 py-1 rounded-full">
-                          <div className="gaming-pulse-dot"></div>
+                        <div className="bg-card bg-card px-2 py-1 rounded-full">
+                          <div className="bg-card"></div>
                           ACTIVE
                         </div>
                       ) : (
-                        <div className="gaming-status px-2 py-1 rounded-full">
+                        <div className="bg-card px-2 py-1 rounded-full">
                           INACTIVE
                         </div>
                       )}
                       {entry.times_used > 0 && (
-                        <span style={{ color: 'var(--gaming-neon-green)' }}>
+                        <span style={{ color: 'hsl(var(--muted))' }}>
                           USED {entry.times_used}X
                         </span>
                       )}
@@ -713,9 +713,9 @@ const PersonalKnowledge: React.FC = () => {
               disabled={currentPage === 1}
               className="px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{
-                background: currentPage === 1 ? 'var(--gaming-bg-elevated)' : 'var(--gaming-bg-elevated)',
-                border: currentPage === 1 ? '1px solid var(--gaming-border)' : '1px solid var(--gaming-neon-cyan)',
-                color: currentPage === 1 ? 'var(--gaming-text-muted)' : 'var(--gaming-neon-cyan)'
+                background: currentPage === 1 ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                border: currentPage === 1 ? '1px solid hsl(var(--muted))' : '1px solid hsl(var(--muted))',
+                color: currentPage === 1 ? 'hsl(var(--muted))' : 'hsl(var(--muted))'
               }}
             >
               &lt;&lt; PREV
@@ -742,20 +742,20 @@ const PersonalKnowledge: React.FC = () => {
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-12 h-12 rounded-xl font-mono font-bold text-sm transition-all duration-300 hover:scale-110 ${
-                      isActive ? 'gaming-btn-active' : ''
+                      isActive ? 'bg-card' : ''
                     }`}
                     style={{
                       background: isActive 
-                        ? 'var(--gaming-gradient-primary)' 
-                        : 'var(--gaming-bg-elevated)',
+                        ? 'hsl(var(--muted))' 
+                        : 'hsl(var(--muted))',
                       border: isActive 
-                        ? '1px solid var(--gaming-neon-cyan)' 
-                        : '1px solid var(--gaming-border)',
+                        ? '1px solid hsl(var(--muted))' 
+                        : '1px solid hsl(var(--muted))',
                       color: isActive 
-                        ? 'var(--gaming-text-primary)' 
-                        : 'var(--gaming-text-secondary)',
+                        ? 'hsl(var(--muted))' 
+                        : 'hsl(var(--muted))',
                       boxShadow: isActive 
-                        ? 'var(--gaming-glow-primary)' 
+                        ? 'hsl(var(--muted))' 
                         : 'none'
                     }}
                   >
@@ -767,14 +767,14 @@ const PersonalKnowledge: React.FC = () => {
               {/* Ellipsis and Last Page */}
               {totalPages > 5 && currentPage < totalPages - 2 && (
                 <>
-                  <span className="font-mono text-lg" style={{ color: 'var(--gaming-text-muted)' }}>...</span>
+                  <span className="font-mono text-lg" style={{ color: 'hsl(var(--muted))' }}>...</span>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     className="w-12 h-12 rounded-xl font-mono font-bold text-sm transition-all duration-300 hover:scale-110"
                     style={{
-                      background: 'var(--gaming-bg-elevated)',
-                      border: '1px solid var(--gaming-border)',
-                      color: 'var(--gaming-text-secondary)'
+                      background: 'hsl(var(--muted))',
+                      border: '1px solid hsl(var(--muted))',
+                      color: 'hsl(var(--muted))'
                     }}
                   >
                     {totalPages}
@@ -789,9 +789,9 @@ const PersonalKnowledge: React.FC = () => {
               disabled={currentPage === totalPages}
               className="px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{
-                background: currentPage === totalPages ? 'var(--gaming-bg-elevated)' : 'var(--gaming-bg-elevated)',
-                border: currentPage === totalPages ? '1px solid var(--gaming-border)' : '1px solid var(--gaming-neon-cyan)',
-                color: currentPage === totalPages ? 'var(--gaming-text-muted)' : 'var(--gaming-neon-cyan)'
+                background: currentPage === totalPages ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                border: currentPage === totalPages ? '1px solid hsl(var(--muted))' : '1px solid hsl(var(--muted))',
+                color: currentPage === totalPages ? 'hsl(var(--muted))' : 'hsl(var(--muted))'
               }}
             >
               NEXT &gt;&gt;
@@ -802,7 +802,7 @@ const PersonalKnowledge: React.FC = () => {
         {/* Neural Data Statistics */}
         {!loading && knowledge.length > 0 && (
           <div className="text-center mt-6">
-            <p className="font-mono text-sm uppercase tracking-wider" style={{ color: 'var(--gaming-text-muted)' }}>
+            <p className="font-mono text-sm uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
               NEURAL DISPLAY: {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} OF {totalItems} ENTRIES
             </p>
           </div>
@@ -811,17 +811,17 @@ const PersonalKnowledge: React.FC = () => {
         {/* Neural Upload Interface */}
         {showUploadModal && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4" 
-               style={{ background: 'var(--gaming-bg-overlay)', backdropFilter: 'blur(20px)' }}>
-            <div className="gaming-neural-card max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
-              <div className="gaming-border-glow"></div>
+               style={{ background: 'hsl(var(--muted))', backdropFilter: 'blur(20px)' }}>
+            <div className="bg-card max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+              <div className="bg-card"></div>
               
               {/* Neural Header */}
               <div className="flex items-center justify-between mb-8 relative z-10 p-6 pb-0">
                 <div>
-                  <h2 className="text-3xl font-bold font-mono uppercase tracking-wider gaming-text-gradient mb-2">
+                  <h2 className="text-3xl font-bold font-mono uppercase tracking-wider bg-card mb-2">
                     NEURAL DATA UPLOAD
                   </h2>
-                  <p className="font-mono text-sm" style={{ color: 'var(--gaming-text-secondary)' }}>
+                  <p className="font-mono text-sm" style={{ color: 'hsl(var(--muted))' }}>
                     &gt;&gt;&gt; INITIALIZING KNOWLEDGE MATRIX PROTOCOL
                   </p>
                 </div>
@@ -833,8 +833,8 @@ const PersonalKnowledge: React.FC = () => {
                   className="p-3 rounded-lg transition-all duration-200 hover:scale-110"
                   style={{ 
                     background: 'rgba(255, 20, 147, 0.1)', 
-                    border: '1px solid var(--gaming-neon-pink)',
-                    color: 'var(--gaming-neon-pink)'
+                    border: '1px solid hsl(var(--muted))',
+                    color: 'hsl(var(--muted))'
                   }}
                 >
                   <X className="w-6 h-6" />
@@ -849,21 +849,21 @@ const PersonalKnowledge: React.FC = () => {
                     onClick={() => setUploadType('text')}
                     className={`flex-1 py-4 px-6 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 ${
                       uploadType === 'text'
-                        ? 'gaming-btn-active'
+                        ? 'bg-card'
                         : ''
                     }`}
                     style={{
                       background: uploadType === 'text' 
-                        ? 'var(--gaming-gradient-primary)' 
-                        : 'var(--gaming-bg-elevated)',
+                        ? 'hsl(var(--muted))' 
+                        : 'hsl(var(--muted))',
                       border: uploadType === 'text' 
-                        ? '1px solid var(--gaming-neon-cyan)' 
-                        : '1px solid var(--gaming-border)',
+                        ? '1px solid hsl(var(--muted))' 
+                        : '1px solid hsl(var(--muted))',
                       color: uploadType === 'text' 
-                        ? 'var(--gaming-text-primary)' 
-                        : 'var(--gaming-text-muted)',
+                        ? 'hsl(var(--muted))' 
+                        : 'hsl(var(--muted))',
                       boxShadow: uploadType === 'text' 
-                        ? 'var(--gaming-glow-primary)' 
+                        ? 'hsl(var(--muted))' 
                         : 'none'
                     }}
                   >
@@ -874,21 +874,21 @@ const PersonalKnowledge: React.FC = () => {
                     onClick={() => setUploadType('file')}
                     className={`flex-1 py-4 px-6 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-3 ${
                       uploadType === 'file'
-                        ? 'gaming-btn-active'
+                        ? 'bg-card'
                         : ''
                     }`}
                     style={{
                       background: uploadType === 'file' 
-                        ? 'var(--gaming-gradient-primary)' 
-                        : 'var(--gaming-bg-elevated)',
+                        ? 'hsl(var(--muted))' 
+                        : 'hsl(var(--muted))',
                       border: uploadType === 'file' 
-                        ? '1px solid var(--gaming-neon-cyan)' 
-                        : '1px solid var(--gaming-border)',
+                        ? '1px solid hsl(var(--muted))' 
+                        : '1px solid hsl(var(--muted))',
                       color: uploadType === 'file' 
-                        ? 'var(--gaming-text-primary)' 
-                        : 'var(--gaming-text-muted)',
+                        ? 'hsl(var(--muted))' 
+                        : 'hsl(var(--muted))',
                       boxShadow: uploadType === 'file' 
-                        ? 'var(--gaming-glow-primary)' 
+                        ? 'hsl(var(--muted))' 
                         : 'none'
                     }}
                   >
@@ -902,14 +902,14 @@ const PersonalKnowledge: React.FC = () => {
                   {/* Neural Title */}
                   <div>
                     <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                           style={{ color: 'var(--gaming-text-primary)' }}>
+                           style={{ color: 'hsl(var(--muted))' }}>
                       NEURAL IDENTIFIER *
                     </label>
                     <input
                       type="text"
                       value={newKnowledge.title}
                       onChange={(e) => setNewKnowledge({...newKnowledge, title: e.target.value})}
-                      className="gaming-neural-input w-full px-4 py-3 font-mono"
+                      className="bg-card w-full px-4 py-3 font-mono"
                       placeholder=">>> ENTER DATA IDENTIFIER..."
                     />
                   </div>
@@ -917,14 +917,14 @@ const PersonalKnowledge: React.FC = () => {
                   {/* Neural Description */}
                   <div>
                     <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                           style={{ color: 'var(--gaming-text-primary)' }}>
+                           style={{ color: 'hsl(var(--muted))' }}>
                       DATA DESCRIPTION
                     </label>
                     <input
                       type="text"
                       value={newKnowledge.description}
                       onChange={(e) => setNewKnowledge({...newKnowledge, description: e.target.value})}
-                      className="gaming-neural-input w-full px-4 py-3 font-mono"
+                      className="bg-card w-full px-4 py-3 font-mono"
                       placeholder=">>> BRIEF NEURAL SUMMARY..."
                     />
                   </div>
@@ -933,17 +933,17 @@ const PersonalKnowledge: React.FC = () => {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                             style={{ color: 'var(--gaming-text-primary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                         DATA TYPE
                       </label>
                       <select
                         value={newKnowledge.content_type}
                         onChange={(e) => setNewKnowledge({...newKnowledge, content_type: e.target.value})}
-                        className="gaming-neural-input w-full px-4 py-3 font-mono cursor-pointer"
+                        className="bg-card w-full px-4 py-3 font-mono cursor-pointer"
                       >
                         {contentTypes.map(type => (
                           <option key={type.value} value={type.value} 
-                                  style={{ background: 'var(--gaming-bg-elevated)', color: 'var(--gaming-text-primary)' }}>
+                                  style={{ background: 'hsl(var(--muted))', color: 'hsl(var(--muted))' }}>
                             {type.label.toUpperCase()}
                           </option>
                         ))}
@@ -952,14 +952,14 @@ const PersonalKnowledge: React.FC = () => {
                     
                     <div>
                       <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                             style={{ color: 'var(--gaming-text-primary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                         NEURAL CATEGORY
                       </label>
                       <input
                         type="text"
                         value={newKnowledge.category}
                         onChange={(e) => setNewKnowledge({...newKnowledge, category: e.target.value})}
-                        className="gaming-neural-input w-full px-4 py-3 font-mono"
+                        className="bg-card w-full px-4 py-3 font-mono"
                         placeholder=">>> CLASSIFICATION..."
                       />
                     </div>
@@ -968,14 +968,14 @@ const PersonalKnowledge: React.FC = () => {
                   {/* Neural Tags */}
                   <div>
                     <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                           style={{ color: 'var(--gaming-text-primary)' }}>
+                           style={{ color: 'hsl(var(--muted))' }}>
                       NEURAL TAGS
                     </label>
                     <input
                       type="text"
                       value={newKnowledge.tags}
                       onChange={(e) => setNewKnowledge({...newKnowledge, tags: e.target.value})}
-                      className="gaming-neural-input w-full px-4 py-3 font-mono"
+                      className="bg-card w-full px-4 py-3 font-mono"
                       placeholder=">>> tag1, tag2, tag3"
                     />
                   </div>
@@ -984,39 +984,39 @@ const PersonalKnowledge: React.FC = () => {
                   {uploadType === 'text' ? (
                     <div>
                       <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                             style={{ color: 'var(--gaming-text-primary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                         NEURAL CONTENT *
                       </label>
                       <textarea
                         value={newKnowledge.content}
                         onChange={(e) => setNewKnowledge({...newKnowledge, content: e.target.value})}
-                        className="gaming-neural-input w-full px-4 py-4 font-mono min-h-[200px] resize-none"
+                        className="bg-card w-full px-4 py-4 font-mono min-h-[200px] resize-none"
                         placeholder=">>> ENTER NEURAL DATA CONTENT..."
                       />
                     </div>
                   ) : (
                     <div>
                       <label className="block text-sm font-mono font-bold uppercase tracking-wider mb-3" 
-                             style={{ color: 'var(--gaming-text-primary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                         DATA FILE UPLOAD
                       </label>
-                      <div className="gaming-neural-card p-8 text-center group cursor-pointer" 
+                      <div className="bg-card p-8 text-center group cursor-pointer" 
                            onClick={() => fileInputRef.current?.click()}
-                           style={{ border: '2px dashed var(--gaming-border)' }}>
-                        <div className="gaming-border-glow"></div>
+                           style={{ border: '2px dashed hsl(var(--muted))' }}>
+                        <div className="bg-card"></div>
                         <div className="relative z-10">
                           <div className="p-4 rounded-xl mx-auto mb-4 w-fit" 
-                               style={{ background: 'rgba(0, 255, 255, 0.1)', border: '1px solid var(--gaming-neon-cyan)' }}>
-                            <Upload className="w-12 h-12" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                               style={{ background: 'rgba(0, 255, 255, 0.1)', border: '1px solid hsl(var(--muted))' }}>
+                            <Upload className="w-12 h-12" style={{ color: 'hsl(var(--muted))' }} />
                           </div>
                           <p className="font-mono font-bold uppercase tracking-wider mb-2" 
-                             style={{ color: 'var(--gaming-text-primary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                             NEURAL FILE INTERFACE
                           </p>
-                          <p className="text-sm font-mono mb-4" style={{ color: 'var(--gaming-text-secondary)' }}>
+                          <p className="text-sm font-mono mb-4" style={{ color: 'hsl(var(--muted))' }}>
                             CLICK TO UPLOAD OR DRAG AND DROP
                           </p>
-                          <p className="text-xs font-mono" style={{ color: 'var(--gaming-text-muted)' }}>
+                          <p className="text-xs font-mono" style={{ color: 'hsl(var(--muted))' }}>
                             SUPPORTED: PDF, DOCX, TXT, MD, CSV, XLSX, JSON, HTML, RTF
                           </p>
                           <input
@@ -1033,9 +1033,9 @@ const PersonalKnowledge: React.FC = () => {
                             }}
                             className="mt-6 px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
                             style={{
-                              background: 'var(--gaming-bg-elevated)',
-                              border: '1px solid var(--gaming-neon-cyan)',
-                              color: 'var(--gaming-neon-cyan)'
+                              background: 'hsl(var(--muted))',
+                              border: '1px solid hsl(var(--muted))',
+                              color: 'hsl(var(--muted))'
                             }}
                           >
                             SELECT FILE
@@ -1047,7 +1047,7 @@ const PersonalKnowledge: React.FC = () => {
                 
                   {/* Neural AI Integration Toggle */}
                   <div className="flex items-center gap-4 p-4 rounded-xl" 
-                       style={{ background: 'rgba(0, 255, 255, 0.05)', border: '1px solid var(--gaming-border)' }}>
+                       style={{ background: 'rgba(0, 255, 255, 0.05)', border: '1px solid hsl(var(--muted))' }}>
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
@@ -1056,20 +1056,20 @@ const PersonalKnowledge: React.FC = () => {
                         onChange={(e) => setNewKnowledge({...newKnowledge, use_in_generation: e.target.checked})}
                         className="w-5 h-5 rounded" 
                         style={{
-                          accentColor: 'var(--gaming-neon-cyan)',
-                          backgroundColor: newKnowledge.use_in_generation ? 'var(--gaming-neon-cyan)' : 'var(--gaming-bg-elevated)'
+                          accentColor: 'hsl(var(--muted))',
+                          backgroundColor: newKnowledge.use_in_generation ? 'hsl(var(--muted))' : 'hsl(var(--muted))'
                         }}
                       />
                       <label htmlFor="use_in_generation" className="font-mono font-bold text-sm uppercase tracking-wider" 
-                             style={{ color: 'var(--gaming-text-primary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                         ENABLE AI NEURAL INTEGRATION
                       </label>
                     </div>
-                    <div className={`gaming-status px-3 py-1 rounded-full ${
-                      newKnowledge.use_in_generation ? 'gaming-status-running' : ''
+                    <div className={`bg-card px-3 py-1 rounded-full ${
+                      newKnowledge.use_in_generation ? 'bg-card' : ''
                     }`}>
                       {newKnowledge.use_in_generation ? (
-                        <><div className="gaming-pulse-dot"></div>ACTIVE</>
+                        <><div className="bg-card"></div>ACTIVE</>
                       ) : (
                         'INACTIVE'
                       )}
@@ -1087,9 +1087,9 @@ const PersonalKnowledge: React.FC = () => {
                     }}
                     className="px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
                     style={{
-                      background: 'var(--gaming-bg-elevated)',
-                      border: '1px solid var(--gaming-border)',
-                      color: 'var(--gaming-text-muted)'
+                      background: 'hsl(var(--muted))',
+                      border: '1px solid hsl(var(--muted))',
+                      color: 'hsl(var(--muted))'
                     }}
                   >
                     ABORT UPLOAD
@@ -1097,14 +1097,14 @@ const PersonalKnowledge: React.FC = () => {
                   <button
                     onClick={uploadType === 'text' ? handleTextSubmit : () => fileInputRef.current?.click()}
                     disabled={uploading || (uploadType === 'text' && (!newKnowledge.title || !newKnowledge.content))}
-                    className="gaming-btn-active px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                    className="bg-card px-8 py-4 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                     style={{
-                      background: uploading ? 'var(--gaming-bg-elevated)' : 'var(--gaming-gradient-primary)',
-                      border: '1px solid var(--gaming-neon-cyan)',
-                      boxShadow: uploading ? 'none' : 'var(--gaming-glow-primary)'
+                      background: uploading ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                      border: '1px solid hsl(var(--muted))',
+                      boxShadow: uploading ? 'none' : 'hsl(var(--muted))'
                     }}
                   >
-                    {uploading && <div className="gaming-loading-matrix w-4 h-4"></div>}
+                    {uploading && <div className="bg-card w-4 h-4"></div>}
                     {uploading 
                       ? 'PROCESSING...' 
                       : uploadType === 'text' 
@@ -1120,18 +1120,18 @@ const PersonalKnowledge: React.FC = () => {
         {/* Neural Data Viewer */}
         {detailEntry && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4" 
-               style={{ background: 'var(--gaming-bg-overlay)', backdropFilter: 'blur(20px)' }}>
-            <div className="gaming-neural-card max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
-              <div className="gaming-border-glow"></div>
+               style={{ background: 'hsl(var(--muted))', backdropFilter: 'blur(20px)' }}>
+            <div className="bg-card max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
+              <div className="bg-card"></div>
               
               {/* Neural Header */}
               <div className="flex items-start justify-between mb-8 relative z-10 p-8 pb-0">
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-3xl font-bold font-mono uppercase tracking-wider gaming-text-gradient mb-3">
+                  <h2 className="text-3xl font-bold font-mono uppercase tracking-wider bg-card mb-3">
                     {detailEntry.title}
                   </h2>
                   {detailEntry.description && (
-                    <p className="font-mono text-lg" style={{ color: 'var(--gaming-text-secondary)' }}>
+                    <p className="font-mono text-lg" style={{ color: 'hsl(var(--muted))' }}>
                       {detailEntry.description}
                     </p>
                   )}
@@ -1141,8 +1141,8 @@ const PersonalKnowledge: React.FC = () => {
                   className="p-3 rounded-lg transition-all duration-200 hover:scale-110 ml-6"
                   style={{ 
                     background: 'rgba(255, 20, 147, 0.1)', 
-                    border: '1px solid var(--gaming-neon-pink)',
-                    color: 'var(--gaming-neon-pink)'
+                    border: '1px solid hsl(var(--muted))',
+                    color: 'hsl(var(--muted))'
                   }}
                 >
                   <X className="w-6 h-6" />
@@ -1153,56 +1153,56 @@ const PersonalKnowledge: React.FC = () => {
               
                 {/* Neural Metadata Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="gaming-neural-card p-4">
+                  <div className="bg-card p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-5 h-5" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                      <FileText className="w-5 h-5" style={{ color: 'hsl(var(--muted))' }} />
                       <span className="font-mono text-xs uppercase tracking-wider" 
-                            style={{ color: 'var(--gaming-text-muted)' }}>TYPE</span>
+                            style={{ color: 'hsl(var(--muted))' }}>TYPE</span>
                     </div>
-                    <p className="font-mono font-bold" style={{ color: 'var(--gaming-text-primary)' }}>
+                    <p className="font-mono font-bold" style={{ color: 'hsl(var(--muted))' }}>
                       {detailEntry.content_type.toUpperCase()}
                     </p>
                   </div>
                   
-                  <div className="gaming-neural-card p-4">
+                  <div className="bg-card p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Hash className="w-5 h-5" style={{ color: 'var(--gaming-neon-green)' }} />
+                      <Hash className="w-5 h-5" style={{ color: 'hsl(var(--muted))' }} />
                       <span className="font-mono text-xs uppercase tracking-wider" 
-                            style={{ color: 'var(--gaming-text-muted)' }}>WORDS</span>
+                            style={{ color: 'hsl(var(--muted))' }}>WORDS</span>
                     </div>
-                    <p className="font-mono font-bold" style={{ color: 'var(--gaming-text-primary)' }}>
+                    <p className="font-mono font-bold" style={{ color: 'hsl(var(--muted))' }}>
                       {detailEntry.word_count.toLocaleString()}
                     </p>
                   </div>
                   
                   {detailEntry.times_used > 0 && (
-                    <div className="gaming-neural-card p-4">
+                    <div className="bg-card p-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="w-5 h-5" style={{ color: 'var(--gaming-neon-green)' }} />
+                        <CheckCircle className="w-5 h-5" style={{ color: 'hsl(var(--muted))' }} />
                         <span className="font-mono text-xs uppercase tracking-wider" 
-                              style={{ color: 'var(--gaming-text-muted)' }}>USAGE</span>
+                              style={{ color: 'hsl(var(--muted))' }}>USAGE</span>
                       </div>
-                      <p className="font-mono font-bold" style={{ color: 'var(--gaming-text-primary)' }}>
+                      <p className="font-mono font-bold" style={{ color: 'hsl(var(--muted))' }}>
                         {detailEntry.times_used} TIMES
                       </p>
                     </div>
                   )}
                   
-                  <div className="gaming-neural-card p-4">
+                  <div className="bg-card p-4">
                     <div className="flex items-center gap-2 mb-2">
                       {detailEntry.use_in_generation ? (
-                        <CheckCircle className="w-5 h-5" style={{ color: 'var(--gaming-neon-green)' }} />
+                        <CheckCircle className="w-5 h-5" style={{ color: 'hsl(var(--muted))' }} />
                       ) : (
-                        <AlertCircle className="w-5 h-5" style={{ color: 'var(--gaming-text-muted)' }} />
+                        <AlertCircle className="w-5 h-5" style={{ color: 'hsl(var(--muted))' }} />
                       )}
                       <span className="font-mono text-xs uppercase tracking-wider" 
-                            style={{ color: 'var(--gaming-text-muted)' }}>AI STATUS</span>
+                            style={{ color: 'hsl(var(--muted))' }}>AI STATUS</span>
                     </div>
-                    <div className={`gaming-status px-2 py-1 rounded-full ${
-                      detailEntry.use_in_generation ? 'gaming-status-running' : ''
+                    <div className={`bg-card px-2 py-1 rounded-full ${
+                      detailEntry.use_in_generation ? 'bg-card' : ''
                     }`}>
                       {detailEntry.use_in_generation ? (
-                        <><div className="gaming-pulse-dot"></div>ACTIVE</>
+                        <><div className="bg-card"></div>ACTIVE</>
                       ) : (
                         'INACTIVE'
                       )}
@@ -1214,7 +1214,7 @@ const PersonalKnowledge: React.FC = () => {
                 {detailEntry.tags.length > 0 && (
                   <div className="mb-8">
                     <h3 className="font-mono font-bold text-sm uppercase tracking-wider mb-4" 
-                        style={{ color: 'var(--gaming-text-primary)' }}>
+                        style={{ color: 'hsl(var(--muted))' }}>
                       NEURAL TAGS
                     </h3>
                     <div className="flex flex-wrap gap-3">
@@ -1224,8 +1224,8 @@ const PersonalKnowledge: React.FC = () => {
                           className="px-4 py-2 rounded-full font-mono font-bold text-sm uppercase tracking-wider"
                           style={{
                             background: 'rgba(0, 255, 255, 0.1)',
-                            border: '1px solid var(--gaming-neon-cyan)',
-                            color: 'var(--gaming-neon-cyan)'
+                            border: '1px solid hsl(var(--muted))',
+                            color: 'hsl(var(--muted))'
                           }}
                         >
                           #{tag}
@@ -1238,15 +1238,15 @@ const PersonalKnowledge: React.FC = () => {
                 {/* Neural Content Display */}
                 <div className="mb-8">
                   <h3 className="font-mono font-bold text-sm uppercase tracking-wider mb-4" 
-                      style={{ color: 'var(--gaming-text-primary)' }}>
+                      style={{ color: 'hsl(var(--muted))' }}>
                     NEURAL CONTENT DATA
                   </h3>
-                  <div className="gaming-neural-card p-6 relative">
-                    <div className="gaming-border-glow"></div>
+                  <div className="bg-card p-6 relative">
+                    <div className="bg-card"></div>
                     <div className="relative z-10">
                       <div className="max-w-none">
                         <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed" 
-                             style={{ color: 'var(--gaming-text-secondary)' }}>
+                             style={{ color: 'hsl(var(--muted))' }}>
                           {detailEntry.full_content || detailEntry.content}
                         </pre>
                       </div>
@@ -1263,9 +1263,9 @@ const PersonalKnowledge: React.FC = () => {
                     }}
                     className="px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 flex items-center gap-3"
                     style={{
-                      background: 'var(--gaming-bg-elevated)',
-                      border: '1px solid var(--gaming-neon-purple)',
-                      color: 'var(--gaming-neon-purple)'
+                      background: 'hsl(var(--muted))',
+                      border: '1px solid hsl(var(--muted))',
+                      color: 'hsl(var(--muted))'
                     }}
                   >
                     <Edit className="w-5 h-5" />
@@ -1273,11 +1273,11 @@ const PersonalKnowledge: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setDetailEntry(null)}
-                    className="gaming-btn-active px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
+                    className="bg-card px-6 py-3 rounded-xl font-mono font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105"
                     style={{
-                      background: 'var(--gaming-gradient-primary)',
-                      border: '1px solid var(--gaming-neon-cyan)',
-                      boxShadow: 'var(--gaming-glow-primary)'
+                      background: 'hsl(var(--muted))',
+                      border: '1px solid hsl(var(--muted))',
+                      boxShadow: 'hsl(var(--muted))'
                     }}
                   >
                     CLOSE VIEWER

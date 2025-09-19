@@ -132,12 +132,12 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
   // Priority configurations
   const priorityConfig = {
     critical: { 
-      color: 'bg-red-500 text-white',
+      color: 'bg-red-500 text-foreground',
       icon: AlertTriangle,
       label: 'Critical'
     },
     high: { 
-      color: 'bg-orange-500 text-white',
+      color: 'bg-orange-500 text-foreground',
       icon: AlertTriangle,
       label: 'High'
     },
@@ -147,7 +147,7 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
       label: 'Medium'
     },
     low: { 
-      color: 'bg-green-500 text-white',
+      color: 'bg-green-500 text-foreground',
       icon: CheckCircle,
       label: 'Low'
     },
@@ -171,7 +171,7 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
       label: 'Resolved'
     },
     dismissed: { 
-      color: 'bg-gray-100 text-gray-800 border-gray-200',
+      color: 'bg-muted/10 text-gray-800 border-border',
       icon: XCircle,
       label: 'Dismissed'
     },
@@ -238,7 +238,7 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search content, reason, or user..."
                 value={searchTerm}
@@ -350,14 +350,14 @@ export const FlaggedContentTable: React.FC<FlaggedContentTableProps> = ({
               // Loading skeleton
               Array.from({ length: pageSize }).map((_, index) => (
                 <TableRow key={index}>
-                  <TableCell><div className="h-6 w-16 bg-gray-200 animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-full bg-gray-200 animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-6 w-20 bg-gray-200 animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-6 w-20 bg-gray-200 animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-24 bg-gray-200 animate-pulse rounded" /></TableCell>
-                  <TableCell><div className="h-4 w-20 bg-gray-200 animate-pulse rounded" /></TableCell>
-                  {showReviewDetails && <TableCell><div className="h-4 w-24 bg-gray-200 animate-pulse rounded" /></TableCell>}
-                  <TableCell><div className="h-8 w-8 bg-gray-200 animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-6 w-16 bg-muted/20 animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-4 w-full bg-muted/20 animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-6 w-20 bg-muted/20 animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-6 w-20 bg-muted/20 animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-muted/20 animate-pulse rounded" /></TableCell>
+                  <TableCell><div className="h-4 w-20 bg-muted/20 animate-pulse rounded" /></TableCell>
+                  {showReviewDetails && <TableCell><div className="h-4 w-24 bg-muted/20 animate-pulse rounded" /></TableCell>}
+                  <TableCell><div className="h-8 w-8 bg-muted/20 animate-pulse rounded" /></TableCell>
                 </TableRow>
               ))
             ) : filteredData.length === 0 ? (

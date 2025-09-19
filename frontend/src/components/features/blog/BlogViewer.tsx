@@ -154,18 +154,18 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-800 rounded-lg w-full max-w-4xl h-full max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-lg w-full max-w-4xl h-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-dark-700">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <DocumentTextIcon className="h-6 w-6 text-primary-400" />
-            <h2 className="text-xl font-semibold text-white">Blog Post</h2>
+            <h2 className="text-xl font-semibold text-foreground">Blog Post</h2>
           </div>
           <div className="flex items-center gap-2">
             {blog && onEdit && (
               <button
                 onClick={() => onEdit(blog)}
-                className="p-2 text-gray-400 hover:text-white transition-colors"
+                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                 title="Edit blog post"
               >
                 <PencilIcon className="h-5 w-5" />
@@ -173,7 +173,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
             )}
             <button
               onClick={() => blog && copyToClipboard(blog.content)}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
               title="Copy content"
               disabled={!blog}
             >
@@ -181,7 +181,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
               title="Close"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -200,7 +200,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
               {/* Title */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h1 className="text-3xl font-bold text-white leading-tight">
+                  <h1 className="text-3xl font-bold text-foreground leading-tight">
                     {blog.title}
                   </h1>
                   <span className={`px-3 py-1 text-sm rounded-full ${
@@ -213,7 +213,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
                 </div>
                 
                 {/* Metadata */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
                   <div className="flex items-center gap-1">
                     <CalendarIcon className="h-4 w-4" />
                     {formatDate(blog.created_at)}
@@ -229,7 +229,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
                   <span className="capitalize px-2 py-1 bg-primary-500/20 text-primary-300 rounded">
                     {blog.tone} tone
                   </span>
-                  <span className="capitalize px-2 py-1 bg-gray-700 text-gray-300 rounded">
+                  <span className="capitalize px-2 py-1 bg-gray-700 text-muted-foreground rounded">
                     {blog.length} length
                   </span>
                 </div>
@@ -237,7 +237,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
                 {/* Tags */}
                 {blog.tags && blog.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <TagIcon className="h-4 w-4 text-gray-400 mt-1" />
+                    <TagIcon className="h-4 w-4 text-muted-foreground mt-1" />
                     {blog.tags.map((tag, index) => (
                       <span
                         key={index}
@@ -278,16 +278,16 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
                       );
                     },
                     p: ({ node, ...props }) => (
-                      <p {...props} className="mb-4 text-gray-100" />
+                      <p {...props} className="mb-4 text-foreground" />
                     ),
                     h1: ({ node, ...props }) => (
-                      <h1 {...props} className="text-3xl font-bold mb-4 text-white" />
+                      <h1 {...props} className="text-3xl font-bold mb-4 text-foreground" />
                     ),
                     h2: ({ node, ...props }) => (
-                      <h2 {...props} className="text-2xl font-bold mb-3 text-white" />
+                      <h2 {...props} className="text-2xl font-bold mb-3 text-foreground" />
                     ),
                     h3: ({ node, ...props }) => (
-                      <h3 {...props} className="text-xl font-bold mb-2 text-white" />
+                      <h3 {...props} className="text-xl font-bold mb-2 text-foreground" />
                     ),
                   }}
                 >
@@ -310,13 +310,13 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t border-dark-700">
+              <div className="flex gap-3 pt-4 border-t border-border">
                 <button
                   onClick={togglePublishStatus}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     blog.is_live
-                      ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      ? 'bg-yellow-600 text-foreground hover:bg-yellow-700'
+                      : 'bg-green-600 text-foreground hover:bg-green-700'
                   }`}
                 >
                   {blog.is_live ? (
@@ -334,7 +334,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
 
                 <button
                   onClick={() => copyToClipboard(blog.content)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
                 >
                   <DocumentDuplicateIcon className="h-4 w-4" />
                   Copy Full Content
@@ -343,7 +343,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
                 {onEdit && (
                   <button
                     onClick={() => onEdit(blog)}
-                    className="flex items-center gap-2 px-4 py-2 bg-dark-600 text-white rounded-lg hover:bg-dark-500 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-dark-600 text-foreground rounded-lg hover:bg-dark-500 transition-colors"
                   >
                     <PencilIcon className="h-4 w-4" />
                     Edit Post
@@ -357,7 +357,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
                       navigator.clipboard.writeText(publicUrl);
                       toast.success('Public blog link copied to clipboard!');
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     <ShareIcon className="h-4 w-4" />
                     Share Public Link
@@ -367,7 +367,7 @@ export function BlogViewer({ blogId, isOpen, onClose, onEdit }: BlogViewerProps)
             </div>
           ) : (
             <div className="flex items-center justify-center h-64">
-              <div className="text-center text-gray-400">
+              <div className="text-center text-muted-foreground">
                 <DocumentTextIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Blog post not found</p>
               </div>

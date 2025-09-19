@@ -133,7 +133,7 @@ export function RealTimeIntelligencePanel() {
       case 'ERROR':
         return 'text-red-500';
       default:
-        return 'text-gray-500';
+        return 'text-muted-foreground';
     }
   };
 
@@ -152,7 +152,7 @@ export function RealTimeIntelligencePanel() {
 
   if (loading) {
     return (
-      <Card className="gaming-card">
+      <Card className="bg-card">
         <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center space-y-4">
             <Brain className="h-12 w-12 text-blue-500 animate-pulse" />
@@ -176,7 +176,7 @@ export function RealTimeIntelligencePanel() {
   return (
     <div className="space-y-6">
       {/* Skynet Status Header */}
-      <Card className="gaming-card border-blue-500/30 bg-gradient-to-r from-blue-900/10 to-purple-900/10">
+      <Card className="bg-card border-blue-500/30 bg-gradient-to-r from-blue-900/10 to-purple-900/10">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function RealTimeIntelligencePanel() {
               <p className="text-2xl font-bold text-green-500">
                 {skynetStatus?.live_opportunities || 0}
               </p>
-              <p className="text-sm text-gray-400">Live Opportunities</p>
+              <p className="text-sm text-muted-foreground">Live Opportunities</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
@@ -213,7 +213,7 @@ export function RealTimeIntelligencePanel() {
               <p className="text-2xl font-bold text-purple-500">
                 {skynetStatus?.live_predictions || 0}
               </p>
-              <p className="text-sm text-gray-400">Active Predictions</p>
+              <p className="text-sm text-muted-foreground">Active Predictions</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
@@ -222,7 +222,7 @@ export function RealTimeIntelligencePanel() {
               <p className="text-2xl font-bold text-blue-500">
                 {skynetStatus?.intelligence_engine === 'ACTIVE' ? '102' : '0'}
               </p>
-              <p className="text-sm text-gray-400">Active Agents</p>
+              <p className="text-sm text-muted-foreground">Active Agents</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
@@ -231,12 +231,12 @@ export function RealTimeIntelligencePanel() {
               <p className="text-2xl font-bold text-yellow-500">
                 {skynetStatus?.scan_interval ? `${skynetStatus.scan_interval/1000}s` : '5s'}
               </p>
-              <p className="text-sm text-gray-400">Scan Interval</p>
+              <p className="text-sm text-muted-foreground">Scan Interval</p>
             </div>
           </div>
 
           {skynetStatus?.last_update && (
-            <div className="text-center text-xs text-gray-500">
+            <div className="text-center text-xs text-muted-foreground">
               Last Update: {new Date(skynetStatus.last_update).toLocaleString()}
             </div>
           )}
@@ -245,13 +245,13 @@ export function RealTimeIntelligencePanel() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Live Opportunities */}
-        <Card className="gaming-card border-green-500/30">
+        <Card className="bg-card border-green-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-green-500" />
               Live Market Opportunities
               {opportunities.length > 0 && (
-                <Badge className="bg-green-500 text-white ml-auto">
+                <Badge className="bg-green-500 text-foreground ml-auto">
                   {opportunities.length}
                 </Badge>
               )}
@@ -259,7 +259,7 @@ export function RealTimeIntelligencePanel() {
           </CardHeader>
           <CardContent className="space-y-3">
             {opportunities.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No live opportunities detected</p>
                 <p className="text-xs">Intelligence engine scanning...</p>
@@ -279,22 +279,22 @@ export function RealTimeIntelligencePanel() {
 
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <span className="text-gray-400">Edge:</span>
+                      <span className="text-muted-foreground">Edge:</span>
                       <p className="font-bold text-green-500">{opp.edge}%</p>
                     </div>
                     <div>
-                      <span className="text-gray-400">Confidence:</span>
+                      <span className="text-muted-foreground">Confidence:</span>
                       <p className="font-bold">{(opp.confidence * 100).toFixed(0)}%</p>
                     </div>
                     <div>
-                      <span className="text-gray-400">Profit:</span>
+                      <span className="text-muted-foreground">Profit:</span>
                       <p className="font-bold text-green-500">${opp.profit_potential}</p>
                     </div>
                   </div>
 
                   {opp.time_window && (
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-700/50">
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         {opp.time_window}s window
                       </div>
@@ -311,13 +311,13 @@ export function RealTimeIntelligencePanel() {
         </Card>
 
         {/* Live Predictions */}
-        <Card className="gaming-card border-purple-500/30">
+        <Card className="bg-card border-purple-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-500" />
               AI Predictions
               {predictions.length > 0 && (
-                <Badge className="bg-purple-500 text-white ml-auto">
+                <Badge className="bg-purple-500 text-foreground ml-auto">
                   {predictions.length}
                 </Badge>
               )}
@@ -325,7 +325,7 @@ export function RealTimeIntelligencePanel() {
           </CardHeader>
           <CardContent className="space-y-3">
             {predictions.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No active predictions</p>
                 <p className="text-xs">AI models analyzing...</p>
@@ -343,18 +343,18 @@ export function RealTimeIntelligencePanel() {
                     </Badge>
                   </div>
 
-                  <p className="text-sm text-gray-300 mb-2">{pred.prediction}</p>
+                  <p className="text-sm text-muted-foreground mb-2">{pred.prediction}</p>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="text-xs">
-                        <span className="text-gray-400">Confidence:</span>
+                        <span className="text-muted-foreground">Confidence:</span>
                         <span className="ml-1 font-bold text-purple-500">
                           {(pred.confidence * 100).toFixed(0)}%
                         </span>
                       </div>
                       <div className="text-xs">
-                        <span className="text-gray-400">Horizon:</span>
+                        <span className="text-muted-foreground">Horizon:</span>
                         <span className="ml-1 font-bold">
                           {pred.time_horizon}
                         </span>
@@ -374,7 +374,7 @@ export function RealTimeIntelligencePanel() {
 
       {/* Intelligence Features Status */}
       {skynetStatus?.features && (
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-blue-500" />

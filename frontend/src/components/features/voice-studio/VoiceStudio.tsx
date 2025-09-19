@@ -375,7 +375,7 @@ export function VoiceStudio() {
     <div className="space-y-6">
       {/* Mode Selection */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Voice Processing Mode</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Voice Processing Mode</h3>
         <div className="grid grid-cols-3 gap-4">
           {modes.map((modeOption) => {
             const isSelected = mode === modeOption.id;
@@ -386,18 +386,18 @@ export function VoiceStudio() {
                 className={`p-4 rounded-lg border-2 transition-all duration-200 text-center ${
                   isSelected
                     ? 'border-primary-500 bg-primary-500/10'
-                    : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                    : 'border-border hover:border-dark-600 hover:bg-white/5'
                 }`}
               >
                 <modeOption.icon className={`h-6 w-6 mx-auto mb-2 ${
-                  isSelected ? 'text-primary-400' : 'text-gray-400'
+                  isSelected ? 'text-primary-400' : 'text-muted-foreground'
                 }`} />
                 <div className={`font-medium mb-1 ${
-                  isSelected ? 'text-white' : 'text-gray-300'
+                  isSelected ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   {modeOption.name}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {modeOption.desc}
                 </div>
               </button>
@@ -410,7 +410,7 @@ export function VoiceStudio() {
         {/* Recording & Upload Panel */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Audio Input</h3>
+            <h3 className="text-lg font-semibold text-foreground">Audio Input</h3>
             {(audioFile || recordedAudio) && (
               <Button
                 onClick={clearAudio}
@@ -426,7 +426,7 @@ export function VoiceStudio() {
           {/* Device Selection */}
           {devices.length > 1 && (
             <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">Microphone</label>
+              <label className="block text-sm text-muted-foreground mb-2">Microphone</label>
               <select 
                 className="input text-sm"
                 value={selectedDeviceId}
@@ -443,7 +443,7 @@ export function VoiceStudio() {
           )}
 
           {/* Recording Section */}
-          <div className="text-center py-6 border-b border-dark-700 mb-6">
+          <div className="text-center py-6 border-b border-border mb-6">
             <div className="relative inline-block">
               <button
                 onClick={toggleRecording}
@@ -455,9 +455,9 @@ export function VoiceStudio() {
                 }`}
               >
                 {isRecording ? (
-                  <StopIcon className="h-8 w-8 text-white" />
+                  <StopIcon className="h-8 w-8 text-foreground" />
                 ) : (
-                  <MicrophoneIcon className="h-8 w-8 text-white" />
+                  <MicrophoneIcon className="h-8 w-8 text-foreground" />
                 )}
               </button>
               
@@ -472,7 +472,7 @@ export function VoiceStudio() {
               )}
             </div>
             
-            <p className="text-gray-400 mt-3">
+            <p className="text-muted-foreground mt-3">
               {isRecording 
                 ? `Recording... ${formatTime(recordingTime)}` 
                 : 'Click to start recording'
@@ -491,7 +491,7 @@ export function VoiceStudio() {
             />
             <label 
               onClick={() => fileInputRef.current?.click()}
-              className="cursor-pointer inline-flex items-center gap-2 px-6 py-3 bg-dark-800 hover:bg-dark-700 rounded-lg border border-dark-700 transition-colors"
+              className="cursor-pointer inline-flex items-center gap-2 px-6 py-3 bg-card hover:bg-dark-700 rounded-lg border border-border transition-colors"
             >
               <CloudArrowUpIcon className="h-5 w-5" />
               Upload Audio File
@@ -499,8 +499,8 @@ export function VoiceStudio() {
             
             {audioFile && (
               <div className="mt-3 text-center">
-                <p className="text-sm text-gray-400">{audioFile.name}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm text-muted-foreground">{audioFile.name}</p>
+                <p className="text-xs text-muted-foreground">
                   {(audioFile.size / 1024 / 1024).toFixed(1)} MB
                 </p>
               </div>
@@ -508,7 +508,7 @@ export function VoiceStudio() {
 
             {recordedAudio && (
               <div className="mt-3 space-y-2">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Recorded: {formatTime(recordedAudio.duration)}
                 </p>
                 <div className="flex justify-center gap-2">
@@ -539,7 +539,7 @@ export function VoiceStudio() {
 
         {/* Results Panel */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             {mode === 'transcribe' ? 'Transcription' : 
              mode === 'conversation' ? 'Conversation' : 
              'Command Result'}
@@ -548,12 +548,12 @@ export function VoiceStudio() {
           {isProcessing ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
-              <span className="ml-3 text-gray-400">Processing audio...</span>
+              <span className="ml-3 text-muted-foreground">Processing audio...</span>
             </div>
           ) : transcript ? (
             <div className="space-y-4">
-              <div className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
-                <pre className="whitespace-pre-wrap text-sm text-gray-300 font-mono max-h-64 overflow-y-auto">
+              <div className="bg-background/50 rounded-lg p-4 border border-border">
+                <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono max-h-64 overflow-y-auto">
                   {transcript}
                 </pre>
               </div>
@@ -579,8 +579,8 @@ export function VoiceStudio() {
               </div>
               
               {/* Content Creation Actions */}
-              <div className="mt-4 pt-4 border-t border-dark-700">
-                <h4 className="text-sm font-medium text-white mb-3">Create Content From This Transcript</h4>
+              <div className="mt-4 pt-4 border-t border-border">
+                <h4 className="text-sm font-medium text-foreground mb-3">Create Content From This Transcript</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <Button
                     onClick={() => createContentFromTranscript('blog')}
@@ -627,19 +627,19 @@ export function VoiceStudio() {
             </div>
           ) : history.length > 0 ? (
             <div className="space-y-3">
-              <h4 className="font-medium text-white flex items-center gap-2">
+              <h4 className="font-medium text-foreground flex items-center gap-2">
                 <ClockIcon className="h-4 w-4" />
                 Recent Processing
               </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {history.map((item) => (
-                  <div key={item.id} className="bg-dark-900/30 rounded p-3 border border-dark-700">
+                  <div key={item.id} className="bg-background/30 rounded p-3 border border-border">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs text-gray-400 capitalize">
+                      <span className="text-xs text-muted-foreground capitalize">
                         {item.format} • {new Date(item.created_at).toLocaleTimeString()}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-300 truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                       {item.transcript.length > 100 
                         ? `${item.transcript.slice(0, 100)}...` 
                         : item.transcript}
@@ -649,7 +649,7 @@ export function VoiceStudio() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               <ChatBubbleLeftRightIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
               <p>
                 {mode === 'transcribe' ? 'Transcription will appear here' :

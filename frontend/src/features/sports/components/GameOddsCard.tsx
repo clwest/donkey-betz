@@ -47,7 +47,7 @@ export function GameOddsCard({ game, onSelectGame }: GameOddsCardProps) {
       case 'scheduled':
         return 'bg-blue-500';
       case 'final':
-        return 'bg-gray-500';
+        return 'bg-muted/50';
       default:
         return 'bg-gray-400';
     }
@@ -63,7 +63,7 @@ export function GameOddsCard({ game, onSelectGame }: GameOddsCardProps) {
         {/* Game Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Badge className={cn(getStatusColor(game.status), 'text-white')}>
+            <Badge className={cn(getStatusColor(game.status), 'text-foreground')}>
               {game.status.toUpperCase()}
             </Badge>
             {game.league && (

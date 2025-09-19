@@ -223,11 +223,11 @@ export function AISettingsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
           <Brain className="w-8 h-8 text-purple-400" />
           AI Intelligence Settings
         </h1>
-        <p className="text-gray-400 mt-1">Configure how AI enhances your content generation</p>
+        <p className="text-muted-foreground mt-1">Configure how AI enhances your content generation</p>
       </div>
 
       {/* Tabs */}
@@ -242,8 +242,8 @@ export function AISettingsPage() {
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
               activeTab === tab.id
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800'
+                ? 'bg-purple-600 text-foreground'
+                : 'bg-card/50 text-muted-foreground hover:bg-card'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -270,10 +270,10 @@ export function AISettingsPage() {
                       <Zap className="w-5 h-5 text-purple-400" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">
+                      <h3 className="text-lg font-semibold text-foreground mb-1">
                         Intelligent Prompting
                       </h3>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-muted-foreground text-sm">
                         Automatically enhance your prompts for better AI responses
                       </p>
                     </div>
@@ -292,7 +292,7 @@ export function AISettingsPage() {
 
               {/* Enhancement Level */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Enhancement Level</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Enhancement Level</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { 
@@ -319,8 +319,8 @@ export function AISettingsPage() {
                       onClick={() => toggleSetting('default_level', option.level)}
                       className={`p-4 rounded-lg border transition-all ${
                         settings.default_level === option.level
-                          ? 'bg-purple-600/20 border-purple-500 text-white'
-                          : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:border-gray-600'
+                          ? 'bg-purple-600/20 border-purple-500 text-foreground'
+                          : 'bg-background/50 border-gray-700 text-muted-foreground hover:border-gray-600'
                       }`}
                     >
                       <div className="text-2xl mb-2">{option.icon}</div>
@@ -333,16 +333,16 @@ export function AISettingsPage() {
 
               {/* Additional Options */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Enhancement Options</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Enhancement Options</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-blue-600/20 rounded">
-                        <Brain className="w-4 h-4 text-blue-400" />
+                        <Brain className="w-4 h-4 text-blue-500" />
                       </div>
                       <div>
-                        <p className="text-white font-medium">Use Memory Context</p>
-                        <p className="text-gray-400 text-xs">Include previous interactions for consistency</p>
+                        <p className="text-foreground font-medium">Use Memory Context</p>
+                        <p className="text-muted-foreground text-xs">Include previous interactions for consistency</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -359,11 +359,11 @@ export function AISettingsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-green-600/20 rounded">
-                        <Sparkles className="w-4 h-4 text-green-400" />
+                        <Sparkles className="w-4 h-4 text-green-500" />
                       </div>
                       <div>
-                        <p className="text-white font-medium">Auto-Enhance</p>
-                        <p className="text-gray-400 text-xs">Automatically enhance all prompts</p>
+                        <p className="text-foreground font-medium">Auto-Enhance</p>
+                        <p className="text-muted-foreground text-xs">Automatically enhance all prompts</p>
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -381,11 +381,11 @@ export function AISettingsPage() {
 
               {/* Content-Specific Settings */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Content-Specific Enhancement</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Content-Specific Enhancement</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {Object.entries(settings.content_preferences || {}).map(([type, enabled]) => (
-                    <div key={type} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                      <span className="text-gray-300 capitalize">{type}</span>
+                    <div key={type} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                      <span className="text-muted-foreground capitalize">{type}</span>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
                           type="checkbox"
@@ -419,7 +419,7 @@ export function AISettingsPage() {
             <div className="space-y-6">
               {/* Help Text */}
               <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <p className="text-sm text-blue-400">
+                <p className="text-sm text-blue-500">
                   💡 <span className="font-semibold">Memory Context</span> shows the percentage of your content that has associated AI memory for maintaining consistency across generations.
                 </p>
               </div>
@@ -429,9 +429,9 @@ export function AISettingsPage() {
                 <Card>
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-400 text-sm">Enhancement Rate</span>
+                    <span className="text-muted-foreground text-sm">Enhancement Rate</span>
                   </div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-foreground">
                     {stats?.overview?.enhancement_rate?.toFixed(1) || 0}%
                   </p>
                 </Card>
@@ -439,12 +439,12 @@ export function AISettingsPage() {
                 <Card>
                   <div className="flex items-center gap-2 mb-2">
                     <Brain className="w-4 h-4 text-blue-500" />
-                    <span className="text-gray-400 text-sm">Memory Context</span>
+                    <span className="text-muted-foreground text-sm">Memory Context</span>
                   </div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-foreground">
                     {stats?.overview?.memory_usage_rate?.toFixed(1) || 0}%
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {stats?.overview?.total_memories || 0} memories
                   </p>
                 </Card>
@@ -452,9 +452,9 @@ export function AISettingsPage() {
                 <Card>
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-purple-500" />
-                    <span className="text-gray-400 text-sm">Enhanced Content</span>
+                    <span className="text-muted-foreground text-sm">Enhanced Content</span>
                   </div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-foreground">
                     {stats?.overview?.enhanced_content || 0}
                   </p>
                 </Card>
@@ -462,9 +462,9 @@ export function AISettingsPage() {
                 <Card>
                   <div className="flex items-center gap-2 mb-2">
                     <Zap className="w-4 h-4 text-yellow-500" />
-                    <span className="text-gray-400 text-sm">Total Content</span>
+                    <span className="text-muted-foreground text-sm">Total Content</span>
                   </div>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-2xl font-bold text-foreground">
                     {stats?.overview?.total_content || 0}
                   </p>
                 </Card>
@@ -472,7 +472,7 @@ export function AISettingsPage() {
 
               {/* Enhancement by Level */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Enhancement by Level</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Enhancement by Level</h3>
                 <div className="space-y-3">
                   {Object.entries(stats?.by_level || {}).map(([level, count]) => (
                     <div key={level} className="flex items-center justify-between">
@@ -481,7 +481,7 @@ export function AISettingsPage() {
                           level === 'expert' ? 'bg-purple-500' :
                           level === 'advanced' ? 'bg-blue-500' : 'bg-green-500'
                         }`} />
-                        <span className="text-gray-300 capitalize">{level}</span>
+                        <span className="text-muted-foreground capitalize">{level}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="w-32 bg-gray-700 rounded-full h-2">
@@ -495,7 +495,7 @@ export function AISettingsPage() {
                             }}
                           />
                         </div>
-                        <span className="text-white font-medium w-12 text-right">
+                        <span className="text-foreground font-medium w-12 text-right">
                           {count as number}
                         </span>
                       </div>
@@ -510,12 +510,12 @@ export function AISettingsPage() {
           {activeTab === 'test' && (
             <div className="space-y-6">
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Test Prompt Enhancement</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Test Prompt Enhancement</h3>
                 
                 <div className="space-y-4">
                   {/* Category Selector */}
                   <div>
-                    <label className="block text-gray-400 text-sm mb-2">Prompt Category</label>
+                    <label className="block text-muted-foreground text-sm mb-2">Prompt Category</label>
                     <div className="grid grid-cols-5 gap-2">
                       {Object.keys(samplePrompts).map((category) => (
                         <button
@@ -527,8 +527,8 @@ export function AISettingsPage() {
                           }}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                             currentCategory === category
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800'
+                              ? 'bg-purple-600 text-foreground'
+                              : 'bg-card/50 text-muted-foreground hover:bg-card'
                           }`}
                         >
                           {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -568,9 +568,9 @@ export function AISettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-gray-400 text-sm mb-2">
+                    <label className="block text-muted-foreground text-sm mb-2">
                       Your Prompt 
-                      <span className="text-xs text-gray-500 ml-2">
+                      <span className="text-xs text-muted-foreground ml-2">
                         ({currentCategory} • Sample {promptIndex + 1}/{samplePrompts[currentCategory].length})
                       </span>
                     </label>
@@ -578,18 +578,18 @@ export function AISettingsPage() {
                       value={testPrompt}
                       onChange={(e) => setTestPrompt(e.target.value)}
                       placeholder="Enter a prompt or load a sample to see how it gets enhanced..."
-                      className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                      className="w-full px-4 py-3 bg-background/50 border border-gray-700 rounded-lg text-foreground placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                       rows={3}
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-gray-400 text-sm mb-2">Enhancement Level</label>
+                      <label className="block text-muted-foreground text-sm mb-2">Enhancement Level</label>
                       <select
                         value={testLevel}
                         onChange={(e) => setTestLevel(e.target.value)}
-                        className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground focus:border-purple-500 focus:outline-none"
                       >
                         <option value="basic">Basic</option>
                         <option value="advanced">Advanced</option>
@@ -597,12 +597,12 @@ export function AISettingsPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-gray-400 text-sm mb-2">Content Type</label>
+                      <label className="block text-muted-foreground text-sm mb-2">Content Type</label>
                       <input
                         type="text"
                         value={currentCategory === 'creative' || currentCategory === 'technical' ? 'blog' : currentCategory}
                         disabled
-                        className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-400"
+                        className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-muted-foreground"
                       />
                     </div>
                   </div>
@@ -619,14 +619,14 @@ export function AISettingsPage() {
 
                 {testResult && (
                   <div className="mt-6 space-y-4">
-                    <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                      <h4 className="text-sm font-medium text-gray-400 mb-2">Enhanced Prompt</h4>
-                      <p className="text-white whitespace-pre-wrap">{testResult.enhanced}</p>
+                    <div className="p-4 bg-background/50 rounded-lg border border-gray-700">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Enhanced Prompt</h4>
+                      <p className="text-foreground whitespace-pre-wrap">{testResult.enhanced}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-gray-900/50 rounded-lg">
-                        <p className="text-xs text-gray-400 mb-1">Techniques Applied</p>
+                      <div className="p-3 bg-background/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Techniques Applied</p>
                         <div className="flex flex-wrap gap-1">
                           {testResult.techniques?.map((tech: string) => (
                             <span key={tech} className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded">
@@ -635,9 +635,9 @@ export function AISettingsPage() {
                           ))}
                         </div>
                       </div>
-                      <div className="p-3 bg-gray-900/50 rounded-lg">
-                        <p className="text-xs text-gray-400 mb-1">Memory Context</p>
-                        <p className="text-white font-medium">{testResult.memory_context} items</p>
+                      <div className="p-3 bg-background/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Memory Context</p>
+                        <p className="text-foreground font-medium">{testResult.memory_context} items</p>
                       </div>
                     </div>
                   </div>
@@ -648,36 +648,36 @@ export function AISettingsPage() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <Lightbulb className="w-5 h-5 text-yellow-500" />
-                  <h3 className="text-lg font-semibold text-white">Pro Tips</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Pro Tips</h3>
                 </div>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                    <p className="text-gray-300 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       Use <span className="text-purple-400 font-medium">Sample Prompts</span> to explore different enhancement styles across categories
                     </p>
                   </li>
                   <li className="flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                    <p className="text-gray-300 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       Try the same prompt with different <span className="text-purple-400 font-medium">Enhancement Levels</span> to see the progression
                     </p>
                   </li>
                   <li className="flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                    <p className="text-gray-300 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       <span className="text-purple-400 font-medium">Expert level</span> adds deep reasoning and nuanced context
                     </p>
                   </li>
                   <li className="flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                    <p className="text-gray-300 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       Enable <span className="text-purple-400 font-medium">Memory Context</span> to maintain consistency across related content
                     </p>
                   </li>
                   <li className="flex items-start gap-2">
                     <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                    <p className="text-gray-300 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       Mix <span className="text-purple-400 font-medium">Categories</span> to discover creative cross-domain enhancements
                     </p>
                   </li>

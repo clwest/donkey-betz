@@ -44,11 +44,11 @@ export function StyleInsightsDashboard() {
           <div className="flex items-center justify-between p-6 border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-primary rounded-lg">
-                <SparklesIcon className="h-6 w-6 text-white" />
+                <SparklesIcon className="h-6 w-6 text-foreground" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Style Insights</h2>
-                <p className="text-gray-400">Your AI-powered style analysis</p>
+                <h2 className="text-2xl font-bold text-foreground">Style Insights</h2>
+                <p className="text-muted-foreground">Your AI-powered style analysis</p>
               </div>
             </div>
             <Button variant="ghost" onClick={toggleInsights}>
@@ -61,7 +61,7 @@ export function StyleInsightsDashboard() {
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
-                <span className="ml-3 text-gray-400">Analyzing your style preferences...</span>
+                <span className="ml-3 text-muted-foreground">Analyzing your style preferences...</span>
               </div>
             ) : insights ? (
               <>
@@ -69,37 +69,37 @@ export function StyleInsightsDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Card className="text-center">
                     <ChartBarIcon className="h-8 w-8 text-primary-400 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-white">{insights.total_memories}</div>
-                    <div className="text-sm text-gray-400">Total Memories</div>
+                    <div className="text-2xl font-bold text-foreground">{insights.total_memories}</div>
+                    <div className="text-sm text-muted-foreground">Total Memories</div>
                   </Card>
                   
                   <Card className="text-center">
-                    <HeartIcon className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-white">{insights.loved_count}</div>
-                    <div className="text-sm text-gray-400">Loved Styles</div>
+                    <HeartIcon className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-foreground">{insights.loved_count}</div>
+                    <div className="text-sm text-muted-foreground">Loved Styles</div>
                   </Card>
                   
                   <Card className="text-center">
-                    <SparklesIcon className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-white">{insights.preferred_cfg}</div>
-                    <div className="text-sm text-gray-400">Preferred CFG</div>
+                    <SparklesIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-foreground">{insights.preferred_cfg}</div>
+                    <div className="text-sm text-muted-foreground">Preferred CFG</div>
                   </Card>
                   
                   <Card className="text-center">
-                    <EyeIcon className="h-8 w-8 text-blue-400 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-white">{insights.preferred_steps}</div>
-                    <div className="text-sm text-gray-400">Preferred Steps</div>
+                    <EyeIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-foreground">{insights.preferred_steps}</div>
+                    <div className="text-sm text-muted-foreground">Preferred Steps</div>
                   </Card>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Favorite Styles */}
                   <Card>
-                    <h3 className="text-lg font-semibold text-white mb-4">Favorite Styles</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Favorite Styles</h3>
                     <div className="space-y-2">
                       {insights.favorite_styles?.slice(0, 5).map((style, index) => (
                         <div key={style.style} className="flex items-center justify-between">
-                          <span className="text-gray-300">{index + 1}. {style.style}</span>
+                          <span className="text-muted-foreground">{index + 1}. {style.style}</span>
                           <span className="text-primary-400 font-medium">{style.count} uses</span>
                         </div>
                       ))}
@@ -108,14 +108,14 @@ export function StyleInsightsDashboard() {
 
                   {/* Detected Patterns */}
                   <Card>
-                    <h3 className="text-lg font-semibold text-white mb-4">Detected Patterns</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Detected Patterns</h3>
                     <div className="space-y-3">
                       {insights.patterns?.slice(0, 5).map((pattern) => (
                         <div key={pattern.id} className="flex items-start gap-3">
                           <div className="w-2 h-2 bg-primary-500 rounded-full mt-2" />
                           <div>
-                            <div className="text-white font-medium">{pattern.pattern_name}</div>
-                            <div className="text-sm text-gray-400">{pattern.pattern_description}</div>
+                            <div className="text-foreground font-medium">{pattern.pattern_name}</div>
+                            <div className="text-sm text-muted-foreground">{pattern.pattern_description}</div>
                             <div className="text-xs text-primary-400 mt-1">
                               {Math.round(pattern.confidence * 100)}% confidence
                             </div>
@@ -127,13 +127,13 @@ export function StyleInsightsDashboard() {
 
                   {/* Evolution Trends */}
                   <Card>
-                    <h3 className="text-lg font-semibold text-white mb-4">Style Evolution</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Style Evolution</h3>
                     <div className="space-y-4">
                       {insights.evolution?.trending_up?.length > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <ArrowTrendingUpIcon className="h-4 w-4 text-green-400" />
-                            <span className="text-sm font-medium text-green-400">Trending Up</span>
+                            <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
+                            <span className="text-sm font-medium text-green-500">Trending Up</span>
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {insights.evolution?.trending_up?.map((trend) => (
@@ -165,19 +165,19 @@ export function StyleInsightsDashboard() {
 
                   {/* AI Suggestions */}
                   <Card>
-                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                      <LightBulbIcon className="h-5 w-5 text-yellow-400" />
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <LightBulbIcon className="h-5 w-5 text-yellow-500" />
                       AI Suggestions
                     </h3>
                     <div className="space-y-3">
                       {suggestions.length === 0 ? (
-                        <p className="text-gray-400 text-sm">No suggestions available. Generate more content to get AI recommendations!</p>
+                        <p className="text-muted-foreground text-sm">No suggestions available. Generate more content to get AI recommendations!</p>
                       ) : (
                         suggestions.slice(0, 3).map((suggestion) => (
-                          <div key={suggestion.id} className="bg-dark-800/50 rounded-lg p-3">
-                            <div className="text-white font-medium mb-1">{suggestion.title}</div>
-                            <div className="text-sm text-gray-400 mb-2">{suggestion.description}</div>
-                            <div className="text-xs text-gray-500 mb-3">{suggestion.reasoning}</div>
+                          <div key={suggestion.id} className="bg-card/50 rounded-lg p-3">
+                            <div className="text-foreground font-medium mb-1">{suggestion.title}</div>
+                            <div className="text-sm text-muted-foreground mb-2">{suggestion.description}</div>
+                            <div className="text-xs text-muted-foreground mb-3">{suggestion.reasoning}</div>
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
@@ -205,7 +205,7 @@ export function StyleInsightsDashboard() {
                 {/* Top Memories Gallery */}
                 {insights.top_memories?.length > 0 && (
                   <Card>
-                    <h3 className="text-lg font-semibold text-white mb-4">Your Best Generations</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-4">Your Best Generations</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {insights.top_memories?.slice(0, 8).map((memory) => (
                         <div key={memory.id} className="aspect-square">
@@ -230,8 +230,8 @@ export function StyleInsightsDashboard() {
             ) : (
               <div className="text-center py-12">
                 <SparklesIcon className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Start Building Your Style Profile</h3>
-                <p className="text-gray-400 mb-6">
+                <h3 className="text-xl font-semibold text-foreground mb-2">Start Building Your Style Profile</h3>
+                <p className="text-muted-foreground mb-6">
                   Generate some images and use the ❤️ Love button to build your personal style memory!
                 </p>
                 <Button onClick={() => window.location.href = '/studio'}>

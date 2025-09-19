@@ -110,24 +110,24 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
   const getFileIcon = (fileType: string) => {
     switch (fileType) {
       case 'python':
-        return <Code className="w-4 h-4 text-blue-400" />;
+        return <Code className="w-4 h-4 text-blue-500" />;
       case 'markdown':
-        return <FileText className="w-4 h-4 text-green-400" />;
+        return <FileText className="w-4 h-4 text-green-500" />;
       default:
-        return <FileText className="w-4 h-4 text-gray-400" />;
+        return <FileText className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-background rounded-xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 flex items-start justify-between">
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-white mb-2">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               {project.strategy?.title || project.name || 'AI Project'}
             </h2>
-            <p className="text-white/90">
+            <p className="text-foreground/90">
               {project.strategy?.description || project.description || 'AI-powered application'}
             </p>
 
@@ -155,14 +155,14 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={downloadProject}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-white"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center gap-2 text-foreground"
             >
               <Download className="w-4 h-4" />
               Download
             </button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white"
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors text-foreground"
             >
               <X className="w-5 h-5" />
             </button>
@@ -172,20 +172,20 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
         {/* Content */}
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-80 bg-gray-800 border-r border-gray-700 overflow-y-auto">
+          <div className="w-80 bg-card border-r border-gray-700 overflow-y-auto">
             {/* Files Section */}
             <div className="p-4">
               <button
                 onClick={() => toggleSection('files')}
                 className="flex items-center justify-between w-full text-left mb-3 hover:text-purple-400 transition-colors"
               >
-                <h3 className="font-semibold text-white flex items-center gap-2">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <Code className="w-4 h-4" />
                   Project Files
                 </h3>
                 {expandedSections.files ?
-                  <ChevronDown className="w-4 h-4 text-gray-400" /> :
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" /> :
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 }
               </button>
 
@@ -197,8 +197,8 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
                       onClick={() => setSelectedFile(file)}
                       className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors ${
                         selectedFile?.filename === file.filename
-                          ? 'bg-purple-600 text-white'
-                          : 'hover:bg-gray-700 text-gray-300'
+                          ? 'bg-purple-600 text-foreground'
+                          : 'hover:bg-gray-700 text-muted-foreground'
                       }`}
                     >
                       {getFileIcon(file.file_type)}
@@ -215,33 +215,33 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
                 onClick={() => toggleSection('setup')}
                 className="flex items-center justify-between w-full text-left mb-3 hover:text-purple-400 transition-colors"
               >
-                <h3 className="font-semibold text-white flex items-center gap-2">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
                   <Terminal className="w-4 h-4" />
                   Setup & Launch
                 </h3>
                 {expandedSections.setup ?
-                  <ChevronDown className="w-4 h-4 text-gray-400" /> :
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" /> :
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 }
               </button>
 
               {expandedSections.setup && (
                 <div className="space-y-3 text-sm">
-                  <div className="bg-gray-900 rounded-lg p-3">
-                    <p className="text-gray-400 mb-1">Install dependencies:</p>
-                    <code className="text-green-400">pip install -r requirements.txt</code>
+                  <div className="bg-background rounded-lg p-3">
+                    <p className="text-muted-foreground mb-1">Install dependencies:</p>
+                    <code className="text-green-500">pip install -r requirements.txt</code>
                   </div>
 
-                  <div className="bg-gray-900 rounded-lg p-3">
-                    <p className="text-gray-400 mb-1">Launch command:</p>
-                    <code className="text-green-400">
+                  <div className="bg-background rounded-lg p-3">
+                    <p className="text-muted-foreground mb-1">Launch command:</p>
+                    <code className="text-green-500">
                       {project.launch_command || 'python ai_app.py'}
                     </code>
                   </div>
 
-                  <div className="bg-gray-900 rounded-lg p-3">
-                    <p className="text-gray-400 mb-1">Required:</p>
-                    <ul className="text-gray-300 text-xs space-y-1">
+                  <div className="bg-background rounded-lg p-3">
+                    <p className="text-muted-foreground mb-1">Required:</p>
+                    <ul className="text-muted-foreground text-xs space-y-1">
                       <li>• OpenAI API key in .env file</li>
                       <li>• Python 3.8+</li>
                     </ul>
@@ -257,24 +257,24 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
                   onClick={() => toggleSection('insights')}
                   className="flex items-center justify-between w-full text-left mb-3 hover:text-purple-400 transition-colors"
                 >
-                  <h3 className="font-semibold text-white flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
                     <User className="w-4 h-4" />
                     Advisor Insights
                   </h3>
                   {expandedSections.insights ?
-                    <ChevronDown className="w-4 h-4 text-gray-400" /> :
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" /> :
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   }
                 </button>
 
                 {expandedSections.insights && (
                   <div className="space-y-3">
                     {project.advisor_insights.slice(0, 2).map((insight: any, index: number) => (
-                      <div key={index} className="bg-gray-900 rounded-lg p-3">
+                      <div key={index} className="bg-background rounded-lg p-3">
                         <p className="text-purple-400 font-medium text-sm mb-2">
                           {insight.advisor}
                         </p>
-                        <p className="text-gray-300 text-xs italic">
+                        <p className="text-muted-foreground text-xs italic">
                           "{insight.advice}"
                         </p>
                       </div>
@@ -289,18 +289,18 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
           <div className="flex-1 bg-gray-950 overflow-hidden flex flex-col">
             {selectedFile ? (
               <>
-                <div className="bg-gray-800 px-6 py-3 flex items-center justify-between border-b border-gray-700">
-                  <h3 className="text-white font-medium flex items-center gap-2">
+                <div className="bg-card px-6 py-3 flex items-center justify-between border-b border-gray-700">
+                  <h3 className="text-foreground font-medium flex items-center gap-2">
                     {getFileIcon(selectedFile.file_type)}
                     {selectedFile.filename}
                   </h3>
                   <button
                     onClick={() => copyToClipboard(selectedFile.content)}
-                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2 text-sm text-gray-300"
+                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-2 text-sm text-muted-foreground"
                   >
                     {copied ? (
                       <>
-                        <Check className="w-4 h-4 text-green-400" />
+                        <Check className="w-4 h-4 text-green-500" />
                         Copied!
                       </>
                     ) : (
@@ -313,13 +313,13 @@ const ProjectViewer: React.FC<ProjectViewerProps> = ({ project, onClose }) => {
                 </div>
 
                 <div className="flex-1 overflow-auto p-6">
-                  <pre className="text-gray-300 text-sm font-mono">
+                  <pre className="text-muted-foreground text-sm font-mono">
                     <code>{selectedFile.content}</code>
                   </pre>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
                   <Code className="w-12 h-12 mx-auto mb-3 text-gray-600" />
                   <p>Select a file to view its contents</p>

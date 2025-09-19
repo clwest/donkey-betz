@@ -148,6 +148,8 @@ from core.views_profile_management import (
 from core.views_job_application_system import (
     JobOpportunityView, QuickApplyView, ApplicationStatusView
 )
+# Import enhanced agent execution views
+from core import views_agent_execution
 
 # Create API router
 router = DefaultRouter()
@@ -297,6 +299,13 @@ urlpatterns = [
     path('api/v1/personal-knowledge/<str:knowledge_id>/delete/', personal_knowledge_delete, name='personal-knowledge-delete'),
     path('api/v1/personal-knowledge/stats/', personal_knowledge_stats, name='personal-knowledge-stats'),
     
+    # Enhanced Agent Execution (No Celery Required!)
+    path('api/v1/agents/execute-sync/', views_agent_execution.execute_agent_sync, name='agent-execute-sync'),
+    path('api/v1/agents/list-executable/', views_agent_execution.list_executable_agents, name='agent-list-executable'),
+    path('api/v1/agents/execution-history/', views_agent_execution.agent_execution_history, name='agent-execution-history'),
+    path('api/v1/agents/test-execution/', views_agent_execution.test_agent_execution, name='agent-test-execution'),
+    path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
+
     # Personal memory endpoints (secure access)
     path('api/v1/personal-memories/search/', search_personal_memories_api, name='personal-memories-search'),
     path('api/v1/personal-memories/stats/', personal_memory_stats, name='personal-memories-stats'),

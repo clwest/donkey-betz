@@ -154,7 +154,7 @@ const UserDashboard: React.FC = () => {
       case 'failed':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <Activity className="h-4 w-4 text-gray-500" />;
+        return <Activity className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -163,24 +163,24 @@ const UserDashboard: React.FC = () => {
       case 'enterprise':
         return 'bg-purple-600/20 text-purple-400 border-purple-600/50';
       case 'pro':
-        return 'bg-blue-600/20 text-blue-400 border-blue-600/50';
+        return 'bg-blue-600/20 text-blue-500 border-blue-600/50';
       default:
-        return 'bg-gray-600/20 text-gray-400 border-gray-600/50';
+        return 'bg-gray-600/20 text-muted-foreground border-gray-600/50';
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white">Loading dashboard...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading dashboard...</div>
       </div>
     );
   }
 
   if (!dashboardData) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-red-400">Failed to load dashboard</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-red-500">Failed to load dashboard</div>
       </div>
     );
   }
@@ -188,12 +188,12 @@ const UserDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
       {/* Header */}
-      <div className="bg-gray-900/70 backdrop-blur-lg border-b border-gray-700 sticky top-0 z-40">
+      <div className="bg-background/70 backdrop-blur-lg border-b border-gray-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-              <p className="text-gray-400">Welcome back, {dashboardData.user.name}</p>
+              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-muted-foreground">Welcome back, {dashboardData.user.name}</p>
             </div>
             <div className="flex items-center gap-4">
               <Badge className={getPlanBadgeColor(dashboardData.user.plan)}>
@@ -206,7 +206,7 @@ const UserDashboard: React.FC = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate('/settings')}
-                className="text-gray-300 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -218,48 +218,48 @@ const UserDashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Articles Generated</p>
-                  <p className="text-3xl font-bold text-white">{dashboardData.stats.articlesGenerated}</p>
+                  <p className="text-sm text-muted-foreground">Articles Generated</p>
+                  <p className="text-3xl font-bold text-foreground">{dashboardData.stats.articlesGenerated}</p>
                 </div>
                 <FileText className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Bets Analyzed</p>
-                  <p className="text-3xl font-bold text-white">{dashboardData.stats.betsAnalyzed}</p>
+                  <p className="text-sm text-muted-foreground">Bets Analyzed</p>
+                  <p className="text-3xl font-bold text-foreground">{dashboardData.stats.betsAnalyzed}</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Agents Used</p>
-                  <p className="text-3xl font-bold text-white">{dashboardData.stats.agentsUsed}</p>
+                  <p className="text-sm text-muted-foreground">Agents Used</p>
+                  <p className="text-3xl font-bold text-foreground">{dashboardData.stats.agentsUsed}</p>
                 </div>
                 <Brain className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Total Savings</p>
-                  <p className="text-3xl font-bold text-white">${dashboardData.stats.totalSavings}</p>
+                  <p className="text-sm text-muted-foreground">Total Savings</p>
+                  <p className="text-3xl font-bold text-foreground">${dashboardData.stats.totalSavings}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-yellow-500" />
               </div>
@@ -270,9 +270,9 @@ const UserDashboard: React.FC = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Quick Actions */}
           <div className="lg:col-span-2">
-            <Card className="bg-gray-800/50 border-gray-700">
+            <Card className="bg-card/50 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-purple-500" />
                   Quick Actions
                 </CardTitle>
@@ -288,8 +288,8 @@ const UserDashboard: React.FC = () => {
                       <div className="flex items-start gap-3">
                         <action.icon className={`h-8 w-8 ${action.color} group-hover:scale-110 transition-transform`} />
                         <div className="flex-1">
-                          <h3 className="font-semibold text-white mb-1">{action.title}</h3>
-                          <p className="text-sm text-gray-400">{action.description}</p>
+                          <h3 className="font-semibold text-foreground mb-1">{action.title}</h3>
+                          <p className="text-sm text-muted-foreground">{action.description}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -301,9 +301,9 @@ const UserDashboard: React.FC = () => {
 
           {/* Recent Activity */}
           <div>
-            <Card className="bg-gray-800/50 border-gray-700">
+            <Card className="bg-card/50 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <Activity className="h-5 w-5 text-green-500" />
                   Recent Activity
                 </CardTitle>
@@ -313,10 +313,10 @@ const UserDashboard: React.FC = () => {
                   <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-700/30">
                     {getStatusIcon(activity.status)}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
+                      <p className="text-sm font-medium text-foreground truncate">
                         {activity.title}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         {new Date(activity.timestamp).toLocaleString()}
                       </p>
                     </div>
@@ -325,7 +325,7 @@ const UserDashboard: React.FC = () => {
                 
                 <Button
                   variant="outline"
-                  className="w-full mt-4 border-gray-600 text-gray-300 hover:bg-gray-700"
+                  className="w-full mt-4 border-gray-600 text-muted-foreground hover:bg-gray-700"
                   onClick={() => navigate('/activity')}
                 >
                   View All Activity
@@ -336,9 +336,9 @@ const UserDashboard: React.FC = () => {
         </div>
 
         {/* Performance Chart Placeholder */}
-        <Card className="mt-8 bg-gray-800/50 border-gray-700">
+        <Card className="mt-8 bg-card/50 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-blue-500" />
               Performance Overview
             </CardTitle>
@@ -347,8 +347,8 @@ const UserDashboard: React.FC = () => {
             <div className="h-64 flex items-center justify-center bg-gray-700/30 rounded-lg">
               <div className="text-center">
                 <BarChart3 className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Performance charts coming soon</p>
-                <p className="text-sm text-gray-500">Track your usage and success metrics</p>
+                <p className="text-muted-foreground">Performance charts coming soon</p>
+                <p className="text-sm text-muted-foreground">Track your usage and success metrics</p>
               </div>
             </div>
           </CardContent>
@@ -359,8 +359,8 @@ const UserDashboard: React.FC = () => {
           <Card className="mt-8 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-purple-700">
             <CardContent className="p-6 text-center">
               <Trophy className="h-12 w-12 text-purple-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Unlock More Power</h3>
-              <p className="text-gray-300 mb-4">
+              <h3 className="text-xl font-bold text-foreground mb-2">Unlock More Power</h3>
+              <p className="text-muted-foreground mb-4">
                 Upgrade to Pro for unlimited agents, priority support, and advanced analytics
               </p>
               <Button

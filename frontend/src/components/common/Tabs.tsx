@@ -46,7 +46,7 @@ export function Tabs({ defaultValue, children, className }: TabsProps) {
 export function TabsList({ children, className }: TabsListProps) {
   return (
     <div className={clsx(
-      'inline-flex h-10 items-center justify-center rounded-lg bg-dark-800 p-1 text-gray-400',
+      'inline-flex h-10 items-center justify-center rounded-lg bg-card p-1 text-muted-foreground',
       className
     )}>
       {children}
@@ -68,8 +68,8 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       className={clsx(
         'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
         isActive 
-          ? 'bg-primary-500 text-white shadow-sm' 
-          : 'text-gray-400 hover:bg-dark-700 hover:text-gray-300',
+          ? 'bg-primary-500 text-foreground shadow-sm' 
+          : 'text-muted-foreground hover:bg-dark-700 hover:text-muted-foreground',
         className
       )}
       onClick={() => setActiveTab(value)}

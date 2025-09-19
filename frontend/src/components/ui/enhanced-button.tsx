@@ -29,7 +29,7 @@ const buttonVariants = cva(
       variant: {
         primary: [
           'bg-gradient-to-r from-primary-500 to-primary-600',
-          'text-white shadow-dark-sm',
+          'text-foreground shadow-dark-sm',
           'hover:shadow-dark-md hover:shadow-primary-500/25 hover:-translate-y-0.5',
           'active:translate-y-0 active:shadow-dark-sm',
           'focus-visible:ring-primary-500 focus-visible:ring-offset-bg-primary',
@@ -54,14 +54,14 @@ const buttonVariants = cva(
         ],
         danger: [
           'bg-status-error border border-accent-rose-600',
-          'text-white shadow-dark-sm',
+          'text-foreground shadow-dark-sm',
           'hover:bg-accent-rose-600 hover:shadow-dark-md hover:shadow-status-error/25 hover:-translate-y-0.5',
           'active:translate-y-0 active:shadow-dark-sm',
           'focus-visible:ring-status-error focus-visible:ring-offset-bg-primary',
         ],
         success: [
           'bg-status-success border border-accent-emerald-600',
-          'text-white shadow-dark-sm',
+          'text-foreground shadow-dark-sm',
           'hover:bg-accent-emerald-600 hover:shadow-dark-md hover:shadow-status-success/25 hover:-translate-y-0.5',
           'active:translate-y-0 active:shadow-dark-sm',
           'focus-visible:ring-status-success focus-visible:ring-offset-bg-primary',

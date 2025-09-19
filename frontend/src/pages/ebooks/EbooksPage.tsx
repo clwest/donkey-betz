@@ -287,13 +287,13 @@ export function EbooksPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'published':
-        return 'text-green-400 bg-green-400/10';
+        return 'text-green-500 bg-green-400/10';
       case 'completed':
-        return 'text-blue-400 bg-blue-400/10';
+        return 'text-blue-500 bg-blue-400/10';
       case 'generating':
-        return 'text-yellow-400 bg-yellow-400/10';
+        return 'text-yellow-500 bg-yellow-400/10';
       default:
-        return 'text-gray-400 bg-gray-400/10';
+        return 'text-muted-foreground bg-gray-400/10';
     }
   };
 
@@ -408,8 +408,8 @@ export function EbooksPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white">eBooks</h1>
-          <p className="text-gray-400 mt-1">Create and manage long-form content</p>
+          <h1 className="text-3xl font-bold text-foreground">eBooks</h1>
+          <p className="text-muted-foreground mt-1">Create and manage long-form content</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <PlusIcon className="h-4 w-4" />
@@ -422,8 +422,8 @@ export function EbooksPage() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Total eBooks</p>
-              <p className="text-2xl font-bold text-white">{ebooks.length}</p>
+              <p className="text-sm text-muted-foreground">Total eBooks</p>
+              <p className="text-2xl font-bold text-foreground">{ebooks.length}</p>
             </div>
             <BookOpenIcon className="h-8 w-8 text-primary-400" />
           </div>
@@ -432,32 +432,32 @@ export function EbooksPage() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Published</p>
-              <p className="text-2xl font-bold text-green-400">
+              <p className="text-sm text-muted-foreground">Published</p>
+              <p className="text-2xl font-bold text-green-500">
                 {ebooks.filter(e => e.status === 'published').length}
               </p>
             </div>
-            <CheckCircleIcon className="h-8 w-8 text-green-400" />
+            <CheckCircleIcon className="h-8 w-8 text-green-500" />
           </div>
         </Card>
         
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Total Words</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-sm text-muted-foreground">Total Words</p>
+              <p className="text-2xl font-bold text-foreground">
                 {ebooks.reduce((sum, e) => sum + (e.word_count || 0), 0).toLocaleString()}
               </p>
             </div>
-            <DocumentTextIcon className="h-8 w-8 text-blue-400" />
+            <DocumentTextIcon className="h-8 w-8 text-blue-500" />
           </div>
         </Card>
         
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Chapters</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-sm text-muted-foreground">Chapters</p>
+              <p className="text-2xl font-bold text-foreground">
                 {ebooks.reduce((sum, e) => sum + (e.chapters || 0), 0)}
               </p>
             </div>
@@ -471,8 +471,8 @@ export function EbooksPage() {
         <Card>
           <div className="text-center py-12">
             <BookOpenIcon className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-400 mb-4">No eBooks yet</p>
-            <p className="text-sm text-gray-500 mb-4">Create your first eBook to get started</p>
+            <p className="text-muted-foreground mb-4">No eBooks yet</p>
+            <p className="text-sm text-muted-foreground mb-4">Create your first eBook to get started</p>
             <Button onClick={() => setShowCreateModal(true)}>
               Create Your First eBook
             </Button>
@@ -497,12 +497,12 @@ export function EbooksPage() {
               
               {/* eBook Info */}
               <div className="flex-1">
-                <h3 className="font-semibold text-white mb-1">{ebook.title}</h3>
-                <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                <h3 className="font-semibold text-foreground mb-1">{ebook.title}</h3>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                   {ebook.description || 'No description'}
                 </p>
                 
-                <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                   <span className="capitalize">{ebook.genre}</span>
                   <span>•</span>
                   <span>{ebook.chapters || 0} chapters</span>
@@ -514,7 +514,7 @@ export function EbooksPage() {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ebook.status)}`}>
                     {ebook.status}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     {(ebook.word_count || 0).toLocaleString()} words
                   </span>
                 </div>
@@ -550,7 +550,7 @@ export function EbooksPage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => setEditingMetadata(ebook)}
-                    className="text-blue-400 hover:text-blue-300"
+                    className="text-blue-500 hover:text-blue-300"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </Button>
@@ -570,7 +570,7 @@ export function EbooksPage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => setPublishingEbook(ebook)}
-                    className="text-green-400 hover:text-green-300"
+                    className="text-green-500 hover:text-green-300"
                   >
                     <RocketLaunchIcon className="h-4 w-4" />
                   </Button>
@@ -579,7 +579,7 @@ export function EbooksPage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => deleteEbook(ebook.id)}
-                    className="text-red-400 hover:text-red-300"
+                    className="text-red-500 hover:text-red-300"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </Button>
@@ -593,38 +593,38 @@ export function EbooksPage() {
       {/* Create eBook Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold text-white mb-4">Create New eBook</h2>
+          <div className="bg-card rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Create New eBook</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter eBook title"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 h-24"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 h-24"
                   placeholder="Brief description of your eBook"
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Genre</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Genre</label>
                   <select
                     value={formData.genre}
                     onChange={(e) => setFormData({...formData, genre: e.target.value})}
-                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="business">Business</option>
                     <option value="technical">Technical</option>
@@ -636,11 +636,11 @@ export function EbooksPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Target Audience</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Target Audience</label>
                   <select
                     value={formData.target_audience}
                     onChange={(e) => setFormData({...formData, target_audience: e.target.value})}
-                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="general">General</option>
                     <option value="professional">Professional</option>
@@ -653,24 +653,24 @@ export function EbooksPage() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Number of Chapters</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Number of Chapters</label>
                   <input
                     type="number"
                     value={formData.chapter_count}
                     onChange={(e) => setFormData({...formData, chapter_count: parseInt(e.target.value)})}
-                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                     min="3"
                     max="30"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Words per Chapter</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Words per Chapter</label>
                   <input
                     type="number"
                     value={formData.words_per_chapter}
                     onChange={(e) => setFormData({...formData, words_per_chapter: parseInt(e.target.value)})}
-                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                     min="500"
                     max="5000"
                     step="500"
@@ -679,7 +679,7 @@ export function EbooksPage() {
               </div>
               
               <div className="bg-dark-700 rounded-lg p-3">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Estimated length: ~{(formData.chapter_count * formData.words_per_chapter).toLocaleString()} words
                   ({Math.round(formData.chapter_count * formData.words_per_chapter / 250)} pages)
                 </p>
@@ -739,7 +739,7 @@ export function EbooksPage() {
               size="sm"
               variant="ghost"
               onClick={() => setEditingMetadata(selectedEbook)}
-              className="text-gray-400 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
             >
               <PencilIcon className="h-4 w-4 mr-1" />
               Edit Metadata
@@ -749,45 +749,45 @@ export function EbooksPage() {
           <div className="space-y-4">
             {!viewingChapter ? (
               <>
-                <p className="text-gray-400">{selectedEbook.description}</p>
+                <p className="text-muted-foreground">{selectedEbook.description}</p>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Genre:</span>
-                    <span className="ml-2 text-white capitalize">{selectedEbook.genre}</span>
+                    <span className="text-muted-foreground">Genre:</span>
+                    <span className="ml-2 text-foreground capitalize">{selectedEbook.genre}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Audience:</span>
-                    <span className="ml-2 text-white capitalize">{selectedEbook.target_audience}</span>
+                    <span className="text-muted-foreground">Audience:</span>
+                    <span className="ml-2 text-foreground capitalize">{selectedEbook.target_audience}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Word Count:</span>
-                    <span className="ml-2 text-white">{(selectedEbook.actual_word_count || selectedEbook.word_count || 0).toLocaleString()}</span>
+                    <span className="text-muted-foreground">Word Count:</span>
+                    <span className="ml-2 text-foreground">{(selectedEbook.actual_word_count || selectedEbook.word_count || 0).toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Reading Time:</span>
-                    <span className="ml-2 text-white">{formatReadingTime(Math.ceil((selectedEbook.actual_word_count || selectedEbook.word_count || 0) / 200))}</span>
+                    <span className="text-muted-foreground">Reading Time:</span>
+                    <span className="ml-2 text-foreground">{formatReadingTime(Math.ceil((selectedEbook.actual_word_count || selectedEbook.word_count || 0) / 200))}</span>
                   </div>
                 </div>
                 
-                <div className="border-t border-dark-700 pt-4">
-                  <h3 className="font-semibold text-white mb-3">Chapters</h3>
+                <div className="border-t border-border pt-4">
+                  <h3 className="font-semibold text-foreground mb-3">Chapters</h3>
                   {Array.isArray(selectedEbook.chapters) && selectedEbook.chapters.length > 0 ? (
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {selectedEbook.chapters.map((chapter) => (
                         <div
                           key={chapter.id}
-                          className="p-3 bg-dark-800 rounded-lg border border-dark-700 transition-colors"
+                          className="p-3 bg-card rounded-lg border border-border transition-colors"
                         >
                           <div className="flex items-center justify-between">
                             <div 
                               className="flex-1 cursor-pointer hover:bg-dark-700/50 p-1 -m-1 rounded"
                               onClick={() => loadChapterContent(selectedEbook, chapter)}
                             >
-                              <h4 className="text-sm font-medium text-white">
+                              <h4 className="text-sm font-medium text-foreground">
                                 Chapter {chapter.chapter_number}: {chapter.title}
                               </h4>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-muted-foreground">
                                 {chapter.word_count.toLocaleString()} words
                               </p>
                             </div>
@@ -796,18 +796,18 @@ export function EbooksPage() {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => setEditingChapter(chapter)}
-                                className="text-gray-400 hover:text-white"
+                                className="text-muted-foreground hover:text-foreground"
                               >
                                 <PencilIcon className="h-4 w-4" />
                               </Button>
-                              <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+                              <DocumentTextIcon className="h-5 w-5 text-muted-foreground" />
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-center py-4">
+                    <p className="text-muted-foreground text-center py-4">
                       {typeof selectedEbook.chapters === 'number' && selectedEbook.chapters > 0
                         ? 'Loading chapters...'
                         : 'No chapters generated yet'}
@@ -829,10 +829,10 @@ export function EbooksPage() {
                 </Button>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     Chapter {viewingChapter.chapter_number}: {viewingChapter.title}
                   </h3>
-                  <p className="text-xs text-gray-500 mb-4">
+                  <p className="text-xs text-muted-foreground mb-4">
                     {viewingChapter.word_count.toLocaleString()} words
                   </p>
                   
@@ -840,15 +840,15 @@ export function EbooksPage() {
                     {loadingChapter ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        <span className="ml-2 text-gray-400">Loading chapter content...</span>
+                        <span className="ml-2 text-muted-foreground">Loading chapter content...</span>
                       </div>
                     ) : viewingChapter.content ? (
-                      <div className="text-gray-300 whitespace-pre-wrap">
+                      <div className="text-muted-foreground whitespace-pre-wrap">
                         {viewingChapter.content}
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-gray-500 mb-2">No content available for this chapter yet</p>
+                        <p className="text-muted-foreground mb-2">No content available for this chapter yet</p>
                         <p className="text-xs text-gray-600">Content may need to be generated</p>
                       </div>
                     )}

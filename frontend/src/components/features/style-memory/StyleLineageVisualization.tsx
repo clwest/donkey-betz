@@ -169,8 +169,8 @@ export function StyleLineageVisualization() {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-white/10">
             <div>
-              <h2 className="text-xl font-bold text-white">Style Lineage</h2>
-              <p className="text-gray-400">Family tree of your image evolution</p>
+              <h2 className="text-xl font-bold text-foreground">Style Lineage</h2>
+              <p className="text-muted-foreground">Family tree of your image evolution</p>
             </div>
             <Button variant="ghost" onClick={toggleLineage}>
               <XMarkIcon className="h-5 w-5" />
@@ -183,15 +183,15 @@ export function StyleLineageVisualization() {
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full border-2 border-blue-500" />
-                  <span className="text-gray-400">Ancestors</span>
+                  <span className="text-muted-foreground">Ancestors</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full border-2 border-primary-500" />
-                  <span className="text-gray-400">Current</span>
+                  <span className="text-muted-foreground">Current</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full border-2 border-green-500" />
-                  <span className="text-gray-400">Descendants</span>
+                  <span className="text-muted-foreground">Descendants</span>
                 </div>
               </div>
               
@@ -223,7 +223,7 @@ export function StyleLineageVisualization() {
               </div>
             </div>
 
-            <div className="bg-dark-900 rounded-lg p-4">
+            <div className="bg-background rounded-lg p-4">
               <svg
                 ref={svgRef}
                 className="w-full"
@@ -235,16 +235,16 @@ export function StyleLineageVisualization() {
             {/* Stats */}
             <div className="mt-4 grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-white">{currentLineage.ancestors.length}</div>
-                <div className="text-sm text-gray-400">Ancestors</div>
+                <div className="text-2xl font-bold text-foreground">{currentLineage.ancestors.length}</div>
+                <div className="text-sm text-muted-foreground">Ancestors</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{currentLineage.descendants.length}</div>
-                <div className="text-sm text-gray-400">Descendants</div>
+                <div className="text-2xl font-bold text-foreground">{currentLineage.descendants.length}</div>
+                <div className="text-sm text-muted-foreground">Descendants</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{currentLineage.total_generations}</div>
-                <div className="text-sm text-gray-400">Total Generations</div>
+                <div className="text-2xl font-bold text-foreground">{currentLineage.total_generations}</div>
+                <div className="text-sm text-muted-foreground">Total Generations</div>
               </div>
             </div>
           </div>

@@ -212,12 +212,12 @@ export function CollaborativeDecision() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-gray-500';
+      case 'draft': return 'bg-muted/50';
       case 'review': return 'bg-blue-500';
       case 'voting': return 'bg-yellow-500';
       case 'decided': return 'bg-green-500';
       case 'executed': return 'bg-purple-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -226,7 +226,7 @@ export function CollaborativeDecision() {
       case 'high': return 'text-green-500';
       case 'medium': return 'text-yellow-500';
       case 'low': return 'text-red-500';
-      default: return 'text-gray-500';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -289,7 +289,7 @@ export function CollaborativeDecision() {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-green-500 bg-clip-text text-transparent">
             Collaborative Decision Making
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Share decisions with trusted advisors and leverage group intelligence
           </p>
         </div>
@@ -310,21 +310,21 @@ export function CollaborativeDecision() {
 
       {/* Group Intelligence Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Analysts</span>
+              <span className="text-sm text-muted-foreground">Analysts</span>
               <Users className="h-4 w-4 text-blue-500" />
             </div>
             <p className="text-2xl font-bold mt-2">{groupIntelligence.totalAnalysts}</p>
-            <p className="text-sm text-gray-400 mt-1">Active advisors</p>
+            <p className="text-sm text-muted-foreground mt-1">Active advisors</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Diversity</span>
+              <span className="text-sm text-muted-foreground">Diversity</span>
               <Star className="h-4 w-4 text-purple-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-purple-500">
@@ -334,10 +334,10 @@ export function CollaborativeDecision() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Experience</span>
+              <span className="text-sm text-muted-foreground">Experience</span>
               <Crown className="h-4 w-4 text-yellow-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-yellow-500">
@@ -347,10 +347,10 @@ export function CollaborativeDecision() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Consensus</span>
+              <span className="text-sm text-muted-foreground">Consensus</span>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-green-500">
@@ -360,10 +360,10 @@ export function CollaborativeDecision() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Risk Alignment</span>
+              <span className="text-sm text-muted-foreground">Risk Alignment</span>
               <TrendingUp className="h-4 w-4 text-orange-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-orange-500">
@@ -373,16 +373,16 @@ export function CollaborativeDecision() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Accuracy</span>
+              <span className="text-sm text-muted-foreground">Accuracy</span>
               <Star className="h-4 w-4 text-blue-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-blue-500">
               {(groupIntelligence.historicalAccuracy * 100).toFixed(0)}%
             </p>
-            <p className="text-sm text-gray-400 mt-1">Historical</p>
+            <p className="text-sm text-muted-foreground mt-1">Historical</p>
           </CardContent>
         </Card>
       </div>
@@ -397,13 +397,13 @@ export function CollaborativeDecision() {
         {/* Active Decisions Tab */}
         <TabsContent value="active" className="space-y-4">
           {collaborations.map(collaboration => (
-            <Card key={collaboration.id} className="gaming-card">
+            <Card key={collaboration.id} className="bg-card">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold">{collaboration.title}</h3>
-                      <Badge className={`${getStatusColor(collaboration.status)} text-white`}>
+                      <Badge className={`${getStatusColor(collaboration.status)} text-foreground`}>
                         {collaboration.status.toUpperCase()}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
@@ -413,10 +413,10 @@ export function CollaborativeDecision() {
                         {collaboration.privacy}
                       </Badge>
                     </div>
-                    <p className="text-gray-400 text-sm">{collaboration.description}</p>
+                    <p className="text-muted-foreground text-sm">{collaboration.description}</p>
                   </div>
                   {collaboration.deadline && (
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
                       {getTimeRemaining(collaboration.deadline)}
                     </div>
@@ -429,14 +429,14 @@ export function CollaborativeDecision() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-400">Confidence</span>
+                      <span className="text-sm text-muted-foreground">Confidence</span>
                       <span className="text-sm font-bold">{(collaboration.confidence * 100).toFixed(0)}%</span>
                     </div>
                     <Progress value={collaboration.confidence * 100} className="h-2" />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-400">Consensus</span>
+                      <span className="text-sm text-muted-foreground">Consensus</span>
                       <span className="text-sm font-bold">{(collaboration.consensus * 100).toFixed(0)}%</span>
                     </div>
                     <Progress value={collaboration.consensus * 100} className="h-2" />
@@ -465,7 +465,7 @@ export function CollaborativeDecision() {
                               {advisor.name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
-                          <div className={`w-2 h-2 rounded-full ${advisor.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
+                          <div className={`w-2 h-2 rounded-full ${advisor.isOnline ? 'bg-green-500' : 'bg-muted/50'}`} />
                         </div>
                       );
                     })}
@@ -478,7 +478,7 @@ export function CollaborativeDecision() {
                     <h4 className="text-sm font-medium mb-2">Votes ({collaboration.votes.length})</h4>
                     <div className="space-y-2">
                       {collaboration.votes.map(vote => (
-                        <div key={vote.id} className="bg-dark-800 rounded-lg p-3">
+                        <div key={vote.id} className="bg-card rounded-lg p-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
                               {getVoteIcon(vote.vote)}
@@ -492,11 +492,11 @@ export function CollaborativeDecision() {
                                 </Badge>
                               )}
                             </div>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(vote.timestamp).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-300 mt-2">{vote.reasoning}</p>
+                          <p className="text-sm text-muted-foreground mt-2">{vote.reasoning}</p>
                         </div>
                       ))}
                     </div>
@@ -509,7 +509,7 @@ export function CollaborativeDecision() {
                     <h4 className="text-sm font-medium mb-2">Discussion ({collaboration.comments.length})</h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {collaboration.comments.map(comment => (
-                        <div key={comment.id} className="bg-dark-800 rounded-lg p-3">
+                        <div key={comment.id} className="bg-card rounded-lg p-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{comment.advisorName}</span>
@@ -517,11 +517,11 @@ export function CollaborativeDecision() {
                                 {comment.type}
                               </Badge>
                             </div>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(comment.timestamp).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-300 mt-1">{comment.content}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{comment.content}</p>
                           {Object.keys(comment.reactions).length > 0 && (
                             <div className="flex items-center gap-2 mt-2">
                               {Object.entries(comment.reactions).map(([emoji, count]) => (
@@ -578,7 +578,7 @@ export function CollaborativeDecision() {
         <TabsContent value="advisors" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {advisors.map(advisor => (
-              <Card key={advisor.id} className="gaming-card">
+              <Card key={advisor.id} className="bg-card">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-12 w-12">
@@ -591,13 +591,13 @@ export function CollaborativeDecision() {
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold">{advisor.name}</h3>
                         <div className="flex items-center gap-1">
-                          <div className={`w-2 h-2 rounded-full ${advisor.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
-                          <span className="text-xs text-gray-400">
+                          <div className={`w-2 h-2 rounded-full ${advisor.isOnline ? 'bg-green-500' : 'bg-muted/50'}`} />
+                          <span className="text-xs text-muted-foreground">
                             {advisor.isOnline ? 'Online' : advisor.lastSeen || 'Offline'}
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-400">{advisor.title}</p>
+                      <p className="text-sm text-muted-foreground">{advisor.title}</p>
 
                       <div className="flex items-center gap-2 mt-2">
                         <div className="flex items-center gap-1">
@@ -611,17 +611,17 @@ export function CollaborativeDecision() {
 
                       <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
                         <div>
-                          <span className="text-gray-400">Success Rate:</span>
+                          <span className="text-muted-foreground">Success Rate:</span>
                           <span className="font-bold ml-1">{(advisor.successRate * 100).toFixed(0)}%</span>
                         </div>
                         <div>
-                          <span className="text-gray-400">Decisions:</span>
+                          <span className="text-muted-foreground">Decisions:</span>
                           <span className="font-bold ml-1">{advisor.totalDecisions}</span>
                         </div>
                       </div>
 
                       <div className="mt-3">
-                        <p className="text-xs text-gray-400 mb-1">Expertise:</p>
+                        <p className="text-xs text-muted-foreground mb-1">Expertise:</p>
                         <div className="flex flex-wrap gap-1">
                           {advisor.expertise.slice(0, 2).map(skill => (
                             <Badge key={skill} variant="outline" className="text-xs">
@@ -655,11 +655,11 @@ export function CollaborativeDecision() {
 
         {/* History Tab */}
         <TabsContent value="history" className="space-y-4">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="text-center py-12">
-              <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-500 opacity-50" />
+              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-lg font-semibold mb-2">Decision History</h3>
-              <p className="text-gray-400">
+              <p className="text-muted-foreground">
                 Past collaborative decisions and their outcomes will appear here.
               </p>
             </CardContent>

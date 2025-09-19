@@ -124,7 +124,7 @@ export function IntelligenceDashboard() {
       case 'UNAVAILABLE':
         return 'text-red-500';
       default:
-        return 'text-gray-500';
+        return 'text-muted-foreground';
     }
   };
 
@@ -149,7 +149,7 @@ export function IntelligenceDashboard() {
           <div className="text-center space-y-4">
             <Brain className="h-16 w-16 mx-auto text-blue-500 animate-pulse" />
             <h2 className="text-2xl font-bold">Initializing Intelligence Dashboard</h2>
-            <p className="text-gray-400">Connecting to Skynet Intelligence Engine...</p>
+            <p className="text-muted-foreground">Connecting to Skynet Intelligence Engine...</p>
           </div>
         </div>
       </div>
@@ -165,7 +165,7 @@ export function IntelligenceDashboard() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
               Intelligence Dashboard
             </h1>
-            <p className="text-gray-400 mt-2">
+            <p className="text-muted-foreground mt-2">
               Real-time AI intelligence and market opportunity detection
             </p>
           </div>
@@ -183,59 +183,59 @@ export function IntelligenceDashboard() {
 
         {/* Quick Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4 text-center">
               <Target className="h-6 w-6 mx-auto mb-2 text-green-500" />
               <p className="text-2xl font-bold text-green-500">{metrics.totalOpportunities}</p>
-              <p className="text-sm text-gray-400">Live Opportunities</p>
+              <p className="text-sm text-muted-foreground">Live Opportunities</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4 text-center">
               <Sparkles className="h-6 w-6 mx-auto mb-2 text-purple-500" />
               <p className="text-2xl font-bold text-purple-500">{metrics.activePredictions}</p>
-              <p className="text-sm text-gray-400">Active Predictions</p>
+              <p className="text-sm text-muted-foreground">Active Predictions</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4 text-center">
               <TrendingUp className="h-6 w-6 mx-auto mb-2 text-blue-500" />
               <p className="text-2xl font-bold text-blue-500">{metrics.avgEdge.toFixed(1)}%</p>
-              <p className="text-sm text-gray-400">Avg Edge</p>
+              <p className="text-sm text-muted-foreground">Avg Edge</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4 text-center">
               <DollarSign className="h-6 w-6 mx-auto mb-2 text-green-500" />
               <p className="text-2xl font-bold text-green-500">
                 ${metrics.totalProfit.toLocaleString()}
               </p>
-              <p className="text-sm text-gray-400">Profit Potential</p>
+              <p className="text-sm text-muted-foreground">Profit Potential</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4 text-center">
               <BarChart3 className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
               <p className="text-2xl font-bold text-yellow-500">{metrics.successRate}%</p>
-              <p className="text-sm text-gray-400">Success Rate</p>
+              <p className="text-sm text-muted-foreground">Success Rate</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4 text-center">
               <Activity className="h-6 w-6 mx-auto mb-2 text-blue-500" />
               <p className="text-2xl font-bold text-blue-500">{metrics.agentCount}</p>
-              <p className="text-sm text-gray-400">Active Agents</p>
+              <p className="text-sm text-muted-foreground">Active Agents</p>
             </CardContent>
           </Card>
         </div>
 
         {/* System Health */}
-        <Card className="gaming-card mb-6 border-blue-500/30">
+        <Card className="bg-card mb-6 border-blue-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-blue-500" />
@@ -309,7 +309,7 @@ export function IntelligenceDashboard() {
 
         {/* Predictions Tab */}
         <TabsContent value="predictions" className="space-y-6">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-purple-500" />
@@ -320,7 +320,7 @@ export function IntelligenceDashboard() {
               <div className="text-center py-12">
                 <Brain className="h-16 w-16 mx-auto mb-4 text-purple-500 opacity-50" />
                 <h3 className="text-xl font-bold mb-2">Advanced Predictions Coming Soon</h3>
-                <p className="text-gray-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Multi-domain predictive analytics with cross-market pattern recognition
                 </p>
                 <Button>
@@ -334,7 +334,7 @@ export function IntelligenceDashboard() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-blue-500" />
@@ -345,7 +345,7 @@ export function IntelligenceDashboard() {
               <div className="text-center py-12">
                 <BarChart3 className="h-16 w-16 mx-auto mb-4 text-blue-500 opacity-50" />
                 <h3 className="text-xl font-bold mb-2">Advanced Analytics Dashboard</h3>
-                <p className="text-gray-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Performance metrics, success rates, and profitability analysis
                 </p>
                 <Button>

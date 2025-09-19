@@ -141,7 +141,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
               className={`${sizes[size]} ${
                 (hoverRating || value) >= star
                   ? 'fill-yellow-500 text-yellow-500'
-                  : 'text-gray-400'
+                  : 'text-muted-foreground'
               }`}
             />
           </button>
@@ -152,11 +152,11 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
 
   if (inline) {
     return (
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
+      <div className="bg-card/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-white">Rate {contentTitle}</h4>
+          <h4 className="text-sm font-medium text-foreground">Rate {contentTitle}</h4>
           {stats && (
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Star className="w-3 h-3 fill-current" />
               <span>{stats.average_rating?.toFixed(1) || 'N/A'}</span>
               <span>({stats.total_feedback} reviews)</span>
@@ -169,13 +169,13 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleQuickFeedback(true)}
-              className="p-1.5 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors"
+              className="p-1.5 rounded-lg bg-green-600/20 text-green-500 hover:bg-green-600/30 transition-colors"
             >
               <ThumbsUp className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleQuickFeedback(false)}
-              className="p-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+              className="p-1.5 rounded-lg bg-red-600/20 text-red-500 hover:bg-red-600/30 transition-colors"
             >
               <ThumbsDown className="w-4 h-4" />
             </button>
@@ -190,7 +190,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
 
         {userFeedback && (
           <div className="mt-3 pt-3 border-t border-gray-700">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground">
               You rated this {userFeedback.overall_rating} stars
               {userFeedback.created_at && ` on ${new Date(userFeedback.created_at).toLocaleDateString()}`}
             </p>
@@ -209,7 +209,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
           animate={{ scale: 1 }}
           whileHover={{ scale: 1.1 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg flex items-center justify-center text-white z-40"
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg flex items-center justify-center text-foreground z-40"
         >
           <MessageSquare className="w-6 h-6" />
         </motion.button>
@@ -230,19 +230,19 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-background rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               {/* Header */}
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-6 flex items-center justify-between">
+              <div className="sticky top-0 bg-background border-b border-gray-800 p-6 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Share Your Feedback</h2>
-                  <p className="text-sm text-gray-400 mt-1">Help us improve {contentTitle}</p>
+                  <h2 className="text-xl font-bold text-foreground">Share Your Feedback</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Help us improve {contentTitle}</p>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-2 hover:bg-card rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5 text-gray-400" />
+                  <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
 
@@ -250,12 +250,12 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
               <div className="p-6 space-y-6">
                 {/* Overall Rating */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-3">
+                  <label className="block text-sm font-medium text-foreground mb-3">
                     Overall Rating
                   </label>
                   <div className="flex items-center gap-4">
                     <StarRating value={rating} onChange={setRating} size="lg" />
-                    <span className="text-gray-400">
+                    <span className="text-muted-foreground">
                       {rating === 0 ? 'Select rating' : 
                        rating === 1 ? 'Poor' :
                        rating === 2 ? 'Fair' :
@@ -267,19 +267,19 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
 
                 {/* Quick Questions */}
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Quick Questions
                   </label>
                   
-                  <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                    <span className="text-sm text-gray-300">Would you recommend this?</span>
+                  <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Would you recommend this?</span>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setQuickAnswers({ ...quickAnswers, would_recommend: true })}
                         className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                           quickAnswers.would_recommend === true
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-green-600 text-foreground'
+                            : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
                         }`}
                       >
                         Yes
@@ -288,8 +288,8 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                         onClick={() => setQuickAnswers({ ...quickAnswers, would_recommend: false })}
                         className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                           quickAnswers.would_recommend === false
-                            ? 'bg-red-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-red-600 text-foreground'
+                            : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
                         }`}
                       >
                         No
@@ -297,15 +297,15 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                    <span className="text-sm text-gray-300">Did it meet expectations?</span>
+                  <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Did it meet expectations?</span>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setQuickAnswers({ ...quickAnswers, met_expectations: true })}
                         className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                           quickAnswers.met_expectations === true
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-green-600 text-foreground'
+                            : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
                         }`}
                       >
                         Yes
@@ -314,8 +314,8 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                         onClick={() => setQuickAnswers({ ...quickAnswers, met_expectations: false })}
                         className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                           quickAnswers.met_expectations === false
-                            ? 'bg-red-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-red-600 text-foreground'
+                            : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
                         }`}
                       >
                         No
@@ -323,15 +323,15 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                    <span className="text-sm text-gray-300">Did it save you time?</span>
+                  <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Did it save you time?</span>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setQuickAnswers({ ...quickAnswers, saved_time: true })}
                         className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                           quickAnswers.saved_time === true
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-green-600 text-foreground'
+                            : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
                         }`}
                       >
                         Yes
@@ -340,8 +340,8 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                         onClick={() => setQuickAnswers({ ...quickAnswers, saved_time: false })}
                         className={`px-3 py-1 rounded-lg text-sm transition-colors ${
                           quickAnswers.saved_time === false
-                            ? 'bg-red-600 text-white'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            ? 'bg-red-600 text-foreground'
+                            : 'bg-gray-700 text-muted-foreground hover:bg-gray-600'
                         }`}
                       >
                         No
@@ -363,7 +363,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                   {showDetails && (
                     <div className="mt-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">Quality</span>
+                        <span className="text-sm text-muted-foreground">Quality</span>
                         <StarRating 
                           value={detailedRatings.quality} 
                           onChange={(v: number) => setDetailedRatings({ ...detailedRatings, quality: v })}
@@ -371,7 +371,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">Accuracy</span>
+                        <span className="text-sm text-muted-foreground">Accuracy</span>
                         <StarRating 
                           value={detailedRatings.accuracy} 
                           onChange={(v: number) => setDetailedRatings({ ...detailedRatings, accuracy: v })}
@@ -379,7 +379,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">Usefulness</span>
+                        <span className="text-sm text-muted-foreground">Usefulness</span>
                         <StarRating 
                           value={detailedRatings.usefulness} 
                           onChange={(v: number) => setDetailedRatings({ ...detailedRatings, usefulness: v })}
@@ -392,7 +392,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
 
                 {/* Comments */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Comments (Optional)
                   </label>
                   <textarea
@@ -400,13 +400,13 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                     onChange={(e) => setComments(e.target.value)}
                     placeholder="What did you like or dislike?"
                     rows={3}
-                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-2 bg-card/50 border border-gray-700 rounded-lg text-foreground placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                   />
                 </div>
 
                 {/* Suggestions */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Suggestions for Improvement (Optional)
                   </label>
                   <textarea
@@ -414,27 +414,27 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                     onChange={(e) => setSuggestions(e.target.value)}
                     placeholder="How can we make this better?"
                     rows={3}
-                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-2 bg-card/50 border border-gray-700 rounded-lg text-foreground placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                   />
                 </div>
 
                 {/* Statistics */}
                 {showStats && stats && (
-                  <div className="bg-gray-800/30 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-white mb-3">Community Feedback</h4>
+                  <div className="bg-card/30 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-foreground mb-3">Community Feedback</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-400">Average Rating</span>
+                        <span className="text-muted-foreground">Average Rating</span>
                         <div className="flex items-center gap-2 mt-1">
                           <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                          <span className="text-white font-medium">
+                          <span className="text-foreground font-medium">
                             {stats.average_rating?.toFixed(1) || 'N/A'}
                           </span>
                         </div>
                       </div>
                       <div>
-                        <span className="text-gray-400">Total Reviews</span>
-                        <p className="text-white font-medium mt-1">{stats.total_feedback}</p>
+                        <span className="text-muted-foreground">Total Reviews</span>
+                        <p className="text-foreground font-medium mt-1">{stats.total_feedback}</p>
                       </div>
                     </div>
                     
@@ -442,7 +442,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                       <div className="mt-4 space-y-2">
                         {[5, 4, 3, 2, 1].map((star) => (
                           <div key={star} className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400 w-3">{star}</span>
+                            <span className="text-xs text-muted-foreground w-3">{star}</span>
                             <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
                             <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
                               <div
@@ -452,7 +452,7 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                                 }}
                               />
                             </div>
-                            <span className="text-xs text-gray-400 w-8 text-right">
+                            <span className="text-xs text-muted-foreground w-8 text-right">
                               {stats.rating_distribution[star]}
                             </span>
                           </div>
@@ -464,9 +464,9 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
               </div>
 
               {/* Footer */}
-              <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-6">
+              <div className="sticky bottom-0 bg-background border-t border-gray-800 p-6">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-muted-foreground">
                     {userFeedback && (
                       <span className="flex items-center gap-1">
                         <AlertCircle className="w-4 h-4" />
@@ -477,14 +477,14 @@ export const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setIsOpen(false)}
-                      className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                      className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSubmit}
                       disabled={loading || rating === 0}
-                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-foreground rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {loading ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />

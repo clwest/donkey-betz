@@ -207,9 +207,9 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
       case 'failed':
         return <XCircleIcon className={`${className} text-red-500`} />;
       case 'pending':
-        return <ClockIcon className={`${className} text-gray-400`} />;
+        return <ClockIcon className={`${className} text-muted-foreground`} />;
       default:
-        return <ClockIcon className={`${className} text-gray-400`} />;
+        return <ClockIcon className={`${className} text-muted-foreground`} />;
     }
   };
 
@@ -223,9 +223,9 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
       case 'failed':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted/10 text-gray-800 border-border';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted/10 text-gray-800 border-border';
     }
   };
 
@@ -255,10 +255,10 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         whileHover={{ scale: 1.02 }}
-        className="gaming-card relative overflow-hidden group cursor-pointer"
+        className="bg-card relative overflow-hidden group cursor-pointer"
         style={{ marginBottom: '16px' }}
       >
-        <div className="gaming-border-glow"></div>
+        <div className="bg-card"></div>
         {/* Status-based top border */}
         <div className={`absolute top-0 left-0 w-full h-1 opacity-60 ${
           instance.status === 'completed' ? 'bg-gradient-to-r from-green-400 to-cyan-400' :
@@ -280,12 +280,12 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                     : 'border-gray-500 hover:border-cyan-400'
                 } ${isDeleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 style={{
-                  borderColor: isSelected ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)',
-                  background: isSelected ? 'var(--gaming-neon-cyan)' : 'transparent'
+                  borderColor: isSelected ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+                  background: isSelected ? 'hsl(var(--muted))' : 'transparent'
                 }}
               >
                 {isSelected && (
-                  <CheckIcon className="h-3 w-3" style={{ color: 'var(--gaming-bg-primary)' }} />
+                  <CheckIcon className="h-3 w-3" style={{ color: 'hsl(var(--muted))' }} />
                 )}
               </button>
             </div>
@@ -300,7 +300,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                 )}
               </div>
               <h4 className="font-bold uppercase tracking-wide truncate" style={{
-                color: 'var(--gaming-text-primary)',
+                color: 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '14px'
               }}>
@@ -309,8 +309,8 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               {instance.template?.specialization && (
                 <div className="px-2 py-1 rounded text-xs font-bold uppercase tracking-wider" style={{
                   background: 'rgba(157, 78, 221, 0.2)',
-                  border: '1px solid var(--gaming-neon-purple)',
-                  color: 'var(--gaming-neon-purple)'
+                  border: '1px solid hsl(var(--muted))',
+                  color: 'hsl(var(--muted))'
                 }}>
                   {instance.template.specialization}
                 </div>
@@ -318,7 +318,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
             </div>
             
             <p className="text-sm line-clamp-2 mb-4" style={{ 
-              color: 'var(--gaming-text-secondary)',
+              color: 'hsl(var(--muted))',
               fontFamily: 'var(--font-mono)'
             }}>
               {instance.task_description}
@@ -326,17 +326,17 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
 
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-xs font-semibold" style={{
-                color: 'var(--gaming-text-muted)',
+                color: 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)'
               }}>
                 <span>{new Date(instance.created_at).toLocaleString()}</span>
                 {instance.token_usage?.total_tokens && (
-                  <span style={{ color: 'var(--gaming-neon-cyan)' }}>
+                  <span style={{ color: 'hsl(var(--muted))' }}>
                     {instance.token_usage.total_tokens.toLocaleString()} TOKENS
                   </span>
                 )}
                 {instance.execution_time_seconds > 0 && (
-                  <span style={{ color: 'var(--gaming-neon-green)' }}>
+                  <span style={{ color: 'hsl(var(--muted))' }}>
                     {instance.execution_time_seconds.toFixed(1)}s
                   </span>
                 )}
@@ -351,15 +351,15 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                              (instance.status === 'processing' || instance.status === 'running') ? 'rgba(255, 107, 0, 0.2)' :
                              'rgba(124, 124, 138, 0.2)',
                   border: `1px solid ${
-                    instance.status === 'completed' ? 'var(--gaming-neon-green)' :
-                    instance.status === 'failed' ? 'var(--gaming-neon-pink)' :
-                    (instance.status === 'processing' || instance.status === 'running') ? 'var(--gaming-neon-orange)' :
-                    'var(--gaming-neutral)'
+                    instance.status === 'completed' ? 'hsl(var(--muted))' :
+                    instance.status === 'failed' ? 'hsl(var(--muted))' :
+                    (instance.status === 'processing' || instance.status === 'running') ? 'hsl(var(--muted))' :
+                    'hsl(var(--muted))'
                   }`,
-                  color: instance.status === 'completed' ? 'var(--gaming-neon-green)' :
-                         instance.status === 'failed' ? 'var(--gaming-neon-pink)' :
-                         (instance.status === 'processing' || instance.status === 'running') ? 'var(--gaming-neon-orange)' :
-                         'var(--gaming-neutral)',
+                  color: instance.status === 'completed' ? 'hsl(var(--muted))' :
+                         instance.status === 'failed' ? 'hsl(var(--muted))' :
+                         (instance.status === 'processing' || instance.status === 'running') ? 'hsl(var(--muted))' :
+                         'hsl(var(--muted))',
                   boxShadow: instance.status === 'completed' ? '0 0 10px rgba(57, 255, 20, 0.3)' :
                             instance.status === 'failed' ? '0 0 10px rgba(255, 20, 147, 0.3)' :
                             (instance.status === 'processing' || instance.status === 'running') ? '0 0 10px rgba(255, 107, 0, 0.3)' :
@@ -376,8 +376,8 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                     className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
                     style={{
                       background: 'rgba(255, 20, 147, 0.1)',
-                      border: '1px solid var(--gaming-neon-pink)',
-                      color: 'var(--gaming-neon-pink)',
+                      border: '1px solid hsl(var(--muted))',
+                      color: 'hsl(var(--muted))',
                       opacity: isDeleting ? 0.5 : 1
                     }}
                     title="Delete this task"
@@ -414,8 +414,8 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                       exit={{ opacity: 0, height: 0 }}
                       className="mt-2 p-3 rounded-lg border text-sm"
                       style={{
-                        background: 'var(--gaming-bg-elevated)',
-                        borderColor: 'var(--gaming-border)',
+                        background: 'hsl(var(--muted))',
+                        borderColor: 'hsl(var(--muted))',
                         boxShadow: '0 0 10px rgba(0, 255, 255, 0.1)'
                       }}
                     >
@@ -424,7 +424,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                           // Handle different result formats
                           if (!instance.result) {
                             return (
-                              <p className="italic" style={{ color: 'var(--gaming-text-muted)' }}>
+                              <p className="italic" style={{ color: 'hsl(var(--muted))' }}>
                                 No result available
                               </p>
                             );
@@ -434,7 +434,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                             // Handle string results
                             if (!instance.result.trim()) {
                               return (
-                                <p className="italic" style={{ color: 'var(--gaming-text-muted)' }}>
+                                <p className="italic" style={{ color: 'hsl(var(--muted))' }}>
                                   Task completed with no output
                                 </p>
                               );
@@ -447,7 +447,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                             
                             return (
                               <p className="whitespace-pre-wrap" style={{ 
-                                color: 'var(--gaming-text-primary)',
+                                color: 'hsl(var(--muted))',
                                 fontFamily: 'var(--font-mono)',
                                 fontSize: '12px',
                                 lineHeight: '1.4'
@@ -471,12 +471,12 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                                 {hasOutput ? (
                                   <div>
                                     <h5 className="text-xs font-bold uppercase mb-2" style={{ 
-                                      color: 'var(--gaming-neon-green)' 
+                                      color: 'hsl(var(--muted))' 
                                     }}>
                                       Agent Output:
                                     </h5>
                                     <p className="whitespace-pre-wrap" style={{ 
-                                      color: 'var(--gaming-text-primary)',
+                                      color: 'hsl(var(--muted))',
                                       fontFamily: 'var(--font-mono)',
                                       fontSize: '12px',
                                       lineHeight: '1.4'
@@ -489,20 +489,20 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                                 ) : (
                                   <div className="p-3 rounded-lg" style={{
                                     background: 'rgba(255, 107, 0, 0.1)',
-                                    border: '1px solid var(--gaming-neon-orange)'
+                                    border: '1px solid hsl(var(--muted))'
                                   }}>
                                     <div className="flex items-center gap-2 mb-2">
                                       <div className="w-2 h-2 rounded-full" style={{ 
-                                        background: 'var(--gaming-neon-orange)' 
+                                        background: 'hsl(var(--muted))' 
                                       }}></div>
                                       <span className="text-xs font-bold uppercase" style={{ 
-                                        color: 'var(--gaming-neon-orange)' 
+                                        color: 'hsl(var(--muted))' 
                                       }}>
                                         Empty Output
                                       </span>
                                     </div>
                                     <p className="text-xs" style={{ 
-                                      color: 'var(--gaming-text-secondary)',
+                                      color: 'hsl(var(--muted))',
                                       fontFamily: 'var(--font-mono)'
                                     }}>
                                       {hasSuccess && result.success 
@@ -514,11 +514,11 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
 
                                 {/* Execution Metrics */}
                                 {(hasTokenUsage || hasExecutionTime || hasSuccess !== undefined) && (
-                                  <div className="pt-2 border-t" style={{ borderColor: 'var(--gaming-border)' }}>
+                                  <div className="pt-2 border-t" style={{ borderColor: 'hsl(var(--muted))' }}>
                                     <div className="flex items-center flex-wrap gap-4">
                                       {hasSuccess !== undefined && (
                                         <span className="text-xs flex items-center gap-1" style={{ 
-                                          color: result.success ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-pink)' 
+                                          color: result.success ? 'hsl(var(--muted))' : 'hsl(var(--muted))' 
                                         }}>
                                           <div className={`w-1.5 h-1.5 rounded-full ${
                                             result.success ? 'bg-green-400' : 'bg-red-400'
@@ -527,12 +527,12 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                                         </span>
                                       )}
                                       {hasTokenUsage && (
-                                        <span className="text-xs" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                                        <span className="text-xs" style={{ color: 'hsl(var(--muted))' }}>
                                           🔢 {result.token_usage.total_tokens.toLocaleString()} tokens
                                         </span>
                                       )}
                                       {hasExecutionTime && (
-                                        <span className="text-xs" style={{ color: 'var(--gaming-neon-purple)' }}>
+                                        <span className="text-xs" style={{ color: 'hsl(var(--muted))' }}>
                                           ⏱️ {result.execution_time.toFixed(1)}s
                                         </span>
                                       )}
@@ -547,12 +547,12 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                           return (
                             <div className="space-y-2">
                               <h5 className="text-xs font-bold uppercase" style={{ 
-                                color: 'var(--gaming-neon-purple)' 
+                                color: 'hsl(var(--muted))' 
                               }}>
                                 Raw Result:
                               </h5>
                               <pre className="text-xs overflow-x-auto" style={{ 
-                                color: 'var(--gaming-text-secondary)',
+                                color: 'hsl(var(--muted))',
                                 fontFamily: 'var(--font-mono)',
                                 background: 'rgba(0, 0, 0, 0.3)',
                                 padding: '8px',
@@ -572,7 +572,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
 
           {/* Error Message */}
           {instance.status === 'failed' && instance.error_message && (
-            <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400">
+            <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-500">
               <ExclamationTriangleIcon className="h-3 w-3 inline mr-1" />
               {instance.error_message}
             </div>
@@ -584,22 +584,22 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
   };
 
   return (
-    <div className={`space-y-6 ${className}`} style={{ background: 'var(--gaming-bg-primary)' }}>
+    <div className={`space-y-6 ${className}`} style={{ background: 'hsl(var(--muted))' }}>
       {/* Execution Panel - Cyberpunk Command Interface */}
-      <div className="gaming-card relative overflow-hidden">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card relative overflow-hidden">
+        <div className="bg-card"></div>
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 opacity-70 animate-pulse"></div>
         
         <div className="flex items-center justify-between mb-6">
           <div className="relative">
             <h2 className="text-2xl font-black uppercase tracking-wider flex items-center" style={{
-              color: 'var(--gaming-neon-cyan)',
+              color: 'hsl(var(--muted))',
               fontFamily: 'var(--font-mono)',
               textShadow: '0 0 20px rgba(0, 255, 255, 0.5)'
             }}>
               <div className="relative mr-4">
                 <BoltIcon className="h-8 w-8" style={{ 
-                  color: 'var(--gaming-neon-cyan)',
+                  color: 'hsl(var(--muted))',
                   filter: 'drop-shadow(0 0 15px rgba(0, 255, 255, 0.8))'
                 }} />
                 <div className="absolute inset-0 rounded-full bg-cyan-400/20 animate-ping"></div>
@@ -607,7 +607,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               AGENT CONTROL
             </h2>
             <div className="mt-1 text-sm font-semibold uppercase tracking-wider" style={{ 
-              color: 'var(--gaming-neon-purple)',
+              color: 'hsl(var(--muted))',
               textShadow: '0 0 10px rgba(157, 78, 221, 0.5)'
             }}>
               Neural Network Interface
@@ -621,13 +621,13 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                 <div className="flex items-center">
                   <div className="relative mr-2">
                     <div className="h-3 w-3 rounded-full animate-pulse" style={{
-                      background: 'var(--gaming-neon-green)',
+                      background: 'hsl(var(--muted))',
                       boxShadow: '0 0 15px rgba(57, 255, 20, 0.8)'
                     }} />
                     <div className="absolute inset-0 rounded-full bg-green-400/30 animate-ping"></div>
                   </div>
                   <span className="text-sm font-bold uppercase tracking-wider" style={{ 
-                    color: 'var(--gaming-neon-green)',
+                    color: 'hsl(var(--muted))',
                     textShadow: '0 0 10px rgba(57, 255, 20, 0.5)'
                   }}>
                     NEURAL LINK ACTIVE
@@ -635,11 +635,11 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                 </div>
               ) : wsConnecting ? (
                 <div className="flex items-center">
-                  <div className="mr-2" style={{ color: 'var(--gaming-neon-orange)' }}>
+                  <div className="mr-2" style={{ color: 'hsl(var(--muted))' }}>
                     <LoadingSpinner size="sm" />
                   </div>
                   <span className="text-sm font-bold uppercase tracking-wider" style={{ 
-                    color: 'var(--gaming-neon-orange)',
+                    color: 'hsl(var(--muted))',
                     textShadow: '0 0 10px rgba(255, 107, 0, 0.5)'
                   }}>
                     ESTABLISHING LINK...
@@ -648,11 +648,11 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               ) : (
                 <div className="flex items-center">
                   <div className="h-3 w-3 rounded-full mr-2" style={{
-                    background: 'var(--gaming-neon-pink)',
+                    background: 'hsl(var(--muted))',
                     boxShadow: '0 0 15px rgba(255, 20, 147, 0.8)'
                   }} />
                   <span className="text-sm font-bold uppercase tracking-wider" style={{ 
-                    color: 'var(--gaming-neon-pink)',
+                    color: 'hsl(var(--muted))',
                     textShadow: '0 0 10px rgba(255, 20, 147, 0.5)'
                   }}>
                     LINK OFFLINE
@@ -666,11 +666,11 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               {runningInstances.length > 0 && (
                 <div className="relative px-3 py-1 rounded-lg border" style={{
                   background: 'rgba(57, 255, 20, 0.1)',
-                  borderColor: 'var(--gaming-neon-green)',
+                  borderColor: 'hsl(var(--muted))',
                   boxShadow: '0 0 10px rgba(57, 255, 20, 0.2)'
                 }}>
                   <span className="text-xs font-bold uppercase tracking-wider" style={{ 
-                    color: 'var(--gaming-neon-green)',
+                    color: 'hsl(var(--muted))',
                     fontFamily: 'var(--font-mono)'
                   }}>
                     {runningInstances.length} ACTIVE
@@ -678,7 +678,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                 </div>
               )}
               <div className="text-sm font-semibold" style={{ 
-                color: 'var(--gaming-text-secondary)',
+                color: 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)'
               }}>
                 TOTAL: {recentInstances.length.toString().padStart(3, '0')}
@@ -691,7 +691,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
         <div className="space-y-4">
           <div className="relative">
             <label className="block text-sm font-bold uppercase tracking-wider mb-3" style={{
-              color: 'var(--gaming-text-secondary)',
+              color: 'hsl(var(--muted))',
               fontFamily: 'var(--font-mono)'
             }}>
               Mission Parameters
@@ -704,20 +704,20 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                 placeholder="Input your mission objectives and parameters..."
                 className="w-full px-4 py-3 rounded-lg resize-none min-h-[100px] transition-all duration-300 focus:outline-none"
                 style={{
-                  background: 'var(--gaming-bg-elevated)',
-                  border: `2px solid ${taskDescription ? 'var(--gaming-neon-cyan)' : 'var(--gaming-border)'}`,
-                  color: 'var(--gaming-text-primary)',
+                  background: 'hsl(var(--muted))',
+                  border: `2px solid ${taskDescription ? 'hsl(var(--muted))' : 'hsl(var(--muted))'}`,
+                  color: 'hsl(var(--muted))',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '14px',
                   boxShadow: taskDescription ? '0 0 15px rgba(0, 255, 255, 0.2)' : 'none'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--gaming-neon-cyan)';
+                  e.target.style.borderColor = 'hsl(var(--muted))';
                   e.target.style.boxShadow = '0 0 20px rgba(0, 255, 255, 0.3)';
                 }}
                 onBlur={(e) => {
                   if (!taskDescription) {
-                    e.target.style.borderColor = 'var(--gaming-border)';
+                    e.target.style.borderColor = 'hsl(var(--muted))';
                     e.target.style.boxShadow = 'none';
                   }
                 }}
@@ -727,7 +727,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               <div className={`absolute inset-0 rounded-lg border-2 border-transparent transition-opacity duration-300 pointer-events-none ${
                 taskDescription ? 'opacity-100' : 'opacity-0'
               }`} style={{
-                background: 'linear-gradient(45deg, transparent, var(--gaming-neon-cyan), transparent)',
+                background: 'linear-gradient(45deg, transparent, hsl(var(--muted)), transparent)',
                 animation: taskDescription ? 'border-flow 3s linear infinite' : 'none'
               }}></div>
             </div>
@@ -840,22 +840,22 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
               className="relative w-full py-4 text-lg font-black uppercase tracking-wider transition-all duration-300 hover:transform hover:scale-105"
               style={{
                 background: isExecuting 
-                  ? 'linear-gradient(45deg, var(--gaming-neon-green), var(--gaming-neon-cyan))'
+                  ? 'linear-gradient(45deg, hsl(var(--muted)), hsl(var(--muted)))'
                   : taskDescription.trim() && selectedAgent
-                    ? 'var(--gaming-bg-secondary)'
-                    : 'var(--gaming-bg-elevated)',
+                    ? 'hsl(var(--muted))'
+                    : 'hsl(var(--muted))',
                 border: `2px solid ${
                   isExecuting 
-                    ? 'var(--gaming-neon-green)'
+                    ? 'hsl(var(--muted))'
                     : taskDescription.trim() && selectedAgent
-                      ? 'var(--gaming-neon-cyan)'
-                      : 'var(--gaming-border)'
+                      ? 'hsl(var(--muted))'
+                      : 'hsl(var(--muted))'
                 }`,
                 color: isExecuting 
-                  ? 'var(--gaming-bg-primary)'
+                  ? 'hsl(var(--muted))'
                   : taskDescription.trim() && selectedAgent
-                    ? 'var(--gaming-neon-cyan)'
-                    : 'var(--gaming-text-muted)',
+                    ? 'hsl(var(--muted))'
+                    : 'hsl(var(--muted))',
                 boxShadow: isExecuting 
                   ? '0 0 25px rgba(57, 255, 20, 0.6)'
                   : taskDescription.trim() && selectedAgent
@@ -893,18 +893,18 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
       </div>
 
       {/* Results Section - Cyberpunk Mission Log */}
-      <div className="gaming-card relative overflow-hidden">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card relative overflow-hidden">
+        <div className="bg-card"></div>
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-green-500 to-purple-500 opacity-60"></div>
         
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <DocumentTextIcon className="h-6 w-6" style={{ 
-              color: 'var(--gaming-neon-purple)',
+              color: 'hsl(var(--muted))',
               filter: 'drop-shadow(0 0 10px rgba(157, 78, 221, 0.7))'
             }} />
             <h3 className="text-xl font-black uppercase tracking-wider" style={{
-              color: 'var(--gaming-neon-purple)',
+              color: 'hsl(var(--muted))',
               fontFamily: 'var(--font-mono)',
               textShadow: '0 0 15px rgba(157, 78, 221, 0.5)'
             }}>
@@ -917,7 +917,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
             {selectedInstanceIds.size > 0 && (
               <div className="flex items-center space-x-2">
                 <span className="text-xs font-bold uppercase tracking-wider" style={{ 
-                  color: 'var(--gaming-neon-cyan)' 
+                  color: 'hsl(var(--muted))' 
                 }}>
                   {selectedInstanceIds.size} SELECTED
                 </span>
@@ -927,8 +927,8 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                   className="text-xs font-bold uppercase tracking-wider px-3 py-1"
                   style={{
                     background: 'rgba(255, 20, 147, 0.2)',
-                    border: '1px solid var(--gaming-neon-pink)',
-                    color: 'var(--gaming-neon-pink)',
+                    border: '1px solid hsl(var(--muted))',
+                    color: 'hsl(var(--muted))',
                     boxShadow: '0 0 10px rgba(255, 20, 147, 0.2)'
                   }}
                   icon={isDeleting ? <LoadingSpinner size="sm" /> : <TrashIcon className="h-3 w-3" />}
@@ -939,7 +939,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                   onClick={clearSelection}
                   variant="ghost"
                   className="text-xs px-2 py-1"
-                  style={{ color: 'var(--gaming-text-muted)' }}
+                  style={{ color: 'hsl(var(--muted))' }}
                 >
                   CLEAR
                 </Button>
@@ -954,7 +954,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                     onClick={selectAllInstances}
                     variant="ghost"
                     className="text-xs px-2 py-1"
-                    style={{ color: 'var(--gaming-neon-cyan)' }}
+                    style={{ color: 'hsl(var(--muted))' }}
                   >
                     SELECT ALL
                   </Button>
@@ -963,7 +963,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                     onClick={selectAllInstances}
                     variant="ghost"
                     className="text-xs px-2 py-1"
-                    style={{ color: 'var(--gaming-neon-cyan)' }}
+                    style={{ color: 'hsl(var(--muted))' }}
                   >
                     SELECT ALL
                   </Button>
@@ -976,9 +976,9 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                 onClick={() => setShowResults(!showResults)}
                 className="font-bold uppercase tracking-wider px-4 py-2"
                 style={{
-                  background: 'var(--gaming-bg-elevated)',
-                  border: `2px solid var(--gaming-neon-purple)`,
-                  color: 'var(--gaming-neon-purple)',
+                  background: 'hsl(var(--muted))',
+                  border: `2px solid hsl(var(--muted))`,
+                  color: 'hsl(var(--muted))',
                   boxShadow: '0 0 10px rgba(157, 78, 221, 0.2)'
                 }}
               >
@@ -987,7 +987,7 @@ export const EnhancedAgentExecutionPanel: React.FC<EnhancedAgentExecutionPanelPr
                   {showResults ? 'COLLAPSE' : 'EXPAND'} 
                   <span className="px-2 py-1 rounded text-xs" style={{
                     background: 'rgba(157, 78, 221, 0.2)',
-                    color: 'var(--gaming-neon-purple)',
+                    color: 'hsl(var(--muted))',
                     fontFamily: 'var(--font-mono)'
                   }}>
                     {recentInstances.length.toString().padStart(2, '0')}

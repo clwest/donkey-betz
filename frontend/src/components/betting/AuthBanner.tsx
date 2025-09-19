@@ -71,24 +71,24 @@ export function AuthBanner({ className }: AuthBannerProps) {
 
   if (isAuthenticated && user) {
     return (
-      <Card className={`gaming-card bg-gaming-success/20 border-gaming-success ${className}`}>
-        <div className="gaming-border-glow gaming-success"></div>
+      <Card className={`bg-card bg-bg-card/20 border-bg-card ${className}`}>
+        <div className="bg-card bg-card"></div>
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gaming-success rounded-full flex items-center justify-center">
-              <UserIcon className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 bg-bg-card rounded-full flex items-center justify-center">
+              <UserIcon className="w-4 h-4 text-foreground" />
             </div>
             <div>
-              <div className="font-bold text-sm gaming-text-primary">
+              <div className="font-bold text-sm bg-card">
                 {user.username}
               </div>
-              <div className="text-xs gaming-text-secondary">
+              <div className="text-xs bg-card">
                 Ready for AI Analysis
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className="gaming-status text-xs">
+            <Badge className="bg-card text-xs">
               <Sparkles className="w-3 h-3 mr-1" />
               100+ AGENTS
             </Badge>
@@ -99,31 +99,31 @@ export function AuthBanner({ className }: AuthBannerProps) {
   }
 
   return (
-    <Card className={`gaming-card bg-gaming-warning/20 border-gaming-warning ${className}`}>
-      <div className="gaming-border-glow gaming-warning"></div>
+    <Card className={`bg-card bg-bg-card/20 border-bg-card ${className}`}>
+      <div className="bg-card bg-card"></div>
       <div className="p-4">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 bg-gaming-warning rounded-full flex items-center justify-center">
-            <Lock className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-bg-card rounded-full flex items-center justify-center">
+            <Lock className="w-4 h-4 text-foreground" />
           </div>
           <div>
-            <div className="font-bold text-sm gaming-text-primary">
+            <div className="font-bold text-sm bg-card">
               🚀 Unlock AI Betting Agents
             </div>
-            <div className="text-xs gaming-text-secondary">
+            <div className="text-xs bg-card">
               Login to access 100+ specialist betting agents
             </div>
           </div>
         </div>
         
         <div className="mb-3">
-          <div className="text-xs gaming-text-secondary mb-2">Quick Login:</div>
+          <div className="text-xs bg-card mb-2">Quick Login:</div>
           <div className="grid grid-cols-3 gap-2">
             <Button
               onClick={() => quickLogin('testuser', 'testpass123')}
               disabled={isLoading}
               size="sm"
-              className="gaming-btn text-xs"
+              className="bg-card text-xs"
             >
               <UserIcon className="w-3 h-3 mr-1" />
               Test
@@ -133,7 +133,7 @@ export function AuthBanner({ className }: AuthBannerProps) {
               onClick={() => quickLogin('demo', 'demo123')}
               disabled={isLoading}
               size="sm"
-              className="gaming-btn text-xs"
+              className="bg-card text-xs"
             >
               <Zap className="w-3 h-3 mr-1" />
               Demo
@@ -143,7 +143,7 @@ export function AuthBanner({ className }: AuthBannerProps) {
               onClick={() => quickLogin('admin', 'admin123')}
               disabled={isLoading}
               size="sm"
-              className="gaming-btn-active text-xs"
+              className="bg-card text-xs"
             >
               <Sparkles className="w-3 h-3 mr-1" />
               Admin
@@ -152,18 +152,18 @@ export function AuthBanner({ className }: AuthBannerProps) {
         </div>
 
         {error && (
-          <div className="text-xs text-gaming-warning bg-gaming-warning/10 p-2 rounded">
+          <div className="text-xs text-bg-card bg-bg-card/10 p-2 rounded">
             {error}
           </div>
         )}
         
         {isLoading && (
-          <div className="text-xs gaming-text-secondary">
+          <div className="text-xs bg-card">
             🔐 Authenticating...
           </div>
         )}
         
-        <div className="text-xs gaming-text-accent mt-2">
+        <div className="text-xs bg-card mt-2">
           💡 After login, you'll have access to Kelly Criterion calculators, odds analyzers, and betting recommendation engines!
         </div>
       </div>

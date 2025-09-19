@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { formatDistanceToNow } from 'date-fns';
-import '../../styles/gaming-theme.css';
 
 // Import API functions
 import { getGameById, getGameOdds, getWeatherData, getInjuryData, getBettingIntelligence } from '../../features/sports/api/sports';
@@ -153,14 +152,14 @@ export const GameDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen gaming-theme">
+      <div className="min-h-screen bg-card">
         <div className="flex items-center justify-center min-h-screen">
-          <div className="gaming-card p-12">
-            <div className="gaming-border-glow"></div>
+          <div className="bg-card p-12">
+            <div className="bg-card"></div>
             <div className="text-center">
-              <div className="gaming-loading w-16 h-16 mx-auto mb-6"></div>
-              <h3 className="text-xl font-bold gaming-text-primary">Loading Game Data...</h3>
-              <p className="gaming-text-secondary mt-2">Gathering intelligence from multiple sources</p>
+              <div className="bg-card w-16 h-16 mx-auto mb-6"></div>
+              <h3 className="text-xl font-bold bg-card">Loading Game Data...</h3>
+              <p className="bg-card mt-2">Gathering intelligence from multiple sources</p>
             </div>
           </div>
         </div>
@@ -170,16 +169,16 @@ export const GameDetailPage: React.FC = () => {
 
   if (!gameData?.game) {
     return (
-      <div className="min-h-screen gaming-theme p-8">
+      <div className="min-h-screen bg-card p-8">
         <div className="max-w-7xl mx-auto">
-          <Button onClick={() => navigate('/betting')} className="mb-8 gaming-btn">
+          <Button onClick={() => navigate('/betting')} className="mb-8 bg-card">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Sports Board
           </Button>
-          <div className="gaming-card p-16 text-center">
-            <div className="gaming-border-glow"></div>
-            <h3 className="text-2xl font-bold gaming-text-primary mb-4">Game Not Found</h3>
-            <p className="gaming-text-secondary">Unable to load game data</p>
+          <div className="bg-card p-16 text-center">
+            <div className="bg-card"></div>
+            <h3 className="text-2xl font-bold bg-card mb-4">Game Not Found</h3>
+            <p className="bg-card">Unable to load game data</p>
           </div>
         </div>
       </div>
@@ -190,11 +189,11 @@ export const GameDetailPage: React.FC = () => {
   const isLive = game.status === 'live';
 
   return (
-    <div className="min-h-screen gaming-theme">
+    <div className="min-h-screen bg-card">
       <div className="max-w-[1920px] mx-auto">
 
         {/* Header Strip */}
-        <div className="border-b border-gaming-border bg-gaming-background/95 backdrop-blur sticky top-0 z-50">
+        <div className="border-b border-bg-card bg-bg-card/95 backdrop-blur sticky top-0 z-50">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -202,7 +201,7 @@ export const GameDetailPage: React.FC = () => {
                   onClick={() => navigate('/betting')}
                   variant="ghost"
                   size="sm"
-                  className="gaming-text-secondary hover:gaming-text-primary"
+                  className="bg-card hover:bg-card"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Sports Board
@@ -216,10 +215,10 @@ export const GameDetailPage: React.FC = () => {
                      game.league_name?.toLowerCase().includes('basketball') ? '🏀' : '⚽'}
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold gaming-text-primary">
+                    <h1 className="text-lg font-bold bg-card">
                       {game.away_team_name} @ {game.home_team_name}
                     </h1>
-                    <div className="text-sm gaming-text-secondary">
+                    <div className="text-sm bg-card">
                       {game.league_name} • {new Date(game.scheduled_start).toLocaleDateString()}
                     </div>
                   </div>
@@ -230,12 +229,12 @@ export const GameDetailPage: React.FC = () => {
                 {isLive && (
                   <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 border border-red-500/50 rounded-full">
                     <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-red-400">LIVE</span>
+                    <span className="text-sm font-medium text-red-500">LIVE</span>
                   </div>
                 )}
 
                 {isConnected && (
-                  <div className="flex items-center gap-2 gaming-text-accent">
+                  <div className="flex items-center gap-2 bg-card">
                     <Wifi className="w-4 h-4" />
                     <span className="text-sm">Connected</span>
                   </div>
@@ -245,7 +244,7 @@ export const GameDetailPage: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setAutoRefresh(!autoRefresh)}
-                  className={autoRefresh ? 'gaming-text-neon' : 'gaming-text-secondary'}
+                  className={autoRefresh ? 'bg-card' : 'bg-card'}
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
                   {autoRefresh ? 'Auto' : 'Manual'}
@@ -262,8 +261,8 @@ export const GameDetailPage: React.FC = () => {
           <div className="col-span-2 space-y-4">
 
             {/* Navigation */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
                 <div className="space-y-2">
                   {[
@@ -278,8 +277,8 @@ export const GameDetailPage: React.FC = () => {
                       onClick={() => setActiveView(item.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all ${
                         activeView === item.id
-                          ? 'bg-gaming-neon-cyan/20 border border-gaming-neon-cyan/50 gaming-text-neon'
-                          : 'hover:bg-gaming-bg-secondary/30 gaming-text-secondary hover:gaming-text-primary'
+                          ? 'bg-bg-card/20 border border-bg-card/50 bg-card'
+                          : 'hover:bg-bg-card/30 bg-card hover:bg-card'
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
@@ -291,30 +290,30 @@ export const GameDetailPage: React.FC = () => {
             </Card>
 
             {/* Quick Game Status */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="text-xs gaming-text-secondary mb-2">GAME STATUS</div>
+                  <div className="text-xs bg-card mb-2">GAME STATUS</div>
 
                   {isLive && game.home_score !== null && game.away_score !== null ? (
                     <div>
-                      <div className="text-2xl font-bold gaming-text-neon mb-1">
+                      <div className="text-2xl font-bold bg-card mb-1">
                         {game.away_score} - {game.home_score}
                       </div>
-                      <div className="text-xs gaming-text-primary">
+                      <div className="text-xs bg-card">
                         Q{game.current_period || '1'} • {game.time_remaining || '15:00'}
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div className="text-lg font-bold gaming-text-primary mb-1">
+                      <div className="text-lg font-bold bg-card mb-1">
                         {new Date(game.scheduled_start).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
                       </div>
-                      <div className="text-xs gaming-text-secondary">
+                      <div className="text-xs bg-card">
                         {formatDistanceToNow(new Date(game.scheduled_start), { addSuffix: true })}
                       </div>
                     </div>
@@ -325,15 +324,15 @@ export const GameDetailPage: React.FC = () => {
 
             {/* Bet Slip Summary */}
             {betSlip.length > 0 && (
-              <Card className="gaming-card">
-                <div className="gaming-border-glow"></div>
+              <Card className="bg-card">
+                <div className="bg-card"></div>
                 <CardContent className="p-4">
                   <div className="text-center">
-                    <div className="text-xs gaming-text-secondary mb-2">BET SLIP</div>
-                    <div className="text-sm font-bold gaming-text-primary mb-1">
+                    <div className="text-xs bg-card mb-2">BET SLIP</div>
+                    <div className="text-sm font-bold bg-card mb-1">
                       {betSlip.length} Selection{betSlip.length !== 1 ? 's' : ''}
                     </div>
-                    <div className="text-xs gaming-text-neon">
+                    <div className="text-xs bg-card">
                       ${getTotalStake()} Total Stake
                     </div>
                   </div>
@@ -366,18 +365,18 @@ export const GameDetailPage: React.FC = () => {
           <div className="col-span-2 space-y-4">
 
             {/* Weather */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="text-xs gaming-text-secondary mb-2">CONDITIONS</div>
+                  <div className="text-xs bg-card mb-2">CONDITIONS</div>
                   <div className="flex items-center justify-center gap-2 mb-2">
-                    <Thermometer className="w-4 h-4 gaming-text-primary" />
-                    <span className="text-sm font-bold gaming-text-primary">
+                    <Thermometer className="w-4 h-4 bg-card" />
+                    <span className="text-sm font-bold bg-card">
                       {gameData.weather?.temperature || 72}°F
                     </span>
                   </div>
-                  <div className="text-xs gaming-text-secondary">
+                  <div className="text-xs bg-card">
                     {gameData.weather?.condition || 'Clear'}
                   </div>
                 </div>
@@ -385,25 +384,25 @@ export const GameDetailPage: React.FC = () => {
             </Card>
 
             {/* Key Stats */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
-                <div className="text-xs gaming-text-secondary mb-3">TEAM RECORDS</div>
+                <div className="text-xs bg-card mb-3">TEAM RECORDS</div>
                 <div className="space-y-3">
                   <div>
-                    <div className="text-xs gaming-text-primary font-medium mb-1">
+                    <div className="text-xs bg-card font-medium mb-1">
                       {game.away_team_name}
                     </div>
-                    <div className="text-xs gaming-text-secondary">
+                    <div className="text-xs bg-card">
                       {game.away_team?.current_record?.wins || 0}-{game.away_team?.current_record?.losses || 0}
                     </div>
                   </div>
                   <Separator />
                   <div>
-                    <div className="text-xs gaming-text-primary font-medium mb-1">
+                    <div className="text-xs bg-card font-medium mb-1">
                       {game.home_team_name}
                     </div>
-                    <div className="text-xs gaming-text-secondary">
+                    <div className="text-xs bg-card">
                       {game.home_team?.current_record?.wins || 0}-{game.home_team?.current_record?.losses || 0}
                     </div>
                   </div>
@@ -412,16 +411,16 @@ export const GameDetailPage: React.FC = () => {
             </Card>
 
             {/* AI Confidence */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="text-xs gaming-text-secondary mb-2">AI CONFIDENCE</div>
-                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gaming-neon-green/20 flex items-center justify-center border border-gaming-neon-green/50">
-                    <Brain className="w-5 h-5 text-gaming-neon-green" />
+                  <div className="text-xs bg-card mb-2">AI CONFIDENCE</div>
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-bg-card/20 flex items-center justify-center border border-bg-card/50">
+                    <Brain className="w-5 h-5 text-bg-card" />
                   </div>
-                  <div className="text-lg font-bold text-gaming-neon-green">87%</div>
-                  <div className="text-xs gaming-text-secondary">Analysis Ready</div>
+                  <div className="text-lg font-bold text-bg-card">87%</div>
+                  <div className="text-xs bg-card">Analysis Ready</div>
                 </div>
               </CardContent>
             </Card>
@@ -439,14 +438,14 @@ const DashboardView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <h2 className="text-4xl font-black gaming-text-primary mb-2">
+            <h2 className="text-4xl font-black bg-card mb-2">
               GAME COMMAND CENTER
             </h2>
-            <p className="gaming-text-secondary">
+            <p className="bg-card">
               Comprehensive betting intelligence for {game.away_team_name} @ {game.home_team_name}
             </p>
           </div>
@@ -454,17 +453,17 @@ const DashboardView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
           <div className="grid grid-cols-3 gap-8 items-center">
             {/* Away Team */}
             <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gaming-bg-secondary/30 flex items-center justify-center border border-gaming-border">
-                <span className="text-2xl font-bold gaming-text-primary">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-bg-card/30 flex items-center justify-center border border-bg-card">
+                <span className="text-2xl font-bold bg-card">
                   {(game.away_team_abbreviation || game.away_team_name?.substring(0, 3) || 'AWY').toUpperCase()}
                 </span>
               </div>
-              <h3 className="text-xl font-bold gaming-text-primary mb-1">{game.away_team_name}</h3>
-              <p className="gaming-text-secondary">
+              <h3 className="text-xl font-bold bg-card mb-1">{game.away_team_name}</h3>
+              <p className="bg-card">
                 {game.away_team?.current_record?.wins || 0}-{game.away_team?.current_record?.losses || 0}
               </p>
               {game.away_score !== null && (
-                <div className="text-4xl font-bold gaming-text-neon mt-3">
+                <div className="text-4xl font-bold bg-card mt-3">
                   {game.away_score}
                 </div>
               )}
@@ -472,15 +471,15 @@ const DashboardView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
 
             {/* Center - Game Info */}
             <div className="text-center">
-              <div className="gaming-text-neon text-6xl font-bold mb-4">VS</div>
+              <div className="bg-card text-6xl font-bold mb-4">VS</div>
               <div className="space-y-2">
-                <div className="text-sm gaming-text-primary">
+                <div className="text-sm bg-card">
                   {new Date(game.scheduled_start).toLocaleDateString()}
                 </div>
-                <div className="text-sm gaming-text-secondary">
+                <div className="text-sm bg-card">
                   {new Date(game.scheduled_start).toLocaleTimeString()}
                 </div>
-                <div className="flex items-center justify-center gap-2 text-sm gaming-text-accent">
+                <div className="flex items-center justify-center gap-2 text-sm bg-card">
                   <MapPin className="w-4 h-4" />
                   {game.venue_name}
                 </div>
@@ -489,17 +488,17 @@ const DashboardView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
 
             {/* Home Team */}
             <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gaming-bg-secondary/30 flex items-center justify-center border border-gaming-border">
-                <span className="text-2xl font-bold gaming-text-primary">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-bg-card/30 flex items-center justify-center border border-bg-card">
+                <span className="text-2xl font-bold bg-card">
                   {(game.home_team_abbreviation || game.home_team_name?.substring(0, 3) || 'HOM').toUpperCase()}
                 </span>
               </div>
-              <h3 className="text-xl font-bold gaming-text-primary mb-1">{game.home_team_name}</h3>
-              <p className="gaming-text-secondary">
+              <h3 className="text-xl font-bold bg-card mb-1">{game.home_team_name}</h3>
+              <p className="bg-card">
                 {game.home_team?.current_record?.wins || 0}-{game.home_team?.current_record?.losses || 0}
               </p>
               {game.home_score !== null && (
-                <div className="text-4xl font-bold gaming-text-neon mt-3">
+                <div className="text-4xl font-bold bg-card mt-3">
                   {game.home_score}
                 </div>
               )}
@@ -512,68 +511,68 @@ const DashboardView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
       <div className="grid grid-cols-2 gap-6">
 
         {/* Betting Intelligence */}
-        <Card className="gaming-card">
-          <div className="gaming-border-glow"></div>
+        <Card className="bg-card">
+          <div className="bg-card"></div>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 gaming-text-primary">
+            <CardTitle className="flex items-center gap-2 bg-card">
               <Brain className="w-5 h-5" />
               Betting Intelligence
             </CardTitle>
           </CardHeader>
           <CardContent>
             {gameData.intelligence?.trends?.slice(0, 3).map((trend: any, idx: number) => (
-              <div key={idx} className="mb-4 p-3 bg-gaming-bg-secondary/20 rounded-lg border border-gaming-border/30">
+              <div key={idx} className="mb-4 p-3 bg-bg-card/20 rounded-lg border border-bg-card/30">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-gaming-neon-cyan rounded-full"></div>
-                  <span className="text-sm font-medium gaming-text-accent">
+                  <div className="w-2 h-2 bg-bg-card rounded-full"></div>
+                  <span className="text-sm font-medium bg-card">
                     {trend.category?.toUpperCase() || 'ANALYSIS'}
                   </span>
                 </div>
-                <p className="text-sm gaming-text-primary">{trend.text}</p>
+                <p className="text-sm bg-card">{trend.text}</p>
               </div>
             )) || (
               <div className="text-center py-8">
-                <Brain className="w-12 h-12 mx-auto mb-4 gaming-text-secondary" />
-                <p className="gaming-text-secondary">AI analysis loading...</p>
+                <Brain className="w-12 h-12 mx-auto mb-4 bg-card" />
+                <p className="bg-card">AI analysis loading...</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Injury Report */}
-        <Card className="gaming-card">
-          <div className="gaming-border-glow"></div>
+        <Card className="bg-card">
+          <div className="bg-card"></div>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 gaming-text-primary">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
+            <CardTitle className="flex items-center gap-2 bg-card">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
               Injury Report
             </CardTitle>
           </CardHeader>
           <CardContent>
             {gameData.injuries?.injuries?.slice(0, 3).map((injury: any, idx: number) => (
-              <div key={idx} className="mb-4 p-3 bg-gaming-bg-secondary/20 rounded-lg border border-gaming-border/30">
+              <div key={idx} className="mb-4 p-3 bg-bg-card/20 rounded-lg border border-bg-card/30">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium gaming-text-primary">
+                  <span className="text-sm font-medium bg-card">
                     {injury.player}
                   </span>
                   <Badge
                     className={`text-xs ${
-                      injury.status === 'Out' ? 'bg-red-500/20 text-red-400' :
+                      injury.status === 'Out' ? 'bg-red-500/20 text-red-500' :
                       injury.status === 'Doubtful' ? 'bg-orange-500/20 text-orange-400' :
-                      'bg-yellow-500/20 text-yellow-400'
+                      'bg-yellow-500/20 text-yellow-500'
                     }`}
                   >
                     {injury.status}
                   </Badge>
                 </div>
-                <div className="text-xs gaming-text-secondary">
+                <div className="text-xs bg-card">
                   {injury.team} • {injury.position} • {injury.injury}
                 </div>
               </div>
             )) || (
               <div className="text-center py-8">
-                <Shield className="w-12 h-12 mx-auto mb-4 gaming-text-secondary" />
-                <p className="gaming-text-secondary">No injury reports available</p>
+                <Shield className="w-12 h-12 mx-auto mb-4 bg-card" />
+                <p className="bg-card">No injury reports available</p>
               </div>
             )}
           </CardContent>
@@ -599,8 +598,8 @@ const BettingView: React.FC<{
   return (
     <div className="space-y-6">
       {/* Market Selection */}
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <CardContent className="p-6">
           <div className="grid grid-cols-4 gap-4">
             {['moneyline', 'spread', 'total', 'props'].map((market) => (
@@ -609,8 +608,8 @@ const BettingView: React.FC<{
                 onClick={() => setActiveMarket(market)}
                 className={`p-4 rounded-lg border-2 transition-all ${
                   activeMarket === market
-                    ? 'border-gaming-neon-cyan bg-gaming-neon-cyan/10 gaming-text-neon'
-                    : 'border-gaming-border hover:border-gaming-neon-cyan/50 gaming-text-secondary'
+                    ? 'border-bg-card bg-bg-card/10 bg-card'
+                    : 'border-bg-card hover:border-bg-card/50 bg-card'
                 }`}
               >
                 <div className="text-sm font-bold uppercase">
@@ -626,10 +625,10 @@ const BettingView: React.FC<{
       </Card>
 
       {/* Betting Options */}
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <CardContent className="p-6">
-          <h3 className="text-xl font-bold gaming-text-primary mb-6">
+          <h3 className="text-xl font-bold bg-card mb-6">
             {activeMarket.charAt(0).toUpperCase() + activeMarket.slice(1)} Betting
           </h3>
 
@@ -643,21 +642,21 @@ const BettingView: React.FC<{
                 key={option.id}
                 className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                   isInBetSlip(option.id)
-                    ? 'border-gaming-neon-green bg-gaming-neon-green/5'
-                    : 'border-gaming-border hover:border-gaming-neon-cyan'
+                    ? 'border-bg-card bg-bg-card/5'
+                    : 'border-bg-card hover:border-bg-card'
                 }`}
                 onClick={() => onAddToBetSlip(option as BettingOption, option.market)}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-bold gaming-text-primary">{option.name}</h4>
-                    <p className="text-sm gaming-text-secondary">Moneyline</p>
+                    <h4 className="font-bold bg-card">{option.name}</h4>
+                    <p className="text-sm bg-card">Moneyline</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold gaming-text-neon">
+                    <div className="text-2xl font-bold bg-card">
                       {option.odds > 0 ? `+${option.odds}` : option.odds}
                     </div>
-                    <div className="text-sm gaming-text-secondary">
+                    <div className="text-sm bg-card">
                       {((option.odds > 0 ? 100 / (option.odds + 100) : Math.abs(option.odds) / (Math.abs(option.odds) + 100)) * 100).toFixed(1)}% implied
                     </div>
                   </div>
@@ -670,10 +669,10 @@ const BettingView: React.FC<{
 
       {/* Bet Slip */}
       {betSlip.length > 0 && (
-        <Card className="gaming-card">
-          <div className="gaming-border-glow"></div>
+        <Card className="bg-card">
+          <div className="bg-card"></div>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 gaming-text-primary">
+            <CardTitle className="flex items-center gap-2 bg-card">
               <Target className="w-5 h-5" />
               Bet Slip ({betSlip.length})
             </CardTitle>
@@ -681,11 +680,11 @@ const BettingView: React.FC<{
           <CardContent>
             <div className="space-y-4">
               {betSlip.map((bet) => (
-                <div key={bet.option.id} className="p-3 bg-gaming-bg-secondary/20 rounded-lg border border-gaming-border/30">
+                <div key={bet.option.id} className="p-3 bg-bg-card/20 rounded-lg border border-bg-card/30">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <div className="font-medium gaming-text-primary">{bet.option.name}</div>
-                      <div className="text-sm gaming-text-secondary">
+                      <div className="font-medium bg-card">{bet.option.name}</div>
+                      <div className="text-sm bg-card">
                         {bet.option.odds > 0 ? `+${bet.option.odds}` : bet.option.odds}
                       </div>
                     </div>
@@ -711,7 +710,7 @@ const BettingView: React.FC<{
                       type="number"
                       value={bet.stake}
                       onChange={(e) => onUpdateStake(bet.option.id, Number(e.target.value))}
-                      className="flex-1 px-3 py-1 text-center gaming-card border border-gaming-border rounded"
+                      className="flex-1 px-3 py-1 text-center bg-card border border-bg-card rounded"
                     />
 
                     <Button
@@ -725,7 +724,7 @@ const BettingView: React.FC<{
                 </div>
               ))}
 
-              <Button className="w-full gaming-btn-active">
+              <Button className="w-full bg-card">
                 <Trophy className="w-4 h-4 mr-2" />
                 Place Bets (${betSlip.reduce((sum, bet) => sum + bet.stake, 0)})
               </Button>
@@ -741,19 +740,19 @@ const BettingView: React.FC<{
 const AnalysisView: React.FC<{ gameData: GameData }> = ({ }) => {
   return (
     <div className="space-y-6">
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 gaming-text-primary">
+          <CardTitle className="flex items-center gap-2 bg-card">
             <Brain className="w-5 h-5" />
             AI Analysis Engine
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <Brain className="w-16 h-16 mx-auto mb-4 gaming-text-secondary" />
-            <h3 className="text-xl font-bold gaming-text-primary mb-2">Deep Analysis Coming Soon</h3>
-            <p className="gaming-text-secondary">Advanced AI-powered game analysis and predictions</p>
+            <Brain className="w-16 h-16 mx-auto mb-4 bg-card" />
+            <h3 className="text-xl font-bold bg-card mb-2">Deep Analysis Coming Soon</h3>
+            <p className="bg-card">Advanced AI-powered game analysis and predictions</p>
           </div>
         </CardContent>
       </Card>
@@ -765,19 +764,19 @@ const AnalysisView: React.FC<{ gameData: GameData }> = ({ }) => {
 const NewsView: React.FC<{ gameData: GameData }> = ({ }) => {
   return (
     <div className="space-y-6">
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 gaming-text-primary">
+          <CardTitle className="flex items-center gap-2 bg-card">
             <Newspaper className="w-5 h-5" />
             News & Intelligence
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <Newspaper className="w-16 h-16 mx-auto mb-4 gaming-text-secondary" />
-            <h3 className="text-xl font-bold gaming-text-primary mb-2">News Feed Coming Soon</h3>
-            <p className="gaming-text-secondary">Real-time team news, injury updates, and expert analysis</p>
+            <Newspaper className="w-16 h-16 mx-auto mb-4 bg-card" />
+            <h3 className="text-xl font-bold bg-card mb-2">News Feed Coming Soon</h3>
+            <p className="bg-card">Real-time team news, injury updates, and expert analysis</p>
           </div>
         </CardContent>
       </Card>
@@ -791,10 +790,10 @@ const LiveView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
 
   return (
     <div className="space-y-6">
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 gaming-text-primary">
+          <CardTitle className="flex items-center gap-2 bg-card">
             <PlayCircle className="w-5 h-5" />
             Live Game Data
           </CardTitle>
@@ -802,15 +801,15 @@ const LiveView: React.FC<{ gameData: GameData }> = ({ gameData }) => {
         <CardContent>
           {isLive ? (
             <div className="text-center py-12">
-              <PlayCircle className="w-16 h-16 mx-auto mb-4 text-gaming-neon-green animate-pulse" />
-              <h3 className="text-xl font-bold gaming-text-primary mb-2">Game In Progress</h3>
-              <p className="gaming-text-secondary">Live play-by-play and statistics</p>
+              <PlayCircle className="w-16 h-16 mx-auto mb-4 text-bg-card animate-pulse" />
+              <h3 className="text-xl font-bold bg-card mb-2">Game In Progress</h3>
+              <p className="bg-card">Live play-by-play and statistics</p>
             </div>
           ) : (
             <div className="text-center py-12">
-              <Clock className="w-16 h-16 mx-auto mb-4 gaming-text-secondary" />
-              <h3 className="text-xl font-bold gaming-text-primary mb-2">Game Not Started</h3>
-              <p className="gaming-text-secondary">
+              <Clock className="w-16 h-16 mx-auto mb-4 bg-card" />
+              <h3 className="text-xl font-bold bg-card mb-2">Game Not Started</h3>
+              <p className="bg-card">
                 Live data will be available when the game begins
               </p>
             </div>

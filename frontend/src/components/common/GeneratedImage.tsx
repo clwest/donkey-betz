@@ -110,7 +110,7 @@ export function GeneratedImage({
   return (
     <div 
       className={clsx(
-        'relative group rounded-lg overflow-hidden bg-dark-900 border border-dark-700',
+        'relative group rounded-lg overflow-hidden bg-background border border-border',
         className
       )}
       onMouseEnter={() => setShowControls(true)}
@@ -138,8 +138,8 @@ export function GeneratedImage({
                 className={clsx(
                   'p-2 rounded-full backdrop-blur-xl transition-all duration-200 hover:scale-110',
                   isLoved 
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/50' 
-                    : 'bg-white/10 text-white hover:bg-red-500/20 hover:text-red-400'
+                    ? 'bg-red-500/20 text-red-500 border border-red-500/50' 
+                    : 'bg-white/10 text-foreground hover:bg-red-500/20 hover:text-red-500'
                 )}
                 title="❤️ Love this style"
               >
@@ -152,8 +152,8 @@ export function GeneratedImage({
                 className={clsx(
                   'p-2 rounded-full backdrop-blur-xl transition-all duration-200 hover:scale-110',
                   isSaved 
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' 
-                    : 'bg-white/10 text-white hover:bg-blue-500/20 hover:text-blue-400'
+                    ? 'bg-blue-500/20 text-blue-500 border border-blue-500/50' 
+                    : 'bg-white/10 text-foreground hover:bg-blue-500/20 hover:text-blue-500'
                 )}
                 title="💾 Save for later"
               >
@@ -166,8 +166,8 @@ export function GeneratedImage({
                 className={clsx(
                   'p-2 rounded-full backdrop-blur-xl transition-all duration-200 hover:scale-110',
                   isLiked 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                    : 'bg-white/10 text-white hover:bg-green-500/20 hover:text-green-400'
+                    ? 'bg-green-500/20 text-green-500 border border-green-500/50' 
+                    : 'bg-white/10 text-foreground hover:bg-green-500/20 hover:text-green-500'
                 )}
                 title="👍 Like this"
               >
@@ -178,7 +178,7 @@ export function GeneratedImage({
             {/* View Lineage */}
             <button
               onClick={handleViewLineage}
-              className="p-2 rounded-full bg-white/10 text-white hover:bg-primary-500/20 hover:text-primary-400 transition-all duration-200 hover:scale-110"
+              className="p-2 rounded-full bg-white/10 text-foreground hover:bg-primary-500/20 hover:text-primary-400 transition-all duration-200 hover:scale-110"
               title="🌳 View style lineage"
             >
               <EyeIcon className="h-5 w-5" />
@@ -194,8 +194,8 @@ export function GeneratedImage({
                 className={clsx(
                   'p-1 rounded transition-all duration-200 hover:scale-110',
                   rating >= stars 
-                    ? 'text-yellow-400' 
-                    : 'text-gray-400 hover:text-yellow-300'
+                    ? 'text-yellow-500' 
+                    : 'text-muted-foreground hover:text-yellow-300'
                 )}
                 title={`⭐ Rate ${stars} star${stars > 1 ? 's' : ''}`}
               >
@@ -266,12 +266,12 @@ export function GeneratedImage({
 
       {/* Image Info */}
       {(prompt || Object.keys(parameters).length > 0) && (
-        <div className="p-3 bg-dark-800/50 backdrop-blur-xl">
+        <div className="p-3 bg-card/50 backdrop-blur-xl">
           {prompt && (
-            <p className="text-sm text-gray-300 mb-2 line-clamp-2">{prompt}</p>
+            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{prompt}</p>
           )}
           {Object.keys(parameters).length > 0 && (
-            <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               {parameters.style && <span className="px-2 py-1 bg-primary-500/20 rounded-full">{parameters.style}</span>}
               {parameters.cfg_scale && <span>CFG: {parameters.cfg_scale}</span>}
               {parameters.steps && <span>Steps: {parameters.steps}</span>}

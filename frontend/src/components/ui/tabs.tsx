@@ -32,7 +32,7 @@ const TabsList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={clsx(
-        'inline-flex h-10 items-center justify-center rounded-lg bg-gray-900 p-1 text-gray-400 border border-cyan-500/30',
+        'inline-flex h-10 items-center justify-center rounded-lg bg-background p-1 text-muted-foreground border border-cyan-500/30',
         className
       )}
       {...props}

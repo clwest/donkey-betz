@@ -764,7 +764,7 @@ export default function IncomeBuilder() {
       case 'intermediate': return 'bg-yellow-500';
       case 'advanced': return 'bg-orange-500';
       case 'expert': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -985,7 +985,7 @@ export default function IncomeBuilder() {
           <TabsTrigger value="action-plans">
             My Action Plans
             {actionPlans.filter(p => p.status === 'in_progress').length > 0 && (
-              <Badge className="ml-2 bg-blue-500 text-white text-xs">
+              <Badge className="ml-2 bg-blue-500 text-foreground text-xs">
                 {actionPlans.filter(p => p.status === 'in_progress').length}
               </Badge>
             )}
@@ -995,7 +995,7 @@ export default function IncomeBuilder() {
               <Trophy className="h-4 w-4 text-yellow-500" />
               Completed
               {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length > 0 && (
-                <Badge className="bg-green-500 text-white text-xs">
+                <Badge className="bg-green-500 text-foreground text-xs">
                   {actionPlans.filter(p => p.status === 'completed').length}
                 </Badge>
               )}
@@ -1089,7 +1089,7 @@ export default function IncomeBuilder() {
                     </CardHeader>
                     {plan.automation_analysis && (
                       <CardContent>
-                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="bg-muted/5 rounded-lg p-4 space-y-3">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                               <p className="text-gray-600">Total Tasks</p>
@@ -1318,8 +1318,8 @@ export default function IncomeBuilder() {
           {actionPlans.filter(p => p.status !== 'completed').length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">
-                <p className="text-gray-500 mb-4">No active action plans.</p>
-                <p className="text-sm text-gray-400">Select an opportunity and click "Get Action Plan" to create a new plan.</p>
+                <p className="text-muted-foreground mb-4">No active action plans.</p>
+                <p className="text-sm text-muted-foreground">Select an opportunity and click "Get Action Plan" to create a new plan.</p>
               </CardContent>
             </Card>
           ) : (
@@ -1399,12 +1399,12 @@ export default function IncomeBuilder() {
                     )}
 
                     {plan.execution_logs && plan.execution_logs.length > 0 && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                      <div className="mt-4 p-3 bg-muted/5 rounded-md">
                         <h4 className="font-semibold text-sm mb-2">Execution Logs:</h4>
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {plan.execution_logs.slice(-5).map((log: any, lIndex: number) => (
                             <div key={lIndex} className="text-xs">
-                              <span className="text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                              <span className="text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString()}</span>
                               <span className={`ml-2 ${
                                 log.level === 'error' ? 'text-red-600' :
                                 log.level === 'success' ? 'text-green-600' :
@@ -1763,7 +1763,7 @@ export default function IncomeBuilder() {
                         <Button
                           size="sm"
                           variant="default"
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          className="bg-purple-600 hover:bg-purple-700 text-foreground"
                           onClick={async () => {
                             console.log('📚 Requesting advisor review for plan:', plan.opportunity_title);
 
@@ -1896,15 +1896,15 @@ export default function IncomeBuilder() {
               <div className="flex items-center gap-3">
                 <Trophy className="h-8 w-8 text-yellow-500" />
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Completed Action Plans</h2>
-                  <p className="text-gray-400">Your successful income generation achievements</p>
+                  <h2 className="text-2xl font-bold text-foreground">Completed Action Plans</h2>
+                  <p className="text-muted-foreground">Your successful income generation achievements</p>
                 </div>
               </div>
               {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length > 0 && (
                 <Card className="bg-slate-800 border-green-500/30">
                   <CardContent className="p-4">
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-green-400">
+                      <p className="text-3xl font-bold text-green-500">
                         {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length}
                       </p>
                       <p className="text-sm text-green-300">Plans Completed</p>
@@ -1919,8 +1919,8 @@ export default function IncomeBuilder() {
             <Card className="bg-slate-800 border-slate-700">
               <CardContent className="text-center py-12">
                 <Trophy className="h-16 w-16 mx-auto text-gray-600 mb-4" />
-                <p className="text-gray-300 mb-2 text-lg">No completed plans yet</p>
-                <p className="text-sm text-gray-500">Complete your first action plan to see it here!</p>
+                <p className="text-muted-foreground mb-2 text-lg">No completed plans yet</p>
+                <p className="text-sm text-muted-foreground">Complete your first action plan to see it here!</p>
               </CardContent>
             </Card>
           ) : (
@@ -1928,7 +1928,7 @@ export default function IncomeBuilder() {
               {/* Success Summary Card */}
               <Card className="bg-slate-800 border-cyan-500/30">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
+                  <CardTitle className="flex items-center gap-2 text-foreground">
                     <CheckCircle className="h-6 w-6 text-cyan-400" />
                     Success Summary
                   </CardTitle>
@@ -1936,20 +1936,20 @@ export default function IncomeBuilder() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className="text-sm text-gray-400">Total Completed</p>
-                      <p className="text-2xl font-bold text-green-400">
+                      <p className="text-sm text-muted-foreground">Total Completed</p>
+                      <p className="text-2xl font-bold text-green-500">
                         {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length}
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-400">Files Generated</p>
+                      <p className="text-sm text-muted-foreground">Files Generated</p>
                       <p className="text-2xl font-bold text-cyan-400">
                         {actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed')
                           .reduce((total, plan) => total + (plan.results?.files_created?.length || 0), 0)}
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-400">Success Rate</p>
+                      <p className="text-sm text-muted-foreground">Success Rate</p>
                       <p className="text-2xl font-bold text-purple-400">
                         {((actionPlans.filter(p => p.status === 'completed' || p.status === 'under_review' || p.status === 'reviewed').length /
                           Math.max(actionPlans.length, 1)) * 100).toFixed(0)}%
@@ -1966,11 +1966,11 @@ export default function IncomeBuilder() {
                     <CardHeader className="bg-slate-900/50">
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="flex items-center gap-2 text-white">
-                            <CheckCircle className="h-5 w-5 text-green-400" />
+                          <CardTitle className="flex items-center gap-2 text-foreground">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
                             {plan.opportunity_title || 'Completed Plan'}
                           </CardTitle>
-                          <CardDescription className="text-gray-400">
+                          <CardDescription className="text-muted-foreground">
                             Completed: {plan.completed_at ?
                               new Date(plan.completed_at).toLocaleDateString() :
                               'Recently'}
@@ -1979,7 +1979,7 @@ export default function IncomeBuilder() {
                         <Badge className={
                           plan.status === 'under_review' ? "bg-purple-600/20 text-purple-400 border-purple-500/50" :
                           plan.status === 'reviewed' ? "bg-indigo-600/20 text-indigo-400 border-indigo-500/50" :
-                          "bg-green-600/20 text-green-400 border-green-500/50"
+                          "bg-green-600/20 text-green-500 border-green-500/50"
                         }>
                           {plan.status === 'under_review' ? (
                             <>
@@ -2045,7 +2045,7 @@ export default function IncomeBuilder() {
 
                                     return (
                                       <div key={idx} className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-300 truncate" title={filepath}>
+                                        <span className="text-sm text-muted-foreground truncate" title={filepath}>
                                           📄 {filename}
                                         </span>
                                         <Button
@@ -2063,7 +2063,7 @@ export default function IncomeBuilder() {
                                     );
                                   })}
                                 {plan.results.files_created.length > 3 && (
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-muted-foreground">
                                     +{plan.results.files_created.length - 3} more files
                                   </p>
                                 )}
@@ -2111,7 +2111,7 @@ export default function IncomeBuilder() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                className="bg-purple-600 hover:bg-purple-700 text-white flex-1"
+                                className="bg-purple-600 hover:bg-purple-700 text-foreground flex-1"
                                 onClick={async () => {
                                   console.log('📚 Requesting advisor review for completed plan:', plan.opportunity_title);
 
@@ -2321,10 +2321,10 @@ export default function IncomeBuilder() {
                           {plan.execution_logs && plan.execution_logs.length > 0 && (
                             <div>
                               <h5 className="text-sm font-semibold mb-2">Execution History:</h5>
-                              <div className="bg-gray-50 rounded p-2 max-h-32 overflow-y-auto">
+                              <div className="bg-muted/5 rounded p-2 max-h-32 overflow-y-auto">
                                 {plan.execution_logs.map((log: any, idx: number) => (
                                   <div key={idx} className="text-xs">
-                                    <span className="text-gray-500">
+                                    <span className="text-muted-foreground">
                                       {new Date(log.timestamp).toLocaleTimeString()}
                                     </span>
                                     <span className={`ml-2 ${
@@ -2351,9 +2351,9 @@ export default function IncomeBuilder() {
         <TabsContent value="quick-start" className="space-y-4">
           <Alert className="border-cyan-500/30 bg-slate-800">
             <Rocket className="h-4 w-4 text-cyan-400" />
-            <AlertDescription className="text-gray-300">
-              <strong className="text-white">Your Quick Start Path to $1000/month:</strong>
-              <ol className="mt-2 space-y-1 list-decimal list-inside text-gray-400">
+            <AlertDescription className="text-muted-foreground">
+              <strong className="text-foreground">Your Quick Start Path to $1000/month:</strong>
+              <ol className="mt-2 space-y-1 list-decimal list-inside text-muted-foreground">
                 <li>Start with Content Writing (1-3 days to first income)</li>
                 <li>Add Social Media Management (Week 1)</li>
                 <li>Launch Digital Templates (Week 2)</li>
@@ -2365,23 +2365,23 @@ export default function IncomeBuilder() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white">Week 1 Goals</CardTitle>
+                <CardTitle className="text-foreground">Week 1 Goals</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-gray-300">
+                  <li className="flex items-center gap-2 text-muted-foreground">
                     <Target className="h-4 w-4 text-cyan-400" />
                     Create profiles on 3 platforms
                   </li>
-                  <li className="flex items-center gap-2 text-gray-300">
+                  <li className="flex items-center gap-2 text-muted-foreground">
                     <Target className="h-4 w-4 text-cyan-400" />
                     Complete 5 sample projects
                   </li>
-                  <li className="flex items-center gap-2 text-gray-300">
+                  <li className="flex items-center gap-2 text-muted-foreground">
                     <Target className="h-4 w-4 text-cyan-400" />
                     Apply to 50 opportunities
                   </li>
-                  <li className="flex items-center gap-2 text-gray-300">
+                  <li className="flex items-center gap-2 text-muted-foreground">
                     <Target className="h-4 w-4 text-cyan-400" />
                     Earn first $100
                   </li>
@@ -2391,24 +2391,24 @@ export default function IncomeBuilder() {
 
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white">Month 1 Targets</CardTitle>
+                <CardTitle className="text-foreground">Month 1 Targets</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-gray-300">
-                    <TrendingUp className="h-4 w-4 text-green-400" />
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
                     3 active income streams
                   </li>
-                  <li className="flex items-center gap-2 text-gray-300">
-                    <TrendingUp className="h-4 w-4 text-green-400" />
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
                     $500+ monthly revenue
                   </li>
-                  <li className="flex items-center gap-2 text-gray-300">
-                    <TrendingUp className="h-4 w-4 text-green-400" />
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
                     5+ positive reviews
                   </li>
-                  <li className="flex items-center gap-2 text-gray-300">
-                    <TrendingUp className="h-4 w-4 text-green-400" />
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
                     2 recurring clients
                   </li>
                 </ul>
@@ -2419,15 +2419,15 @@ export default function IncomeBuilder() {
           {/* Quick Start Action Button */}
           <Card className="bg-gradient-to-r from-cyan-600 to-purple-600 border-0">
             <CardHeader className="text-center">
-              <CardTitle className="text-white text-xl">Ready to Start Earning?</CardTitle>
-              <CardDescription className="text-gray-200">
+              <CardTitle className="text-foreground text-xl">Ready to Start Earning?</CardTitle>
+              <CardDescription className="text-foreground">
                 Set up all 4 automation workflows for your path to $1000/month
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
               <Button
                 size="lg"
-                className="bg-white text-purple-600 hover:bg-gray-100 font-bold px-8 py-3"
+                className="bg-white text-purple-600 hover:bg-muted/10 font-bold px-8 py-3"
                 onClick={executeQuickStart}
                 disabled={settingUpAutomation === 'quick_start'}
               >
@@ -2443,7 +2443,7 @@ export default function IncomeBuilder() {
                   </>
                 )}
               </Button>
-              <p className="text-sm text-gray-200 mt-2">
+              <p className="text-sm text-foreground mt-2">
                 This will set up Blog + Social Media automation to get you started!
               </p>
             </CardContent>
@@ -2454,22 +2454,22 @@ export default function IncomeBuilder() {
         <TabsContent value="automation" className="space-y-4">
           <Alert className="border-purple-500/30 bg-slate-800">
             <Zap className="h-4 w-4 text-purple-400" />
-            <AlertDescription className="text-gray-300">
-              <strong className="text-white">Automated Income Potential: $200-950/day</strong>
-              <p className="mt-1 text-gray-400">Set up once, earn continuously with AI automation</p>
+            <AlertDescription className="text-muted-foreground">
+              <strong className="text-foreground">Automated Income Potential: $200-950/day</strong>
+              <p className="mt-1 text-muted-foreground">Set up once, earn continuously with AI automation</p>
             </AlertDescription>
           </Alert>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-slate-800 border-slate-700 hover:border-cyan-500/30 transition-all">
               <CardHeader>
-                <CardTitle className="text-white">Blog Automation</CardTitle>
-                <CardDescription className="text-gray-400">3 posts/day across platforms</CardDescription>
+                <CardTitle className="text-foreground">Blog Automation</CardTitle>
+                <CardDescription className="text-muted-foreground">3 posts/day across platforms</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-green-400">$50-200/day</p>
-                  <p className="text-sm text-gray-500">AdSense + Affiliates + Sponsored</p>
+                  <p className="text-2xl font-bold text-green-500">$50-200/day</p>
+                  <p className="text-sm text-muted-foreground">AdSense + Affiliates + Sponsored</p>
                   <Button
                     className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30"
                     variant="outline"
@@ -2484,13 +2484,13 @@ export default function IncomeBuilder() {
 
             <Card className="bg-slate-800 border-slate-700 hover:border-cyan-500/30 transition-all">
               <CardHeader>
-                <CardTitle className="text-white">Social Media Automation</CardTitle>
-                <CardDescription className="text-gray-400">10 posts/day automated</CardDescription>
+                <CardTitle className="text-foreground">Social Media Automation</CardTitle>
+                <CardDescription className="text-muted-foreground">10 posts/day automated</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-cyan-400">$30-150/day</p>
-                  <p className="text-sm text-gray-500">Sponsored + Affiliate Marketing</p>
+                  <p className="text-sm text-muted-foreground">Sponsored + Affiliate Marketing</p>
                   <Button
                     className="w-full bg-slate-700 hover:bg-slate-600 border-cyan-500/30"
                     variant="outline"
@@ -2505,13 +2505,13 @@ export default function IncomeBuilder() {
 
             <Card className="bg-slate-800 border-slate-700 hover:border-purple-500/30 transition-all">
               <CardHeader>
-                <CardTitle className="text-white">Video Scripts</CardTitle>
-                <CardDescription className="text-gray-400">5 scripts/day for creators</CardDescription>
+                <CardTitle className="text-foreground">Video Scripts</CardTitle>
+                <CardDescription className="text-muted-foreground">5 scripts/day for creators</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-purple-400">$100-500/day</p>
-                  <p className="text-sm text-gray-500">Direct Sales + Subscriptions</p>
+                  <p className="text-sm text-muted-foreground">Direct Sales + Subscriptions</p>
                   <Button
                     className="w-full bg-slate-700 hover:bg-slate-600 border-purple-500/30"
                     variant="outline"
@@ -2526,13 +2526,13 @@ export default function IncomeBuilder() {
 
             <Card className="bg-slate-800 border-slate-700 hover:border-indigo-500/30 transition-all">
               <CardHeader>
-                <CardTitle className="text-white">Digital Templates</CardTitle>
-                <CardDescription className="text-gray-400">10 new templates/week</CardDescription>
+                <CardTitle className="text-foreground">Digital Templates</CardTitle>
+                <CardDescription className="text-muted-foreground">10 new templates/week</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <p className="text-2xl font-bold text-indigo-400">$20-100/day</p>
-                  <p className="text-sm text-gray-500">Etsy + Gumroad + Creative Market</p>
+                  <p className="text-sm text-muted-foreground">Etsy + Gumroad + Creative Market</p>
                   <Button
                     className="w-full bg-slate-700 hover:bg-slate-600 border-indigo-500/30"
                     variant="outline"

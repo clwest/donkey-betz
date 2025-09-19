@@ -231,7 +231,7 @@ export function RiskManager() {
       case 'healthy': return 'bg-green-500';
       case 'warning': return 'bg-yellow-500';
       case 'critical': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -282,13 +282,13 @@ export function RiskManager() {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-yellow-500 bg-clip-text text-transparent">
             Automated Risk Management
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Portfolio-aware position sizing and automated risk controls
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1">
-            <div className={`w-2 h-2 rounded-full ${isAutoRiskEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-500'} mr-2`} />
+            <div className={`w-2 h-2 rounded-full ${isAutoRiskEnabled ? 'bg-green-500 animate-pulse' : 'bg-muted/50'} mr-2`} />
             {isAutoRiskEnabled ? 'Auto Risk ON' : 'Manual Mode'}
           </Badge>
           <Switch
@@ -305,7 +305,7 @@ export function RiskManager() {
       {riskRules.some(rule => rule.triggered && rule.isActive) && (
         <Alert className="border-red-500/50 bg-red-500/5">
           <AlertTriangle className="h-4 w-4 text-red-500" />
-          <AlertDescription className="text-red-400">
+          <AlertDescription className="text-red-500">
             <strong>RISK RULES TRIGGERED!</strong> {' '}
             {riskRules.filter(rule => rule.triggered && rule.isActive).length} risk management rules require attention.
           </AlertDescription>
@@ -324,10 +324,10 @@ export function RiskManager() {
         <TabsContent value="overview" className="space-y-6">
           {/* Risk Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Overall Risk</span>
+                  <span className="text-sm text-muted-foreground">Overall Risk</span>
                   <Gauge className="h-4 w-4 text-orange-500" />
                 </div>
                 <p className={`text-2xl font-bold mt-2 ${getRiskColor(riskMetrics.overallRisk)}`}>
@@ -337,49 +337,49 @@ export function RiskManager() {
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Daily VaR</span>
+                  <span className="text-sm text-muted-foreground">Daily VaR</span>
                   <TrendingDown className="h-4 w-4 text-red-500" />
                 </div>
                 <p className="text-2xl font-bold mt-2 text-red-500">
                   ${riskMetrics.dailyVaR.toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-400 mt-1">95% confidence</p>
+                <p className="text-sm text-muted-foreground mt-1">95% confidence</p>
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Correlation</span>
+                  <span className="text-sm text-muted-foreground">Correlation</span>
                   <Activity className="h-4 w-4 text-yellow-500" />
                 </div>
                 <p className={`text-2xl font-bold mt-2 ${riskMetrics.correlation > 0.7 ? 'text-red-500' : 'text-green-500'}`}>
                   {(riskMetrics.correlation * 100).toFixed(0)}%
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Avg position</p>
+                <p className="text-sm text-muted-foreground mt-1">Avg position</p>
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Sharpe Ratio</span>
+                  <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
                   <BarChart3 className="h-4 w-4 text-blue-500" />
                 </div>
                 <p className="text-2xl font-bold mt-2 text-blue-500">
                   {riskMetrics.sharpeRatio.toFixed(2)}
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Risk-adjusted</p>
+                <p className="text-sm text-muted-foreground mt-1">Risk-adjusted</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Risk Distribution Chart */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle>Position Risk Distribution</CardTitle>
               </CardHeader>
@@ -392,7 +392,7 @@ export function RiskManager() {
                           <Badge className={`text-xs ${DOMAIN_COLORS[position.domain]}`}>
                             {position.entity}
                           </Badge>
-                          <span className="text-sm text-gray-400">
+                          <span className="text-sm text-muted-foreground">
                             {(position.positionSize * 100).toFixed(1)}%
                           </span>
                         </div>
@@ -407,7 +407,7 @@ export function RiskManager() {
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle>Risk Metrics Breakdown</CardTitle>
               </CardHeader>
@@ -415,8 +415,8 @@ export function RiskManager() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-400">Max Drawdown</span>
-                      <span className="text-sm font-bold text-red-400">
+                      <span className="text-sm text-muted-foreground">Max Drawdown</span>
+                      <span className="text-sm font-bold text-red-500">
                         {(riskMetrics.maxDrawdown * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -425,8 +425,8 @@ export function RiskManager() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-400">Leverage</span>
-                      <span className="text-sm font-bold text-blue-400">
+                      <span className="text-sm text-muted-foreground">Leverage</span>
+                      <span className="text-sm font-bold text-blue-500">
                         {riskMetrics.leverage.toFixed(2)}x
                       </span>
                     </div>
@@ -435,8 +435,8 @@ export function RiskManager() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-400">Liquidity Risk</span>
-                      <span className="text-sm font-bold text-yellow-400">
+                      <span className="text-sm text-muted-foreground">Liquidity Risk</span>
+                      <span className="text-sm font-bold text-yellow-500">
                         {(riskMetrics.liquidityRisk * 100).toFixed(0)}%
                       </span>
                     </div>
@@ -454,7 +454,7 @@ export function RiskManager() {
             const StatusIcon = getStatusIcon(position.status);
 
             return (
-              <Card key={position.id} className="gaming-card">
+              <Card key={position.id} className="bg-card">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
@@ -473,36 +473,36 @@ export function RiskManager() {
                               {position.domain.replace('_', ' ')}
                             </Badge>
                           </div>
-                          <Badge className={`${getStatusColor(position.status)} text-white`}>
+                          <Badge className={`${getStatusColor(position.status)} text-foreground`}>
                             {position.status}
                           </Badge>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                           <div className="text-center">
-                            <p className="text-xs text-gray-400">Value</p>
+                            <p className="text-xs text-muted-foreground">Value</p>
                             <p className="font-bold">${position.currentValue.toLocaleString()}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-400">P&L</p>
+                            <p className="text-xs text-muted-foreground">P&L</p>
                             <p className={`font-bold ${position.unrealizedPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                               {position.unrealizedPnL >= 0 ? '+' : ''}${position.unrealizedPnL.toLocaleString()}
                             </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-400">Size</p>
+                            <p className="text-xs text-muted-foreground">Size</p>
                             <p className={`font-bold ${position.positionSize > position.maxSize ? 'text-red-500' : 'text-green-500'}`}>
                               {(position.positionSize * 100).toFixed(1)}%
                             </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-400">Risk</p>
+                            <p className="text-xs text-muted-foreground">Risk</p>
                             <p className={`font-bold ${getRiskColor(position.riskScore)}`}>
                               {(position.riskScore * 100).toFixed(0)}%
                             </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-400">Correlation</p>
+                            <p className="text-xs text-muted-foreground">Correlation</p>
                             <p className={`font-bold ${position.correlation > 0.7 ? 'text-red-500' : 'text-green-500'}`}>
                               {(position.correlation * 100).toFixed(0)}%
                             </p>
@@ -511,17 +511,17 @@ export function RiskManager() {
 
                         {/* Stop Loss & Take Profit */}
                         {(position.stopLoss || position.takeProfitTarget) && (
-                          <div className="bg-dark-800 rounded-lg p-2 mb-3">
+                          <div className="bg-card rounded-lg p-2 mb-3">
                             <div className="grid grid-cols-2 gap-3 text-xs">
                               {position.stopLoss && (
                                 <div>
-                                  <p className="text-gray-400">Stop Loss</p>
+                                  <p className="text-muted-foreground">Stop Loss</p>
                                   <p className="font-bold text-red-500">${position.stopLoss.toLocaleString()}</p>
                                 </div>
                               )}
                               {position.takeProfitTarget && (
                                 <div>
-                                  <p className="text-gray-400">Take Profit</p>
+                                  <p className="text-muted-foreground">Take Profit</p>
                                   <p className="font-bold text-green-500">${position.takeProfitTarget.toLocaleString()}</p>
                                 </div>
                               )}
@@ -565,7 +565,7 @@ export function RiskManager() {
         {/* Risk Rules Tab */}
         <TabsContent value="rules" className="space-y-4">
           {riskRules.map(rule => (
-            <Card key={rule.id} className={`gaming-card ${rule.triggered ? 'border-red-500/50' : ''}`}>
+            <Card key={rule.id} className={`bg-card ${rule.triggered ? 'border-red-500/50' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -582,27 +582,27 @@ export function RiskManager() {
                           checked={rule.isActive}
                           onCheckedChange={() => toggleRiskRule(rule.id)}
                         />
-                        {rule.isActive ? <Lock className="h-4 w-4 text-green-500" /> : <Unlock className="h-4 w-4 text-gray-400" />}
+                        {rule.isActive ? <Lock className="h-4 w-4 text-green-500" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-400 mb-3">{rule.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{rule.description}</p>
 
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-xs text-gray-400">Threshold</p>
+                        <p className="text-xs text-muted-foreground">Threshold</p>
                         <p className="font-bold">
                           {rule.type === 'var' ? '$' : ''}{rule.threshold.toLocaleString()}{rule.type !== 'var' ? '%' : ''}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Current</p>
+                        <p className="text-xs text-muted-foreground">Current</p>
                         <p className={`font-bold ${rule.triggered ? 'text-red-500' : 'text-green-500'}`}>
                           {rule.type === 'var' ? '$' : ''}{rule.currentValue.toLocaleString()}{rule.type !== 'var' ? '%' : ''}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Action</p>
+                        <p className="text-xs text-muted-foreground">Action</p>
                         <Badge variant="outline" className="text-xs">
                           {rule.action.toUpperCase()}
                         </Badge>
@@ -610,7 +610,7 @@ export function RiskManager() {
                     </div>
 
                     {rule.triggered && rule.lastTriggered && (
-                      <p className="text-xs text-red-400 mt-2">
+                      <p className="text-xs text-red-500 mt-2">
                         Last triggered: {new Date(rule.lastTriggered).toLocaleString()}
                       </p>
                     )}
@@ -624,7 +624,7 @@ export function RiskManager() {
         {/* Auto Actions Tab */}
         <TabsContent value="actions" className="space-y-4">
           {autoActions.map(action => (
-            <Card key={action.id} className="gaming-card">
+            <Card key={action.id} className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -638,27 +638,27 @@ export function RiskManager() {
                       <Badge className={`${
                         action.status === 'pending' ? 'bg-yellow-500' :
                         action.status === 'executed' ? 'bg-green-500' :
-                        'bg-gray-500'
-                      } text-white`}>
+                        'bg-muted/50'
+                      } text-foreground`}>
                         {action.status}
                       </Badge>
                     </div>
 
-                    <p className="text-sm text-gray-300 mb-3">{action.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{action.description}</p>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-400">Trigger Value</p>
+                        <p className="text-xs text-muted-foreground">Trigger Value</p>
                         <p className="font-bold">{action.triggerValue.toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Current Value</p>
+                        <p className="text-xs text-muted-foreground">Current Value</p>
                         <p className="font-bold">{action.currentValue.toLocaleString()}</p>
                       </div>
                     </div>
 
                     {action.executedAt && (
-                      <p className="text-xs text-green-400 mt-2">
+                      <p className="text-xs text-green-500 mt-2">
                         Executed: {new Date(action.executedAt).toLocaleString()} - {action.result}
                       </p>
                     )}
@@ -689,10 +689,10 @@ export function RiskManager() {
           ))}
 
           {autoActions.filter(a => a.status === 'pending').length === 0 && (
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="text-center py-8">
                 <Shield className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                <p className="text-gray-400">No pending auto actions. Risk management is operating normally.</p>
+                <p className="text-muted-foreground">No pending auto actions. Risk management is operating normally.</p>
               </CardContent>
             </Card>
           )}

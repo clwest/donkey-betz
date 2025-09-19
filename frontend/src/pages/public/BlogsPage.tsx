@@ -200,8 +200,8 @@ const BlogsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white">Loading blog posts...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading blog posts...</div>
       </div>
     );
   }
@@ -212,14 +212,14 @@ const BlogsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
       {/* Header */}
-      <div className="bg-gray-900/70 backdrop-blur-lg border-b border-gray-700 sticky top-0 z-40">
+      <div className="bg-background/70 backdrop-blur-lg border-b border-gray-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">Blog & Insights</h1>
+            <h1 className="text-2xl font-bold text-foreground">Blog & Insights</h1>
             <Button 
               onClick={() => navigate('/')}
               variant="ghost"
-              className="text-gray-300 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
             >
               Back to Home
             </Button>
@@ -230,22 +230,22 @@ const BlogsPage: React.FC = () => {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 py-12 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Insights from the AI Frontier
           </h2>
-          <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
             Expert analysis on AI, content generation, sports analytics, and cutting-edge technology
           </p>
           
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               type="text"
               placeholder="Search articles, topics, or tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-3 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-purple-500"
+              className="pl-10 pr-4 py-3 bg-card border-gray-700 text-foreground placeholder-gray-400 focus:border-purple-500"
             />
           </div>
 
@@ -255,7 +255,7 @@ const BlogsPage: React.FC = () => {
               variant={selectedCategory === null ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedCategory(null)}
-              className={selectedCategory === null ? 'bg-purple-600' : 'border-gray-600 text-gray-300'}
+              className={selectedCategory === null ? 'bg-purple-600' : 'border-gray-600 text-muted-foreground'}
             >
               All Posts
             </Button>
@@ -265,7 +265,7 @@ const BlogsPage: React.FC = () => {
                 variant={selectedCategory === category ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedCategory(category)}
-                className={selectedCategory === category ? 'bg-purple-600' : 'border-gray-600 text-gray-300'}
+                className={selectedCategory === category ? 'bg-purple-600' : 'border-gray-600 text-muted-foreground'}
               >
                 {category}
               </Button>
@@ -279,14 +279,14 @@ const BlogsPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-12">
           <div className="flex items-center mb-6">
             <TrendingUp className="h-6 w-6 text-purple-500 mr-2" />
-            <h3 className="text-2xl font-bold text-white">Featured Articles</h3>
+            <h3 className="text-2xl font-bold text-foreground">Featured Articles</h3>
           </div>
           
           <div className="grid md:grid-cols-2 gap-6">
             {featuredPosts.map(post => (
               <Card 
                 key={post.id}
-                className="bg-gray-800/50 border-gray-700 hover:bg-gray-800/70 transition-all cursor-pointer overflow-hidden group"
+                className="bg-card/50 border-gray-700 hover:bg-card/70 transition-all cursor-pointer overflow-hidden group"
                 onClick={() => navigate(`/blog/${post.slug}`)}
               >
                 {post.imageUrl && (
@@ -303,20 +303,20 @@ const BlogsPage: React.FC = () => {
                     <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/50">
                       Featured
                     </Badge>
-                    <Badge variant="outline" className="border-gray-600 text-gray-400">
+                    <Badge variant="outline" className="border-gray-600 text-muted-foreground">
                       {post.category}
                     </Badge>
                   </div>
                   
-                  <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                  <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-purple-400 transition-colors">
                     {post.title}
                   </h3>
                   
-                  <p className="text-gray-400 mb-4 line-clamp-2">
+                  <p className="text-muted-foreground mb-4 line-clamp-2">
                     {post.excerpt}
                   </p>
                   
-                  <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <User className="h-4 w-4" />
@@ -334,7 +334,7 @@ const BlogsPage: React.FC = () => {
                           e.stopPropagation();
                           handleLike(post.id);
                         }}
-                        className="flex items-center gap-1 hover:text-red-400 transition-colors"
+                        className="flex items-center gap-1 hover:text-red-500 transition-colors"
                       >
                         <Heart className="h-4 w-4" />
                         {post.likes}
@@ -354,13 +354,13 @@ const BlogsPage: React.FC = () => {
 
       {/* Regular Posts */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <h3 className="text-2xl font-bold text-white mb-6">Recent Articles</h3>
+        <h3 className="text-2xl font-bold text-foreground mb-6">Recent Articles</h3>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {regularPosts.map(post => (
             <Card 
               key={post.id}
-              className="bg-gray-800/50 border-gray-700 hover:bg-gray-800/70 transition-all cursor-pointer group"
+              className="bg-card/50 border-gray-700 hover:bg-card/70 transition-all cursor-pointer group"
               onClick={() => navigate(`/blog/${post.slug}`)}
             >
               {post.imageUrl && (
@@ -373,19 +373,19 @@ const BlogsPage: React.FC = () => {
                 </div>
               )}
               <CardContent className="p-5">
-                <Badge variant="outline" className="border-gray-600 text-gray-400 mb-3">
+                <Badge variant="outline" className="border-gray-600 text-muted-foreground mb-3">
                   {post.category}
                 </Badge>
                 
-                <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-purple-400 transition-colors line-clamp-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-purple-400 transition-colors line-clamp-2">
                   {post.title}
                 </h3>
                 
-                <p className="text-gray-400 text-sm mb-4 line-clamp-3">
+                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
                   {post.excerpt}
                 </p>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {format(new Date(post.publishedAt), 'MMM d, yyyy')}
@@ -408,7 +408,7 @@ const BlogsPage: React.FC = () => {
                     <Badge 
                       key={index}
                       variant="outline" 
-                      className="text-xs border-gray-700 text-gray-500"
+                      className="text-xs border-gray-700 text-muted-foreground"
                     >
                       {tag}
                     </Badge>
@@ -422,7 +422,7 @@ const BlogsPage: React.FC = () => {
         {filteredPosts.length === 0 && (
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No articles found matching your criteria</p>
+            <p className="text-muted-foreground">No articles found matching your criteria</p>
           </div>
         )}
       </div>
@@ -430,17 +430,17 @@ const BlogsPage: React.FC = () => {
       {/* Newsletter CTA */}
       <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 py-12 px-4 mt-12">
         <div className="max-w-4xl mx-auto text-center">
-          <h3 className="text-2xl font-bold text-white mb-4">
+          <h3 className="text-2xl font-bold text-foreground mb-4">
             Stay Updated with AI Insights
           </h3>
-          <p className="text-gray-300 mb-6">
+          <p className="text-muted-foreground mb-6">
             Get weekly updates on AI trends, sports analytics, and platform features
           </p>
           <div className="flex justify-center gap-4">
             <Input
               type="email"
               placeholder="Enter your email..."
-              className="max-w-sm bg-gray-800 border-gray-700 text-white"
+              className="max-w-sm bg-card border-gray-700 text-foreground"
             />
             <Button className="bg-purple-600 hover:bg-purple-700">
               Subscribe

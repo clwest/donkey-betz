@@ -77,7 +77,7 @@ export function IntelligencePanel({ gameId, gameData, onDecision }: Intelligence
       case 'WAIT': return 'bg-yellow-500';
       case 'AVOID': return 'bg-red-400';
       case 'STRONG_AVOID': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -94,7 +94,7 @@ export function IntelligencePanel({ gameId, gameData, onDecision }: Intelligence
 
   if (loading && !intelligence) {
     return (
-      <Card className="gaming-card">
+      <Card className="bg-card">
         <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center space-y-4">
             <Brain className="h-12 w-12 text-blue-500 animate-pulse" />
@@ -117,7 +117,7 @@ export function IntelligencePanel({ gameId, gameData, onDecision }: Intelligence
 
   if (!intelligence) {
     return (
-      <Card className="gaming-card">
+      <Card className="bg-card">
         <CardContent className="p-6">
           <Button onClick={analyzeGame} className="w-full">
             <Brain className="mr-2 h-4 w-4" />
@@ -129,7 +129,7 @@ export function IntelligencePanel({ gameId, gameData, onDecision }: Intelligence
   }
 
   return (
-    <Card className="gaming-card">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -151,7 +151,7 @@ export function IntelligencePanel({ gameId, gameData, onDecision }: Intelligence
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Primary Action</span>
-            <Badge className={`${getActionColor(intelligence.primary_action)} text-white`}>
+            <Badge className={`${getActionColor(intelligence.primary_action)} text-foreground`}>
               {intelligence.primary_action.replace('_', ' ')}
             </Badge>
           </div>

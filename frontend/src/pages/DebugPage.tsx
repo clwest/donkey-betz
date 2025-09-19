@@ -52,8 +52,8 @@ export default function DebugPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Debug Page</h1>
-        <p className="text-gray-400">Testing API calls and component rendering</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Debug Page</h1>
+        <p className="text-muted-foreground">Testing API calls and component rendering</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -64,7 +64,7 @@ export default function DebugPage() {
           </CardHeader>
           <CardContent>
             {workflows.length === 0 ? (
-              <p className="text-gray-500">No workflows found</p>
+              <p className="text-muted-foreground">No workflows found</p>
             ) : (
               <div className="space-y-2">
                 {workflows.slice(0, 3).map((workflow, index) => (
@@ -84,7 +84,7 @@ export default function DebugPage() {
           </CardHeader>
           <CardContent>
             {templates.length === 0 ? (
-              <p className="text-gray-500">No templates found</p>
+              <p className="text-muted-foreground">No templates found</p>
             ) : (
               <div className="space-y-2">
                 {templates.slice(0, 3).map((template, index) => (
@@ -104,7 +104,7 @@ export default function DebugPage() {
           </CardHeader>
           <CardContent>
             {agents.length === 0 ? (
-              <p className="text-gray-500">No agents found</p>
+              <p className="text-muted-foreground">No agents found</p>
             ) : (
               <div className="space-y-2">
                 {agents.slice(0, 3).map((agent, index) => (
@@ -121,7 +121,7 @@ export default function DebugPage() {
       {error && (
         <Card className="border-red-500">
           <CardContent className="pt-6">
-            <div className="text-red-400">
+            <div className="text-red-500">
               <strong>Error:</strong> {error}
             </div>
           </CardContent>
@@ -149,7 +149,7 @@ export default function DebugPage() {
           <CardTitle>Raw Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="text-xs bg-gray-900 p-4 rounded overflow-auto max-h-96">
+          <pre className="text-xs bg-background p-4 rounded overflow-auto max-h-96">
             {JSON.stringify({ workflows, templates, agents }, null, 2)}
           </pre>
         </CardContent>

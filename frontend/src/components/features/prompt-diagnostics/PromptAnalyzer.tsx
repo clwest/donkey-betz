@@ -145,7 +145,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-foreground flex items-center">
               <BeakerIcon className="h-6 w-6 mr-2 text-blue-500" />
               Prompt Analyzer
             </h2>
@@ -156,7 +156,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                 }`}>
                   {quickAnalysis.complexity_rating} Complexity
                 </div>
-                <div className="text-gray-500 dark:text-gray-400">
+                <div className="text-muted-foreground dark:text-muted-foreground">
                   {promptDiagnosticsService.formatTokenCount(quickAnalysis.token_count)}
                 </div>
               </div>
@@ -166,7 +166,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
           {/* Configuration Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Title (optional)
               </label>
               <input
@@ -174,18 +174,18 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Analysis title..."
-                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white placeholder-gray-400"
+                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-card/50 backdrop-blur-sm text-foreground placeholder-gray-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Prompt Type
               </label>
               <select
                 value={promptType}
                 onChange={(e) => setPromptType(e.target.value as any)}
-                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white"
+                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-card/50 backdrop-blur-sm text-foreground"
               >
                 <option value="user">User Prompt</option>
                 <option value="system">System Prompt</option>
@@ -195,13 +195,13 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Target Model
               </label>
               <select
                 value={targetModel}
                 onChange={(e) => setTargetModel(e.target.value)}
-                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-dark-800/50 backdrop-blur-sm text-white"
+                className="w-full px-3 py-2 border border-white/10 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-card/50 backdrop-blur-sm text-foreground"
               >
                 <option value="gpt-5">GPT-5 (Best Reasoning)</option>
                 <option value="gpt-5-mini">GPT-5 Mini (Balanced)</option>
@@ -214,7 +214,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Goals
               </label>
               <div className="flex flex-wrap gap-1">
@@ -231,7 +231,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                     className={`px-2 py-1 text-xs rounded-md transition-colors ${
                       optimizationGoals.includes(goal)
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200'
+                        : 'bg-muted/10 text-gray-600 dark:bg-card dark:text-muted-foreground hover:bg-muted/20'
                     }`}
                   >
                     {goal.replace('_', ' ')}
@@ -243,7 +243,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
 
           {/* Prompt Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-2">
               Prompt to Analyze
             </label>
             <textarea
@@ -251,31 +251,31 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
               onChange={(e) => handlePromptChange(e.target.value)}
               placeholder="Enter your prompt here for analysis..."
               rows={8}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-y"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-foreground resize-y"
             />
             
             {/* Quick Analysis Feedback */}
             {quickAnalysis && (
-              <div className="mt-3 p-3 bg-dark-900/50 backdrop-blur-sm rounded-md">
+              <div className="mt-3 p-3 bg-background/50 backdrop-blur-sm rounded-md">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">Tokens:</span>
+                    <span className="text-muted-foreground dark:text-muted-foreground">Tokens:</span>
                     <span className="ml-1 font-medium">{quickAnalysis.token_count}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">Readability:</span>
+                    <span className="text-muted-foreground dark:text-muted-foreground">Readability:</span>
                     <span className="ml-1 font-medium">{quickAnalysis.readability_score.toFixed(1)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">Grade Level:</span>
+                    <span className="text-muted-foreground dark:text-muted-foreground">Grade Level:</span>
                     <span className="ml-1 font-medium">{quickAnalysis.grade_level.toFixed(1)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">Issues:</span>
+                    <span className="text-muted-foreground dark:text-muted-foreground">Issues:</span>
                     <span className="ml-1 font-medium">{quickAnalysis.issues_count}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 dark:text-gray-400">Critical:</span>
+                    <span className="text-muted-foreground dark:text-muted-foreground">Critical:</span>
                     <span className="ml-1 font-medium text-red-600">{quickAnalysis.critical_issues}</span>
                   </div>
                 </div>
@@ -330,7 +330,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
           {/* Results Summary */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground flex items-center">
                 <CheckCircleIcon className="h-6 w-6 mr-2 text-green-500" />
                 Analysis Results
               </h3>
@@ -358,29 +358,29 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
             {/* Metrics Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-500">
                   -{analysisResult.metrics.token_reduction_percentage.toFixed(1)}%
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Token Reduction</div>
-                <div className="text-xs text-gray-400">
+                <div className="text-sm text-muted-foreground dark:text-muted-foreground">Token Reduction</div>
+                <div className="text-xs text-muted-foreground">
                   {analysisResult.metrics.original_tokens} → {analysisResult.metrics.optimized_tokens}
                 </div>
               </div>
               
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-500">
                   {analysisResult.metrics.clarity_score.toFixed(1)}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Clarity Score</div>
-                <div className="text-xs text-gray-400">/100</div>
+                <div className="text-sm text-muted-foreground dark:text-muted-foreground">Clarity Score</div>
+                <div className="text-xs text-muted-foreground">/100</div>
               </div>
               
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {analysisResult.issues.length}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Issues Found</div>
-                <div className="text-xs text-gray-400">
+                <div className="text-sm text-muted-foreground dark:text-muted-foreground">Issues Found</div>
+                <div className="text-xs text-muted-foreground">
                   {analysisResult.issues.filter(i => i.severity === 'critical').length} critical
                 </div>
               </div>
@@ -389,22 +389,22 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {analysisResult.quick_wins.length}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Quick Wins</div>
-                <div className="text-xs text-gray-400">Available</div>
+                <div className="text-sm text-muted-foreground dark:text-muted-foreground">Quick Wins</div>
+                <div className="text-xs text-muted-foreground">Available</div>
               </div>
             </div>
 
             {/* Prompt Comparison */}
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Original Prompt</h4>
-                <div className="bg-dark-900/50 backdrop-blur-sm p-4 rounded-lg text-sm">
+                <h4 className="font-medium text-gray-900 dark:text-foreground mb-2">Original Prompt</h4>
+                <div className="bg-background/50 backdrop-blur-sm p-4 rounded-lg text-sm">
                   <pre className="whitespace-pre-wrap font-mono">{analysisResult.original_prompt}</pre>
                 </div>
               </div>
               
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Optimized Prompt</h4>
+                <h4 className="font-medium text-gray-900 dark:text-foreground mb-2">Optimized Prompt</h4>
                 <div className="bg-green-50 dark:bg-green-900 p-4 rounded-lg text-sm">
                   <pre className="whitespace-pre-wrap font-mono">{analysisResult.optimized_prompt}</pre>
                 </div>
@@ -416,7 +416,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Issues */}
             <Card className="p-6">
-              <h4 className="font-medium text-white mb-4 flex items-center">
+              <h4 className="font-medium text-foreground mb-4 flex items-center">
                 <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-orange-500" />
                 Issues Detected ({analysisResult.issues.length})
               </h4>
@@ -429,14 +429,14 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                       }`}>
                         {issue.severity}
                       </span>
-                      <span className="text-xs text-gray-500">{issue.confidence.toFixed(1)}% confidence</span>
+                      <span className="text-xs text-muted-foreground">{issue.confidence.toFixed(1)}% confidence</span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">{issue.description}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{issue.suggestion}</p>
+                    <p className="text-sm text-gray-700 dark:text-muted-foreground mb-1">{issue.description}</p>
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">{issue.suggestion}</p>
                   </div>
                 ))}
                 {analysisResult.issues.length > 5 && (
-                  <p className="text-sm text-gray-500 text-center">
+                  <p className="text-sm text-muted-foreground text-center">
                     +{analysisResult.issues.length - 5} more issues
                   </p>
                 )}
@@ -445,7 +445,7 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
 
             {/* Quick Wins */}
             <Card className="p-6">
-              <h4 className="font-medium text-white mb-4 flex items-center">
+              <h4 className="font-medium text-foreground mb-4 flex items-center">
                 <LightBulbIcon className="h-5 w-5 mr-2 text-green-500" />
                 Quick Wins ({analysisResult.quick_wins.length})
               </h4>
@@ -460,8 +460,8 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
                       </span>
                       <span className="text-xs text-green-600">-{win.token_savings} tokens</span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">{win.description}</p>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-700 dark:text-muted-foreground mb-1">{win.description}</p>
+                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                       <span className="font-mono bg-red-50 dark:bg-red-900 px-1">{win.before}</span>
                       {' → '}
                       <span className="font-mono bg-green-50 dark:bg-green-900 px-1">{win.after}</span>
@@ -474,28 +474,28 @@ export function PromptAnalyzer({ onAnalysisComplete }: Props) {
 
           {/* Implementation Notes */}
           <Card className="p-6">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+            <h4 className="font-medium text-gray-900 dark:text-foreground mb-4 flex items-center">
               <InformationCircleIcon className="h-5 w-5 mr-2 text-blue-500" />
               Implementation Guidance
             </h4>
             <div className="grid md:grid-cols-3 gap-6">
               <div>
-                <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Summary</h5>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <h5 className="font-medium text-gray-700 dark:text-muted-foreground mb-2">Summary</h5>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">
                   {analysisResult.improvements_summary}
                 </p>
               </div>
               
               <div>
-                <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Implementation Notes</h5>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <h5 className="font-medium text-gray-700 dark:text-muted-foreground mb-2">Implementation Notes</h5>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">
                   {analysisResult.implementation_notes}
                 </p>
               </div>
               
               <div>
-                <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Rollback Strategy</h5>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <h5 className="font-medium text-gray-700 dark:text-muted-foreground mb-2">Rollback Strategy</h5>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">
                   {analysisResult.rollback_strategy}
                 </p>
               </div>

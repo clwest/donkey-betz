@@ -53,28 +53,28 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
     switch (status) {
       case 'live':
         return (
-          <div className="gaming-status gaming-status-live">
-            <div className="gaming-pulse-dot"></div>
+          <div className="bg-card bg-card">
+            <div className="bg-card"></div>
             LIVE
           </div>
         );
       case 'scheduled':
         return (
-          <div className="gaming-status">
+          <div className="bg-card">
             <ClockIcon className="w-3 h-3 mr-1" />
             SCHEDULED
           </div>
         );
       case 'final':
         return (
-          <div className="gaming-status">
+          <div className="bg-card">
             <TrophyIcon className="w-3 h-3 mr-1" />
             FINAL
           </div>
         );
       default:
         return (
-          <div className="gaming-status">
+          <div className="bg-card">
             {status.toUpperCase()}
           </div>
         );
@@ -87,50 +87,50 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="gaming-card gaming-hover-lift cursor-pointer"
+      className="bg-card bg-card cursor-pointer"
       onClick={() => setExpanded(!expanded)}
     >
       {/* Gaming Border Glow Effect */}
-      <div className="gaming-border-glow"></div>
+      <div className="bg-card"></div>
       
       <div className="space-y-4">
         {/* Gaming Header */}
-        <div className="gaming-header">
+        <div className="bg-card">
           <div className="flex items-center gap-3">
             {getGamingStatus(game.status)}
             {game.league && (
-              <div className="gaming-league">{game.league}</div>
+              <div className="bg-card">{game.league}</div>
             )}
           </div>
-          <div className="flex items-center gap-2 text-sm gaming-text-muted">
+          <div className="flex items-center gap-2 text-sm bg-card">
             <Calendar className="h-3 w-3" />
             {day}
-            <span className="gaming-text-accent">•</span>
+            <span className="bg-card">•</span>
             {time} MST
           </div>
         </div>
 
         {/* Gaming Team Matchup */}
-        <div className="gaming-matchup">
+        <div className="bg-card">
           {/* Away Team */}
-          <div className="gaming-team">
-            <div className="gaming-team-avatar">
+          <div className="bg-card">
+            <div className="bg-card">
               {(game.away_team_name || game.away_team?.name || 'AWAY').substring(0, 2).toUpperCase()}
             </div>
-            <div className="gaming-team-info">
-              <div className="gaming-team-name">
+            <div className="bg-card">
+              <div className="bg-card">
                 {game.away_team_name || game.away_team?.name || 'Away Team'}
               </div>
-              <div className="gaming-team-record">AWAY</div>
+              <div className="bg-card">AWAY</div>
             </div>
             {game.away_score !== null && (
-              <div className="gaming-score">
+              <div className="bg-card">
                 {game.away_score}
               </div>
             )}
             {markets.length > 0 && markets[0].odds_lines?.length > 0 && (
-              <div className="gaming-bet-option ml-auto">
-                <div className="gaming-bet-odds">
+              <div className="bg-card ml-auto">
+                <div className="bg-card">
                   {formatOdds(markets[0].odds_lines[0].away_odds)}
                 </div>
               </div>
@@ -138,30 +138,30 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
           </div>
 
           {/* Gaming VS Divider */}
-          <div className="gaming-vs-divider">
-            <div className="gaming-vs-text">VS</div>
-            <div className="gaming-progress-bar"></div>
+          <div className="bg-card">
+            <div className="bg-card">VS</div>
+            <div className="bg-card"></div>
           </div>
 
           {/* Home Team */}
-          <div className="gaming-team">
-            <div className="gaming-team-avatar gaming-home">
+          <div className="bg-card">
+            <div className="bg-card bg-card">
               {(game.home_team_name || game.home_team?.name || 'HOME').substring(0, 2).toUpperCase()}
             </div>
-            <div className="gaming-team-info">
-              <div className="gaming-team-name">
+            <div className="bg-card">
+              <div className="bg-card">
                 {game.home_team_name || game.home_team?.name || 'Home Team'}
               </div>
-              <div className="gaming-team-record">HOME</div>
+              <div className="bg-card">HOME</div>
             </div>
             {game.home_score !== null && (
-              <div className="gaming-score gaming-score-leading">
+              <div className="bg-card bg-card">
                 {game.home_score}
               </div>
             )}
             {markets.length > 0 && markets[0].odds_lines?.length > 0 && (
-              <div className="gaming-bet-option ml-auto">
-                <div className="gaming-bet-odds">
+              <div className="bg-card ml-auto">
+                <div className="bg-card">
                   {formatOdds(markets[0].odds_lines[0].home_odds)}
                 </div>
               </div>
@@ -171,12 +171,12 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
 
         {/* Gaming Venue */}
         {game.venue_name && (
-          <div className="flex items-center gap-2 gaming-text-accent text-sm pt-3 border-t border-gaming-border">
+          <div className="flex items-center gap-2 bg-card text-sm pt-3 border-t border-bg-card">
             <MapPin className="h-3 w-3" />
             <span>{game.venue_name}</span>
             {game.venue_city && (
               <>
-                <span className="gaming-text-muted">•</span>
+                <span className="bg-card">•</span>
                 <span>{game.venue_city}</span>
               </>
             )}
@@ -188,44 +188,44 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="gaming-odds"
+            className="bg-card"
           >
             <div className="flex items-center gap-2 mb-4">
-              <h4 className="text-sm font-bold gaming-text-primary">BETTING MARKETS</h4>
-              <div className="w-16 h-0.5 bg-gaming-gradient-neon rounded"></div>
+              <h4 className="text-sm font-bold bg-card">BETTING MARKETS</h4>
+              <div className="w-16 h-0.5 bg-bg-card rounded"></div>
             </div>
 
             {loading ? (
               <div className="text-center py-8">
-                <div className="gaming-loading mx-auto mb-2"></div>
-                <div className="gaming-bet-label">Loading odds...</div>
+                <div className="bg-card mx-auto mb-2"></div>
+                <div className="bg-card">Loading odds...</div>
               </div>
             ) : markets.length > 0 ? (
               <div className="space-y-4">
                 {markets.map((market) => (
                   <div key={market.id} className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="gaming-bet-label font-bold">{market.market_type}</span>
-                      <div className="w-8 h-0.5 bg-gaming-neon-cyan rounded"></div>
+                      <span className="bg-card font-bold">{market.market_type}</span>
+                      <div className="w-8 h-0.5 bg-bg-card rounded"></div>
                     </div>
                     
-                    <div className="gaming-odds-grid">
+                    <div className="bg-card">
                       {market.odds_lines?.map((line) => (
-                        <div key={line.id} className="gaming-bet-option">
-                          <div className="gaming-bet-label mb-2">{line.sportsbook}</div>
+                        <div key={line.id} className="bg-card">
+                          <div className="bg-card mb-2">{line.sportsbook}</div>
                           <div className="space-y-1">
                             {line.home_odds && (
-                              <div className="gaming-bet-odds text-sm">
+                              <div className="bg-card text-sm">
                                 H: {formatOdds(line.home_odds)}
                               </div>
                             )}
                             {line.away_odds && (
-                              <div className="gaming-bet-odds text-sm">
+                              <div className="bg-card text-sm">
                                 A: {formatOdds(line.away_odds)}
                               </div>
                             )}
                             {line.total_line && (
-                              <div className="gaming-bet-odds text-xs gaming-text-accent">
+                              <div className="bg-card text-xs bg-card">
                                 O/U {line.total_line}
                               </div>
                             )}
@@ -237,10 +237,10 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
                 ))}
               </div>
             ) : (
-              <div className="gaming-card text-center py-8">
-                <TrendingDown className="w-12 h-12 mx-auto mb-4 gaming-text-muted" />
-                <div className="gaming-team-name mb-2">NO ODDS AVAILABLE</div>
-                <p className="gaming-bet-label">Check back later for updates</p>
+              <div className="bg-card text-center py-8">
+                <TrendingDown className="w-12 h-12 mx-auto mb-4 bg-card" />
+                <div className="bg-card mb-2">NO ODDS AVAILABLE</div>
+                <p className="bg-card">Check back later for updates</p>
               </div>
             )}
             
@@ -249,16 +249,16 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="gaming-bet-option gaming-bet-hot w-full mt-6 gaming-hover-glow"
+                className="bg-card bg-card w-full mt-6 bg-card"
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectGame(game);
                 }}
               >
-                <div className="gaming-bet-glow"></div>
+                <div className="bg-card"></div>
                 <div className="flex items-center justify-center gap-2">
                   <DollarSign className="h-4 w-4" />
-                  <span className="gaming-bet-label font-bold">VIEW BETTING OPTIONS</span>
+                  <span className="bg-card font-bold">VIEW BETTING OPTIONS</span>
                 </div>
               </motion.button>
             )}
@@ -269,7 +269,7 @@ export function GamingGameOddsCard({ game, onSelectGame }: GamingGameOddsCardPro
         <div className="flex items-center justify-center pt-2">
           <motion.div
             animate={{ rotate: expanded ? 180 : 0 }}
-            className="w-6 h-6 gaming-text-accent"
+            className="w-6 h-6 bg-card"
           >
             <TrendingDown className="w-full h-full" />
           </motion.div>

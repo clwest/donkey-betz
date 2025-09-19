@@ -106,7 +106,7 @@ class WorkflowsService {
 
   async listWorkflows(): Promise<{workflows: Workflow[]}> {
     try {
-      const response = await apiClient.get('/v1/workflows/list/');
+      const response = await apiClient.get('/api/v1/workflows/list/');
       return response.data;
     } catch (error) {
       console.error('Error listing workflows:', error);
@@ -116,7 +116,7 @@ class WorkflowsService {
 
   async getWorkflowTemplates(): Promise<{templates: WorkflowTemplate[]}> {
     try {
-      const response = await apiClient.get('/v1/workflows/templates/');
+      const response = await apiClient.get('/api/v1/workflows/templates/');
       return response.data;
     } catch (error) {
       console.error('Error getting workflow templates:', error);

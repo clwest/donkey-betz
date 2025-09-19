@@ -220,8 +220,8 @@ export function MetadataEditorModal({
           <div className="flex items-center gap-3">
             <BookOpenIcon className="h-6 w-6 text-primary-400" />
             <div>
-              <h3 className="text-lg font-semibold text-white">eBook Information</h3>
-              <p className="text-sm text-gray-400">Edit your eBook's metadata and details</p>
+              <h3 className="text-lg font-semibold text-foreground">eBook Information</h3>
+              <p className="text-sm text-muted-foreground">Edit your eBook's metadata and details</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -242,69 +242,69 @@ export function MetadataEditorModal({
             {/* Basic Information */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Title *
                 </label>
                 <input
                   type="text"
                   value={editedEbook.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter eBook title"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Subtitle
                 </label>
                 <input
                   type="text"
                   value={editedEbook.subtitle || ''}
                   onChange={(e) => handleInputChange('subtitle', e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Optional subtitle"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Author
                 </label>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <input
                     type="text"
                     value={editedEbook.author || ''}
                     onChange={(e) => handleInputChange('author', e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pl-10 pr-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="Author name"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Description
                 </label>
                 <textarea
                   value={editedEbook.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 h-24"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 h-24"
                   placeholder="Brief description of your eBook"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Genre
                   </label>
                   <select
                     value={editedEbook.genre}
                     onChange={(e) => handleInputChange('genre', e.target.value)}
-                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     {genres.map(genre => (
                       <option key={genre.value} value={genre.value}>
@@ -315,13 +315,13 @@ export function MetadataEditorModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Target Audience
                   </label>
                   <select
                     value={editedEbook.target_audience}
                     onChange={(e) => handleInputChange('target_audience', e.target.value)}
-                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     {audiences.map(audience => (
                       <option key={audience.value} value={audience.value}>
@@ -334,20 +334,20 @@ export function MetadataEditorModal({
 
               {/* Keywords */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Keywords (SEO)
                 </label>
                 <div className="space-y-2">
                   {/* Add new keyword */}
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <TagIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <TagIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <input
                         type="text"
                         value={newKeyword}
                         onChange={(e) => setNewKeyword(e.target.value)}
                         onKeyDown={handleKeywordKeyDown}
-                        className="w-full pl-10 pr-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full pl-10 pr-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                         placeholder="Add a keyword"
                       />
                     </div>
@@ -385,14 +385,14 @@ export function MetadataEditorModal({
 
               {/* Edit Summary */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Edit Summary (optional)
                 </label>
                 <input
                   type="text"
                   value={editSummary}
                   onChange={(e) => setEditSummary(e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Describe what you changed (for version history)"
                 />
               </div>
@@ -402,7 +402,7 @@ export function MetadataEditorModal({
           /* Version history */
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-white">Metadata History</h4>
+              <h4 className="text-lg font-semibold text-foreground">Metadata History</h4>
               <Button size="sm" variant="ghost" onClick={() => setShowVersions(false)}>
                 ← Back to Editor
               </Button>
@@ -422,19 +422,19 @@ export function MetadataEditorModal({
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-foreground">
                           v{version.version_number}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           by {version.edited_by}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(version.created_at).toLocaleString()}
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-300 mb-2">{version.edit_summary}</p>
-                    <div className="text-xs text-gray-500">
+                    <p className="text-sm text-muted-foreground mb-2">{version.edit_summary}</p>
+                    <div className="text-xs text-muted-foreground">
                       Title: "{version.title}"
                     </div>
                   </div>
@@ -447,9 +447,9 @@ export function MetadataEditorModal({
         {/* Actions */}
         {!showVersions && (
           <div className="flex justify-between items-center pt-4 border-t border-dark-600">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               {hasUnsavedChanges && (
-                <span className="text-yellow-400">You have unsaved changes</span>
+                <span className="text-yellow-500">You have unsaved changes</span>
               )}
             </div>
             <div className="flex gap-3">

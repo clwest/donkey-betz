@@ -19,7 +19,6 @@ import {
   EyeIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
-import '../styles/gaming-theme.css';
 import { workflowsService } from '@/services/workflows.service';
 import { agentDiscoveryService } from '@/services/agentDiscovery.service';
 import { toast } from 'sonner';
@@ -64,11 +63,11 @@ export default function MultiAgentWorkflowsPage() {
   const [taskPrompt, setTaskPrompt] = useState('');
 
   useEffect(() => {
-    document.body.classList.add('gaming-theme');
+    document.body.classList.add('bg-card');
     loadAgents();
     
     return () => {
-      document.body.classList.remove('gaming-theme');
+      document.body.classList.remove('bg-card');
     };
   }, []);
 
@@ -234,31 +233,31 @@ export default function MultiAgentWorkflowsPage() {
   return (
     <div className="space-y-6">
       {/* Gaming Header */}
-      <div className="gaming-card relative overflow-hidden mb-8">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card relative overflow-hidden mb-8">
+        <div className="bg-card"></div>
         
         <div className="relative flex items-center justify-between p-8">
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 gaming-card border-gaming-neon-purple flex items-center justify-center">
-                <UserGroupIcon className="w-8 h-8 text-gaming-neon-purple" />
+              <div className="w-16 h-16 bg-card border-bg-card flex items-center justify-center">
+                <UserGroupIcon className="w-8 h-8 text-bg-card" />
               </div>
-              <h1 className="text-5xl font-black gaming-text-primary text-shadow-lg">
-                AGENT <span className="gaming-text-neon">TEAM</span> BUILDER
+              <h1 className="text-5xl font-black bg-card text-shadow-lg">
+                AGENT <span className="bg-card">TEAM</span> BUILDER
               </h1>
             </div>
             
-            <p className="gaming-text-secondary text-xl font-bold font-mono">
+            <p className="bg-card text-xl font-bold font-mono">
               [ASSEMBLING COLLABORATIVE NEURAL TEAMS] &gt;&gt; MULTI-AGENT COORDINATION
             </p>
             
             <div className="flex items-center gap-4">
-              <div className="gaming-status gaming-status-live">
+              <div className="bg-card bg-card">
                 <SparklesIcon className="w-4 h-4" />
                 {agents.length} AGENTS AVAILABLE
               </div>
               
-              <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
+              <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                 <UserGroupIcon className="w-4 h-4" />
                 {selectedAgents.size} SELECTED
               </div>
@@ -269,7 +268,7 @@ export default function MultiAgentWorkflowsPage() {
             <Button 
               onClick={handleCreateTeam}
               disabled={selectedAgents.size < 2}
-              className="gaming-btn-active px-8 py-4 text-lg">
+              className="bg-card px-8 py-4 text-lg">
               <PlusIcon className="h-5 w-5 mr-3" />
               BUILD TEAM ({selectedAgents.size})
             </Button>
@@ -293,9 +292,9 @@ export default function MultiAgentWorkflowsPage() {
       </div>
 
       {/* Quick Selection Filters */}
-      <div className="gaming-card p-4">
+      <div className="bg-card p-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="gaming-text-secondary font-mono text-sm">QUICK SELECT:</span>
+          <span className="bg-card font-mono text-sm">QUICK SELECT:</span>
           {Object.keys(agentsBySpecialization).map(spec => (
             <Button
               key={spec}
@@ -312,12 +311,12 @@ export default function MultiAgentWorkflowsPage() {
 
       {/* Agent Selection Grid */}
       {Object.entries(agentsBySpecialization).map(([specialization, specAgents]) => (
-        <div key={specialization} className="gaming-card">
-          <div className="gaming-border-glow"></div>
+        <div key={specialization} className="bg-card">
+          <div className="bg-card"></div>
           
           <div className="mb-4">
-            <h3 className="text-xl font-bold gaming-text-primary flex items-center gap-2">
-              <CpuChipIcon className="w-5 h-5 gaming-text-neon" />
+            <h3 className="text-xl font-bold bg-card flex items-center gap-2">
+              <CpuChipIcon className="w-5 h-5 bg-card" />
               {specialization.toUpperCase()} AGENTS
               <Badge className="ml-2" variant="outline">
                 {specAgents.length}
@@ -330,9 +329,9 @@ export default function MultiAgentWorkflowsPage() {
               <div 
                 key={agent.name}
                 onClick={() => toggleAgentSelection(agent)}
-                className={`gaming-card p-4 cursor-pointer transition-all gaming-hover-lift ${
+                className={`bg-card p-4 cursor-pointer transition-all bg-card ${
                   selectedAgents.has(agent.name) 
-                    ? 'border-gaming-neon-purple bg-gaming-neon-purple/10' 
+                    ? 'border-bg-card bg-bg-card/10' 
                     : ''
                 }`}>
                 <div className="flex items-start gap-3">
@@ -342,10 +341,10 @@ export default function MultiAgentWorkflowsPage() {
                     className="mt-1"
                   />
                   <div className="flex-1">
-                    <h4 className="font-bold gaming-text-primary text-sm">
+                    <h4 className="font-bold bg-card text-sm">
                       {agent.name.toUpperCase()}
                     </h4>
-                    <p className="text-xs gaming-text-secondary mt-1 line-clamp-2">
+                    <p className="text-xs bg-card mt-1 line-clamp-2">
                       {agent.description}
                     </p>
                     {agent.capabilities && agent.capabilities.length > 0 && (
@@ -372,13 +371,13 @@ export default function MultiAgentWorkflowsPage() {
 
       {/* Team Configuration Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl gaming-card border-gaming-neon-purple">
+        <DialogContent className="max-w-3xl bg-card border-bg-card">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold gaming-text-primary">
-              <UserGroupIcon className="w-6 h-6 mr-2 text-gaming-neon-purple inline" />
+            <DialogTitle className="text-2xl font-bold bg-card">
+              <UserGroupIcon className="w-6 h-6 mr-2 text-bg-card inline" />
               CONFIGURE AGENT TEAM
             </DialogTitle>
-            <DialogDescription className="gaming-text-secondary font-mono">
+            <DialogDescription className="bg-card font-mono">
               &gt;&gt; SELECTED AGENTS: {Array.from(selectedAgents.keys()).join(', ')}
             </DialogDescription>
           </DialogHeader>
@@ -386,19 +385,19 @@ export default function MultiAgentWorkflowsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="team-name" className="text-gray-300">Team Name</Label>
+                <Label htmlFor="team-name" className="text-muted-foreground">Team Name</Label>
                 <input
                   id="team-name"
                   type="text"
                   value={teamWorkflow.name}
                   onChange={(e) => setTeamWorkflow(prev => ({...prev, name: e.target.value}))}
                   placeholder="Alpha Strike Team"
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground"
                 />
               </div>
               
               <div>
-                <Label htmlFor="coordination" className="text-gray-300">Coordination Strategy</Label>
+                <Label htmlFor="coordination" className="text-muted-foreground">Coordination Strategy</Label>
                 <select
                   id="coordination"
                   value={teamWorkflow.coordination_strategy}
@@ -406,7 +405,7 @@ export default function MultiAgentWorkflowsPage() {
                     ...prev, 
                     coordination_strategy: e.target.value as any
                   }))}
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground"
                 >
                   <option value="sequential">Sequential</option>
                   <option value="parallel">Parallel</option>
@@ -417,32 +416,32 @@ export default function MultiAgentWorkflowsPage() {
             </div>
             
             <div>
-              <Label htmlFor="team-description" className="text-gray-300">Team Description</Label>
+              <Label htmlFor="team-description" className="text-muted-foreground">Team Description</Label>
               <textarea
                 id="team-description"
                 value={teamWorkflow.description}
                 onChange={(e) => setTeamWorkflow(prev => ({...prev, description: e.target.value}))}
                 placeholder="Describe the team's mission..."
                 rows={3}
-                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground"
               />
             </div>
             
             <div>
-              <Label htmlFor="task-prompt" className="text-gray-300">Task Description</Label>
+              <Label htmlFor="task-prompt" className="text-muted-foreground">Task Description</Label>
               <textarea
                 id="task-prompt"
                 value={taskPrompt}
                 onChange={(e) => setTaskPrompt(e.target.value)}
                 placeholder="What should this team accomplish?"
                 rows={4}
-                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground"
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="communication" className="text-gray-300">Communication Mode</Label>
+                <Label htmlFor="communication" className="text-muted-foreground">Communication Mode</Label>
                 <select
                   id="communication"
                   value={teamWorkflow.communication_mode}
@@ -450,7 +449,7 @@ export default function MultiAgentWorkflowsPage() {
                     ...prev, 
                     communication_mode: e.target.value as any
                   }))}
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground"
                 >
                   <option value="broadcast">Broadcast</option>
                   <option value="direct">Direct</option>
@@ -459,7 +458,7 @@ export default function MultiAgentWorkflowsPage() {
               </div>
               
               <div>
-                <Label htmlFor="iterations" className="text-gray-300">Max Iterations</Label>
+                <Label htmlFor="iterations" className="text-muted-foreground">Max Iterations</Label>
                 <input
                   id="iterations"
                   type="number"
@@ -470,7 +469,7 @@ export default function MultiAgentWorkflowsPage() {
                     ...prev, 
                     max_iterations: parseInt(e.target.value) || 5
                   }))}
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground"
                 />
               </div>
             </div>
@@ -484,7 +483,7 @@ export default function MultiAgentWorkflowsPage() {
                   consensus_requirement: !!checked
                 }))}
               />
-              <Label htmlFor="consensus" className="text-gray-300">
+              <Label htmlFor="consensus" className="text-muted-foreground">
                 Require consensus before proceeding
               </Label>
             </div>
@@ -500,7 +499,7 @@ export default function MultiAgentWorkflowsPage() {
               <Button 
                 onClick={handleExecuteWorkflow}
                 disabled={executing || !teamWorkflow.name || !taskPrompt}
-                className="gaming-btn-active"
+                className="bg-card"
               >
                 {executing ? (
                   <>

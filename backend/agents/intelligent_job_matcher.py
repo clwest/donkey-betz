@@ -310,7 +310,10 @@ class IntelligentJobMatcher:
 
     async def _store_matching_decision(self, job: Dict[str, Any], match: Dict[str, Any], embedding: np.ndarray):
         """Store the matching decision in memory for future learning"""
-        app_id = f"app_{hashlib.md5(f"{job.get('id', '')}_{match['agent_id']}_{datetime.now()}".encode()).hexdigest()}"
+        job_id = job.get('id', '')
+        agent_id = match['agent_id']
+        timestamp = datetime.now()
+        app_id = f"app_{hashlib.md5(f'{job_id}_{agent_id}_{timestamp}'.encode()).hexdigest()}"
 
         memory = JobApplicationMemory(
             application_id=app_id,

@@ -25,16 +25,15 @@ import {
   RefreshCw
 } from 'lucide-react';
 import MultiSportsDashboard from '../components/MultiSportsDashboard';
-import '../../../styles/gaming-theme.css';
 
 export function SportsBoardPage() {
   const [view, setView] = useState<'modern' | 'features'>('modern');
 
   // Add gaming theme to body
   useEffect(() => {
-    document.body.classList.add('gaming-theme');
+    document.body.classList.add('bg-card');
     return () => {
-      document.body.classList.remove('gaming-theme');
+      document.body.classList.remove('bg-card');
     };
   }, []);
 
@@ -45,7 +44,7 @@ export function SportsBoardPage() {
         <h1 className="text-4xl font-bold text-gradient">
           🎯 DONKEY BETZ COMMAND CENTER
         </h1>
-        <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           Real-time sports data and betting odds across all major leagues - 
           powered by free, open-source APIs as a complete replacement for Polygon.io
         </p>
@@ -53,10 +52,10 @@ export function SportsBoardPage() {
 
       {/* Data Sources */}
       <Card>
-        <div className="p-6 border-b border-dark-700">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-2">
-            <Zap className="w-5 h-5 text-yellow-400" />
-            <span className="text-lg font-semibold text-white">Free Data Sources</span>
+            <Zap className="w-5 h-5 text-yellow-500" />
+            <span className="text-lg font-semibold text-foreground">Free Data Sources</span>
           </div>
         </div>
         <div className="p-6">
@@ -64,12 +63,12 @@ export function SportsBoardPage() {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary">ESPN Hidden API</Badge>
-                <span className="text-green-400 text-sm font-medium">FREE</span>
+                <span className="text-green-500 text-sm font-medium">FREE</span>
               </div>
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-muted-foreground">
                 Comprehensive sports data including scores, schedules, team info, and live game data
               </p>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 • NFL, NBA, MLB, NHL, College Sports<br/>
                 • Soccer, Tennis, Golf<br/>
                 • Live scores and schedules
@@ -79,12 +78,12 @@ export function SportsBoardPage() {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary">TheSportsDB</Badge>
-                <span className="text-green-400 text-sm font-medium">FREE</span>
+                <span className="text-green-500 text-sm font-medium">FREE</span>
               </div>
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-muted-foreground">
                 Community-driven sports database with extensive historical data and team information
               </p>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 • Team logos and info<br/>
                 • Historical statistics<br/>
                 • League structures
@@ -94,12 +93,12 @@ export function SportsBoardPage() {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary">The Odds API</Badge>
-                <span className="text-blue-400 text-sm font-medium">FREE TIER</span>
+                <span className="text-blue-500 text-sm font-medium">FREE TIER</span>
               </div>
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-muted-foreground">
                 Live betting odds from major sportsbooks for optimal betting opportunities
               </p>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 • Moneylines, spreads, totals<br/>
                 • Multiple sportsbooks<br/>
                 • Real-time odds updates
@@ -111,10 +110,10 @@ export function SportsBoardPage() {
 
       {/* Supported Sports */}
       <Card>
-        <div className="p-6 border-b border-dark-700">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-2">
             <Star className="w-5 h-5 text-purple-400" />
-            <span className="text-lg font-semibold text-white">Supported Sports</span>
+            <span className="text-lg font-semibold text-foreground">Supported Sports</span>
           </div>
         </div>
         <div className="p-6">
@@ -133,10 +132,10 @@ export function SportsBoardPage() {
               { sport: 'Boxing', emoji: '🥊', desc: 'Professional Boxing' },
               { sport: 'Esports', emoji: '🎮', desc: 'Competitive Gaming' },
             ].map((item, index) => (
-              <div key={index} className="text-center p-3 rounded-lg border border-dark-700 hover:border-primary-500/50 transition-colors">
+              <div key={index} className="text-center p-3 rounded-lg border border-border hover:border-primary-500/50 transition-colors">
                 <div className="text-2xl mb-1">{item.emoji}</div>
-                <div className="font-medium text-sm text-white">{item.sport}</div>
-                <div className="text-xs text-gray-400">{item.desc}</div>
+                <div className="font-medium text-sm text-foreground">{item.sport}</div>
+                <div className="text-xs text-muted-foreground">{item.desc}</div>
               </div>
             ))}
           </div>
@@ -145,17 +144,17 @@ export function SportsBoardPage() {
 
       {/* Features */}
       <Card>
-        <div className="p-6 border-b border-dark-700">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-2">
-            <Activity className="w-5 h-5 text-green-400" />
-            <span className="text-lg font-semibold text-white">Key Features</span>
+            <Activity className="w-5 h-5 text-green-500" />
+            <span className="text-lg font-semibold text-foreground">Key Features</span>
           </div>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h4 className="font-semibold text-white">Live Sports Data</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <h4 className="font-semibold text-foreground">Live Sports Data</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• Real-time scores and game status</li>
                 <li>• Live betting odds from multiple books</li>
                 <li>• Automatic data synchronization</li>
@@ -164,8 +163,8 @@ export function SportsBoardPage() {
             </div>
             
             <div className="space-y-4">
-              <h4 className="font-semibold text-white">Advanced Analytics</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <h4 className="font-semibold text-foreground">Advanced Analytics</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• Kelly Criterion bet sizing</li>
                 <li>• Expected value calculations</li>
                 <li>• Arbitrage opportunity detection</li>
@@ -174,8 +173,8 @@ export function SportsBoardPage() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="font-semibold text-white">Multi-Sport Coverage</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <h4 className="font-semibold text-foreground">Multi-Sport Coverage</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• All major US professional leagues</li>
                 <li>• College football and basketball</li>
                 <li>• International soccer leagues</li>
@@ -184,8 +183,8 @@ export function SportsBoardPage() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="font-semibold text-white">Free Data Sources</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <h4 className="font-semibold text-foreground">Free Data Sources</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• No expensive API subscriptions</li>
                 <li>• Open-source and community-driven</li>
                 <li>• Reliable backup providers</li>
@@ -203,7 +202,7 @@ export function SportsBoardPage() {
             <h3 className="text-lg font-semibold text-green-300">
               Ready to explore multi-sport betting?
             </h3>
-            <p className="text-green-400">
+            <p className="text-green-500">
               Access real-time data across all major sports leagues with no subscription fees
             </p>
             <Button 
@@ -240,43 +239,43 @@ export function SportsBoardPage() {
         ) : (
           <>
             {/* Gaming Header */}
-            <div className="gaming-card relative overflow-hidden mb-8">
-              <div className="gaming-border-glow"></div>
+            <div className="bg-card relative overflow-hidden mb-8">
+              <div className="bg-card"></div>
               
               {/* Cyberpunk background pattern */}
               <div className="absolute inset-0 opacity-10">
-                <div className="w-full h-full" style={{backgroundImage: 'linear-gradient(45deg, transparent 40%, var(--gaming-neon-cyan) 50%, transparent 60%)', backgroundSize: '20px 20px'}}></div>
+                <div className="w-full h-full" style={{backgroundImage: 'linear-gradient(45deg, transparent 40%, hsl(var(--muted)) 50%, transparent 60%)', backgroundSize: '20px 20px'}}></div>
               </div>
               
               <div className="relative flex items-center justify-between p-8">
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 gaming-card border-gaming-neon-cyan flex items-center justify-center">
-                      <Activity className="w-8 h-8 gaming-text-neon" />
+                    <div className="w-16 h-16 bg-card border-bg-card flex items-center justify-center">
+                      <Activity className="w-8 h-8 bg-card" />
                     </div>
-                    <h1 className="text-5xl font-black gaming-text-primary text-shadow-lg">
-                      SPORTS <span className="gaming-text-neon">BETTING</span> HUB
+                    <h1 className="text-5xl font-black bg-card text-shadow-lg">
+                      SPORTS <span className="bg-card">BETTING</span> HUB
                     </h1>
                   </div>
                   
-                  <p className="gaming-text-secondary text-xl font-bold font-mono">
+                  <p className="bg-card text-xl font-bold font-mono">
                     [MULTI-SPORT ARENA] &gt;&gt; FREE OPEN-SOURCE APIs
                   </p>
                   
                   {/* Gaming Data Sources Indicators */}
                   <div className="flex items-center gap-4">
-                    <div className="gaming-status gaming-status-live">
+                    <div className="bg-card bg-card">
                       <Zap className="w-4 h-4" />
                       ESPN API
-                      <div className="gaming-pulse-dot"></div>
+                      <div className="bg-card"></div>
                     </div>
                     
-                    <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
+                    <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                       <Star className="w-4 h-4" />
                       THESPORTSDB
                     </div>
                     
-                    <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
+                    <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                       <TrendingUp className="w-4 h-4" />
                       ODDS API
                     </div>
@@ -287,7 +286,7 @@ export function SportsBoardPage() {
                   <Button
                     variant="outline"
                     onClick={() => setView('features')}
-                    className="gaming-btn-active px-6 py-3 text-lg"
+                    className="bg-card px-6 py-3 text-lg"
                   >
                     <Star className="w-5 h-5 mr-3" />
                     FEATURES & INFO

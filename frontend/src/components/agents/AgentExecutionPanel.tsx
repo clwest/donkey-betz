@@ -101,7 +101,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
       case 'failed':
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
       default:
-        return <ClockIcon className="h-5 w-5 text-gray-400" />;
+        return <ClockIcon className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -114,14 +114,14 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
       case 'failed':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted/10 text-gray-800 border-border';
     }
   };
 
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Execution Panel */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center">
             <BoltIcon className="h-6 w-6 mr-2 text-blue-600" />
@@ -179,7 +179,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
               <button
                 onClick={handleSuggestAgents}
                 disabled={!taskDescription.trim()}
-                className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-3 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <CpuChipIcon className="h-5 w-5" />
               </button>
@@ -200,7 +200,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 p-4 bg-gray-50 rounded-lg"
+                  className="mt-4 p-4 bg-muted/5 rounded-lg"
                 >
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -240,7 +240,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
           <button
             onClick={handleExecute}
             disabled={isExecuting || !taskDescription.trim() || !selectedAgentType}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            className="w-full py-3 bg-blue-600 text-foreground rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
           >
             {isExecuting ? (
               <>
@@ -259,7 +259,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
 
       {/* Running Instances */}
       {runningInstances.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-border p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Running Tasks ({runningInstances.length})
           </h3>
@@ -286,7 +286,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
                   <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(instance.status)}`}>
                     {instance.status}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(instance.created_at).toLocaleTimeString()}
                   </span>
                 </div>
@@ -297,7 +297,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
       )}
 
       {/* Recent Results */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Recent Tasks
         </h3>
@@ -306,7 +306,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
             {recentInstances.map((instance) => (
               <div
                 key={instance.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-center justify-between p-4 bg-muted/5 rounded-lg hover:bg-muted/10 transition-colors cursor-pointer"
               >
                 <div className="flex items-center space-x-3">
                   {getStatusIcon(instance.status)}
@@ -315,7 +315,7 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
                       <p className="font-medium text-gray-900">
                         {instance.template.name}
                       </p>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {instance.template.specialization}
                       </span>
                     </div>
@@ -326,14 +326,14 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
                 </div>
                 <div className="flex items-center space-x-3">
                   {instance.tokens_used > 0 && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       {instance.tokens_used.toLocaleString()} tokens
                     </span>
                   )}
                   <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(instance.status)}`}>
                     {instance.status}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(instance.created_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -342,9 +342,9 @@ export const AgentExecutionPanel: React.FC<AgentExecutionPanelProps> = ({ classN
           </div>
         ) : (
           <div className="text-center py-8">
-            <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No recent agent executions</p>
-            <p className="text-sm text-gray-400 mt-1">
+            <UserIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No recent agent executions</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Execute your first agent to see results here
             </p>
           </div>

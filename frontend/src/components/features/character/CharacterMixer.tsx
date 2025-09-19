@@ -203,8 +203,8 @@ export function CharacterMixer() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Character Mixer</h2>
-          <p className="text-gray-400 mt-1">Mix features from multiple characters to create unique hybrids</p>
+          <h2 className="text-2xl font-bold text-foreground">Character Mixer</h2>
+          <p className="text-muted-foreground mt-1">Mix features from multiple characters to create unique hybrids</p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -223,7 +223,7 @@ export function CharacterMixer() {
         {/* Character Selection */}
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Select Characters to Mix</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Select Characters to Mix</h3>
             
             <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
               {characters.map((character) => (
@@ -234,8 +234,8 @@ export function CharacterMixer() {
                   className={`
                     p-3 rounded-lg border text-left transition-all
                     ${selectedCharacters.find(sc => sc.character.id === character.id)
-                      ? 'border-primary-500/50 bg-primary-500/10 text-gray-500'
-                      : 'border-gray-700 hover:border-primary-500/50 bg-gray-800/50 text-white hover:bg-gray-700/50'
+                      ? 'border-primary-500/50 bg-primary-500/10 text-muted-foreground'
+                      : 'border-gray-700 hover:border-primary-500/50 bg-card/50 text-foreground hover:bg-gray-700/50'
                     }
                   `}
                 >
@@ -261,7 +261,7 @@ export function CharacterMixer() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{character.name}</div>
-                      <div className="text-xs text-gray-400 truncate">{character.category}</div>
+                      <div className="text-xs text-muted-foreground truncate">{character.category}</div>
                     </div>
                     {selectedCharacters.find(sc => sc.character.id === character.id) && (
                       <CheckIcon className="h-4 w-4 text-primary-400" />
@@ -276,11 +276,11 @@ export function CharacterMixer() {
         {/* Mix Settings */}
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Mix Settings</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Mix Settings</h3>
             
             {/* Mix Name */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Mixed Character Name
               </label>
               <input
@@ -288,13 +288,13 @@ export function CharacterMixer() {
                 value={mixName}
                 onChange={(e) => setMixName(e.target.value)}
                 placeholder="Enter name for mixed character..."
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-card border border-gray-700 rounded-lg text-foreground placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
 
             {/* Mix Method */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Mixing Method
               </label>
               <div className="space-y-2">
@@ -312,8 +312,8 @@ export function CharacterMixer() {
                       className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                     />
                     <div>
-                      <div className="text-sm font-medium text-white">{method.label}</div>
-                      <div className="text-xs text-gray-400">{method.desc}</div>
+                      <div className="text-sm font-medium text-foreground">{method.label}</div>
+                      <div className="text-xs text-muted-foreground">{method.desc}</div>
                     </div>
                   </label>
                 ))}
@@ -328,7 +328,7 @@ export function CharacterMixer() {
         <Card>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Selected Characters ({selectedCharacters.length}/4)</h3>
+              <h3 className="text-lg font-semibold text-foreground">Selected Characters ({selectedCharacters.length}/4)</h3>
               <Button
                 onClick={mixCharacters}
                 disabled={selectedCharacters.length < 2 || !mixName.trim() || isGenerating}
@@ -363,13 +363,13 @@ export function CharacterMixer() {
                         {sc.character.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-white">{sc.character.name}</div>
-                        <div className="text-sm text-gray-400">{sc.character.category}</div>
+                        <div className="font-medium text-foreground">{sc.character.name}</div>
+                        <div className="text-sm text-muted-foreground">{sc.character.category}</div>
                       </div>
                     </div>
                     <button
                       onClick={() => removeCharacter(sc.character.id)}
-                      className="text-red-400 hover:text-red-300 p-1"
+                      className="text-red-500 hover:text-red-300 p-1"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -378,7 +378,7 @@ export function CharacterMixer() {
                   {/* Weight Slider */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-gray-300">Weight</label>
+                      <label className="text-sm font-medium text-muted-foreground">Weight</label>
                       <span className="text-sm text-primary-400">{Math.round(sc.weight * 100)}%</span>
                     </div>
                     <input
@@ -395,7 +395,7 @@ export function CharacterMixer() {
                   {/* Feature Selection */}
                   {mixMethod === 'selective' && (
                     <div>
-                      <label className="text-sm font-medium text-gray-300 mb-2 block">Features to Use</label>
+                      <label className="text-sm font-medium text-muted-foreground mb-2 block">Features to Use</label>
                       <div className="grid grid-cols-3 gap-2">
                         {availableFeatures.map((feature) => (
                           <label key={feature} className="flex items-center gap-2">
@@ -405,7 +405,7 @@ export function CharacterMixer() {
                               onChange={() => toggleFeature(sc.character.id, feature)}
                               className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
-                            <span className="text-sm text-gray-300 capitalize">{feature}</span>
+                            <span className="text-sm text-muted-foreground capitalize">{feature}</span>
                           </label>
                         ))}
                       </div>
@@ -422,7 +422,7 @@ export function CharacterMixer() {
       {mixHistory.length > 0 && (
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Recent Mixed Characters</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Recent Mixed Characters</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {mixHistory.slice(0, 6).map((mix) => (
@@ -432,14 +432,14 @@ export function CharacterMixer() {
                       {mix.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-white truncate">{mix.name}</div>
-                      <div className="text-sm text-gray-400">
+                      <div className="font-medium text-foreground truncate">{mix.name}</div>
+                      <div className="text-sm text-muted-foreground">
                         {mix.source_characters.length} characters mixed
                       </div>
                     </div>
                   </div>
                   
-                  <div className="text-xs text-gray-400 space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1">
                     {mix.source_characters.map((source, index) => (
                       <div key={index}>
                         {Math.round(source.weight * 100)}% {source.character_name}
@@ -456,19 +456,19 @@ export function CharacterMixer() {
       {/* Preview Modal */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4">
+          <div className="bg-background rounded-lg p-6 max-w-2xl w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Mix Preview</h3>
+              <h3 className="text-lg font-semibold text-foreground">Mix Preview</h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
             
-            <div className="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap">{previewMix}</pre>
+            <div className="bg-card rounded-lg p-4 max-h-96 overflow-y-auto">
+              <pre className="text-sm text-muted-foreground whitespace-pre-wrap">{previewMix}</pre>
             </div>
             
             <div className="flex justify-end mt-4">

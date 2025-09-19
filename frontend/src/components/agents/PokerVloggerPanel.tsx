@@ -186,7 +186,7 @@ Pot Odds Analysis:
           </div>
 
           {toolsError && (
-            <div className="text-red-400 text-sm bg-red-900/20 p-2 rounded">
+            <div className="text-red-500 text-sm bg-red-900/20 p-2 rounded">
               Error: {toolsError}
             </div>
           )}
@@ -216,7 +216,7 @@ Pot Odds Analysis:
               <div>
                 <div className="text-sm text-muted-foreground">Expected Value</div>
                 <div className={`text-xl font-semibold ${
-                  oddsCalculations['poker-hand'].ev_percentage > 0 ? 'text-green-400' : 'text-red-400'
+                  oddsCalculations['poker-hand'].ev_percentage > 0 ? 'text-green-500' : 'text-red-500'
                 }`}>
                   {oddsCalculations['poker-hand'].ev_percentage > 0 ? '+' : ''}
                   {oddsCalculations['poker-hand'].ev_percentage.toFixed(1)}%
@@ -232,7 +232,7 @@ Pot Odds Analysis:
 
             {oddsCalculations['poker-hand'].warnings.length > 0 && (
               <div className="mt-4 space-y-2">
-                <div className="text-sm font-medium text-yellow-400">Warnings:</div>
+                <div className="text-sm font-medium text-yellow-500">Warnings:</div>
                 {oddsCalculations['poker-hand'].warnings.map((warning, index) => (
                   <Badge key={index} variant="warning" size="sm">
                     {warning}
@@ -253,7 +253,7 @@ Pot Odds Analysis:
           <CardContent>
             <div className="space-y-3">
               {bettingOpportunities.map((opportunity) => (
-                <div key={opportunity.id} className="border border-dark-700 rounded-lg p-3">
+                <div key={opportunity.id} className="border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-medium">{opportunity.game}</div>
                     <Badge 

@@ -128,7 +128,7 @@ export default function EnhancedProfile() {
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-white" />
+                  <User className="w-8 h-8 text-foreground" />
                 </div>
                 <div className="absolute -bottom-1 -right-1">
                   <Progress value={profile.profile_completeness} className="w-20 h-2" />

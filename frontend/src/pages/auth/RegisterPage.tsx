@@ -130,13 +130,13 @@ const RegisterPage: React.FC = () => {
         <div className="flex justify-center">
           <div className="flex items-center space-x-2">
             <SparklesIcon className="h-12 w-12 text-purple-400" />
-            <h2 className="text-3xl font-bold text-white">AI Content Studio</h2>
+            <h2 className="text-3xl font-bold text-foreground">AI Content Studio</h2>
           </div>
         </div>
-        <h2 className="mt-6 text-center text-2xl font-bold text-gray-300">
+        <h2 className="mt-6 text-center text-2xl font-bold text-muted-foreground">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-400">
+        <p className="mt-2 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
           <Link to="/login" className="font-medium text-purple-400 hover:text-purple-300">
             Sign in
@@ -161,7 +161,7 @@ const RegisterPage: React.FC = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="first_name" className="block text-sm font-medium text-gray-200">
+                <label htmlFor="first_name" className="block text-sm font-medium text-foreground">
                   First Name
                 </label>
                 <input
@@ -170,13 +170,13 @@ const RegisterPage: React.FC = () => {
                   type="text"
                   value={formData.first_name}
                   onChange={handleChange}
-                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md placeholder-gray-400 bg-card/50 text-foreground focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                   placeholder="John"
                 />
               </div>
               
               <div>
-                <label htmlFor="last_name" className="block text-sm font-medium text-gray-200">
+                <label htmlFor="last_name" className="block text-sm font-medium text-foreground">
                   Last Name
                 </label>
                 <input
@@ -185,15 +185,15 @@ const RegisterPage: React.FC = () => {
                   type="text"
                   value={formData.last_name}
                   onChange={handleChange}
-                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md placeholder-gray-400 bg-card/50 text-foreground focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                   placeholder="Doe"
                 />
               </div>
             </div>
             
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-200">
-                Username <span className="text-red-400">*</span>
+              <label htmlFor="username" className="block text-sm font-medium text-foreground">
+                Username <span className="text-red-500">*</span>
               </label>
               <input
                 id="username"
@@ -204,17 +204,17 @@ const RegisterPage: React.FC = () => {
                 onChange={handleChange}
                 className={`mt-1 appearance-none block w-full px-3 py-2 border ${
                   errors.username ? 'border-red-500' : 'border-gray-600'
-                } rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
+                } rounded-md placeholder-gray-400 bg-card/50 text-foreground focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
                 placeholder="johndoe"
               />
               {errors.username && (
-                <p className="mt-1 text-sm text-red-400">{errors.username}</p>
+                <p className="mt-1 text-sm text-red-500">{errors.username}</p>
               )}
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-200">
-                Email Address <span className="text-red-400">*</span>
+              <label htmlFor="email" className="block text-sm font-medium text-foreground">
+                Email Address <span className="text-red-500">*</span>
               </label>
               <input
                 id="email"
@@ -225,17 +225,17 @@ const RegisterPage: React.FC = () => {
                 onChange={handleChange}
                 className={`mt-1 appearance-none block w-full px-3 py-2 border ${
                   errors.email ? 'border-red-500' : 'border-gray-600'
-                } rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
+                } rounded-md placeholder-gray-400 bg-card/50 text-foreground focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
                 placeholder="john@example.com"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-400">{errors.email}</p>
+                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
               )}
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-200">
-                Password <span className="text-red-400">*</span>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                Password <span className="text-red-500">*</span>
               </label>
               <div className="mt-1 relative">
                 <input
@@ -247,7 +247,7 @@ const RegisterPage: React.FC = () => {
                   onChange={handleChange}
                   className={`appearance-none block w-full px-3 py-2 pr-10 border ${
                     errors.password ? 'border-red-500' : 'border-gray-600'
-                  } rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
+                  } rounded-md placeholder-gray-400 bg-card/50 text-foreground focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
                   placeholder="Min 8 chars, 1 uppercase, 1 number"
                 />
                 <button
@@ -256,20 +256,20 @@ const RegisterPage: React.FC = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                    <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                    <EyeIcon className="h-5 w-5 text-muted-foreground" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-400">{errors.password}</p>
+                <p className="mt-1 text-sm text-red-500">{errors.password}</p>
               )}
             </div>
             
             <div>
-              <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-200">
-                Confirm Password <span className="text-red-400">*</span>
+              <label htmlFor="confirm_password" className="block text-sm font-medium text-foreground">
+                Confirm Password <span className="text-red-500">*</span>
               </label>
               <div className="mt-1 relative">
                 <input
@@ -281,7 +281,7 @@ const RegisterPage: React.FC = () => {
                   onChange={handleChange}
                   className={`appearance-none block w-full px-3 py-2 pr-10 border ${
                     errors.confirm_password ? 'border-red-500' : 'border-gray-600'
-                  } rounded-md placeholder-gray-400 bg-gray-800/50 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
+                  } rounded-md placeholder-gray-400 bg-card/50 text-foreground focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm`}
                   placeholder="Re-enter your password"
                 />
                 <button
@@ -290,14 +290,14 @@ const RegisterPage: React.FC = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showConfirmPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                    <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                    <EyeIcon className="h-5 w-5 text-muted-foreground" />
                   )}
                 </button>
               </div>
               {errors.confirm_password && (
-                <p className="mt-1 text-sm text-red-400">{errors.confirm_password}</p>
+                <p className="mt-1 text-sm text-red-500">{errors.confirm_password}</p>
               )}
             </div>
             
@@ -307,9 +307,9 @@ const RegisterPage: React.FC = () => {
                 name="terms"
                 type="checkbox"
                 required
-                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-800"
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-card"
               />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-300">
+              <label htmlFor="terms" className="ml-2 block text-sm text-muted-foreground">
                 I agree to the{' '}
                 <a href="#" className="text-purple-400 hover:text-purple-300">
                   Terms and Conditions
@@ -321,7 +321,7 @@ const RegisterPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading || Object.keys(errors).length > 0}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-foreground bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Creating account...' : 'Create account'}
               </button>
@@ -334,21 +334,21 @@ const RegisterPage: React.FC = () => {
                 <div className="w-full border-t border-gray-600" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-transparent text-gray-400">Or continue with</span>
+                <span className="px-2 bg-transparent text-muted-foreground">Or continue with</span>
               </div>
             </div>
             
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-800/30 text-sm font-medium text-gray-200 hover:bg-gray-700/50"
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-card/30 text-sm font-medium text-foreground hover:bg-gray-700/50"
               >
                 Google
               </button>
               
               <button
                 type="button"
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-800/30 text-sm font-medium text-gray-200 hover:bg-gray-700/50"
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-card/30 text-sm font-medium text-foreground hover:bg-gray-700/50"
               >
                 GitHub
               </button>

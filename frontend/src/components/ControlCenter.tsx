@@ -269,7 +269,7 @@ const ControlCenter: React.FC = () => {
                 <span className={`text-2xl font-bold ${getStatusColor(metric.status)}`}>
                   {metric.value.toFixed(metric.unit === '%' ? 1 : 0)}
                 </span>
-                <span className="text-sm text-gray-500">{metric.unit}</span>
+                <span className="text-sm text-muted-foreground">{metric.unit}</span>
               </div>
               {metric.name.includes('Usage') || metric.name.includes('Rate') ? (
                 <Progress
@@ -527,11 +527,11 @@ const ControlCenter: React.FC = () => {
                   <p className="text-gray-700 mb-3">{insight.description}</p>
                   <div className="flex gap-4 mb-3">
                     <div>
-                      <span className="text-xs text-gray-500">Confidence</span>
+                      <span className="text-xs text-muted-foreground">Confidence</span>
                       <Progress value={insight.confidence * 100} className="w-20 h-2 mt-1" />
                     </div>
                     <div>
-                      <span className="text-xs text-gray-500">Impact</span>
+                      <span className="text-xs text-muted-foreground">Impact</span>
                       <Progress value={insight.impact * 100} className="w-20 h-2 mt-1" />
                     </div>
                   </div>
@@ -579,7 +579,7 @@ const ControlCenter: React.FC = () => {
                           </Badge>
                           <p className="text-sm">{alert.message}</p>
                         </div>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(alert.timestamp).toLocaleTimeString()}
                         </span>
                       </div>

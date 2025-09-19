@@ -348,7 +348,7 @@ export function TextGenerator() {
     <div className="space-y-6">
       {/* Content Type Selection */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Content Type</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Content Type</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {contentTypes.map((type) => {
             const isSelected = params.type === type.id;
@@ -359,18 +359,18 @@ export function TextGenerator() {
                 className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
                   isSelected
                     ? 'border-primary-500 bg-primary-500/10'
-                    : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                    : 'border-border hover:border-dark-600 hover:bg-white/5'
                 }`}
               >
                 <type.icon className={`h-6 w-6 mb-2 ${
-                  isSelected ? 'text-primary-400' : 'text-gray-400'
+                  isSelected ? 'text-primary-400' : 'text-muted-foreground'
                 }`} />
                 <div className={`font-medium ${
-                  isSelected ? 'text-white' : 'text-gray-300'
+                  isSelected ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   {type.label}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   {type.desc}
                 </div>
               </button>
@@ -383,11 +383,11 @@ export function TextGenerator() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Input Panel */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Generate Content</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Generate Content</h3>
           <div className="space-y-4">
             {/* Prompt */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Prompt</label>
+              <label className="block text-sm text-muted-foreground mb-2">Prompt</label>
               <textarea
                 className="input min-h-[120px]"
                 placeholder="Describe what you want to generate..."
@@ -399,7 +399,7 @@ export function TextGenerator() {
             {/* Basic Settings */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Model</label>
+                <label className="block text-sm text-muted-foreground mb-2">Model</label>
                 <select 
                   className="input"
                   value={params.model}
@@ -414,7 +414,7 @@ export function TextGenerator() {
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Tone</label>
+                <label className="block text-sm text-muted-foreground mb-2">Tone</label>
                 <select 
                   className="input"
                   value={params.tone}
@@ -430,7 +430,7 @@ export function TextGenerator() {
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Length</label>
+                <label className="block text-sm text-muted-foreground mb-2">Length</label>
                 <select 
                   className="input"
                   value={params.length}
@@ -446,7 +446,7 @@ export function TextGenerator() {
             {/* Advanced Settings Toggle */}
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <AdjustmentsHorizontalIcon className="h-4 w-4" />
               Advanced Settings
@@ -454,9 +454,9 @@ export function TextGenerator() {
 
             {/* Advanced Settings */}
             {showAdvanced && (
-              <div className="space-y-4 p-4 bg-dark-900/50 rounded-lg border border-dark-700">
+              <div className="space-y-4 p-4 bg-background/50 rounded-lg border border-border">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
+                  <label className="block text-sm text-muted-foreground mb-2">
                     Temperature: {params.temperature}
                   </label>
                   <input
@@ -468,14 +468,14 @@ export function TextGenerator() {
                     onChange={(e) => setParams({ ...params, temperature: parseFloat(e.target.value) })}
                     className="w-full"
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>Focused</span>
                     <span>Creative</span>
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Max Tokens</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Max Tokens</label>
                   <input
                     type="number"
                     className="input"
@@ -490,7 +490,7 @@ export function TextGenerator() {
                 {params.model.startsWith('gpt-5') && (
                   <>
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Verbosity Level</label>
+                      <label className="block text-sm text-muted-foreground mb-2">Verbosity Level</label>
                       <select
                         className="input"
                         value={params.verbosity}
@@ -500,11 +500,11 @@ export function TextGenerator() {
                         <option value="medium">Medium (Balanced)</option>
                         <option value="high">High (Detailed)</option>
                       </select>
-                      <p className="text-xs text-gray-500 mt-1">Controls response detail level</p>
+                      <p className="text-xs text-muted-foreground mt-1">Controls response detail level</p>
                     </div>
 
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Reasoning Effort</label>
+                      <label className="block text-sm text-muted-foreground mb-2">Reasoning Effort</label>
                       <select
                         className="input"
                         value={params.reasoning_effort}
@@ -514,7 +514,7 @@ export function TextGenerator() {
                         <option value="standard">Standard (Balanced)</option>
                         <option value="maximum">Maximum (Deep Analysis)</option>
                       </select>
-                      <p className="text-xs text-gray-500 mt-1">GPT-5 reasoning depth</p>
+                      <p className="text-xs text-muted-foreground mt-1">GPT-5 reasoning depth</p>
                     </div>
                   </>
                 )}
@@ -535,7 +535,7 @@ export function TextGenerator() {
         {/* Output Panel */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Generated Content</h3>
+            <h3 className="text-lg font-semibold text-foreground">Generated Content</h3>
             {generatedContent && (
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={handleCopy}>
@@ -565,18 +565,18 @@ export function TextGenerator() {
           {isGenerating ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
-              <span className="ml-3 text-gray-400">Generating content...</span>
+              <span className="ml-3 text-muted-foreground">Generating content...</span>
             </div>
           ) : generatedContent ? (
             <div className="space-y-4">
-              <div className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
-                <pre className="whitespace-pre-wrap text-sm text-gray-300 font-mono">
+              <div className="bg-background/50 rounded-lg p-4 border border-border">
+                <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono">
                   {generatedContent}
                 </pre>
               </div>
               
               {/* Word count and stats */}
-              <div className="flex gap-4 text-xs text-gray-500">
+              <div className="flex gap-4 text-xs text-muted-foreground">
                 <span>Words: {generatedContent.split(' ').length}</span>
                 <span>Characters: {generatedContent.length}</span>
                 <span>Est. reading time: {Math.ceil(generatedContent.split(' ').length / 200)} min</span>
@@ -585,7 +585,7 @@ export function TextGenerator() {
               {/* Feedback Section */}
               <div className="border-t border-gray-700 pt-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-300">How was this content?</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">How was this content?</h4>
                   <div className="flex items-center gap-3">
                     {/* Star Rating */}
                     <div className="flex gap-1">
@@ -599,7 +599,7 @@ export function TextGenerator() {
                           {userRating >= star ? (
                             <StarIconSolid className="h-5 w-5 text-yellow-500" />
                           ) : (
-                            <StarIcon className="h-5 w-5 text-gray-500 hover:text-yellow-500" />
+                            <StarIcon className="h-5 w-5 text-muted-foreground hover:text-yellow-500" />
                           )}
                         </button>
                       ))}
@@ -612,7 +612,7 @@ export function TextGenerator() {
                         className={`p-2 rounded-lg transition-colors ${
                           userFeedback === 'positive' 
                             ? 'bg-green-500/20 text-green-500' 
-                            : 'hover:bg-gray-800 text-gray-400 hover:text-green-500'
+                            : 'hover:bg-card text-muted-foreground hover:text-green-500'
                         }`}
                         title="Helpful"
                       >
@@ -627,7 +627,7 @@ export function TextGenerator() {
                         className={`p-2 rounded-lg transition-colors ${
                           userFeedback === 'negative' 
                             ? 'bg-red-500/20 text-red-500' 
-                            : 'hover:bg-gray-800 text-gray-400 hover:text-red-500'
+                            : 'hover:bg-card text-muted-foreground hover:text-red-500'
                         }`}
                         title="Not helpful"
                       >
@@ -643,15 +643,15 @@ export function TextGenerator() {
 
                 {/* Detailed Feedback Form */}
                 {showFeedbackForm && (
-                  <div className="bg-gray-800/30 rounded-lg p-4 space-y-3">
-                    <p className="text-sm text-gray-400">
+                  <div className="bg-card/30 rounded-lg p-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">
                       Help us improve! What could be better about this content?
                     </p>
                     <textarea
                       value={feedbackComments}
                       onChange={(e) => setFeedbackComments(e.target.value)}
                       placeholder="Your feedback helps us improve the content generation..."
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none resize-none"
+                      className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg text-foreground placeholder-gray-500 focus:border-primary-500 focus:outline-none resize-none"
                       rows={3}
                     />
                     <div className="flex gap-2">
@@ -687,7 +687,7 @@ export function TextGenerator() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               <DocumentTextIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
               <p>Generated content will appear here</p>
             </div>
