@@ -11,6 +11,7 @@ import {
 import { apiClient } from '../services/api.config';
 import { unifiedConnector } from '../services/UnifiedPlatformConnector';
 import { toast } from 'sonner';
+import ProjectViewer from './ProjectViewer';
 // Temporarily define local interfaces to test
 interface Campaign {
   id: string;
@@ -212,6 +213,8 @@ export const OpportunitiesHub: React.FC = () => {
   const [activatingEcosystem, setActivatingEcosystem] = useState(false);
   const [generatedProjects, setGeneratedProjects] = useState<any[]>([]);
   const [showGeneratedProjects, setShowGeneratedProjects] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [viewingProject, setViewingProject] = useState(false);
 
   // WebSocket reference
   const wsRef = useRef<WebSocket | null>(null);
@@ -227,6 +230,7 @@ export const OpportunitiesHub: React.FC = () => {
   ];
 
   useEffect(() => {
+    console.log('🎯 OpportunitiesHub mounted');
     loadUserProfile();
     checkEcosystemStatus();
     connectToUnifiedHub();
@@ -240,6 +244,11 @@ export const OpportunitiesHub: React.FC = () => {
       }
     };
   }, []);
+
+  // Debug useEffect to monitor generatingProjects state
+  useEffect(() => {
+    console.log('🔄 generatingProjects state changed to:', generatingProjects);
+  }, [generatingProjects]);
 
   useEffect(() => {
     applyFilters();
@@ -692,13 +701,33 @@ export const OpportunitiesHub: React.FC = () => {
   };
 
   const generateAIProjects = async () => {
+    console.log('🚀 Starting AI project generation...');
+    console.log('🔍 Current state - generatingProjects:', generatingProjects);
+    console.log('🔍 Search term:', searchTerm);
+
+    // Check if we're already generating (prevent double-clicks)
+    if (generatingProjects) {
+      console.warn('⚠️ Already generating projects, ignoring duplicate request');
+      return;
+    }
+
     setGeneratingProjects(true);
+    console.log('✅ Set generatingProjects to true');
+
     try {
       // Call the AI opportunity pipeline API
+      console.log('📡 Calling /api/v1/ai-opportunities/execute/');
+      console.log('📋 Request payload:', {
+        preference: searchTerm || '',
+        strategies_count: 3
+      });
+
       const response = await apiClient.post('/api/v1/ai-opportunities/execute/', {
         preference: searchTerm || '', // Use search term as preference
         strategies_count: 3
       });
+
+      console.log('📦 Response received:', response.data);
 
       if (response.data.success) {
         const { summary, projects, strategies } = response.data;
@@ -721,9 +750,17 @@ export const OpportunitiesHub: React.FC = () => {
 
         // Refresh opportunities to show any new data
         await fetchInitialData();
+
+        // Also reload the generated projects list
+        await loadGeneratedProjects();
       }
     } catch (error: any) {
-      console.error('AI project generation failed:', error);
+      console.error('❌ AI project generation failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        data: error.response?.data
+      });
       toast.error(
         'Failed to generate AI projects',
         {
@@ -893,7 +930,11 @@ export const OpportunitiesHub: React.FC = () => {
             </button>
 
             <button
-              onClick={generateAIProjects}
+              onClick={() => {
+                console.log('🖱️ AI Generate Projects button clicked!');
+                console.log('🔍 Button state - disabled:', generatingProjects);
+                generateAIProjects();
+              }}
               disabled={generatingProjects}
               className="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
             >
@@ -1275,7 +1316,11 @@ export const OpportunitiesHub: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={generateAIProjects}
+          onClick={() => {
+            console.log('🖱️ Generate New Projects button clicked (AI Projects tab)!');
+            console.log('🔍 Button state - disabled:', generatingProjects);
+            generateAIProjects();
+          }}
           disabled={generatingProjects}
           className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
         >
@@ -1302,7 +1347,11 @@ export const OpportunitiesHub: React.FC = () => {
             Click "Generate New Projects" to research and build AI monetization opportunities
           </p>
           <button
-            onClick={generateAIProjects}
+            onClick={() => {
+              console.log('🖱️ Generate Your First Projects button clicked!');
+              console.log('🔍 Button state - disabled:', generatingProjects);
+              generateAIProjects();
+            }}
             disabled={generatingProjects}
             className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
@@ -1318,7 +1367,11 @@ export const OpportunitiesHub: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 transition-colors"
+              className="bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 transition-colors cursor-pointer group"
+              onClick={() => {
+                setSelectedProject(project);
+                setViewingProject(true);
+              }}
             >
               {/* Project Header with Type */}
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4">
@@ -1467,110 +1520,14 @@ export const OpportunitiesHub: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => {
-                      // Open README in new window
-                      const readmePath = `${project.project_path}/README.md`;
-                      toast.info('Opening project documentation...', {
-                        description: 'Check your file explorer'
-                      });
-                      // You could also fetch and display the README content
-                    }}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  >
-                    <FileText className="w-4 h-4 inline-block mr-1" />
-                    View Docs
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const setupInstructions = `
-cd ${project.project_path}
-pip install -r requirements.txt
-# Add your OpenAI API key to .env
-python ai_app.py
-                      `.trim();
-                      navigator.clipboard.writeText(setupInstructions);
-                      toast.success('Setup instructions copied!', {
-                        description: 'Paste in terminal to get started'
-                      });
-                    }}
-                    className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                  >
-                    <Zap className="w-4 h-4 inline-block mr-1" />
-                    Quick Start
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(project.project_path);
-                      toast.success('Project path copied!');
-                    }}
-                    className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
-                  >
-                    <Building className="w-4 h-4 inline-block mr-1" />
-                    Open Folder
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      // Create enhanced business plan with advisor insights
-                      let businessPlan = `
-PROJECT: ${project.strategy?.title || 'AI Application'}
-
-REVENUE MODEL:
-${project.revenue_potential || '$1,000-10,000/month'}
-
-TARGET MARKET:
-${project.strategy?.title?.includes('LLM') ? 'Developers, AI startups, enterprises needing LLM integration' :
-  project.strategy?.title?.includes('Roop') ? 'Content creators, video editors, entertainment industry' :
-  'Businesses seeking AI automation'}
-
-PRICING STRATEGY:
-- Starter: $29/month (100 API calls)
-- Pro: $99/month (1,000 API calls)
-- Enterprise: $499/month (unlimited)`;
-
-                      // Add advisor insights if available
-                      if (project.advisor_insights && project.advisor_insights.length > 0) {
-                        businessPlan += '\n\n🎯 ADVISOR INSIGHTS:\n';
-                        project.advisor_insights.forEach((insight: any) => {
-                          const advisorName = insight.advisor?.replace(' (AI Model)', '');
-                          businessPlan += `\n${advisorName}:\n`;
-                          businessPlan += `"${insight.advice?.substring(0, 200)}..."\n`;
-                          if (insight.recommendations && insight.recommendations.length > 0) {
-                            businessPlan += 'Key Recommendations:\n';
-                            insight.recommendations.slice(0, 3).forEach((rec: string) => {
-                              businessPlan += `• ${rec}\n`;
-                            });
-                          }
-                        });
-                      }
-
-                      businessPlan += `
-
-LAUNCH CHECKLIST:
-1. Add API keys to .env file
-2. Test core functionality
-3. Set up payment processing (Stripe)
-4. Create landing page
-5. Launch on Product Hunt
-6. Run Google/Facebook ads
-7. Reach out to target customers`;
-
-                      navigator.clipboard.writeText(businessPlan.trim());
-                      toast.success('Business plan with advisor insights copied!', {
-                        description: 'Ready to launch with expert guidance'
-                      });
-                    }}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    <TrendingUp className="w-4 h-4 inline-block mr-1" />
-                    Biz Plan
-                  </button>
+                {/* View Details Indicator */}
+                <div className="mt-4 pt-4 border-t border-gray-700 flex items-center justify-center gap-2 text-purple-400 group-hover:text-purple-300 transition-colors">
+                  <Eye className="w-4 h-4" />
+                  <span className="text-sm font-medium">Click to View Project Details</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
+
+                {/* Action buttons removed - card is clickable to view details */}
               </div>
             </motion.div>
           ))}
@@ -2072,6 +2029,17 @@ LAUNCH CHECKLIST:
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Project Viewer Modal */}
+      {viewingProject && selectedProject && (
+        <ProjectViewer
+          project={selectedProject}
+          onClose={() => {
+            setViewingProject(false);
+            setSelectedProject(null);
+          }}
+        />
       )}
     </div>
   );

@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'campaigns',              # Campaign management
     'workflows',              # Workflow management
     'mythology',              # Mythology detection and prevention system
+    'ai_opportunities',       # AI Project Generation & Storage
     # 'realtime',               # WebSocket & Event Bus
     # 'monitoring',             # System Health & Analytics
     # 'billing',                # Unified billing system

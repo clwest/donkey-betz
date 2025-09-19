@@ -1,0 +1,58 @@
+{
+  "Warren Buffett": {
+    "expertise": "value investing",
+    "data_sources": [
+      "sec.gov",
+      "yahoo finance",
+      "morningstar"
+    ],
+    "analysis_types": [
+      "fundamental",
+      "value_investing",
+      "moat_analysis"
+    ],
+    "metrics": [
+      "pe_ratio",
+      "book_value",
+      "roi",
+      "debt_equity"
+    ]
+  },
+  "Elon Musk": {
+    "expertise": "innovation and scaling",
+    "data_sources": [
+      "techcrunch",
+      "arxiv",
+      "github trending"
+    ],
+    "analysis_types": [
+      "innovation",
+      "disruption",
+      "scalability"
+    ],
+    "metrics": [
+      "growth_rate",
+      "market_size",
+      "tech_stack",
+      "automation_potential"
+    ]
+  },
+  "Cathie Wood": {
+    "expertise": "disruptive technology",
+    "data_sources": [
+      "ark-invest",
+      "nasdaq",
+      "coinmarketcap"
+    ],
+    "analysis_types": [
+      "disruptive_innovation",
+      "genomics",
+      "ai_robotics"
+    ],
+    "metrics": [
+      "innovation_score",
+      "market_disruption",
+      "adoption_curve"
+    ]
+  }
+}

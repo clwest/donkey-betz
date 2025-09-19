@@ -1,0 +1,9 @@
+{
+  "category": "freelance_platforms",
+  "target": "fiverr.com",
+  "rate_limit": 1.0,
+  "deep_scrape": true,
+  "analyze_content": true,
+  "extract_patterns": true,
+  "created_at": "2025-09-19T16:01:17.786093"
+}
