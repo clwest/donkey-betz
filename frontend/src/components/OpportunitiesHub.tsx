@@ -1352,6 +1352,51 @@ export const OpportunitiesHub: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Advisor Insights */}
+                {project.advisor_insights && project.advisor_insights.length > 0 ? (
+                  <div className="mb-4 p-3 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-lg border border-blue-800/30">
+                    <h5 className="text-sm font-semibold text-blue-400 mb-2 flex items-center gap-2">
+                      <Brain className="w-4 h-4" />
+                      Advisor Insights
+                    </h5>
+                    {project.advisor_insights.slice(0, 1).map((insight: any, i: number) => (
+                      <div key={i} className="text-xs">
+                        <div className="text-yellow-400 font-semibold mb-1">
+                          {insight.advisor?.replace(' (AI Model)', '')}:
+                        </div>
+                        <p className="text-gray-300 mb-1 line-clamp-2">
+                          "{insight.advice?.substring(0, 150)}..."
+                        </p>
+                        <div className="mt-1">
+                          <span className="text-blue-400">Top tip:</span>
+                          <span className="text-gray-400 ml-1">
+                            {insight.action_items?.[0] || 'Validate market demand first'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-gray-900 rounded-lg border border-gray-800">
+                    <button
+                      onClick={async () => {
+                        toast.info('🎯 Getting advisor insights...', {
+                          description: 'Warren Buffett and Cathie Wood are reviewing your project'
+                        });
+                        // In a real implementation, this would call an API to get advisor insights
+                        // For now, just show a message
+                        setTimeout(() => {
+                          toast.success('Advisor insights will be available in the next generation!');
+                        }, 2000);
+                      }}
+                      className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      <Brain className="w-4 h-4" />
+                      Get Advisor Insights
+                    </button>
+                  </div>
+                )}
+
                 {/* Status */}
                 <div className="mb-4 p-3 bg-gray-900 rounded-lg">
                   <div className="flex items-center justify-between text-sm">
@@ -1411,7 +1456,8 @@ python ai_app.py
 
                   <button
                     onClick={() => {
-                      const businessPlan = `
+                      // Create enhanced business plan with advisor insights
+                      let businessPlan = `
 PROJECT: ${project.strategy?.title || 'AI Application'}
 
 REVENUE MODEL:
@@ -1425,7 +1471,25 @@ ${project.strategy?.title?.includes('LLM') ? 'Developers, AI startups, enterpris
 PRICING STRATEGY:
 - Starter: $29/month (100 API calls)
 - Pro: $99/month (1,000 API calls)
-- Enterprise: $499/month (unlimited)
+- Enterprise: $499/month (unlimited)`;
+
+                      // Add advisor insights if available
+                      if (project.advisor_insights && project.advisor_insights.length > 0) {
+                        businessPlan += '\n\n🎯 ADVISOR INSIGHTS:\n';
+                        project.advisor_insights.forEach((insight: any) => {
+                          const advisorName = insight.advisor?.replace(' (AI Model)', '');
+                          businessPlan += `\n${advisorName}:\n`;
+                          businessPlan += `"${insight.advice?.substring(0, 200)}..."\n`;
+                          if (insight.recommendations && insight.recommendations.length > 0) {
+                            businessPlan += 'Key Recommendations:\n';
+                            insight.recommendations.slice(0, 3).forEach((rec: string) => {
+                              businessPlan += `• ${rec}\n`;
+                            });
+                          }
+                        });
+                      }
+
+                      businessPlan += `
 
 LAUNCH CHECKLIST:
 1. Add API keys to .env file
@@ -1434,11 +1498,11 @@ LAUNCH CHECKLIST:
 4. Create landing page
 5. Launch on Product Hunt
 6. Run Google/Facebook ads
-7. Reach out to target customers
-                      `.trim();
-                      navigator.clipboard.writeText(businessPlan);
-                      toast.success('Business plan copied!', {
-                        description: 'Ready to launch your AI business'
+7. Reach out to target customers`;
+
+                      navigator.clipboard.writeText(businessPlan.trim());
+                      toast.success('Business plan with advisor insights copied!', {
+                        description: 'Ready to launch with expert guidance'
                       });
                     }}
                     className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"

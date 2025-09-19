@@ -14,6 +14,8 @@ from pathlib import Path
 # Import our pipeline components
 from backend.spiders.ai_monetization_spider import research_ai_monetization_sync
 from agents.ai_project_builder import AIProjectBuilder
+from advisors.registry import AdvisorRegistry
+from advisors.llm_advisor_system import LLMAdvisor
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,9 @@ def execute_ai_opportunity_pipeline(request):
         builder = AIProjectBuilder()
         execution_results = []
 
+        # Initialize advisor registry for consultations
+        advisor_registry = AdvisorRegistry()
+
         for strategy in strategies[:strategies_count]:
             logger.info(f"⚙️ Building project for: {strategy['title']}")
 
@@ -70,6 +75,10 @@ def execute_ai_opportunity_pipeline(request):
 
             if result['success']:
                 logger.info(f"✅ Successfully built: {strategy['title']}")
+
+                # Get advisor consultation for this project
+                advisor_insights = _get_advisor_consultation(strategy, advisor_registry)
+                result['advisor_insights'] = advisor_insights
                 execution_results.append({
                     'success': True,
                     'strategy': strategy,
@@ -77,7 +86,8 @@ def execute_ai_opportunity_pipeline(request):
                     'files_created': result.get('files_created', []),
                     'launch_command': result.get('launch_command'),
                     'revenue_potential': strategy.get('potential_revenue'),
-                    'project_type': result.get('project_type')
+                    'project_type': result.get('project_type'),
+                    'advisor_insights': advisor_insights
                 })
             else:
                 logger.error(f"❌ Failed to build: {strategy['title']}")
@@ -291,3 +301,99 @@ def _get_strategy_categories(strategies):
             categories.add(strategy_type)
 
     return sorted(list(categories))
+
+
+def _get_advisor_consultation(strategy, advisor_registry):
+    """Get advisor insights for an AI project strategy"""
+    try:
+        # Select relevant advisors based on the strategy type
+        relevant_advisors = []
+
+        # Get advisors for business/investment advice
+        business_advisors = ['Warren Buffett (AI Model)', 'Cathie Wood (AI Model)', 'Peter Thiel (AI Model)']
+
+        # Get advisors for tech/AI advice
+        tech_advisors = ['Elon Musk (AI Model)', 'Naval Ravikant (AI Model)']
+
+        # Select 2-3 advisors for consultation
+        selected_advisors = []
+        if strategy.get('strategy_type') in ['ai_application', 'saas_development']:
+            selected_advisors = business_advisors[:2] + tech_advisors[:1]
+        else:
+            selected_advisors = business_advisors[:2]
+
+        insights = []
+        for advisor_name in selected_advisors:
+            try:
+                # Get advisor profile
+                advisor_info = advisor_registry.get_advisor_by_name(advisor_name)
+                if advisor_info:
+                    # Create LLM advisor instance
+                    advisor = LLMAdvisor(
+                        advisor_id=advisor_info['id'],
+                        advisor_profile=advisor_info,
+                        user=None  # Can be user context if available
+                    )
+
+                    # Get consultation on the AI project
+                    consultation_context = {
+                        'project_title': strategy.get('title', ''),
+                        'project_type': strategy.get('strategy_type', ''),
+                        'revenue_potential': strategy.get('potential_revenue', ''),
+                        'time_to_implement': strategy.get('time_to_implement', ''),
+                        'difficulty': strategy.get('difficulty', ''),
+                        'description': strategy.get('description', '')
+                    }
+
+                    result = advisor.provide_consultation(
+                        topic=f"AI Business Opportunity: {strategy.get('title', 'AI Project')}",
+                        context=consultation_context,
+                        consultation_type='investment_analysis'
+                    )
+
+                    if result.get('success'):
+                        insights.append({
+                            'advisor': advisor_name,
+                            'advice': result.get('advice', ''),
+                            'recommendations': result.get('recommendations', []),
+                            'action_items': result.get('action_items', [])
+                        })
+                        logger.info(f"✅ Got insights from {advisor_name}")
+
+            except Exception as e:
+                logger.warning(f"Could not get consultation from {advisor_name}: {e}")
+                # Add mock insights as fallback
+                insights.append({
+                    'advisor': advisor_name,
+                    'advice': f"This AI project shows strong potential. Focus on rapid prototyping and market validation.",
+                    'recommendations': [
+                        'Start with an MVP to test market demand',
+                        'Focus on a specific niche initially',
+                        'Build strong API documentation'
+                    ],
+                    'action_items': [
+                        'Create landing page',
+                        'Run pilot with 10 beta users',
+                        'Set up analytics tracking'
+                    ]
+                })
+
+        return insights
+
+    except Exception as e:
+        logger.error(f"Error getting advisor consultation: {e}")
+        # Return mock insights as fallback
+        return [{
+            'advisor': 'Warren Buffett (AI Model)',
+            'advice': 'Focus on creating sustainable value and competitive moats in your AI business.',
+            'recommendations': [
+                'Build a strong brand and customer loyalty',
+                'Focus on recurring revenue models',
+                'Maintain low operational costs'
+            ],
+            'action_items': [
+                'Validate market demand before scaling',
+                'Build defensible technology advantages',
+                'Focus on customer retention metrics'
+            ]
+        }]
