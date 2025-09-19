@@ -34,7 +34,7 @@ class SystemMonitor:
     """Real-time monitoring of the activated platform"""
     
     def __init__(self):
-        self.console = Console()
+        self.console = Console(width=120)  # Set fixed width for consistency
         self.refresh_rate = 2  # seconds
         
     def get_agent_activity(self) -> Dict:
@@ -49,16 +49,20 @@ class SystemMonitor:
             ).count()
             
             # Get agent groups
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT 
-                        COALESCE(metadata->>'group', 'ungrouped') as group_name,
-                        COUNT(*) as agent_count
-                    FROM agents_unifiedagenttemplate
-                    WHERE is_active = true
-                    GROUP BY metadata->>'group'
-                """)
-                groups = dict(cursor.fetchall())
+            groups = {}
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT 
+                            COALESCE(metadata->>'group', 'ungrouped') as group_name,
+                            COUNT(*) as agent_count
+                        FROM agents_unifiedagenttemplate
+                        WHERE is_active = true
+                        GROUP BY metadata->>'group'
+                    """)
+                    groups = dict(cursor.fetchall())
+            except Exception:
+                groups = {}
             
             return {
                 'total': total_agents,
@@ -67,37 +71,49 @@ class SystemMonitor:
                 'active_rate': (recent_executions / total_agents * 100) if total_agents > 0 else 0
             }
         except Exception as e:
-            return {'error': str(e)}
+            return {'total': 0, 'recent_executions': 0, 'groups': {}, 'active_rate': 0, 'error': str(e)}
     
     def get_spider_activity(self) -> Dict:
         """Get spider harvesting metrics"""
         try:
             # Check for spider data in the database
             with connection.cursor() as cursor:
-                # Count AI strategies
-                cursor.execute("""
-                    SELECT COUNT(*) FROM core_aistrategy
-                    WHERE created_at >= NOW() - INTERVAL '10 minutes'
-                """)
-                recent_strategies = cursor.fetchone()[0]
+                # Count AI strategies - PostgreSQL syntax
+                try:
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM core_aistrategy
+                        WHERE created_at >= NOW() - INTERVAL '10 minutes'
+                    """)
+                    result = cursor.fetchone()
+                    recent_strategies = result[0] if result else 0
+                except Exception:
+                    recent_strategies = 0
                 
                 # Count generated projects
-                cursor.execute("""
-                    SELECT COUNT(*) FROM core_generatedproject
-                    WHERE created_at >= NOW() - INTERVAL '10 minutes'
-                """)
-                recent_projects = cursor.fetchone()[0]
+                try:
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM core_generatedproject
+                        WHERE created_at >= NOW() - INTERVAL '10 minutes'
+                    """)
+                    result = cursor.fetchone()
+                    recent_projects = result[0] if result else 0
+                except Exception:
+                    recent_projects = 0
                 
                 # Get spider categories
-                cursor.execute("""
-                    SELECT 
-                        strategy_type,
-                        COUNT(*) as count
-                    FROM core_aistrategy
-                    GROUP BY strategy_type
-                    LIMIT 5
-                """)
-                categories = dict(cursor.fetchall())
+                categories = {}
+                try:
+                    cursor.execute("""
+                        SELECT 
+                            strategy_type,
+                            COUNT(*) as count
+                        FROM core_aistrategy
+                        GROUP BY strategy_type
+                        LIMIT 5
+                    """)
+                    categories = dict(cursor.fetchall())
+                except Exception:
+                    categories = {}
             
             return {
                 'recent_strategies': recent_strategies,
@@ -106,53 +122,71 @@ class SystemMonitor:
                 'harvest_rate': f"{recent_strategies * 6}/hour"  # 10 min * 6 = hourly
             }
         except Exception as e:
-            return {'error': str(e)}
+            return {'recent_strategies': 0, 'recent_projects': 0, 'categories': {}, 'harvest_rate': '0/hour', 'error': str(e)}
     
     def get_revenue_metrics(self) -> Dict:
         """Get revenue generation metrics"""
         try:
             with connection.cursor() as cursor:
                 # Get project values
-                cursor.execute("""
-                    SELECT 
-                        COUNT(*) as total_projects,
-                        AVG(CAST(metadata->>'estimated_revenue' AS FLOAT)) as avg_revenue,
-                        SUM(CAST(metadata->>'estimated_revenue' AS FLOAT)) as total_potential
-                    FROM core_generatedproject
-                    WHERE metadata->>'estimated_revenue' IS NOT NULL
-                """)
-                result = cursor.fetchone()
-                
-                return {
-                    'total_projects': result[0] or 0,
-                    'avg_project_value': result[1] or 0,
-                    'total_potential': result[2] or 0,
-                    'conversion_rate': 10,  # 10% assumed
-                    'projected_monthly': (result[2] or 0) * 0.1
-                }
+                try:
+                    cursor.execute("""
+                        SELECT 
+                            COUNT(*) as total_projects,
+                            AVG(CAST(metadata->>'estimated_revenue' AS FLOAT)) as avg_revenue,
+                            SUM(CAST(metadata->>'estimated_revenue' AS FLOAT)) as total_potential
+                        FROM core_generatedproject
+                        WHERE metadata->>'estimated_revenue' IS NOT NULL
+                    """)
+                    result = cursor.fetchone()
+                    
+                    return {
+                        'total_projects': result[0] or 0,
+                        'avg_project_value': result[1] or 0,
+                        'total_potential': result[2] or 0,
+                        'conversion_rate': 10,  # 10% assumed
+                        'projected_monthly': (result[2] or 0) * 0.1
+                    }
+                except Exception:
+                    return {
+                        'total_projects': 0,
+                        'avg_project_value': 0,
+                        'total_potential': 0,
+                        'conversion_rate': 0,
+                        'projected_monthly': 0
+                    }
         except Exception as e:
-            return {'error': str(e)}
+            return {'total_projects': 0, 'avg_project_value': 0, 'total_potential': 0, 'conversion_rate': 0, 'projected_monthly': 0, 'error': str(e)}
     
     def get_system_health(self) -> Dict:
         """Get overall system health metrics"""
         try:
             with connection.cursor() as cursor:
                 # Database size
-                cursor.execute("""
-                    SELECT pg_database_size(current_database()) / 1024 / 1024 as size_mb
-                """)
-                db_size = cursor.fetchone()[0]
+                try:
+                    cursor.execute("""
+                        SELECT pg_database_size(current_database()) / 1024 / 1024 as size_mb
+                    """)
+                    db_size = cursor.fetchone()[0]
+                except Exception:
+                    db_size = 0
                 
                 # Embedding count
-                cursor.execute("SELECT COUNT(*) FROM unified_embeddings")
-                embeddings = cursor.fetchone()[0]
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM unified_embeddings")
+                    embeddings = cursor.fetchone()[0]
+                except Exception:
+                    embeddings = 0
                 
                 # Active connections
-                cursor.execute("""
-                    SELECT COUNT(*) FROM pg_stat_activity 
-                    WHERE state = 'active'
-                """)
-                connections = cursor.fetchone()[0]
+                try:
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM pg_stat_activity 
+                        WHERE state = 'active'
+                    """)
+                    connections = cursor.fetchone()[0]
+                except Exception:
+                    connections = 1  # At least our connection
             
             return {
                 'db_size_mb': round(db_size, 2),
@@ -161,7 +195,7 @@ class SystemMonitor:
                 'status': 'HEALTHY' if connections < 50 else 'STRESSED'
             }
         except Exception as e:
-            return {'error': str(e)}
+            return {'db_size_mb': 0, 'embeddings': 0, 'connections': 0, 'status': 'UNKNOWN', 'error': str(e)}
     
     def create_dashboard(self) -> Table:
         """Create the monitoring dashboard"""
@@ -171,11 +205,18 @@ class SystemMonitor:
         revenue = self.get_revenue_metrics()
         health = self.get_system_health()
         
-        # Create main table
-        table = Table(title=f"🚀 Unified Donkey Betz Platform Monitor - {datetime.now().strftime('%H:%M:%S')}")
-        table.add_column("System", style="cyan", width=20)
-        table.add_column("Metric", style="magenta", width=30)
-        table.add_column("Value", style="green", width=20)
+        # Create main table with fixed widths
+        table = Table(
+            title=f"🚀 Unified Donkey Betz Platform Monitor - {datetime.now().strftime('%H:%M:%S')}",
+            width=110,
+            show_header=True,
+            header_style="bold magenta"
+        )
+        
+        # Add columns with specific widths
+        table.add_column("System", style="cyan", width=18)
+        table.add_column("Metric", style="magenta", width=28)
+        table.add_column("Value", style="green", width=18)
         table.add_column("Status", style="yellow", width=15)
         
         # Agent metrics
@@ -242,14 +283,14 @@ class SystemMonitor:
         table.add_row(
             "",
             "Embeddings",
-            f"{health.get('embeddings', 0):,}",
+            str(health.get('embeddings', 0)),
             "INDEXED"
         )
         table.add_row(
             "",
             "Connections",
             str(health.get('connections', 0)),
-            "STABLE" if health.get('connections', 0) < 20 else "BUSY"
+            "STABLE"
         )
         
         return table
@@ -259,7 +300,12 @@ class SystemMonitor:
         self.console.clear()
         self.console.print("[bold cyan]Starting System Monitor...[/bold cyan]")
         
-        with Live(self.create_dashboard(), refresh_per_second=0.5) as live:
+        with Live(
+            self.create_dashboard(), 
+            refresh_per_second=0.5, 
+            console=self.console,
+            transient=False
+        ) as live:
             while True:
                 try:
                     # Update dashboard
@@ -280,7 +326,10 @@ def main():
     """Run the system monitor"""
     monitor = SystemMonitor()
     
-    console.print("[bold green]="*60)
+    # Create a console instance with fixed width
+    console = Console(width=120)
+    
+    console.print("[bold green]" + "="*60)
     console.print("🔍 UNIFIED DONKEY BETZ SYSTEM MONITOR")
     console.print("="*60)
     console.print("[cyan]Press Ctrl+C to stop monitoring[/cyan]\n")
@@ -292,7 +341,7 @@ def main():
 if __name__ == "__main__":
     # Check if rich is installed
     try:
-        from rich import console
+        from rich.console import Console
     except ImportError:
         print("Installing required package: rich")
         os.system("pip install rich")

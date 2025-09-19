@@ -252,26 +252,6 @@ class LLMEnforcer:
             'cost': cost
         }
 
-
-    def generate_completion(self, prompt, max_tokens=500, temperature=0.7, agent_name="Agent"):
-        """
-        Compatibility method for executors expecting generate_completion
-        Maps to enforce_real_ai internally
-        """
-        result = self.enforce_real_ai(
-            prompt=prompt,
-            agent_name=agent_name,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            task_type="content"
-        )
-        
-        # Return just the response text for compatibility
-        if result['success']:
-            return result['response']
-        else:
-            return result.get('response', f"Error: {result.get('error', 'Unknown error')}")
-
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get usage statistics"""
         return {
