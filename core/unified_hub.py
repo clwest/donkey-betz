@@ -31,7 +31,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         super().__init__(*args, **kwargs)
         self.component_type = None
         self.update_task = None
-        self.update_interval = 5  # seconds
+        self.update_interval = 30  # seconds - reduced frequency to avoid flooding
         # BRIDGE CONNECTION
         self.bridge = get_system_bridge()
 
