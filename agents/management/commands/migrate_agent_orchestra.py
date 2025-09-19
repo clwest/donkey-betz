@@ -208,7 +208,7 @@ class Command(BaseCommand):
                 'system_prompt': template_data.get('system_prompt', ''),
                 'personality_traits': template_data.get('personality_traits', {}),
                 'llm_provider': template_data.get('llm_provider', 'openai'),
-                'llm_model': template_data.get('llm_model', 'gpt-4'),
+                'llm_model': template_data.get('llm_model', 'gpt-5-mini'),
                 'llm_config': template_data.get('llm_config', {}),
                 'routing_keywords': routing_keywords,
                 'routing_patterns': [],

@@ -214,7 +214,7 @@ class RealDataOrchestrator:
         # Configure decision parameters
         decision_config = {
             'mode': 'production',
-            'ai_models': ['gpt-4', 'claude-3', 'gemini-pro'],
+            'ai_models': ['gpt-5-mini', 'claude-3', 'gemini-pro'],
             'decision_threshold': 0.75,
             'auto_execute': True,
             'risk_tolerance': 'balanced'

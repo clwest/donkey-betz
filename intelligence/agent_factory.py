@@ -263,7 +263,7 @@ class UnifiedAgentFactory:
 
                     # Call GPT-5-mini for real processing
                     response = self.client.chat.completions.create(
-                        model="gpt-4o-mini",  # GPT-4o-mini (stable and reliable)
+                        model="gpt-5-mini",  # GPT-5-mini for intelligent processing
                         messages=[
                             {
                                 "role": "system",
@@ -275,8 +275,8 @@ class UnifiedAgentFactory:
                                 "content": prompt
                             }
                         ],
-                        max_tokens=2000,  # GPT-4o-mini token parameter
-                        temperature=0.7,  # Optimal for GPT-4o-mini
+                        max_completion_tokens=2000,  # GPT-4o-mini token parameter
+                        # temperature=0.7  # GPT-5 only supports default temperature,  # Optimal for GPT-4o-mini
                         # GPT-4o-mini - no special reasoning parameters needed
                     )
 

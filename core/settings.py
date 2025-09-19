@@ -297,20 +297,20 @@ AI_CONFIG = {
         'gpt-5': 272000,
         'gpt-5-mini': 272000,
         'gpt-5-nano': 272000,
-        'gpt-4': 128000,
-        'gpt-3.5-turbo': 16385
+        'gpt-5-mini': 128000,
+        'gpt-5-nano': 16385
     },
     'MAX_OUTPUT_TOKENS': {
         'gpt-5': 128000,
         'gpt-5-mini': 128000,
         'gpt-5-nano': 128000,
-        'gpt-4': 4096,
-        'gpt-3.5-turbo': 4096
+        'gpt-5-mini': 4096,
+        'gpt-5-nano': 4096
     },
     # Prompt Caching
     'ENABLE_PROMPT_CACHING': True,
     'PROMPT_CACHE_TTL': 300,
-    'GPT5_FALLBACK_MODEL': 'gpt-4',
+    'GPT5_FALLBACK_MODEL': 'gpt-5-mini',
     'ENABLE_GPT5_MIGRATION': True,
 }
 
@@ -594,15 +594,27 @@ if not DEBUG:
     X_FRAME_OPTIONS = env('X_FRAME_OPTIONS', 'DENY')
     
     # Cookie Security
-    SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', True)
-    SESSION_COOKIE_HTTPONLY = env_bool('SESSION_COOKIE_HTTPONLY', True)
-    SESSION_COOKIE_SAMESITE = env('SESSION_COOKIE_SAMESITE', 'Strict')
+    # For local development, we need to allow WebSocket cookies to work properly
+    if DEBUG:
+        SESSION_COOKIE_SECURE = False  # Allow cookies over HTTP in development
+        SESSION_COOKIE_HTTPONLY = True
+        SESSION_COOKIE_SAMESITE = 'Lax'  # Allow cookies in WebSocket connections
+    else:
+        SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', True)
+        SESSION_COOKIE_HTTPONLY = env_bool('SESSION_COOKIE_HTTPONLY', True)
+        SESSION_COOKIE_SAMESITE = env('SESSION_COOKIE_SAMESITE', 'Strict')
     SESSION_COOKIE_AGE = env_int('SESSION_COOKIE_AGE', 1209600)  # 2 weeks
     SESSION_EXPIRE_AT_BROWSER_CLOSE = env_bool('SESSION_EXPIRE_AT_BROWSER_CLOSE', False)
     
-    CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', True)
-    CSRF_COOKIE_HTTPONLY = env_bool('CSRF_COOKIE_HTTPONLY', True)
-    CSRF_COOKIE_SAMESITE = env('CSRF_COOKIE_SAMESITE', 'Strict')
+    # CSRF Cookie Security
+    if DEBUG:
+        CSRF_COOKIE_SECURE = False  # Allow CSRF cookies over HTTP in development
+        CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access in development for WebSocket
+        CSRF_COOKIE_SAMESITE = 'Lax'  # Allow CSRF cookies in WebSocket connections
+    else:
+        CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', True)
+        CSRF_COOKIE_HTTPONLY = env_bool('CSRF_COOKIE_HTTPONLY', True)
+        CSRF_COOKIE_SAMESITE = env('CSRF_COOKIE_SAMESITE', 'Strict')
     CSRF_USE_SESSIONS = env_bool('CSRF_USE_SESSIONS', False)
     
     # Content Security Policy (CSP)

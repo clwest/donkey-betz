@@ -69,8 +69,8 @@ def test_gpt5_directly():
     except Exception as e:
         print(f"❌ Error without token limit: {e}")
 
-    # Test 3: Try with temperature=0
-    print("\n📝 Test 3: With temperature=0...")
+    # Test 3: Try with # temperature=0  # GPT-5 only supports default temperature
+    print("\n📝 Test 3: With # temperature=0...  # GPT-5 only supports default temperature")
     try:
         response = client.chat.completions.create(
             model="gpt-5",
@@ -79,7 +79,7 @@ def test_gpt5_directly():
                 {"role": "user", "content": "Write a 3-step plan to learn Python programming."}
             ],
             max_completion_tokens=200,
-            temperature=0
+            # temperature=0  # GPT-5 only supports default temperature
         )
 
         content = response.choices[0].message.content
@@ -87,18 +87,18 @@ def test_gpt5_directly():
         print(f"   Content: {content[:200] if content else 'None'}")
         print(f"   Length: {len(content) if content else 0} characters")
     except Exception as e:
-        print(f"❌ Error with temperature=0: {e}")
+        print(f"❌ Error with # temperature=0  # GPT-5 only supports default temperature: {e}")
 
     # Test 4: Try the fallback to GPT-4
     print("\n📝 Test 4: Testing GPT-4o as comparison...")
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "Write a 3-step plan to learn Python programming."}
             ],
-            max_tokens=200
+            max_completion_tokens=200
         )
 
         content = response.choices[0].message.content

@@ -358,7 +358,7 @@ class UserProfile(models.Model):
         ('gpt-5', 'GPT-5'),
         ('gpt-5-mini', 'GPT-5 Mini'),
         ('gpt-5-nano', 'GPT-5 Nano'),
-        ('gpt-4', 'GPT-4'),
+        ('gpt-5-mini', 'GPT-4'),
         ('claude-3-sonnet', 'Claude 3 Sonnet'),
     ]
     

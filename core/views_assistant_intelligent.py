@@ -397,7 +397,7 @@ def _process_with_intelligent_routing(user, message: str, context: str,
                 return {
                     'message': agent_result['content'],
                     'provider': agent_result.get('provider', 'openai'),
-                    'model': agent_result.get('model', 'gpt-4'),
+                    'model': agent_result.get('model', 'gpt-5-mini'),
                     'token_usage': agent_result.get('token_usage', {}),
                     'generation_time_ms': agent_result.get('generation_time_ms', 0),
                     'quality_score': quality_analysis['quality_score'],

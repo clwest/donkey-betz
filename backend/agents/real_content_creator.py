@@ -59,13 +59,12 @@ class RealContentCreatorAgent:
 
             # Generate the content
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-5-nano",  # Fast content generation
                 messages=[
                     {"role": "system", "content": "You are a professional content writer creating high-quality, sellable content."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
-                max_tokens=1500
+                max_completion_tokens=1500
             )
 
             content = response.choices[0].message.content
@@ -133,13 +132,12 @@ class RealContentCreatorAgent:
             """
 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-5-nano",  # Fast content generation
                 messages=[
                     {"role": "system", "content": "You are a technical writer creating professional documentation."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.5,
-                max_tokens=2000
+                max_completion_tokens=2000
             )
 
             content = response.choices[0].message.content
@@ -199,13 +197,12 @@ class RealContentCreatorAgent:
             """
 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-5-nano",  # Fast content generation
                 messages=[
                     {"role": "system", "content": f"You are a social media expert creating content for {platform}."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.8,
-                max_tokens=1000
+                max_completion_tokens=1000
             )
 
             content = response.choices[0].message.content

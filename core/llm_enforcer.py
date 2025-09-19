@@ -119,12 +119,12 @@ class LLMEnforcer:
                 # Use Claude
                 response = self._call_claude(full_prompt, max_tokens, temperature)
                 provider = "anthropic"
-                model = "claude-3-haiku"
+                model = "claude-3-haiku"  # Keep Claude as alternative
             elif self.openai_client:
                 # Use OpenAI
                 response = self._call_openai(full_prompt, max_tokens, temperature, task_type)
                 provider = "openai"
-                model = "gpt-3.5-turbo"
+                model = "gpt-5-nano"  # Fast and efficient
             else:
                 raise Exception("No LLM client available")
 
@@ -198,20 +198,26 @@ class LLMEnforcer:
 
         system_msg = system_messages.get(task_type, system_messages['general'])
 
-        response = self.openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
+        # Build parameters for GPT-5 models
+        # GPT-5 models only support default temperature (1.0)
+        params = {
+            'model': "gpt-5-nano",  # Using GPT-5-nano for fast operations
+            'messages': [
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
+            'max_completion_tokens': max_tokens  # GPT-5 uses max_completion_tokens
+        }
+
+        # Note: GPT-5 models only support temperature=1.0 (default)
+        # Omitting temperature parameter to use default value
+
+        response = self.openai_client.chat.completions.create(**params)
 
         content = response.choices[0].message.content
         tokens = response.usage.total_tokens
 
-        # Estimate cost (GPT-3.5-turbo pricing)
+        # Estimate cost (GPT-5-nano pricing)
         cost = (response.usage.prompt_tokens * 0.0005 + response.usage.completion_tokens * 0.0015) / 1000
 
         return {

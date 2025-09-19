@@ -96,12 +96,12 @@ class OpenAIProvider(BaseAIProvider):
             'gpt-5-nano': {'input': 0.05, 'output': 0.40},
             'gpt-5-chat-latest': {'input': 1.25, 'output': 10.0},
             # GPT-4 Models (kept for fallback)
-            'gpt-4': {'input': 0.03, 'output': 0.06},
-            'gpt-4-turbo': {'input': 0.01, 'output': 0.03},
-            'gpt-4-turbo-preview': {'input': 0.01, 'output': 0.03},
-            'gpt-4o': {'input': 0.005, 'output': 0.015},
-            'gpt-3.5-turbo': {'input': 0.001, 'output': 0.002},
-            'gpt-3.5-turbo-16k': {'input': 0.003, 'output': 0.004},
+            'gpt-5-mini': {'input': 0.03, 'output': 0.06},
+            'gpt-5-mini': {'input': 0.01, 'output': 0.03},
+            'gpt-5-mini': {'input': 0.01, 'output': 0.03},
+            'gpt-5-mini': {'input': 0.005, 'output': 0.015},
+            'gpt-5-nano': {'input': 0.001, 'output': 0.002},
+            'gpt-5-nano': {'input': 0.003, 'output': 0.004},
         }
     
     def _initialize_client(self):
@@ -135,7 +135,7 @@ class OpenAIProvider(BaseAIProvider):
             
             # Handle GPT-5 models differently - they have different parameters
             try:
-                if 'gpt-4o' in model.lower():
+                if 'gpt-5-mini' in model.lower():
                     # GPT-4o models use standard parameters
                     completion_params["max_tokens"] = config.get('max_tokens', 4000)
                     completion_params["temperature"] = config.get('temperature', 0.7)
@@ -237,7 +237,7 @@ class OpenAIProvider(BaseAIProvider):
                 logger.warning(f"Empty content after all processing for {model}")
 
                 # For GPT-4o models, provide helpful guidance
-                if 'gpt-4o' in model.lower():
+                if 'gpt-5-mini' in model.lower():
                     logger.error(f"GPT-4o failed to generate content - retrying with fallback")
                     content = ""  # Don't show error message, let fallback handle it
                 else:
@@ -255,7 +255,7 @@ class OpenAIProvider(BaseAIProvider):
                             retry_response = self.client.chat.completions.create(
                                 model=model,
                                 messages=messages,
-                                max_tokens=300
+                                max_completion_tokens=300
                             )
                         content = retry_response.choices[0].message.content or ""
                         if content:
@@ -289,12 +289,12 @@ class OpenAIProvider(BaseAIProvider):
             'gpt-5-mini',
             'gpt-5-nano',
             'gpt-5-chat-latest',
-            'gpt-4o',
-            'gpt-4-turbo-preview', 
-            'gpt-4-turbo',
-            'gpt-4',
-            'gpt-3.5-turbo',
-            'gpt-3.5-turbo-16k'
+            'gpt-5-mini',
+            'gpt-5-mini', 
+            'gpt-5-mini',
+            'gpt-5-mini',
+            'gpt-5-nano',
+            'gpt-5-nano'
         ]
     
     def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:

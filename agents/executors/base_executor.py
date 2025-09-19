@@ -475,7 +475,7 @@ class BaseAgentExecutor(ABC):
 
     async def call_openai_api(self,
                              prompt: str,
-                             model: str = "gpt-4",
+                             model: str = "gpt-5-mini",
                              max_tokens: int = 1000,
                              temperature: float = 0.7) -> Dict[str, Any]:
         """Make OpenAI API call with cost tracking"""
@@ -488,7 +488,7 @@ class BaseAgentExecutor(ABC):
                 lambda: self.api_clients['openai'].chat.completions.create(
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=max_tokens,
+                    max_completion_tokens=max_tokens,
                     temperature=temperature
                 )
             )

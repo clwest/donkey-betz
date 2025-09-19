@@ -166,7 +166,7 @@ Always prioritize code quality, user experience, and professional-grade function
             },
             
             'fallback_provider': 'openai',
-            'fallback_model': 'gpt-4-turbo-preview',
+            'fallback_model': 'gpt-5-mini',
             
             'routing_keywords': [
                 # Betting & Sports

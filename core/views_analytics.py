@@ -204,7 +204,7 @@ def model_performance_analytics(request):
         'success': True,
         'performance_metrics': {
             'models': {
-                'gpt-4': {
+                'gpt-5-mini': {
                     'avg_response_time': 2.3,
                     'success_rate': 97.8,
                     'cost_per_1k_tokens': 0.06,
@@ -218,7 +218,7 @@ def model_performance_analytics(request):
                     'quality_score': 8.9,
                     'usage_share': 28.7
                 },
-                'gpt-3.5-turbo': {
+                'gpt-5-nano': {
                     'avg_response_time': 0.9,
                     'success_rate': 94.2,
                     'cost_per_1k_tokens': 0.002,

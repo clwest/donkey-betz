@@ -263,7 +263,7 @@ class AgentRegistry:
                 system_prompt=agent_config.get('system_prompt', ''),
                 routing_keywords=agent_config.get('routing_keywords', []),
                 llm_provider=agent_config.get('llm_provider', 'openai'),
-                llm_model=agent_config.get('llm_model', 'gpt-4'),
+                llm_model=agent_config.get('llm_model', 'gpt-5-mini'),
                 llm_config=agent_config.get('llm_config', {}),
                 is_active=True
             )
@@ -299,8 +299,10 @@ class AgentRegistry:
             execution.status = AgentStatus.INITIALIZING
             execution.save()
 
-            self.logger.info(f"Initiated execution of agent {agent_name} (ID: {execution.id})")
-            return str(execution.id)
+            # Convert UUID to string for JSON serialization
+            execution_id_str = str(execution.id)
+            self.logger.info(f"Initiated execution of agent {agent_name} (ID: {execution_id_str})")
+            return execution_id_str
 
         except UnifiedAgentTemplate.DoesNotExist:
             self.logger.error(f"Agent {agent_name} not found")

@@ -137,7 +137,7 @@ Original system prompt:
                 config = generation.template.generation_config
             else:
                 provider = generation.generation_config.get('llm_provider', 'openai')
-                model = generation.generation_config.get('llm_model', 'gpt-4-turbo-preview')
+                model = generation.generation_config.get('llm_model', 'gpt-5-mini')
                 config = generation.generation_config
             
             # Generate content using AI provider

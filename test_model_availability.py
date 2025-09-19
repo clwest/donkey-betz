@@ -26,7 +26,7 @@ try:
         print(f"  - {model}")
 
     # Test each model we think exists
-    test_models = ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo', 'gpt-5-mini', 'gpt-5', 'gpt-5-nano']
+    test_models = ['gpt-5-mini', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-mini', 'gpt-5', 'gpt-5-nano']
 
     print(f"\n🧪 Testing each model with minimal request:")
     for model in test_models:
@@ -35,7 +35,7 @@ try:
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": "Hi"}],
-                max_tokens=10
+                max_completion_tokens=10
             )
             content = response.choices[0].message.content
             print(f"  ✅ Success: '{content}'")

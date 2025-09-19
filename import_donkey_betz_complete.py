@@ -138,7 +138,7 @@ class DonkeyBetzAgentParser:
                         llm_match = re.search(r'- \*\*LLM Provider\*\*: (.+?)(?:\n|$)', agent_content)
                         llm_info = llm_match.group(1) if llm_match else "OpenAI (gpt-4)"
                         llm_provider = "anthropic" if "anthropic" in llm_info.lower() or "claude" in llm_info.lower() else "openai"
-                        llm_model = "gpt-4" if "gpt-4" in llm_info.lower() else "gpt-3.5-turbo"
+                        llm_model = "gpt-5-mini" if "gpt-5-mini" in llm_info.lower() else "gpt-5-nano"
                         
                         agent_data = {
                             'name': agent_name,

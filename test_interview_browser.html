@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interview WebSocket Test</title>
+</head>
+<body>
+    <h1>Interview WebSocket Test</h1>
+    <div id="status">Connecting...</div>
+    <button id="startBtn">Start Interview</button>
+    <input type="text" id="responseInput" placeholder="Your response">
+    <button id="sendBtn">Send Response</button>
+    <div id="messages"></div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8000/ws/interview/');
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+
+        ws.onopen = () => {
+            status.textContent = 'Connected ✅';
+            console.log('WebSocket connected');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log('Received:', data);
+
+            const msg = document.createElement('div');
+            msg.style.margin = '10px 0';
+            msg.style.padding = '10px';
+            msg.style.background = '#f0f0f0';
+            msg.innerHTML = `<strong>${data.type}:</strong> ${JSON.stringify(data.data || data, null, 2)}`;
+            messages.appendChild(msg);
+        };
+
+        ws.onerror = (error) => {
+            status.textContent = 'Error ❌';
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            status.textContent = 'Disconnected ❌';
+            console.log('WebSocket closed');
+        };
+
+        document.getElementById('startBtn').onclick = () => {
+            const message = {
+                type: 'start_interview',
+                data: {
+                    interview_type: 'comprehensive',
+                    session_id: `test-${Date.now()}`
+                }
+            };
+            console.log('Sending:', message);
+            ws.send(JSON.stringify(message));
+        };
+
+        document.getElementById('sendBtn').onclick = () => {
+            const response = document.getElementById('responseInput').value;
+            const message = {
+                type: 'interview_response',
+                data: {
+                    response: response,
+                    session_id: `test-${Date.now()}`
+                }
+            };
+            console.log('Sending:', message);
+            ws.send(JSON.stringify(message));
+        };
+    </script>
+</body>
+</html>

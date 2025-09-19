@@ -106,7 +106,7 @@ Please provide a helpful response.''',
                             {"role": "system", "content": test['system']},
                             {"role": "user", "content": test['user']}
                         ],
-                        max_tokens=100
+                        max_completion_tokens=100
                     )
                     
                     print(f"   Raw response type: {type(raw_response)}")

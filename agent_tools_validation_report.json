@@ -1,0 +1,59 @@
+{
+  "validation_timestamp": "2025-09-19T03:50:08.421283",
+  "total_components_tested": 3,
+  "violations_found": 2,
+  "real_data_confirmations": 3,
+  "overall_status": "FAIL",
+  "test_results": {
+    "opportunities_api": {
+      "http://localhost:8000/api/opportunities/": {
+        "status_code": 200,
+        "real_indicators": 5,
+        "mock_indicators": 2,
+        "data_type": "REAL"
+      }
+    },
+    "file_creation": {
+      "can_create_files": true,
+      "test_file_size": 151,
+      "test_file_path": "test_file_creation/agent_test_file.md",
+      "status": "FILE_CREATION_WORKING"
+    },
+    "web_search": {
+      "available_modules": [
+        "requests",
+        "aiohttp"
+      ],
+      "web_connectivity": true,
+      "test_response": true,
+      "status": "WEB_SEARCH_AVAILABLE"
+    }
+  },
+  "violations": [
+    {
+      "component": "live_job_scraper",
+      "issue": "Spider execution failed: Cannot run the event loop while another loop is running",
+      "severity": "CRITICAL"
+    },
+    {
+      "component": "agent_executors",
+      "issue": "Agent executor test failed: Apps aren't loaded yet.",
+      "severity": "HIGH"
+    }
+  ],
+  "real_data_detected": [
+    {
+      "component": "opportunities_api",
+      "evidence": "APIs returning real data indicators"
+    },
+    {
+      "component": "file_creation",
+      "evidence": "Successfully created file: test_file_creation/agent_test_file.md"
+    },
+    {
+      "component": "web_search",
+      "evidence": "Web connectivity confirmed for real-time data"
+    }
+  ],
+  "recommendations": []
+}

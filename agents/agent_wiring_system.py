@@ -388,7 +388,7 @@ class UnifiedAgentWiringSystem:
                 "routing_keywords": self._extract_keywords(agent_name),
                 "system_prompt": self._generate_system_prompt(agent_name, config),
                 "llm_provider": "openai",
-                "llm_model": "gpt-4",
+                "llm_model": "gpt-5-mini",
                 "llm_config": {
                     "temperature": 0.7,
                     "max_tokens": 2000

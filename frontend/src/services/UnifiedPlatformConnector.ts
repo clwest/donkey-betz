@@ -9,6 +9,7 @@ interface WebSocketMessage {
   source?: string;
   target?: string;
   timestamp?: string;
+  routed_to?: string[];
 }
 
 interface ComponentContext {
@@ -56,7 +57,15 @@ class UnifiedPlatformConnector {
    */
   public async connect(component: string): Promise<boolean> {
     try {
-      const wsUrl = this.getWebSocketUrl(component);
+      let wsUrl = this.getWebSocketUrl(component);
+
+      // Add authentication token to WebSocket URL
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        const separator = wsUrl.includes('?') ? '&' : '?';
+        wsUrl = `${wsUrl}${separator}token=${authToken}`;
+      }
+
       console.log(`🔌 Connecting ${component} to Unified Hub at ${wsUrl}`);
 
       this.ws = new WebSocket(wsUrl);
@@ -164,6 +173,17 @@ class UnifiedPlatformConnector {
   }
 
   private routeMessage(message: WebSocketMessage) {
+    // Prevent infinite loops by tracking message routing
+    if (message.routed_to) {
+      console.log(`⚠️ Message ${message.type} already routed to ${message.routed_to.join(',')}, skipping duplicate routing`);
+      return;
+    }
+
+    // Check if this is an interview message
+    const isInterviewMessage = message.data?.is_interview === true ||
+                               ['interview_started', 'interview_question', 'interview_completed', 'interview_error'].includes(message.type);
+
+    // Always route to registered handlers (including interview handlers)
     const handlers = this.messageHandlers.get(message.type) || [];
     handlers.forEach(handler => {
       try {
@@ -174,12 +194,23 @@ class UnifiedPlatformConnector {
       }
     });
 
-    // Component-specific routing
+    // Only perform component routing for non-interview messages
+    if (isInterviewMessage) {
+      console.log(`🎙️ Interview message detected (${message.type}), skipping component routing`);
+      return; // Don't do component routing for interview messages
+    }
+
+    // Component-specific routing with loop prevention
     switch (message.type) {
       case 'opportunities_analysis':
       case 'opportunities_update':
-        this.forwardToComponent('income_builder', message);
-        this.forwardToComponent('personal_assistant', message);
+        // Only route if not already routed to prevent infinite loops
+        if (!message.routed_to || !message.routed_to.includes('income_builder')) {
+          this.forwardToComponent('income_builder', message);
+        }
+        if (!message.routed_to || !message.routed_to.includes('personal_assistant')) {
+          this.forwardToComponent('personal_assistant', message);
+        }
         break;
 
       case 'profile_updated':
@@ -187,27 +218,63 @@ class UnifiedPlatformConnector {
         break;
 
       case 'spider_results':
-        this.forwardToComponent('job_tracker', message);
-        this.forwardToComponent('income_builder', message);
+        if (!message.routed_to || !message.routed_to.includes('job_tracker')) {
+          this.forwardToComponent('job_tracker', message);
+        }
+        if (!message.routed_to || !message.routed_to.includes('income_builder')) {
+          this.forwardToComponent('income_builder', message);
+        }
         break;
 
       case 'decision_ready':
-        this.forwardToComponent('decision_command', message);
+        if (!message.routed_to || !message.routed_to.includes('decision_command')) {
+          this.forwardToComponent('decision_command', message);
+        }
         break;
 
       case 'revenue_generated':
-        this.forwardToComponent('revenue_dashboard', message);
+        if (!message.routed_to || !message.routed_to.includes('revenue_dashboard')) {
+          this.forwardToComponent('revenue_dashboard', message);
+        }
         break;
 
       case 'pipeline_response':
         this.handlePipelineResponse(message.data);
         break;
+
+      case 'start_interview':
+        this.handleStartInterview(message.data);
+        break;
+
+      case 'interview_response':
+        this.handleInterviewResponse(message.data);
+        break;
     }
   }
 
   private forwardToComponent(targetComponent: string, message: WebSocketMessage) {
-    // This would forward to component-specific handlers
-    console.log(`🔄 Forwarding ${message.type} to ${targetComponent}`);
+    // Track routing to prevent infinite loops
+    if (!message.routed_to) {
+      message.routed_to = [];
+    }
+
+    if (message.routed_to.includes(targetComponent)) {
+      console.log(`⚠️ Message ${message.type} already routed to ${targetComponent}, skipping`);
+      return;
+    }
+
+    message.routed_to.push(targetComponent);
+    console.log(`🔄 Forwarding ${message.type} to ${targetComponent} (routed to: ${message.routed_to.join(', ')})`);
+
+    // Forward to component-specific handlers
+    const componentHandlers = this.messageHandlers.get(`${targetComponent}_${message.type}`) || [];
+    componentHandlers.forEach(handler => {
+      try {
+        handler(message.data || message);
+      } catch (error) {
+        console.error(`Error in ${targetComponent} handler for ${message.type}:`, error);
+      }
+    });
   }
 
   private async syncProfileUpdate(profileData: any) {
@@ -452,6 +519,103 @@ class UnifiedPlatformConnector {
    */
   public onConnected(callback: () => void): void {
     this.connectionCallbacks.push(callback);
+  }
+
+  /**
+   * Interview System Methods
+   */
+  private handleStartInterview(data: any) {
+    console.log('🎙️ Starting Personal AI Assistant interview:', data);
+
+    // Broadcast interview start to interested components
+    this.send({
+      type: 'interview_started',
+      source: 'platform_connector',
+      data: {
+        session_id: data.session_id || `interview-${Date.now()}`,
+        user_id: data.user_id,
+        interview_type: data.interview_type || 'comprehensive',
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+
+  private handleInterviewResponse(data: any) {
+    console.log('💬 Interview response received:', data);
+
+    // Route interview responses to personal assistant
+    this.send({
+      type: 'process_interview_response',
+      source: 'platform_connector',
+      target: 'personal_assistant',
+      data: {
+        ...data,
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+
+  /**
+   * Start Personal AI Assistant interview
+   */
+  public startPersonalAssistantInterview(interviewType: 'quick' | 'comprehensive' = 'comprehensive', userId?: string): void {
+    console.log(`🎙️ Initiating ${interviewType} Personal AI Assistant interview`);
+
+    this.send({
+      type: 'start_interview',
+      source: 'platform_connector',
+      target: 'personal_assistant',
+      data: {
+        interview_type: interviewType,
+        user_id: userId,
+        session_id: `interview-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        questions_mode: interviewType === 'quick' ? 'essential_only' : 'comprehensive',
+        expected_duration: interviewType === 'quick' ? '30_seconds' : '10_minutes',
+        capabilities: {
+          skills_discovery: true,
+          experience_analysis: true,
+          goals_capture: true,
+          preferences_mapping: true,
+          personality_insights: true
+        }
+      }
+    });
+  }
+
+  /**
+   * Process interview response
+   */
+  public processInterviewResponse(sessionId: string, response: string, questionId?: string): void {
+    this.send({
+      type: 'interview_response',
+      source: 'platform_connector',
+      data: {
+        session_id: sessionId,
+        response: response,
+        question_id: questionId,
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+
+  /**
+   * Complete interview and build profile
+   */
+  public completeInterview(sessionId: string, responses: any[]): void {
+    console.log('✅ Completing Personal AI Assistant interview');
+
+    this.send({
+      type: 'complete_interview',
+      source: 'platform_connector',
+      target: 'personal_assistant',
+      data: {
+        session_id: sessionId,
+        all_responses: responses,
+        completion_timestamp: new Date().toISOString(),
+        build_profile: true,
+        activate_personalization: true
+      }
+    });
   }
 
   /**

@@ -243,7 +243,7 @@ class SystemIntegrationOrchestrator:
                     capabilities=agent.get('capabilities', []),
                     metadata={
                         "specialization": agent.get('specialization', 'general'),
-                        "llm_model": agent.get('llm_model', 'gpt-4'),
+                        "llm_model": agent.get('llm_model', 'gpt-5-mini'),
                         "is_active": agent.get('is_active', True),
                         "is_verified": agent.get('is_verified', False)
                     }

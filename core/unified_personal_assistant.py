@@ -221,7 +221,7 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
 
             response = ai_provider.generate_content(
                 provider='openai',
-                model='gpt-4',
+                model='gpt-5-mini',
                 system_prompt=enhanced_prompt,
                 user_prompt=message,
                 config={'max_tokens': 500, 'temperature': 0.7}
