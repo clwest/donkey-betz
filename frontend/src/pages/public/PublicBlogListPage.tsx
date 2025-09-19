@@ -170,7 +170,7 @@ export function PublicBlogListPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
       </div>
     );
@@ -219,22 +219,22 @@ export function PublicBlogListPage() {
         siteName="Donkey Betz"
       />
       
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-dark-800 border-b border-dark-700">
+      <header className="bg-card border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="text-center mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-4xl font-bold text-white">Our Blog</h1>
+              <h1 className="text-4xl font-bold text-foreground">Our Blog</h1>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-foreground rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <DocumentTextIcon className="h-4 w-4" />
                 Donkey Betz
               </button>
             </div>
-            <p className="text-xl text-gray-300">
+            <p className="text-xl text-muted-foreground">
               Discover insights, stories, and knowledge from our content creators
             </p>
           </div>
@@ -244,13 +244,13 @@ export function PublicBlogListPage() {
             {/* Main Search Bar */}
             <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
               <div className="relative flex-1 max-w-lg">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search blogs..."
-                  className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -259,7 +259,7 @@ export function PublicBlogListPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'popular')}
-                  className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -271,8 +271,8 @@ export function PublicBlogListPage() {
                   onClick={() => setShowFilters(!showFilters)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
                     showFilters || selectedCategory || selectedTag
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                      ? 'bg-primary-500 text-foreground'
+                      : 'bg-dark-700 text-muted-foreground hover:bg-dark-600'
                   }`}
                 >
                   <FunnelIcon className="h-4 w-4" />
@@ -288,16 +288,16 @@ export function PublicBlogListPage() {
 
             {/* Advanced Filters Panel */}
             {showFilters && (
-              <div className="bg-dark-800/50 rounded-lg p-4 border border-dark-700">
+              <div className="bg-card/50 rounded-lg p-4 border border-border">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-white">Advanced Filters</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Advanced Filters</h3>
                   <button
                     onClick={() => {
                       setSelectedCategory(null);
                       setSelectedTag(null);
                       setShowFilters(false);
                     }}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
@@ -306,14 +306,14 @@ export function PublicBlogListPage() {
                 <div className="space-y-4">
                   {/* Categories */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">Categories</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Categories</h4>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setSelectedCategory(null)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
                           selectedCategory === null
-                            ? 'bg-primary-500 text-white'
-                            : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                            ? 'bg-primary-500 text-foreground'
+                            : 'bg-dark-700 text-muted-foreground hover:bg-dark-600'
                         }`}
                       >
                         All Categories
@@ -325,7 +325,7 @@ export function PublicBlogListPage() {
                           className={`flex items-center gap-1 px-3 py-1 text-sm rounded-full transition-colors ${
                             selectedCategory === category.id
                               ? `${category.bgColor} ${category.color} ring-1 ring-current`
-                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                              : 'bg-dark-700 text-muted-foreground hover:bg-dark-600'
                           }`}
                         >
                           <span>{category.icon}</span>
@@ -338,14 +338,14 @@ export function PublicBlogListPage() {
 
                   {/* Tags */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">Popular Tags</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Popular Tags</h4>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setSelectedTag(null)}
                         className={`px-3 py-1 text-sm rounded-full transition-colors ${
                           selectedTag === null
-                            ? 'bg-primary-500 text-white'
-                            : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                            ? 'bg-primary-500 text-foreground'
+                            : 'bg-dark-700 text-muted-foreground hover:bg-dark-600'
                         }`}
                       >
                         All Tags
@@ -356,8 +356,8 @@ export function PublicBlogListPage() {
                           onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
                           className={`px-3 py-1 text-sm rounded-full transition-colors ${
                             selectedTag === tag
-                              ? 'bg-primary-500 text-white'
-                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                              ? 'bg-primary-500 text-foreground'
+                              : 'bg-dark-700 text-muted-foreground hover:bg-dark-600'
                           }`}
                         >
                           {tag}
@@ -372,11 +372,11 @@ export function PublicBlogListPage() {
             {/* Active Filters Display */}
             {(selectedCategory || selectedTag) && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-400">Active filters:</span>
+                <span className="text-muted-foreground">Active filters:</span>
                 {selectedCategory && (
                   <span className="flex items-center gap-1 px-2 py-1 bg-primary-500/20 text-primary-300 rounded-full">
                     {getCategoryById(selectedCategory)?.icon} {getCategoryById(selectedCategory)?.name}
-                    <button onClick={() => setSelectedCategory(null)} className="hover:text-white">
+                    <button onClick={() => setSelectedCategory(null)} className="hover:text-foreground">
                       <XMarkIcon className="h-3 w-3" />
                     </button>
                   </span>
@@ -384,7 +384,7 @@ export function PublicBlogListPage() {
                 {selectedTag && (
                   <span className="flex items-center gap-1 px-2 py-1 bg-primary-500/20 text-primary-300 rounded-full">
                     #{selectedTag}
-                    <button onClick={() => setSelectedTag(null)} className="hover:text-white">
+                    <button onClick={() => setSelectedTag(null)} className="hover:text-foreground">
                       <XMarkIcon className="h-3 w-3" />
                     </button>
                   </span>
@@ -399,11 +399,11 @@ export function PublicBlogListPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {filteredAndSortedBlogs.length === 0 ? (
           <div className="text-center py-16">
-            <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-400 mb-2">
+            <DocumentTextIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-muted-foreground mb-2">
               {searchQuery || selectedTag || selectedCategory ? 'No blogs found' : 'No blogs published yet'}
             </h2>
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {searchQuery || selectedTag || selectedCategory
                 ? 'Try adjusting your search or filter criteria' 
                 : 'Check back soon for new content!'}
@@ -415,7 +415,7 @@ export function PublicBlogListPage() {
               <article
                 key={blog.id}
                 onClick={() => handleBlogClick(blog.id)}
-                className="bg-dark-800 rounded-lg overflow-hidden hover:bg-dark-700 transition-all cursor-pointer group border border-dark-700 hover:border-primary-500/50"
+                className="bg-card rounded-lg overflow-hidden hover:bg-dark-700 transition-all cursor-pointer group border border-border hover:border-primary-500/50"
               >
                 <div className="p-6">
                   {/* Category Badge */}
@@ -432,15 +432,15 @@ export function PublicBlogListPage() {
                     </div>
                   )}
 
-                  <h2 className="text-xl font-semibold text-white mb-3 group-hover:text-primary-300 transition-colors line-clamp-2">
+                  <h2 className="text-xl font-semibold text-foreground mb-3 group-hover:text-primary-300 transition-colors line-clamp-2">
                     {stripMarkdown(blog.title)}
                   </h2>
                   
-                  <p className="text-gray-300 text-sm mb-4 line-clamp-3 leading-relaxed">
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-3 leading-relaxed">
                     {stripMarkdown(blog.meta_description || blog.preview)}
                   </p>
 
-                  <div className="flex items-center gap-4 text-xs text-gray-400 mb-4">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
                     <div className="flex items-center gap-1">
                       <CalendarIcon className="h-3 w-3" />
                       {formatDate(blog.created_at)}
@@ -478,7 +478,7 @@ export function PublicBlogListPage() {
                         </span>
                       ))}
                       {blog.tags.length > 3 && (
-                        <span className="px-2 py-1 text-xs bg-gray-700 text-gray-400 rounded">
+                        <span className="px-2 py-1 text-xs bg-gray-700 text-muted-foreground rounded">
                           +{blog.tags.length - 3}
                         </span>
                       )}
@@ -486,9 +486,9 @@ export function PublicBlogListPage() {
                   )}
                 </div>
 
-                <div className="px-6 py-3 bg-dark-900/50 border-t border-dark-700">
+                <div className="px-6 py-3 bg-background/50 border-t border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400 capitalize">
+                    <span className="text-xs text-muted-foreground capitalize">
                       {blog.tone} • {blog.length}
                     </span>
                     <span className="text-xs text-primary-400 group-hover:text-primary-300">
@@ -503,7 +503,7 @@ export function PublicBlogListPage() {
 
         {/* Stats */}
         {filteredAndSortedBlogs.length > 0 && (
-          <div className="mt-12 text-center text-gray-400 text-sm">
+          <div className="mt-12 text-center text-muted-foreground text-sm">
             Showing {filteredAndSortedBlogs.length} of {blogs.length} blog posts
           </div>
         )}

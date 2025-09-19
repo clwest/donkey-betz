@@ -49,13 +49,13 @@ export const QuickLogin: React.FC = () => {
 
   return (
     <div className="mt-4 space-y-2">
-      <p className="text-sm text-gray-600 dark:text-gray-400">Quick Login:</p>
+      <p className="text-sm text-gray-600 dark:text-muted-foreground">Quick Login:</p>
       
       <div className="flex gap-2">
         <button
           onClick={() => quickLogin('testuser', 'testpass123')}
           disabled={isLoading}
-          className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+          className="px-3 py-1 text-sm bg-blue-500 text-foreground rounded hover:bg-blue-600 disabled:opacity-50"
         >
           Test User
         </button>
@@ -63,7 +63,7 @@ export const QuickLogin: React.FC = () => {
         <button
           onClick={() => quickLogin('demo', 'demo123')}
           disabled={isLoading}
-          className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+          className="px-3 py-1 text-sm bg-green-500 text-foreground rounded hover:bg-green-600 disabled:opacity-50"
         >
           Demo User
         </button>
@@ -71,7 +71,7 @@ export const QuickLogin: React.FC = () => {
         <button
           onClick={() => quickLogin('admin', 'admin123')}
           disabled={isLoading}
-          className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+          className="px-3 py-1 text-sm bg-purple-500 text-foreground rounded hover:bg-purple-600 disabled:opacity-50"
         >
           Admin
         </button>
@@ -82,7 +82,7 @@ export const QuickLogin: React.FC = () => {
       )}
       
       {isLoading && (
-        <p className="text-sm text-gray-500">Logging in...</p>
+        <p className="text-sm text-muted-foreground">Logging in...</p>
       )}
     </div>
   );

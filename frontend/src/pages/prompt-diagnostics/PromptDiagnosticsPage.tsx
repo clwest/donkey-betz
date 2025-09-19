@@ -96,7 +96,7 @@ export default function PromptDiagnosticsPage() {
   return (
     <div className="min-h-screen bg-black">
       {/* Gaming Header */}
-      <div className="border-b-2 border-purple-800/50 bg-gray-900/80">
+      <div className="border-b-2 border-purple-800/50 bg-background/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
@@ -110,14 +110,14 @@ export default function PromptDiagnosticsPage() {
             <div className="flex space-x-3">
               <Button
                 onClick={() => setActiveTab('templates')}
-                className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 text-purple-400 font-mono uppercase tracking-wider transition-all duration-300 flex items-center"
+                className="bg-background/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 text-purple-400 font-mono uppercase tracking-wider transition-all duration-300 flex items-center"
               >
                 <DocumentTextIcon className="h-4 w-4 mr-2 animate-pulse" />
                 TEMPLATES
               </Button>
               <Button
                 onClick={() => setActiveTab('analyzer')}
-                className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 text-cyan-400 font-mono uppercase tracking-wider transition-all duration-300 flex items-center"
+                className="bg-background/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 text-cyan-400 font-mono uppercase tracking-wider transition-all duration-300 flex items-center"
               >
                 <PlusIcon className="h-4 w-4 mr-2 animate-pulse" />
                 NEURAL SCAN
@@ -128,7 +128,7 @@ export default function PromptDiagnosticsPage() {
       </div>
 
       {/* Gaming Navigation Tabs */}
-      <div className="border-b-2 border-purple-800/50 bg-gray-900/80">
+      <div className="border-b-2 border-purple-800/50 bg-background/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
             {tabs.map((tab) => {
@@ -152,7 +152,7 @@ export default function PromptDiagnosticsPage() {
                       ml-2 py-0.5 px-2 rounded text-xs font-mono font-bold border
                       ${activeTab === tab.id
                         ? 'bg-cyan-900/50 text-cyan-400 border-cyan-400/50 animate-pulse'
-                        : 'bg-gray-900/50 text-purple-400 border-purple-400/50'
+                        : 'bg-background/50 text-purple-400 border-purple-400/50'
                       }
                     `}>
                       {tab.count}
@@ -177,10 +177,10 @@ export default function PromptDiagnosticsPage() {
             ) : dashboardError ? (
               <div className="text-center py-12">
                 <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">
                   Failed to load dashboard
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground dark:text-muted-foreground">
                   Please try refreshing the page
                 </p>
               </div>
@@ -211,7 +211,7 @@ export default function PromptDiagnosticsPage() {
         {activeTab === 'history' && (
           <div className="space-y-6">
             {/* Gaming Search Bar */}
-            <Card className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 p-4">
+            <Card className="bg-background/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 p-4">
               <div className="flex items-center space-x-4">
                 <div className="flex-1 relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-cyan-400 animate-pulse" />
@@ -223,7 +223,7 @@ export default function PromptDiagnosticsPage() {
                     className="w-full pl-10 pr-4 py-3 bg-black/50 border-2 border-gray-800/50 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-400 text-cyan-400 font-mono placeholder-purple-400/70 transition-all duration-300"
                   />
                 </div>
-                <Button className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 text-purple-400 font-mono uppercase tracking-wider transition-all duration-300">
+                <Button className="bg-background/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 text-purple-400 font-mono uppercase tracking-wider transition-all duration-300">
                   FILTER
                 </Button>
               </div>
@@ -237,7 +237,7 @@ export default function PromptDiagnosticsPage() {
             ) : analysesData?.analyses?.length ? (
               <div className="grid gap-4">
                 {analysesData.analyses?.map((analysis) => (
-                  <Card key={analysis.id} className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 p-6">
+                  <Card key={analysis.id} className="bg-background/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
@@ -253,13 +253,13 @@ export default function PromptDiagnosticsPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                           <div>
                             <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">Token Efficiency</p>
-                            <p className="text-lg font-bold text-green-400 font-mono glow-text-sm">
+                            <p className="text-lg font-bold text-green-500 font-mono glow-text-sm">
                               {analysis.token_reduction_percentage?.toFixed(1)}%
                             </p>
                           </div>
                           <div>
                             <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">Neural Clarity</p>
-                            <p className="text-lg font-bold text-blue-400 font-mono glow-text-sm">
+                            <p className="text-lg font-bold text-blue-500 font-mono glow-text-sm">
                               {analysis.clarity_score?.toFixed(1)}/100
                             </p>
                           </div>

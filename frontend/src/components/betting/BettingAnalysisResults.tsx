@@ -21,7 +21,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAgentOrchestraStore } from '../../store/agentOrchestraStore';
 import type { Game } from '../../features/sports/api/sports';
-import '../../styles/gaming-theme.css';
 
 interface BettingAnalysisResultsProps {
   game: Game;
@@ -180,7 +179,7 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
       case 'team_analysis':
         return 'text-cyan-400 border-cyan-400/30 bg-cyan-400/5';
       case 'kelly_calculation':
-        return 'text-green-400 border-green-400/30 bg-green-400/5';
+        return 'text-green-500 border-green-400/30 bg-green-400/5';
       case 'risk_assessment':
         return 'text-orange-400 border-orange-400/30 bg-orange-400/5';
       case 'market_analysis':
@@ -191,29 +190,29 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
   const getStatusIcon = (status: AnalysisResult['status']) => {
     switch (status) {
       case 'completed':
-        return <CheckCircleIcon className="w-4 h-4 text-green-400" />;
+        return <CheckCircleIcon className="w-4 h-4 text-green-500" />;
       case 'running':
-        return <ClockIcon className="w-4 h-4 text-yellow-400 animate-spin" />;
+        return <ClockIcon className="w-4 h-4 text-yellow-500 animate-spin" />;
       case 'failed':
-        return <XCircleIcon className="w-4 h-4 text-red-400" />;
+        return <XCircleIcon className="w-4 h-4 text-red-500" />;
       default:
-        return <ClockIcon className="w-4 h-4 text-gray-400" />;
+        return <ClockIcon className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
   if (analysisResults.length === 0) {
     return (
-      <Card className={`gaming-card ${className}`}>
-        <div className="gaming-border-glow"></div>
+      <Card className={`bg-card ${className}`}>
+        <div className="bg-card"></div>
         <div className="p-6">
-          <h3 className="text-lg font-bold gaming-text-primary mb-4 flex items-center gap-2 border-b border-gaming-border pb-3">
-            <SparklesIcon className="w-5 h-5 text-yellow-400" />
+          <h3 className="text-lg font-bold bg-card mb-4 flex items-center gap-2 border-b border-bg-card pb-3">
+            <SparklesIcon className="w-5 h-5 text-yellow-500" />
             AI ANALYSIS RESULTS
           </h3>
-          <div className="text-center py-8 gaming-text-secondary">
+          <div className="text-center py-8 bg-card">
             <BoltIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm mb-2">No analysis results yet</p>
-            <p className="text-xs gaming-text-accent">
+            <p className="text-xs bg-card">
               Click "Analyze Teams" or "Kelly Analysis" to generate insights
             </p>
           </div>
@@ -223,13 +222,13 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
   }
 
   return (
-    <Card className={`gaming-card ${className}`}>
-      <div className="gaming-border-glow"></div>
+    <Card className={`bg-card ${className}`}>
+      <div className="bg-card"></div>
       <div className="p-6">
-        <h3 className="text-lg font-bold gaming-text-primary mb-6 flex items-center gap-2 border-b border-gaming-border pb-3">
-          <SparklesIcon className="w-5 h-5 text-yellow-400" />
+        <h3 className="text-lg font-bold bg-card mb-6 flex items-center gap-2 border-b border-bg-card pb-3">
+          <SparklesIcon className="w-5 h-5 text-yellow-500" />
           AI ANALYSIS RESULTS
-          <Badge className="ml-auto gaming-status text-xs">
+          <Badge className="ml-auto bg-card text-xs">
             {analysisResults.filter(r => r.status === 'completed').length} COMPLETED
           </Badge>
         </h3>
@@ -238,7 +237,7 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
           {analysisResults.map(result => (
             <div
               key={result.id}
-              className={`gaming-card-inner border-2 p-4 transition-all duration-300 ${getTypeColor(result.type)}`}
+              className={`bg-card border-2 p-4 transition-all duration-300 ${getTypeColor(result.type)}`}
             >
               {/* Result Header */}
               <div className="flex items-start justify-between mb-3">
@@ -246,10 +245,10 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
                   <div className="flex items-center gap-2">
                     {getTypeIcon(result.type)}
                     <div>
-                      <div className="font-bold gaming-text-primary text-sm">
+                      <div className="font-bold bg-card text-sm">
                         {result.agentName}
                       </div>
-                      <div className="gaming-text-secondary text-xs">
+                      <div className="bg-card text-xs">
                         {result.timestamp.toLocaleTimeString()}
                       </div>
                     </div>
@@ -261,7 +260,7 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
                   onClick={() => toggleExpanded(result.id)}
                   variant="ghost"
                   size="sm"
-                  className="gaming-btn p-1"
+                  className="bg-card p-1"
                 >
                   {expandedResults.has(result.id) ? (
                     <ChevronUpIcon className="w-4 h-4" />
@@ -278,25 +277,25 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
                   {(result.content.winProbability || result.content.recommendedBet) && (
                     <div className="grid grid-cols-2 gap-3">
                       {result.content.winProbability && (
-                        <div className="gaming-card p-3 border border-gaming-border/30">
-                          <div className="text-xs gaming-text-secondary mb-1">WIN PROBABILITY</div>
-                          <div className="text-xl font-bold gaming-text-neon flex items-center gap-2">
+                        <div className="bg-card p-3 border border-bg-card/30">
+                          <div className="text-xs bg-card mb-1">WIN PROBABILITY</div>
+                          <div className="text-xl font-bold bg-card flex items-center gap-2">
                             {result.content.winProbability}%
                             {result.content.winProbability > 50 ? (
-                              <ArrowTrendingUpIcon className="w-4 h-4 text-green-400" />
+                              <ArrowTrendingUpIcon className="w-4 h-4 text-green-500" />
                             ) : (
-                              <ArrowTrendingDownIcon className="w-4 h-4 text-red-400" />
+                              <ArrowTrendingDownIcon className="w-4 h-4 text-red-500" />
                             )}
                           </div>
                         </div>
                       )}
                       
                       {result.content.recommendedBet && (
-                        <div className="gaming-card p-3 border border-gaming-border/30">
-                          <div className="text-xs gaming-text-secondary mb-1">RECOMMENDED BET</div>
+                        <div className="bg-card p-3 border border-bg-card/30">
+                          <div className="text-xs bg-card mb-1">RECOMMENDED BET</div>
                           <div className="text-xl font-bold text-cyan-400 flex items-center gap-2">
                             ${result.content.recommendedBet.amount.toFixed(0)}
-                            <span className="text-xs gaming-text-accent">
+                            <span className="text-xs bg-card">
                               ({result.content.recommendedBet.percentage.toFixed(1)}%)
                             </span>
                           </div>
@@ -306,22 +305,22 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
                   )}
 
                   {/* Summary Text */}
-                  <div className="gaming-text-primary text-sm">
+                  <div className="bg-card text-sm">
                     {result.content.summary}
                   </div>
 
                   {/* Expanded Details */}
                   {expandedResults.has(result.id) && (
-                    <div className="mt-4 pt-4 border-t border-gaming-border/30 space-y-3">
+                    <div className="mt-4 pt-4 border-t border-bg-card/30 space-y-3">
                       {/* Key Factors */}
                       {result.content.keyFactors && result.content.keyFactors.length > 0 && (
                         <div>
-                          <div className="text-xs font-bold gaming-text-accent mb-2">KEY FACTORS</div>
+                          <div className="text-xs font-bold bg-card mb-2">KEY FACTORS</div>
                           <div className="space-y-1">
                             {result.content.keyFactors.map((factor, idx) => (
                               <div key={idx} className="flex items-start gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0"></div>
-                                <div className="gaming-text-secondary text-xs">{factor}</div>
+                                <div className="bg-card text-xs">{factor}</div>
                               </div>
                             ))}
                           </div>
@@ -331,9 +330,9 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
                       {/* Detailed Analysis */}
                       {result.content.detailedAnalysis && (
                         <div>
-                          <div className="text-xs font-bold gaming-text-accent mb-2">FULL ANALYSIS</div>
-                          <div className="gaming-card p-3 border border-gaming-border/20 max-h-64 overflow-y-auto">
-                            <pre className="gaming-text-secondary text-xs whitespace-pre-wrap font-mono">
+                          <div className="text-xs font-bold bg-card mb-2">FULL ANALYSIS</div>
+                          <div className="bg-card p-3 border border-bg-card/20 max-h-64 overflow-y-auto">
+                            <pre className="bg-card text-xs whitespace-pre-wrap font-mono">
                               {result.content.detailedAnalysis}
                             </pre>
                           </div>
@@ -346,15 +345,15 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
 
               {/* Running Status */}
               {result.status === 'running' && (
-                <div className="flex items-center gap-2 gaming-text-secondary text-sm">
-                  <div className="gaming-loading w-4 h-4"></div>
+                <div className="flex items-center gap-2 bg-card text-sm">
+                  <div className="bg-card w-4 h-4"></div>
                   <span>Analyzing {game.away_team_name} vs {game.home_team_name}...</span>
                 </div>
               )}
 
               {/* Error State */}
               {result.status === 'failed' && (
-                <div className="text-red-400 text-sm">
+                <div className="text-red-500 text-sm">
                   {result.error || 'Analysis failed'}
                 </div>
               )}
@@ -363,7 +362,7 @@ export function BettingAnalysisResults({ game, className }: BettingAnalysisResul
         </div>
 
         {/* Analysis Summary Footer */}
-        <div className="mt-4 pt-4 border-t border-gaming-border/30 flex items-center justify-between text-xs gaming-text-secondary">
+        <div className="mt-4 pt-4 border-t border-bg-card/30 flex items-center justify-between text-xs bg-card">
           <span>🔬 ADVANCED AI ANALYSIS</span>
           <span className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>

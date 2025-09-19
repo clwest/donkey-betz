@@ -509,25 +509,25 @@ export function VideoGenerator() {
     <div className="space-y-6">
       {/* Mode Selection */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Video Generation Mode</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Mode</h3>
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => setMode('text2video')}
             className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
               mode === 'text2video'
                 ? 'border-primary-500 bg-primary-500/10'
-                : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                : 'border-border hover:border-dark-600 hover:bg-white/5'
             }`}
           >
             <VideoCameraIcon className={`h-6 w-6 mb-2 ${
-              mode === 'text2video' ? 'text-primary-400' : 'text-gray-400'
+              mode === 'text2video' ? 'text-primary-400' : 'text-muted-foreground'
             }`} />
             <div className={`font-medium ${
-              mode === 'text2video' ? 'text-white' : 'text-gray-300'
+              mode === 'text2video' ? 'text-foreground' : 'text-muted-foreground'
             }`}>
               Text to Video
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Generate video from text description
             </div>
           </button>
@@ -537,18 +537,18 @@ export function VideoGenerator() {
             className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
               mode === 'image2video'
                 ? 'border-primary-500 bg-primary-500/10'
-                : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                : 'border-border hover:border-dark-600 hover:bg-white/5'
             }`}
           >
             <PhotoIcon className={`h-6 w-6 mb-2 ${
-              mode === 'image2video' ? 'text-primary-400' : 'text-gray-400'
+              mode === 'image2video' ? 'text-primary-400' : 'text-muted-foreground'
             }`} />
             <div className={`font-medium ${
-              mode === 'image2video' ? 'text-white' : 'text-gray-300'
+              mode === 'image2video' ? 'text-foreground' : 'text-muted-foreground'
             }`}>
               Image to Video
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Animate an existing image
             </div>
           </button>
@@ -558,12 +558,12 @@ export function VideoGenerator() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Generation Panel */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Generate Video</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Generate Video</h3>
           <div className="space-y-4">
             {/* Image Upload for Image2Video */}
             {mode === 'image2video' && (
               <div className="space-y-3">
-                <label className="block text-sm text-gray-400 mb-2">Source Image</label>
+                <label className="block text-sm text-muted-foreground mb-2">Source Image</label>
                 
                 {/* Selected Gallery Image or Uploaded Image Preview */}
                 {(selectedGalleryImage || imageFile) ? (
@@ -579,12 +579,12 @@ export function VideoGenerator() {
                           setSelectedGalleryImage(null);
                           setImageFile(null);
                         }}
-                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs"
                       >
                         ✕
                       </button>
                     </div>
-                    <p className="text-sm text-gray-400 text-center">
+                    <p className="text-sm text-muted-foreground text-center">
                       {selectedGalleryImage ? selectedGalleryImage.title || 'Gallery Image' : imageFile?.name}
                     </p>
                   </div>
@@ -605,11 +605,11 @@ export function VideoGenerator() {
                     
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="p-4 border-2 border-dashed border-dark-700 rounded-lg hover:border-dark-600 transition-colors text-center"
+                      className="p-4 border-2 border-dashed border-border rounded-lg hover:border-dark-600 transition-colors text-center"
                     >
                       <div>
-                        <PhotoIcon className="h-6 w-6 mx-auto mb-1 text-gray-500" />
-                        <p className="text-xs text-gray-400">Upload Image</p>
+                        <PhotoIcon className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Upload Image</p>
                       </div>
                     </button>
                   </div>
@@ -625,7 +625,7 @@ export function VideoGenerator() {
                 
                 {/* Public URL Input */}
                 <div className="mt-4">
-                  <label className="block text-sm text-gray-400 mb-2">
+                  <label className="block text-sm text-muted-foreground mb-2">
                     Or use a Public Image URL
                   </label>
                   <input
@@ -635,7 +635,7 @@ export function VideoGenerator() {
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     ✅ Gallery images and public URLs both work! Local images are automatically converted.
                   </p>
                 </div>
@@ -644,7 +644,7 @@ export function VideoGenerator() {
 
             {/* Prompt */}
             <div>
-              <label className="block text-sm text-gray-400 mb-2">
+              <label className="block text-sm text-muted-foreground mb-2">
                 {mode === 'text2video' ? 'Video Description' : 'Motion Description'}
               </label>
               <textarea
@@ -661,7 +661,7 @@ export function VideoGenerator() {
             {/* Style Selection */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm text-gray-400">Visual Style</label>
+                <label className="block text-sm text-muted-foreground">Visual Style</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -676,7 +676,7 @@ export function VideoGenerator() {
                   className="flex items-center gap-2 px-3 py-1 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors"
                 >
                   <SparklesIcon className="h-4 w-4 text-primary-400" />
-                  <span className="text-xs font-medium text-gray-300">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {useImageStyles ? 'Use 54 Image Styles' : 'Use Video Styles'}
                   </span>
                 </button>
@@ -692,18 +692,18 @@ export function VideoGenerator() {
                       className={`p-3 rounded-lg border-2 transition-all duration-200 text-left ${
                         style === styleOption.id
                           ? 'border-primary-500 bg-primary-500/10'
-                          : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                          : 'border-border hover:border-dark-600 hover:bg-white/5'
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-lg">{styleOption.icon}</span>
                         <span className={`font-medium text-sm ${
-                          style === styleOption.id ? 'text-white' : 'text-gray-300'
+                          style === styleOption.id ? 'text-foreground' : 'text-muted-foreground'
                         }`}>
                           {styleOption.name}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {styleOption.desc}
                       </p>
                     </button>
@@ -740,15 +740,15 @@ export function VideoGenerator() {
                       </div>
                       {selectedImageStyle && (
                         <div className="p-3 bg-dark-700 rounded-lg">
-                          <p className="text-xs text-gray-400 mb-1">Selected Style:</p>
-                          <p className="text-sm text-white font-medium">
+                          <p className="text-xs text-muted-foreground mb-1">Selected Style:</p>
+                          <p className="text-sm text-foreground font-medium">
                             {imageStyles.find(s => s.id === selectedImageStyle)?.name || selectedImageStyle}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {imageStyles.find(s => s.id === selectedImageStyle)?.description}
                           </p>
-                          <div className="mt-2 p-2 bg-dark-800 rounded">
-                            <p className="text-xs text-gray-400 mb-1">Style will add:</p>
+                          <div className="mt-2 p-2 bg-card rounded">
+                            <p className="text-xs text-muted-foreground mb-1">Style will add:</p>
                             <p className="text-xs text-primary-400 italic">
                               {imageStyles.find(s => s.id === selectedImageStyle)?.preview_prompt?.substring(0, 100)}...
                             </p>
@@ -758,7 +758,7 @@ export function VideoGenerator() {
                     </>
                   ) : (
                     <div className="p-4 bg-dark-700 rounded-lg text-center">
-                      <p className="text-sm text-gray-400">Loading image styles...</p>
+                      <p className="text-sm text-muted-foreground">Loading image styles...</p>
                     </div>
                   )}
                 </div>
@@ -768,7 +768,7 @@ export function VideoGenerator() {
             {/* Settings */}
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Duration</label>
+                <label className="block text-sm text-muted-foreground mb-2">Duration</label>
                 <select 
                   className="input"
                   value={duration}
@@ -780,7 +780,7 @@ export function VideoGenerator() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Quality</label>
+                <label className="block text-sm text-muted-foreground mb-2">Quality</label>
                 <select 
                   className="input"
                   value={quality}
@@ -792,7 +792,7 @@ export function VideoGenerator() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Motion</label>
+                <label className="block text-sm text-muted-foreground mb-2">Motion</label>
                 <select 
                   className="input"
                   value={motion}
@@ -806,11 +806,11 @@ export function VideoGenerator() {
             </div>
 
             {/* Intelligent Prompting Settings */}
-            <div className="space-y-4 border-t border-dark-700 pt-4">
+            <div className="space-y-4 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Intelligent Prompting</label>
-                  <p className="text-xs text-gray-500">AI enhances your prompts for better results</p>
+                  <label className="block text-sm text-muted-foreground mb-1">Intelligent Prompting</label>
+                  <p className="text-xs text-muted-foreground">AI enhances your prompts for better results</p>
                 </div>
                 <button
                   type="button"
@@ -829,15 +829,15 @@ export function VideoGenerator() {
 
               {enhancePrompt && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Enhancement Level</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Enhancement Level</label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setEnhancementLevel('basic')}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         enhancementLevel === 'basic'
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-dark-700 text-gray-400 hover:bg-dark-600 hover:text-gray-300'
+                          ? 'bg-primary-600 text-foreground'
+                          : 'bg-dark-700 text-muted-foreground hover:bg-dark-600 hover:text-muted-foreground'
                       }`}
                     >
                       Basic
@@ -847,8 +847,8 @@ export function VideoGenerator() {
                       onClick={() => setEnhancementLevel('advanced')}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         enhancementLevel === 'advanced'
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-dark-700 text-gray-400 hover:bg-dark-600 hover:text-gray-300'
+                          ? 'bg-primary-600 text-foreground'
+                          : 'bg-dark-700 text-muted-foreground hover:bg-dark-600 hover:text-muted-foreground'
                       }`}
                     >
                       Advanced
@@ -858,14 +858,14 @@ export function VideoGenerator() {
                       onClick={() => setEnhancementLevel('expert')}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         enhancementLevel === 'expert'
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-dark-700 text-gray-400 hover:bg-dark-600 hover:text-gray-300'
+                          ? 'bg-primary-600 text-foreground'
+                          : 'bg-dark-700 text-muted-foreground hover:bg-dark-600 hover:text-muted-foreground'
                       }`}
                     >
                       Expert
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     {enhancementLevel === 'basic' && 'Simple enhancements for clarity'}
                     {enhancementLevel === 'advanced' && 'Balanced optimization with context'}
                     {enhancementLevel === 'expert' && 'Maximum creativity and detail'}
@@ -875,11 +875,11 @@ export function VideoGenerator() {
             </div>
 
             {/* Voiceover Settings */}
-            <div className="space-y-4 border-t border-dark-700 pt-4">
+            <div className="space-y-4 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Add Voiceover</label>
-                  <p className="text-xs text-gray-500">Generate AI narration for your video</p>
+                  <label className="block text-sm text-muted-foreground mb-1">Add Voiceover</label>
+                  <p className="text-xs text-muted-foreground">Generate AI narration for your video</p>
                 </div>
                 <button
                   type="button"
@@ -900,7 +900,7 @@ export function VideoGenerator() {
                 <div className="space-y-4">
                   {/* Voiceover Script */}
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Narration Script</label>
+                    <label className="block text-sm text-muted-foreground mb-2">Narration Script</label>
                     <textarea
                       className="input min-h-[100px]"
                       placeholder="Enter the narration text for your video. This will be converted to speech and synced with your video..."
@@ -908,7 +908,7 @@ export function VideoGenerator() {
                       onChange={(e) => setVoiceoverScript(e.target.value)}
                     />
                     <div className="mt-2 flex items-center justify-between">
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {voiceoverScript.length} characters
                       </p>
                       <button
@@ -929,7 +929,7 @@ export function VideoGenerator() {
                   {/* Voice Selection */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Voice</label>
+                      <label className="block text-sm text-muted-foreground mb-2">Voice</label>
                       <select
                         className="input"
                         value={selectedVoice}
@@ -944,7 +944,7 @@ export function VideoGenerator() {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">Style</label>
+                      <label className="block text-sm text-muted-foreground mb-2">Style</label>
                       <select
                         className="input"
                         value={voiceStyle}
@@ -981,7 +981,7 @@ export function VideoGenerator() {
                             setVoiceoverUrl(null);
                             toast.info('Voiceover removed');
                           }}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-red-500 hover:text-red-300"
                         >
                           <XMarkIcon className="h-5 w-5" />
                         </button>
@@ -1006,32 +1006,32 @@ export function VideoGenerator() {
 
         {/* Status/Results Panel */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Generation Status</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Generation Status</h3>
           
           {/* Current Task */}
           {currentTask ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 {currentTask.status === 'PENDING' && (
-                  <ClockIcon className="h-5 w-5 text-yellow-400 animate-pulse" />
+                  <ClockIcon className="h-5 w-5 text-yellow-500 animate-pulse" />
                 )}
                 {currentTask.status === 'IN_PROGRESS' && (
                   <div className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full" />
                 )}
                 {currentTask.status === 'SUCCESS' && (
-                  <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
                 )}
                 {currentTask.status === 'FAILED' && (
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+                  <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
                 )}
                 <div>
-                  <p className="text-white font-medium">
+                  <p className="text-foreground font-medium">
                     {currentTask.status === 'PENDING' && 'Queued for processing...'}
                     {currentTask.status === 'IN_PROGRESS' && 'Generating video...'}
                     {currentTask.status === 'SUCCESS' && 'Video ready!'}
                     {currentTask.status === 'FAILED' && 'Generation failed'}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-muted-foreground">
                     Task ID: {currentTask.id}
                   </p>
                 </div>
@@ -1070,7 +1070,7 @@ export function VideoGenerator() {
             </div>
           ) : generatedVideos.length > 0 ? (
             <div className="space-y-4">
-              <h4 className="font-medium text-white">Recent Videos</h4>
+              <h4 className="font-medium text-foreground">Recent Videos</h4>
               {generatedVideos.slice(0, 3).map(video => (
                 <div key={video.id} className="space-y-2">
                   {video.video_url && (
@@ -1083,7 +1083,7 @@ export function VideoGenerator() {
                     </video>
                   )}
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(video.created_at).toLocaleString()}
                     </span>
                     {video.video_url && (
@@ -1101,7 +1101,7 @@ export function VideoGenerator() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <VideoCameraIcon className="h-12 w-12 mx-auto mb-2 text-gray-600" />
               <p>Generated videos will appear here</p>
               <p className="text-xs mt-1">Generation typically takes 5-10 minutes</p>
@@ -1113,13 +1113,13 @@ export function VideoGenerator() {
       {/* Gallery Modal */}
       {showGalleryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <div className="bg-card rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-dark-700">
-              <h3 className="text-xl font-semibold text-white">Select Image from Gallery</h3>
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h3 className="text-xl font-semibold text-foreground">Select Image from Gallery</h3>
               <button
                 onClick={() => setShowGalleryModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1132,7 +1132,7 @@ export function VideoGenerator() {
               {galleryLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin h-8 w-8 border-2 border-primary-400 border-t-transparent rounded-full"></div>
-                  <span className="ml-3 text-gray-400">Loading gallery...</span>
+                  <span className="ml-3 text-muted-foreground">Loading gallery...</span>
                 </div>
               ) : galleryImages.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -1152,7 +1152,7 @@ export function VideoGenerator() {
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-end">
                         <div className="p-2 w-full">
-                          <p className="text-white text-xs truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                          <p className="text-foreground text-xs truncate opacity-0 group-hover:opacity-100 transition-opacity">
                             {image.title || 'Untitled'}
                           </p>
                         </div>
@@ -1163,8 +1163,8 @@ export function VideoGenerator() {
               ) : (
                 <div className="text-center py-12">
                   <PhotoIcon className="h-12 w-12 mx-auto mb-4 text-gray-600" />
-                  <p className="text-gray-400 text-lg mb-2">No images in gallery</p>
-                  <p className="text-gray-500 text-sm">Generate some images first to use them for video creation!</p>
+                  <p className="text-muted-foreground text-lg mb-2">No images in gallery</p>
+                  <p className="text-muted-foreground text-sm">Generate some images first to use them for video creation!</p>
                 </div>
               )}
             </div>

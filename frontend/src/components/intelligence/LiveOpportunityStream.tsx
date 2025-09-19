@@ -128,7 +128,7 @@ export function LiveOpportunityStream() {
       case 'LOW': return 'text-green-500 border-green-500/30';
       case 'MEDIUM': return 'text-yellow-500 border-yellow-500/30';
       case 'HIGH': return 'text-red-500 border-red-500/30';
-      default: return 'text-gray-500 border-gray-500/30';
+      default: return 'text-muted-foreground border-gray-500/30';
     }
   };
 
@@ -147,13 +147,13 @@ export function LiveOpportunityStream() {
   return (
     <div className="space-y-6">
       {/* Scanner Status & Controls */}
-      <Card className="gaming-card border-blue-500/30">
+      <Card className="bg-card border-blue-500/30">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Activity className={`h-5 w-5 ${isScanning ? 'text-green-500 animate-pulse' : 'text-gray-500'}`} />
+              <Activity className={`h-5 w-5 ${isScanning ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
               Live Opportunity Scanner
-              <Badge className={`${isConnected ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+              <Badge className={`${isConnected ? 'bg-green-500' : 'bg-red-500'} text-foreground`}>
                 {isConnected ? 'ONLINE' : 'OFFLINE'}
               </Badge>
             </div>
@@ -176,34 +176,34 @@ export function LiveOpportunityStream() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-green-500">{filteredOpportunities.length}</p>
-              <p className="text-sm text-gray-400">Active Opportunities</p>
+              <p className="text-sm text-muted-foreground">Active Opportunities</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-500">
                 {filteredOpportunities.length > 0 ?
                   Math.max(...filteredOpportunities.map(o => o.edge)).toFixed(1) : '0.0'}%
               </p>
-              <p className="text-sm text-gray-400">Max Edge</p>
+              <p className="text-sm text-muted-foreground">Max Edge</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-purple-500">
                 ${filteredOpportunities.reduce((sum, opp) => sum + opp.profit_potential, 0).toLocaleString()}
               </p>
-              <p className="text-sm text-gray-400">Total Profit Potential</p>
+              <p className="text-sm text-muted-foreground">Total Profit Potential</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-yellow-500">
                 {filteredOpportunities.length > 0 ?
                   Math.min(...filteredOpportunities.map(o => o.time_window)) : 0}s
               </p>
-              <p className="text-sm text-gray-400">Min Time Window</p>
+              <p className="text-sm text-muted-foreground">Min Time Window</p>
             </div>
           </div>
 
           {/* Quick Filters */}
           <div className="flex items-center gap-2 text-sm">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-400">Filters:</span>
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Filters:</span>
             {settings.domains.map(domain => (
               <Badge key={domain} variant="outline" className="text-xs">
                 {DOMAIN_ICONS[domain as keyof typeof DOMAIN_ICONS]} {domain.replace('_', ' ')}
@@ -220,14 +220,14 @@ export function LiveOpportunityStream() {
       </Card>
 
       {/* Live Opportunities Stream */}
-      <Card className="gaming-card">
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-green-500" />
               Live Opportunities
               {filteredOpportunities.length > 0 && (
-                <Badge className="bg-green-500 text-white">
+                <Badge className="bg-green-500 text-foreground">
                   {filteredOpportunities.length}
                 </Badge>
               )}
@@ -244,7 +244,7 @@ export function LiveOpportunityStream() {
         <CardContent>
           <AnimatePresence>
             {filteredOpportunities.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-muted-foreground">
                 <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p className="text-lg mb-2">No opportunities match current filters</p>
                 <p className="text-sm">Scanner is actively monitoring {settings.domains.length} domains...</p>
@@ -275,13 +275,13 @@ export function LiveOpportunityStream() {
                       </Badge>
                     </div>
 
-                    <p className="text-sm text-gray-300 mb-3">{opportunity.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{opportunity.description}</p>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                       <div>
                         <div className="flex items-center gap-1 mb-1">
-                          <TrendingUp className="h-3 w-3 text-gray-400" />
-                          <span className="text-xs text-gray-400">Edge</span>
+                          <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Edge</span>
                         </div>
                         <p className={`font-bold text-lg ${getEdgeColor(opportunity.edge)}`}>
                           {opportunity.edge.toFixed(1)}%
@@ -289,8 +289,8 @@ export function LiveOpportunityStream() {
                       </div>
                       <div>
                         <div className="flex items-center gap-1 mb-1">
-                          <Target className="h-3 w-3 text-gray-400" />
-                          <span className="text-xs text-gray-400">Confidence</span>
+                          <Target className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Confidence</span>
                         </div>
                         <p className="font-bold text-lg">
                           {(opportunity.confidence * 100).toFixed(0)}%
@@ -298,8 +298,8 @@ export function LiveOpportunityStream() {
                       </div>
                       <div>
                         <div className="flex items-center gap-1 mb-1">
-                          <DollarSign className="h-3 w-3 text-gray-400" />
-                          <span className="text-xs text-gray-400">Profit Potential</span>
+                          <DollarSign className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Profit Potential</span>
                         </div>
                         <p className="font-bold text-lg text-green-500">
                           ${opportunity.profit_potential.toLocaleString()}
@@ -307,8 +307,8 @@ export function LiveOpportunityStream() {
                       </div>
                       <div>
                         <div className="flex items-center gap-1 mb-1">
-                          <Clock className="h-3 w-3 text-gray-400" />
-                          <span className="text-xs text-gray-400">Time Window</span>
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Time Window</span>
                         </div>
                         <p className="font-bold text-lg text-yellow-500">
                           {opportunity.time_window}s
@@ -317,7 +317,7 @@ export function LiveOpportunityStream() {
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t border-gray-700/50">
-                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>Created {new Date(opportunity.timestamp).toLocaleTimeString()}</span>
                         {opportunity.status === 'active' && (
                           <Badge className="bg-green-500/20 text-green-500 border-green-500/30">

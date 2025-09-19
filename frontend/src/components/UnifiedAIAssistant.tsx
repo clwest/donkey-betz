@@ -450,10 +450,10 @@ Would you like to explore any specific feature?`,
   };
 
   const getPersonalizationColor = (score: number): string => {
-    if (score < 0.3) return 'text-gray-400';
-    if (score < 0.6) return 'text-yellow-400';
-    if (score < 0.9) return 'text-blue-400';
-    return 'text-green-400';
+    if (score < 0.3) return 'text-muted-foreground';
+    if (score < 0.6) return 'text-yellow-500';
+    if (score < 0.9) return 'text-blue-500';
+    return 'text-green-500';
   };
 
   const getConfidenceIndicator = (confidence?: number): string => {
@@ -474,7 +474,7 @@ Would you like to explore any specific feature?`,
         onClick={() => setIsOpen(true)}
         className={`fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-xl z-50 hover:shadow-2xl transition-shadow ${className}`}
       >
-        <MessageCircle className="w-7 h-7 text-white" />
+        <MessageCircle className="w-7 h-7 text-foreground" />
         {context && context.personalization_score > 0 && (
           <motion.div
             animate={{ rotate: 360 }}
@@ -494,7 +494,7 @@ Would you like to explore any specific feature?`,
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="fixed bottom-4 right-4 bg-gray-800 rounded-xl p-4 shadow-xl z-50 flex items-center gap-3 border border-gray-700"
+        className="fixed bottom-4 right-4 bg-card rounded-xl p-4 shadow-xl z-50 flex items-center gap-3 border border-gray-700"
       >
         <div className="relative">
           <Bot className="w-6 h-6 text-purple-400" />
@@ -507,22 +507,22 @@ Would you like to explore any specific feature?`,
           </motion.div>
         </div>
         <div>
-          <span className="text-white font-medium">AI Assistant</span>
+          <span className="text-foreground font-medium">AI Assistant</span>
           {context && (
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-muted-foreground">
               Learning: {context.personalization_score ? (context.personalization_score * 100).toFixed(0) : '0'}%
             </div>
           )}
         </div>
         <button
           onClick={() => setIsMinimized(false)}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
         <button
           onClick={() => setIsOpen(false)}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <X className="w-4 h-4" />
         </button>
@@ -535,14 +535,14 @@ Would you like to explore any specific feature?`,
     <motion.div
       initial={{ opacity: 0, y: 100 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`fixed bottom-4 right-4 w-[480px] h-[720px] bg-gray-900 rounded-xl shadow-2xl z-50 flex flex-col border border-gray-700 ${className}`}
+      className={`fixed bottom-4 right-4 w-[480px] h-[720px] bg-background rounded-xl shadow-2xl z-50 flex flex-col border border-gray-700 ${className}`}
     >
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-t-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Bot className="w-6 h-6 text-white" />
+              <Bot className="w-6 h-6 text-foreground" />
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -552,26 +552,26 @@ Would you like to explore any specific feature?`,
               </motion.div>
             </div>
             <div>
-              <h3 className="text-white font-semibold flex items-center gap-2">
+              <h3 className="text-foreground font-semibold flex items-center gap-2">
                 Unified AI Assistant
                 <Zap className="w-4 h-4 text-yellow-300" />
               </h3>
               {context && (
                 <div className="flex items-center gap-2 text-xs">
                   <Brain className={`w-3 h-3 ${getPersonalizationColor(context.personalization_score || 0)}`} />
-                  <span className="text-white/80">
+                  <span className="text-foreground/80">
                     Learning: {context.personalization_score ? (context.personalization_score * 100).toFixed(0) : '0'}%
                   </span>
                   {context.page_context?.page && (
                     <>
-                      <span className="text-white/60">•</span>
-                      <span className="text-white/80">{context.page_context.page}</span>
+                      <span className="text-foreground/60">•</span>
+                      <span className="text-foreground/80">{context.page_context.page}</span>
                     </>
                   )}
                   {context.system_status && (
                     <>
-                      <span className="text-white/60">•</span>
-                      <span className="text-white/70 text-xs">{context.system_status}</span>
+                      <span className="text-foreground/60">•</span>
+                      <span className="text-foreground/70 text-xs">{context.system_status}</span>
                     </>
                   )}
                 </div>
@@ -582,7 +582,7 @@ Would you like to explore any specific feature?`,
             {speechSupported && (
               <button
                 onClick={toggleListening}
-                className={`${isListening ? 'text-red-400' : 'text-white/80'} hover:text-white`}
+                className={`${isListening ? 'text-red-500' : 'text-foreground/80'} hover:text-foreground`}
                 title={isListening ? 'Stop listening' : 'Start voice input'}
               >
                 {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -590,20 +590,20 @@ Would you like to explore any specific feature?`,
             )}
             <button
               onClick={resetAssistant}
-              className="text-white/80 hover:text-white"
+              className="text-foreground/80 hover:text-foreground"
               title="Reset Learning"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
               onClick={() => setIsMinimized(true)}
-              className="text-white/80 hover:text-white"
+              className="text-foreground/80 hover:text-foreground"
             >
               <Minimize2 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-white/80 hover:text-white"
+              className="text-foreground/80 hover:text-foreground"
             >
               <X className="w-4 h-4" />
             </button>
@@ -615,30 +615,30 @@ Would you like to explore any specific feature?`,
       {context && context.recommendations && context.recommendations.length > 0 && (
         <div className="bg-purple-600/10 border-b border-gray-700 p-2">
           <div className="flex items-center gap-2 text-xs">
-            <Lightbulb className="w-3 h-3 text-yellow-400" />
-            <span className="text-gray-400">Tip:</span>
-            <span className="text-white/80 truncate">{context.recommendations[0]?.description}</span>
+            <Lightbulb className="w-3 h-3 text-yellow-500" />
+            <span className="text-muted-foreground">Tip:</span>
+            <span className="text-foreground/80 truncate">{context.recommendations[0]?.description}</span>
           </div>
         </div>
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900/50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50">
         {/* Welcome message when no messages */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="bg-gray-800/50 rounded-xl p-6 max-w-sm">
+            <div className="bg-card/50 rounded-xl p-6 max-w-sm">
               <Bot className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-              <h3 className="text-white font-semibold mb-2">
+              <h3 className="text-foreground font-semibold mb-2">
                 Welcome to your AI Assistant!
               </h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 I'm here to help you with income opportunities, career advice, learning, and more.
                 {context?.first_name && ` Nice to meet you, ${context.first_name}!`}
               </p>
               {context?.skills?.top_skills && context.skills.top_skills.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-xs text-gray-500 mb-2">I see you have skills in:</p>
+                  <p className="text-xs text-muted-foreground mb-2">I see you have skills in:</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {context.skills.top_skills.slice(0, 3).map((skill, index) => (
                       <span key={index} className="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded-full">
@@ -684,8 +684,8 @@ Would you like to explore any specific feature?`,
                 <div
                   className={`rounded-xl p-4 shadow-lg ${
                     message.sender === 'user'
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
-                      : 'bg-gray-800 text-white border border-gray-700'
+                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-foreground'
+                      : 'bg-card text-foreground border border-gray-700'
                   }`}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -694,7 +694,7 @@ Would you like to explore any specific feature?`,
 
                   {/* Confidence indicator */}
                   {message.sender === 'assistant' && message.confidence !== undefined && (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{getConfidenceIndicator(message.confidence)}</span>
                       <span>Confidence: {(message.confidence * 100).toFixed(0)}%</span>
                     </div>
@@ -708,7 +708,7 @@ Would you like to explore any specific feature?`,
                       <button
                         key={idx}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="text-xs px-3 py-1 bg-gray-800 text-gray-300 rounded-full hover:bg-gray-700 hover:text-white border border-gray-700 transition-colors"
+                        className="text-xs px-3 py-1 bg-card text-muted-foreground rounded-full hover:bg-gray-700 hover:text-foreground border border-gray-700 transition-colors"
                       >
                         {suggestion}
                       </button>
@@ -721,13 +721,13 @@ Would you like to explore any specific feature?`,
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       onClick={() => provideFeedback(message.id, 'positive')}
-                      className="text-gray-500 hover:text-green-400 transition-colors"
+                      className="text-muted-foreground hover:text-green-500 transition-colors"
                     >
                       <ThumbsUp className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => provideFeedback(message.id, 'negative')}
-                      className="text-gray-500 hover:text-red-400 transition-colors"
+                      className="text-muted-foreground hover:text-red-500 transition-colors"
                     >
                       <ThumbsDown className="w-3 h-3" />
                     </button>
@@ -736,7 +736,7 @@ Would you like to explore any specific feature?`,
 
                 {/* Show feedback if provided */}
                 {message.feedback && (
-                  <div className="mt-1 text-xs text-gray-400">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     {message.feedback === 'positive' ? '✅ Thanks!' : '📝 Noted'}
                   </div>
                 )}
@@ -746,10 +746,10 @@ Would you like to explore any specific feature?`,
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 message.sender === 'user'
                   ? 'bg-purple-600 order-1 mr-2'
-                  : 'bg-gray-800 border border-gray-700 order-2 ml-2'
+                  : 'bg-card border border-gray-700 order-2 ml-2'
               }`}>
                 {message.sender === 'user' ? (
-                  <User className="w-4 h-4 text-white" />
+                  <User className="w-4 h-4 text-foreground" />
                 ) : (
                   <Bot className="w-4 h-4 text-purple-400" />
                 )}
@@ -763,7 +763,7 @@ Would you like to explore any specific feature?`,
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-gray-400"
+            className="flex items-center gap-2 text-muted-foreground"
           >
             <Bot className="w-4 h-4" />
             <div className="flex gap-1">
@@ -790,7 +790,7 @@ Would you like to explore any specific feature?`,
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+      <div className="p-4 border-t border-gray-700 bg-card/50">
         {/* Quick actions */}
         {showSuggestions && context?.skills?.top_skills && (
           <div className="mb-3 flex flex-wrap gap-2">
@@ -819,7 +819,7 @@ Would you like to explore any specific feature?`,
                 }
               }}
               placeholder={isListening ? "🎤 Listening..." : "Ask me anything... (Shift+Enter for new line)"}
-              className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none transition-all"
+              className="w-full px-4 py-3 bg-card text-foreground rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none transition-all"
               rows={inputMessage.split('\n').length || 1}
               maxLength={1000}
               disabled={isListening}
@@ -828,17 +828,17 @@ Would you like to explore any specific feature?`,
           <button
             onClick={sendMessage}
             disabled={!inputMessage.trim() || isTyping}
-            className="w-12 h-12 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-lg"
+            className="w-12 h-12 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-lg"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
 
         {/* Status indicators */}
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             {isListening && (
-              <span className="flex items-center gap-1 text-red-400">
+              <span className="flex items-center gap-1 text-red-500">
                 <Activity className="w-3 h-3 animate-pulse" />
                 Listening...
               </span>
@@ -852,7 +852,7 @@ Would you like to explore any specific feature?`,
               </span>
             )}
             {(!context?.personalization_score || context.personalization_score === 0) && (
-              <span className="text-gray-400">
+              <span className="text-muted-foreground">
                 Getting to know you...
               </span>
             )}

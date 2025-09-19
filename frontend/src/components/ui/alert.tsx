@@ -14,10 +14,10 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(
       className={clsx(
         'relative w-full rounded-lg border-2 p-4',
         {
-          'border-cyan-500/50 bg-black text-gray-300 shadow-[0_0_10px_rgba(0,255,255,0.2)]': variant === 'default',
-          'border-red-500/50 bg-red-500/10 text-red-400 shadow-[0_0_10px_rgba(255,0,0,0.2)]': variant === 'destructive',
-          'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.2)]': variant === 'warning',
-          'border-green-500/50 bg-green-500/10 text-green-400 shadow-[0_0_10px_rgba(0,255,0,0.2)]': variant === 'success',
+          'border-cyan-500/50 bg-black text-muted-foreground shadow-[0_0_10px_rgba(0,255,255,0.2)]': variant === 'default',
+          'border-red-500/50 bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(255,0,0,0.2)]': variant === 'destructive',
+          'border-yellow-500/50 bg-yellow-500/10 text-yellow-500 shadow-[0_0_10px_rgba(255,255,0,0.2)]': variant === 'warning',
+          'border-green-500/50 bg-green-500/10 text-green-500 shadow-[0_0_10px_rgba(0,255,0,0.2)]': variant === 'success',
         },
         'before:absolute before:inset-0 before:border-2 before:border-opacity-30 before:rounded-lg before:animate-pulse',
         {

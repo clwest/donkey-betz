@@ -76,7 +76,7 @@ export function MemorySearch({ domain, onMemorySelect }: MemorySearchProps) {
   };
 
   return (
-    <Card className="gaming-card">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5 text-purple-500" />
@@ -104,8 +104,8 @@ export function MemorySearch({ domain, onMemorySelect }: MemorySearchProps) {
 
         {/* Domain Filter */}
         <div className="flex items-center gap-2 text-sm">
-          <Filter className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-400">Domain:</span>
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Domain:</span>
           <Badge variant="outline">{domain}</Badge>
         </div>
 
@@ -120,21 +120,21 @@ export function MemorySearch({ domain, onMemorySelect }: MemorySearchProps) {
         {loading && (
           <div className="text-center py-8">
             <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin text-purple-500" />
-            <p className="text-gray-400">Searching intelligence memory...</p>
+            <p className="text-muted-foreground">Searching intelligence memory...</p>
           </div>
         )}
 
         {!loading && results.length === 0 && query && (
           <div className="text-center py-8">
-            <Database className="h-8 w-8 mx-auto mb-4 opacity-50 text-gray-400" />
-            <p className="text-gray-400">No memories found for "{query}"</p>
+            <Database className="h-8 w-8 mx-auto mb-4 opacity-50 text-muted-foreground" />
+            <p className="text-muted-foreground">No memories found for "{query}"</p>
           </div>
         )}
 
         {!loading && results.length === 0 && !query && (
           <div className="text-center py-8">
-            <Search className="h-8 w-8 mx-auto mb-4 opacity-50 text-gray-400" />
-            <p className="text-gray-400">Enter a search term to explore intelligence memory</p>
+            <Search className="h-8 w-8 mx-auto mb-4 opacity-50 text-muted-foreground" />
+            <p className="text-muted-foreground">Enter a search term to explore intelligence memory</p>
           </div>
         )}
 
@@ -158,7 +158,7 @@ export function MemorySearch({ domain, onMemorySelect }: MemorySearchProps) {
                 </div>
 
                 <div className="space-y-2 mb-3">
-                  <div className="text-sm text-gray-300">
+                  <div className="text-sm text-muted-foreground">
                     <strong>Context:</strong> {JSON.stringify(result.context).slice(1, -1)}
                   </div>
                   <div className="flex items-center gap-4 text-xs">
@@ -175,14 +175,14 @@ export function MemorySearch({ domain, onMemorySelect }: MemorySearchProps) {
                       <span>Outcome: {result.outcome}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-gray-400" />
+                      <Clock className="h-3 w-3 text-muted-foreground" />
                       <span>{new Date(result.timestamp).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-gray-700/50">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     Similarity: {(result.similarity_score * 100).toFixed(1)}%
                   </span>
                   <Button
@@ -201,7 +201,7 @@ export function MemorySearch({ domain, onMemorySelect }: MemorySearchProps) {
         )}
 
         {results.length > 0 && (
-          <div className="text-center text-xs text-gray-500 pt-4 border-t border-gray-700/50">
+          <div className="text-center text-xs text-muted-foreground pt-4 border-t border-gray-700/50">
             Found {results.length} similar patterns in intelligence memory
           </div>
         )}

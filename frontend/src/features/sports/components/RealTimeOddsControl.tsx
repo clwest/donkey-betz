@@ -125,9 +125,9 @@ export const RealTimeOddsControl: React.FC = () => {
       case 'stale':
         return 'bg-yellow-100 text-yellow-800';
       case 'no_data':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted/10 text-gray-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted/10 text-gray-800';
     }
   };
 
@@ -137,7 +137,7 @@ export const RealTimeOddsControl: React.FC = () => {
     } else if (status === 'scheduled' || status === 'status_scheduled') {
       return 'bg-blue-100 text-blue-800';
     }
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-muted/10 text-gray-800';
   };
 
   return (
@@ -161,7 +161,7 @@ export const RealTimeOddsControl: React.FC = () => {
               </Badge>
             )}
             {lastUpdate && (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 Updated {formatDistanceToNow(lastUpdate, { addSuffix: true })}
               </span>
             )}
@@ -218,7 +218,7 @@ export const RealTimeOddsControl: React.FC = () => {
                 <div>
                   ✅ Updated {updateResult.games_enriched || 0} games with {updateResult.odds_added || 0} odds
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted-foreground">
                   API Calls: {updateResult.api_calls || 0} | From Cache: {updateResult.from_cache || 0}
                 </div>
               </div>
@@ -229,14 +229,14 @@ export const RealTimeOddsControl: React.FC = () => {
         {/* Games List */}
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {games.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No games found. Try refreshing the status.
             </div>
           ) : (
             games.map((game) => (
               <div
                 key={game.game_id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/5"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export const RealTimeOddsControl: React.FC = () => {
                     <span className="font-medium">{game.matchup}</span>
                     <Badge variant="outline">{game.league}</Badge>
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {new Date(game.start_time).toLocaleString()}
@@ -283,7 +283,7 @@ export const RealTimeOddsControl: React.FC = () => {
         </div>
 
         {/* Live Updater Status */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+        <div className="mt-4 p-3 bg-muted/5 rounded-lg">
           <div className="text-sm text-gray-600">
             <div className="font-medium mb-1">💡 Auto-Update Schedule:</div>
             <div className="space-y-1">
@@ -292,7 +292,7 @@ export const RealTimeOddsControl: React.FC = () => {
               <div>• Pre-game (1hr before): Updates every 30 minutes</div>
             </div>
             <div className="mt-2">
-              Run <code className="bg-gray-200 px-1 rounded">python manage.py live_odds_updater</code> for automatic updates
+              Run <code className="bg-muted/20 px-1 rounded">python manage.py live_odds_updater</code> for automatic updates
             </div>
           </div>
         </div>

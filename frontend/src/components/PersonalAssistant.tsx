@@ -618,10 +618,10 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
   };
 
   const getPersonalizationColor = (score: number): string => {
-    if (score < 0.3) return 'text-gray-400';
-    if (score < 0.6) return 'text-yellow-400';
-    if (score < 0.9) return 'text-blue-400';
-    return 'text-green-400';
+    if (score < 0.3) return 'text-muted-foreground';
+    if (score < 0.6) return 'text-yellow-500';
+    if (score < 0.9) return 'text-blue-500';
+    return 'text-green-500';
   };
 
   // Only show the floating button if not embedded and not open
@@ -634,7 +634,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg z-50"
       >
-        <MessageCircle className="w-6 h-6 text-white" />
+        <MessageCircle className="w-6 h-6 text-foreground" />
       </motion.button>
     );
   }
@@ -645,19 +645,19 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="fixed bottom-6 right-6 bg-gray-800 rounded-lg p-3 shadow-xl z-50 flex items-center gap-3"
+        className="fixed bottom-6 right-6 bg-card rounded-lg p-3 shadow-xl z-50 flex items-center gap-3"
       >
         <Bot className="w-5 h-5 text-purple-400" />
-        <span className="text-white font-medium">AI Assistant</span>
+        <span className="text-foreground font-medium">AI Assistant</span>
         <button
           onClick={() => setIsMinimized(false)}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
         <button
           onClick={() => setIsOpen(false)}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <X className="w-4 h-4" />
         </button>
@@ -670,8 +670,8 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
       initial={{ opacity: 0, y: embedded ? 0 : 100 }}
       animate={{ opacity: 1, y: 0 }}
       className={embedded
-        ? "w-full h-full flex flex-col bg-gray-900"
-        : "fixed bottom-6 right-6 w-96 h-[600px] bg-gray-900 rounded-xl shadow-2xl z-50 flex flex-col border border-gray-700"
+        ? "w-full h-full flex flex-col bg-background"
+        : "fixed bottom-6 right-6 w-96 h-[600px] bg-background rounded-xl shadow-2xl z-50 flex flex-col border border-gray-700"
       }
     >
       {/* Header - only show in non-embedded mode */}
@@ -679,7 +679,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-t-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Bot className="w-6 h-6 text-white" />
+            <Bot className="w-6 h-6 text-foreground" />
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -689,11 +689,11 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
             </motion.div>
           </div>
           <div>
-            <h3 className="text-white font-semibold">Personal AI Assistant</h3>
+            <h3 className="text-foreground font-semibold">Personal AI Assistant</h3>
             {context && (
               <div className="flex items-center gap-2 text-xs">
                 <Brain className={`w-3 h-3 ${getPersonalizationColor(context.personalization_score)}`} />
-                <span className="text-white/80">
+                <span className="text-foreground/80">
                   Learning: {(context.personalization_score * 100).toFixed(0)}%
                 </span>
                 {isConnectedToPlatform && (
@@ -709,27 +709,27 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowIntroduction(true)}
-            className="text-white/80 hover:text-white"
+            className="text-foreground/80 hover:text-foreground"
             title="Learn About Your AI Assistant"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
           <button
             onClick={resetAssistant}
-            className="text-white/80 hover:text-white"
+            className="text-foreground/80 hover:text-foreground"
             title="Reset Learning"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsMinimized(true)}
-            className="text-white/80 hover:text-white"
+            className="text-foreground/80 hover:text-foreground"
           >
             <Minimize2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsOpen(false)}
-            className="text-white/80 hover:text-white"
+            className="text-foreground/80 hover:text-foreground"
           >
             <X className="w-4 h-4" />
           </button>
@@ -750,22 +750,22 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-purple-500/30"
+            className="bg-card rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-purple-500/30"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-white" />
+                  <Bot className="w-6 h-6 text-foreground" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Your Personal AI Assistant</h2>
+                  <h2 className="text-2xl font-bold text-foreground">Your Personal AI Assistant</h2>
                   <p className="text-purple-400">Powered by Neural Intelligence</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowIntroduction(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -773,36 +773,36 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
 
             <div className="space-y-4">
               <div className="bg-gray-700/50 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-yellow-500" />
                   What I Can Do For You
                 </h3>
-                <ul className="space-y-2 text-gray-300">
+                <ul className="space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
                     <span>Find personalized income opportunities across 100+ sources</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
                     <span>Analyze your skills and match them to high-paying opportunities</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
                     <span>Create action plans and apply to opportunities automatically</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
                     <span>Learn and adapt to your preferences over time</span>
                   </li>
                 </ul>
               </div>
 
               <div className="bg-gray-700/50 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-blue-400" />
+                <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-500" />
                   Getting Started
                 </h3>
-                <div className="space-y-3 text-gray-300">
+                <div className="space-y-3 text-muted-foreground">
                   <div>
                     <span className="text-purple-400 font-medium">Step 1: Complete Your Profile</span>
                     <p className="text-sm mt-1">I'll guide you through a 10-minute interview to understand your skills, experience, and goals.</p>
@@ -819,14 +819,14 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
               </div>
 
               <div className="bg-gray-700/50 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
                   <Brain className="w-4 h-4 text-purple-400" />
                   How I Learn About You
                 </h3>
-                <p className="text-gray-300 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Through our conversational interview, I discover:
                 </p>
-                <ul className="mt-2 space-y-1 text-gray-400 text-sm">
+                <ul className="mt-2 space-y-1 text-muted-foreground text-sm">
                   <li>• Your professional background and expertise</li>
                   <li>• Hidden talents and monetizable skills</li>
                   <li>• Income goals and work preferences</li>
@@ -836,11 +836,11 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
               </div>
 
               <div className="bg-purple-600/20 rounded-lg p-4 border border-purple-500/30">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-yellow-400" />
+                <h3 className="text-foreground font-semibold mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-yellow-500" />
                   Pro Tips
                 </h3>
-                <ul className="space-y-2 text-gray-300 text-sm">
+                <ul className="space-y-2 text-muted-foreground text-sm">
                   <li>💡 Be specific about your skills - the more I know, the better matches I find</li>
                   <li>💡 Set realistic income goals to get achievable opportunities</li>
                   <li>💡 Check back daily - I find new opportunities every hour</li>
@@ -856,13 +856,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                       connectToInterviewSystem();
                     }
                   }}
-                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-colors"
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-foreground rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-colors"
                 >
                   Start Interview (10 min)
                 </button>
                 <button
                   onClick={() => setShowIntroduction(false)}
-                  className="flex-1 py-3 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                  className="flex-1 py-3 bg-gray-700 text-foreground rounded-lg font-medium hover:bg-gray-600 transition-colors"
                 >
                   Explore First
                 </button>
@@ -876,9 +876,9 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
       {context && context.recommendations && context.recommendations.length > 0 && (
         <div className="bg-purple-600/10 border-b border-gray-700 p-2">
           <div className="flex items-center gap-2 text-xs">
-            <Lightbulb className="w-3 h-3 text-yellow-400" />
-            <span className="text-gray-400">Tip:</span>
-            <span className="text-white/80">{context.recommendations[0]?.description}</span>
+            <Lightbulb className="w-3 h-3 text-yellow-500" />
+            <span className="text-muted-foreground">Tip:</span>
+            <span className="text-foreground/80">{context.recommendations[0]?.description}</span>
           </div>
         </div>
       )}
@@ -887,7 +887,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
       {interviewMode && interviewState.active && (
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400">Interview Progress</span>
+            <span className="text-sm text-muted-foreground">Interview Progress</span>
             <span className="text-sm text-purple-400">
               {interviewState.completion_percentage.toFixed(0)}%
             </span>
@@ -915,8 +915,8 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                 <div
                   className={`rounded-lg p-3 ${
                     message.sender === 'user'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-800 text-white border border-gray-700'
+                      ? 'bg-purple-600 text-foreground'
+                      : 'bg-card text-foreground border border-gray-700'
                   }`}
                 >
                   <p className="text-sm">{message.text}</p>
@@ -926,7 +926,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                     <div className="mt-2 flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 rounded-full bg-green-400 opacity-${Math.round(message.confidence * 100)}" />
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           Confidence: {(message.confidence * 100).toFixed(0)}%
                         </span>
                       </div>
@@ -946,7 +946,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                               handleOptionSelect(option);
                               submitInterviewResponse(option);
                             }}
-                            className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-600 text-white transition-colors"
+                            className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-600 text-foreground transition-colors"
                           >
                             {option}
                           </button>
@@ -956,7 +956,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
 
                     {currentQuestion.input_type === 'multi_select' && currentQuestion.options && (
                       <div className="space-y-2">
-                        <p className="text-xs text-gray-400 mb-2">Select all that apply:</p>
+                        <p className="text-xs text-muted-foreground mb-2">Select all that apply:</p>
                         {currentQuestion.options.map((option, idx) => (
                           <label
                             key={idx}
@@ -968,13 +968,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                               onChange={() => handleOptionSelect(option)}
                               className="mr-3 rounded"
                             />
-                            <span className="text-white text-sm">{option}</span>
+                            <span className="text-foreground text-sm">{option}</span>
                           </label>
                         ))}
                         {selectedOptions.length > 0 && (
                           <button
                             onClick={() => submitInterviewResponse(selectedOptions)}
-                            className="w-full mt-2 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-medium"
+                            className="w-full mt-2 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-foreground font-medium"
                           >
                             Continue ({selectedOptions.length} selected)
                           </button>
@@ -986,13 +986,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                       <div className="flex gap-2">
                         <button
                           onClick={() => submitInterviewResponse('Yes')}
-                          className="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium"
+                          className="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-foreground font-medium"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => submitInterviewResponse('No')}
-                          className="flex-1 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium"
+                          className="flex-1 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-foreground font-medium"
                         >
                           No
                         </button>
@@ -1008,7 +1008,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                       <button
                         key={idx}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="text-xs px-3 py-1 bg-gray-800 text-gray-300 rounded-full hover:bg-gray-700 hover:text-white border border-gray-700"
+                        className="text-xs px-3 py-1 bg-card text-muted-foreground rounded-full hover:bg-gray-700 hover:text-foreground border border-gray-700"
                       >
                         {suggestion}
                       </button>
@@ -1021,13 +1021,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       onClick={() => provideFeedback(message.id, 'positive')}
-                      className="text-gray-500 hover:text-green-400"
+                      className="text-muted-foreground hover:text-green-500"
                     >
                       <ThumbsUp className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => provideFeedback(message.id, 'negative')}
-                      className="text-gray-500 hover:text-red-400"
+                      className="text-muted-foreground hover:text-red-500"
                     >
                       <ThumbsDown className="w-3 h-3" />
                     </button>
@@ -1039,10 +1039,10 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                 message.sender === 'user'
                   ? 'bg-purple-600 order-1 mr-2'
-                  : 'bg-gray-800 border border-gray-700 order-2 ml-2'
+                  : 'bg-card border border-gray-700 order-2 ml-2'
               }`}>
                 {message.sender === 'user' ? (
-                  <User className="w-4 h-4 text-white" />
+                  <User className="w-4 h-4 text-foreground" />
                 ) : (
                   <Bot className="w-4 h-4 text-purple-400" />
                 )}
@@ -1055,7 +1055,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-gray-400"
+            className="flex items-center gap-2 text-muted-foreground"
           >
             <Bot className="w-4 h-4" />
             <div className="flex gap-1">
@@ -1096,18 +1096,18 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                 }
               }}
               placeholder={currentQuestion.required ? "Your response (required)..." : "Your response (optional)..."}
-              className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500 resize-none"
+              className="w-full px-4 py-3 bg-card text-foreground rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500 resize-none"
               rows={3}
             />
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 {currentQuestion.required ? 'Required' : 'Optional'} • Press Enter to submit
               </span>
               <div className="flex gap-2">
                 {!currentQuestion.required && (
                   <button
                     onClick={() => submitInterviewResponse('')}
-                    className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
+                    className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-muted-foreground"
                   >
                     Skip
                   </button>
@@ -1115,7 +1115,7 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
                 <button
                   onClick={handleInterviewSubmit}
                   disabled={currentQuestion.required && !interviewResponse.trim()}
-                  className="px-4 py-1 text-xs bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-medium"
+                  className="px-4 py-1 text-xs bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-foreground font-medium"
                 >
                   Submit
                 </button>
@@ -1131,13 +1131,13 @@ export const PersonalAssistant: React.FC<PersonalAssistantProps> = ({
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
               placeholder={interviewMode ? "Type your response..." : "Ask me anything..."}
-              className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500"
+              className="flex-1 px-4 py-2 bg-card text-foreground rounded-lg border border-gray-700 focus:outline-none focus:border-purple-500"
               disabled={interviewMode && currentQuestion && currentQuestion.input_type !== 'text'}
             />
             <button
               onClick={sendMessage}
               disabled={!inputMessage.trim() || isTyping || (interviewMode && currentQuestion && currentQuestion.input_type !== 'text')}
-              className="w-10 h-10 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-10 h-10 bg-purple-600 text-foreground rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               <Send className="w-5 h-5" />
             </button>

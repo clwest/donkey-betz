@@ -446,8 +446,8 @@ export function ImageEditor() {
     <div className="space-y-6">
       {/* Tool Selection */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">AI Image Editor</h3>
-        <p className="text-gray-400 mb-6">Professional image editing powered by Stability AI</p>
+        <h3 className="text-lg font-semibold text-foreground mb-4">AI Image Editor</h3>
+        <p className="text-muted-foreground mb-6">Professional image editing powered by Stability AI</p>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {tools.map((tool) => {
@@ -459,18 +459,18 @@ export function ImageEditor() {
                 className={`p-3 rounded-lg border-2 transition-all duration-200 text-center ${
                   isSelected
                     ? 'border-primary-500 bg-primary-500/10'
-                    : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                    : 'border-border hover:border-dark-600 hover:bg-white/5'
                 }`}
               >
                 <tool.icon className={`h-6 w-6 mx-auto mb-1 ${
-                  isSelected ? 'text-primary-400' : 'text-gray-400'
+                  isSelected ? 'text-primary-400' : 'text-muted-foreground'
                 }`} />
                 <div className={`font-medium text-sm mb-1 ${
-                  isSelected ? 'text-white' : 'text-gray-300'
+                  isSelected ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   {tool.name}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {tool.desc}
                 </div>
               </button>
@@ -483,7 +483,7 @@ export function ImageEditor() {
         {/* Upload & Settings Panel */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-foreground">
               {selectedToolData?.name} Settings
             </h3>
             {originalImage && (
@@ -502,7 +502,7 @@ export function ImageEditor() {
             {/* Image Upload */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm text-gray-400">Source Image</label>
+                <label className="block text-sm text-muted-foreground">Source Image</label>
                 <Button
                   onClick={handleLoadFromGallery}
                   variant="secondary"
@@ -521,7 +521,7 @@ export function ImageEditor() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full p-4 border-2 border-dashed border-dark-700 rounded-lg hover:border-dark-600 transition-colors text-center"
+                className="w-full p-4 border-2 border-dashed border-border rounded-lg hover:border-dark-600 transition-colors text-center"
               >
                 {originalImageUrl ? (
                   <div className="space-y-2">
@@ -530,12 +530,12 @@ export function ImageEditor() {
                       alt="Source" 
                       className="w-full h-32 object-cover rounded"
                     />
-                    <p className="text-sm text-gray-400">{originalImage?.name}</p>
+                    <p className="text-sm text-muted-foreground">{originalImage?.name}</p>
                   </div>
                 ) : (
                   <div>
-                    <PhotoIcon className="h-8 w-8 mx-auto mb-2 text-gray-500" />
-                    <p className="text-gray-400">Click to upload image</p>
+                    <PhotoIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-muted-foreground">Click to upload image</p>
                   </div>
                 )}
               </button>
@@ -545,7 +545,7 @@ export function ImageEditor() {
             {requiresMask(selectedTool) && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm text-gray-400">
+                  <label className="block text-sm text-muted-foreground">
                     Mask Image (white = edit area, black = keep)
                   </label>
                   <Button
@@ -567,7 +567,7 @@ export function ImageEditor() {
                 />
                 <button
                   onClick={() => maskInputRef.current?.click()}
-                  className="w-full p-4 border-2 border-dashed border-dark-700 rounded-lg hover:border-dark-600 transition-colors text-center"
+                  className="w-full p-4 border-2 border-dashed border-border rounded-lg hover:border-dark-600 transition-colors text-center"
                 >
                   {maskUrl ? (
                     <div className="space-y-2">
@@ -576,12 +576,12 @@ export function ImageEditor() {
                         alt="Mask" 
                         className="w-full h-24 object-cover rounded"
                       />
-                      <p className="text-sm text-gray-400">{maskFile?.name}</p>
+                      <p className="text-sm text-muted-foreground">{maskFile?.name}</p>
                     </div>
                   ) : (
                     <div>
-                      <PaintBrushIcon className="h-6 w-6 mx-auto mb-2 text-gray-500" />
-                      <p className="text-gray-400">Upload mask image or use Draw Mask</p>
+                      <PaintBrushIcon className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-muted-foreground">Upload mask image or use Draw Mask</p>
                     </div>
                   )}
                 </button>
@@ -592,7 +592,7 @@ export function ImageEditor() {
             {selectedTool === 'upscale' && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Factor</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Factor</label>
                   <select 
                     className="input"
                     value={upscaleFactor}
@@ -603,7 +603,7 @@ export function ImageEditor() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Mode</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Mode</label>
                   <select 
                     className="input"
                     value={creativity}
@@ -618,7 +618,7 @@ export function ImageEditor() {
 
             {selectedTool === 'outpaint' && (
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Direction</label>
+                <label className="block text-sm text-muted-foreground mb-2">Direction</label>
                 <select 
                   className="input"
                   value={outpaintDirection}
@@ -636,7 +636,7 @@ export function ImageEditor() {
             {selectedTool === 'search_replace' && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Search For</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Search For</label>
                   <input
                     className="input"
                     placeholder="dog"
@@ -645,7 +645,7 @@ export function ImageEditor() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Replace With</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Replace With</label>
                   <input
                     className="input"
                     placeholder="cat"
@@ -659,7 +659,7 @@ export function ImageEditor() {
             {/* Prompt for tools that need it */}
             {requiresPrompt(selectedTool) && selectedTool !== 'search_replace' && (
               <div>
-                <label className="block text-sm text-gray-400 mb-2">
+                <label className="block text-sm text-muted-foreground mb-2">
                   {selectedTool === 'inpaint' ? 'What to paint in the masked area' : 
                    selectedTool === 'outpaint' ? 'What to add (optional)' :
                    selectedTool === 'sketch' ? 'What this sketch represents' : 'Prompt'}
@@ -693,14 +693,14 @@ export function ImageEditor() {
 
         {/* Results Panel */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Results</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Results</h3>
           
           {results.length > 0 ? (
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {results.map((result) => (
                 <div key={result.id} className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-400 capitalize">
+                    <span className="text-sm text-muted-foreground capitalize">
                       {result.tool.replace('_', ' ')} • {new Date(result.created_at).toLocaleTimeString()}
                     </span>
                     <div className="flex gap-2">
@@ -727,17 +727,17 @@ export function ImageEditor() {
                   
                   <div className="relative">
                     {result.is3D ? (
-                      <div className="w-full aspect-square bg-dark-900 rounded-lg flex flex-col items-center justify-center text-gray-400">
+                      <div className="w-full aspect-square bg-background rounded-lg flex flex-col items-center justify-center text-muted-foreground">
                         <CubeIcon className="h-24 w-24 mb-4" />
                         <p className="text-lg font-semibold">3D Model Generated</p>
                         <p className="text-sm mt-2">GLB Format</p>
-                        <p className="text-xs mt-1 text-gray-500">Click Download to save the 3D file</p>
+                        <p className="text-xs mt-1 text-muted-foreground">Click Download to save the 3D file</p>
                       </div>
                     ) : (
                       <img 
                         src={result.image_url} 
                         alt={`${result.tool} result`}
-                        className="w-full rounded-lg bg-dark-900"
+                        className="w-full rounded-lg bg-background"
                       />
                     )}
                   </div>
@@ -745,7 +745,7 @@ export function ImageEditor() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               <SparklesIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
               <p>Edited images will appear here</p>
               <p className="text-sm mt-2">
@@ -759,14 +759,14 @@ export function ImageEditor() {
       {/* Gallery Modal */}
       {showGalleryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 w-full max-w-4xl max-h-[80vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-dark-700">
-              <h3 className="text-lg font-semibold text-white">Select Image from Gallery</h3>
+          <div className="bg-card rounded-xl border border-border w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">Select Image from Gallery</h3>
               <button
                 onClick={() => setShowGalleryModal(false)}
                 className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <XMarkIcon className="h-5 w-5 text-gray-400" />
+                <XMarkIcon className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
             
@@ -774,7 +774,7 @@ export function ImageEditor() {
               {loadingGallery ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-                  <span className="ml-3 text-gray-400">Loading gallery...</span>
+                  <span className="ml-3 text-muted-foreground">Loading gallery...</span>
                 </div>
               ) : galleryImages.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -782,7 +782,7 @@ export function ImageEditor() {
                     <button
                       key={image.id || index}
                       onClick={() => handleSelectGalleryImage(image)}
-                      className="relative group aspect-square overflow-hidden rounded-lg border-2 border-dark-700 hover:border-primary-500 transition-colors"
+                      className="relative group aspect-square overflow-hidden rounded-lg border-2 border-border hover:border-primary-500 transition-colors"
                     >
                       <img
                         src={(() => {
@@ -801,11 +801,11 @@ export function ImageEditor() {
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <PhotoIcon className="h-6 w-6 text-white" />
+                          <PhotoIcon className="h-6 w-6 text-foreground" />
                         </div>
                       </div>
                       {(image.title || image.prompt) && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate">
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-foreground text-xs p-1 truncate">
                           {image.title || image.prompt}
                         </div>
                       )}
@@ -813,7 +813,7 @@ export function ImageEditor() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <PhotoIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
                   <p>No images in gallery</p>
                   <p className="text-sm mt-2">Generate some images first to use this feature</p>
@@ -827,12 +827,12 @@ export function ImageEditor() {
       {/* Mask Drawing Modal */}
       {showMaskDrawer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-dark-700">
-              <h3 className="text-lg font-semibold text-white">Draw Mask</h3>
+          <div className="bg-card rounded-xl border border-border w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">Draw Mask</h3>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-400">Brush Size:</label>
+                  <label className="text-sm text-muted-foreground">Brush Size:</label>
                   <input
                     type="range"
                     min="5"
@@ -841,7 +841,7 @@ export function ImageEditor() {
                     onChange={(e) => setBrushSize(Number(e.target.value))}
                     className="w-20"
                   />
-                  <span className="text-sm text-white w-8">{brushSize}</span>
+                  <span className="text-sm text-foreground w-8">{brushSize}</span>
                 </div>
                 <Button onClick={clearMask} variant="secondary" size="sm">
                   Clear
@@ -853,7 +853,7 @@ export function ImageEditor() {
                   onClick={() => setShowMaskDrawer(false)}
                   className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
                 >
-                  <XMarkIcon className="h-5 w-5 text-gray-400" />
+                  <XMarkIcon className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
             </div>
@@ -897,9 +897,9 @@ export function ImageEditor() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-dark-700 bg-dark-900 text-center">
-              <p className="text-sm text-gray-400">
-                Paint <span className="text-white font-semibold">WHITE</span> areas where you want to edit. 
+            <div className="p-4 border-t border-border bg-background text-center">
+              <p className="text-sm text-muted-foreground">
+                Paint <span className="text-foreground font-semibold">WHITE</span> areas where you want to edit. 
                 <span className="text-black bg-gray-300 px-1 rounded">BLACK</span> areas will remain unchanged.
               </p>
             </div>

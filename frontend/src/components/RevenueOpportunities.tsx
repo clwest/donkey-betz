@@ -256,7 +256,7 @@ const RevenueOpportunities: React.FC = () => {
   // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'identified': return 'bg-gray-500';
+      case 'identified': return 'bg-muted/50';
       case 'analyzing': return 'bg-blue-500';
       case 'plan_created': return 'bg-indigo-500';
       case 'proposal_generated': return 'bg-purple-500';
@@ -267,7 +267,7 @@ const RevenueOpportunities: React.FC = () => {
       case 'converted': return 'bg-green-500';
       case 'rejected': return 'bg-red-500';
       case 'expired': return 'bg-gray-400';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 

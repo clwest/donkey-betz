@@ -95,35 +95,35 @@ const LoginPage: React.FC = () => {
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-4 text-gray-400 hover:text-white"
+          className="mb-4 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Home
         </Button>
 
-        <Card className="bg-gray-800/50 backdrop-blur-lg border-gray-700 shadow-2xl">
+        <Card className="bg-card/50 backdrop-blur-lg border-gray-700 shadow-2xl">
           <CardHeader className="text-center pb-4">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <Sparkles className="h-8 w-8 text-purple-500" />
-              <span className="text-2xl font-bold text-white">Unified Donkey Betz</span>
+              <span className="text-2xl font-bold text-foreground">Unified Donkey Betz</span>
             </div>
-            <CardTitle className="text-2xl text-white">Welcome Back</CardTitle>
-            <p className="text-gray-400">Sign in to your account to continue</p>
+            <CardTitle className="text-2xl text-foreground">Welcome Back</CardTitle>
+            <p className="text-muted-foreground">Sign in to your account to continue</p>
           </CardHeader>
 
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-300">Username or Email</Label>
+                <Label htmlFor="email" className="text-muted-foreground">Username or Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     id="email"
                     type="text"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter your username or email"
-                    className="pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                    className="pl-10 bg-gray-700/50 border-gray-600 text-foreground placeholder-gray-400 focus:border-purple-500"
                     disabled={loading}
                     required
                   />
@@ -131,23 +131,23 @@ const LoginPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <Label htmlFor="password" className="text-muted-foreground">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     placeholder="Enter your password"
-                    className="pl-10 pr-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                    className="pl-10 pr-10 bg-gray-700/50 border-gray-600 text-foreground placeholder-gray-400 focus:border-purple-500"
                     disabled={loading}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -162,7 +162,7 @@ const LoginPage: React.FC = () => {
                     onCheckedChange={(checked) => handleInputChange('rememberMe', checked as boolean)}
                     className="border-gray-600 data-[state=checked]:bg-purple-600"
                   />
-                  <Label htmlFor="remember" className="text-sm text-gray-300 cursor-pointer">
+                  <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
                     Remember me
                   </Label>
                 </div>
@@ -177,14 +177,14 @@ const LoginPage: React.FC = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2.5"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-foreground font-medium py-2.5"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
 
             <div className="text-center">
-              <p className="text-gray-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Don't have an account?{' '}
                 <Link
                   to="/signup"

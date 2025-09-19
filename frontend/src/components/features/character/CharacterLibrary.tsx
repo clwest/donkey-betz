@@ -33,7 +33,7 @@ function CharacterThumbnail({ character }: { character: CharacterProfile }) {
   if (!hasValidThumbnail || imageError) {
     return (
       <div className="w-full h-48 bg-gradient-primary rounded-t-lg flex items-center justify-center">
-        <span className="text-4xl font-bold text-white">
+        <span className="text-4xl font-bold text-foreground">
           {character.name[0]}
         </span>
       </div>
@@ -129,8 +129,8 @@ export function CharacterLibrary() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Character Library</h2>
-          <p className="text-gray-400 mt-1">Manage your consistent characters</p>
+          <h2 className="text-2xl font-bold text-foreground">Character Library</h2>
+          <p className="text-muted-foreground mt-1">Manage your consistent characters</p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -154,20 +154,20 @@ export function CharacterLibrary() {
       <div className="flex gap-4">
         <div className="flex-1">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search characters..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-foreground placeholder-gray-400 focus:border-primary-500 focus:outline-none"
             />
           </div>
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white focus:border-primary-500 focus:outline-none"
+          className="px-4 py-2 bg-card border border-border rounded-xl text-foreground focus:border-primary-500 focus:outline-none"
         >
           <option value="">All Categories</option>
           <option value="default">Default</option>
@@ -185,7 +185,7 @@ export function CharacterLibrary() {
         </div>
       ) : characters.length === 0 ? (
         <Card className="text-center py-12">
-          <p className="text-gray-400 mb-4">
+          <p className="text-muted-foreground mb-4">
             {search || category || favoritesOnly
               ? 'No characters found. Try adjusting your filters.'
               : 'No characters yet. Create your first character to get started.'}
@@ -213,12 +213,12 @@ export function CharacterLibrary() {
               {/* Content */}
               <div className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
-                  <h3 className="font-semibold text-white group-hover:text-primary-400 transition-colors">
+                  <h3 className="font-semibold text-foreground group-hover:text-primary-400 transition-colors">
                     {character.name}
                   </h3>
                   <button
                     onClick={() => handleToggleFavorite(character)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    className="text-muted-foreground hover:text-red-500 transition-colors"
                   >
                     {character.is_favorite ? (
                       <HeartIconSolid className="h-5 w-5 text-red-500" />
@@ -228,7 +228,7 @@ export function CharacterLibrary() {
                   </button>
                 </div>
 
-                <p className="text-sm text-gray-400 line-clamp-2">
+                <p className="text-sm text-muted-foreground line-clamp-2">
                   {character.description}
                 </p>
 
@@ -237,21 +237,21 @@ export function CharacterLibrary() {
                   {character.tags.slice(0, 3).map((tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-1 text-xs bg-dark-700 text-gray-300 rounded-full"
+                      className="px-2 py-1 text-xs bg-dark-700 text-muted-foreground rounded-full"
                     >
                       {tag}
                     </span>
                   ))}
                   {character.tags.length > 3 && (
-                    <span className="px-2 py-1 text-xs bg-dark-700 text-gray-300 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-dark-700 text-muted-foreground rounded-full">
                       +{character.tags.length - 3}
                     </span>
                   )}
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-between items-center pt-3 border-t border-dark-700">
-                  <span className="text-xs text-gray-500">
+                <div className="flex justify-between items-center pt-3 border-t border-border">
+                  <span className="text-xs text-muted-foreground">
                     Used {character.usage_count} times
                   </span>
                   <span className="text-xs text-primary-400">
@@ -291,42 +291,42 @@ export function CharacterLibrary() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <Card className="w-full max-w-lg">
             <div className="p-6 space-y-4">
-              <h3 className="text-xl font-bold text-white">Create New Character</h3>
+              <h3 className="text-xl font-bold text-foreground">Create New Character</h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Character Name
                 </label>
                 <input
                   type="text"
                   value={newCharacter.name}
                   onChange={(e) => setNewCharacter({ ...newCharacter, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-2 bg-card border border-border rounded-xl text-foreground placeholder-gray-400 focus:border-primary-500 focus:outline-none"
                   placeholder="Enter character name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Description
                 </label>
                 <textarea
                   value={newCharacter.description}
                   onChange={(e) => setNewCharacter({ ...newCharacter, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none resize-none"
+                  className="w-full px-4 py-2 bg-card border border-border rounded-xl text-foreground placeholder-gray-400 focus:border-primary-500 focus:outline-none resize-none"
                   placeholder="e.g., little girl with curly black hair, olive skin, wearing a silly dress"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Category
                 </label>
                 <select
                   value={newCharacter.category}
                   onChange={(e) => setNewCharacter({ ...newCharacter, category: e.target.value })}
-                  className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-2 bg-card border border-border rounded-xl text-foreground focus:border-primary-500 focus:outline-none"
                 >
                   <option value="default">Default</option>
                   <option value="fantasy">Fantasy</option>
@@ -337,7 +337,7 @@ export function CharacterLibrary() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Tags (comma separated)
                 </label>
                 <input
@@ -347,7 +347,7 @@ export function CharacterLibrary() {
                     ...newCharacter,
                     tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)
                   })}
-                  className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none"
+                  className="w-full px-4 py-2 bg-card border border-border rounded-xl text-foreground placeholder-gray-400 focus:border-primary-500 focus:outline-none"
                   placeholder="girl, child, cute"
                 />
               </div>

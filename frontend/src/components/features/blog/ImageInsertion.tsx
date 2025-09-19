@@ -113,16 +113,16 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-800 rounded-lg w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
+      <div className="bg-card rounded-lg w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-dark-700">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <PhotoIcon className="h-6 w-6 text-primary-400" />
-            <h2 className="text-xl font-semibold text-white">Insert Image</h2>
+            <h2 className="text-xl font-semibold text-foreground">Insert Image</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
             title="Close"
           >
             <XMarkIcon className="h-5 w-5" />
@@ -130,13 +130,13 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 border-b border-dark-700 px-6">
+        <div className="flex space-x-1 border-b border-border px-6">
           <button
             onClick={() => setActiveTab('gallery')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'gallery'
                 ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <PhotoIcon className="inline h-4 w-4 mr-2" />
@@ -147,7 +147,7 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'upload'
                 ? 'text-primary-400 border-b-2 border-primary-400'
-                : 'text-gray-400 hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <CloudArrowUpIcon className="inline h-4 w-4 mr-2" />
@@ -161,11 +161,11 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
             <div className="space-y-6">
               <div className="text-center">
                 <div className="border-2 border-dashed border-dark-600 rounded-lg p-8 hover:border-primary-500 transition-colors">
-                  <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <CloudArrowUpIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-white">Upload Image</h3>
-                    <p className="text-gray-400">Drag and drop or click to select an image</p>
-                    <p className="text-xs text-gray-500">Supports JPG, PNG, WebP (max 10MB)</p>
+                    <h3 className="text-lg font-semibold text-foreground">Upload Image</h3>
+                    <p className="text-muted-foreground">Drag and drop or click to select an image</p>
+                    <p className="text-xs text-muted-foreground">Supports JPG, PNG, WebP (max 10MB)</p>
                   </div>
                   <Button
                     onClick={() => fileInputRef.current?.click()}
@@ -202,13 +202,13 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
             <div className="space-y-4">
               {/* Search */}
               <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search images..."
-                  className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -231,10 +231,10 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-opacity flex items-end">
-                        <div className="p-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="p-2 text-foreground text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                           <p className="font-medium truncate">{image.title}</p>
                           {image.tags.length > 0 && (
-                            <p className="text-gray-300 truncate">{image.tags.slice(0, 2).join(', ')}</p>
+                            <p className="text-muted-foreground truncate">{image.tags.slice(0, 2).join(', ')}</p>
                           )}
                         </div>
                       </div>
@@ -245,8 +245,8 @@ export function ImageInsertion({ isOpen, onClose, onInsert }: ImageInsertionProp
 
               {!loadingGallery && filteredImages.length === 0 && (
                 <div className="text-center py-12">
-                  <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-400">
+                  <PhotoIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
                     {searchQuery ? 'No images found matching your search' : 'No images in gallery yet'}
                   </p>
                   {!searchQuery && (

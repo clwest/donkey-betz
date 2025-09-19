@@ -51,7 +51,6 @@ import {
   type IntelligenceResult
 } from '@/features/sports/api/sports';
 
-import '../styles/gaming-theme.css';
 
 // Domain configurations
 const DOMAINS = {
@@ -61,7 +60,7 @@ const DOMAINS = {
     color: 'text-green-500',
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/20',
-    neonColor: 'gaming-neon-green'
+    neonColor: 'bg-card'
   },
   TRADING: {
     name: 'Stock Trading',
@@ -69,7 +68,7 @@ const DOMAINS = {
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
     borderColor: 'border-blue-500/20',
-    neonColor: 'gaming-neon-cyan'
+    neonColor: 'bg-card'
   },
   CRYPTO: {
     name: 'Cryptocurrency',
@@ -77,7 +76,7 @@ const DOMAINS = {
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/10',
     borderColor: 'border-orange-500/20',
-    neonColor: 'gaming-neon-orange'
+    neonColor: 'bg-card'
   },
   REAL_ESTATE: {
     name: 'Real Estate',
@@ -85,7 +84,7 @@ const DOMAINS = {
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
     borderColor: 'border-purple-500/20',
-    neonColor: 'gaming-neon-purple'
+    neonColor: 'bg-card'
   },
   BUSINESS: {
     name: 'Business Decisions',
@@ -93,7 +92,7 @@ const DOMAINS = {
     color: 'text-indigo-500',
     bgColor: 'bg-indigo-500/10',
     borderColor: 'border-indigo-500/20',
-    neonColor: 'gaming-neon-indigo'
+    neonColor: 'bg-card'
   }
 };
 
@@ -344,8 +343,8 @@ export function UnifiedCommandCenter() {
       case 'pending': return 'bg-yellow-500';
       case 'analyzing': return 'bg-blue-500 animate-pulse';
       case 'ready': return 'bg-green-500';
-      case 'executed': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+      case 'executed': return 'bg-muted/50';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -364,7 +363,7 @@ export function UnifiedCommandCenter() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
               Universal Decision Command Center
             </h1>
-            <p className="text-gray-400 mt-2">
+            <p className="text-muted-foreground mt-2">
               AI-powered decision intelligence, research, analytics, and learning
             </p>
           </div>
@@ -381,10 +380,10 @@ export function UnifiedCommandCenter() {
 
         {/* Portfolio Overview */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Portfolio Value</span>
+                <span className="text-sm text-muted-foreground">Portfolio Value</span>
                 <DollarSign className="h-4 w-4 text-green-500" />
               </div>
               <p className="text-2xl font-bold mt-2">
@@ -396,10 +395,10 @@ export function UnifiedCommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Win Rate</span>
+                <span className="text-sm text-muted-foreground">Win Rate</span>
                 <Trophy className="h-4 w-4 text-yellow-500" />
               </div>
               <p className="text-2xl font-bold mt-2">
@@ -409,21 +408,21 @@ export function UnifiedCommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Active Positions</span>
+                <span className="text-sm text-muted-foreground">Active Positions</span>
                 <Activity className="h-4 w-4 text-blue-500" />
               </div>
               <p className="text-2xl font-bold mt-2">{portfolio.activePositions}</p>
-              <p className="text-sm text-gray-400 mt-1">Across 5 domains</p>
+              <p className="text-sm text-muted-foreground mt-1">Across 5 domains</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Risk Score</span>
+                <span className="text-sm text-muted-foreground">Risk Score</span>
                 <Shield className="h-4 w-4 text-orange-500" />
               </div>
               <p className={`text-2xl font-bold mt-2 ${getRiskColor(portfolio.riskScore)}`}>
@@ -433,21 +432,21 @@ export function UnifiedCommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Research Sources</span>
+                <span className="text-sm text-muted-foreground">Research Sources</span>
                 <BookOpen className="h-4 w-4 text-purple-500" />
               </div>
               <p className="text-2xl font-bold mt-2">{researchSources.length}</p>
-              <p className="text-sm text-gray-400 mt-1">Active sources</p>
+              <p className="text-sm text-muted-foreground mt-1">Active sources</p>
             </CardContent>
           </Card>
 
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Agent Consensus</span>
+                <span className="text-sm text-muted-foreground">Agent Consensus</span>
                 <Zap className="h-4 w-4 text-yellow-500" />
               </div>
               <p className="text-2xl font-bold mt-2">82%</p>
@@ -478,7 +477,7 @@ export function UnifiedCommandCenter() {
           <Alert className="border-blue-500/50 bg-gradient-to-r from-blue-900/20 to-purple-900/20">
             <Brain className="h-4 w-4" />
             <AlertDescription>
-              <span className="font-bold text-blue-400">SKYNET INTELLIGENCE ACTIVE:</span> Real-time market analysis across {Object.keys(DOMAINS).length} domains with 102 specialized agents
+              <span className="font-bold text-blue-500">SKYNET INTELLIGENCE ACTIVE:</span> Real-time market analysis across {Object.keys(DOMAINS).length} domains with 102 specialized agents
             </AlertDescription>
           </Alert>
 
@@ -486,7 +485,7 @@ export function UnifiedCommandCenter() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Decisions */}
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-blue-500" />
@@ -505,10 +504,10 @@ export function UnifiedCommandCenter() {
                           <Icon className={`h-5 w-5 ${domainConfig.color}`} />
                           <div>
                             <p className="font-medium">{decision.entity}</p>
-                            <p className="text-sm text-gray-400">{domainConfig.name}</p>
+                            <p className="text-sm text-muted-foreground">{domainConfig.name}</p>
                           </div>
                         </div>
-                        <Badge className={`${getStatusColor(decision.status)} text-white`}>
+                        <Badge className={`${getStatusColor(decision.status)} text-foreground`}>
                           {decision.status}
                         </Badge>
                       </div>
@@ -519,12 +518,12 @@ export function UnifiedCommandCenter() {
             </Card>
 
             {/* Live Opportunity Preview */}
-            <Card className="gaming-card border-green-500/30 bg-gradient-to-br from-green-900/10 to-transparent">
+            <Card className="bg-card border-green-500/30 bg-gradient-to-br from-green-900/10 to-transparent">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="h-5 w-5 text-green-500" />
                   Live Opportunities
-                  <Badge className="bg-green-500 text-white ml-auto">LIVE</Badge>
+                  <Badge className="bg-green-500 text-foreground ml-auto">LIVE</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -534,12 +533,12 @@ export function UnifiedCommandCenter() {
                       <Target className="h-4 w-4 text-green-500" />
                       <div>
                         <p className="font-medium text-sm">NBA Arbitrage</p>
-                        <p className="text-xs text-gray-400">Lakers vs Warriors</p>
+                        <p className="text-xs text-muted-foreground">Lakers vs Warriors</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-green-500">+4.2%</p>
-                      <p className="text-xs text-gray-400">85% conf</p>
+                      <p className="text-xs text-muted-foreground">85% conf</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between p-3 border border-blue-700/50 rounded-lg bg-blue-900/10">
@@ -547,12 +546,12 @@ export function UnifiedCommandCenter() {
                       <TrendingUp className="h-4 w-4 text-blue-500" />
                       <div>
                         <p className="font-medium text-sm">Crypto Pattern</p>
-                        <p className="text-xs text-gray-400">BTC Ascending Triangle</p>
+                        <p className="text-xs text-muted-foreground">BTC Ascending Triangle</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-blue-500">+3.8%</p>
-                      <p className="text-xs text-gray-400">72% conf</p>
+                      <p className="text-xs text-muted-foreground">72% conf</p>
                     </div>
                   </div>
                   <Button
@@ -684,7 +683,7 @@ export function UnifiedCommandCenter() {
               const Icon = domainConfig.icon;
 
               return (
-                <Card key={decision.id} className={`gaming-card border ${domainConfig.borderColor}`}>
+                <Card key={decision.id} className={`bg-card border ${domainConfig.borderColor}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -693,27 +692,27 @@ export function UnifiedCommandCenter() {
                         </div>
                         <div>
                           <h3 className="font-semibold">{decision.entity}</h3>
-                          <p className="text-xs text-gray-400">{domainConfig.name}</p>
+                          <p className="text-xs text-muted-foreground">{domainConfig.name}</p>
                         </div>
                       </div>
-                      <Badge className={`${getStatusColor(decision.status)} text-white`}>
+                      <Badge className={`${getStatusColor(decision.status)} text-foreground`}>
                         {decision.status}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-gray-300">{decision.description}</p>
+                    <p className="text-sm text-muted-foreground">{decision.description}</p>
 
                     {decision.intelligence && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-400">Action</span>
+                          <span className="text-sm text-muted-foreground">Action</span>
                           <Badge variant="outline">
                             {decision.intelligence.primary_action}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-400">Confidence</span>
+                          <span className="text-sm text-muted-foreground">Confidence</span>
                           <span className="text-sm font-bold">
                             {(decision.intelligence.confidence * 100).toFixed(0)}%
                           </span>
@@ -722,7 +721,7 @@ export function UnifiedCommandCenter() {
 
                         {decision.intelligence.position_sizing && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-400">Recommended</span>
+                            <span className="text-muted-foreground">Recommended</span>
                             <span className="font-bold text-green-500">
                               ${decision.intelligence.position_sizing.recommended_stake}
                             </span>
@@ -763,7 +762,7 @@ export function UnifiedCommandCenter() {
                       {decision.status === 'analyzing' && (
                         <div className="flex-1 text-center">
                           <RefreshCw className="h-4 w-4 animate-spin mx-auto" />
-                          <p className="text-xs text-gray-400 mt-1">Analyzing...</p>
+                          <p className="text-xs text-muted-foreground mt-1">Analyzing...</p>
                         </div>
                       )}
                     </div>
@@ -836,7 +835,7 @@ export function UnifiedCommandCenter() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {researchSources.map(source => (
-                  <Card key={source.id} className="gaming-card">
+                  <Card key={source.id} className="bg-card">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -851,7 +850,7 @@ export function UnifiedCommandCenter() {
                             source.status === 'processing' ? 'bg-blue-500 animate-pulse' :
                             source.status === 'error' ? 'bg-red-500' :
                             'bg-yellow-500'
-                          } text-white`}
+                          } text-foreground`}
                         >
                           {source.status}
                         </Badge>
@@ -859,10 +858,10 @@ export function UnifiedCommandCenter() {
 
                       <h4 className="font-medium mb-2">{source.title}</h4>
                       {source.url && (
-                        <p className="text-xs text-gray-400 mb-2 truncate">{source.url}</p>
+                        <p className="text-xs text-muted-foreground mb-2 truncate">{source.url}</p>
                       )}
                       {source.summary && (
-                        <p className="text-sm text-gray-300">{source.summary}</p>
+                        <p className="text-sm text-muted-foreground">{source.summary}</p>
                       )}
 
                       <div className="flex gap-2 mt-3">
@@ -886,7 +885,7 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="knowledge-base" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Knowledge Base</CardTitle>
                 </CardHeader>
@@ -899,7 +898,7 @@ export function UnifiedCommandCenter() {
                       </Button>
                     </div>
 
-                    <div className="text-center py-12 text-gray-400">
+                    <div className="text-center py-12 text-muted-foreground">
                       <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>Knowledge base entries will appear here</p>
                       <Button className="mt-4">
@@ -913,7 +912,7 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="fact-checker" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Fact Checker</CardTitle>
                 </CardHeader>
@@ -928,7 +927,7 @@ export function UnifiedCommandCenter() {
                       Verify Facts
                     </Button>
 
-                    <div className="text-center py-12 text-gray-400">
+                    <div className="text-center py-12 text-muted-foreground">
                       <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
                       <p>Fact check results will appear here</p>
                     </div>
@@ -938,12 +937,12 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="library" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Document Library</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Archive className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Document library will appear here</p>
                   </div>
@@ -965,40 +964,40 @@ export function UnifiedCommandCenter() {
 
             <TabsContent value="dashboard" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <Beaker className="h-8 w-8 mx-auto mb-2 text-blue-500" />
                     <p className="text-2xl font-bold">{systemMetrics.totalAnalyses}</p>
-                    <p className="text-sm text-gray-400">Total Analyses</p>
+                    <p className="text-sm text-muted-foreground">Total Analyses</p>
                   </CardContent>
                 </Card>
 
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <FileText className="h-8 w-8 mx-auto mb-2 text-green-500" />
                     <p className="text-2xl font-bold">{systemMetrics.avgTokens}</p>
-                    <p className="text-sm text-gray-400">Avg Tokens</p>
+                    <p className="text-sm text-muted-foreground">Avg Tokens</p>
                   </CardContent>
                 </Card>
 
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <CheckCircle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
                     <p className="text-2xl font-bold">{(systemMetrics.avgClarity * 100).toFixed(0)}%</p>
-                    <p className="text-sm text-gray-400">Avg Clarity</p>
+                    <p className="text-sm text-muted-foreground">Avg Clarity</p>
                   </CardContent>
                 </Card>
 
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <Activity className="h-8 w-8 mx-auto mb-2 text-purple-500" />
                     <p className="text-2xl font-bold">{systemMetrics.activePrompts}</p>
-                    <p className="text-sm text-gray-400">Active Prompts</p>
+                    <p className="text-sm text-muted-foreground">Active Prompts</p>
                   </CardContent>
                 </Card>
               </div>
 
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Recent Diagnostic Results</CardTitle>
                 </CardHeader>
@@ -1012,22 +1011,22 @@ export function UnifiedCommandCenter() {
                             result.status === 'completed' ? 'bg-green-500' :
                             result.status === 'analyzing' ? 'bg-blue-500 animate-pulse' :
                             'bg-red-500'
-                          } text-white`}>
+                          } text-foreground`}>
                             {result.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-300 mb-2 truncate">
+                        <p className="text-sm text-muted-foreground mb-2 truncate">
                           {result.promptText}
                         </p>
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <span className="text-gray-400">Tokens:</span> {result.metrics.tokenCount}
+                            <span className="text-muted-foreground">Tokens:</span> {result.metrics.tokenCount}
                           </div>
                           <div>
-                            <span className="text-gray-400">Clarity:</span> {(result.metrics.clarityScore * 100).toFixed(0)}%
+                            <span className="text-muted-foreground">Clarity:</span> {(result.metrics.clarityScore * 100).toFixed(0)}%
                           </div>
                           <div>
-                            <span className="text-gray-400">Issues:</span> {result.metrics.issues.length}
+                            <span className="text-muted-foreground">Issues:</span> {result.metrics.issues.length}
                           </div>
                         </div>
                       </div>
@@ -1038,7 +1037,7 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="diagnostics" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Prompt Analyzer</CardTitle>
                 </CardHeader>
@@ -1058,25 +1057,25 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="performance" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Performance Metrics</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 bg-dark-800 rounded-lg p-4 flex items-center justify-center">
-                    <p className="text-gray-400">Performance charts will appear here</p>
+                  <div className="h-64 bg-card rounded-lg p-4 flex items-center justify-center">
+                    <p className="text-muted-foreground">Performance charts will appear here</p>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="optimization" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Optimization Recommendations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-muted-foreground">
                     <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Optimization suggestions will appear here</p>
                   </div>
@@ -1098,40 +1097,40 @@ export function UnifiedCommandCenter() {
 
             <TabsContent value="analytics" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <MessageSquare className="h-8 w-8 mx-auto mb-2 text-blue-500" />
                     <p className="text-2xl font-bold">{feedbackAnalytics.totalFeedback}</p>
-                    <p className="text-sm text-gray-400">Total Feedback</p>
+                    <p className="text-sm text-muted-foreground">Total Feedback</p>
                   </CardContent>
                 </Card>
 
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <Star className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
                     <p className="text-2xl font-bold">{feedbackAnalytics.avgRating.toFixed(1)}</p>
-                    <p className="text-sm text-gray-400">Avg Rating</p>
+                    <p className="text-sm text-muted-foreground">Avg Rating</p>
                   </CardContent>
                 </Card>
 
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <ThumbsUp className="h-8 w-8 mx-auto mb-2 text-green-500" />
                     <p className="text-2xl font-bold">{(feedbackAnalytics.positiveRate * 100).toFixed(0)}%</p>
-                    <p className="text-sm text-gray-400">Positive Rate</p>
+                    <p className="text-sm text-muted-foreground">Positive Rate</p>
                   </CardContent>
                 </Card>
 
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="h-8 w-8 mx-auto mb-2 text-purple-500" />
                     <p className="text-2xl font-bold">+12%</p>
-                    <p className="text-sm text-gray-400">Improvement</p>
+                    <p className="text-sm text-muted-foreground">Improvement</p>
                   </CardContent>
                 </Card>
               </div>
 
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Recent Feedback</CardTitle>
                 </CardHeader>
@@ -1147,7 +1146,7 @@ export function UnifiedCommandCenter() {
                                 <Star
                                   key={i}
                                   className={`h-3 w-3 ${
-                                    i < feedback.rating ? 'text-yellow-500 fill-current' : 'text-gray-400'
+                                    i < feedback.rating ? 'text-yellow-500 fill-current' : 'text-muted-foreground'
                                   }`}
                                 />
                               ))}
@@ -1158,13 +1157,13 @@ export function UnifiedCommandCenter() {
                               feedback.outcome === 'success' ? 'bg-green-500' :
                               feedback.outcome === 'failure' ? 'bg-red-500' :
                               'bg-yellow-500'
-                            } text-white`}>
+                            } text-foreground`}>
                               {feedback.outcome}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-gray-300">{feedback.comment}</p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-sm text-muted-foreground">{feedback.comment}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
                           {new Date(feedback.timestamp).toLocaleDateString()}
                         </p>
                       </div>
@@ -1175,12 +1174,12 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="history" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Decision Outcome History</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Decision history will appear here</p>
                   </div>
@@ -1189,12 +1188,12 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="learning" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Learning Insights</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-muted-foreground">
                     <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Learning insights will appear here</p>
                   </div>
@@ -1203,12 +1202,12 @@ export function UnifiedCommandCenter() {
             </TabsContent>
 
             <TabsContent value="improvement" className="space-y-6">
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Improvement Tracking</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-muted-foreground">
                     <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Improvement metrics will appear here</p>
                   </div>

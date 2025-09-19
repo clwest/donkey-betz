@@ -137,7 +137,7 @@ const SubscriptionManager: React.FC<Props> = ({ subscription, onUpdate }) => {
   const getTierIcon = (tierType: string) => {
     switch (tierType) {
       case 'free':
-        return <Zap className="h-6 w-6 text-gray-500" />;
+        return <Zap className="h-6 w-6 text-muted-foreground" />;
       case 'starter':
         return <TrendingUp className="h-6 w-6 text-blue-500" />;
       case 'professional':
@@ -328,7 +328,7 @@ const SubscriptionManager: React.FC<Props> = ({ subscription, onUpdate }) => {
                               {enabled ? (
                                 <Check className="h-4 w-4 text-green-500" />
                               ) : (
-                                <X className="h-4 w-4 text-gray-400" />
+                                <X className="h-4 w-4 text-muted-foreground" />
                               )}
                               <span className={`text-sm ${enabled ? '' : 'text-muted-foreground'}`}>
                                 {feature.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}

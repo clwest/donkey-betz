@@ -206,15 +206,15 @@ export function ImageViewer({
       />
       
       {/* Modal Content */}
-      <div className="relative flex flex-col h-full bg-dark-900">
+      <div className="relative flex flex-col h-full bg-background">
         {/* Header Toolbar */}
-        <div className="flex items-center justify-between p-4 border-b border-dark-700">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-foreground">
               {activeImage.title || activeImage.prompt?.substring(0, 50) || 'Generated Image'}
             </h2>
             {images.length > 1 && (
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {activeImageIndex + 1} / {images.length}
               </span>
             )}
@@ -222,20 +222,20 @@ export function ImageViewer({
           
           <div className="flex items-center gap-2">
             {/* Zoom Controls */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-dark-800 rounded-lg">
+            <div className="flex items-center gap-1 px-2 py-1 bg-card rounded-lg">
               <button
                 onClick={handleZoomOut}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
                 title="Zoom Out (-)"
               >
                 <MagnifyingGlassMinusIcon className="h-4 w-4" />
               </button>
-              <span className="text-sm text-gray-400 min-w-[3rem] text-center">
+              <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
                 {Math.round(scale * 100)}%
               </span>
               <button
                 onClick={handleZoomIn}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
                 title="Zoom In (+)"
               >
                 <MagnifyingGlassPlusIcon className="h-4 w-4" />
@@ -246,7 +246,7 @@ export function ImageViewer({
             <button
               onClick={handleFavorite}
               className={`p-2 transition-colors ${
-                isFavorited ? 'text-red-500' : 'text-gray-400 hover:text-red-400'
+                isFavorited ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
               }`}
               title="Favorite"
             >
@@ -256,7 +256,7 @@ export function ImageViewer({
             <button
               onClick={() => setShowInfo(!showInfo)}
               className={`p-2 transition-colors ${
-                showInfo ? 'text-primary-400' : 'text-gray-400 hover:text-white'
+                showInfo ? 'text-primary-400' : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Toggle Info (I)"
             >
@@ -265,7 +265,7 @@ export function ImageViewer({
 
             <button
               onClick={handleCopyPrompt}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
               title="Copy Prompt (C)"
             >
               <DocumentDuplicateIcon className="h-5 w-5" />
@@ -273,7 +273,7 @@ export function ImageViewer({
 
             <button
               onClick={handleDownload}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
               title="Download (D)"
             >
               <ArrowDownTrayIcon className="h-5 w-5" />
@@ -282,7 +282,7 @@ export function ImageViewer({
             {onGenerateSimilar && (
               <button
                 onClick={handleGenerateSimilar}
-                className="p-2 text-gray-400 hover:text-primary-400 transition-colors"
+                className="p-2 text-muted-foreground hover:text-primary-400 transition-colors"
                 title="Generate Similar"
               >
                 <SparklesIcon className="h-5 w-5" />
@@ -291,7 +291,7 @@ export function ImageViewer({
 
             <button
               onClick={toggleFullscreen}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
               title="Fullscreen (F)"
             >
               {isFullscreen ? (
@@ -304,7 +304,7 @@ export function ImageViewer({
             {onDelete && (
               <button
                 onClick={handleDelete}
-                className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                 title="Delete"
               >
                 <TrashIcon className="h-5 w-5" />
@@ -313,7 +313,7 @@ export function ImageViewer({
 
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white transition-colors ml-2"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors ml-2"
               title="Close (Esc)"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -329,27 +329,27 @@ export function ImageViewer({
               <button
                 onClick={navigatePrevious}
                 disabled={activeImageIndex === 0}
-                className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-dark-800/80 rounded-full transition-all ${
+                className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-card/80 rounded-full transition-all ${
                   activeImageIndex === 0 
                     ? 'opacity-30 cursor-not-allowed' 
                     : 'hover:bg-dark-700 hover:scale-110'
                 }`}
                 title="Previous (←)"
               >
-                <ChevronLeftIcon className="h-6 w-6 text-white" />
+                <ChevronLeftIcon className="h-6 w-6 text-foreground" />
               </button>
               
               <button
                 onClick={navigateNext}
                 disabled={activeImageIndex === images.length - 1}
-                className={`absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-dark-800/80 rounded-full transition-all ${
+                className={`absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-card/80 rounded-full transition-all ${
                   activeImageIndex === images.length - 1 
                     ? 'opacity-30 cursor-not-allowed' 
                     : 'hover:bg-dark-700 hover:scale-110'
                 }`}
                 title="Next (→)"
               >
-                <ChevronRightIcon className="h-6 w-6 text-white" />
+                <ChevronRightIcon className="h-6 w-6 text-foreground" />
               </button>
             </>
           )}
@@ -376,14 +376,14 @@ export function ImageViewer({
 
           {/* Info Panel */}
           {showInfo && (
-            <div className="w-80 bg-dark-800 border-l border-dark-700 p-4 overflow-y-auto">
-              <h3 className="text-lg font-semibold text-white mb-4">Image Information</h3>
+            <div className="w-80 bg-card border-l border-border p-4 overflow-y-auto">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Image Information</h3>
               
               <div className="space-y-4">
                 {activeImage.prompt && (
                   <div>
-                    <label className="text-sm text-gray-400">Prompt</label>
-                    <p className="text-sm text-gray-200 mt-1">{activeImage.prompt}</p>
+                    <label className="text-sm text-muted-foreground">Prompt</label>
+                    <p className="text-sm text-foreground mt-1">{activeImage.prompt}</p>
                   </div>
                 )}
 
@@ -391,22 +391,22 @@ export function ImageViewer({
                   <>
                     {activeImage.metadata.style && (
                       <div>
-                        <label className="text-sm text-gray-400">Style</label>
-                        <p className="text-sm text-gray-200 mt-1 capitalize">{activeImage.metadata.style}</p>
+                        <label className="text-sm text-muted-foreground">Style</label>
+                        <p className="text-sm text-foreground mt-1 capitalize">{activeImage.metadata.style}</p>
                       </div>
                     )}
 
                     {activeImage.metadata.model && (
                       <div>
-                        <label className="text-sm text-gray-400">Model</label>
-                        <p className="text-sm text-gray-200 mt-1">{activeImage.metadata.model}</p>
+                        <label className="text-sm text-muted-foreground">Model</label>
+                        <p className="text-sm text-foreground mt-1">{activeImage.metadata.model}</p>
                       </div>
                     )}
 
                     {(activeImage.metadata.width && activeImage.metadata.height) && (
                       <div>
-                        <label className="text-sm text-gray-400">Resolution</label>
-                        <p className="text-sm text-gray-200 mt-1">
+                        <label className="text-sm text-muted-foreground">Resolution</label>
+                        <p className="text-sm text-foreground mt-1">
                           {activeImage.metadata.width} × {activeImage.metadata.height}
                         </p>
                       </div>
@@ -414,29 +414,29 @@ export function ImageViewer({
 
                     {activeImage.metadata.cfg_scale && (
                       <div>
-                        <label className="text-sm text-gray-400">CFG Scale</label>
-                        <p className="text-sm text-gray-200 mt-1">{activeImage.metadata.cfg_scale}</p>
+                        <label className="text-sm text-muted-foreground">CFG Scale</label>
+                        <p className="text-sm text-foreground mt-1">{activeImage.metadata.cfg_scale}</p>
                       </div>
                     )}
 
                     {activeImage.metadata.steps && (
                       <div>
-                        <label className="text-sm text-gray-400">Steps</label>
-                        <p className="text-sm text-gray-200 mt-1">{activeImage.metadata.steps}</p>
+                        <label className="text-sm text-muted-foreground">Steps</label>
+                        <p className="text-sm text-foreground mt-1">{activeImage.metadata.steps}</p>
                       </div>
                     )}
 
                     {activeImage.metadata.seed && (
                       <div>
-                        <label className="text-sm text-gray-400">Seed</label>
-                        <p className="text-sm text-gray-200 mt-1 font-mono text-xs">{activeImage.metadata.seed}</p>
+                        <label className="text-sm text-muted-foreground">Seed</label>
+                        <p className="text-sm text-foreground mt-1 font-mono text-xs">{activeImage.metadata.seed}</p>
                       </div>
                     )}
 
                     {activeImage.metadata.negative_prompt && (
                       <div>
-                        <label className="text-sm text-gray-400">Negative Prompt</label>
-                        <p className="text-sm text-gray-200 mt-1">{activeImage.metadata.negative_prompt}</p>
+                        <label className="text-sm text-muted-foreground">Negative Prompt</label>
+                        <p className="text-sm text-foreground mt-1">{activeImage.metadata.negative_prompt}</p>
                       </div>
                     )}
                   </>
@@ -444,12 +444,12 @@ export function ImageViewer({
 
                 {activeImage.tags && activeImage.tags.length > 0 && (
                   <div>
-                    <label className="text-sm text-gray-400">Tags</label>
+                    <label className="text-sm text-muted-foreground">Tags</label>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {activeImage.tags.map((tag: string, index: number) => (
                         <span
                           key={index}
-                          className="px-2 py-1 text-xs bg-dark-700 text-gray-300 rounded"
+                          className="px-2 py-1 text-xs bg-dark-700 text-muted-foreground rounded"
                         >
                           {tag}
                         </span>
@@ -460,8 +460,8 @@ export function ImageViewer({
 
                 {(activeImage.saved_at || activeImage.created_at) && (
                   <div>
-                    <label className="text-sm text-gray-400">Created</label>
-                    <p className="text-sm text-gray-200 mt-1">
+                    <label className="text-sm text-muted-foreground">Created</label>
+                    <p className="text-sm text-foreground mt-1">
                       {new Date(activeImage.saved_at || activeImage.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -469,14 +469,14 @@ export function ImageViewer({
 
                 {activeImage.id && (
                   <div>
-                    <label className="text-sm text-gray-400">ID</label>
-                    <p className="text-sm text-gray-200 mt-1 font-mono">{activeImage.id}</p>
+                    <label className="text-sm text-muted-foreground">ID</label>
+                    <p className="text-sm text-foreground mt-1 font-mono">{activeImage.id}</p>
                   </div>
                 )}
               </div>
 
               {/* Feedback Section */}
-              <div className="mt-6 pt-4 border-t border-dark-700">
+              <div className="mt-6 pt-4 border-t border-border">
                 <FeedbackWidget
                   contentType="image"
                   contentId={parseInt(activeImage.id)}
@@ -487,36 +487,36 @@ export function ImageViewer({
               </div>
 
               {/* Keyboard Shortcuts */}
-              <div className="mt-6 pt-4 border-t border-dark-700">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2">Keyboard Shortcuts</h4>
+              <div className="mt-6 pt-4 border-t border-border">
+                <h4 className="text-sm font-semibold text-muted-foreground mb-2">Keyboard Shortcuts</h4>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Navigate</span>
-                    <span className="text-gray-400">← →</span>
+                    <span className="text-muted-foreground">Navigate</span>
+                    <span className="text-muted-foreground">← →</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Zoom</span>
-                    <span className="text-gray-400">+ / - / 0</span>
+                    <span className="text-muted-foreground">Zoom</span>
+                    <span className="text-muted-foreground">+ / - / 0</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Download</span>
-                    <span className="text-gray-400">D</span>
+                    <span className="text-muted-foreground">Download</span>
+                    <span className="text-muted-foreground">D</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Copy Prompt</span>
-                    <span className="text-gray-400">C</span>
+                    <span className="text-muted-foreground">Copy Prompt</span>
+                    <span className="text-muted-foreground">C</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Toggle Info</span>
-                    <span className="text-gray-400">I</span>
+                    <span className="text-muted-foreground">Toggle Info</span>
+                    <span className="text-muted-foreground">I</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Fullscreen</span>
-                    <span className="text-gray-400">F</span>
+                    <span className="text-muted-foreground">Fullscreen</span>
+                    <span className="text-muted-foreground">F</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Close</span>
-                    <span className="text-gray-400">Esc</span>
+                    <span className="text-muted-foreground">Close</span>
+                    <span className="text-muted-foreground">Esc</span>
                   </div>
                 </div>
               </div>
@@ -526,7 +526,7 @@ export function ImageViewer({
 
         {/* Thumbnail Strip (for multiple images) */}
         {images.length > 1 && (
-          <div className="border-t border-dark-700 p-4">
+          <div className="border-t border-border p-4">
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, index) => {
                 const thumbUrl = img.url || img.image_url || img.result;
@@ -540,7 +540,7 @@ export function ImageViewer({
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                       index === activeImageIndex
                         ? 'border-primary-500 scale-110'
-                        : 'border-dark-700 hover:border-dark-600'
+                        : 'border-border hover:border-dark-600'
                     }`}
                   >
                     <img

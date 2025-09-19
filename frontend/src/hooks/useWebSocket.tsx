@@ -315,7 +315,7 @@ export function WebSocketStatus() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 space-y-2">
+    <div className="fixed bottom-4 right-4 bg-white dark:bg-card shadow-lg rounded-lg p-4 space-y-2">
       <div className="text-sm font-semibold mb-2">Connection Status</div>
       
       {/* Backend Health */}
@@ -349,7 +349,7 @@ export function WebSocketStatus() {
             dashboardWS.reconnect();
             agentsWS.reconnect();
           }}
-          className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+          className="mt-2 px-3 py-1 bg-blue-500 text-foreground text-xs rounded hover:bg-blue-600"
         >
           Reconnect All
         </button>

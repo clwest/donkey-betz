@@ -581,14 +581,14 @@ export function ResearchBooks() {
   const renderOutlineTab = () => (
     <div className="space-y-6">
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Build Your Book Outline</h3>
-        <p className="text-gray-400 text-sm mb-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Build Your Book Outline</h3>
+        <p className="text-muted-foreground text-sm mb-6">
           Search your research library, select relevant sources, and add your personal insights to create a unique book.
         </p>
         
         {/* Book Topic & Search */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-muted-foreground mb-2">
             What's your book about?
           </label>
           <div className="flex gap-2">
@@ -609,12 +609,12 @@ export function ResearchBooks() {
       {/* Search Results / Available Research */}
       {documents.length > 0 && (
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             Available Research ({selectedDocuments.size} selected)
           </h3>
           <div className="space-y-3">
             {documents.map((doc) => (
-              <div key={doc.id} className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
+              <div key={doc.id} className="bg-background/50 rounded-lg p-4 border border-border">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
                     <input
@@ -635,24 +635,24 @@ export function ResearchBooks() {
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <DocumentTextIcon className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm font-medium text-white">
+                        <DocumentTextIcon className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm font-medium text-foreground">
                           {doc.filename}
                         </span>
                         <span className={`px-2 py-1 rounded text-xs ${
-                          doc.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                          doc.status === 'processing' ? 'bg-blue-900/20 text-blue-400' :
-                          'bg-red-900/20 text-red-400'
+                          doc.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                          doc.status === 'processing' ? 'bg-blue-900/20 text-blue-500' :
+                          'bg-red-900/20 text-red-500'
                         }`}>
                           {doc.status}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-400 line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
                         {doc.content_preview.length > 150 
                           ? `${doc.content_preview.slice(0, 150)}...` 
                           : doc.content_preview}
                       </p>
-                      <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                      <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                         <span>Pages: {doc.pages}</span>
                         <span>Words: {doc.word_count.toLocaleString()}</span>
                         <span>Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</span>
@@ -684,20 +684,20 @@ export function ResearchBooks() {
 
       {/* Visual Assets Management */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Visual Assets for Your Book</h3>
-        <p className="text-gray-400 text-sm mb-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Visual Assets for Your Book</h3>
+        <p className="text-muted-foreground text-sm mb-6">
           Generate custom illustrations, upload images, or select from your gallery to enhance your book.
         </p>
         
         {/* Image Generation */}
         <div className="mb-6">
-          <h4 className="font-medium text-white mb-3 flex items-center gap-2">
+          <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
             <PhotoIcon className="h-4 w-4" />
             Generate Book Illustrations
           </h4>
           <div className="space-y-3">
             <textarea
-              className="w-full h-20 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none"
+              className="w-full h-20 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-foreground placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none"
               placeholder="Describe the illustration you want... e.g., 'A futuristic AI workspace with holographic displays', 'Python code visualization with colorful data flows'"
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
@@ -726,7 +726,7 @@ export function ResearchBooks() {
         {/* Selected Images */}
         {selectedImages.length > 0 && (
           <div className="mb-6">
-            <h4 className="font-medium text-white mb-3">
+            <h4 className="font-medium text-foreground mb-3">
               Selected Images ({selectedImages.length})
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -739,7 +739,7 @@ export function ResearchBooks() {
                   />
                   <button
                     onClick={() => removeSelectedImage(imageUrl)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -top-2 -right-2 bg-red-500 text-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove image"
                   >
                     <XMarkIcon className="h-3 w-3" />
@@ -753,18 +753,18 @@ export function ResearchBooks() {
 
       {/* Personal Thoughts & Insights */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Add Your Personal Touch</h3>
-        <p className="text-gray-400 text-sm mb-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Add Your Personal Touch</h3>
+        <p className="text-muted-foreground text-sm mb-4">
           Add your own thoughts, insights, or unique perspectives to make this book uniquely yours.
         </p>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Personal Notes & Insights
             </label>
             <textarea
-              className="w-full h-32 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none"
+              className="w-full h-32 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-foreground placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none"
               placeholder="Add your personal thoughts, experiences, or unique perspectives that should be woven into the book content..."
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
@@ -772,7 +772,7 @@ export function ResearchBooks() {
           </div>
           
           <div className="flex justify-between items-center">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground">
               These insights will be incorporated throughout your book to add personal value
             </p>
             <Button onClick={addTextSource} disabled={!textInput.trim()} size="sm">
@@ -786,21 +786,21 @@ export function ResearchBooks() {
       {/* Added Insights */}
       {sources.length > 0 && (
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             Your Insights ({sources.length})
           </h3>
           <div className="space-y-3">
             {sources.map((source, index) => (
-              <div key={index} className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
+              <div key={index} className="bg-background/50 rounded-lg p-4 border border-border">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <DocumentTextIcon className="h-4 w-4 text-purple-400" />
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         Personal Insight {index + 1}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-300 leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {source.content.length > 200 
                         ? `${source.content.slice(0, 200)}...` 
                         : source.content}
@@ -822,8 +822,8 @@ export function ResearchBooks() {
 
       {/* Outline Preview & Actions */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Outline Management</h3>
-        <p className="text-gray-400 text-sm mb-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Outline Management</h3>
+        <p className="text-muted-foreground text-sm mb-4">
           Preview your book structure and manage your outline before generating the full book.
         </p>
         
@@ -832,7 +832,7 @@ export function ResearchBooks() {
             <div className="text-center">
               <BookOpenIcon className="h-6 w-6 mx-auto mb-2" />
               <div className="font-medium">Generate Preview Outline</div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 See how your book will be structured
               </div>
             </div>
@@ -842,7 +842,7 @@ export function ResearchBooks() {
             <div className="text-center">
               <DocumentTextIcon className="h-6 w-6 mx-auto mb-2" />
               <div className="font-medium">Save Draft</div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 Save your current progress
               </div>
             </div>
@@ -852,29 +852,29 @@ export function ResearchBooks() {
         {/* Progress Summary */}
         {(selectedDocuments.size > 0 || sources.length > 0 || selectedImages.length > 0) && (
           <div className="bg-primary-500/10 border border-primary-500/20 rounded-lg p-4">
-            <h4 className="font-medium text-white mb-2">Your Book Foundation</h4>
+            <h4 className="font-medium text-foreground mb-2">Your Book Foundation</h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               <div>
-                <div className="text-lg font-bold text-blue-400">{selectedDocuments.size}</div>
-                <div className="text-xs text-gray-400">Research Sources</div>
+                <div className="text-lg font-bold text-blue-500">{selectedDocuments.size}</div>
+                <div className="text-xs text-muted-foreground">Research Sources</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-purple-400">{sources.length}</div>
-                <div className="text-xs text-gray-400">Personal Insights</div>
+                <div className="text-xs text-muted-foreground">Personal Insights</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-pink-400">{selectedImages.length}</div>
-                <div className="text-xs text-gray-400">Visual Assets</div>
+                <div className="text-xs text-muted-foreground">Visual Assets</div>
               </div>
               <div>
-                <div className="text-lg font-bold text-green-400">
+                <div className="text-lg font-bold text-green-500">
                   {bookTitle.trim() ? '✓' : '○'}
                 </div>
-                <div className="text-xs text-gray-400">Book Topic</div>
+                <div className="text-xs text-muted-foreground">Book Topic</div>
               </div>
               <div>
-                <div className="text-lg font-bold text-yellow-400">Ready</div>
-                <div className="text-xs text-gray-400">Status</div>
+                <div className="text-lg font-bold text-yellow-500">Ready</div>
+                <div className="text-xs text-muted-foreground">Status</div>
               </div>
             </div>
             
@@ -897,8 +897,8 @@ export function ResearchBooks() {
         <Card>
           <div className="text-center py-12">
             <DocumentTextIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
-            <p className="text-gray-400 mb-2">No research available yet</p>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-muted-foreground mb-2">No research available yet</p>
+            <p className="text-sm text-muted-foreground mb-4">
               Go to Research Sources to upload documents and build your research library
             </p>
             <Button 
@@ -916,14 +916,14 @@ export function ResearchBooks() {
   const renderSourcesTab = () => (
     <div className="space-y-6">
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Research Collection</h3>
-        <p className="text-gray-400 text-sm mb-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Research Collection</h3>
+        <p className="text-muted-foreground text-sm mb-6">
           Build your research library by uploading documents, extracting content from URLs, and processing videos.
         </p>
         
         {/* PDF Upload */}
         <div className="mb-6">
-          <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
             <DocumentArrowUpIcon className="h-4 w-4" />
             Upload PDF Documents
           </h4>
@@ -947,7 +947,7 @@ export function ResearchBooks() {
 
         {/* URL Input */}
         <div className="mb-6">
-          <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
             <LinkIcon className="h-4 w-4" />
             Web Articles & Pages
           </h4>
@@ -968,7 +968,7 @@ export function ResearchBooks() {
 
         {/* YouTube Input */}
         <div className="mb-6">
-          <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
             <VideoCameraIcon className="h-4 w-4" />
             YouTube Videos
           </h4>
@@ -989,7 +989,7 @@ export function ResearchBooks() {
 
         {/* Text Input */}
         <div className="mb-6">
-          <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
             <DocumentTextIcon className="h-4 w-4" />
             Direct Text Input
           </h4>
@@ -1010,21 +1010,21 @@ export function ResearchBooks() {
 
       {/* Research Library Status */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Your Research Library</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Your Research Library</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-dark-700 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-400">{documents.length}</div>
-            <div className="text-sm text-gray-400">Processed Documents</div>
+            <div className="text-2xl font-bold text-blue-500">{documents.length}</div>
+            <div className="text-sm text-muted-foreground">Processed Documents</div>
           </div>
           <div className="bg-dark-700 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-green-400">{sources.length}</div>
-            <div className="text-sm text-gray-400">Active Sources</div>
+            <div className="text-2xl font-bold text-green-500">{sources.length}</div>
+            <div className="text-sm text-muted-foreground">Active Sources</div>
           </div>
           <div className="bg-dark-700 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-purple-400">
               {documents.reduce((acc, doc) => acc + (doc.word_count || 0), 0).toLocaleString()}
             </div>
-            <div className="text-sm text-gray-400">Total Words</div>
+            <div className="text-sm text-muted-foreground">Total Words</div>
           </div>
         </div>
         
@@ -1040,31 +1040,31 @@ export function ResearchBooks() {
       {/* Uploaded Documents Management */}
       {documents.length > 0 && (
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Manage Uploaded Documents</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Manage Uploaded Documents</h3>
           <div className="space-y-3">
             {documents.map((doc) => (
-              <div key={doc.id} className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
+              <div key={doc.id} className="bg-background/50 rounded-lg p-4 border border-border">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <DocumentTextIcon className="h-4 w-4 text-blue-400" />
-                      <span className="text-sm font-medium text-white">
+                      <DocumentTextIcon className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-medium text-foreground">
                         {doc.filename}
                       </span>
                       <span className={`px-2 py-1 rounded text-xs ${
-                        doc.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                        doc.status === 'processing' ? 'bg-blue-900/20 text-blue-400' :
-                        'bg-red-900/20 text-red-400'
+                        doc.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                        doc.status === 'processing' ? 'bg-blue-900/20 text-blue-500' :
+                        'bg-red-900/20 text-red-500'
                       }`}>
                         {doc.status}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-400 line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
                       {doc.content_preview && doc.content_preview.length > 150 
                         ? `${doc.content_preview.slice(0, 150)}...` 
                         : doc.content_preview || 'No preview available'}
                     </p>
-                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                    <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                       <span>Pages: {doc.pages || 0}</span>
                       <span>Words: {(doc.word_count || 0).toLocaleString()}</span>
                       <span>Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown'}</span>
@@ -1088,32 +1088,32 @@ export function ResearchBooks() {
       {/* Active Sources Management */}
       {sources.length > 0 && (
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Manage Extracted Sources</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Manage Extracted Sources</h3>
           <div className="space-y-3">
             {sources.map((source, index) => (
-              <div key={index} className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
+              <div key={index} className="bg-background/50 rounded-lg p-4 border border-border">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      {source.type === 'url' && <LinkIcon className="h-4 w-4 text-blue-400" />}
-                      {source.type === 'youtube' && <VideoCameraIcon className="h-4 w-4 text-red-400" />}
-                      {source.type === 'pdf' && <DocumentArrowUpIcon className="h-4 w-4 text-green-400" />}
-                      {source.type === 'text' && <DocumentTextIcon className="h-4 w-4 text-gray-400" />}
-                      {source.type === 'csv' && <DocumentTextIcon className="h-4 w-4 text-blue-400" />}
+                      {source.type === 'url' && <LinkIcon className="h-4 w-4 text-blue-500" />}
+                      {source.type === 'youtube' && <VideoCameraIcon className="h-4 w-4 text-red-500" />}
+                      {source.type === 'pdf' && <DocumentArrowUpIcon className="h-4 w-4 text-green-500" />}
+                      {source.type === 'text' && <DocumentTextIcon className="h-4 w-4 text-muted-foreground" />}
+                      {source.type === 'csv' && <DocumentTextIcon className="h-4 w-4 text-blue-500" />}
                       {source.type === 'doc' && <DocumentTextIcon className="h-4 w-4 text-blue-500" />}
                       {source.type === 'spreadsheet' && <DocumentTextIcon className="h-4 w-4 text-green-500" />}
                       {source.type === 'document' && <DocumentArrowUpIcon className="h-4 w-4 text-purple-400" />}
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         {source.title || `${source.type.toUpperCase()} Source`}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-400 line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
                       {source.content.length > 150 
                         ? `${source.content.slice(0, 150)}...` 
                         : source.content}
                     </p>
                     {source.metadata && (
-                      <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                      <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                         {source.metadata.pages && <span>Pages: {source.metadata.pages}</span>}
                         {source.metadata.word_count && <span>Words: {source.metadata.word_count.toLocaleString()}</span>}
                         {source.metadata.duration && <span>Duration: {source.metadata.duration}</span>}
@@ -1145,11 +1145,11 @@ export function ResearchBooks() {
   const renderGenerateTab = () => (
     <div className="space-y-6">
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Book Configuration</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Book Configuration</h3>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Book Title</label>
+            <label className="block text-sm text-muted-foreground mb-2">Book Title</label>
             <input
               className="input"
               placeholder="Enter your book title..."
@@ -1160,7 +1160,7 @@ export function ResearchBooks() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Genre</label>
+              <label className="block text-sm text-muted-foreground mb-2">Genre</label>
               <select 
                 className="input"
                 value={bookOptions.genre}
@@ -1175,7 +1175,7 @@ export function ResearchBooks() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Target Audience</label>
+              <label className="block text-sm text-muted-foreground mb-2">Target Audience</label>
               <select 
                 className="input"
                 value={bookOptions.target_audience}
@@ -1192,7 +1192,7 @@ export function ResearchBooks() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Chapter Count</label>
+              <label className="block text-sm text-muted-foreground mb-2">Chapter Count</label>
               <input
                 className="input"
                 type="number"
@@ -1204,7 +1204,7 @@ export function ResearchBooks() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Words per Chapter</label>
+              <label className="block text-sm text-muted-foreground mb-2">Words per Chapter</label>
               <input
                 className="input"
                 type="number"
@@ -1219,7 +1219,7 @@ export function ResearchBooks() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Tone</label>
+              <label className="block text-sm text-muted-foreground mb-2">Tone</label>
               <select 
                 className="input"
                 value={bookOptions.tone}
@@ -1240,17 +1240,17 @@ export function ResearchBooks() {
                 onChange={(e) => setBookOptions(prev => ({ ...prev, include_citations: e.target.checked }))}
                 className="w-4 h-4"
               />
-              <label htmlFor="citations" className="text-sm text-gray-300">
+              <label htmlFor="citations" className="text-sm text-muted-foreground">
                 Include citations
               </label>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-dark-700">
+          <div className="pt-4 border-t border-border">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <p className="text-white font-medium">Ready to Generate</p>
-                <p className="text-sm text-gray-400">
+                <p className="text-foreground font-medium">Ready to Generate</p>
+                <p className="text-sm text-muted-foreground">
                   {sources.length} new sources • {selectedDocuments.size} selected documents • {bookOptions.chapter_count} chapters • 
                   ~{(bookOptions.chapter_count * bookOptions.words_per_chapter).toLocaleString()} words
                 </p>
@@ -1272,22 +1272,22 @@ export function ResearchBooks() {
       {/* Current Generation Status */}
       {currentBook && (
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Generation Progress</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Generation Progress</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-white">{currentBook.title}</h4>
-                <p className="text-sm text-gray-400">Status: {currentBook.status}</p>
+                <h4 className="font-medium text-foreground">{currentBook.title}</h4>
+                <p className="text-sm text-muted-foreground">Status: {currentBook.status}</p>
               </div>
               <div className="flex items-center gap-2">
                 {currentBook.status === 'generating' && (
                   <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
                 )}
                 {currentBook.status === 'completed' && (
-                  <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
                 )}
                 {currentBook.status === 'error' && (
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+                  <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
                 )}
               </div>
             </div>
@@ -1298,10 +1298,10 @@ export function ResearchBooks() {
                   <div
                     key={chapter.id}
                     className={`p-2 rounded text-xs text-center ${
-                      chapter.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                      chapter.status === 'generating' ? 'bg-blue-900/20 text-blue-400' :
-                      chapter.status === 'error' ? 'bg-red-900/20 text-red-400' :
-                      'bg-dark-700 text-gray-400'
+                      chapter.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                      chapter.status === 'generating' ? 'bg-blue-900/20 text-blue-500' :
+                      chapter.status === 'error' ? 'bg-red-900/20 text-red-500' :
+                      'bg-dark-700 text-muted-foreground'
                     }`}
                   >
                     Ch. {chapter.chapter_number}
@@ -1340,18 +1340,18 @@ export function ResearchBooks() {
             <Card key={book.id}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white mb-1">{book.title}</h3>
-                  <p className="text-sm text-gray-400 mb-2 line-clamp-2">
+                  <h3 className="font-semibold text-foreground mb-1">{book.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                     {book.description}
                   </p>
-                  <div className="flex gap-4 text-xs text-gray-500">
+                  <div className="flex gap-4 text-xs text-muted-foreground">
                     <span>{book.chapters?.length || 0} chapters</span>
                     <span>{book.word_count?.toLocaleString() || 0} words</span>
                     <span className={`px-2 py-1 rounded ${
-                      book.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                      book.status === 'generating' ? 'bg-blue-900/20 text-blue-400' :
-                      book.status === 'error' ? 'bg-red-900/20 text-red-400' :
-                      'bg-gray-900/20 text-gray-400'
+                      book.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                      book.status === 'generating' ? 'bg-blue-900/20 text-blue-500' :
+                      book.status === 'error' ? 'bg-red-900/20 text-red-500' :
+                      'bg-background/20 text-muted-foreground'
                     }`}>
                       {book.status}
                     </span>
@@ -1396,8 +1396,8 @@ export function ResearchBooks() {
         <Card>
           <div className="text-center py-12">
             <BookOpenIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
-            <p className="text-gray-400 mb-2">No books generated yet</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-muted-foreground mb-2">No books generated yet</p>
+            <p className="text-sm text-muted-foreground">
               Add research sources and generate your first book
             </p>
             <Button 
@@ -1427,7 +1427,7 @@ export function ResearchBooks() {
           <Card>
             <div className="text-center py-12">
               <SparklesIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
-              <p className="text-gray-400">Coming soon!</p>
+              <p className="text-muted-foreground">Coming soon!</p>
             </div>
           </Card>
         );
@@ -1447,8 +1447,8 @@ export function ResearchBooks() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary-500 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-primary-500 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                 }`}
               >
                 <tab.icon className="h-4 w-4" />
@@ -1465,12 +1465,12 @@ export function ResearchBooks() {
       {/* Book Details Modal */}
       {currentBook && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-semibold text-white">{currentBook.title}</h2>
+              <h2 className="text-xl font-semibold text-foreground">{currentBook.title}</h2>
               <button
                 onClick={() => setCurrentBook(null)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -1481,53 +1481,53 @@ export function ResearchBooks() {
                 {/* Book Status & Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-dark-700 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-1">Status</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
                     <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                      currentBook.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                      currentBook.status === 'generating' ? 'bg-blue-900/20 text-blue-400' :
-                      currentBook.status === 'error' ? 'bg-red-900/20 text-red-400' :
-                      'bg-gray-900/20 text-gray-400'
+                      currentBook.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                      currentBook.status === 'generating' ? 'bg-blue-900/20 text-blue-500' :
+                      currentBook.status === 'error' ? 'bg-red-900/20 text-red-500' :
+                      'bg-background/20 text-muted-foreground'
                     }`}>
                       {currentBook.status}
                     </span>
                   </div>
                   
                   <div className="bg-dark-700 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-1">Word Count</h3>
-                    <p className="text-white font-medium">{currentBook.word_count?.toLocaleString() || 'N/A'}</p>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Word Count</h3>
+                    <p className="text-foreground font-medium">{currentBook.word_count?.toLocaleString() || 'N/A'}</p>
                   </div>
                   
                   <div className="bg-dark-700 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-1">Chapters</h3>
-                    <p className="text-white font-medium">{currentBook.chapters?.length || 0}</p>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Chapters</h3>
+                    <p className="text-foreground font-medium">{currentBook.chapters?.length || 0}</p>
                   </div>
                 </div>
 
                 {/* Description */}
                 {currentBook.description && (
                   <div>
-                    <h3 className="text-lg font-medium text-white mb-2">Description</h3>
-                    <p className="text-gray-300 text-sm leading-relaxed">{currentBook.description}</p>
+                    <h3 className="text-lg font-medium text-foreground mb-2">Description</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{currentBook.description}</p>
                   </div>
                 )}
 
                 {/* Chapters */}
                 {currentBook.chapters && currentBook.chapters.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-medium text-white mb-4">Chapters</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-4">Chapters</h3>
                     <div className="space-y-3">
                       {currentBook.chapters.map((chapter, index) => (
                         <div key={chapter.id} className="bg-dark-700 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-white">
+                            <h4 className="font-medium text-foreground">
                               Chapter {chapter.chapter_number}: {chapter.title}
                             </h4>
                             <div className="flex items-center gap-2">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                chapter.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                                chapter.status === 'generating' ? 'bg-blue-900/20 text-blue-400' :
-                                chapter.status === 'error' ? 'bg-red-900/20 text-red-400' :
-                                'bg-gray-900/20 text-gray-400'
+                                chapter.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                                chapter.status === 'generating' ? 'bg-blue-900/20 text-blue-500' :
+                                chapter.status === 'error' ? 'bg-red-900/20 text-red-500' :
+                                'bg-background/20 text-muted-foreground'
                               }`}>
                                 {chapter.status || 'completed'}
                               </span>
@@ -1549,7 +1549,7 @@ export function ResearchBooks() {
                           
                           {chapter.content && (
                             <div className="mt-3">
-                              <p className="text-gray-300 text-sm line-clamp-3">
+                              <p className="text-muted-foreground text-sm line-clamp-3">
                                 {chapter.content.substring(0, 200)}...
                               </p>
                               <Button
@@ -1565,7 +1565,7 @@ export function ResearchBooks() {
                           )}
                           
                           {chapter.word_count && (
-                            <p className="text-xs text-gray-400 mt-2">
+                            <p className="text-xs text-muted-foreground mt-2">
                               {chapter.word_count} words
                             </p>
                           )}
@@ -1617,14 +1617,14 @@ export function ResearchBooks() {
       {/* Chapter Reading/Editing Modal */}
       {editingChapter && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-dark-800 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-card rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-xl font-semibold text-foreground">
                 Chapter {editingChapter.chapter_number}: {editingChapter.title}
               </h2>
               <button
                 onClick={cancelChapterEdit}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -1635,16 +1635,16 @@ export function ResearchBooks() {
                 {/* Chapter Info */}
                 <div className="flex items-center justify-between bg-dark-700 rounded-lg p-4">
                   <div>
-                    <h3 className="font-medium text-white">Chapter Details</h3>
-                    <p className="text-sm text-gray-400">
+                    <h3 className="font-medium text-foreground">Chapter Details</h3>
+                    <p className="text-sm text-muted-foreground">
                       {editingChapter.word_count || 0} words
                     </p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    editingChapter.status === 'completed' ? 'bg-green-900/20 text-green-400' :
-                    editingChapter.status === 'generating' ? 'bg-blue-900/20 text-blue-400' :
-                    editingChapter.status === 'error' ? 'bg-red-900/20 text-red-400' :
-                    'bg-gray-900/20 text-gray-400'
+                    editingChapter.status === 'completed' ? 'bg-green-900/20 text-green-500' :
+                    editingChapter.status === 'generating' ? 'bg-blue-900/20 text-blue-500' :
+                    editingChapter.status === 'error' ? 'bg-red-900/20 text-red-500' :
+                    'bg-background/20 text-muted-foreground'
                   }`}>
                     {editingChapter.status || 'completed'}
                   </span>
@@ -1652,16 +1652,16 @@ export function ResearchBooks() {
 
                 {/* Chapter Content Editor */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Chapter Content
                   </label>
                   <textarea
                     value={chapterContent}
                     onChange={(e) => setChapterContent(e.target.value)}
-                    className="w-full h-96 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none font-mono text-sm leading-relaxed"
+                    className="w-full h-96 px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-foreground placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none font-mono text-sm leading-relaxed"
                     placeholder="Chapter content..."
                   />
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     {chapterContent.split(' ').filter(word => word.length > 0).length} words
                   </p>
                 </div>
@@ -1670,7 +1670,7 @@ export function ResearchBooks() {
             
             {/* Modal Actions */}
             <div className="flex justify-between items-center p-6 border-t border-gray-700">
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Use this editor to review and make changes to the chapter before publishing.
               </div>
               
@@ -1698,12 +1698,12 @@ export function ResearchBooks() {
       {/* Gallery Modal */}
       {showImageModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
-          <div className="bg-dark-800 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <div className="bg-card rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-semibold text-white">Select Images from Gallery</h2>
+              <h2 className="text-xl font-semibold text-foreground">Select Images from Gallery</h2>
               <button
                 onClick={() => setShowImageModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -1714,8 +1714,8 @@ export function ResearchBooks() {
                 {/* Placeholder for gallery images - would integrate with actual gallery service */}
                 <div className="text-center py-12 col-span-full">
                   <PhotoIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
-                  <p className="text-gray-400 mb-2">Gallery integration coming soon</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-muted-foreground mb-2">Gallery integration coming soon</p>
+                  <p className="text-sm text-muted-foreground">
                     Use the "Generate Image" feature to create custom illustrations for your book
                   </p>
                   <Button 

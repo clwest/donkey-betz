@@ -233,27 +233,27 @@ const AssistantChatPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
       {/* Header */}
-      <div className="bg-gray-900/70 backdrop-blur-lg border-b border-gray-700 sticky top-0 z-40">
+      <div className="bg-background/70 backdrop-blur-lg border-b border-gray-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <MessageCircle className="h-6 w-6 text-purple-500" />
                 AI Assistant
               </h1>
-              <p className="text-gray-400">Chat with your personal AI assistant</p>
+              <p className="text-muted-foreground">Chat with your personal AI assistant</p>
             </div>
             <div className="flex items-center gap-4">
               <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="w-48 bg-card border-gray-700 text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectContent className="bg-card border-gray-700">
                   {models.map((model) => (
                     <SelectItem key={model.value} value={model.value}>
                       <div className="flex flex-col">
                         <span className="font-medium">{model.label}</span>
-                        <span className="text-xs text-gray-400">{model.description}</span>
+                        <span className="text-xs text-muted-foreground">{model.description}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -274,9 +274,9 @@ const AssistantChatPage: React.FC = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Conversations Sidebar */}
           <div className="lg:col-span-1">
-            <Card className="bg-gray-800/50 border-gray-700 h-fit">
+            <Card className="bg-card/50 border-gray-700 h-fit">
               <CardHeader>
-                <CardTitle className="text-white text-lg">Conversations</CardTitle>
+                <CardTitle className="text-foreground text-lg">Conversations</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 max-h-96 overflow-y-auto">
                 {conversations.map((conversation) => (
@@ -292,10 +292,10 @@ const AssistantChatPage: React.FC = () => {
                         : 'bg-gray-700/50 hover:bg-gray-700/70'
                     }`}
                   >
-                    <h4 className="font-medium text-white text-sm truncate">
+                    <h4 className="font-medium text-foreground text-sm truncate">
                       {conversation.title}
                     </h4>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       {new Date(conversation.updatedAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -306,19 +306,19 @@ const AssistantChatPage: React.FC = () => {
 
           {/* Chat Interface */}
           <div className="lg:col-span-3">
-            <Card className="bg-gray-800/50 border-gray-700">
+            <Card className="bg-card/50 border-gray-700">
               <CardHeader className="border-b border-gray-700">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white">
+                  <CardTitle className="text-foreground">
                     {currentConversation?.title || 'New Conversation'}
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-green-600/20 text-green-400 border-green-600/50">
+                    <Badge className="bg-green-600/20 text-green-500 border-green-600/50">
                       <Brain className="h-3 w-3 mr-1" />
                       {selectedModel}
                     </Badge>
                     <Button variant="ghost" size="sm">
-                      <Settings className="h-4 w-4 text-gray-400" />
+                      <Settings className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </div>
                 </div>
@@ -330,10 +330,10 @@ const AssistantChatPage: React.FC = () => {
                   {messages.length === 0 ? (
                     <div className="text-center py-12">
                       <Sparkles className="h-12 w-12 text-purple-500 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-white mb-2">
+                      <h3 className="text-xl font-semibold text-foreground mb-2">
                         Start a new conversation
                       </h3>
-                      <p className="text-gray-400 mb-6">
+                      <p className="text-muted-foreground mb-6">
                         Ask me anything about content creation, sports analysis, or AI assistance
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
@@ -346,7 +346,7 @@ const AssistantChatPage: React.FC = () => {
                           <Button
                             key={index}
                             variant="outline"
-                            className="border-gray-600 text-gray-300 hover:bg-gray-700 text-left justify-start"
+                            className="border-gray-600 text-muted-foreground hover:bg-gray-700 text-left justify-start"
                             onClick={() => setInputMessage(suggestion)}
                           >
                             {suggestion}
@@ -364,14 +364,14 @@ const AssistantChatPage: React.FC = () => {
                       >
                         {message.role === 'assistant' && (
                           <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
-                            <Bot className="h-4 w-4 text-white" />
+                            <Bot className="h-4 w-4 text-foreground" />
                           </div>
                         )}
                         
                         <div className={`max-w-2xl ${
                           message.role === 'user' 
-                            ? 'bg-purple-600 text-white' 
-                            : 'bg-gray-700/50 text-gray-100'
+                            ? 'bg-purple-600 text-foreground' 
+                            : 'bg-gray-700/50 text-foreground'
                         } rounded-lg p-4`}>
                           <div className="prose prose-invert max-w-none">
                             <div className="whitespace-pre-wrap">
@@ -384,7 +384,7 @@ const AssistantChatPage: React.FC = () => {
                               ? 'border-purple-500' 
                               : 'border-gray-600'
                           }`}>
-                            <div className="flex items-center gap-2 text-xs text-gray-300">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />
                               {new Date(message.timestamp).toLocaleTimeString()}
                               {message.metadata && (
@@ -437,7 +437,7 @@ const AssistantChatPage: React.FC = () => {
                         
                         {message.role === 'user' && (
                           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                            <User className="h-4 w-4 text-white" />
+                            <User className="h-4 w-4 text-foreground" />
                           </div>
                         )}
                       </div>
@@ -447,7 +447,7 @@ const AssistantChatPage: React.FC = () => {
                   {isTyping && (
                     <div className="flex gap-3 justify-start">
                       <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-white" />
+                        <Bot className="h-4 w-4 text-foreground" />
                       </div>
                       <div className="bg-gray-700/50 rounded-lg p-4">
                         <div className="flex items-center gap-1">
@@ -471,7 +471,7 @@ const AssistantChatPage: React.FC = () => {
                       onKeyPress={handleKeyPress}
                       placeholder="Type your message..."
                       disabled={loading}
-                      className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                      className="bg-gray-700 border-gray-600 text-foreground placeholder-gray-400 focus:border-purple-500"
                     />
                     <Button
                       onClick={sendMessage}
@@ -481,7 +481,7 @@ const AssistantChatPage: React.FC = () => {
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Press Enter to send, Shift+Enter for new line
                   </p>
                 </div>

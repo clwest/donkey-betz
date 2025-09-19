@@ -21,7 +21,6 @@ import {
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
-import '../styles/gaming-theme.css';
 
 // Import Intelligence Components
 import { IntelligencePanel } from '../components/intelligence/IntelligencePanel';
@@ -42,7 +41,7 @@ const DOMAINS = {
     color: 'text-green-500',
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/20',
-    neonColor: 'gaming-neon-green'
+    neonColor: 'bg-card'
   },
   TRADING: {
     name: 'Stock Trading',
@@ -50,7 +49,7 @@ const DOMAINS = {
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
     borderColor: 'border-blue-500/20',
-    neonColor: 'gaming-neon-cyan'
+    neonColor: 'bg-card'
   },
   CRYPTO: {
     name: 'Cryptocurrency',
@@ -58,7 +57,7 @@ const DOMAINS = {
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/10',
     borderColor: 'border-orange-500/20',
-    neonColor: 'gaming-neon-orange'
+    neonColor: 'bg-card'
   },
   REAL_ESTATE: {
     name: 'Real Estate',
@@ -66,7 +65,7 @@ const DOMAINS = {
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
     borderColor: 'border-purple-500/20',
-    neonColor: 'gaming-neon-purple'
+    neonColor: 'bg-card'
   },
   BUSINESS: {
     name: 'Business Decisions',
@@ -74,7 +73,7 @@ const DOMAINS = {
     color: 'text-indigo-500',
     bgColor: 'bg-indigo-500/10',
     borderColor: 'border-indigo-500/20',
-    neonColor: 'gaming-neon-indigo'
+    neonColor: 'bg-card'
   }
 };
 
@@ -314,10 +313,10 @@ export function DecisionDetailPage() {
 
   if (loading && !decisionData) {
     return (
-      <div className="min-h-screen gaming-theme flex items-center justify-center">
+      <div className="min-h-screen bg-card flex items-center justify-center">
         <div className="text-center">
           <Brain className="h-12 w-12 text-blue-500 animate-pulse mx-auto mb-4" />
-          <p className="text-lg gaming-text-primary">Analyzing decision...</p>
+          <p className="text-lg bg-card">Analyzing decision...</p>
         </div>
       </div>
     );
@@ -325,15 +324,15 @@ export function DecisionDetailPage() {
 
   if (!decisionData) {
     return (
-      <div className="min-h-screen gaming-theme">
+      <div className="min-h-screen bg-card">
         <div className="p-6">
           <Button onClick={() => navigate('/command-center')} variant="ghost">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Command Center
           </Button>
-          <div className="gaming-card p-16 text-center">
-            <h3 className="text-2xl font-bold gaming-text-primary mb-4">Decision Not Found</h3>
-            <p className="gaming-text-secondary">Unable to load decision data</p>
+          <div className="bg-card p-16 text-center">
+            <h3 className="text-2xl font-bold bg-card mb-4">Decision Not Found</h3>
+            <p className="bg-card">Unable to load decision data</p>
           </div>
         </div>
       </div>
@@ -343,11 +342,11 @@ export function DecisionDetailPage() {
   const isLive = decisionData.liveData?.isLive || false;
 
   return (
-    <div className="min-h-screen gaming-theme">
+    <div className="min-h-screen bg-card">
       <div className="max-w-[1920px] mx-auto">
 
         {/* Header Strip */}
-        <div className="border-b border-gaming-border bg-gaming-background/95 backdrop-blur sticky top-0 z-50">
+        <div className="border-b border-bg-card bg-bg-card/95 backdrop-blur sticky top-0 z-50">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -355,7 +354,7 @@ export function DecisionDetailPage() {
                   onClick={() => navigate('/command-center')}
                   variant="ghost"
                   size="sm"
-                  className="gaming-text-secondary hover:gaming-text-primary"
+                  className="bg-card hover:bg-card"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Command Center
@@ -368,10 +367,10 @@ export function DecisionDetailPage() {
                     <DomainIcon className={`h-5 w-5 ${domainConfig.color}`} />
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold gaming-text-primary">
+                    <h1 className="text-lg font-bold bg-card">
                       {decisionData.title}
                     </h1>
-                    <div className="text-sm gaming-text-secondary">
+                    <div className="text-sm bg-card">
                       {decisionData.subtitle}
                     </div>
                   </div>
@@ -386,12 +385,12 @@ export function DecisionDetailPage() {
                 {isLive && (
                   <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 border border-red-500/50 rounded-full">
                     <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-red-400">LIVE</span>
+                    <span className="text-sm font-medium text-red-500">LIVE</span>
                   </div>
                 )}
 
                 {isConnected && (
-                  <div className="flex items-center gap-2 gaming-text-accent">
+                  <div className="flex items-center gap-2 bg-card">
                     <Wifi className="w-4 h-4" />
                     <span className="text-sm">Connected</span>
                   </div>
@@ -401,7 +400,7 @@ export function DecisionDetailPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setAutoRefresh(!autoRefresh)}
-                  className={autoRefresh ? 'gaming-text-neon' : 'gaming-text-secondary'}
+                  className={autoRefresh ? 'bg-card' : 'bg-card'}
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
                   {autoRefresh ? 'Auto' : 'Manual'}
@@ -418,8 +417,8 @@ export function DecisionDetailPage() {
           <div className="col-span-2 space-y-4">
 
             {/* Navigation */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
                 <div className="space-y-2">
                   {[
@@ -435,8 +434,8 @@ export function DecisionDetailPage() {
                       onClick={() => setActiveView(item.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all ${
                         activeView === item.id
-                          ? `bg-${domainConfig.neonColor}/20 border border-${domainConfig.neonColor}/50 gaming-text-neon`
-                          : 'hover:bg-gaming-bg-secondary/30 gaming-text-secondary hover:gaming-text-primary'
+                          ? `bg-${domainConfig.neonColor}/20 border border-${domainConfig.neonColor}/50 bg-card`
+                          : 'hover:bg-bg-card/30 bg-card hover:bg-card'
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
@@ -448,17 +447,17 @@ export function DecisionDetailPage() {
             </Card>
 
             {/* Quick Decision Status */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="text-xs gaming-text-secondary mb-2">DECISION STATUS</div>
+                  <div className="text-xs bg-card mb-2">DECISION STATUS</div>
 
                   <Badge
                     className={`mb-3 ${
                       decisionData.status === 'ready' ? 'bg-green-500' :
                       decisionData.status === 'analyzing' ? 'bg-blue-500 animate-pulse' :
-                      decisionData.status === 'executed' ? 'bg-gray-500' :
+                      decisionData.status === 'executed' ? 'bg-muted/50' :
                       'bg-yellow-500'
                     }`}
                   >
@@ -467,10 +466,10 @@ export function DecisionDetailPage() {
 
                   {decisionData.metrics.primary && (
                     <div>
-                      <div className="text-xs gaming-text-secondary mb-1">
+                      <div className="text-xs bg-card mb-1">
                         {decisionData.metrics.primary.label}
                       </div>
-                      <div className="text-xl font-bold gaming-text-neon">
+                      <div className="text-xl font-bold bg-card">
                         {decisionData.metrics.primary.value}
                       </div>
                       {decisionData.metrics.primary.change && (
@@ -488,15 +487,15 @@ export function DecisionDetailPage() {
             </Card>
 
             {/* Key Metrics */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4 space-y-3">
                 {decisionData.metrics.secondary && (
                   <div>
-                    <div className="text-xs gaming-text-secondary">
+                    <div className="text-xs bg-card">
                       {decisionData.metrics.secondary.label}
                     </div>
-                    <div className="text-lg font-bold gaming-text-primary">
+                    <div className="text-lg font-bold bg-card">
                       {decisionData.metrics.secondary.value}
                     </div>
                     {decisionData.metrics.secondary.change && (
@@ -512,10 +511,10 @@ export function DecisionDetailPage() {
 
                 {decisionData.metrics.tertiary && (
                   <div>
-                    <div className="text-xs gaming-text-secondary">
+                    <div className="text-xs bg-card">
                       {decisionData.metrics.tertiary.label}
                     </div>
-                    <div className="text-lg font-bold gaming-text-primary">
+                    <div className="text-lg font-bold bg-card">
                       {decisionData.metrics.tertiary.value}
                     </div>
                   </div>
@@ -536,7 +535,7 @@ export function DecisionDetailPage() {
                 />
 
                 {/* Decision Analysis */}
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Brain className="h-5 w-5 text-blue-500" />
@@ -544,7 +543,7 @@ export function DecisionDetailPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm gaming-text-secondary">
+                    <p className="text-sm bg-card">
                       {decisionData.description}
                     </p>
 
@@ -572,7 +571,7 @@ export function DecisionDetailPage() {
 
                 {/* Live Data Stream */}
                 {isLive && (
-                  <Card className="gaming-card">
+                  <Card className="bg-card">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Activity className="h-5 w-5 text-green-500 animate-pulse" />
@@ -580,10 +579,10 @@ export function DecisionDetailPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-64 bg-dark-800 rounded-lg p-4">
+                      <div className="h-64 bg-card rounded-lg p-4">
                         {/* Placeholder for live chart */}
                         <div className="flex items-center justify-center h-full">
-                          <p className="text-gray-400">Live data visualization</p>
+                          <p className="text-muted-foreground">Live data visualization</p>
                         </div>
                       </div>
                     </CardContent>
@@ -594,7 +593,7 @@ export function DecisionDetailPage() {
 
             {activeView === 'execution' && (
               <div className="space-y-6">
-                <Card className="gaming-card">
+                <Card className="bg-card">
                   <CardHeader>
                     <CardTitle>Execution Options</CardTitle>
                   </CardHeader>
@@ -607,7 +606,7 @@ export function DecisionDetailPage() {
                         { id: '3', name: 'Alternative B', value: 95, confidence: 0.55, type: 'alternative' },
                         { id: '4', name: 'Hedge Position', value: -50, confidence: 0.75, type: 'hedge' },
                       ].map((option) => (
-                        <div key={option.id} className="border border-gaming-border rounded-lg p-4">
+                        <div key={option.id} className="border border-bg-card rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -619,10 +618,10 @@ export function DecisionDetailPage() {
                                 )}
                               </div>
                               <div className="flex items-center gap-4 mt-2 text-sm">
-                                <span className="gaming-text-secondary">
+                                <span className="bg-card">
                                   Expected: {option.value > 0 ? '+' : ''}{option.value}%
                                 </span>
-                                <span className="gaming-text-secondary">
+                                <span className="bg-card">
                                   Confidence: {(option.confidence * 100).toFixed(0)}%
                                 </span>
                               </div>
@@ -682,7 +681,7 @@ export function DecisionDetailPage() {
             )}
 
             {activeView === 'live' && (
-              <Card className="gaming-card">
+              <Card className="bg-card">
                 <CardHeader>
                   <CardTitle>Live Data Feed</CardTitle>
                 </CardHeader>
@@ -694,8 +693,8 @@ export function DecisionDetailPage() {
                         Real-time data streaming for {domainConfig.name}
                       </AlertDescription>
                     </Alert>
-                    <div className="h-96 bg-dark-800 rounded-lg p-4">
-                      <p className="text-center text-gray-400 mt-32">
+                    <div className="h-96 bg-card rounded-lg p-4">
+                      <p className="text-center text-muted-foreground mt-32">
                         Live data visualization would appear here
                       </p>
                     </div>
@@ -707,8 +706,8 @@ export function DecisionDetailPage() {
 
           {/* Right Sidebar - Execution Slip */}
           <div className="col-span-2 space-y-4">
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center justify-between">
                   <span>Execution Slip</span>
@@ -718,17 +717,17 @@ export function DecisionDetailPage() {
               <CardContent className="space-y-3">
                 {executionSlip.length === 0 ? (
                   <div className="text-center py-8">
-                    <Target className="h-8 w-8 mx-auto mb-2 text-gray-500" />
-                    <p className="text-sm text-gray-400">No actions selected</p>
+                    <Target className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No actions selected</p>
                   </div>
                 ) : (
                   <>
                     {executionSlip.map((item, index) => (
-                      <div key={index} className="border border-gaming-border rounded-lg p-3">
+                      <div key={index} className="border border-bg-card rounded-lg p-3">
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <p className="text-sm font-medium">{item.action.name}</p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-muted-foreground">
                               Expected: {item.action.value > 0 ? '+' : ''}{item.action.value}%
                             </p>
                           </div>
@@ -741,12 +740,12 @@ export function DecisionDetailPage() {
                           </Button>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400">Stake:</span>
+                          <span className="text-muted-foreground">Stake:</span>
                           <span className="font-bold">${item.stake.toLocaleString()}</span>
                         </div>
                         {item.expectedReturn && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-400">Expected:</span>
+                            <span className="text-muted-foreground">Expected:</span>
                             <span className="text-green-500">
                               ${item.expectedReturn.toLocaleString()}
                             </span>
@@ -759,11 +758,11 @@ export function DecisionDetailPage() {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Total Stake:</span>
+                        <span className="text-muted-foreground">Total Stake:</span>
                         <span className="font-bold">${getTotalStake().toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Expected Return:</span>
+                        <span className="text-muted-foreground">Expected Return:</span>
                         <span className="text-green-500 font-bold">
                           ${getTotalExpectedReturn().toLocaleString()}
                         </span>
@@ -780,34 +779,34 @@ export function DecisionDetailPage() {
             </Card>
 
             {/* Portfolio Summary */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Portfolio</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <div className="text-xs text-gray-400">Available</div>
-                  <div className="text-xl font-bold gaming-text-neon">
+                  <div className="text-xs text-muted-foreground">Available</div>
+                  <div className="text-xl font-bold bg-card">
                     ${bankroll.toLocaleString()}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-400">Kelly Suggestion</div>
+                  <div className="text-xs text-muted-foreground">Kelly Suggestion</div>
                   <div className="text-lg font-bold text-green-500">
                     ${(bankroll * 0.025).toLocaleString()}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-400">Risk Level</div>
+                  <div className="text-xs text-muted-foreground">Risk Level</div>
                   <Progress value={42} className="mt-1" />
                 </div>
               </CardContent>
             </Card>
 
             {/* Quick Actions */}
-            <Card className="gaming-card">
-              <div className="gaming-border-glow"></div>
+            <Card className="bg-card">
+              <div className="bg-card"></div>
               <CardContent className="p-4 space-y-2">
                 <Button variant="outline" size="sm" className="w-full">
                   <Calculator className="h-4 w-4 mr-2" />

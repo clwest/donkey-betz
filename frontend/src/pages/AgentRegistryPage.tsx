@@ -190,19 +190,19 @@ export default function AgentRegistryPage() {
   };
 
   const getProviderColor = (provider: string) => {
-    if (!provider) return 'text-gray-400 bg-gray-400/10';
+    if (!provider) return 'text-muted-foreground bg-gray-400/10';
     const colors: Record<string, string> = {
-      openai: 'text-green-400 bg-green-400/10',
+      openai: 'text-green-500 bg-green-400/10',
       anthropic: 'text-purple-400 bg-purple-400/10',
-      google: 'text-blue-400 bg-blue-400/10',
+      google: 'text-blue-500 bg-blue-400/10',
     };
-    return colors[provider.toLowerCase()] || 'text-gray-400 bg-gray-400/10';
+    return colors[provider.toLowerCase()] || 'text-muted-foreground bg-gray-400/10';
   };
 
   const getPriorityColor = (priority: number) => {
-    if (priority >= 8) return 'text-red-400 bg-red-400/10';
-    if (priority >= 5) return 'text-yellow-400 bg-yellow-400/10';
-    return 'text-green-400 bg-green-400/10';
+    if (priority >= 8) return 'text-red-500 bg-red-400/10';
+    if (priority >= 5) return 'text-yellow-500 bg-yellow-400/10';
+    return 'text-green-500 bg-green-400/10';
   };
 
 
@@ -222,10 +222,10 @@ export default function AgentRegistryPage() {
         <Card>
           <div className="text-center py-12">
             <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Failed to Load Agents
             </h3>
-            <p className="text-gray-400 mb-4">{error}</p>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={() => loadAgents()} variant="secondary">
               <ArrowPathIcon className="h-4 w-4" />
               Try Again
@@ -251,7 +251,7 @@ export default function AgentRegistryPage() {
         <Button
           onClick={refreshDiscovery}
           disabled={refreshing}
-          className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 text-cyan-400 font-mono uppercase tracking-wider transition-all duration-300"
+          className="bg-background/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 text-cyan-400 font-mono uppercase tracking-wider transition-all duration-300"
         >
           <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''} text-cyan-400`} />
           {refreshing ? 'SCANNING...' : 'NEURAL SCAN'}
@@ -261,7 +261,7 @@ export default function AgentRegistryPage() {
       {/* Gaming Stats Cards */}
       {discoveryStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">TOTAL AGENTS</p>
@@ -271,7 +271,7 @@ export default function AgentRegistryPage() {
             </div>
           </Card>
           
-          <Card className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">CORE AGENTS</p>
@@ -283,19 +283,19 @@ export default function AgentRegistryPage() {
             </div>
           </Card>
           
-          <Card className="bg-gray-900/80 border-2 border-blue-800/50 hover:border-blue-400/80 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-blue-800/50 hover:border-blue-400/80 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">NEURAL FILES</p>
-                <p className="text-3xl font-bold text-blue-400 font-mono glow-text-sm">
+                <p className="text-3xl font-bold text-blue-500 font-mono glow-text-sm">
                   {discoveryStats?.by_source?.claude_files || 0}
                 </p>
               </div>
-              <DocumentTextIcon className="h-8 w-8 text-blue-400 animate-pulse" />
+              <DocumentTextIcon className="h-8 w-8 text-blue-500 animate-pulse" />
             </div>
           </Card>
           
-          <Card className="bg-gray-900/80 border-2 border-orange-800/50 hover:border-orange-400/80 hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-orange-800/50 hover:border-orange-400/80 hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-400 font-mono uppercase tracking-wider">CAPABILITIES</p>
@@ -310,7 +310,7 @@ export default function AgentRegistryPage() {
       )}
 
       {/* Gaming Search & Filters */}
-      <Card className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300">
+      <Card className="bg-background/80 border-2 border-purple-800/50 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -343,10 +343,10 @@ export default function AgentRegistryPage() {
 
       {/* Gaming Agents Grid */}
       {filteredAgents.length === 0 ? (
-        <Card className="bg-gray-900/80 border-2 border-red-800/50 hover:border-red-400/80 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300">
+        <Card className="bg-background/80 border-2 border-red-800/50 hover:border-red-400/80 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300">
           <div className="text-center py-12">
-            <MagnifyingGlassIcon className="h-12 w-12 text-red-400 mx-auto mb-3 animate-pulse" />
-            <p className="text-red-400 mb-4 font-mono uppercase tracking-wider">NO NEURAL AGENTS DETECTED</p>
+            <MagnifyingGlassIcon className="h-12 w-12 text-red-500 mx-auto mb-3 animate-pulse" />
+            <p className="text-red-500 mb-4 font-mono uppercase tracking-wider">NO NEURAL AGENTS DETECTED</p>
             <p className="text-sm text-purple-400 mb-4 font-mono">
               {'>>>'} Adjust neural scan parameters or reinitialize discovery protocols
             </p>
@@ -355,7 +355,7 @@ export default function AgentRegistryPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAgents.map((agent) => (
-            <Card key={agent.id} className="bg-gray-900/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 flex flex-col">
+            <Card key={agent.id} className="bg-background/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 flex flex-col">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="text-cyan-400 animate-pulse">
@@ -393,13 +393,13 @@ export default function AgentRegistryPage() {
                     {agent.capabilities?.slice(0, 3).map((cap, index) => (
                       <span
                         key={cap.name || `cap-${index}`}
-                        className="inline-block px-2 py-1 text-xs bg-black/50 text-green-400 border border-green-400/30 rounded font-mono"
+                        className="inline-block px-2 py-1 text-xs bg-black/50 text-green-500 border border-green-400/30 rounded font-mono"
                       >
                         {cap.name?.replace('_', ' ') || cap.name}
                       </span>
                     ))}
                     {(agent.capabilities?.length || 0) > 3 && (
-                      <span className="inline-block px-2 py-1 text-xs bg-black/50 text-green-400 border border-green-400/30 rounded font-mono">
+                      <span className="inline-block px-2 py-1 text-xs bg-black/50 text-green-500 border border-green-400/30 rounded font-mono">
                         +{agent.capabilities.length - 3} MORE
                       </span>
                     )}
@@ -414,13 +414,13 @@ export default function AgentRegistryPage() {
                       {agent.trigger_keywords?.slice(0, 3).map((keyword) => (
                         <span
                           key={keyword}
-                          className="inline-block px-2 py-1 text-xs bg-black/50 text-yellow-400 border border-yellow-400/30 rounded font-mono"
+                          className="inline-block px-2 py-1 text-xs bg-black/50 text-yellow-500 border border-yellow-400/30 rounded font-mono"
                         >
                           {keyword}
                         </span>
                       ))}
                       {agent.trigger_keywords?.length > 3 && (
-                        <span className="inline-block px-2 py-1 text-xs bg-black/50 text-yellow-400 border border-yellow-400/30 rounded font-mono">
+                        <span className="inline-block px-2 py-1 text-xs bg-black/50 text-yellow-500 border border-yellow-400/30 rounded font-mono">
                           +{agent.trigger_keywords.length - 3}
                         </span>
                       )}
@@ -456,11 +456,11 @@ export default function AgentRegistryPage() {
 
       {/* Agent Details Modal */}
       <Dialog open={showAgentDetails} onOpenChange={setShowAgentDetails}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-dark-800 border-dark-700">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border">
           {selectedAgent && (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center space-x-2 text-white">
+                <DialogTitle className="flex items-center space-x-2 text-foreground">
                   <span className="text-primary-400">
                     {getSpecializationIcon(selectedAgent.specialization)}
                   </span>
@@ -469,7 +469,7 @@ export default function AgentRegistryPage() {
                     Priority {selectedAgent.priority}
                   </span>
                 </DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogDescription className="text-muted-foreground">
                   {selectedAgent.description}
                 </DialogDescription>
               </DialogHeader>
@@ -482,29 +482,29 @@ export default function AgentRegistryPage() {
                   <TabsTrigger value="usage">Usage Stats</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="overview" className="space-y-4 text-white">
+                <TabsContent value="overview" className="space-y-4 text-foreground">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-semibold mb-2">Basic Info</h4>
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">ID:</span>
+                          <span className="text-muted-foreground">ID:</span>
                           <span className="font-mono text-sm">{selectedAgent.id}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Specialization:</span>
-                          <Badge variant="outline" className="text-gray-300 border-gray-600">
+                          <span className="text-muted-foreground">Specialization:</span>
+                          <Badge variant="outline" className="text-muted-foreground border-gray-600">
                             {selectedAgent.specialization.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </Badge>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Provider:</span>
+                          <span className="text-muted-foreground">Provider:</span>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getProviderColor(selectedAgent.llm_provider)}`}>
                             {selectedAgent.llm_provider.toUpperCase()}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Model:</span>
+                          <span className="text-muted-foreground">Model:</span>
                           <span>{selectedAgent.llm_model}</span>
                         </div>
                       </div>
@@ -514,7 +514,7 @@ export default function AgentRegistryPage() {
                       <h4 className="font-semibold mb-2">Source Info</h4>
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Source:</span>
+                          <span className="text-muted-foreground">Source:</span>
                           <span>
                             {selectedAgent.source_file ? (
                               <span>📄 File-based</span>
@@ -527,14 +527,14 @@ export default function AgentRegistryPage() {
                         </div>
                         {selectedAgent.source_file && (
                           <div className="flex justify-between">
-                            <span className="text-gray-400">File:</span>
+                            <span className="text-muted-foreground">File:</span>
                             <span className="font-mono text-sm truncate max-w-48">
                               {selectedAgent.source_file.split('/').pop()}
                             </span>
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Confidence:</span>
+                          <span className="text-muted-foreground">Confidence:</span>
                           <span>{(selectedAgent.confidence_threshold * 100).toFixed(0)}%</span>
                         </div>
                       </div>
@@ -546,7 +546,7 @@ export default function AgentRegistryPage() {
                       <h4 className="font-semibold mb-2">Trigger Keywords</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedAgent.trigger_keywords.map((keyword) => (
-                          <Badge key={keyword} variant="secondary" className="bg-dark-700 text-gray-300">
+                          <Badge key={keyword} variant="secondary" className="bg-dark-700 text-muted-foreground">
                             {keyword}
                           </Badge>
                         ))}
@@ -561,18 +561,18 @@ export default function AgentRegistryPage() {
                       <Card key={capability.name}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h5 className="font-semibold text-white">
+                            <h5 className="font-semibold text-foreground">
                               {capability.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </h5>
-                            <p className="text-gray-400 text-sm mt-1">
+                            <p className="text-muted-foreground text-sm mt-1">
                               {capability.description}
                             </p>
                             {capability.required_tools && capability.required_tools.length > 0 && (
                               <div className="mt-2">
-                                <p className="text-xs text-gray-500 mb-1">Required Tools:</p>
+                                <p className="text-xs text-muted-foreground mb-1">Required Tools:</p>
                                 <div className="flex flex-wrap gap-1">
                                   {capability.required_tools.map((tool) => (
-                                    <Badge key={tool} variant="outline" className="text-xs text-gray-400 border-gray-600">
+                                    <Badge key={tool} variant="outline" className="text-xs text-muted-foreground border-gray-600">
                                       {tool}
                                     </Badge>
                                   ))}
@@ -580,7 +580,7 @@ export default function AgentRegistryPage() {
                               </div>
                             )}
                           </div>
-                          <Badge variant="outline" className="ml-2 text-gray-300 border-gray-600">
+                          <Badge variant="outline" className="ml-2 text-muted-foreground border-gray-600">
                             {capability.category}
                           </Badge>
                         </div>
@@ -592,9 +592,9 @@ export default function AgentRegistryPage() {
                 <TabsContent value="configuration" className="space-y-4">
                   {selectedAgent.system_prompt && (
                     <div>
-                      <h4 className="font-semibold mb-2 text-white">System Prompt</h4>
+                      <h4 className="font-semibold mb-2 text-foreground">System Prompt</h4>
                       <div className="bg-dark-700 p-4 rounded-lg">
-                        <pre className="whitespace-pre-wrap text-sm text-gray-300">
+                        <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
                           {selectedAgent.system_prompt}
                         </pre>
                       </div>
@@ -603,11 +603,11 @@ export default function AgentRegistryPage() {
 
                   {selectedAgent.personality_traits && Object.keys(selectedAgent.personality_traits).length > 0 && (
                     <div>
-                      <h4 className="font-semibold mb-2 text-white">Personality Traits</h4>
+                      <h4 className="font-semibold mb-2 text-foreground">Personality Traits</h4>
                       <div className="space-y-2">
                         {Object.entries(selectedAgent.personality_traits).map(([trait, value]) => (
                           <div key={trait} className="flex items-center justify-between">
-                            <span className="text-gray-300">{trait.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            <span className="text-muted-foreground">{trait.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                             <div className="flex items-center space-x-2">
                               <div className="w-24 bg-dark-700 rounded-full h-2">
                                 <div 
@@ -615,7 +615,7 @@ export default function AgentRegistryPage() {
                                   style={{ width: `${value * 100}%` }}
                                 />
                               </div>
-                              <span className="text-sm text-gray-400">
+                              <span className="text-sm text-muted-foreground">
                                 {(value * 100).toFixed(0)}%
                               </span>
                             </div>
@@ -631,18 +631,18 @@ export default function AgentRegistryPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Card>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-green-400">
+                          <p className="text-2xl font-bold text-green-500">
                             {selectedAgent.usage_stats.usage_count}
                           </p>
-                          <p className="text-sm text-gray-400">Total Uses</p>
+                          <p className="text-sm text-muted-foreground">Total Uses</p>
                         </div>
                       </Card>
                       <Card>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-blue-400">
+                          <p className="text-2xl font-bold text-blue-500">
                             {selectedAgent.usage_stats.success_count}
                           </p>
-                          <p className="text-sm text-gray-400">Successful</p>
+                          <p className="text-sm text-muted-foreground">Successful</p>
                         </div>
                       </Card>
                       <Card>
@@ -650,14 +650,14 @@ export default function AgentRegistryPage() {
                           <p className="text-2xl font-bold text-purple-400">
                             {(selectedAgent.usage_stats.success_rate * 100).toFixed(1)}%
                           </p>
-                          <p className="text-sm text-gray-400">Success Rate</p>
+                          <p className="text-sm text-muted-foreground">Success Rate</p>
                         </div>
                       </Card>
                       {selectedAgent.usage_stats.last_used && (
                         <Card className="md:col-span-3">
                           <div>
-                            <p className="text-sm text-gray-400">Last Used</p>
-                            <p className="font-semibold text-white">
+                            <p className="text-sm text-muted-foreground">Last Used</p>
+                            <p className="font-semibold text-foreground">
                               {new Date(selectedAgent.usage_stats.last_used).toLocaleString()}
                             </p>
                           </div>
@@ -668,10 +668,10 @@ export default function AgentRegistryPage() {
                     <Card>
                       <div className="text-center py-8">
                         <ChartBarIcon className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-white mb-2">
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
                           No Usage Data
                         </h3>
-                        <p className="text-gray-400">
+                        <p className="text-muted-foreground">
                           This agent hasn't been used yet or usage tracking is not available.
                         </p>
                       </div>

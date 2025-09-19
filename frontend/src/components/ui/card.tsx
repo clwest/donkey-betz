@@ -20,7 +20,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadi
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={clsx('text-2xl font-semibold leading-none tracking-tight text-white', className)}
+      className={clsx('text-2xl font-semibold leading-none tracking-tight text-foreground', className)}
       {...props}
     />
   )
@@ -31,7 +31,7 @@ export const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<H
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={clsx('text-sm text-gray-400', className)}
+      className={clsx('text-sm text-muted-foreground', className)}
       {...props}
     />
   )

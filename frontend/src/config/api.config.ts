@@ -1,6 +1,6 @@
 /**
  * Centralized API Configuration
- * Supports dynamic URLs for development and production
+ * Fixed to use correct /api/v1/agents/ endpoints
  */
 
 // Get base URL from environment or use dynamic detection
@@ -37,66 +37,83 @@ const getWsUrl = () => {
   return 'ws://localhost:8000';
 };
 
+// Get auth token from environment or localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('authToken') || 
+         import.meta.env.VITE_AUTH_TOKEN || 
+         '0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97';
+};
+
 // Export configuration
 export const API_CONFIG = {
   BASE_URL: getBaseUrl(),
   WS_URL: getWsUrl(),
+  AUTH_TOKEN: getAuthToken(),
   
-  // API endpoints
+  // API endpoints - FIXED to use v1
   endpoints: {
     // Authentication
     auth: {
       login: '/api/v1/auth/login/',
       logout: '/api/v1/auth/logout/',
       register: '/api/v1/auth/register/',
-      refresh: '/v1/auth/refresh/',
-      profile: '/v1/auth/profile/',
-      forgotPassword: '/v1/auth/forgot-password/',
-      resetPassword: '/v1/auth/reset-password/',
+      refresh: '/api/v1/auth/refresh/',
+      profile: '/api/v1/auth/profile/',
+      forgotPassword: '/api/v1/auth/forgot-password/',
+      resetPassword: '/api/v1/auth/reset-password/',
     },
     
     // Assistant
     assistant: {
-      chat: '/v1/assistant/chat/',
+      chat: '/api/v1/assistant/chat/',
       ws: '/ws/assistant/',
     },
     
-    // Agent Orchestra
-    orchestra: {
-      agents: '/v1/agents/',
-      execute: '/v1/agents/execute/',
-      status: '/v1/agents/status/',
-      ws: '/ws/orchestra/',
+    // Agent Orchestra - FIXED to use correct v1 endpoints
+    agents: {
+      templates: '/api/v1/agents/templates/?page_size=200',
+      execute: '/api/v1/agents/execute/',
+      executions: '/api/v1/agents/executions/',
+      discover: '/api/v1/agents/discover/',
+      status: '/api/v1/agents/status/',
+      ws: '/ws/agents/',
     },
     
     // Sports/Odds
     sports: {
-      leagues: '/v1/sports/leagues/',
-      games: '/v1/sports/games/',
-      markets: '/v1/sports/markets/',
-      odds: '/v1/odds/',
-      kelly: '/v1/odds/kelly/',
+      leagues: '/api/v1/sports/leagues/',
+      games: '/api/v1/sports/games/',
+      markets: '/api/v1/sports/markets/',
+      odds: '/api/v1/odds/',
+      kelly: '/api/v1/odds/kelly/',
     },
     
     // Content
     content: {
-      generate: '/v1/content/generate/',
-      images: '/v1/content/images/',
-      videos: '/v1/content/videos/',
-      upload: '/v1/content/upload/',
+      generate: '/api/v1/content/generate/',
+      images: '/api/v1/content/images/',
+      videos: '/api/v1/content/videos/',
+      upload: '/api/v1/content/upload/',
     },
     
     // Knowledge/RAG
     knowledge: {
-      embeddings: '/v1/knowledge/embeddings/',
-      search: '/v1/knowledge/search/',
-      documents: '/v1/knowledge/documents/',
+      embeddings: '/api/v1/knowledge/embeddings/',
+      search: '/api/v1/knowledge/search/',
+      documents: '/api/v1/knowledge/documents/',
+    },
+    
+    // Intelligence & Revenue
+    intelligence: {
+      revenue: '/api/v1/intelligence/revenue/',
+      metrics: '/api/v1/intelligence/revenue/metrics/',
+      opportunities: '/api/v1/intelligence/opportunities/',
     },
     
     // Health
     health: {
-      check: '/v1/health/',
-      status: '/v1/status/',
+      check: '/api/v1/health/',
+      status: '/api/v1/status/',
     },
   },
 };
@@ -112,7 +129,7 @@ export const buildWsUrl = (endpoint: string): string => {
   return `${wsUrl}${endpoint}`;
 };
 
-// API Request Helper with authentication
+// API Request Helper with authentication - FIXED
 export async function apiRequest<T = any>(
   endpoint: string, 
   options: RequestInit & { params?: Record<string, any> } = {}
@@ -136,8 +153,8 @@ export async function apiRequest<T = any>(
     }
   }
   
-  // Get auth token from localStorage
-  const token = localStorage.getItem('authToken') || import.meta.env.VITE_AUTH_TOKEN;
+  // Get auth token
+  const token = getAuthToken();
   
   // Prepare headers
   const headers: HeadersInit = {
@@ -181,6 +198,15 @@ export async function apiRequest<T = any>(
     throw error;
   }
 }
+
+// Axios-like API client for backwards compatibility
+export const apiClient = {
+  get: (url: string, config?: any) => apiRequest(url, { method: 'GET', ...config }),
+  post: (url: string, data?: any, config?: any) => apiRequest(url, { method: 'POST', body: JSON.stringify(data), ...config }),
+  put: (url: string, data?: any, config?: any) => apiRequest(url, { method: 'PUT', body: JSON.stringify(data), ...config }),
+  delete: (url: string, config?: any) => apiRequest(url, { method: 'DELETE', ...config }),
+  patch: (url: string, data?: any, config?: any) => apiRequest(url, { method: 'PATCH', body: JSON.stringify(data), ...config }),
+};
 
 // Export for backwards compatibility
 export default API_CONFIG;

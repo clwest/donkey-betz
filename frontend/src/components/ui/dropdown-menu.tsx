@@ -133,7 +133,7 @@ export const DropdownMenuItem = forwardRef<HTMLDivElement, DropdownMenuItemProps
       <div
         ref={ref}
         className={clsx(
-          'relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-sm text-gray-300 font-mono',
+          'relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-sm text-muted-foreground font-mono',
           'outline-none transition-all duration-200 hover:bg-cyan-500/20 hover:text-cyan-400 hover:border-cyan-500/50',
           'focus:bg-cyan-500/20 focus:text-cyan-400 hover:shadow-[0_0_8px_rgba(0,255,255,0.3)]',
           disabled && 'pointer-events-none opacity-50',

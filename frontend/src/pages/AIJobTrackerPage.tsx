@@ -208,65 +208,65 @@ export default function AIJobTrackerPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-900">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-purple-500 mx-auto mb-4" />
-          <p className="text-white">Loading AI Job Tracker...</p>
+          <p className="text-foreground">Loading AI Job Tracker...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-8">
+    <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-4">
             AI Job Tracker
           </h1>
-          <p className="text-gray-400 text-lg">13 Spiders • Real-time Job Matching • Automated Applications</p>
+          <p className="text-muted-foreground text-lg">13 Spiders • Real-time Job Matching • Automated Applications</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-400">Active Spiders</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Active Spiders</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-400">{stats?.activeSpiders || 0}/13</div>
+              <div className="text-3xl font-bold text-green-500">{stats?.activeSpiders || 0}/13</div>
               <Progress value={((stats?.activeSpiders || 0) / 13) * 100} className="mt-2 h-2" />
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-400">Jobs Analyzed</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Jobs Analyzed</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-400">{stats?.jobsAnalyzed || 0}</div>
-              <p className="text-xs text-gray-500 mt-2">Last 24 hours</p>
+              <div className="text-3xl font-bold text-blue-500">{stats?.jobsAnalyzed || 0}</div>
+              <p className="text-xs text-muted-foreground mt-2">Last 24 hours</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-400">AI Suitable</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">AI Suitable</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-purple-400">{stats?.aiSuitable || 0}</div>
-              <p className="text-xs text-gray-500 mt-2">&gt;70% score</p>
+              <p className="text-xs text-muted-foreground mt-2">&gt;70% score</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className="bg-card/50 border-gray-700">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-gray-400">Applications</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">Applications</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-pink-400">{stats?.applicationsGenerated || 0}</div>
-              <p className="text-xs text-gray-500 mt-2">Generated</p>
+              <p className="text-xs text-muted-foreground mt-2">Generated</p>
             </CardContent>
           </Card>
         </div>
@@ -285,7 +285,7 @@ export default function AIJobTrackerPage() {
             onClick={loadData}
             size="lg"
             variant="outline"
-            className="border-gray-600 text-white hover:bg-gray-800"
+            className="border-gray-600 text-foreground hover:bg-card"
           >
             <RefreshCw className="mr-2 h-5 w-5" />
             Refresh Data
@@ -296,27 +296,27 @@ export default function AIJobTrackerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Spider Status */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center">
+            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center">
               <Bot className="mr-2 h-6 w-6 text-purple-400" />
               Spider Network Status
             </h2>
             <div className="grid grid-cols-1 gap-3">
               {spiders.map((spider, index) => (
-                <Card key={`spider-${spider.id}-${index}`} className="bg-gray-800/30 border-gray-700">
+                <Card key={`spider-${spider.id}-${index}`} className="bg-card/30 border-gray-700">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`h-3 w-3 rounded-full ${
-                          spider.status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+                          spider.status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-muted/50'
                         }`} />
                         <div>
-                          <p className="text-white font-medium">{spider.name}</p>
-                          <p className="text-xs text-gray-400">{spider.target}</p>
+                          <p className="text-foreground font-medium">{spider.name}</p>
+                          <p className="text-xs text-muted-foreground">{spider.target}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         {spider.status === 'active' ? (
-                          <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                          <Badge className="bg-green-500/20 text-green-500 border-green-500/50">
                             {spider.dataCollected} collected
                           </Badge>
                         ) : (
@@ -332,33 +332,33 @@ export default function AIJobTrackerPage() {
 
           {/* AI Jobs */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center">
-              <Briefcase className="mr-2 h-6 w-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center">
+              <Briefcase className="mr-2 h-6 w-6 text-blue-500" />
               AI-Matched Opportunities
             </h2>
             <div className="space-y-4">
               {jobs.length === 0 ? (
-                <Card className="bg-gray-800/30 border-gray-700">
+                <Card className="bg-card/30 border-gray-700">
                   <CardContent className="p-8 text-center">
-                    <AlertCircle className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-400">No jobs analyzed yet. Activate spiders to start collecting opportunities.</p>
+                    <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No jobs analyzed yet. Activate spiders to start collecting opportunities.</p>
                   </CardContent>
                 </Card>
               ) : (
                 jobs.map((job, index) => (
-                  <Card key={`job-${job.id}-${index}`} className="bg-gray-800/30 border-gray-700">
+                  <Card key={`job-${job.id}-${index}`} className="bg-card/30 border-gray-700">
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white mb-1">{job.title}</h3>
-                          <p className="text-sm text-gray-400">{job.company}</p>
+                          <h3 className="text-lg font-semibold text-foreground mb-1">{job.title}</h3>
+                          <p className="text-sm text-muted-foreground">{job.company}</p>
                         </div>
                         <Badge className={`${
                           job.status === 'applied'
-                            ? 'bg-green-500/20 text-green-400'
+                            ? 'bg-green-500/20 text-green-500'
                             : job.status === 'applying'
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-blue-500/20 text-blue-400'
+                            ? 'bg-yellow-500/20 text-yellow-500'
+                            : 'bg-blue-500/20 text-blue-500'
                         }`}>
                           {job.status === 'applied' ? 'Applied' : job.status === 'applying' ? 'Applying...' : 'New'}
                         </Badge>
@@ -367,9 +367,9 @@ export default function AIJobTrackerPage() {
                       <div className="flex items-center gap-4 mb-4">
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-purple-400" />
-                          <span className="text-sm text-white">AI Score: {(job.aiScore * 100).toFixed(0)}%</span>
+                          <span className="text-sm text-foreground">AI Score: {(job.aiScore * 100).toFixed(0)}%</span>
                         </div>
-                        <div className="text-sm text-gray-400">{job.budget}</div>
+                        <div className="text-sm text-muted-foreground">{job.budget}</div>
                       </div>
 
                       <div className="flex items-center justify-between">

@@ -22,7 +22,6 @@ import type { Agent } from '../../services/agentDiscovery.service';
 import { useAgentOrchestraStore } from '../../store/agentOrchestraStore';
 import type { Game, BettingMarket } from '../../features/sports/api/sports';
 import { getMarkets } from '../../features/sports/api/sports';
-import '../../styles/gaming-theme.css';
 
 interface BettingAgentPanelProps {
   game: Game;
@@ -71,8 +70,8 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
     basic: {
       name: 'Basic',
       price: 29,
-      color: 'text-gray-400',
-      bgColor: 'bg-gray-500/10',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted/50/10',
       borderColor: 'border-gray-500/30',
       allowedAgents: ['kelly-bet-sizing', 'weather-analyzer', 'odds-calculation'],
       updateFrequency: '4 hours',
@@ -82,7 +81,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
     pro: {
       name: 'Pro',
       price: 79,
-      color: 'text-blue-400',
+      color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/30',
       allowedAgents: ['kelly-bet-sizing', 'weather-analyzer', 'odds-calculation', 'market-value-analyzer', 'public-sentiment-analyzer', 'injury-analyzer'],
@@ -104,7 +103,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
     'high-roller': {
       name: 'High Roller',
       price: 499,
-      color: 'text-yellow-400',
+      color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
       borderColor: 'border-yellow-500/30',
       allowedAgents: 'all',
@@ -373,7 +372,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
               agent.description.toLowerCase().includes('statistical analysis') ||
               agent.description.toLowerCase().includes('betting intelligence')
             ),
-            color: 'gaming-neon-cyan'
+            color: 'bg-card'
           },
           {
             name: 'Market Analysis',
@@ -388,7 +387,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
               agent.description.toLowerCase().includes('line movement') ||
               agent.description.toLowerCase().includes('public sentiment')
             ),
-            color: 'gaming-neon-green'
+            color: 'bg-card'
           },
           {
             name: 'Kelly & Risk',
@@ -402,7 +401,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
               agent.description.toLowerCase().includes('bankroll management') ||
               agent.description.toLowerCase().includes('optimal bet sizing')
             ),
-            color: 'gaming-neon-orange'
+            color: 'bg-card'
           },
           {
             name: 'Intelligence Gathering',
@@ -416,7 +415,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
               agent.description.toLowerCase().includes('injury intelligence') ||
               agent.description.toLowerCase().includes('situational analysis')
             ),
-            color: 'gaming-neon-purple'
+            color: 'bg-card'
           },
           {
             name: 'Betting Strategies',
@@ -431,7 +430,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
               agent.description.toLowerCase().includes('arbitrage') ||
               agent.description.toLowerCase().includes('contrarian opportunities')
             ),
-            color: 'gaming-neon-red'
+            color: 'bg-card'
           },
           {
             name: 'Recommendations',
@@ -442,7 +441,7 @@ export function BettingAgentPanel({ game, className }: BettingAgentPanelProps) {
               agent.description.toLowerCase().includes('betting recommendations') ||
               agent.description.toLowerCase().includes('decision support')
             ),
-            color: 'gaming-neon-blue'
+            color: 'bg-card'
           }
         ];
 
@@ -721,12 +720,12 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
 
   if (loading) {
     return (
-      <Card className={`gaming-card ${className}`}>
-        <div className="gaming-border-glow"></div>
+      <Card className={`bg-card ${className}`}>
+        <div className="bg-card"></div>
         <div className="p-6">
           <div className="flex items-center justify-center py-8">
-            <div className="gaming-loading w-8 h-8"></div>
-            <span className="ml-3 gaming-text-secondary">Loading AI Agents...</span>
+            <div className="bg-card w-8 h-8"></div>
+            <span className="ml-3 bg-card">Loading AI Agents...</span>
           </div>
         </div>
       </Card>
@@ -734,15 +733,15 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
   }
 
   return (
-    <Card className={`gaming-card ${className}`}>
-      <div className="gaming-border-glow"></div>
+    <Card className={`bg-card ${className}`}>
+      <div className="bg-card"></div>
       <div className="p-6">
         <div className="space-y-4 mb-6">
           {/* Subscription Tier Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Bot className="w-6 h-6 gaming-text-neon animate-pulse" />
-              <h3 className="text-xl font-bold gaming-text-primary">AI BETTING AGENTS</h3>
+              <Bot className="w-6 h-6 bg-card animate-pulse" />
+              <h3 className="text-xl font-bold bg-card">AI BETTING AGENTS</h3>
               <div className="flex items-center gap-2">
                 <Badge 
                   className={`text-xs px-3 py-1 ${getCurrentTierConfig().bgColor} ${getCurrentTierConfig().borderColor} border`}
@@ -751,7 +750,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                     💎 {getCurrentTierConfig().name.toUpperCase()}
                   </span>
                 </Badge>
-                <Badge className="gaming-status text-xs px-2 py-1">
+                <Badge className="bg-card text-xs px-2 py-1">
                   {agents.filter(a => isAgentAllowed(a.id)).length}/{agents.length} AGENTS
                 </Badge>
               </div>
@@ -761,7 +760,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                 onClick={() => setDeployMode(deployMode === 'single' ? 'multi' : 'single')}
                 variant="ghost"
                 size="sm"
-                className={`gaming-btn text-xs ${deployMode === 'multi' ? 'border-gaming-neon-cyan bg-gaming-neon-cyan/10' : ''}`}
+                className={`bg-card text-xs ${deployMode === 'multi' ? 'border-bg-card bg-bg-card/10' : ''}`}
               >
                 {deployMode === 'single' ? '🎯 Single' : '🚀 Multi'}
               </Button>
@@ -769,7 +768,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                 onClick={() => setShowUpgradeModal(true)}
                 variant="ghost"
                 size="sm"
-                className="gaming-btn text-xs hover:border-gaming-neon-purple"
+                className="bg-card text-xs hover:border-bg-card"
               >
                 💳 Upgrade
               </Button>
@@ -778,7 +777,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                 disabled={loading}
                 variant="ghost"
                 size="sm"
-                className="gaming-btn"
+                className="bg-card"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
@@ -786,31 +785,31 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
           </div>
 
           {/* Tier Benefits Display */}
-          <div className={`gaming-card-inner p-3 ${getCurrentTierConfig().bgColor} ${getCurrentTierConfig().borderColor} border`}>
+          <div className={`bg-card p-3 ${getCurrentTierConfig().bgColor} ${getCurrentTierConfig().borderColor} border`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className={`font-bold text-sm ${getCurrentTierConfig().color}`}>
                   Your {getCurrentTierConfig().name} Plan
                 </span>
-                <span className="gaming-text-secondary text-xs">
+                <span className="bg-card text-xs">
                   Updates every {getCurrentTierConfig().updateFrequency}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <span className="gaming-text-secondary">Next update:</span>
-                <span className="gaming-text-accent font-bold">
+                <span className="bg-card">Next update:</span>
+                <span className="bg-card font-bold">
                   {userTier === 'high-roller' ? '12 min' : userTier === 'elite' ? '28 min' : userTier === 'pro' ? '1.2 hrs' : '3.4 hrs'}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-1 flex-wrap">
               {getCurrentTierConfig().features.map((feature, idx) => (
-                <span key={idx} className="text-xs gaming-text-secondary bg-gaming-background/50 px-2 py-1 rounded">
+                <span key={idx} className="text-xs bg-card bg-bg-card/50 px-2 py-1 rounded">
                   {feature}
                 </span>
               ))}
               {getLockedAgentCount() > 0 && (
-                <span className="text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/30">
+                <span className="text-xs text-red-500 bg-red-500/10 px-2 py-1 rounded border border-red-500/30">
                   🔒 {getLockedAgentCount()} Agents Locked
                 </span>
               )}
@@ -821,7 +820,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
           {deployMode === 'multi' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="gaming-text-secondary text-sm font-bold">
+                <div className="bg-card text-sm font-bold">
                   📋 SELECT AGENTS ({selectedAgents.size} selected)
                 </div>
                 <div className="flex gap-1">
@@ -829,7 +828,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                     onClick={() => selectPresetAgents('core')}
                     size="sm"
                     variant="outline"
-                    className="text-xs px-2 py-1 gaming-btn-ghost hover:border-gaming-neon-cyan"
+                    className="text-xs px-2 py-1 bg-card hover:border-bg-card"
                   >
                     Core 4
                   </Button>
@@ -837,7 +836,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                     onClick={() => selectPresetAgents('injury-crisis')}
                     size="sm"
                     variant="outline"
-                    className="text-xs px-2 py-1 gaming-btn-ghost hover:border-gaming-neon-orange"
+                    className="text-xs px-2 py-1 bg-card hover:border-bg-card"
                   >
                     🏥 Injury Crisis
                   </Button>
@@ -845,7 +844,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                     onClick={() => selectPresetAgents('line-movement')}
                     size="sm"
                     variant="outline"
-                    className="text-xs px-2 py-1 gaming-btn-ghost hover:border-gaming-neon-green"
+                    className="text-xs px-2 py-1 bg-card hover:border-bg-card"
                   >
                     📈 Line Move
                   </Button>
@@ -853,7 +852,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                     onClick={() => selectPresetAgents('all')}
                     size="sm"
                     variant="outline"
-                    className="text-xs px-2 py-1 gaming-btn-ghost hover:border-gaming-neon-purple"
+                    className="text-xs px-2 py-1 bg-card hover:border-bg-card"
                   >
                     All 12
                   </Button>
@@ -861,7 +860,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                     onClick={() => selectPresetAgents('clear')}
                     size="sm"
                     variant="outline"
-                    className="text-xs px-2 py-1 gaming-btn-ghost hover:border-gaming-neon-red"
+                    className="text-xs px-2 py-1 bg-card hover:border-bg-card"
                   >
                     Clear
                   </Button>
@@ -872,7 +871,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                 <Button
                   onClick={deploySelectedAgents}
                   disabled={executing}
-                  className="w-full gaming-btn-active hover:bg-gaming-neon-cyan/20 border-gaming-neon-cyan"
+                  className="w-full bg-card hover:bg-bg-card/20 border-bg-card"
                 >
                   {executing ? (
                     <RefreshCw className="w-4 h-4 animate-spin mr-2" />
@@ -889,20 +888,20 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 gaming-text-accent" />
+            <Search className="absolute left-3 top-3 w-4 h-4 bg-card" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search agents..."
-              className="w-full gaming-card pl-10 pr-4 py-2 border border-gaming-border rounded gaming-text-primary text-sm focus:border-gaming-neon-cyan focus:outline-none transition-colors"
+              className="w-full bg-card pl-10 pr-4 py-2 border border-bg-card rounded bg-card text-sm focus:border-bg-card focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         {/* Running Instances Alert */}
         {runningInstancesForGame.length > 0 && (
-          <div className="mb-6 gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green p-3 rounded">
+          <div className="mb-6 bg-card bg-bg-card/20 border-bg-card text-bg-card p-3 rounded">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 animate-pulse" />
               <span className="font-bold text-sm">
@@ -918,38 +917,38 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
         {/* Agent Categories */}
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {filteredCategories.map(category => (
-            <div key={category.name} className="gaming-card border-gaming-border">
+            <div key={category.name} className="bg-card border-bg-card">
               <button
                 onClick={() => setExpandedCategory(
                   expandedCategory === category.name ? null : category.name
                 )}
-                className="w-full p-4 flex items-center justify-between hover:bg-gaming-border/20 transition-colors"
+                className="w-full p-4 flex items-center justify-between hover:bg-bg-card/20 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div className={`text-${category.color}`}>
                     {category.icon}
                   </div>
                   <div className="text-left">
-                    <div className="font-bold gaming-text-primary text-sm">
+                    <div className="font-bold bg-card text-sm">
                       {category.name}
                     </div>
-                    <div className="gaming-text-secondary text-xs">
+                    <div className="bg-card text-xs">
                       {category.description} • {category.agents.length} agent{category.agents.length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
                 <ChevronRight 
-                  className={`w-4 h-4 gaming-text-accent transition-transform ${
+                  className={`w-4 h-4 bg-card transition-transform ${
                     expandedCategory === category.name ? 'rotate-90' : ''
                   }`} 
                 />
               </button>
 
               {expandedCategory === category.name && (
-                <div className="border-t border-gaming-border">
+                <div className="border-t border-bg-card">
                   <div className="p-4 space-y-3">
                     {category.agents.map(agent => (
-                      <div key={agent.id} className={`gaming-card border-gaming-border p-3 ${!isAgentAllowed(agent.id) ? 'opacity-60 bg-gray-500/10' : ''}`}>
+                      <div key={agent.id} className={`bg-card border-bg-card p-3 ${!isAgentAllowed(agent.id) ? 'opacity-60 bg-muted/50/10' : ''}`}>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             {deployMode === 'multi' && (
@@ -958,15 +957,15 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                                 checked={selectedAgents.has(agent.id)}
                                 onChange={() => isAgentAllowed(agent.id) ? toggleAgentSelection(agent.id) : setShowUpgradeModal(true)}
                                 disabled={!isAgentAllowed(agent.id)}
-                                className="w-4 h-4 text-gaming-neon-cyan bg-gaming-background border-gaming-border rounded focus:ring-gaming-neon-cyan focus:ring-2 disabled:opacity-30"
+                                className="w-4 h-4 text-bg-card bg-bg-card border-bg-card rounded focus:ring-bg-card focus:ring-2 disabled:opacity-30"
                               />
                             )}
                             <div className={`w-2 h-2 bg-${category.color} rounded-full`}></div>
-                            <span className={`font-medium text-sm ${isAgentAllowed(agent.id) ? 'gaming-text-primary' : 'text-gray-500'}`}>
+                            <span className={`font-medium text-sm ${isAgentAllowed(agent.id) ? 'bg-card' : 'text-muted-foreground'}`}>
                               {agent.name}
                             </span>
                             {!isAgentAllowed(agent.id) && (
-                              <Badge className="text-xs bg-red-500/20 text-red-400 border border-red-500/30">
+                              <Badge className="text-xs bg-red-500/20 text-red-500 border border-red-500/30">
                                 🔒 LOCKED
                               </Badge>
                             )}
@@ -978,7 +977,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                           </div>
                         </div>
                         
-                        <p className="gaming-text-secondary text-xs mb-3 line-clamp-2">
+                        <p className="bg-card text-xs mb-3 line-clamp-2">
                           {agent.description}
                         </p>
                         
@@ -994,7 +993,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                               </Badge>
                             ))}
                             {agent.capabilities.length > 2 && (
-                              <span className="gaming-text-accent text-xs">
+                              <span className="bg-card text-xs">
                                 +{agent.capabilities.length - 2}
                               </span>
                             )}
@@ -1007,8 +1006,8 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
                               size="sm"
                               className={`text-xs px-3 py-1 ${
                                 isAgentAllowed(agent.id) 
-                                  ? 'gaming-btn-active' 
-                                  : 'gaming-btn hover:border-gaming-neon-purple hover:bg-gaming-neon-purple/10'
+                                  ? 'bg-card' 
+                                  : 'bg-card hover:border-bg-card hover:bg-bg-card/10'
                               }`}
                             >
                               {isAgentAllowed(agent.id) ? (
@@ -1038,7 +1037,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
           ))}
 
           {filteredCategories.length === 0 && (
-            <div className="text-center py-8 gaming-text-secondary">
+            <div className="text-center py-8 bg-card">
               <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-sm">
                 {searchQuery ? 'No agents found matching your search' : 'No betting agents available'}
@@ -1058,8 +1057,8 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-6 pt-4 border-t border-gaming-border">
-          <div className="text-xs gaming-text-secondary mb-3 font-bold">QUICK ANALYSIS</div>
+        <div className="mt-6 pt-4 border-t border-bg-card">
+          <div className="text-xs bg-card mb-3 font-bold">QUICK ANALYSIS</div>
           <div className="grid grid-cols-2 gap-2">
             <Button
               onClick={async () => {
@@ -1143,7 +1142,7 @@ Task: ${customTask || `Analyze this ${game.league} matchup between ${game.away_t
               }}
               disabled={executing}
               size="sm"
-              className="gaming-btn text-xs hover:border-gaming-neon-cyan hover:bg-gaming-neon-cyan/10 transition-all"
+              className="bg-card text-xs hover:border-bg-card hover:bg-bg-card/10 transition-all"
             >
               <TrendingUp className="w-3 h-3 mr-1" />
               Analyze Teams
@@ -1236,7 +1235,7 @@ Note: Always use fractional Kelly (25-50%) to account for estimation errors and 
               }}
               disabled={executing}
               size="sm"
-              className="gaming-btn text-xs hover:border-gaming-neon-green hover:bg-gaming-neon-green/10 transition-all"
+              className="bg-card text-xs hover:border-bg-card hover:bg-bg-card/10 transition-all"
             >
               <Calculator className="w-3 h-3 mr-1" />
               Kelly Analysis
@@ -1247,18 +1246,18 @@ Note: Always use fractional Kelly (25-50%) to account for estimation errors and 
         {/* Upgrade Modal */}
         {showUpgradeModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="gaming-card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="gaming-border-glow"></div>
+            <div className="bg-card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-card"></div>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold gaming-text-primary">
+                  <h2 className="text-2xl font-bold bg-card">
                     💎 Upgrade Your AI Betting Intelligence
                   </h2>
                   <Button
                     onClick={() => setShowUpgradeModal(false)}
                     variant="ghost"
                     size="sm"
-                    className="gaming-btn"
+                    className="bg-card"
                   >
                     ✕
                   </Button>
@@ -1268,10 +1267,10 @@ Note: Always use fractional Kelly (25-50%) to account for estimation errors and 
                   {Object.entries(SUBSCRIPTION_TIERS).map(([tier, config]) => (
                     <div 
                       key={tier}
-                      className={`gaming-card-inner p-4 border-2 cursor-pointer transition-all hover:scale-105 ${
+                      className={`bg-card p-4 border-2 cursor-pointer transition-all hover:scale-105 ${
                         userTier === tier 
                           ? `${config.borderColor} ${config.bgColor}` 
-                          : 'border-gaming-border hover:border-gaming-neon-cyan/50'
+                          : 'border-bg-card hover:border-bg-card/50'
                       }`}
                       onClick={() => {
                         setUserTier(tier as any);
@@ -1286,24 +1285,24 @@ Note: Always use fractional Kelly (25-50%) to account for estimation errors and 
                         <div className={`text-2xl font-bold mb-2 ${config.color}`}>
                           {config.name}
                         </div>
-                        <div className="text-3xl font-bold gaming-text-primary mb-2">
-                          ${config.price}<span className="text-sm gaming-text-secondary">/mo</span>
+                        <div className="text-3xl font-bold bg-card mb-2">
+                          ${config.price}<span className="text-sm bg-card">/mo</span>
                         </div>
-                        <div className="text-xs gaming-text-secondary mb-3">
+                        <div className="text-xs bg-card mb-3">
                           {config.allowedAgents === 'all' ? 'All 12 Agents' : `${config.allowedAgents.length} Agents`}
                         </div>
-                        <div className="text-xs gaming-text-accent mb-3">
+                        <div className="text-xs bg-card mb-3">
                           Updates: {config.updateFrequency}
                         </div>
                         <div className="space-y-1">
                           {config.features.map((feature, idx) => (
-                            <div key={idx} className="text-xs gaming-text-secondary">
+                            <div key={idx} className="text-xs bg-card">
                               ✓ {feature}
                             </div>
                           ))}
                         </div>
                         {userTier === tier && (
-                          <div className="mt-3 px-2 py-1 bg-gaming-neon-green/20 text-gaming-neon-green rounded text-xs font-bold border border-gaming-neon-green/30">
+                          <div className="mt-3 px-2 py-1 bg-bg-card/20 text-bg-card rounded text-xs font-bold border border-bg-card/30">
                             CURRENT PLAN
                           </div>
                         )}
@@ -1312,29 +1311,29 @@ Note: Always use fractional Kelly (25-50%) to account for estimation errors and 
                   ))}
                 </div>
 
-                <div className="bg-gaming-background/30 p-4 rounded border border-gaming-border/50">
-                  <h3 className="font-bold gaming-text-primary mb-3">🚀 What You Get With Premium Agents:</h3>
+                <div className="bg-bg-card/30 p-4 rounded border border-bg-card/50">
+                  <h3 className="font-bold bg-card mb-3">🚀 What You Get With Premium Agents:</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="space-y-2">
-                      <div className="gaming-text-secondary">
+                      <div className="bg-card">
                         <span className="text-purple-400 font-bold">🧠 Intelligence Coordination:</span> Agents share data and insights for smarter recommendations
                       </div>
-                      <div className="gaming-text-secondary">
-                        <span className="text-green-400 font-bold">📊 Real-time Updates:</span> Get the latest line movements, injury reports, and market sentiment
+                      <div className="bg-card">
+                        <span className="text-green-500 font-bold">📊 Real-time Updates:</span> Get the latest line movements, injury reports, and market sentiment
                       </div>
-                      <div className="gaming-text-secondary">
+                      <div className="bg-card">
                         <span className="text-cyan-400 font-bold">⚡ Automated Analysis:</span> Agents run automatically based on game events and news
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="gaming-text-secondary">
-                        <span className="text-yellow-400 font-bold">🎯 Precision Betting:</span> Kelly Criterion with advanced risk management
+                      <div className="bg-card">
+                        <span className="text-yellow-500 font-bold">🎯 Precision Betting:</span> Kelly Criterion with advanced risk management
                       </div>
-                      <div className="gaming-text-secondary">
+                      <div className="bg-card">
                         <span className="text-orange-400 font-bold">📈 Market Intelligence:</span> Track sharp money vs public sentiment
                       </div>
-                      <div className="gaming-text-secondary">
-                        <span className="text-red-400 font-bold">🏆 Professional Edge:</span> Same tools used by professional handicappers
+                      <div className="bg-card">
+                        <span className="text-red-500 font-bold">🏆 Professional Edge:</span> Same tools used by professional handicappers
                       </div>
                     </div>
                   </div>

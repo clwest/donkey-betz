@@ -25,7 +25,6 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
-import '../../styles/gaming-theme.css';
 
 interface AgentMessage {
   id: string;
@@ -196,17 +195,17 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
   const getMessageIcon = (type: AgentMessage['message_type']) => {
     switch (type) {
       case 'thinking':
-        return <Clock className="w-4 h-4 text-blue-400" />;
+        return <Clock className="w-4 h-4 text-blue-500" />;
       case 'analysis':
-        return <Zap className="w-4 h-4 text-yellow-400" />;
+        return <Zap className="w-4 h-4 text-yellow-500" />;
       case 'result':
-        return <CheckCircle className="w-4 h-4 text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'coordination':
         return <Users className="w-4 h-4 text-purple-400" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-400" />;
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
       default:
-        return <MessageCircle className="w-4 h-4 text-gray-400" />;
+        return <MessageCircle className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -223,19 +222,19 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
       case 'error':
         return 'border-red-500/30 bg-red-900/10';
       default:
-        return 'border-gaming-border/50 bg-gaming-bg/50';
+        return 'border-bg-card/50 bg-bg-card/50';
     }
   };
 
   return (
-    <Card className={`gaming-card ${className}`}>
-      <div className="gaming-border-glow"></div>
+    <Card className={`bg-card ${className}`}>
+      <div className="bg-card"></div>
       
       {/* Header */}
-      <div className="p-4 border-b border-gaming-border flex items-center justify-between">
+      <div className="p-4 border-b border-bg-card flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Activity className="w-5 h-5 text-cyan-400" />
-          <h3 className="text-lg font-bold gaming-text-primary">Agent Activity Monitor</h3>
+          <h3 className="text-lg font-bold bg-card">Agent Activity Monitor</h3>
           <Badge variant={isConnected ? 'success' : 'destructive'} className="text-xs">
             {isConnected ? 'LIVE' : 'OFFLINE'}
           </Badge>
@@ -251,7 +250,7 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => setIsMuted(!isMuted)}
-            className="gaming-btn p-2"
+            className="bg-card p-2"
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
@@ -260,7 +259,7 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => setIsPaused(!isPaused)}
-            className="gaming-btn p-2"
+            className="bg-card p-2"
           >
             {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
           </Button>
@@ -269,7 +268,7 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
             variant="ghost"
             size="sm"
             onClick={clearMessages}
-            className="gaming-btn p-2"
+            className="bg-card p-2"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -278,7 +277,7 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => setIsMinimized(!isMinimized)}
-            className="gaming-btn p-2"
+            className="bg-card p-2"
           >
             {isMinimized ? '▲' : '▼'}
           </Button>
@@ -287,9 +286,9 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
       
       {/* Messages Container */}
       {!isMinimized && (
-        <div className="h-64 overflow-y-auto p-4 space-y-2 gaming-scrollbar">
+        <div className="h-64 overflow-y-auto p-4 space-y-2 bg-card">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-muted-foreground py-8">
               <Bot className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Waiting for agent activity...</p>
               <p className="text-xs mt-1">Agents will appear here when analysis begins</p>
@@ -303,14 +302,14 @@ export const AgentActivityMonitor: React.FC<AgentActivityMonitorProps> = ({
                 {getMessageIcon(msg.message_type)}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-gray-300">
+                    <span className="text-sm font-semibold text-muted-foreground">
                       {msg.agent_name}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(msg.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-400 break-words">
+                  <p className="text-sm text-muted-foreground break-words">
                     {msg.content}
                   </p>
                 </div>

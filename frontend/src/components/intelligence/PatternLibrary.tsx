@@ -49,7 +49,7 @@ export function PatternLibrary({ domain: initialDomain, onPatternSelect }: Patte
       REAL_ESTATE: 'bg-purple-500',
       BUSINESS: 'bg-indigo-500'
     };
-    return colors[domains[0]] || 'bg-gray-500';
+    return colors[domains[0]] || 'bg-muted/50';
   };
 
   const getSuccessColor = (rate: number) => {
@@ -59,7 +59,7 @@ export function PatternLibrary({ domain: initialDomain, onPatternSelect }: Patte
   };
 
   return (
-    <Card className="gaming-card">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export function PatternLibrary({ domain: initialDomain, onPatternSelect }: Patte
             <select
               value={selectedDomain}
               onChange={(e) => setSelectedDomain(e.target.value)}
-              className="w-[150px] bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-[150px] bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="all">All Domains</option>
               <option value="SPORTS_BETTING">Sports Betting</option>
@@ -105,7 +105,7 @@ export function PatternLibrary({ domain: initialDomain, onPatternSelect }: Patte
                     <h4 className="font-medium">{pattern.name}</h4>
                     <p className="text-sm text-muted-foreground">{pattern.description}</p>
                   </div>
-                  <Badge className={`${getDomainColor(pattern.domains)} text-white`}>
+                  <Badge className={`${getDomainColor(pattern.domains)} text-foreground`}>
                     {pattern.domains.length > 1 ? 'Cross-Domain' : pattern.domains[0]}
                   </Badge>
                 </div>

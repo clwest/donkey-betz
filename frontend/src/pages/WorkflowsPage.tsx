@@ -19,7 +19,6 @@ import {
   ChartBarIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import '../styles/gaming-theme.css';
 import { workflowsService } from '@/services/workflows.service';
 import { agentDiscoveryService } from '@/services/agentDiscovery.service';
 import { toast } from 'sonner';
@@ -109,7 +108,7 @@ export default function WorkflowsPage() {
 
   useEffect(() => {
     // Add gaming theme to body
-    document.body.classList.add('gaming-theme');
+    document.body.classList.add('bg-card');
     
     loadData();
     loadExecutionHistory();
@@ -120,7 +119,7 @@ export default function WorkflowsPage() {
     }, 5000);
     
     return () => {
-      document.body.classList.remove('gaming-theme');
+      document.body.classList.remove('bg-card');
       clearInterval(interval);
     };
   }, []);
@@ -392,43 +391,43 @@ export default function WorkflowsPage() {
   return (
     <div className="space-y-6">
       {/* Gaming Header */}
-      <div className="gaming-card relative overflow-hidden mb-8">
-        <div className="gaming-border-glow"></div>
+      <div className="bg-card relative overflow-hidden mb-8">
+        <div className="bg-card"></div>
         
         {/* Cyberpunk background pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="w-full h-full" style={{backgroundImage: 'linear-gradient(45deg, transparent 40%, var(--gaming-neon-cyan) 50%, transparent 60%)', backgroundSize: '20px 20px'}}></div>
+          <div className="w-full h-full" style={{backgroundImage: 'linear-gradient(45deg, transparent 40%, hsl(var(--muted)) 50%, transparent 60%)', backgroundSize: '20px 20px'}}></div>
         </div>
         
         <div className="relative flex items-center justify-between p-8">
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 gaming-card border-gaming-neon-cyan flex items-center justify-center">
-                <CpuChipIcon className="w-8 h-8 gaming-text-neon" />
+              <div className="w-16 h-16 bg-card border-bg-card flex items-center justify-center">
+                <CpuChipIcon className="w-8 h-8 bg-card" />
               </div>
-              <h1 className="text-5xl font-black gaming-text-primary text-shadow-lg">
-                MULTI-AGENT <span className="gaming-text-neon">NEURAL</span> MATRIX
+              <h1 className="text-5xl font-black bg-card text-shadow-lg">
+                MULTI-AGENT <span className="bg-card">NEURAL</span> MATRIX
               </h1>
             </div>
             
-            <p className="gaming-text-secondary text-xl font-bold font-mono">
+            <p className="bg-card text-xl font-bold font-mono">
               [ORCHESTRATING PARALLEL AGENT PROTOCOLS] &gt;&gt; NEURAL WORKFLOW MATRIX
             </p>
             
             {/* Gaming Status Indicators */}
             <div className="flex items-center gap-4">
-              <div className="gaming-status gaming-status-live">
-                <div className="gaming-pulse-dot"></div>
+              <div className="bg-card bg-card">
+                <div className="bg-card"></div>
                 <ArrowPathIcon className="w-4 h-4" />
                 AGENTS ONLINE
               </div>
               
-              <div className="gaming-status bg-gaming-neon-cyan/20 border-gaming-neon-cyan text-gaming-neon-cyan">
+              <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                 <CpuChipIcon className="w-4 h-4" />
                 NEURAL SYNC
               </div>
               
-              <div className="gaming-status bg-gaming-neon-purple/20 border-gaming-neon-purple text-gaming-neon-purple">
+              <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                 <ChartBarIcon className="w-4 h-4" />
                 WORKFLOW MATRIX
               </div>
@@ -438,7 +437,7 @@ export default function WorkflowsPage() {
           <div className="flex items-center gap-4">
             <Button 
               onClick={() => setTemplateDialogOpen(true)}
-              className="gaming-btn-active px-8 py-4 text-lg">
+              className="bg-card px-8 py-4 text-lg">
               <PlusIcon className="h-5 w-5 mr-3" />
               INITIATE NEURAL MATRIX
             </Button>
@@ -447,13 +446,13 @@ export default function WorkflowsPage() {
       </div>
 
       <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto gaming-card border-gaming-neon-cyan">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-bg-card">
             <DialogHeader>
-              <DialogTitle className="text-white text-2xl font-bold gaming-text-primary">
-                <CpuChipIcon className="w-6 h-6 mr-2 gaming-text-neon inline" />
+              <DialogTitle className="text-foreground text-2xl font-bold bg-card">
+                <CpuChipIcon className="w-6 h-6 mr-2 bg-card inline" />
                 NEURAL MATRIX ARCHITECT
               </DialogTitle>
-              <DialogDescription className="gaming-text-secondary font-mono">
+              <DialogDescription className="bg-card font-mono">
                 &gt;&gt; DESIGN MULTI-AGENT WORKFLOW PROTOCOLS FOR NEURAL COORDINATION
               </DialogDescription>
             </DialogHeader>
@@ -467,18 +466,18 @@ export default function WorkflowsPage() {
               <TabsContent value="design" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="workflow-name" className="text-gray-300">Workflow Name</Label>
+                    <Label htmlFor="workflow-name" className="text-muted-foreground">Workflow Name</Label>
                     <input
                       id="workflow-name"
                       type="text"
                       value={newWorkflow.name}
                       onChange={(e) => setNewWorkflow(prev => ({...prev, name: e.target.value}))}
                       placeholder="My Custom Workflow"
-                      className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="flow-type" className="text-gray-300">Flow Type</Label>
+                    <Label htmlFor="flow-type" className="text-muted-foreground">Flow Type</Label>
                     <Select
                       value={newWorkflow.flow_config.type}
                       onValueChange={(value) => setNewWorkflow(prev => ({
@@ -486,7 +485,7 @@ export default function WorkflowsPage() {
                         flow_config: {...prev.flow_config, type: value}
                       }))}
                     >
-                      <SelectTrigger className="bg-dark-700 border-dark-600 text-white">
+                      <SelectTrigger className="bg-dark-700 border-dark-600 text-foreground">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -498,20 +497,20 @@ export default function WorkflowsPage() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="workflow-description" className="text-gray-300">Description</Label>
+                  <Label htmlFor="workflow-description" className="text-muted-foreground">Description</Label>
                   <textarea
                     id="workflow-description"
                     value={newWorkflow.description}
                     onChange={(e) => setNewWorkflow(prev => ({...prev, description: e.target.value}))}
                     placeholder="Describe what this workflow does..."
                     rows={3}
-                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
                 
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <Label className="text-gray-300">Agents</Label>
+                    <Label className="text-muted-foreground">Agents</Label>
                     <Button variant="outline" size="sm" onClick={addAgentToWorkflow}>
                       <PlusIcon className="h-4 w-4" />
                       Add Agent
@@ -523,12 +522,12 @@ export default function WorkflowsPage() {
                       <Card key={index} className="p-3">
                         <div className="grid grid-cols-3 gap-3 items-center">
                           <div>
-                            <Label className="text-xs text-gray-400">Agent</Label>
+                            <Label className="text-xs text-muted-foreground">Agent</Label>
                             <Select
                               value={agent.name}
                               onValueChange={(value) => updateWorkflowAgent(index, 'name', value)}
                             >
-                              <SelectTrigger className="h-8 bg-dark-700 border-dark-600 text-white">
+                              <SelectTrigger className="h-8 bg-dark-700 border-dark-600 text-foreground">
                                 <SelectValue placeholder="Select agent" />
                               </SelectTrigger>
                               <SelectContent>
@@ -542,12 +541,12 @@ export default function WorkflowsPage() {
                           </div>
                           
                           <div>
-                            <Label className="text-xs text-gray-400">Order</Label>
+                            <Label className="text-xs text-muted-foreground">Order</Label>
                             <input
                               type="number"
                               value={agent.order}
                               onChange={(e) => updateWorkflowAgent(index, 'order', parseInt(e.target.value))}
-                              className="w-full px-2 py-1 bg-dark-700 border border-dark-600 rounded text-white h-8"
+                              className="w-full px-2 py-1 bg-dark-700 border border-dark-600 rounded text-foreground h-8"
                               min={1}
                             />
                           </div>
@@ -557,7 +556,7 @@ export default function WorkflowsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeAgentFromWorkflow(index)}
-                              className="text-red-400 hover:text-red-300"
+                              className="text-red-500 hover:text-red-300"
                             >
                               <XCircleIcon className="h-4 w-4" />
                             </Button>
@@ -589,13 +588,13 @@ export default function WorkflowsPage() {
                     <Card key={index} className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-white">{template.name}</h3>
-                          <p className="text-sm text-gray-400 mt-1">{template.description}</p>
+                          <h3 className="font-semibold text-foreground">{template.name}</h3>
+                          <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-gray-300 border-gray-600">
+                            <Badge variant="outline" className="text-muted-foreground border-gray-600">
                               {template.agents?.length || 0} agents
                             </Badge>
-                            <Badge variant="outline" className="text-gray-300 border-gray-600">
+                            <Badge variant="outline" className="text-muted-foreground border-gray-600">
                               {template.flow_config?.type || 'sequential'}
                             </Badge>
                           </div>
@@ -619,54 +618,54 @@ export default function WorkflowsPage() {
 
       {/* Neural Matrix Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="gaming-card gaming-hover-lift">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card bg-card">
+          <div className="bg-card"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">ACTIVE NEURAL MATRICES</p>
-              <p className="text-3xl font-black gaming-text-neon font-mono">{workflows.length}</p>
+              <p className="text-xs bg-card font-mono uppercase tracking-wide">ACTIVE NEURAL MATRICES</p>
+              <p className="text-3xl font-black bg-card font-mono">{workflows.length}</p>
             </div>
-            <div className="w-12 h-12 gaming-card border-gaming-neon-cyan flex items-center justify-center">
-              <CpuChipIcon className="h-6 w-6 gaming-text-neon" />
+            <div className="w-12 h-12 bg-card border-bg-card flex items-center justify-center">
+              <CpuChipIcon className="h-6 w-6 bg-card" />
             </div>
           </div>
         </div>
         
-        <div className="gaming-card gaming-hover-lift">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card bg-card">
+          <div className="bg-card"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">PROTOCOL TEMPLATES</p>
-              <p className="text-3xl font-black text-gaming-neon-purple font-mono">{templates.length}</p>
+              <p className="text-xs bg-card font-mono uppercase tracking-wide">PROTOCOL TEMPLATES</p>
+              <p className="text-3xl font-black text-bg-card font-mono">{templates.length}</p>
             </div>
-            <div className="w-12 h-12 gaming-card border-gaming-neon-purple flex items-center justify-center">
-              <DocumentTextIcon className="h-6 w-6 text-gaming-neon-purple" />
+            <div className="w-12 h-12 bg-card border-bg-card flex items-center justify-center">
+              <DocumentTextIcon className="h-6 w-6 text-bg-card" />
             </div>
           </div>
         </div>
         
-        <div className="gaming-card gaming-hover-lift">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card bg-card">
+          <div className="bg-card"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">NEURAL AGENTS</p>
-              <p className="text-3xl font-black gaming-text-neon font-mono">{agents.length}</p>
+              <p className="text-xs bg-card font-mono uppercase tracking-wide">NEURAL AGENTS</p>
+              <p className="text-3xl font-black bg-card font-mono">{agents.length}</p>
             </div>
-            <div className="w-12 h-12 gaming-card border-gaming-neon-cyan flex items-center justify-center">
-              <SparklesIcon className="h-6 w-6 gaming-text-neon" />
+            <div className="w-12 h-12 bg-card border-bg-card flex items-center justify-center">
+              <SparklesIcon className="h-6 w-6 bg-card" />
             </div>
           </div>
         </div>
         
-        <div className="gaming-card gaming-hover-lift">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card bg-card">
+          <div className="bg-card"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs gaming-text-secondary font-mono uppercase tracking-wide">MATRIX EXECUTIONS</p>
-              <p className="text-3xl font-black gaming-text-matrix font-mono">{executions.length}</p>
+              <p className="text-xs bg-card font-mono uppercase tracking-wide">MATRIX EXECUTIONS</p>
+              <p className="text-3xl font-black bg-card font-mono">{executions.length}</p>
             </div>
-            <div className="w-12 h-12 gaming-card border-gaming-neon-green flex items-center justify-center">
-              <ChartBarIcon className="h-6 w-6 gaming-text-matrix" />
+            <div className="w-12 h-12 bg-card border-bg-card flex items-center justify-center">
+              <ChartBarIcon className="h-6 w-6 bg-card" />
             </div>
           </div>
         </div>
@@ -674,49 +673,49 @@ export default function WorkflowsPage() {
 
       {/* Matrix Execution History */}
       {executions.length > 0 && (
-        <div className="gaming-card">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card">
+          <div className="bg-card"></div>
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">
-              <ChartBarIcon className="w-6 h-6 gaming-text-neon" />
-              <h3 className="text-2xl font-black gaming-text-primary">NEURAL MATRIX EXECUTIONS</h3>
+              <ChartBarIcon className="w-6 h-6 bg-card" />
+              <h3 className="text-2xl font-black bg-card">NEURAL MATRIX EXECUTIONS</h3>
             </div>
-            <p className="gaming-text-secondary font-mono">&gt;&gt; REAL-TIME EXECUTION STATUS MONITORING</p>
+            <p className="bg-card font-mono">&gt;&gt; REAL-TIME EXECUTION STATUS MONITORING</p>
           </div>
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {executions.map((execution) => (
-              <div key={execution.id} className="gaming-card flex items-center justify-between p-4 gaming-hover-lift">
+              <div key={execution.id} className="bg-card flex items-center justify-between p-4 bg-card">
                 <div className="flex items-center gap-4">
                   {execution.status === 'running' ? (
-                    <div className="gaming-status gaming-status-live">
-                      <div className="gaming-pulse-dot"></div>
+                    <div className="bg-card bg-card">
+                      <div className="bg-card"></div>
                       <ArrowPathIcon className="h-4 w-4 animate-spin" />
                     </div>
                   ) : execution.status === 'completed' ? (
-                    <div className="gaming-status bg-gaming-neon-green/20 border-gaming-neon-green text-gaming-neon-green">
+                    <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                       <CheckCircleIcon className="h-4 w-4" />
                     </div>
                   ) : execution.status === 'failed' ? (
-                    <div className="gaming-status bg-gaming-neon-pink/20 border-gaming-neon-pink text-gaming-neon-pink">
+                    <div className="bg-card bg-bg-card/20 border-bg-card text-bg-card">
                       <XCircleIcon className="h-4 w-4" />
                     </div>
                   ) : (
-                    <div className="gaming-status">
+                    <div className="bg-card">
                       <ClockIcon className="h-4 w-4" />
                     </div>
                   )}
                   <div>
-                    <p className="font-bold gaming-text-primary text-sm uppercase tracking-wide">{execution.workflow_name}</p>
-                    <p className="text-xs gaming-text-secondary font-mono">
+                    <p className="font-bold bg-card text-sm uppercase tracking-wide">{execution.workflow_name}</p>
+                    <p className="text-xs bg-card font-mono">
                       MATRIX_ID: {execution.id.slice(0, 8)}... | INITIATED: {new Date(execution.started_at).toLocaleTimeString()}
                     </p>
                     {execution.prompt && (
-                      <p className="text-xs gaming-text-muted mt-1 font-mono">INPUT: {execution.prompt.slice(0, 50)}...</p>
+                      <p className="text-xs bg-card mt-1 font-mono">INPUT: {execution.prompt.slice(0, 50)}...</p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="gaming-status font-mono text-xs">
+                  <div className="bg-card font-mono text-xs">
                     {execution.status.toUpperCase()}
                   </div>
                   
@@ -725,9 +724,9 @@ export default function WorkflowsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewExecution(execution)}
-                      className="gaming-hover-glow p-2"
+                      className="bg-card p-2"
                     >
-                      <EyeIcon className="h-4 w-4 gaming-text-neon" />
+                      <EyeIcon className="h-4 w-4 bg-card" />
                     </Button>
                     
                     {execution.status === 'running' && (
@@ -735,9 +734,9 @@ export default function WorkflowsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleStopExecution(execution.id)}
-                        className="gaming-hover-glow p-2"
+                        className="bg-card p-2"
                       >
-                        <XCircleIcon className="h-4 w-4 gaming-text-danger" />
+                        <XCircleIcon className="h-4 w-4 bg-card" />
                       </Button>
                     )}
                   </div>
@@ -750,40 +749,40 @@ export default function WorkflowsPage() {
 
       {/* Neural Matrix Roster */}
       {workflows.length === 0 && templates.length === 0 ? (
-        <div className="gaming-card text-center py-16">
-          <div className="gaming-border-glow"></div>
-          <div className="w-16 h-16 gaming-card border-gaming-neon-cyan mx-auto mb-6 flex items-center justify-center">
-            <CpuChipIcon className="h-8 w-8 gaming-text-neon" />
+        <div className="bg-card text-center py-16">
+          <div className="bg-card"></div>
+          <div className="w-16 h-16 bg-card border-bg-card mx-auto mb-6 flex items-center justify-center">
+            <CpuChipIcon className="h-8 w-8 bg-card" />
           </div>
-          <h3 className="gaming-text-primary text-xl font-bold mb-2">NEURAL MATRIX OFFLINE</h3>
-          <p className="gaming-text-secondary font-mono mb-4">&gt;&gt; NO ACTIVE WORKFLOW PROTOCOLS DETECTED</p>
-          <p className="gaming-text-muted text-sm font-mono">SCANNING FOR NEURAL TEMPLATES...</p>
+          <h3 className="bg-card text-xl font-bold mb-2">NEURAL MATRIX OFFLINE</h3>
+          <p className="bg-card font-mono mb-4">&gt;&gt; NO ACTIVE WORKFLOW PROTOCOLS DETECTED</p>
+          <p className="bg-card text-sm font-mono">SCANNING FOR NEURAL TEMPLATES...</p>
         </div>
       ) : workflows.length === 0 && templates.length > 0 ? (
         <div className="space-y-6">
-          <div className="gaming-card">
-            <div className="gaming-border-glow"></div>
+          <div className="bg-card">
+            <div className="bg-card"></div>
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
-                <DocumentTextIcon className="w-6 h-6 text-gaming-neon-purple" />
-                <h3 className="text-2xl font-black gaming-text-primary">NEURAL PROTOCOL TEMPLATES</h3>
+                <DocumentTextIcon className="w-6 h-6 text-bg-card" />
+                <h3 className="text-2xl font-black bg-card">NEURAL PROTOCOL TEMPLATES</h3>
               </div>
-              <p className="gaming-text-secondary font-mono">&gt;&gt; PRE-CONFIGURED MISSION PROTOCOLS FOR INSTANT DEPLOYMENT</p>
+              <p className="bg-card font-mono">&gt;&gt; PRE-CONFIGURED MISSION PROTOCOLS FOR INSTANT DEPLOYMENT</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {templates.map((template, index) => (
-                <div key={index} className="gaming-card gaming-hover-lift">
-                  <div className="gaming-border-glow"></div>
+                <div key={index} className="bg-card bg-card">
+                  <div className="bg-card"></div>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-bold gaming-text-primary text-sm uppercase tracking-wide mb-2">{template.name}</h3>
-                      <p className="gaming-text-secondary text-xs font-mono mb-3">{template.description}</p>
+                      <h3 className="font-bold bg-card text-sm uppercase tracking-wide mb-2">{template.name}</h3>
+                      <p className="bg-card text-xs font-mono mb-3">{template.description}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <div className="gaming-status text-xs">
+                        <div className="bg-card text-xs">
                           <SparklesIcon className="w-3 h-3" />
                           {template.agents?.length || 0} AGENTS
                         </div>
-                        <div className="gaming-status text-xs">
+                        <div className="bg-card text-xs">
                           <CpuChipIcon className="w-3 h-3" />
                           {(template.flow_config?.type || 'sequential').toUpperCase()}
                         </div>
@@ -793,7 +792,7 @@ export default function WorkflowsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleUseTemplate(template)}
-                      className="gaming-btn-active"
+                      className="bg-card"
                     >
                       DEPLOY
                     </Button>
@@ -806,30 +805,30 @@ export default function WorkflowsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workflows.map((workflow) => (
-            <div key={workflow.id} className="gaming-card gaming-hover-lift flex flex-col">
-              <div className="gaming-border-glow"></div>
+            <div key={workflow.id} className="bg-card bg-card flex flex-col">
+              <div className="bg-card"></div>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="font-bold gaming-text-primary text-sm uppercase tracking-wide">{workflow.name}</h3>
-                  <p className="gaming-text-secondary text-xs font-mono mt-1">{workflow.description}</p>
+                  <h3 className="font-bold bg-card text-sm uppercase tracking-wide">{workflow.name}</h3>
+                  <p className="bg-card text-xs font-mono mt-1">{workflow.description}</p>
                 </div>
-                <div className="w-10 h-10 gaming-card border-gaming-neon-cyan flex items-center justify-center">
-                  <CpuChipIcon className="h-5 w-5 gaming-text-neon" />
+                <div className="w-10 h-10 bg-card border-bg-card flex items-center justify-center">
+                  <CpuChipIcon className="h-5 w-5 bg-card" />
                 </div>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <div className="gaming-status text-xs">
+                    <div className="bg-card text-xs">
                       <SparklesIcon className="w-3 h-3" />
                       {workflow.agent_count} AGENTS
                     </div>
-                    <div className="gaming-status text-xs">
+                    <div className="bg-card text-xs">
                       <DocumentTextIcon className="w-3 h-3" />
                       v{workflow.version}
                     </div>
                   </div>
-                  <span className="text-xs gaming-text-muted font-mono">
+                  <span className="text-xs bg-card font-mono">
                     {new Date(workflow.created_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -837,39 +836,39 @@ export default function WorkflowsPage() {
                 <div className="flex gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="secondary" size="sm" className="flex-1 gaming-btn-active">
+                      <Button variant="secondary" size="sm" className="flex-1 bg-card">
                         <PlayIcon className="h-4 w-4 mr-2" />
                         EXECUTE MATRIX
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="gaming-card border-gaming-neon-cyan">
+                    <DialogContent className="bg-card border-bg-card">
                       <DialogHeader>
-                        <DialogTitle className="gaming-text-primary text-xl font-bold">
-                          <PlayIcon className="w-5 h-5 mr-2 gaming-text-neon inline" />
+                        <DialogTitle className="bg-card text-xl font-bold">
+                          <PlayIcon className="w-5 h-5 mr-2 bg-card inline" />
                           EXECUTE NEURAL MATRIX
                         </DialogTitle>
-                        <DialogDescription className="gaming-text-secondary font-mono">
+                        <DialogDescription className="bg-card font-mono">
                           &gt;&gt; INITIATE NEURAL PROTOCOL: {workflow.name.toUpperCase()}
                         </DialogDescription>
                       </DialogHeader>
                       
                       <div className="space-y-6">
                         <div>
-                          <Label htmlFor="execute-prompt" className="gaming-text-secondary font-mono text-sm">NEURAL INPUT PROMPT</Label>
+                          <Label htmlFor="execute-prompt" className="bg-card font-mono text-sm">NEURAL INPUT PROMPT</Label>
                           <textarea
                             id="execute-prompt"
                             value={executeForm.prompt}
                             onChange={(e) => setExecuteForm(prev => ({...prev, prompt: e.target.value}))}
                             placeholder=">> ENTER MISSION PARAMETERS AND OBJECTIVES..."
                             rows={4}
-                            className="w-full px-4 py-3 mt-2 gaming-card border-gaming-neon-cyan gaming-text-primary font-mono text-sm focus:outline-none focus:border-gaming-neon-cyan focus:shadow-gaming-glow-primary"
+                            className="w-full px-4 py-3 mt-2 bg-card border-bg-card bg-card font-mono text-sm focus:outline-none focus:border-bg-card focus:shadow-bg-card"
                           />
                         </div>
                         
                         <Button
                           onClick={() => handleExecuteWorkflow(workflow.name, executeForm.prompt)}
                           disabled={executing === workflow.name}
-                          className="w-full gaming-btn-active py-3 text-lg"
+                          className="w-full bg-card py-3 text-lg"
                         >
                           {executing === workflow.name ? (
                             <ArrowPathIcon className="h-5 w-5 animate-spin mr-3" />
@@ -882,8 +881,8 @@ export default function WorkflowsPage() {
                     </DialogContent>
                   </Dialog>
                   
-                  <Button variant="ghost" size="sm" className="gaming-hover-glow p-2">
-                    <EyeIcon className="h-4 w-4 gaming-text-neon" />
+                  <Button variant="ghost" size="sm" className="bg-card p-2">
+                    <EyeIcon className="h-4 w-4 bg-card" />
                   </Button>
                 </div>
               </div>
@@ -894,10 +893,10 @@ export default function WorkflowsPage() {
 
       {/* Template Dialog - controlled by templateDialogOpen state */}
       <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-dark-800 border-dark-700">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Create Workflow from Template</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Create Workflow from Template</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Customize your workflow based on the selected template
             </DialogDescription>
           </DialogHeader>
@@ -905,18 +904,18 @@ export default function WorkflowsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="template-workflow-name" className="text-gray-300">Workflow Name</Label>
+                <Label htmlFor="template-workflow-name" className="text-muted-foreground">Workflow Name</Label>
                 <input
                   id="template-workflow-name"
                   type="text"
                   value={newWorkflow.name}
                   onChange={(e) => setNewWorkflow(prev => ({...prev, name: e.target.value}))}
                   placeholder="My Custom Workflow"
-                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <Label htmlFor="template-flow-type" className="text-gray-300">Flow Type</Label>
+                <Label htmlFor="template-flow-type" className="text-muted-foreground">Flow Type</Label>
                 <Select
                   value={newWorkflow.flow_config.type}
                   onValueChange={(value) => setNewWorkflow(prev => ({
@@ -924,7 +923,7 @@ export default function WorkflowsPage() {
                     flow_config: {...prev.flow_config, type: value}
                   }))}
                 >
-                  <SelectTrigger className="bg-dark-700 border-dark-600 text-white">
+                  <SelectTrigger className="bg-dark-700 border-dark-600 text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -936,20 +935,20 @@ export default function WorkflowsPage() {
             </div>
             
             <div>
-              <Label htmlFor="template-workflow-description" className="text-gray-300">Description</Label>
+              <Label htmlFor="template-workflow-description" className="text-muted-foreground">Description</Label>
               <textarea
                 id="template-workflow-description"
                 value={newWorkflow.description}
                 onChange={(e) => setNewWorkflow(prev => ({...prev, description: e.target.value}))}
                 placeholder="Describe what this workflow does..."
                 rows={3}
-                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Label className="text-gray-300">Agents</Label>
+                <Label className="text-muted-foreground">Agents</Label>
                 <Button variant="outline" size="sm" onClick={addAgentToWorkflow}>
                   <PlusIcon className="h-4 w-4" />
                   Add Agent
@@ -961,12 +960,12 @@ export default function WorkflowsPage() {
                   <Card key={index} className="p-3">
                     <div className="grid grid-cols-3 gap-3 items-center">
                       <div>
-                        <Label className="text-xs text-gray-400">Agent</Label>
+                        <Label className="text-xs text-muted-foreground">Agent</Label>
                         <Select
                           value={agent.name}
                           onValueChange={(value) => updateWorkflowAgent(index, 'name', value)}
                         >
-                          <SelectTrigger className="h-8 bg-dark-700 border-dark-600 text-white">
+                          <SelectTrigger className="h-8 bg-dark-700 border-dark-600 text-foreground">
                             <SelectValue placeholder="Select agent" />
                           </SelectTrigger>
                           <SelectContent>
@@ -980,12 +979,12 @@ export default function WorkflowsPage() {
                       </div>
                       
                       <div>
-                        <Label className="text-xs text-gray-400">Order</Label>
+                        <Label className="text-xs text-muted-foreground">Order</Label>
                         <input
                           type="number"
                           value={agent.order}
                           onChange={(e) => updateWorkflowAgent(index, 'order', parseInt(e.target.value))}
-                          className="w-full px-2 py-1 bg-dark-700 border border-dark-600 rounded text-white h-8"
+                          className="w-full px-2 py-1 bg-dark-700 border border-dark-600 rounded text-foreground h-8"
                           min={1}
                         />
                       </div>
@@ -995,7 +994,7 @@ export default function WorkflowsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeAgentFromWorkflow(index)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-red-500 hover:text-red-300"
                         >
                           <XCircleIcon className="h-4 w-4" />
                         </Button>
@@ -1034,10 +1033,10 @@ export default function WorkflowsPage() {
 
       {/* Execution Details Dialog */}
       <Dialog open={executionDialogOpen} onOpenChange={setExecutionDialogOpen}>
-        <DialogContent className="max-w-2xl bg-dark-800 border-dark-700">
+        <DialogContent className="max-w-2xl bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Workflow Execution Details</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Workflow Execution Details</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               View detailed information about this workflow execution
             </DialogDescription>
           </DialogHeader>
@@ -1046,11 +1045,11 @@ export default function WorkflowsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-400">Workflow</Label>
-                  <p className="text-white font-medium">{selectedExecution.workflow_name}</p>
+                  <Label className="text-muted-foreground">Workflow</Label>
+                  <p className="text-foreground font-medium">{selectedExecution.workflow_name}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-400">Status</Label>
+                  <Label className="text-muted-foreground">Status</Label>
                   <Badge 
                     variant={
                       selectedExecution.status === 'running' ? 'default' : 
@@ -1060,8 +1059,8 @@ export default function WorkflowsPage() {
                     }
                     className={
                       selectedExecution.status === 'running' ? 'bg-blue-500' :
-                      selectedExecution.status === 'completed' ? 'text-green-400 border-green-400' :
-                      selectedExecution.status === 'stopped' ? 'text-gray-400 border-gray-400' :
+                      selectedExecution.status === 'completed' ? 'text-green-500 border-green-400' :
+                      selectedExecution.status === 'stopped' ? 'text-muted-foreground border-gray-400' :
                       ''
                     }
                   >
@@ -1072,15 +1071,15 @@ export default function WorkflowsPage() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-400">Started</Label>
-                  <p className="text-white text-sm">
+                  <Label className="text-muted-foreground">Started</Label>
+                  <p className="text-foreground text-sm">
                     {new Date(selectedExecution.started_at).toLocaleString()}
                   </p>
                 </div>
                 {selectedExecution.completed_at && (
                   <div>
-                    <Label className="text-gray-400">Completed</Label>
-                    <p className="text-white text-sm">
+                    <Label className="text-muted-foreground">Completed</Label>
+                    <p className="text-foreground text-sm">
                       {new Date(selectedExecution.completed_at).toLocaleString()}
                     </p>
                   </div>
@@ -1088,16 +1087,16 @@ export default function WorkflowsPage() {
               </div>
               
               <div>
-                <Label className="text-gray-400">Execution ID</Label>
-                <p className="text-white font-mono text-sm bg-dark-700 p-2 rounded">
+                <Label className="text-muted-foreground">Execution ID</Label>
+                <p className="text-foreground font-mono text-sm bg-dark-700 p-2 rounded">
                   {selectedExecution.id}
                 </p>
               </div>
               
               {selectedExecution.prompt && (
                 <div>
-                  <Label className="text-gray-400">Input Prompt</Label>
-                  <p className="text-white text-sm bg-dark-700 p-3 rounded">
+                  <Label className="text-muted-foreground">Input Prompt</Label>
+                  <p className="text-foreground text-sm bg-dark-700 p-3 rounded">
                     {selectedExecution.prompt}
                   </p>
                 </div>
@@ -1105,13 +1104,13 @@ export default function WorkflowsPage() {
               
               {selectedExecution.progress && (
                 <div>
-                  <Label className="text-gray-400">Progress</Label>
+                  <Label className="text-muted-foreground">Progress</Label>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">
+                      <span className="text-muted-foreground">
                         Step {selectedExecution.progress.current_step} of {selectedExecution.progress.total_steps}
                       </span>
-                      <span className="text-white">
+                      <span className="text-foreground">
                         {Math.round((selectedExecution.progress.current_step / selectedExecution.progress.total_steps) * 100)}%
                       </span>
                     </div>
@@ -1123,15 +1122,15 @@ export default function WorkflowsPage() {
                         }}
                       />
                     </div>
-                    <p className="text-sm text-gray-400">{selectedExecution.progress.message}</p>
+                    <p className="text-sm text-muted-foreground">{selectedExecution.progress.message}</p>
                   </div>
                 </div>
               )}
               
               {selectedExecution.result && (
                 <div>
-                  <Label className="text-gray-400">Results</Label>
-                  <pre className="text-white text-sm bg-dark-700 p-3 rounded overflow-x-auto">
+                  <Label className="text-muted-foreground">Results</Label>
+                  <pre className="text-foreground text-sm bg-dark-700 p-3 rounded overflow-x-auto">
                     {JSON.stringify(selectedExecution.result, null, 2)}
                   </pre>
                 </div>

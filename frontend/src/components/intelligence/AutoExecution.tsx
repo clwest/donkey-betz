@@ -280,8 +280,8 @@ export function AutoExecution() {
       case 'executing': return 'bg-orange-500 animate-pulse';
       case 'completed': return 'bg-green-500';
       case 'failed': return 'bg-red-500';
-      case 'cancelled': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+      case 'cancelled': return 'bg-muted/50';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -291,7 +291,7 @@ export function AutoExecution() {
       case 'high': return 'text-orange-500';
       case 'medium': return 'text-yellow-500';
       case 'low': return 'text-green-500';
-      default: return 'text-gray-500';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -301,7 +301,7 @@ export function AutoExecution() {
       case 'require_approval': return <Lock className="h-4 w-4 text-yellow-500" />;
       case 'reduce_size': return <TrendingDown className="h-4 w-4 text-blue-500" />;
       case 'delay': return <Clock className="h-4 w-4 text-purple-500" />;
-      default: return <Info className="h-4 w-4 text-gray-500" />;
+      default: return <Info className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -380,7 +380,7 @@ export function AutoExecution() {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
             Automated Execution System
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Execute decisions while you sleep - with comprehensive safeguards
           </p>
         </div>
@@ -407,7 +407,7 @@ export function AutoExecution() {
       {safeguards.globalKillSwitch && (
         <Alert className="border-red-500/50 bg-red-500/5">
           <AlertTriangle className="h-4 w-4 text-red-500" />
-          <AlertDescription className="text-red-400">
+          <AlertDescription className="text-red-500">
             <strong>GLOBAL KILL SWITCH ACTIVATED!</strong> All automated executions are disabled.
             Enable the system above to resume automated trading.
           </AlertDescription>
@@ -416,21 +416,21 @@ export function AutoExecution() {
 
       {/* System Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Executions</span>
+              <span className="text-sm text-muted-foreground">Executions</span>
               <Zap className="h-4 w-4 text-orange-500" />
             </div>
             <p className="text-2xl font-bold mt-2">{metrics.totalExecutions}</p>
-            <p className="text-sm text-gray-400 mt-1">Total</p>
+            <p className="text-sm text-muted-foreground mt-1">Total</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Success Rate</span>
+              <span className="text-sm text-muted-foreground">Success Rate</span>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-green-500">
@@ -440,62 +440,62 @@ export function AutoExecution() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Avg Speed</span>
+              <span className="text-sm text-muted-foreground">Avg Speed</span>
               <Activity className="h-4 w-4 text-blue-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-blue-500">
               {metrics.avgExecutionTime}s
             </p>
-            <p className="text-sm text-gray-400 mt-1">Execution</p>
+            <p className="text-sm text-muted-foreground mt-1">Execution</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Volume</span>
+              <span className="text-sm text-muted-foreground">Volume</span>
               <DollarSign className="h-4 w-4 text-purple-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-purple-500">
               ${(metrics.totalVolume / 1000000).toFixed(1)}M
             </p>
-            <p className="text-sm text-gray-400 mt-1">Total</p>
+            <p className="text-sm text-muted-foreground mt-1">Total</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Time Saved</span>
+              <span className="text-sm text-muted-foreground">Time Saved</span>
               <Clock className="h-4 w-4 text-yellow-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-yellow-500">
               {metrics.savedTime}
             </p>
-            <p className="text-sm text-gray-400 mt-1">Manual work</p>
+            <p className="text-sm text-muted-foreground mt-1">Manual work</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Risk Prevented</span>
+              <span className="text-sm text-muted-foreground">Risk Prevented</span>
               <Shield className="h-4 w-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold mt-2 text-green-500">
               ${metrics.riskPrevented.toLocaleString()}
             </p>
-            <p className="text-sm text-gray-400 mt-1">By safeguards</p>
+            <p className="text-sm text-muted-foreground mt-1">By safeguards</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Settings Panel */}
       {showSettings && (
-        <Card className="gaming-card border-orange-500/20">
+        <Card className="bg-card border-orange-500/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
@@ -514,7 +514,7 @@ export function AutoExecution() {
                   step={0.5}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">{(safeguards.maxDailyRisk * 100).toFixed(1)}% max daily portfolio risk</p>
+                <p className="text-sm text-muted-foreground mt-1">{(safeguards.maxDailyRisk * 100).toFixed(1)}% max daily portfolio risk</p>
               </div>
               <div>
                 <Label>Max Position Size (%)</Label>
@@ -526,7 +526,7 @@ export function AutoExecution() {
                   step={1}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">{(safeguards.maxPositionSize * 100).toFixed(0)}% max single position</p>
+                <p className="text-sm text-muted-foreground mt-1">{(safeguards.maxPositionSize * 100).toFixed(0)}% max single position</p>
               </div>
               <div>
                 <Label>Emergency Stop Loss (%)</Label>
@@ -538,7 +538,7 @@ export function AutoExecution() {
                   step={1}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">{(safeguards.emergencyStopLoss * 100).toFixed(0)}% emergency stop</p>
+                <p className="text-sm text-muted-foreground mt-1">{(safeguards.emergencyStopLoss * 100).toFixed(0)}% emergency stop</p>
               </div>
             </div>
             <div className="space-y-4">
@@ -552,7 +552,7 @@ export function AutoExecution() {
                   step={1000}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">${safeguards.requireApprovalAbove.toLocaleString()} requires approval</p>
+                <p className="text-sm text-muted-foreground mt-1">${safeguards.requireApprovalAbove.toLocaleString()} requires approval</p>
               </div>
               <div>
                 <Label>Max Executions/Hour</Label>
@@ -564,7 +564,7 @@ export function AutoExecution() {
                   step={1}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">{safeguards.maxExecutionsPerHour} max per hour</p>
+                <p className="text-sm text-muted-foreground mt-1">{safeguards.maxExecutionsPerHour} max per hour</p>
               </div>
             </div>
           </CardContent>
@@ -581,13 +581,13 @@ export function AutoExecution() {
         {/* Execution Queue Tab */}
         <TabsContent value="queue" className="space-y-4">
           {executions.filter(exec => ['pending', 'approved', 'queued', 'executing'].includes(exec.status)).map(execution => (
-            <Card key={execution.id} className="gaming-card">
+            <Card key={execution.id} className="bg-card">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold">{execution.decisionTitle}</h3>
-                      <Badge className={`${getStatusColor(execution.status)} text-white`}>
+                      <Badge className={`${getStatusColor(execution.status)} text-foreground`}>
                         {execution.status.toUpperCase()}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
@@ -597,10 +597,10 @@ export function AutoExecution() {
                         {execution.executionType}
                       </Badge>
                     </div>
-                    <p className="text-gray-400 text-sm">{execution.entity}</p>
+                    <p className="text-muted-foreground text-sm">{execution.entity}</p>
                   </div>
                   {execution.scheduledAt && (
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
                       {execution.status === 'executing' ? 'Executing...' : getTimeRemaining(execution.scheduledAt)}
                     </div>
@@ -611,42 +611,42 @@ export function AutoExecution() {
               <CardContent className="space-y-4">
                 {/* Current Metrics vs Conditions */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-dark-800 rounded-lg p-2">
-                    <p className="text-xs text-gray-400">Confidence</p>
+                  <div className="bg-card rounded-lg p-2">
+                    <p className="text-xs text-muted-foreground">Confidence</p>
                     <p className={`font-bold ${execution.currentMetrics.confidence >= execution.conditions.minConfidence ? 'text-green-500' : 'text-red-500'}`}>
                       {(execution.currentMetrics.confidence * 100).toFixed(0)}%
                     </p>
-                    <p className="text-xs text-gray-400">Min: {(execution.conditions.minConfidence * 100).toFixed(0)}%</p>
+                    <p className="text-xs text-muted-foreground">Min: {(execution.conditions.minConfidence * 100).toFixed(0)}%</p>
                   </div>
-                  <div className="bg-dark-800 rounded-lg p-2">
-                    <p className="text-xs text-gray-400">Risk</p>
+                  <div className="bg-card rounded-lg p-2">
+                    <p className="text-xs text-muted-foreground">Risk</p>
                     <p className={`font-bold ${execution.currentMetrics.risk <= execution.conditions.maxRisk ? 'text-green-500' : 'text-red-500'}`}>
                       {(execution.currentMetrics.risk * 100).toFixed(0)}%
                     </p>
-                    <p className="text-xs text-gray-400">Max: {(execution.conditions.maxRisk * 100).toFixed(0)}%</p>
+                    <p className="text-xs text-muted-foreground">Max: {(execution.conditions.maxRisk * 100).toFixed(0)}%</p>
                   </div>
-                  <div className="bg-dark-800 rounded-lg p-2">
-                    <p className="text-xs text-gray-400">Position</p>
+                  <div className="bg-card rounded-lg p-2">
+                    <p className="text-xs text-muted-foreground">Position</p>
                     <p className={`font-bold ${execution.currentMetrics.positionSize <= execution.conditions.maxPosition ? 'text-green-500' : 'text-red-500'}`}>
                       {(execution.currentMetrics.positionSize * 100).toFixed(1)}%
                     </p>
-                    <p className="text-xs text-gray-400">Max: {(execution.conditions.maxPosition * 100).toFixed(0)}%</p>
+                    <p className="text-xs text-muted-foreground">Max: {(execution.conditions.maxPosition * 100).toFixed(0)}%</p>
                   </div>
-                  <div className="bg-dark-800 rounded-lg p-2">
-                    <p className="text-xs text-gray-400">Correlation</p>
+                  <div className="bg-card rounded-lg p-2">
+                    <p className="text-xs text-muted-foreground">Correlation</p>
                     <p className={`font-bold ${execution.currentMetrics.correlation <= 0.7 ? 'text-green-500' : 'text-yellow-500'}`}>
                       {(execution.currentMetrics.correlation * 100).toFixed(0)}%
                     </p>
-                    <p className="text-xs text-gray-400">Portfolio</p>
+                    <p className="text-xs text-muted-foreground">Portfolio</p>
                   </div>
                 </div>
 
                 {/* Safeguards */}
-                <div className="bg-dark-800 rounded-lg p-3">
+                <div className="bg-card rounded-lg p-3">
                   <h4 className="font-medium mb-2">Active Safeguards</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-2">
-                      {execution.safeguards.doubleConfirmation ? <CheckCircle className="h-3 w-3 text-green-500" /> : <X className="h-3 w-3 text-gray-400" />}
+                      {execution.safeguards.doubleConfirmation ? <CheckCircle className="h-3 w-3 text-green-500" /> : <X className="h-3 w-3 text-muted-foreground" />}
                       <span>Double Confirmation</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -740,11 +740,11 @@ export function AutoExecution() {
           ))}
 
           {executions.filter(exec => ['pending', 'approved', 'queued', 'executing'].includes(exec.status)).length === 0 && (
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="text-center py-12">
-                <Zap className="h-12 w-12 mx-auto mb-4 text-gray-500 opacity-50" />
+                <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">No Pending Executions</h3>
-                <p className="text-gray-400">
+                <p className="text-muted-foreground">
                   Automated executions will appear here when conditions are met.
                 </p>
               </CardContent>
@@ -755,7 +755,7 @@ export function AutoExecution() {
         {/* Safeguard Rules Tab */}
         <TabsContent value="rules" className="space-y-4">
           {executionRules.map(rule => (
-            <Card key={rule.id} className="gaming-card">
+            <Card key={rule.id} className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -772,21 +772,21 @@ export function AutoExecution() {
                           checked={rule.isActive}
                           onCheckedChange={() => toggleRule(rule.id)}
                         />
-                        {rule.isActive ? <Lock className="h-4 w-4 text-green-500" /> : <Unlock className="h-4 w-4 text-gray-400" />}
+                        {rule.isActive ? <Lock className="h-4 w-4 text-green-500" /> : <Unlock className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-400 mb-3">{rule.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{rule.description}</p>
 
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-xs text-gray-400">Type</p>
+                        <p className="text-xs text-muted-foreground">Type</p>
                         <Badge variant="outline" className="text-xs capitalize">
                           {rule.type.replace('_', ' ')}
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Threshold</p>
+                        <p className="text-xs text-muted-foreground">Threshold</p>
                         <p className="font-bold">
                           {rule.type.includes('threshold') || rule.type.includes('limit') || rule.type.includes('check') ?
                             `${(rule.threshold * 100).toFixed(0)}%` :
@@ -795,7 +795,7 @@ export function AutoExecution() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Action</p>
+                        <p className="text-xs text-muted-foreground">Action</p>
                         <Badge variant="outline" className="text-xs capitalize">
                           {rule.action.replace('_', ' ')}
                         </Badge>
@@ -811,31 +811,31 @@ export function AutoExecution() {
         {/* History Tab */}
         <TabsContent value="history" className="space-y-4">
           {executions.filter(exec => ['completed', 'failed', 'cancelled'].includes(exec.status)).map(execution => (
-            <Card key={execution.id} className="gaming-card">
+            <Card key={execution.id} className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-semibold">{execution.decisionTitle}</h3>
-                      <Badge className={`${getStatusColor(execution.status)} text-white`}>
+                      <Badge className={`${getStatusColor(execution.status)} text-foreground`}>
                         {execution.status.toUpperCase()}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
                         {execution.domain}
                       </Badge>
                     </div>
-                    <p className="text-gray-400 text-sm">{execution.entity}</p>
+                    <p className="text-muted-foreground text-sm">{execution.entity}</p>
                   </div>
-                  <div className="text-right text-sm text-gray-400">
+                  <div className="text-right text-sm text-muted-foreground">
                     {execution.executedAt && new Date(execution.executedAt).toLocaleString()}
                   </div>
                 </div>
 
                 {execution.result && (
-                  <div className="mt-3 p-3 bg-dark-800 rounded-lg">
+                  <div className="mt-3 p-3 bg-card rounded-lg">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                       <div>
-                        <p className="text-gray-400">Result</p>
+                        <p className="text-muted-foreground">Result</p>
                         <p className={`font-bold ${execution.result.success ? 'text-green-500' : 'text-red-500'}`}>
                           {execution.result.success ? 'Success' : 'Failed'}
                         </p>
@@ -843,21 +843,21 @@ export function AutoExecution() {
                       {execution.result.success && (
                         <>
                           <div>
-                            <p className="text-gray-400">Amount</p>
+                            <p className="text-muted-foreground">Amount</p>
                             <p className="font-bold">${execution.result.amount.toLocaleString()}</p>
                           </div>
                           <div>
-                            <p className="text-gray-400">Price</p>
+                            <p className="text-muted-foreground">Price</p>
                             <p className="font-bold">${execution.result.price.toLocaleString()}</p>
                           </div>
                           <div>
-                            <p className="text-gray-400">Fees</p>
+                            <p className="text-muted-foreground">Fees</p>
                             <p className="font-bold">${execution.result.fees}</p>
                           </div>
                         </>
                       )}
                     </div>
-                    <p className="text-sm text-gray-300 mt-2">{execution.result.message}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{execution.result.message}</p>
                   </div>
                 )}
               </CardContent>
@@ -865,11 +865,11 @@ export function AutoExecution() {
           ))}
 
           {executions.filter(exec => ['completed', 'failed', 'cancelled'].includes(exec.status)).length === 0 && (
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="text-center py-12">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-500 opacity-50" />
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">No Execution History</h3>
-                <p className="text-gray-400">
+                <p className="text-muted-foreground">
                   Completed executions will appear here for review and analysis.
                 </p>
               </CardContent>

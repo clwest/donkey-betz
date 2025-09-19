@@ -279,7 +279,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
   return (
     <div className={`h-full flex flex-col ${className}`}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white border-b border-border p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center">
             <UserGroupIcon className="h-8 w-8 mr-3 text-purple-600" />
@@ -325,7 +325,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowAgentPanel(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center px-4 py-2 bg-blue-600 text-foreground rounded-lg hover:bg-blue-700 transition-colors"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add Agent
@@ -334,7 +334,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
           <button
             onClick={executeWorkflow}
             disabled={isBuilding || nodes.length === 0}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center px-4 py-2 bg-green-600 text-foreground rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isBuilding ? (
               <>
@@ -351,7 +351,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
 
           <button
             onClick={clearWorkflow}
-            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="flex items-center px-4 py-2 bg-gray-600 text-foreground rounded-lg hover:bg-gray-700 transition-colors"
           >
             <TrashIcon className="h-5 w-5 mr-2" />
             Clear
@@ -369,7 +369,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
-            className="bg-gray-50"
+            className="bg-muted/5"
             onNodeClick={(event, node) => setSelectedNodeId(node.id)}
             fitView
           >
@@ -386,16 +386,16 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
               initial={{ opacity: 0, x: -300 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -300 }}
-              className="absolute left-4 top-4 bottom-4 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-10 overflow-hidden"
+              className="absolute left-4 top-4 bottom-4 w-80 bg-white rounded-lg shadow-lg border border-border z-10 overflow-hidden"
             >
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">
                     Available Agents
                   </h3>
                   <button
                     onClick={() => setShowAgentPanel(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-muted-foreground hover:text-gray-600"
                   >
                     <XCircleIcon className="h-6 w-6" />
                   </button>
@@ -405,7 +405,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
               <div className="p-4 overflow-y-auto max-h-full">
                 {agentsLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <ClockIcon className="h-8 w-8 text-gray-400 animate-spin" />
+                    <ClockIcon className="h-8 w-8 text-muted-foreground animate-spin" />
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -413,13 +413,13 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
                       <div
                         key={agent.id}
                         onClick={() => addAgent(agent)}
-                        className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors"
+                        className="p-3 border border-border rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-gray-900">
                             {agent.name}
                           </h4>
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                          <span className="text-xs px-2 py-1 bg-muted/10 text-gray-600 rounded-full">
                             {agent.specialization}
                           </span>
                         </div>
@@ -452,9 +452,9 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
               initial={{ opacity: 0, x: 300 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 300 }}
-              className="absolute right-4 top-4 bottom-4 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-10 overflow-hidden"
+              className="absolute right-4 top-4 bottom-4 w-80 bg-white rounded-lg shadow-lg border border-border z-10 overflow-hidden"
             >
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">
                     Agent Configuration
@@ -462,13 +462,13 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => removeNode(selectedNodeId)}
-                      className="text-red-400 hover:text-red-600"
+                      className="text-red-500 hover:text-red-600"
                     >
                       <TrashIcon className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => setSelectedNodeId(null)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground hover:text-gray-600"
                     >
                       <XCircleIcon className="h-6 w-6" />
                     </button>
@@ -513,7 +513,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
                           {node.data.agent.capabilities.map((capability: string, idx: number) => (
                             <span
                               key={idx}
-                              className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded"
+                              className="text-xs px-2 py-1 bg-muted/10 text-gray-600 rounded"
                             >
                               {capability}
                             </span>
@@ -544,7 +544,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ className }) =
       </div>
 
       {/* Status Bar */}
-      <div className="bg-gray-100 border-t border-gray-200 px-4 py-3">
+      <div className="bg-muted/10 border-t border-border px-4 py-3">
         <div className="flex items-center justify-between text-sm text-gray-600">
           <div className="flex items-center space-x-4">
             <span>Agents: {nodes.length}</span>

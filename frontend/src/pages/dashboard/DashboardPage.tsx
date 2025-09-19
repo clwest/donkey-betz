@@ -161,7 +161,7 @@ export function DashboardPage() {
   if (error || !stats) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-400 mb-4">{error || 'Failed to load dashboard'}</p>
+        <p className="text-red-500 mb-4">{error || 'Failed to load dashboard'}</p>
         <Button onClick={loadDashboardData} variant="secondary">
           Try Again
         </Button>
@@ -212,24 +212,38 @@ export function DashboardPage() {
   const insights = getProductivityInsights(stats);
 
   return (
-    <div className="space-y-8">
-      {/* Gaming Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neon-cyan">Welcome back!</h1>
-          <p className="mt-1" style={{ color: 'var(--gaming-text-muted)' }}>
-            Here's what's happening with your content in the last {stats.usage_period}.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => navigate('/studio')}>
-            <SparklesIcon className="h-4 w-4" />
-            Quick Generate
-          </Button>
-          <Button onClick={() => navigate('/opportunities?tab=campaigns')}>
-            <PlusIcon className="h-4 w-4" />
-            New Campaign
-          </Button>
+    <div className="space-y-8 animate-fade-in">
+      {/* Enhanced Gaming Header */}
+      <div className="relative">
+        {/* Background gradient accent */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-2xl" />
+
+        <div className="relative flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-6 rounded-2xl bg-card/40 backdrop-blur-sm border border-border/30">
+          <div>
+            <h1 className="text-4xl font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Welcome back!
+            </h1>
+            <p className="mt-2 text-muted-foreground text-lg">
+              Here's what's happening with your content in the last {stats.usage_period}.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/studio')}
+              className="hover:shadow-glow-secondary"
+            >
+              <SparklesIcon className="h-4 w-4" />
+              Quick Generate
+            </Button>
+            <Button
+              onClick={() => navigate('/opportunities?tab=campaigns')}
+              className="hover:shadow-glow-primary"
+            >
+              <PlusIcon className="h-4 w-4" />
+              New Campaign
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -238,36 +252,31 @@ export function DashboardPage() {
         {mainStats.map((stat) => {
           const trendData = stat.trend ? formatTrend(stat.trend) : null;
           return (
-            <Card 
-              key={stat.label} 
-              hover 
-              className="cursor-pointer card-gaming"
+            <Card
+              key={stat.label}
+              hover
+              className="cursor-pointer group p-6 border-border/50 hover:border-primary/30 transition-all duration-300"
               onClick={() => stat.route && navigate(stat.route)}
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--gaming-text-muted)' }}>{stat.label}</p>
-                  <p className="text-2xl font-bold text-neon-cyan mt-1 font-mono">{stat.value}</p>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
+                  <p className="text-3xl font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mt-2 font-mono tracking-tight">
+                    {stat.value}
+                  </p>
                   {trendData && (
-                    <div className={`flex items-center gap-1 text-sm mt-2 ${trendData.color}`}>
+                    <div className={`flex items-center gap-1 text-sm mt-3 ${trendData.color}`}>
                       {trendData.isPositive ? (
                         <ArrowTrendingUpIcon className="h-3 w-3" />
                       ) : (
                         <ArrowTrendingDownIcon className="h-3 w-3" />
                       )}
-                      {trendData.value} from last period
+                      <span className="font-medium">{trendData.value}</span> from last period
                     </div>
                   )}
                 </div>
-                <div 
-                  className="p-3 rounded-lg"
-                  style={{
-                    background: 'rgba(0, 255, 255, 0.1)',
-                    border: '1px solid var(--gaming-neon-cyan)',
-                    boxShadow: 'var(--gaming-glow-subtle)'
-                  }}
-                >
-                  <stat.icon className="h-6 w-6 text-neon-cyan" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20 group-hover:border-primary/40 group-hover:shadow-glow-subtle transition-all duration-300">
+                  <stat.icon className="h-6 w-6 text-primary group-hover:drop-shadow-glow-cyan" />
                 </div>
               </div>
             </Card>
@@ -279,24 +288,20 @@ export function DashboardPage() {
       {extendedContentStats.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {extendedContentStats.map((stat) => (
-            <Card 
+            <Card
               key={stat.label}
               hover
-              className="cursor-pointer card-gaming"
+              className="cursor-pointer group p-4 text-center border-border/50 hover:border-secondary/40"
               onClick={() => navigate(stat.route)}
             >
-              <div className="text-center">
-                <div 
-                  className="p-2 rounded-lg inline-flex mb-2"
-                  style={{
-                    background: 'rgba(157, 78, 221, 0.1)',
-                    border: '1px solid var(--gaming-neon-purple)'
-                  }}
-                >
-                  <stat.icon className="h-5 w-5 text-neon-purple" />
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl inline-flex bg-gradient-to-br from-secondary/10 to-accent/5 border border-secondary/20 group-hover:border-secondary/40 group-hover:shadow-glow-subtle transition-all duration-300">
+                  <stat.icon className="h-5 w-5 text-secondary group-hover:drop-shadow-glow-cyan" />
                 </div>
-                <p className="text-lg font-bold text-neon-green font-mono">{stat.value}</p>
-                <p className="text-xs" style={{ color: 'var(--gaming-text-muted)' }}>{stat.label}</p>
+                <p className="text-2xl font-bold text-gradient bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent font-mono">
+                  {stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
               </div>
             </Card>
           ))}
@@ -311,12 +316,14 @@ export function DashboardPage() {
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Gaming Recent Activity */}
-        <Card className="lg:col-span-2 card-gaming">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-neon-cyan">Recent Activity</h2>
-            <button 
-              className="text-sm text-neon-cyan hover:text-neon-purple transition-colors duration-200"
+        {/* Enhanced Gaming Recent Activity */}
+        <Card className="lg:col-span-2 p-6 border-border/50">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Recent Activity
+            </h2>
+            <button
+              className="text-sm text-primary hover:text-accent hover:shadow-glow-subtle transition-all duration-200 px-3 py-1 rounded-lg border border-primary/20 hover:border-primary/40 backdrop-blur-sm"
               onClick={() => navigate('/gallery')}
             >
               View all
@@ -324,11 +331,15 @@ export function DashboardPage() {
           </div>
           <div className="space-y-3">
             {activities.length === 0 ? (
-              <div className="text-center py-8">
-                <p style={{ color: 'var(--gaming-text-muted)' }}>No recent activity</p>
-                <Button 
-                  variant="secondary" 
-                  className="mt-4"
+              <div className="text-center py-12">
+                <div className="mb-4">
+                  <SparklesIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                </div>
+                <p className="text-muted-foreground text-lg mb-2">No recent activity</p>
+                <p className="text-muted-foreground/70 text-sm mb-6">Start creating content to see your activity here</p>
+                <Button
+                  variant="primary"
+                  className="hover:shadow-glow-primary"
                   onClick={() => navigate('/studio')}
                 >
                   <SparklesIcon className="h-4 w-4" />
@@ -339,17 +350,17 @@ export function DashboardPage() {
               activities.map((activity) => {
                 const IconComponent = getIconComponent(getContentTypeIcon(activity.type));
                 const typeColors = {
-                  'image': 'rgba(157, 78, 221, 0.1) border-gaming-neon-purple',
-                  'video': 'rgba(0, 255, 255, 0.1) border-gaming-neon-cyan',
-                  'text': 'rgba(57, 255, 20, 0.1) border-gaming-neon-green',
-                  'workflow': 'rgba(255, 107, 0, 0.1) border-gaming-border'
+                  'image': 'bg-purple-500/10 border-purple-500',
+                  'video': 'bg-primary/10 border-primary',
+                  'text': 'bg-green-500/10 border-green-500',
+                  'workflow': 'bg-orange-500/10 border-orange-500'
                 };
-                const bgColor = typeColors[activity.type] || 'rgba(255, 255, 255, 0.05) border-gaming-border';
+                const bgColor = typeColors[activity.type] || 'bg-muted/10 border-border';
                 
                 return (
-                  <div 
-                    key={activity.id} 
-                    className={`p-4 rounded-lg border ${bgColor} hover:bg-white/5 transition-all cursor-pointer group`}
+                  <div
+                    key={activity.id}
+                    className={`p-4 rounded-xl border ${bgColor} hover:bg-card/60 hover:border-primary/30 transition-all duration-300 cursor-pointer group backdrop-blur-sm`}
                     onClick={() => {
                       if (activity.nav_route) {
                         navigate(activity.nav_route);
@@ -361,26 +372,28 @@ export function DashboardPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 flex-1">
                         <div className="mt-1 flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${getActivityStatusColor(activity.status)}`} />
-                          <IconComponent className="h-5 w-5 text-gray-300" />
+                          <div className={`w-2 h-2 rounded-full ${getActivityStatusColor(activity.status)} shadow-glow-subtle`} />
+                          <IconComponent className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold text-white">{activity.name}</p>
-                            <span className="px-2 py-0.5 text-xs rounded-full bg-white/10 text-gray-300">
+                            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {activity.name}
+                            </p>
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-background/60 border border-border/40 text-muted-foreground backdrop-blur-sm">
                               {activity.type === 'image' ? '🎨' : activity.type === 'video' ? '🎬' : activity.type === 'text' ? '📝' : '⚙️'} {activity.type}
                             </span>
                           </div>
                           {activity.description && (
-                            <p className="text-xs text-gray-400 line-clamp-2 mt-1">
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
                               {activity.description}
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
                         <ClockIcon className="h-3 w-3" />
-                        {activity.time}
+                        <span className="font-medium">{activity.time}</span>
                       </div>
                     </div>
                   </div>
@@ -390,20 +403,22 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        {/* Quick Actions & Suggestions */}
+        {/* Enhanced Quick Actions & Suggestions */}
         <div className="space-y-6">
-          {/* Productivity Insights */}
-          <Card>
-            <h2 className="text-lg font-semibold text-white mb-4">Productivity Insights</h2>
-            <div className="space-y-3">
+          {/* Enhanced Productivity Insights */}
+          <Card className="p-6 border-border/50">
+            <h2 className="text-lg font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-6">
+              Productivity Insights
+            </h2>
+            <div className="space-y-4">
               {insights.map((insight, index) => (
-                <div key={index} className="flex justify-between items-center">
+                <div key={index} className="flex justify-between items-center p-3 rounded-lg bg-background/40 border border-border/30 backdrop-blur-sm">
                   <div>
-                    <p className="text-sm font-medium text-white">{insight.value}</p>
-                    <p className="text-xs text-gray-400">{insight.description}</p>
+                    <p className="text-sm font-semibold text-foreground">{insight.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{insight.description}</p>
                   </div>
                   {insight.trend && (
-                    <span className={`text-xs ${formatTrend(insight.trend).color}`}>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full bg-background/60 border border-border/40 ${formatTrend(insight.trend).color}`}>
                       {insight.trend}
                     </span>
                   )}
@@ -412,29 +427,31 @@ export function DashboardPage() {
             </div>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-            <div className="space-y-2">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start"
+          {/* Enhanced Quick Actions */}
+          <Card className="p-6 border-border/50">
+            <h2 className="text-lg font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-6">
+              Quick Actions
+            </h2>
+            <div className="space-y-3">
+              <Button
+                variant="secondary"
+                className="w-full justify-start hover:shadow-glow-secondary"
                 onClick={() => navigate('/studio')}
               >
                 <SparklesIcon className="h-4 w-4" />
                 Generate Content
               </Button>
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start"
+              <Button
+                variant="secondary"
+                className="w-full justify-start hover:shadow-glow-secondary"
                 onClick={() => navigate('/voice')}
               >
                 <MicrophoneIcon className="h-4 w-4" />
                 Voice Studio
               </Button>
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start"
+              <Button
+                variant="secondary"
+                className="w-full justify-start hover:shadow-glow-secondary"
                 onClick={() => navigate('/research')}
               >
                 <BookOpenIcon className="h-4 w-4" />
@@ -443,16 +460,23 @@ export function DashboardPage() {
             </div>
           </Card>
 
-          {/* AI Suggestions */}
+          {/* Enhanced AI Suggestions */}
           {suggestions.length > 0 && (
-            <Card>
-              <h2 className="text-lg font-semibold text-white mb-4">Suggested Next Steps</h2>
+            <Card className="p-6 border-border/50">
+              <h2 className="text-lg font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-6">
+                Suggested Next Steps
+              </h2>
               <div className="space-y-3">
                 {suggestions.map((suggestion, index) => (
-                  <div key={index} className="p-3 border border-white/10 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
-                       onClick={() => navigate(`/${suggestion.action}`)}>
-                    <h3 className="font-medium text-white text-sm">{suggestion.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">{suggestion.description}</p>
+                  <div
+                    key={index}
+                    className="p-4 border border-border/30 rounded-xl hover:bg-card/60 hover:border-primary/30 cursor-pointer transition-all duration-300 backdrop-blur-sm group"
+                    onClick={() => navigate(`/${suggestion.action}`)}
+                  >
+                    <h3 className="font-semibold text-foreground text-sm mb-1 group-hover:text-primary transition-colors">
+                      {suggestion.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.description}</p>
                   </div>
                 ))}
               </div>

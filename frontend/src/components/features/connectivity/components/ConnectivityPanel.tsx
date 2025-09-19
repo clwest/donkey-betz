@@ -39,26 +39,26 @@ function ProbeRow({ title, description, status, message, hint, responseTime, act
     <div className="flex items-center justify-between py-4 border-b border-gray-800 last:border-b-0">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1">
-          <h3 className="text-sm font-medium text-gray-100">{title}</h3>
+          <h3 className="text-sm font-medium text-foreground">{title}</h3>
           <Badge variant={getBadgeVariant(status)} size="sm">
             {getStatusText(status)}
           </Badge>
           {responseTime && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {responseTime}ms
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-400 mb-1">{description}</p>
+        <p className="text-xs text-muted-foreground mb-1">{description}</p>
         <p className={`text-sm ${
-          status === 'error' ? 'text-red-400' : 
-          status === 'warning' ? 'text-yellow-400' : 
-          'text-gray-300'
+          status === 'error' ? 'text-red-500' : 
+          status === 'warning' ? 'text-yellow-500' : 
+          'text-muted-foreground'
         }`}>
           {message}
         </p>
         {hint && (
-          <p className="text-xs text-blue-400 mt-1 italic">
+          <p className="text-xs text-blue-500 mt-1 italic">
             💡 {hint}
           </p>
         )}
@@ -155,10 +155,10 @@ export function ConnectivityPanel() {
     <Card className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-100 mb-1">
+          <h2 className="text-xl font-bold text-foreground mb-1">
             Connectivity Panel
           </h2>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Monitor API health, CORS configuration, and WebSocket connectivity
           </p>
         </div>
@@ -246,29 +246,29 @@ export function ConnectivityPanel() {
 
       {/* Environment Information */}
       <div className="mt-6 pt-6 border-t border-gray-800">
-        <h3 className="text-sm font-medium text-gray-100 mb-3">Environment Configuration</h3>
+        <h3 className="text-sm font-medium text-foreground mb-3">Environment Configuration</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <span className="text-gray-400">API URL:</span>
-            <span className="ml-2 text-gray-300 font-mono">
+            <span className="text-muted-foreground">API URL:</span>
+            <span className="ml-2 text-muted-foreground font-mono">
               {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
             </span>
           </div>
           <div>
-            <span className="text-gray-400">WebSocket URL:</span>
-            <span className="ml-2 text-gray-300 font-mono">
+            <span className="text-muted-foreground">WebSocket URL:</span>
+            <span className="ml-2 text-muted-foreground font-mono">
               {import.meta.env.VITE_WS_URL || 'ws://localhost:8000'}
             </span>
           </div>
           <div>
-            <span className="text-gray-400">Current Origin:</span>
-            <span className="ml-2 text-gray-300 font-mono">
+            <span className="text-muted-foreground">Current Origin:</span>
+            <span className="ml-2 text-muted-foreground font-mono">
               {window.location.origin}
             </span>
           </div>
           <div>
-            <span className="text-gray-400">Last Updated:</span>
-            <span className="ml-2 text-gray-300">
+            <span className="text-muted-foreground">Last Updated:</span>
+            <span className="ml-2 text-muted-foreground">
               {new Date().toLocaleTimeString()}
             </span>
           </div>

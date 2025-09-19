@@ -154,16 +154,16 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
         </div>
 
         {/* Modal panel */}
-        <div className="inline-block align-bottom bg-dark-900 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div className="inline-block align-bottom bg-background rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-foreground">
                 {loading ? 'Loading...' : socialPost?.topic || 'Social Media Posts'}
               </h3>
               <button
                 onClick={onClose}
-                className="text-white hover:text-gray-200 transition-colors"
+                className="text-foreground hover:text-foreground transition-colors"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -179,18 +179,18 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
             ) : socialPost ? (
               <div className="space-y-4">
                 {/* Metadata */}
-                <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                  <span>Tone: <span className="text-white">{socialPost.tone}</span></span>
-                  <span>Created: <span className="text-white">
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <span>Tone: <span className="text-foreground">{socialPost.tone}</span></span>
+                  <span>Created: <span className="text-foreground">
                     {new Date(socialPost.created_at).toLocaleDateString()}
                   </span></span>
-                  <span>Platforms: <span className="text-white">
+                  <span>Platforms: <span className="text-foreground">
                     {Object.keys(socialPost.platforms).length}
                   </span></span>
                 </div>
 
                 {/* Platform Tabs */}
-                <div className="border-b border-dark-700">
+                <div className="border-b border-border">
                   <div className="flex gap-2 overflow-x-auto">
                     {Object.keys(socialPost.platforms).map(platform => (
                       <button
@@ -199,7 +199,7 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
                         className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors whitespace-nowrap ${
                           activeTab === platform
                             ? 'border-primary-500 text-primary-400'
-                            : 'border-transparent text-gray-400 hover:text-gray-200'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <span className="text-lg">{getPlatformIcon(platform)}</span>
@@ -220,18 +220,18 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <span className="text-2xl">{getPlatformIcon(activeTab)}</span>
-                            <span className="text-sm text-gray-400">
+                            <span className="text-sm text-muted-foreground">
                               Variation {post.post_number}
                             </span>
                           </div>
                           <div className={`text-sm ${
-                            !post.within_limit ? 'text-red-400' : 'text-gray-400'
+                            !post.within_limit ? 'text-red-500' : 'text-muted-foreground'
                           }`}>
                             {post.character_count} chars
                           </div>
                         </div>
 
-                        <p className="text-gray-100 whitespace-pre-wrap mb-3">
+                        <p className="text-foreground whitespace-pre-wrap mb-3">
                           {post.content}
                         </p>
 
@@ -250,13 +250,13 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
 
                         <button
                           onClick={() => copyToClipboard(post.content, `${activeTab}-${index}`)}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-dark-800/50 hover:bg-dark-700/50 
-                                   text-gray-300 hover:text-white rounded-lg transition-all border border-dark-600"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-card/50 hover:bg-dark-700/50 
+                                   text-muted-foreground hover:text-foreground rounded-lg transition-all border border-dark-600"
                         >
                           {copiedPost === `${activeTab}-${index}` ? (
                             <>
-                              <CheckIcon className="w-4 h-4 text-green-400" />
-                              <span className="text-sm text-green-400">Copied!</span>
+                              <CheckIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-sm text-green-500">Copied!</span>
                             </>
                           ) : (
                             <>
@@ -271,7 +271,7 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
                 )}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-muted-foreground">
                 No social posts found
               </div>
             )}
@@ -279,7 +279,7 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
 
           {/* Feedback Section */}
           {socialPost && (
-            <div className="px-6 py-4 border-t border-dark-700">
+            <div className="px-6 py-4 border-t border-border">
               <FeedbackWidget
                 contentType="social"
                 contentId={socialPost.id}
@@ -291,11 +291,11 @@ export function SocialViewer({ socialPostId, isOpen, onClose }: SocialViewerProp
           )}
 
           {/* Footer */}
-          <div className="bg-dark-800 px-6 py-3">
+          <div className="bg-card px-6 py-3">
             <div className="flex justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-dark-700 text-gray-300 rounded-lg hover:bg-dark-600 transition-colors"
+                className="px-4 py-2 bg-dark-700 text-muted-foreground rounded-lg hover:bg-dark-600 transition-colors"
               >
                 Close
               </button>

@@ -63,7 +63,7 @@ export function CharacterPage() {
         <h1 className="text-4xl font-bold text-gradient mb-2">
           Character Studio
         </h1>
-        <p className="text-gray-400">
+        <p className="text-muted-foreground">
           Create and manage consistent characters across all your content
         </p>
       </div>
@@ -86,7 +86,7 @@ export function CharacterPage() {
                     border-b-2 hover:bg-white/5
                     ${isActive 
                       ? 'text-primary-400 border-primary-400 bg-primary-400/10' 
-                      : 'text-gray-400 border-transparent hover:text-white'
+                      : 'text-muted-foreground border-transparent hover:text-foreground'
                     }
                   `}
                   aria-current={isActive ? 'page' : undefined}

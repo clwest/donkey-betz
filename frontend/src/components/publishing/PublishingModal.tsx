@@ -272,44 +272,44 @@ export function PublishingModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Review Your eBook</h3>
-              <p className="text-gray-400">Verify all details before publishing</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Review Your eBook</h3>
+              <p className="text-muted-foreground">Verify all details before publishing</p>
             </div>
 
-            <div className="bg-dark-800 rounded-lg p-4 border border-dark-700">
+            <div className="bg-card rounded-lg p-4 border border-border">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-400">Title:</span>
-                  <p className="text-white font-medium">{ebook.title}</p>
+                  <span className="text-muted-foreground">Title:</span>
+                  <p className="text-foreground font-medium">{ebook.title}</p>
                 </div>
                 {ebook.subtitle && (
                   <div>
-                    <span className="text-gray-400">Subtitle:</span>
-                    <p className="text-white">{ebook.subtitle}</p>
+                    <span className="text-muted-foreground">Subtitle:</span>
+                    <p className="text-foreground">{ebook.subtitle}</p>
                   </div>
                 )}
                 <div>
-                  <span className="text-gray-400">Author:</span>
-                  <p className="text-white">{ebook.author || 'Not specified'}</p>
+                  <span className="text-muted-foreground">Author:</span>
+                  <p className="text-foreground">{ebook.author || 'Not specified'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Genre:</span>
-                  <p className="text-white capitalize">{ebook.genre}</p>
+                  <span className="text-muted-foreground">Genre:</span>
+                  <p className="text-foreground capitalize">{ebook.genre}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Word Count:</span>
-                  <p className="text-white">{(ebook.actual_word_count || ebook.word_count || 0).toLocaleString()}</p>
+                  <span className="text-muted-foreground">Word Count:</span>
+                  <p className="text-foreground">{(ebook.actual_word_count || ebook.word_count || 0).toLocaleString()}</p>
                 </div>
                 <div>
-                  <span className="text-gray-400">Chapters:</span>
-                  <p className="text-white">{Array.isArray(ebook.chapters) ? ebook.chapters.length : 0}</p>
+                  <span className="text-muted-foreground">Chapters:</span>
+                  <p className="text-foreground">{Array.isArray(ebook.chapters) ? ebook.chapters.length : 0}</p>
                 </div>
               </div>
               
               {ebook.description && (
                 <div className="mt-4">
-                  <span className="text-gray-400">Description:</span>
-                  <p className="text-white mt-1">{ebook.description}</p>
+                  <span className="text-muted-foreground">Description:</span>
+                  <p className="text-foreground mt-1">{ebook.description}</p>
                 </div>
               )}
             </div>
@@ -329,8 +329,8 @@ export function PublishingModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Choose Export Formats</h3>
-              <p className="text-gray-400">Select the formats you want to export your eBook in</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Choose Export Formats</h3>
+              <p className="text-muted-foreground">Select the formats you want to export your eBook in</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,22 +346,22 @@ export function PublishingModal({
                       p-4 rounded-lg border-2 cursor-pointer transition-all
                       ${isSelected 
                         ? 'border-primary-500 bg-primary-500/10' 
-                        : 'border-dark-600 bg-dark-800 hover:border-dark-500'
+                        : 'border-dark-600 bg-card hover:border-dark-500'
                       }
                     `}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <IconComponent className="h-5 w-5 text-primary-400" />
-                        <span className="font-medium text-white">{format.name}</span>
+                        <span className="font-medium text-foreground">{format.name}</span>
                       </div>
                       {format.recommended && (
-                        <span className="px-2 py-1 bg-green-400/10 text-green-400 text-xs rounded">
+                        <span className="px-2 py-1 bg-green-400/10 text-green-500 text-xs rounded">
                           Recommended
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-400">{format.description}</p>
+                    <p className="text-sm text-muted-foreground">{format.description}</p>
                     
                     {isSelected && (
                       <div className="mt-2 flex items-center gap-1 text-primary-400 text-sm">
@@ -392,8 +392,8 @@ export function PublishingModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Book Cover</h3>
-              <p className="text-gray-400">Generate a professional cover for your eBook</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Book Cover</h3>
+              <p className="text-muted-foreground">Generate a professional cover for your eBook</p>
             </div>
 
             {/* Current cover */}
@@ -410,14 +410,14 @@ export function PublishingModal({
                 )}
               </div>
               {!ebook.cover_image_url && (
-                <p className="text-gray-500">No cover generated yet</p>
+                <p className="text-muted-foreground">No cover generated yet</p>
               )}
             </div>
 
             {/* Cover generation */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Cover Style
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -435,11 +435,11 @@ export function PublishingModal({
                         flex-1 p-3 rounded-lg border-2 cursor-pointer transition-all
                         ${coverStyle === style.id 
                           ? 'border-primary-500 bg-primary-500/10' 
-                          : 'border-dark-600 bg-dark-800'
+                          : 'border-dark-600 bg-card'
                         }
                       `}>
-                        <div className="font-medium text-white">{style.name}</div>
-                        <div className="text-xs text-gray-400">{style.description}</div>
+                        <div className="font-medium text-foreground">{style.name}</div>
+                        <div className="text-xs text-muted-foreground">{style.description}</div>
                       </div>
                     </label>
                   ))}
@@ -447,13 +447,13 @@ export function PublishingModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Custom Prompt (optional)
                 </label>
                 <textarea
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 h-20"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 h-20"
                   placeholder="Describe specific elements you want on your cover..."
                 />
               </div>
@@ -492,13 +492,13 @@ export function PublishingModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Final Publishing</h3>
-              <p className="text-gray-400">Complete your eBook publication</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Final Publishing</h3>
+              <p className="text-muted-foreground">Complete your eBook publication</p>
             </div>
 
             {/* ISBN */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 ISBN (optional)
               </label>
               <div className="flex gap-2">
@@ -509,7 +509,7 @@ export function PublishingModal({
                     setIsbn(e.target.value);
                     setIsbnError('');
                   }}
-                  className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="978-0-123456-78-9 or 0123456789"
                 />
                 <Button size="sm" onClick={updateISBN} disabled={!isbn.trim()}>
@@ -517,32 +517,32 @@ export function PublishingModal({
                 </Button>
               </div>
               {isbnError && (
-                <p className="text-red-400 text-sm mt-1">{isbnError}</p>
+                <p className="text-red-500 text-sm mt-1">{isbnError}</p>
               )}
             </div>
 
             {/* Publication summary */}
-            <div className="bg-dark-800 rounded-lg p-4 border border-dark-700">
-              <h4 className="font-medium text-white mb-3">Publication Summary</h4>
+            <div className="bg-card rounded-lg p-4 border border-border">
+              <h4 className="font-medium text-foreground mb-3">Publication Summary</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Export Formats:</span>
-                  <span className="text-white">{selectedFormats.map(f => f.toUpperCase()).join(', ')}</span>
+                  <span className="text-muted-foreground">Export Formats:</span>
+                  <span className="text-foreground">{selectedFormats.map(f => f.toUpperCase()).join(', ')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Cover:</span>
-                  <span className="text-white">{ebook.cover_image_url ? 'Generated' : 'Not generated'}</span>
+                  <span className="text-muted-foreground">Cover:</span>
+                  <span className="text-foreground">{ebook.cover_image_url ? 'Generated' : 'Not generated'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Publication Date:</span>
-                  <span className="text-white">{new Date().toLocaleDateString()}</span>
+                  <span className="text-muted-foreground">Publication Date:</span>
+                  <span className="text-foreground">{new Date().toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
 
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <CheckCircleIcon className="h-5 w-5 text-blue-400 mt-0.5" />
+                <CheckCircleIcon className="h-5 w-5 text-blue-500 mt-0.5" />
                 <div>
                   <p className="text-blue-300 font-medium">Ready to Publish</p>
                   <p className="text-blue-200 text-sm mt-1">
@@ -597,8 +597,8 @@ export function PublishingModal({
               className={`
                 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
                 ${step >= stepNumber
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-dark-700 text-gray-400'
+                  ? 'bg-primary-500 text-foreground'
+                  : 'bg-dark-700 text-muted-foreground'
                 }
               `}
             >

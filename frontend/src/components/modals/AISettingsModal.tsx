@@ -132,7 +132,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-cyan-400 uppercase font-mono tracking-wider drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">NEURAL AI SETTINGS</h2>
-                  <p className="text-gray-300 text-sm mt-1 font-mono">
+                  <p className="text-muted-foreground text-sm mt-1 font-mono">
                     Configure how AI enhances your content generation
                   </p>
                 </div>
@@ -141,7 +141,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                 onClick={onClose}
                 className="p-2 hover:bg-cyan-500/20 rounded-lg transition-all duration-200 hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(0,255,255,0.5)] hover:scale-110 border border-transparent hover:border-cyan-500/50"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
 
@@ -160,7 +160,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-mono uppercase tracking-wider ${
                     activeTab === tab.id
                       ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
-                      : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800/50 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30'
+                      : 'bg-background/50 text-muted-foreground hover:bg-card/50 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30'
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -182,7 +182,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                 {activeTab === 'settings' && settings && (
                   <div className="space-y-6">
                     {/* Master Toggle */}
-                    <div className="bg-gray-900/50 rounded-lg p-6 border border-cyan-500/30 relative">
+                    <div className="bg-background/50 rounded-lg p-6 border border-cyan-500/30 relative">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-cyan-500/20 rounded-lg mt-1 border border-cyan-500/50">
@@ -192,7 +192,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                             <h3 className="text-lg font-semibold text-cyan-400 mb-1 uppercase font-mono tracking-wider">
                               INTELLIGENT PROMPTING
                             </h3>
-                            <p className="text-gray-300 text-sm font-mono">
+                            <p className="text-muted-foreground text-sm font-mono">
                               Automatically enhance your prompts for better AI responses
                             </p>
                           </div>
@@ -210,7 +210,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Enhancement Level */}
-                    <div className="bg-gray-900/50 rounded-lg p-6 border border-cyan-500/30 relative">
+                    <div className="bg-background/50 rounded-lg p-6 border border-cyan-500/30 relative">
                       <h3 className="text-lg font-semibold text-cyan-400 mb-4 uppercase font-mono tracking-wider">ENHANCEMENT LEVEL</h3>
                       <div className="grid grid-cols-3 gap-3">
                         {[
@@ -239,7 +239,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                             className={`p-4 rounded-lg border transition-all ${
                               settings.default_level === option.level
                                 ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
-                                : 'bg-gray-900/50 border-gray-700 text-gray-400 hover:border-cyan-500/50 hover:text-cyan-300'
+                                : 'bg-background/50 border-gray-700 text-muted-foreground hover:border-cyan-500/50 hover:text-cyan-300'
                             }`}
                           >
                             <div className="text-2xl mb-2">{option.icon}</div>
@@ -251,17 +251,17 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Additional Options */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 space-y-4">
-                      <h3 className="text-lg font-semibold text-white mb-4">Enhancement Options</h3>
+                    <div className="bg-card/50 rounded-xl p-6 border border-gray-700 space-y-4">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Enhancement Options</h3>
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="p-1.5 bg-blue-600/20 rounded">
-                            <Brain className="w-4 h-4 text-blue-400" />
+                            <Brain className="w-4 h-4 text-blue-500" />
                           </div>
                           <div>
-                            <p className="text-white font-medium">Use Memory Context</p>
-                            <p className="text-gray-400 text-xs">Include previous interactions for consistency</p>
+                            <p className="text-foreground font-medium">Use Memory Context</p>
+                            <p className="text-muted-foreground text-xs">Include previous interactions for consistency</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -278,11 +278,11 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="p-1.5 bg-green-600/20 rounded">
-                            <Sparkles className="w-4 h-4 text-green-400" />
+                            <Sparkles className="w-4 h-4 text-green-500" />
                           </div>
                           <div>
-                            <p className="text-white font-medium">Auto-Enhance</p>
-                            <p className="text-gray-400 text-xs">Automatically enhance all prompts</p>
+                            <p className="text-foreground font-medium">Auto-Enhance</p>
+                            <p className="text-muted-foreground text-xs">Automatically enhance all prompts</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -298,12 +298,12 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Content-Specific Settings */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                      <h3 className="text-lg font-semibold text-white mb-4">Content-Specific Enhancement</h3>
+                    <div className="bg-card/50 rounded-xl p-6 border border-gray-700">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Content-Specific Enhancement</h3>
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(settings.content_preferences || {}).map(([type, enabled]) => (
-                          <div key={type} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                            <span className="text-gray-300 capitalize">{type}</span>
+                          <div key={type} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                            <span className="text-muted-foreground capitalize">{type}</span>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
@@ -325,50 +325,50 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                   <div className="space-y-6">
                     {/* Overview Cards */}
                     <div className="grid grid-cols-4 gap-4">
-                      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                      <div className="bg-card/50 rounded-xl p-4 border border-gray-700">
                         <div className="flex items-center gap-2 mb-2">
                           <TrendingUp className="w-4 h-4 text-green-500" />
-                          <span className="text-gray-400 text-sm">Enhancement Rate</span>
+                          <span className="text-muted-foreground text-sm">Enhancement Rate</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-2xl font-bold text-foreground">
                           {stats.overview?.enhancement_rate?.toFixed(1) || 0}%
                         </p>
                       </div>
                       
-                      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                      <div className="bg-card/50 rounded-xl p-4 border border-gray-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Brain className="w-4 h-4 text-blue-500" />
-                          <span className="text-gray-400 text-sm">Memory Usage</span>
+                          <span className="text-muted-foreground text-sm">Memory Usage</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-2xl font-bold text-foreground">
                           {stats.overview?.memory_usage_rate?.toFixed(1) || 0}%
                         </p>
                       </div>
                       
-                      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                      <div className="bg-card/50 rounded-xl p-4 border border-gray-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Sparkles className="w-4 h-4 text-purple-500" />
-                          <span className="text-gray-400 text-sm">Enhanced Content</span>
+                          <span className="text-muted-foreground text-sm">Enhanced Content</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-2xl font-bold text-foreground">
                           {stats.overview?.enhanced_content || 0}
                         </p>
                       </div>
                       
-                      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                      <div className="bg-card/50 rounded-xl p-4 border border-gray-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Zap className="w-4 h-4 text-yellow-500" />
-                          <span className="text-gray-400 text-sm">Total Content</span>
+                          <span className="text-muted-foreground text-sm">Total Content</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-2xl font-bold text-foreground">
                           {stats.overview?.total_content || 0}
                         </p>
                       </div>
                     </div>
 
                     {/* Enhancement by Level */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                      <h3 className="text-lg font-semibold text-white mb-4">Enhancement by Level</h3>
+                    <div className="bg-card/50 rounded-xl p-6 border border-gray-700">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Enhancement by Level</h3>
                       <div className="space-y-3">
                         {Object.entries(stats.by_level || {}).map(([level, count]) => (
                           <div key={level} className="flex items-center justify-between">
@@ -377,7 +377,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                                 level === 'expert' ? 'bg-purple-500' :
                                 level === 'advanced' ? 'bg-blue-500' : 'bg-green-500'
                               }`} />
-                              <span className="text-gray-300 capitalize">{level}</span>
+                              <span className="text-muted-foreground capitalize">{level}</span>
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="w-32 bg-gray-700 rounded-full h-2">
@@ -391,7 +391,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                                   }}
                                 />
                               </div>
-                              <span className="text-white font-medium w-12 text-right">
+                              <span className="text-foreground font-medium w-12 text-right">
                                 {count as number}
                               </span>
                             </div>
@@ -401,22 +401,22 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Content Type Usage */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                      <h3 className="text-lg font-semibold text-white mb-4">Enhancement by Content Type</h3>
+                    <div className="bg-card/50 rounded-xl p-6 border border-gray-700">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Enhancement by Content Type</h3>
                       <div className="grid grid-cols-2 gap-4">
                         {Object.entries(stats.by_content_type || {}).map(([type, data]: [string, any]) => (
-                          <div key={type} className="bg-gray-900/50 rounded-lg p-4">
+                          <div key={type} className="bg-background/50 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-gray-300 capitalize font-medium">{type}</span>
+                              <span className="text-muted-foreground capitalize font-medium">{type}</span>
                               <span className="text-xs text-purple-400">
                                 {data.total > 0 ? ((data.enhanced / data.total) * 100).toFixed(0) : 0}%
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="text-gray-500">Enhanced:</span>
-                              <span className="text-white">{data.enhanced}</span>
-                              <span className="text-gray-500">/</span>
-                              <span className="text-gray-400">{data.total}</span>
+                              <span className="text-muted-foreground">Enhanced:</span>
+                              <span className="text-foreground">{data.enhanced}</span>
+                              <span className="text-muted-foreground">/</span>
+                              <span className="text-muted-foreground">{data.total}</span>
                             </div>
                           </div>
                         ))}
@@ -428,27 +428,27 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                 {/* Test Lab Tab */}
                 {activeTab === 'test' && (
                   <div className="space-y-6">
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                      <h3 className="text-lg font-semibold text-white mb-4">Test Prompt Enhancement</h3>
+                    <div className="bg-card/50 rounded-xl p-6 border border-gray-700">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">Test Prompt Enhancement</h3>
                       
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-gray-400 text-sm mb-2">Your Prompt</label>
+                          <label className="block text-muted-foreground text-sm mb-2">Your Prompt</label>
                           <textarea
                             value={testPrompt}
                             onChange={(e) => setTestPrompt(e.target.value)}
                             placeholder="Enter a prompt to see how it gets enhanced..."
-                            className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                            className="w-full px-4 py-3 bg-background/50 border border-gray-700 rounded-lg text-foreground placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                             rows={3}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-gray-400 text-sm mb-2">Enhancement Level</label>
+                          <label className="block text-muted-foreground text-sm mb-2">Enhancement Level</label>
                           <select
                             value={testLevel}
                             onChange={(e) => setTestLevel(e.target.value)}
-                            className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                            className="w-full px-4 py-2 bg-background/50 border border-gray-700 rounded-lg text-foreground focus:border-purple-500 focus:outline-none"
                           >
                             <option value="basic">Basic</option>
                             <option value="advanced">Advanced</option>
@@ -459,7 +459,7 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                         <button
                           onClick={handleTestEnhancement}
                           disabled={testing}
-                          className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-white rounded-lg hover:from-cyan-700 hover:to-purple-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed font-mono uppercase tracking-wider border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
+                          className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-foreground rounded-lg hover:from-cyan-700 hover:to-purple-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed font-mono uppercase tracking-wider border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
                         >
                           {testing ? (
                             <>
@@ -477,14 +477,14 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
 
                       {testResult && (
                         <div className="mt-6 space-y-4">
-                          <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                            <h4 className="text-sm font-medium text-gray-400 mb-2">Enhanced Prompt</h4>
-                            <p className="text-white whitespace-pre-wrap">{testResult.enhanced}</p>
+                          <div className="p-4 bg-background/50 rounded-lg border border-gray-700">
+                            <h4 className="text-sm font-medium text-muted-foreground mb-2">Enhanced Prompt</h4>
+                            <p className="text-foreground whitespace-pre-wrap">{testResult.enhanced}</p>
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 bg-gray-900/50 rounded-lg">
-                              <p className="text-xs text-gray-400 mb-1">Techniques Applied</p>
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <p className="text-xs text-muted-foreground mb-1">Techniques Applied</p>
                               <div className="flex flex-wrap gap-1">
                                 {testResult.techniques?.map((tech: string) => (
                                   <span key={tech} className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded">
@@ -493,9 +493,9 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                                 ))}
                               </div>
                             </div>
-                            <div className="p-3 bg-gray-900/50 rounded-lg">
-                              <p className="text-xs text-gray-400 mb-1">Memory Context</p>
-                              <p className="text-white font-medium">{testResult.memory_context} items</p>
+                            <div className="p-3 bg-background/50 rounded-lg">
+                              <p className="text-xs text-muted-foreground mb-1">Memory Context</p>
+                              <p className="text-foreground font-medium">{testResult.memory_context} items</p>
                             </div>
                           </div>
                         </div>
@@ -503,33 +503,33 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Suggestions */}
-                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                    <div className="bg-card/50 rounded-xl p-6 border border-gray-700">
                       <div className="flex items-center gap-2 mb-4">
                         <Lightbulb className="w-5 h-5 text-yellow-500" />
-                        <h3 className="text-lg font-semibold text-white">Pro Tips</h3>
+                        <h3 className="text-lg font-semibold text-foreground">Pro Tips</h3>
                       </div>
                       <ul className="space-y-2">
                         <li className="flex items-start gap-2">
                           <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                          <p className="text-gray-300 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             Use <span className="text-purple-400 font-medium">Expert level</span> for complex, nuanced content that requires deep reasoning
                           </p>
                         </li>
                         <li className="flex items-start gap-2">
                           <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                          <p className="text-gray-300 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             Enable <span className="text-purple-400 font-medium">Memory Context</span> to maintain consistency across related content
                           </p>
                         </li>
                         <li className="flex items-start gap-2">
                           <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                          <p className="text-gray-300 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             <span className="text-purple-400 font-medium">Advanced level</span> provides the best balance between quality and speed
                           </p>
                         </li>
                         <li className="flex items-start gap-2">
                           <ChevronRight className="w-4 h-4 text-purple-400 mt-0.5" />
-                          <p className="text-gray-300 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             Review enhanced prompts to learn how to write better prompts yourself
                           </p>
                         </li>
@@ -543,15 +543,15 @@ export const AISettingsModal: React.FC<AISettingsModalProps> = ({ isOpen, onClos
 
           {/* Footer */}
           {activeTab === 'settings' && !loading && (
-            <div className="p-6 border-t border-gray-800 bg-gray-900/50">
+            <div className="p-6 border-t border-gray-800 bg-background/50">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Changes are saved automatically
                 </p>
                 <button
                   onClick={handleSaveSettings}
                   disabled={saving}
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-white rounded-lg hover:from-cyan-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-mono uppercase tracking-wider border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
+                  className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 text-foreground rounded-lg hover:from-cyan-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-mono uppercase tracking-wider border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
                 >
                   {saving ? (
                     <>

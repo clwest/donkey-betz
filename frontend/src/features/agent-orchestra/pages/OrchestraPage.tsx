@@ -53,13 +53,13 @@ class OrchestraErrorBoundary extends React.Component<
         <Card className="p-8 border-red-500/20 bg-red-500/5">
           <div className="text-center">
             <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-400 mb-2">
+            <h2 className="text-xl font-semibold text-red-500 mb-2">
               Agent Orchestra Error
             </h2>
             <p className="text-red-300 mb-4">
               An unexpected error occurred while loading the Agent Orchestra interface.
             </p>
-            <p className="text-sm text-red-400 font-mono bg-red-950/50 p-3 rounded">
+            <p className="text-sm text-red-500 font-mono bg-red-950/50 p-3 rounded">
               {this.state.error?.message || 'Unknown error'}
             </p>
             <button
@@ -67,7 +67,7 @@ class OrchestraErrorBoundary extends React.Component<
                 this.setState({ hasError: false, error: undefined });
                 window.location.reload();
               }}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="mt-4 px-4 py-2 bg-red-500 text-foreground rounded hover:bg-red-600 transition-colors"
             >
               Reload Page
             </button>

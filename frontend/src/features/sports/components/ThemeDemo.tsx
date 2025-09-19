@@ -54,11 +54,11 @@ export function ThemeDemo() {
 
   return (
     <Card className="border-t-4 border-t-primary-500">
-      <div className="p-6 border-b border-dark-700">
+      <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Palette className="w-6 h-6 text-primary-400" />
-            <span className="text-xl text-white">Theme Comparison</span>
+            <span className="text-xl text-foreground">Theme Comparison</span>
             <Badge variant="secondary" className="ml-2">
               Live Demo
             </Badge>
@@ -78,7 +78,7 @@ export function ThemeDemo() {
               onClick={() => setSelectedTheme('gaming')}
               variant={selectedTheme === 'gaming' ? 'primary' : 'secondary'}
               size="sm"
-              className={selectedTheme === 'gaming' ? 'gaming-btn-active' : ''}
+              className={selectedTheme === 'gaming' ? 'bg-card' : ''}
             >
               <Gamepad2 className="w-4 h-4 mr-2" />
               Gaming
@@ -91,12 +91,12 @@ export function ThemeDemo() {
         <div className="space-y-6">
           {/* Theme Description */}
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-foreground">
               {selectedTheme === 'gaming' ? '🎮 Gaming/Esports Theme' : '🎨 Classic Theme'}
             </h3>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               {selectedTheme === 'gaming' 
-                ? 'Experience the thrill with neon accents, cyberpunk aesthetics, pulsing animations, and gaming-inspired design elements that bring excitement to every bet.'
+                ? 'Experience the thrill with neon accents, cyberpunk aesthetics, pulsing animations, and bg-card design elements that bring excitement to every bet.'
                 : 'Clean, professional interface with subtle shadows, perfect typography hierarchy, and minimal distractions for focused betting decisions.'
               }
             </p>
@@ -129,10 +129,10 @@ export function ThemeDemo() {
           {/* Theme Features */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <Card className="p-4">
-              <h4 className="font-semibold text-white mb-3">
+              <h4 className="font-semibold text-foreground mb-3">
                 {selectedTheme === 'gaming' ? '🎮 Gaming Features' : '🎨 Classic Features'}
               </h4>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 {selectedTheme === 'gaming' ? (
                   <>
                     <li>• Neon glow effects and cyberpunk colors</li>
@@ -154,8 +154,8 @@ export function ThemeDemo() {
             </Card>
 
             <Card className="p-4">
-              <h4 className="font-semibold text-white mb-3">Best For</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <h4 className="font-semibold text-foreground mb-3">Best For</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
                 {selectedTheme === 'gaming' ? (
                   <>
                     <li>• Esports and gaming audiences</li>
@@ -180,7 +180,7 @@ export function ThemeDemo() {
           {/* Call to Action */}
           <div className="text-center">
             <div className="inline-flex items-center space-x-3 bg-primary-500/10 px-6 py-3 rounded-lg">
-              <span className="text-white font-medium">
+              <span className="text-foreground font-medium">
                 Switch between themes using the toggle in the header
               </span>
               <ArrowRight className="w-4 h-4 text-primary-400" />

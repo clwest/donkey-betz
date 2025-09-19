@@ -90,10 +90,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ contentId, onClose }) 
 
   // Priority and status configurations
   const priorityConfig = {
-    critical: { color: 'bg-red-500 text-white', label: 'Critical' },
-    high: { color: 'bg-orange-500 text-white', label: 'High' },
+    critical: { color: 'bg-red-500 text-foreground', label: 'Critical' },
+    high: { color: 'bg-orange-500 text-foreground', label: 'High' },
     medium: { color: 'bg-yellow-500 text-black', label: 'Medium' },
-    low: { color: 'bg-green-500 text-white', label: 'Low' },
+    low: { color: 'bg-green-500 text-foreground', label: 'Low' },
   };
 
   const flagTypeLabels = {
@@ -132,9 +132,9 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ contentId, onClose }) 
         {isLoading ? (
           <div className="space-y-4">
             {/* Loading skeleton */}
-            <div className="h-8 w-full bg-gray-200 animate-pulse rounded" />
-            <div className="h-32 w-full bg-gray-200 animate-pulse rounded" />
-            <div className="h-24 w-full bg-gray-200 animate-pulse rounded" />
+            <div className="h-8 w-full bg-muted/20 animate-pulse rounded" />
+            <div className="h-32 w-full bg-muted/20 animate-pulse rounded" />
+            <div className="h-24 w-full bg-muted/20 animate-pulse rounded" />
           </div>
         ) : content ? (
           <div className="space-y-6">

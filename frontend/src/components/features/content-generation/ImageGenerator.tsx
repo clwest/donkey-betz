@@ -446,7 +446,7 @@ export function ImageGenerator() {
       {/* Mode Selection */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Generation Mode</h3>
+          <h3 className="text-lg font-semibold text-foreground">Generation Mode</h3>
           {insights && (
             <Button 
               size="sm" 
@@ -466,18 +466,18 @@ export function ImageGenerator() {
             className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
               mode === 'text2img'
                 ? 'border-primary-500 bg-primary-500/10'
-                : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                : 'border-border hover:border-dark-600 hover:bg-white/5'
             }`}
           >
             <PhotoIcon className={`h-6 w-6 mb-2 ${
-              mode === 'text2img' ? 'text-primary-400' : 'text-gray-400'
+              mode === 'text2img' ? 'text-primary-400' : 'text-muted-foreground'
             }`} />
             <div className={`font-medium mb-1 ${
-              mode === 'text2img' ? 'text-white' : 'text-gray-300'
+              mode === 'text2img' ? 'text-foreground' : 'text-muted-foreground'
             }`}>
               Text to Image
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-muted-foreground">
               Generate images from text descriptions
             </div>
           </button>
@@ -490,7 +490,7 @@ export function ImageGenerator() {
                   ? 'border-primary-500 bg-primary-500/10'
                   : isDragActive
                   ? 'border-primary-400 bg-primary-500/5'
-                  : 'border-dark-700 hover:border-dark-600 hover:bg-white/5'
+                  : 'border-border hover:border-dark-600 hover:bg-white/5'
               }`
             })}
           >
@@ -513,28 +513,28 @@ export function ImageGenerator() {
                       setMode('text2img');
                       toast.info('Image removed');
                     }}
-                    className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                    className="bg-red-500 text-foreground p-1 rounded-full hover:bg-red-600"
                   >
                     <XMarkIcon className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="text-center">
                   <div className="text-primary-400 font-medium text-sm">✓ Image loaded</div>
-                  <div className="text-xs text-gray-400">{img2imgFile?.name}</div>
-                  <div className="text-xs text-gray-500 mt-1">Add a prompt to transform this image</div>
+                  <div className="text-xs text-muted-foreground">{img2imgFile?.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Add a prompt to transform this image</div>
                 </div>
               </div>
             ) : (
               <>
                 <CloudArrowUpIcon className={`h-6 w-6 mb-2 mx-auto ${
-                  mode === 'img2img' || isDragActive ? 'text-primary-400' : 'text-gray-400'
+                  mode === 'img2img' || isDragActive ? 'text-primary-400' : 'text-muted-foreground'
                 }`} />
                 <div className={`font-medium mb-1 text-center ${
-                  mode === 'img2img' || isDragActive ? 'text-white' : 'text-gray-300'
+                  mode === 'img2img' || isDragActive ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
                   Image to Image
                 </div>
-                <div className="text-xs text-gray-500 text-center mb-3">
+                <div className="text-xs text-muted-foreground text-center mb-3">
                   {isDragActive 
                     ? 'Drop image here...'
                     : 'Click to upload or drag & drop an image'
@@ -548,7 +548,7 @@ export function ImageGenerator() {
                       e.stopPropagation();
                       handleLoadFromGallery();
                     }}
-                    className="flex items-center gap-2 px-3 py-2 text-xs bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg text-gray-300 hover:text-white transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-xs bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <RectangleGroupIcon className="h-4 w-4" />
                     Load from Gallery
@@ -564,11 +564,11 @@ export function ImageGenerator() {
         {/* Generation Settings */}
         <div className="xl:col-span-2 space-y-6">
           <Card>
-            <h3 className="text-lg font-semibold text-white mb-4">Generation Settings</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Generation Settings</h3>
             <div className="space-y-4">
               {/* Prompt */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">
+                <label className="block text-sm text-muted-foreground mb-2">
                   {mode === 'img2img' ? 'Transformation Prompt' : 'Prompt'}
                 </label>
                 <textarea
@@ -582,11 +582,11 @@ export function ImageGenerator() {
               </div>
 
               {/* AI Enhancement Controls */}
-              <div className="bg-gray-800/30 rounded-lg p-4 space-y-3">
+              <div className="bg-card/30 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CpuChipIcon className="h-4 w-4 text-purple-400" />
-                    <span className="text-sm text-gray-300">AI Enhancement</span>
+                    <span className="text-sm text-muted-foreground">AI Enhancement</span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -602,11 +602,11 @@ export function ImageGenerator() {
                 {enhancePrompt && (
                   <>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-400">Level:</label>
+                      <label className="text-xs text-muted-foreground">Level:</label>
                       <select
                         value={enhancementLevel}
                         onChange={(e) => setEnhancementLevel(e.target.value as any)}
-                        className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-foreground text-sm"
                       >
                         <option value="basic">Basic</option>
                         <option value="advanced">Advanced</option>
@@ -622,7 +622,7 @@ export function ImageGenerator() {
                         onChange={(e) => setUseMemory(e.target.checked)}
                         className="rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
                       />
-                      <label htmlFor="useMemory" className="text-xs text-gray-400">
+                      <label htmlFor="useMemory" className="text-xs text-muted-foreground">
                         Use memory context for consistency
                       </label>
                     </div>
@@ -633,7 +633,7 @@ export function ImageGenerator() {
               {/* Image-to-Image Strength Slider (only show in img2img mode) */}
               {mode === 'img2img' && img2imgFile && (
                 <div className="p-4 bg-primary-500/10 border border-primary-500/30 rounded-lg">
-                  <label className="block text-sm text-gray-300 mb-2">
+                  <label className="block text-sm text-muted-foreground mb-2">
                     Transformation Strength: {img2imgStrength.toFixed(1)}
                   </label>
                   <input
@@ -645,12 +645,12 @@ export function ImageGenerator() {
                     onChange={(e) => setImg2imgStrength(parseFloat(e.target.value))}
                     className="w-full accent-primary-500 mb-2"
                   />
-                  <div className="flex justify-between text-xs text-gray-500 mb-2">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-2">
                     <span>Subtle</span>
                     <span>Balanced</span>
                     <span>Dramatic</span>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {img2imgStrength <= 0.4 && "Subtle changes - Keeps original structure, minor style tweaks"}
                     {img2imgStrength > 0.4 && img2imgStrength <= 0.7 && "Moderate changes - Good balance, can add/modify objects"}
                     {img2imgStrength > 0.7 && img2imgStrength <= 0.9 && "Strong changes - Major transformations, can completely reimagine scene"}
@@ -662,8 +662,8 @@ export function ImageGenerator() {
               {/* Style Selection */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm text-gray-400">Style ({availableStyles.length} available)</label>
-                  {stylesLoading && <span className="text-xs text-gray-500">Loading styles...</span>}
+                  <label className="text-sm text-muted-foreground">Style ({availableStyles.length} available)</label>
+                  {stylesLoading && <span className="text-xs text-muted-foreground">Loading styles...</span>}
                 </div>
                 
                 {/* Category Filter */}
@@ -674,8 +674,8 @@ export function ImageGenerator() {
                       onClick={() => setSelectedCategory(cat)}
                       className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-all ${
                         selectedCategory === cat
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-dark-800 text-gray-400 hover:bg-dark-700'
+                          ? 'bg-primary-500 text-foreground'
+                          : 'bg-card text-muted-foreground hover:bg-dark-700'
                       }`}
                     >
                       {cat === 'all' ? `All (${availableStyles.length})` : `${cat} (${availableStyles.filter(s => s.category === cat).length})`}
@@ -686,7 +686,7 @@ export function ImageGenerator() {
                 {/* Popular Styles (Quick Access) */}
                 {popularStyles.length > 0 && selectedCategory === 'all' && (
                   <div className="mb-3">
-                    <div className="text-xs text-gray-500 mb-2">⭐ Popular Styles</div>
+                    <div className="text-xs text-muted-foreground mb-2">⭐ Popular Styles</div>
                     <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                       {popularStyles.map((style) => (
                         <button
@@ -695,7 +695,7 @@ export function ImageGenerator() {
                           className={`p-2 rounded-lg border text-center transition-all duration-200 ${
                             params.style === style.id
                               ? 'border-primary-500 bg-primary-500/10 text-primary-300'
-                              : 'border-dark-700 hover:border-dark-600 hover:bg-white/5 text-gray-400'
+                              : 'border-border hover:border-dark-600 hover:bg-white/5 text-muted-foreground'
                           }`}
                         >
                           <div className="text-xs font-medium">{style.emoji} {style.name.substring(0, 15)}</div>
@@ -715,7 +715,7 @@ export function ImageGenerator() {
                         className={`p-3 rounded-lg border text-left transition-all duration-200 ${
                           params.style === style.id
                             ? 'border-primary-500 bg-primary-500/10 text-primary-300'
-                            : 'border-dark-700 hover:border-dark-600 hover:bg-white/5 text-gray-400'
+                            : 'border-border hover:border-dark-600 hover:bg-white/5 text-muted-foreground'
                         }`}
                       >
                         <div className="font-medium text-sm">
@@ -732,7 +732,7 @@ export function ImageGenerator() {
 
               {/* Resolution */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Resolution (SD3 Optimized)</label>
+                <label className="block text-sm text-muted-foreground mb-2">Resolution (SD3 Optimized)</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {resolutions.filter(r => r.popular).map((res) => {
                     const isSelected = params.width === res.width && params.height === res.height;
@@ -743,7 +743,7 @@ export function ImageGenerator() {
                         className={`p-3 rounded-lg border text-left transition-all duration-200 ${
                           isSelected
                             ? 'border-primary-500 bg-primary-500/10 text-primary-300'
-                            : 'border-dark-700 hover:border-dark-600 hover:bg-white/5 text-gray-400'
+                            : 'border-border hover:border-dark-600 hover:bg-white/5 text-muted-foreground'
                         }`}
                       >
                         <div className="text-sm font-medium">{res.label}</div>
@@ -756,7 +756,7 @@ export function ImageGenerator() {
                 
                 {/* Show more resolutions toggle */}
                 <details className="mt-2">
-                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">Show more resolutions...</summary>
+                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-muted-foreground">Show more resolutions...</summary>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
                     {resolutions.filter(r => !r.popular).map((res) => {
                       const isSelected = params.width === res.width && params.height === res.height;
@@ -767,7 +767,7 @@ export function ImageGenerator() {
                           className={`p-3 rounded-lg border text-left transition-all duration-200 ${
                             isSelected
                               ? 'border-primary-500 bg-primary-500/10 text-primary-300'
-                              : 'border-dark-700 hover:border-dark-600 hover:bg-white/5 text-gray-400'
+                              : 'border-border hover:border-dark-600 hover:bg-white/5 text-muted-foreground'
                           }`}
                         >
                           <div className="text-sm font-medium">{res.label}</div>
@@ -783,7 +783,7 @@ export function ImageGenerator() {
               {/* Batch Size */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
+                  <label className="block text-sm text-muted-foreground mb-2">
                     {mode === 'img2img' ? 'Batch (disabled for img2img)' : 'Batch Size'}
                   </label>
                   <select 
@@ -801,7 +801,7 @@ export function ImageGenerator() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Model</label>
+                  <label className="block text-sm text-muted-foreground mb-2">Model</label>
                   <select 
                     className="input"
                     value={params.model}
@@ -817,16 +817,16 @@ export function ImageGenerator() {
               {/* Advanced Settings */}
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <AdjustmentsHorizontalIcon className="h-4 w-4" />
                 Advanced Settings
               </button>
 
               {showAdvanced && (
-                <div className="space-y-4 p-4 bg-dark-900/50 rounded-lg border border-dark-700">
+                <div className="space-y-4 p-4 bg-background/50 rounded-lg border border-border">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">
+                    <label className="block text-sm text-muted-foreground mb-2">
                       CFG Scale: {params.cfg_scale}
                     </label>
                     <input
@@ -838,14 +838,14 @@ export function ImageGenerator() {
                       onChange={(e) => setParams({ ...params, cfg_scale: parseFloat(e.target.value) })}
                       className="w-full"
                     />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
                       <span>Creative</span>
                       <span>Precise</span>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">
+                    <label className="block text-sm text-muted-foreground mb-2">
                       Steps: {params.steps}
                     </label>
                     <input
@@ -857,14 +857,14 @@ export function ImageGenerator() {
                       onChange={(e) => setParams({ ...params, steps: parseInt(e.target.value) })}
                       className="w-full"
                     />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
                       <span>Fast</span>
                       <span>Quality</span>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Negative Prompt</label>
+                    <label className="block text-sm text-muted-foreground mb-2">Negative Prompt</label>
                     <textarea
                       className="input min-h-[60px]"
                       placeholder="What to avoid in the image..."
@@ -874,7 +874,7 @@ export function ImageGenerator() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Seed (optional)</label>
+                    <label className="block text-sm text-muted-foreground mb-2">Seed (optional)</label>
                     <input
                       type="number"
                       className="input"
@@ -924,16 +924,16 @@ export function ImageGenerator() {
         <div className="space-y-6">
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Generated Images</h3>
+              <h3 className="text-lg font-semibold text-foreground">Generated Images</h3>
               {generatedImages.length > 0 && (
-                <span className="text-sm text-gray-400">{generatedImages.length} images</span>
+                <span className="text-sm text-muted-foreground">{generatedImages.length} images</span>
               )}
             </div>
             
             {isGenerating ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
-                <span className="ml-3 text-gray-400">Generating images...</span>
+                <span className="ml-3 text-muted-foreground">Generating images...</span>
               </div>
             ) : generatedImages.length > 0 ? (
               <div className="space-y-4">
@@ -949,7 +949,7 @@ export function ImageGenerator() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-muted-foreground">
                 <PhotoIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
                 <p>Generated images will appear here</p>
               </div>
@@ -961,14 +961,14 @@ export function ImageGenerator() {
       {/* Gallery Modal */}
       {showGalleryModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 max-w-4xl w-full max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-dark-700">
-              <h3 className="text-lg font-semibold text-white">Select Image from Gallery</h3>
+          <div className="bg-card rounded-xl border border-border max-w-4xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">Select Image from Gallery</h3>
               <button
                 onClick={() => setShowGalleryModal(false)}
                 className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
               >
-                <XMarkIcon className="h-5 w-5 text-gray-400" />
+                <XMarkIcon className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
             
@@ -976,7 +976,7 @@ export function ImageGenerator() {
               {loadingGallery ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-                  <span className="ml-3 text-gray-400">Loading gallery...</span>
+                  <span className="ml-3 text-muted-foreground">Loading gallery...</span>
                 </div>
               ) : galleryImages.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -984,7 +984,7 @@ export function ImageGenerator() {
                     <button
                       key={image.id || index}
                       onClick={() => handleSelectGalleryImage(image)}
-                      className="relative group aspect-square overflow-hidden rounded-lg border-2 border-dark-700 hover:border-primary-500 transition-colors"
+                      className="relative group aspect-square overflow-hidden rounded-lg border-2 border-border hover:border-primary-500 transition-colors"
                     >
                       <img
                         src={(() => {
@@ -1002,11 +1002,11 @@ export function ImageGenerator() {
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <PhotoIcon className="h-6 w-6 text-white" />
+                          <PhotoIcon className="h-6 w-6 text-foreground" />
                         </div>
                       </div>
                       {(image.title || image.prompt) && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate">
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-foreground text-xs p-1 truncate">
                           {image.title || image.prompt}
                         </div>
                       )}
@@ -1014,7 +1014,7 @@ export function ImageGenerator() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <PhotoIcon className="h-16 w-16 mx-auto mb-4 text-gray-600" />
                   <p>No images found in gallery</p>
                 </div>

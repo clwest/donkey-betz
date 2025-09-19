@@ -33,7 +33,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { agentOrchestraService } from '../../services/agent-orchestra.service';
-import '../../styles/gaming-theme.css';
 
 interface AgentExecution {
   id: string;
@@ -190,13 +189,13 @@ ${execution.result.output}
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'running':
-        return <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />;
+        return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
       case 'failed':
-        return <XCircle className="w-4 h-4 text-red-400" />;
+        return <XCircle className="w-4 h-4 text-red-500" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+        return <Clock className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -209,7 +208,7 @@ ${execution.result.output}
       case 'failed':
         return 'border-red-500/30 bg-red-900/10';
       default:
-        return 'border-gray-500/30 bg-gray-900/10';
+        return 'border-gray-500/30 bg-background/10';
     }
   };
 
@@ -217,8 +216,8 @@ ${execution.result.output}
     return (
       <div className="space-y-3">
         {Object.entries(toolResults).map(([tool, data]) => (
-          <div key={tool} className="border border-gaming-border/50 rounded-lg p-3">
-            <h5 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+          <div key={tool} className="border border-bg-card/50 rounded-lg p-3">
+            <h5 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
               <Calculator className="w-4 h-4 text-cyan-400" />
               {tool.replace(/_/g, ' ').toUpperCase()}
             </h5>
@@ -226,20 +225,20 @@ ${execution.result.output}
             {tool === 'kelly_calculation' && data && (
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-gray-500">Recommended Bet:</span>
-                  <span className="ml-2 text-green-400 font-bold">
+                  <span className="text-muted-foreground">Recommended Bet:</span>
+                  <span className="ml-2 text-green-500 font-bold">
                     ${data.recommended_bet?.toFixed(2) || '0.00'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Kelly %:</span>
-                  <span className="ml-2 text-yellow-400">
+                  <span className="text-muted-foreground">Kelly %:</span>
+                  <span className="ml-2 text-yellow-500">
                     {data.adjusted_kelly?.toFixed(2) || '0.00'}%
                   </span>
                 </div>
                 {data.edge && (
                   <div>
-                    <span className="text-gray-500">Edge:</span>
+                    <span className="text-muted-foreground">Edge:</span>
                     <span className="ml-2 text-cyan-400">
                       {(data.edge * 100).toFixed(2)}%
                     </span>
@@ -250,8 +249,8 @@ ${execution.result.output}
             
             {tool === 'implied_probability' && data && (
               <div className="text-sm">
-                <span className="text-gray-500">Probability:</span>
-                <span className="ml-2 text-blue-400 font-bold">
+                <span className="text-muted-foreground">Probability:</span>
+                <span className="ml-2 text-blue-500 font-bold">
                   {data.percentage || 'N/A'}
                 </span>
               </div>
@@ -260,14 +259,14 @@ ${execution.result.output}
             {tool === 'expected_value' && data && (
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-gray-500">EV:</span>
-                  <span className={`ml-2 font-bold ${data.expected_value > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span className="text-muted-foreground">EV:</span>
+                  <span className={`ml-2 font-bold ${data.expected_value > 0 ? 'text-green-500' : 'text-red-500'}`}>
                     ${data.expected_value?.toFixed(2) || '0.00'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">ROI:</span>
-                  <span className="ml-2 text-yellow-400">
+                  <span className="text-muted-foreground">ROI:</span>
+                  <span className="ml-2 text-yellow-500">
                     {data.roi_percentage?.toFixed(2) || '0.00'}%
                   </span>
                 </div>
@@ -275,7 +274,7 @@ ${execution.result.output}
             )}
             
             {!['kelly_calculation', 'implied_probability', 'expected_value'].includes(tool) && (
-              <pre className="text-xs text-gray-400 overflow-x-auto">
+              <pre className="text-xs text-muted-foreground overflow-x-auto">
                 {JSON.stringify(data, null, 2)}
               </pre>
             )}
@@ -301,14 +300,14 @@ ${execution.result.output}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             {getStatusIcon(execution.status)}
-            <h4 className="text-lg font-bold text-gray-200">
+            <h4 className="text-lg font-bold text-foreground">
               {execution.template_name}
             </h4>
             <Badge variant="outline" className="text-xs">
               {execution.status}
             </Badge>
             {execution.execution_time_seconds && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {execution.execution_time_seconds.toFixed(2)}s
               </span>
             )}
@@ -345,13 +344,13 @@ ${execution.result.output}
         </div>
         
         {/* Task Description */}
-        <p className="text-sm text-gray-400 mb-3">
+        <p className="text-sm text-muted-foreground mb-3">
           {execution.task_description}
         </p>
         
         {/* Main Result */}
         <div className="bg-black/30 rounded-lg p-3 mb-3">
-          <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+          <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-mono">
             {displayText}
             {!isExpanded && needsExpansion && '...'}
           </pre>
@@ -360,8 +359,8 @@ ${execution.result.output}
         {/* Tool Results */}
         {execution.result?.tool_results && Object.keys(execution.result.tool_results).length > 0 && (
           <div className="mt-3">
-            <h5 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-yellow-400" />
+            <h5 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-500" />
               Tool Calculations
             </h5>
             {renderToolResults(execution.result.tool_results)}
@@ -371,7 +370,7 @@ ${execution.result.output}
         {/* Tools Used */}
         {execution.result?.tools_used && execution.result.tools_used.length > 0 && (
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs text-gray-500">Tools used:</span>
+            <span className="text-xs text-muted-foreground">Tools used:</span>
             {execution.result.tools_used.map(tool => (
               <Badge key={tool} variant="outline" className="text-xs">
                 {tool}
@@ -383,7 +382,7 @@ ${execution.result.output}
         {/* Error Message */}
         {execution.error_message && (
           <div className="mt-3 p-2 bg-red-900/20 border border-red-500/30 rounded">
-            <p className="text-sm text-red-400">{execution.error_message}</p>
+            <p className="text-sm text-red-500">{execution.error_message}</p>
           </div>
         )}
       </div>
@@ -391,15 +390,15 @@ ${execution.result.output}
   };
 
   return (
-    <Card className={`gaming-card ${className}`}>
-      <div className="gaming-border-glow"></div>
+    <Card className={`bg-card ${className}`}>
+      <div className="bg-card"></div>
       
       {/* Header */}
-      <div className="p-6 border-b border-gaming-border">
+      <div className="p-6 border-b border-bg-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FileText className="w-6 h-6 text-cyan-400" />
-            <h2 className="text-2xl font-bold gaming-text-primary">Agent Analysis Reports</h2>
+            <h2 className="text-2xl font-bold bg-card">Agent Analysis Reports</h2>
             <Badge variant="outline" className="text-sm">
               {executions.length} reports
             </Badge>
@@ -442,7 +441,7 @@ ${execution.result.output}
               variant="outline"
               size="sm"
               onClick={fetchExecutions}
-              className="gaming-btn"
+              className="bg-card"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
@@ -452,17 +451,17 @@ ${execution.result.output}
       </div>
       
       {/* Results List */}
-      <div className="p-6 max-h-[800px] overflow-y-auto gaming-scrollbar">
+      <div className="p-6 max-h-[800px] overflow-y-auto bg-card">
         {loading ? (
           <div className="text-center py-12">
             <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading agent reports...</p>
+            <p className="text-muted-foreground">Loading agent reports...</p>
           </div>
         ) : executions.length === 0 ? (
           <div className="text-center py-12">
             <Bot className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No agent reports available</p>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-muted-foreground">No agent reports available</p>
+            <p className="text-sm text-muted-foreground mt-2">
               Deploy agents to see their analysis results here
             </p>
           </div>

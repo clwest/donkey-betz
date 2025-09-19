@@ -124,28 +124,28 @@ export default function AgentOrchestrationPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8" style={{ backgroundColor: 'var(--gaming-bg-primary)' }}>
+    <div className="container mx-auto px-4 py-8" style={{ backgroundColor: 'hsl(var(--muted))' }}>
       {/* Page Header - Cyberpunk Style */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="relative">
             <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 rounded-lg blur opacity-30"></div>
             <div className="relative">
-              <h1 className="text-4xl font-black text-white flex items-center uppercase tracking-wider" 
+              <h1 className="text-4xl font-black text-foreground flex items-center uppercase tracking-wider" 
                   style={{ 
                     fontFamily: 'var(--font-mono)',
                     textShadow: '0 0 20px rgba(0, 255, 255, 0.5)',
-                    color: 'var(--gaming-neon-cyan)'
+                    color: 'hsl(var(--muted))'
                   }}>
-                <CpuChipIcon className="h-10 w-10 mr-4" style={{ color: 'var(--gaming-neon-cyan)', filter: 'drop-shadow(0 0 10px rgba(0, 255, 255, 0.8))' }} />
+                <CpuChipIcon className="h-10 w-10 mr-4" style={{ color: 'hsl(var(--muted))', filter: 'drop-shadow(0 0 10px rgba(0, 255, 255, 0.8))' }} />
                 Agent Orchestra
               </h1>
               <p className="mt-3 text-lg font-semibold" 
                  style={{ 
-                   color: 'var(--gaming-text-secondary)',
+                   color: 'hsl(var(--muted))',
                    textShadow: '0 0 10px rgba(157, 78, 221, 0.3)'
                  }}>
-                <span style={{ color: 'var(--gaming-neon-purple)' }}>CYBERPUNK</span> AI Command Center
+                <span style={{ color: 'hsl(var(--muted))' }}>CYBERPUNK</span> AI Command Center
               </p>
             </div>
           </div>
@@ -156,18 +156,18 @@ export default function AgentOrchestrationPage() {
             <Button
               onClick={runConnectivityTest}
               disabled={testing}
-              className="relative bg-gray-900 border-2 border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 hover:shadow-cyan-400/50 transition-all duration-300 font-bold uppercase tracking-wider"
+              className="relative bg-background border-2 border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 hover:shadow-cyan-400/50 transition-all duration-300 font-bold uppercase tracking-wider"
               style={{
                 boxShadow: testing ? '0 0 20px rgba(0, 255, 255, 0.5)' : '0 0 10px rgba(0, 255, 255, 0.2)',
-                background: 'var(--gaming-bg-secondary)',
-                borderColor: 'var(--gaming-neon-cyan)',
-                color: 'var(--gaming-neon-cyan)'
+                background: 'hsl(var(--muted))',
+                borderColor: 'hsl(var(--muted))',
+                color: 'hsl(var(--muted))'
               }}
               icon={testing ? 
-                <div className="animate-spin" style={{ color: 'var(--gaming-neon-cyan)' }}>
+                <div className="animate-spin" style={{ color: 'hsl(var(--muted))' }}>
                   <LoadingSpinner size="sm" />
                 </div> : 
-                <ChartBarIcon className="h-4 w-4" style={{ color: 'var(--gaming-neon-cyan)' }} />
+                <ChartBarIcon className="h-4 w-4" style={{ color: 'hsl(var(--muted))' }} />
               }
             >
               {testing ? 'SCANNING...' : 'SYSTEM SCAN'}
@@ -179,23 +179,23 @@ export default function AgentOrchestrationPage() {
       {/* System Status Dashboard - Cyberpunk Command Center */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Agents Status - Gaming Card */}
-        <div className="gaming-card relative overflow-hidden group">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card relative overflow-hidden group">
+          <div className="bg-card"></div>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-cyan-500 opacity-60"></div>
           <div className="flex items-center">
             <div className="relative">
               <CpuChipIcon className="h-10 w-10" style={{ 
-                color: 'var(--gaming-neon-cyan)',
+                color: 'hsl(var(--muted))',
                 filter: 'drop-shadow(0 0 10px rgba(0, 255, 255, 0.7))'
               }} />
               <div className="absolute inset-0 rounded-full bg-cyan-400/20 animate-ping"></div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
                 AI AGENTS
               </p>
               <p className="text-3xl font-black" style={{ 
-                color: 'var(--gaming-neon-cyan)',
+                color: 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)',
                 textShadow: '0 0 15px rgba(0, 255, 255, 0.5)'
               }}>
@@ -209,7 +209,7 @@ export default function AgentOrchestrationPage() {
           </div>
           {agentsError && (
             <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-xs font-semibold" style={{ color: 'var(--gaming-neon-pink)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'hsl(var(--muted))' }}>
                 <ExclamationTriangleIcon className="h-3 w-3 inline mr-1" />
                 {agentsError}
               </p>
@@ -218,13 +218,13 @@ export default function AgentOrchestrationPage() {
         </div>
 
         {/* Running Tasks - Gaming Card with Pulse */}
-        <div className="gaming-card relative overflow-hidden group">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card relative overflow-hidden group">
+          <div className="bg-card"></div>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 via-yellow-400 to-green-400 opacity-60 animate-pulse"></div>
           <div className="flex items-center">
             <div className="relative">
               <BoltIcon className="h-10 w-10" style={{ 
-                color: 'var(--gaming-neon-green)',
+                color: 'hsl(var(--muted))',
                 filter: 'drop-shadow(0 0 10px rgba(57, 255, 20, 0.7))'
               }} />
               {runningInstances.length > 0 && (
@@ -232,11 +232,11 @@ export default function AgentOrchestrationPage() {
               )}
             </div>
             <div className="ml-4">
-              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
                 ACTIVE TASKS
               </p>
               <p className="text-3xl font-black" style={{ 
-                color: 'var(--gaming-neon-green)',
+                color: 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)',
                 textShadow: '0 0 15px rgba(57, 255, 20, 0.5)'
               }}>
@@ -245,18 +245,18 @@ export default function AgentOrchestrationPage() {
             </div>
           </div>
           <div className="mt-3 flex space-x-4 text-xs font-semibold">
-            <span style={{ color: 'var(--gaming-neon-green)' }}>
+            <span style={{ color: 'hsl(var(--muted))' }}>
               ✓ {completedInstances.length} COMPLETE
             </span>
-            <span style={{ color: 'var(--gaming-neon-pink)' }}>
+            <span style={{ color: 'hsl(var(--muted))' }}>
               ✗ {failedInstances.length} FAILED
             </span>
           </div>
         </div>
 
         {/* WebSocket Status - Gaming Card with Connection Animation */}
-        <div className="gaming-card relative overflow-hidden group">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card relative overflow-hidden group">
+          <div className="bg-card"></div>
           <div className={`absolute top-0 left-0 w-full h-1 ${
             wsConnected 
               ? 'bg-gradient-to-r from-green-400 to-cyan-400 animate-pulse' 
@@ -277,11 +277,11 @@ export default function AgentOrchestrationPage() {
               }} />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
                 NEURAL LINK
               </p>
               <p className="text-lg font-black uppercase" style={{ 
-                color: wsConnected ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-pink)',
+                color: wsConnected ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)',
                 textShadow: wsConnected 
                   ? '0 0 10px rgba(57, 255, 20, 0.5)'
@@ -297,9 +297,9 @@ export default function AgentOrchestrationPage() {
                 onClick={connectWebSocket}
                 className="text-xs font-bold uppercase tracking-wider py-1 px-3"
                 style={{
-                  background: 'var(--gaming-bg-elevated)',
-                  borderColor: 'var(--gaming-neon-pink)',
-                  color: 'var(--gaming-neon-pink)',
+                  background: 'hsl(var(--muted))',
+                  borderColor: 'hsl(var(--muted))',
+                  color: 'hsl(var(--muted))',
                   boxShadow: '0 0 10px rgba(255, 20, 147, 0.3)'
                 }}
               >
@@ -310,8 +310,8 @@ export default function AgentOrchestrationPage() {
         </div>
 
         {/* System Health - Gaming Card */}
-        <div className="gaming-card relative overflow-hidden group">
-          <div className="gaming-border-glow"></div>
+        <div className="bg-card relative overflow-hidden group">
+          <div className="bg-card"></div>
           <div className={`absolute top-0 left-0 w-full h-1 ${
             healthStatus?.status === 'healthy'
               ? 'bg-gradient-to-r from-green-400 to-cyan-400'
@@ -321,12 +321,12 @@ export default function AgentOrchestrationPage() {
             <div className="relative">
               {healthStatus?.status === 'healthy' ? (
                 <CheckCircleIcon className="h-10 w-10" style={{ 
-                  color: 'var(--gaming-neon-green)',
+                  color: 'hsl(var(--muted))',
                   filter: 'drop-shadow(0 0 10px rgba(57, 255, 20, 0.7))'
                 }} />
               ) : (
                 <ExclamationTriangleIcon className="h-10 w-10" style={{ 
-                  color: 'var(--gaming-neon-pink)',
+                  color: 'hsl(var(--muted))',
                   filter: 'drop-shadow(0 0 10px rgba(255, 20, 147, 0.7))'
                 }} />
               )}
@@ -335,11 +335,11 @@ export default function AgentOrchestrationPage() {
               )}
             </div>
             <div className="ml-4">
-              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--gaming-text-secondary)' }}>
+              <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--muted))' }}>
                 SYSTEM STATUS
               </p>
               <p className="text-lg font-black uppercase" style={{ 
-                color: healthStatus?.status === 'healthy' ? 'var(--gaming-neon-green)' : 'var(--gaming-neon-pink)',
+                color: healthStatus?.status === 'healthy' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                 fontFamily: 'var(--font-mono)',
                 textShadow: healthStatus?.status === 'healthy'
                   ? '0 0 10px rgba(57, 255, 20, 0.5)'
@@ -351,7 +351,7 @@ export default function AgentOrchestrationPage() {
           </div>
           {healthStatus?.version && (
             <div className="mt-3">
-              <p className="text-xs font-semibold" style={{ color: 'var(--gaming-text-muted)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'hsl(var(--muted))' }}>
                 VERSION {healthStatus.version}
               </p>
             </div>
@@ -366,17 +366,17 @@ export default function AgentOrchestrationPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="gaming-card relative overflow-hidden">
-            <div className="gaming-border-glow"></div>
+          <div className="bg-card relative overflow-hidden">
+            <div className="bg-card"></div>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-cyan-500 to-purple-500 opacity-60 animate-pulse"></div>
             
             <h3 className="text-xl font-black uppercase tracking-wider mb-6 flex items-center" style={{
-              color: 'var(--gaming-neon-purple)',
+              color: 'hsl(var(--muted))',
               fontFamily: 'var(--font-mono)',
               textShadow: '0 0 15px rgba(157, 78, 221, 0.5)'
             }}>
               <InformationCircleIcon className="h-6 w-6 mr-3" style={{ 
-                color: 'var(--gaming-neon-purple)',
+                color: 'hsl(var(--muted))',
                 filter: 'drop-shadow(0 0 10px rgba(157, 78, 221, 0.7))'
               }} />
               SYSTEM DIAGNOSTICS
@@ -390,10 +390,10 @@ export default function AgentOrchestrationPage() {
                 
                 return (
                   <div key={key} className="relative p-4 rounded-lg border transition-all duration-300 hover:transform hover:scale-105" style={{
-                    background: 'var(--gaming-bg-elevated)',
-                    borderColor: isSuccess ? 'var(--gaming-neon-green)' : 
-                                isWarning ? 'var(--gaming-neon-orange)' : 
-                                isError ? 'var(--gaming-neon-pink)' : 'var(--gaming-border)',
+                    background: 'hsl(var(--muted))',
+                    borderColor: isSuccess ? 'hsl(var(--muted))' : 
+                                isWarning ? 'hsl(var(--muted))' : 
+                                isError ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                     boxShadow: isSuccess ? '0 0 10px rgba(57, 255, 20, 0.2)' :
                               isWarning ? '0 0 10px rgba(255, 107, 0, 0.2)' :
                               isError ? '0 0 10px rgba(255, 20, 147, 0.2)' : 'none'
@@ -413,14 +413,14 @@ export default function AgentOrchestrationPage() {
                     
                     <div className="flex flex-col gap-2">
                       <span className="text-sm font-bold uppercase tracking-wider" style={{ 
-                        color: 'var(--gaming-text-secondary)'
+                        color: 'hsl(var(--muted))'
                       }}>
                         {key.replace(/([A-Z])/g, ' $1').trim()}
                       </span>
                       <span className="text-sm font-semibold" style={{ 
-                        color: isSuccess ? 'var(--gaming-neon-green)' : 
-                              isWarning ? 'var(--gaming-neon-orange)' : 
-                              isError ? 'var(--gaming-neon-pink)' : 'var(--gaming-text-primary)',
+                        color: isSuccess ? 'hsl(var(--muted))' : 
+                              isWarning ? 'hsl(var(--muted))' : 
+                              isError ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
                         fontFamily: 'var(--font-mono)'
                       }}>
                         {value}

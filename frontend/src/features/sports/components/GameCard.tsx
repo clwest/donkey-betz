@@ -104,12 +104,12 @@ export function GameCard({ game, params, className }: GameCardProps) {
         className={`glass rounded-lg p-4 border transition-all duration-200 ${
           isPositiveEV 
             ? 'border-green-500/30 bg-green-500/5 hover:border-green-500/50' 
-            : 'border-gray-600/30 bg-gray-800/20 hover:border-gray-500/50'
+            : 'border-gray-600/30 bg-card/20 hover:border-gray-500/50'
         }`}
       >
         {/* Team Name */}
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-medium text-white text-sm">
+          <h4 className="font-medium text-foreground text-sm">
             {line.team}
           </h4>
           {line.side === 'home' && (
@@ -122,14 +122,14 @@ export function GameCard({ game, params, className }: GameCardProps) {
         {/* Odds and Probability Row */}
         <div className="space-y-2 mb-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">American Odds</span>
-            <span className="font-semibold text-white">
+            <span className="text-xs text-muted-foreground">American Odds</span>
+            <span className="font-semibold text-foreground">
               {formatAmericanOdds(line.odds_american)}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">Implied Prob</span>
-            <span className="text-sm text-gray-300">
+            <span className="text-xs text-muted-foreground">Implied Prob</span>
+            <span className="text-sm text-muted-foreground">
               {formatPercentage(line.implied_probability)}
             </span>
           </div>
@@ -139,14 +139,14 @@ export function GameCard({ game, params, className }: GameCardProps) {
         {line.loading && (
           <div className="flex items-center justify-center py-4">
             <LoadingSpinner size="sm" />
-            <span className="text-xs text-gray-400 ml-2">Calculating...</span>
+            <span className="text-xs text-muted-foreground ml-2">Calculating...</span>
           </div>
         )}
 
         {line.error && !line.loading && (
           <div className="flex items-center py-2">
-            <ExclamationTriangleIcon className="w-4 h-4 text-red-400 mr-2" />
-            <span className="text-xs text-red-400">{line.error}</span>
+            <ExclamationTriangleIcon className="w-4 h-4 text-red-500 mr-2" />
+            <span className="text-xs text-red-500">{line.error}</span>
           </div>
         )}
 
@@ -154,7 +154,7 @@ export function GameCard({ game, params, className }: GameCardProps) {
           <div className="space-y-2">
             {/* Edge/EV */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">Edge (EV)</span>
+              <span className="text-xs text-muted-foreground">Edge (EV)</span>
               <Badge 
                 variant={isPositiveEV ? 'success' : 'error'} 
                 size="sm"
@@ -166,18 +166,18 @@ export function GameCard({ game, params, className }: GameCardProps) {
 
             {/* Kelly Percentage */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">Kelly %</span>
-              <span className="text-sm text-gray-300">
+              <span className="text-xs text-muted-foreground">Kelly %</span>
+              <span className="text-sm text-muted-foreground">
                 {formatPercentage(line.kelly_percentage)}
               </span>
             </div>
 
             {/* Recommended Stake */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">Stake</span>
+              <span className="text-xs text-muted-foreground">Stake</span>
               <div className="flex items-center gap-2">
                 <span className={`text-sm font-medium ${
-                  shouldBet ? 'text-green-400' : 'text-gray-500'
+                  shouldBet ? 'text-green-500' : 'text-muted-foreground'
                 }`}>
                   {formatCurrency(line.recommended_stake || 0)}
                 </span>
@@ -192,12 +192,12 @@ export function GameCard({ game, params, className }: GameCardProps) {
             {/* Action Recommendation */}
             <div className="pt-2 border-t border-dark-600">
               {shouldBet ? (
-                <div className="flex items-center text-green-400 text-xs">
+                <div className="flex items-center text-green-500 text-xs">
                   <CheckCircleIcon className="w-4 h-4 mr-1" />
                   <span className="font-medium">RECOMMENDED</span>
                 </div>
               ) : (
-                <div className="flex items-center text-gray-500 text-xs">
+                <div className="flex items-center text-muted-foreground text-xs">
                   <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
                   <span>NO BET</span>
                 </div>
@@ -226,10 +226,10 @@ export function GameCard({ game, params, className }: GameCardProps) {
         {/* Game Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-white mb-1">
+            <h3 className="text-lg font-semibold text-foreground mb-1">
               {game.away_team} @ {game.home_team}
             </h3>
-            <div className="flex items-center gap-3 text-sm text-gray-400">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="flex items-center">
                 <ClockIcon className="w-4 h-4 mr-1" />
                 {formatGameTime(game.game_date)}
@@ -250,7 +250,7 @@ export function GameCard({ game, params, className }: GameCardProps) {
         {/* Moneyline Tiles */}
         {moneylines.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-gray-300 mb-3">Moneylines</h4>
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Moneylines</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {moneylines.map(renderMoneylineTile)}
             </div>
@@ -259,7 +259,7 @@ export function GameCard({ game, params, className }: GameCardProps) {
 
         {/* No Lines Available */}
         {moneylines.length === 0 && (
-          <div className="text-center py-4 text-gray-500">
+          <div className="text-center py-4 text-muted-foreground">
             <ExclamationTriangleIcon className="w-6 h-6 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No moneyline yet.</p>
           </div>

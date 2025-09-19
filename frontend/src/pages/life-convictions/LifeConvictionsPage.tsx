@@ -77,14 +77,14 @@ export function LifeConvictionsPage() {
       case 'strong': return 'bg-blue-500';
       case 'developing': return 'bg-green-500';
       case 'questioning': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 
   return (
     <div className="container mx-auto p-6 space-y-8">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg p-8 text-white">
+      <div className="relative bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg p-8 text-foreground">
         <div className="flex items-center gap-4 mb-4">
           <Mountain className="h-12 w-12" />
           <div>

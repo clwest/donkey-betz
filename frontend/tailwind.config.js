@@ -8,76 +8,40 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Design token integration
+        // shadcn/ui color tokens
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          50: 'var(--primary-50)',
-          100: 'var(--primary-100)',
-          200: 'var(--primary-200)',
-          300: 'var(--primary-300)',
-          400: 'var(--primary-400)',
-          500: 'var(--primary-500)',
-          600: 'var(--primary-600)',
-          700: 'var(--primary-700)',
-          800: 'var(--primary-800)',
-          900: 'var(--primary-900)',
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
-        // Background colors
-        'bg-primary': 'var(--bg-primary)',
-        'bg-secondary': 'var(--bg-secondary)',
-        'bg-tertiary': 'var(--bg-tertiary)',
-        'bg-elevated': 'var(--bg-elevated)',
-        'bg-overlay': 'var(--bg-overlay)',
-        // Text colors
-        'text-primary': 'var(--text-primary)',
-        'text-secondary': 'var(--text-secondary)',
-        'text-muted': 'var(--text-muted)',
-        'text-disabled': 'var(--text-disabled)',
-        'text-inverse': 'var(--text-inverse)',
-        // Border colors
-        'border-primary': 'var(--border-primary)',
-        'border-secondary': 'var(--border-secondary)',
-        'border-tertiary': 'var(--border-tertiary)',
-        'border-focus': 'var(--border-focus)',
-        // Status colors
-        'status-success': 'var(--status-success)',
-        'status-warning': 'var(--status-warning)',
-        'status-error': 'var(--status-error)',
-        'status-info': 'var(--status-info)',
-        // Accent colors
-        'accent-cyan': {
-          400: 'var(--accent-cyan-400)',
-          500: 'var(--accent-cyan-500)',
-          600: 'var(--accent-cyan-600)',
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
-        'accent-emerald': {
-          400: 'var(--accent-emerald-400)',
-          500: 'var(--accent-emerald-500)',
-          600: 'var(--accent-emerald-600)',
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        'accent-rose': {
-          400: 'var(--accent-rose-400)',
-          500: 'var(--accent-rose-500)',
-          600: 'var(--accent-rose-600)',
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
-        'accent-amber': {
-          400: 'var(--accent-amber-400)',
-          500: 'var(--accent-amber-500)',
-          600: 'var(--accent-amber-600)',
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
-        // Legacy dark mode support (for existing components)
-        dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#0a0a0f',
-        }
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
       },
       fontFamily: {
         sans: 'var(--font-sans)',

@@ -117,7 +117,7 @@ const RevenueDashboard: React.FC = () => {
   const getTierIcon = (tierType: string) => {
     switch (tierType) {
       case 'free':
-        return <Zap className="h-4 w-4 text-gray-500" />;
+        return <Zap className="h-4 w-4 text-muted-foreground" />;
       case 'starter':
         return <TrendingUp className="h-4 w-4 text-blue-500" />;
       case 'professional':

@@ -287,10 +287,10 @@ export function OutcomePrediction() {
 
   if (!selectedPred) {
     return (
-      <Card className="gaming-card">
+      <Card className="bg-card">
         <CardContent className="text-center py-12">
-          <Brain className="h-12 w-12 mx-auto mb-4 text-gray-500 opacity-50" />
-          <p className="text-gray-400">No prediction data available</p>
+          <Brain className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="text-muted-foreground">No prediction data available</p>
         </CardContent>
       </Card>
     );
@@ -304,7 +304,7 @@ export function OutcomePrediction() {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
             Decision Outcome Prediction
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Monte Carlo simulations with confidence intervals for decision outcomes
           </p>
         </div>
@@ -339,7 +339,7 @@ export function OutcomePrediction() {
 
       {/* Settings Panel */}
       {showSettings && (
-        <Card className="gaming-card border-blue-500/20">
+        <Card className="bg-card border-blue-500/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
@@ -358,7 +358,7 @@ export function OutcomePrediction() {
                   step={1000}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">{simulationSettings.runs.toLocaleString()} simulations</p>
+                <p className="text-sm text-muted-foreground mt-1">{simulationSettings.runs.toLocaleString()} simulations</p>
               </div>
               <div>
                 <Label>Portfolio Size</Label>
@@ -370,7 +370,7 @@ export function OutcomePrediction() {
                   step={10000}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">${simulationSettings.portfolioSize.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mt-1">${simulationSettings.portfolioSize.toLocaleString()}</p>
               </div>
             </div>
             <div className="space-y-4">
@@ -384,7 +384,7 @@ export function OutcomePrediction() {
                   step={5}
                   className="mt-2"
                 />
-                <p className="text-sm text-gray-400 mt-1">{(simulationSettings.riskTolerance * 100).toFixed(0)}% risk tolerance</p>
+                <p className="text-sm text-muted-foreground mt-1">{(simulationSettings.riskTolerance * 100).toFixed(0)}% risk tolerance</p>
               </div>
             </div>
           </CardContent>
@@ -404,7 +404,7 @@ export function OutcomePrediction() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Prediction Summary */}
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
@@ -414,19 +414,19 @@ export function OutcomePrediction() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-400">Entity</p>
+                    <p className="text-sm text-muted-foreground">Entity</p>
                     <p className="font-bold">{selectedPred.entity}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Domain</p>
+                    <p className="text-sm text-muted-foreground">Domain</p>
                     <Badge variant="outline">{selectedPred.domain}</Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Time Horizon</p>
+                    <p className="text-sm text-muted-foreground">Time Horizon</p>
                     <p className="font-bold">{TIME_HORIZONS[selectedPred.timeHorizon]}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Historical Accuracy</p>
+                    <p className="text-sm text-muted-foreground">Historical Accuracy</p>
                     <p className="font-bold text-blue-500">
                       {(selectedPred.historicalAccuracy * 100).toFixed(0)}%
                     </p>
@@ -435,7 +435,7 @@ export function OutcomePrediction() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Volatility</span>
+                    <span className="text-muted-foreground">Volatility</span>
                     <span className="font-bold">{(selectedPred.volatility * 100).toFixed(0)}%</span>
                   </div>
                   <Progress value={selectedPred.volatility * 100} className="h-2" />
@@ -443,7 +443,7 @@ export function OutcomePrediction() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Market Correlation</span>
+                    <span className="text-muted-foreground">Market Correlation</span>
                     <span className="font-bold">{(selectedPred.correlation * 100).toFixed(0)}%</span>
                   </div>
                   <Progress value={selectedPred.correlation * 100} className="h-2" />
@@ -452,7 +452,7 @@ export function OutcomePrediction() {
             </Card>
 
             {/* Expected Outcomes */}
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
@@ -474,7 +474,7 @@ export function OutcomePrediction() {
                         <p className={`font-bold ${data.roi >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                           {data.roi >= 0 ? '+' : ''}{(data.roi * 100).toFixed(1)}%
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-muted-foreground">
                           {data.timeToTarget > 0 ? `${data.timeToTarget}d` : 'N/A'}
                         </p>
                       </div>
@@ -487,7 +487,7 @@ export function OutcomePrediction() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Expected ROI</span>
+                    <span className="text-muted-foreground">Expected ROI</span>
                     <span className="font-bold text-blue-500">
                       +{((
                         selectedPred.scenarios.optimistic.roi * selectedPred.scenarios.optimistic.probability +
@@ -497,7 +497,7 @@ export function OutcomePrediction() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Portfolio Impact</span>
+                    <span className="text-muted-foreground">Portfolio Impact</span>
                     <span className="font-bold">
                       {((
                         selectedPred.scenarios.optimistic.portfolioImpact * selectedPred.scenarios.optimistic.probability +
@@ -515,7 +515,7 @@ export function OutcomePrediction() {
         {/* Scenarios Tab */}
         <TabsContent value="scenarios" className="space-y-4">
           {Object.entries(selectedPred.scenarios).map(([scenario, data]) => (
-            <Card key={scenario} className={`gaming-card border-l-4 ${
+            <Card key={scenario} className={`bg-card border-l-4 ${
               scenario === 'optimistic' ? 'border-green-500' :
               scenario === 'realistic' ? 'border-blue-500' :
               'border-red-500'
@@ -533,28 +533,28 @@ export function OutcomePrediction() {
                     <p className={`text-2xl font-bold ${data.roi >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {data.roi >= 0 ? '+' : ''}{(data.roi * 100).toFixed(1)}%
                     </p>
-                    <p className="text-sm text-gray-400">Expected ROI</p>
+                    <p className="text-sm text-muted-foreground">Expected ROI</p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-300">{data.description}</p>
+                <p className="text-muted-foreground">{data.description}</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-dark-800 rounded-lg p-3">
-                    <p className="text-sm text-gray-400">Portfolio Impact</p>
+                  <div className="bg-card rounded-lg p-3">
+                    <p className="text-sm text-muted-foreground">Portfolio Impact</p>
                     <p className={`text-lg font-bold ${data.portfolioImpact >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {data.portfolioImpact >= 0 ? '+' : ''}{(data.portfolioImpact * 100).toFixed(2)}%
                     </p>
                   </div>
-                  <div className="bg-dark-800 rounded-lg p-3">
-                    <p className="text-sm text-gray-400">Time to Target</p>
+                  <div className="bg-card rounded-lg p-3">
+                    <p className="text-sm text-muted-foreground">Time to Target</p>
                     <p className="text-lg font-bold">
                       {data.timeToTarget > 0 ? `${data.timeToTarget} days` : 'Not applicable'}
                     </p>
                   </div>
-                  <div className="bg-dark-800 rounded-lg p-3">
-                    <p className="text-sm text-gray-400">Dollar Impact</p>
+                  <div className="bg-card rounded-lg p-3">
+                    <p className="text-sm text-muted-foreground">Dollar Impact</p>
                     <p className={`text-lg font-bold ${data.portfolioImpact >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {data.portfolioImpact >= 0 ? '+' : ''}${(data.portfolioImpact * simulationSettings.portfolioSize).toLocaleString()}
                     </p>
@@ -578,7 +578,7 @@ export function OutcomePrediction() {
 
         {/* Confidence Intervals Tab */}
         <TabsContent value="confidence" className="space-y-6">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Gauge className="h-5 w-5" />
@@ -595,13 +595,13 @@ export function OutcomePrediction() {
                     </Badge>
                   </div>
 
-                  <div className="relative bg-dark-800 rounded-lg p-4">
+                  <div className="relative bg-card rounded-lg p-4">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-red-400">
+                      <span className="text-sm text-red-500">
                         Loss: {(Math.abs(interval.lower) * 100).toFixed(1)}%
                       </span>
-                      <span className="text-sm text-gray-400">0%</span>
-                      <span className="text-sm text-green-400">
+                      <span className="text-sm text-muted-foreground">0%</span>
+                      <span className="text-sm text-green-500">
                         Gain: {(interval.upper * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -617,21 +617,21 @@ export function OutcomePrediction() {
                       <div className="absolute left-1/2 top-0 w-0.5 h-full bg-white transform -translate-x-0.5" />
                     </div>
 
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       There is a {level} probability that the outcome will fall within this range
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                      <p className="text-sm text-gray-400">Dollar Range (Lower)</p>
-                      <p className="text-lg font-bold text-red-400">
+                      <p className="text-sm text-muted-foreground">Dollar Range (Lower)</p>
+                      <p className="text-lg font-bold text-red-500">
                         ${(interval.lower * simulationSettings.portfolioSize).toLocaleString()}
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-400">Dollar Range (Upper)</p>
-                      <p className="text-lg font-bold text-green-400">
+                      <p className="text-sm text-muted-foreground">Dollar Range (Upper)</p>
+                      <p className="text-lg font-bold text-green-500">
                         +${(interval.upper * simulationSettings.portfolioSize).toLocaleString()}
                       </p>
                     </div>
@@ -645,7 +645,7 @@ export function OutcomePrediction() {
         {/* Key Factors Tab */}
         <TabsContent value="factors" className="space-y-4">
           {selectedPred.keyFactors.map(factor => (
-            <Card key={factor.name} className="gaming-card">
+            <Card key={factor.name} className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -656,12 +656,12 @@ export function OutcomePrediction() {
                         {factor.category}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-400 mb-3">{factor.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{factor.description}</p>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-gray-400">Impact Score</span>
+                          <span className="text-sm text-muted-foreground">Impact Score</span>
                           <span className={`font-bold ${getFactorColor(factor.impact)}`}>
                             {(factor.impact * 100).toFixed(0)}%
                           </span>
@@ -670,7 +670,7 @@ export function OutcomePrediction() {
                       </div>
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-gray-400">Probability</span>
+                          <span className="text-sm text-muted-foreground">Probability</span>
                           <span className="font-bold text-blue-500">
                             {(factor.probability * 100).toFixed(0)}%
                           </span>
@@ -688,62 +688,62 @@ export function OutcomePrediction() {
         {/* Risk Analysis Tab */}
         <TabsContent value="risk" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Max Drawdown</span>
+                  <span className="text-sm text-muted-foreground">Max Drawdown</span>
                   <TrendingDown className="h-4 w-4 text-red-500" />
                 </div>
                 <p className="text-2xl font-bold text-red-500">
                   -{(selectedPred.riskMetrics.maxDrawdown * 100).toFixed(1)}%
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Worst case scenario</p>
+                <p className="text-sm text-muted-foreground mt-1">Worst case scenario</p>
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Sharpe Ratio</span>
+                  <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
                   <Activity className="h-4 w-4 text-blue-500" />
                 </div>
                 <p className="text-2xl font-bold text-blue-500">
                   {selectedPred.riskMetrics.sharpeRatio.toFixed(2)}
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Risk-adjusted return</p>
+                <p className="text-sm text-muted-foreground mt-1">Risk-adjusted return</p>
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Value at Risk</span>
+                  <span className="text-sm text-muted-foreground">Value at Risk</span>
                   <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 </div>
                 <p className="text-2xl font-bold text-yellow-500">
                   -{(selectedPred.riskMetrics.valueAtRisk * 100).toFixed(1)}%
                 </p>
-                <p className="text-sm text-gray-400 mt-1">95% confidence, 1-day</p>
+                <p className="text-sm text-muted-foreground mt-1">95% confidence, 1-day</p>
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Expected Shortfall</span>
+                  <span className="text-sm text-muted-foreground">Expected Shortfall</span>
                   <TrendingDown className="h-4 w-4 text-red-500" />
                 </div>
                 <p className="text-2xl font-bold text-red-500">
                   -{(selectedPred.riskMetrics.expectedShortfall * 100).toFixed(1)}%
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Conditional VaR</p>
+                <p className="text-sm text-muted-foreground mt-1">Conditional VaR</p>
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Loss Probability</span>
+                  <span className="text-sm text-muted-foreground">Loss Probability</span>
                   <Percent className="h-4 w-4 text-orange-500" />
                 </div>
                 <p className="text-2xl font-bold text-orange-500">
@@ -753,16 +753,16 @@ export function OutcomePrediction() {
               </CardContent>
             </Card>
 
-            <Card className="gaming-card">
+            <Card className="bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Simulation Runs</span>
+                  <span className="text-sm text-muted-foreground">Simulation Runs</span>
                   <Sparkles className="h-4 w-4 text-purple-500" />
                 </div>
                 <p className="text-2xl font-bold text-purple-500">
                   {(selectedPred.monteCarloRuns / 1000).toFixed(0)}K
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Monte Carlo</p>
+                <p className="text-sm text-muted-foreground mt-1">Monte Carlo</p>
               </CardContent>
             </Card>
           </div>

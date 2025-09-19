@@ -83,7 +83,7 @@ export function Modal({
                       {actions}
                       <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-cyan-400 transition-all duration-200 hover:drop-shadow-[0_0_8px_rgba(0,255,255,0.5)] hover:scale-110 p-1 rounded border border-transparent hover:border-cyan-500/50"
+                        className="text-muted-foreground hover:text-cyan-400 transition-all duration-200 hover:drop-shadow-[0_0_8px_rgba(0,255,255,0.5)] hover:scale-110 p-1 rounded border border-transparent hover:border-cyan-500/50"
                       >
                         <XMarkIcon className="h-5 w-5" />
                       </button>

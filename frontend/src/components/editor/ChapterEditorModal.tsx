@@ -269,8 +269,8 @@ export function ChapterEditorModal({
           <div className="flex items-center gap-3">
             <DocumentTextIcon className="h-6 w-6 text-primary-400" />
             <div>
-              <h3 className="text-lg font-semibold text-white">Chapter Editor</h3>
-              <p className="text-sm text-gray-400">
+              <h3 className="text-lg font-semibold text-foreground">Chapter Editor</h3>
+              <p className="text-sm text-muted-foreground">
                 {editedChapter.word_count?.toLocaleString() || 0} words • 
                 {Math.ceil((editedChapter.word_count || 0) / 200)} min read
               </p>
@@ -278,7 +278,7 @@ export function ChapterEditorModal({
           </div>
           <div className="flex items-center gap-2">
             {autoSaving && (
-              <div className="flex items-center gap-1 text-xs text-yellow-400">
+              <div className="flex items-center gap-1 text-xs text-yellow-500">
                 <div className="animate-spin rounded-full h-3 w-3 border border-yellow-400 border-t-transparent" />
                 Auto-saving...
               </div>
@@ -297,7 +297,7 @@ export function ChapterEditorModal({
                 size="sm"
                 variant="ghost"
                 onClick={onDelete}
-                className="text-red-400 hover:text-red-300"
+                className="text-red-500 hover:text-red-300"
               >
                 <TrashIcon className="h-4 w-4" />
                 Delete
@@ -311,32 +311,32 @@ export function ChapterEditorModal({
             {/* Chapter metadata */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Chapter Title
                 </label>
                 <input
                   type="text"
                   value={editedChapter.title}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Subtitle (optional)
                 </label>
                 <input
                   type="text"
                   value={editedChapter.subtitle || ''}
                   onChange={(e) => handleInputChange('subtitle', e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>
 
             {/* Chapter content */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Chapter Content
               </label>
               <div className="bg-dark-700 border border-dark-600 rounded-lg p-4" style={{ minHeight: '400px' }}>
@@ -346,20 +346,20 @@ export function ChapterEditorModal({
                   placeholder="Start writing your chapter..."
                 />
               </div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 💡 Tip: Hover over content to see controls. Click + between blocks to add images, headings, or text.
               </div>
             </div>
 
             {/* Chapter summary */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 Chapter Summary (optional)
               </label>
               <textarea
                 value={editedChapter.summary || ''}
                 onChange={(e) => handleInputChange('summary', e.target.value)}
-                className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 h-20"
+                className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 h-20"
                 placeholder="Brief summary of this chapter..."
               />
             </div>
@@ -367,7 +367,7 @@ export function ChapterEditorModal({
             {/* Key points */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-400">
+                <label className="block text-sm font-medium text-muted-foreground">
                   Key Points (optional)
                 </label>
                 <Button size="sm" variant="ghost" onClick={addKeyPoint}>
@@ -381,14 +381,14 @@ export function ChapterEditorModal({
                     type="text"
                     value={point}
                     onChange={(e) => updateKeyPoint(index, e.target.value)}
-                    className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder={`Key point ${index + 1}`}
                   />
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => removeKeyPoint(index)}
-                    className="text-red-400 hover:text-red-300"
+                    className="text-red-500 hover:text-red-300"
                   >
                     <XMarkIcon className="h-4 w-4" />
                   </Button>
@@ -400,7 +400,7 @@ export function ChapterEditorModal({
           /* Version history */
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-white">Version History</h4>
+              <h4 className="text-lg font-semibold text-foreground">Version History</h4>
               <Button size="sm" variant="ghost" onClick={() => setShowVersions(false)}>
                 ← Back to Editor
               </Button>
@@ -420,17 +420,17 @@ export function ChapterEditorModal({
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-foreground">
                           v{version.version_number}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           by {version.edited_by}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(version.created_at).toLocaleString()}
                         </span>
                         {version.auto_saved && (
-                          <span className="px-2 py-1 bg-yellow-400/10 text-yellow-400 text-xs rounded">
+                          <span className="px-2 py-1 bg-yellow-400/10 text-yellow-500 text-xs rounded">
                             Auto-saved
                           </span>
                         )}
@@ -443,8 +443,8 @@ export function ChapterEditorModal({
                         Restore
                       </Button>
                     </div>
-                    <p className="text-sm text-gray-300 mb-2">{version.edit_summary}</p>
-                    <div className="text-xs text-gray-500">
+                    <p className="text-sm text-muted-foreground mb-2">{version.edit_summary}</p>
+                    <div className="text-xs text-muted-foreground">
                       {version.word_count.toLocaleString()} words • "{version.title}"
                     </div>
                   </div>
@@ -457,9 +457,9 @@ export function ChapterEditorModal({
         {/* Actions */}
         {!showVersions && (
           <div className="flex justify-between items-center pt-4 border-t border-dark-600">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               {hasUnsavedChanges && (
-                <span className="text-yellow-400">You have unsaved changes</span>
+                <span className="text-yellow-500">You have unsaved changes</span>
               )}
             </div>
             <div className="flex gap-3">

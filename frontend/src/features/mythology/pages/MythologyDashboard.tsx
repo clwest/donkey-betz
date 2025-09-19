@@ -81,7 +81,7 @@ export const MythologyDashboard: React.FC = () => {
       case 'high': return 'bg-orange-500';
       case 'medium': return 'bg-yellow-500';
       case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-muted/50';
     }
   };
 
@@ -100,7 +100,7 @@ export const MythologyDashboard: React.FC = () => {
       value: (recentEvents && Array.isArray(recentEvents)) ? recentEvents.length : 0,
       icon: Clock,
       description: 'Content pending verification review',
-      color: 'text-yellow-400',
+      color: 'text-yellow-500',
       bgGlow: 'shadow-yellow-500/50',
     },
     {
@@ -108,7 +108,7 @@ export const MythologyDashboard: React.FC = () => {
       value: stats?.high_priority || 0,
       icon: AlertTriangle,
       description: 'Critical content requiring immediate review',
-      color: 'text-red-400',
+      color: 'text-red-500',
       bgGlow: 'shadow-red-500/50',
     },
     {
@@ -116,7 +116,7 @@ export const MythologyDashboard: React.FC = () => {
       value: stats?.resolved_today || 0,
       icon: CheckCircle,
       description: 'Content items verified and processed',
-      color: 'text-green-400',
+      color: 'text-green-500',
       bgGlow: 'shadow-green-500/50',
     },
   ];
@@ -167,7 +167,7 @@ export const MythologyDashboard: React.FC = () => {
       {/* Gaming Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((card, index) => (
-          <Card key={index} className={`bg-gray-900/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg transition-all duration-300 ${card.bgGlow}`}>
+          <Card key={index} className={`bg-background/80 border-2 border-purple-800/50 hover:border-cyan-400/80 hover:shadow-lg transition-all duration-300 ${card.bgGlow}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className={`text-sm font-mono uppercase tracking-wider ${card.color}`}>
                 {card.title}
@@ -177,7 +177,7 @@ export const MythologyDashboard: React.FC = () => {
             <CardContent>
               <div className={`text-3xl font-bold font-mono ${card.color} glow-text-sm`}>
                 {statsLoading ? (
-                  <div className="h-8 w-16 bg-gray-800/50 animate-pulse rounded border border-purple-700/50" />
+                  <div className="h-8 w-16 bg-card/50 animate-pulse rounded border border-purple-700/50" />
                 ) : (
                   card.value.toLocaleString()
                 )}
@@ -193,24 +193,24 @@ export const MythologyDashboard: React.FC = () => {
       {/* Neural Performance Analytics */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="bg-gray-900/80 border-2 border-green-800/50 hover:border-green-400/80 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-green-800/50 hover:border-green-400/80 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-green-400 animate-pulse" />
-                <span className="text-green-400 font-mono uppercase tracking-wider">VERIFICATION PROCESSING STATS</span>
+                <TrendingUp className="h-5 w-5 text-green-500 animate-pulse" />
+                <span className="text-green-500 font-mono uppercase tracking-wider">VERIFICATION PROCESSING STATS</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-purple-300 font-mono">AVG REVIEW TIME</span>
-                <Badge className="bg-green-900/50 text-green-400 border border-green-400/50 font-mono">
+                <Badge className="bg-green-900/50 text-green-500 border border-green-400/50 font-mono">
                   {stats.avg_review_time ? `${stats.avg_review_time.toFixed(1)}h` : 'N/A'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-purple-300 font-mono">FALSE POSITIVE RATE</span>
                 <Badge 
-                  className={`font-mono border ${stats.false_positive_rate < 0.1 ? "bg-green-900/50 text-green-400 border-green-400/50" : "bg-red-900/50 text-red-400 border-red-400/50"}`}
+                  className={`font-mono border ${stats.false_positive_rate < 0.1 ? "bg-green-900/50 text-green-500 border-green-400/50" : "bg-red-900/50 text-red-500 border-red-400/50"}`}
                 >
                   {stats.false_positive_rate ? `${(stats.false_positive_rate * 100).toFixed(1)}%` : 'N/A'}
                 </Badge>
@@ -218,7 +218,7 @@ export const MythologyDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-cyan-400 animate-pulse" />
@@ -229,14 +229,14 @@ export const MythologyDashboard: React.FC = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-purple-300 font-mono">QUEUE STATUS</span>
                 <Badge 
-                  className={`font-mono border ${stats.pending_review < 50 ? "bg-green-900/50 text-green-400 border-green-400/50" : stats.pending_review < 100 ? "bg-yellow-900/50 text-yellow-400 border-yellow-400/50" : "bg-red-900/50 text-red-400 border-red-400/50"}`}
+                  className={`font-mono border ${stats.pending_review < 50 ? "bg-green-900/50 text-green-500 border-green-400/50" : stats.pending_review < 100 ? "bg-yellow-900/50 text-yellow-500 border-yellow-400/50" : "bg-red-900/50 text-red-500 border-red-400/50"}`}
                 >
                   {stats.pending_review < 50 ? 'OPTIMAL' : stats.pending_review < 100 ? 'MODERATE' : 'CRITICAL'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-purple-300 font-mono">HIGH-PRIORITY ITEMS</span>
-                <Badge className={`font-mono border ${stats.high_priority === 0 ? "bg-green-900/50 text-green-400 border-green-400/50" : "bg-red-900/50 text-red-400 border-red-400/50"}`}>
+                <Badge className={`font-mono border ${stats.high_priority === 0 ? "bg-green-900/50 text-green-500 border-green-400/50" : "bg-red-900/50 text-red-500 border-red-400/50"}`}>
                   {stats.high_priority === 0 ? 'NONE' : `${stats.high_priority} PENDING`}
                 </Badge>
               </div>
@@ -247,29 +247,29 @@ export const MythologyDashboard: React.FC = () => {
 
       {/* Gaming Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="bg-gray-900/80 border border-purple-800/50">
+        <TabsList className="bg-background/80 border border-purple-800/50">
           <TabsTrigger value="overview" className="data-[state=active]:bg-cyan-900/50 data-[state=active]:text-cyan-400 text-purple-300 font-mono uppercase tracking-wider">OVERVIEW</TabsTrigger>
-          <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-900/50 data-[state=active]:text-yellow-400 text-purple-300 font-mono uppercase tracking-wider">
+          <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-900/50 data-[state=active]:text-yellow-500 text-purple-300 font-mono uppercase tracking-wider">
             VERIFICATION QUEUE
             {recentEvents && Array.isArray(recentEvents) && recentEvents.length > 0 ? (
-              <Badge className="ml-2 bg-yellow-900/50 text-yellow-400 border border-yellow-400/50 font-mono animate-pulse">
+              <Badge className="ml-2 bg-yellow-900/50 text-yellow-500 border border-yellow-400/50 font-mono animate-pulse">
                 {recentEvents.length}
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="high-priority" className="data-[state=active]:bg-red-900/50 data-[state=active]:text-red-400 text-purple-300 font-mono uppercase tracking-wider">
+          <TabsTrigger value="high-priority" className="data-[state=active]:bg-red-900/50 data-[state=active]:text-red-500 text-purple-300 font-mono uppercase tracking-wider">
             HIGH-PRIORITY
             {stats?.high_priority ? (
-              <Badge className="ml-2 bg-red-900/50 text-red-400 border border-red-400/50 font-mono animate-pulse glow-sm">
+              <Badge className="ml-2 bg-red-900/50 text-red-500 border border-red-400/50 font-mono animate-pulse glow-sm">
                 {stats.high_priority}
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="resolved" className="data-[state=active]:bg-green-900/50 data-[state=active]:text-green-400 text-purple-300 font-mono uppercase tracking-wider">VERIFIED</TabsTrigger>
+          <TabsTrigger value="resolved" className="data-[state=active]:bg-green-900/50 data-[state=active]:text-green-500 text-purple-300 font-mono uppercase tracking-wider">VERIFIED</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <Card className="bg-gray-900/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-cyan-800/50 hover:border-cyan-400/80 hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300">
             <CardHeader>
               <CardTitle className="text-cyan-400 font-mono uppercase tracking-wider">RECENT VERIFICATION ACTIVITY</CardTitle>
               <CardDescription className="text-purple-300 font-mono">
@@ -287,9 +287,9 @@ export const MythologyDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="pending">
-          <Card className="bg-gray-900/80 border-2 border-yellow-800/50 hover:border-yellow-400/80 hover:shadow-lg hover:shadow-yellow-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-yellow-800/50 hover:border-yellow-400/80 hover:shadow-lg hover:shadow-yellow-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono uppercase tracking-wider">CONTENT VERIFICATION QUEUE</CardTitle>
+              <CardTitle className="text-yellow-500 font-mono uppercase tracking-wider">CONTENT VERIFICATION QUEUE</CardTitle>
               <CardDescription className="text-purple-300 font-mono">
                 {'>>>'} Content items awaiting verification review
               </CardDescription>
@@ -298,7 +298,7 @@ export const MythologyDashboard: React.FC = () => {
               {eventsLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-800/50 animate-pulse rounded border border-purple-700/50" />
+                    <div key={i} className="h-16 bg-card/50 animate-pulse rounded border border-purple-700/50" />
                   ))}
                 </div>
               ) : !recentEvents || !Array.isArray(recentEvents) || recentEvents.length === 0 ? (
@@ -311,15 +311,15 @@ export const MythologyDashboard: React.FC = () => {
                   {(recentEvents || []).map((event: MythologyEvent) => (
                     <div 
                       key={event.id} 
-                      className="bg-gray-800/50 border border-purple-700/50 rounded p-4 hover:border-yellow-400/50 transition-all duration-200"
+                      className="bg-card/50 border border-purple-700/50 rounded p-4 hover:border-yellow-400/50 transition-all duration-200"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
                           <Badge 
                             className={`font-mono text-xs ${
-                              event.risk_level >= 0.8 ? 'bg-red-900/50 text-red-400 border-red-400/50' :
-                              event.risk_level >= 0.5 ? 'bg-yellow-900/50 text-yellow-400 border-yellow-400/50' :
-                              'bg-green-900/50 text-green-400 border-green-400/50'
+                              event.risk_level >= 0.8 ? 'bg-red-900/50 text-red-500 border-red-400/50' :
+                              event.risk_level >= 0.5 ? 'bg-yellow-900/50 text-yellow-500 border-yellow-400/50' :
+                              'bg-green-900/50 text-green-500 border-green-400/50'
                             }`}
                           >
                             RISK: {(event.risk_level * 100).toFixed(0)}%
@@ -328,7 +328,7 @@ export const MythologyDashboard: React.FC = () => {
                             {event.event_type.toUpperCase()}
                           </Badge>
                           {event.was_prevented && (
-                            <Badge className="bg-green-900/50 text-green-400 border-green-400/50 font-mono text-xs animate-pulse">
+                            <Badge className="bg-green-900/50 text-green-500 border-green-400/50 font-mono text-xs animate-pulse">
                               PREVENTED
                             </Badge>
                           )}
@@ -360,7 +360,7 @@ export const MythologyDashboard: React.FC = () => {
                           Confidence: {(event.confidence_score * 100).toFixed(1)}%
                         </div>
                         {event.prevention_method && (
-                          <div className="text-xs text-green-400 font-mono">
+                          <div className="text-xs text-green-500 font-mono">
                             Method: {event.prevention_method}
                           </div>
                         )}
@@ -374,9 +374,9 @@ export const MythologyDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="high-priority">
-          <Card className="bg-gray-900/80 border-2 border-red-800/50 hover:border-red-400/80 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-red-800/50 hover:border-red-400/80 hover:shadow-lg hover:shadow-red-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-red-400 font-mono uppercase tracking-wider animate-pulse">HIGH-PRIORITY CONTENT</CardTitle>
+              <CardTitle className="text-red-500 font-mono uppercase tracking-wider animate-pulse">HIGH-PRIORITY CONTENT</CardTitle>
               <CardDescription className="text-purple-300 font-mono">
                 {'>>>'} Critical content items requiring immediate verification
               </CardDescription>
@@ -391,9 +391,9 @@ export const MythologyDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="resolved">
-          <Card className="bg-gray-900/80 border-2 border-green-800/50 hover:border-green-400/80 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300">
+          <Card className="bg-background/80 border-2 border-green-800/50 hover:border-green-400/80 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300">
             <CardHeader>
-              <CardTitle className="text-green-400 font-mono uppercase tracking-wider">VERIFIED CONTENT</CardTitle>
+              <CardTitle className="text-green-500 font-mono uppercase tracking-wider">VERIFIED CONTENT</CardTitle>
               <CardDescription className="text-purple-300 font-mono">
                 {'>>>'} Successfully verified and processed content items
               </CardDescription>

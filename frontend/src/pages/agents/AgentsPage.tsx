@@ -72,7 +72,7 @@ export const AgentsPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -121,7 +121,7 @@ export const AgentsPage: React.FC = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-muted-foreground truncate">
                         {stat.name}
                       </dt>
                       <dd className="text-2xl font-semibold text-gray-900">
@@ -136,16 +136,16 @@ export const AgentsPage: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg border border-border overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="border-b border-gray-200">
+            <div className="border-b border-border">
               <TabsList className="flex space-x-8 px-6 py-4">
                 <TabsTrigger 
                   value="execution" 
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'execution' 
                       ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-500 hover:text-gray-700'
+                      : 'text-muted-foreground hover:text-gray-700'
                   }`}
                 >
                   <BoltIcon className="h-5 w-5" />
@@ -157,7 +157,7 @@ export const AgentsPage: React.FC = () => {
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'workflows' 
                       ? 'bg-purple-100 text-purple-700' 
-                      : 'text-gray-500 hover:text-gray-700'
+                      : 'text-muted-foreground hover:text-gray-700'
                   }`}
                 >
                   <UserGroupIcon className="h-5 w-5" />
@@ -169,7 +169,7 @@ export const AgentsPage: React.FC = () => {
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'finance' 
                       ? 'bg-emerald-100 text-emerald-700' 
-                      : 'text-gray-500 hover:text-gray-700'
+                      : 'text-muted-foreground hover:text-gray-700'
                   }`}
                 >
                   <CurrencyDollarIcon className="h-5 w-5" />
@@ -181,7 +181,7 @@ export const AgentsPage: React.FC = () => {
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'analytics' 
                       ? 'bg-green-100 text-green-700' 
-                      : 'text-gray-500 hover:text-gray-700'
+                      : 'text-muted-foreground hover:text-gray-700'
                   }`}
                 >
                   <ChartBarIcon className="h-5 w-5" />
@@ -253,7 +253,7 @@ export const AgentsPage: React.FC = () => {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-gray-50 rounded-lg p-6">
+                <div className="bg-muted/5 rounded-lg p-6">
                   <h4 className="text-lg font-medium text-gray-900 mb-4">
                     Recent Activity
                   </h4>
@@ -263,13 +263,13 @@ export const AgentsPage: React.FC = () => {
                       {instances.slice(0, 5).map((instance) => (
                         <div
                           key={instance.id}
-                          className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200"
+                          className="flex items-center justify-between bg-white rounded-lg p-4 border border-border"
                         >
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-full ${
                               instance.status === 'completed' ? 'bg-green-100' :
                               instance.status === 'processing' ? 'bg-yellow-100' :
-                              instance.status === 'failed' ? 'bg-red-100' : 'bg-gray-100'
+                              instance.status === 'failed' ? 'bg-red-100' : 'bg-muted/10'
                             }`}>
                               {instance.status === 'completed' && <CheckCircleIcon className="h-4 w-4 text-green-600" />}
                               {instance.status === 'processing' && <ClockIcon className="h-4 w-4 text-yellow-600 animate-spin" />}
@@ -285,7 +285,7 @@ export const AgentsPage: React.FC = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {new Date(instance.created_at).toLocaleDateString()}
                           </div>
                         </div>
@@ -293,9 +293,9 @@ export const AgentsPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No activity data available</p>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No activity data available</p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         Execute some agents to see analytics here
                       </p>
                     </div>

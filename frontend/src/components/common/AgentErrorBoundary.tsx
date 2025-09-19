@@ -146,7 +146,7 @@ export class AgentErrorBoundary extends Component<Props, State> {
               {this.retryCount < this.maxRetries && (
                 <button
                   onClick={this.handleRetry}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  className="w-full px-4 py-2 bg-blue-600 text-foreground rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
                 >
                   <ArrowPathIcon className="h-4 w-4 mr-2" />
                   Try Again ({this.maxRetries - this.retryCount} attempts left)
@@ -156,7 +156,7 @@ export class AgentErrorBoundary extends Component<Props, State> {
               {/* Refresh Page Button */}
               <button
                 onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="w-full px-4 py-2 bg-gray-600 text-foreground rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Refresh Page
               </button>
@@ -164,11 +164,11 @@ export class AgentErrorBoundary extends Component<Props, State> {
               {/* Error Details (if enabled) */}
               {this.props.showDetails && this.state.error && (
                 <details className="text-left">
-                  <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 mb-2">
+                  <summary className="cursor-pointer text-sm text-muted-foreground hover:text-gray-700 mb-2">
                     <BugAntIcon className="h-4 w-4 inline mr-1" />
                     Show Error Details
                   </summary>
-                  <div className="bg-gray-50 border rounded p-3 text-xs text-left">
+                  <div className="bg-muted/5 border rounded p-3 text-xs text-left">
                     <div className="mb-2">
                       <strong>Error ID:</strong> {this.state.errorId}
                     </div>
@@ -178,7 +178,7 @@ export class AgentErrorBoundary extends Component<Props, State> {
                     {this.state.error.stack && (
                       <div className="mb-2">
                         <strong>Stack:</strong>
-                        <pre className="mt-1 overflow-x-auto text-xs bg-gray-100 p-2 rounded">
+                        <pre className="mt-1 overflow-x-auto text-xs bg-muted/10 p-2 rounded">
                           {this.state.error.stack}
                         </pre>
                       </div>
@@ -188,7 +188,7 @@ export class AgentErrorBoundary extends Component<Props, State> {
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={this.handleCopyError}
-                      className="flex-1 px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center justify-center"
+                      className="flex-1 px-3 py-2 text-xs bg-muted/10 text-gray-700 rounded hover:bg-muted/20 transition-colors flex items-center justify-center"
                     >
                       <ClipboardDocumentIcon className="h-3 w-3 mr-1" />
                       Copy Details
@@ -262,7 +262,7 @@ export const LoadingError: React.FC<LoadingErrorProps> = ({
           <button
             onClick={onRetry}
             disabled={loading}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            className="w-full px-4 py-2 bg-blue-600 text-foreground rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
           >
             {loading ? (
               <>

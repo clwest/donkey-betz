@@ -127,12 +127,12 @@ export function BlogEditor({ blog, isOpen, onClose, onSaved }: BlogEditorProps) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-800 rounded-lg w-full max-w-5xl h-full max-h-[95vh] flex flex-col">
+      <div className="bg-card rounded-lg w-full max-w-5xl h-full max-h-[95vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-dark-700">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <PencilIcon className="h-6 w-6 text-primary-400" />
-            <h2 className="text-xl font-semibold text-white">Edit Blog Post</h2>
+            <h2 className="text-xl font-semibold text-foreground">Edit Blog Post</h2>
             {hasChanges && (
               <span className="px-2 py-1 text-xs bg-yellow-500/20 text-yellow-300 rounded">
                 Unsaved changes
@@ -173,48 +173,48 @@ export function BlogEditor({ blog, isOpen, onClose, onSaved }: BlogEditorProps) 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Title
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg font-semibold"
+              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg font-semibold"
               placeholder="Enter blog post title..."
             />
           </div>
 
           {/* Meta Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Meta Description
-              <span className="text-gray-400 font-normal ml-2">(SEO description, 150-160 chars recommended)</span>
+              <span className="text-muted-foreground font-normal ml-2">(SEO description, 150-160 chars recommended)</span>
             </label>
             <textarea
               value={metaDescription}
               onChange={(e) => setMetaDescription(e.target.value)}
               rows={2}
               maxLength={160}
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
               placeholder="Brief description for search engines..."
             />
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {metaDescription.length}/160 characters
             </div>
           </div>
 
           {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Tags
-              <span className="text-gray-400 font-normal ml-2">(comma-separated)</span>
+              <span className="text-muted-foreground font-normal ml-2">(comma-separated)</span>
             </label>
             <input
               type="text"
               value={tagsText}
               onChange={(e) => setTagsText(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="marketing, social media, business..."
             />
           </div>
@@ -222,10 +222,10 @@ export function BlogEditor({ blog, isOpen, onClose, onSaved }: BlogEditorProps) 
           {/* Content */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-300">
+              <label className="block text-sm font-medium text-muted-foreground">
                 Content
               </label>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 {getWordCount()} words
               </div>
             </div>
@@ -236,7 +236,7 @@ export function BlogEditor({ blog, isOpen, onClose, onSaved }: BlogEditorProps) 
                 placeholder="Start writing your blog post..."
               />
             </div>
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               💡 Tip: Hover over content to see controls. Click + between blocks to add images, headings, or text.
             </div>
           </div>
@@ -264,9 +264,9 @@ export function BlogEditor({ blog, isOpen, onClose, onSaved }: BlogEditorProps) 
         </div>
 
         {/* Footer */}
-        <div className="border-t border-dark-700 p-4">
+        <div className="border-t border-border p-4">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               {hasChanges ? 'You have unsaved changes' : 'All changes saved'}
             </div>
             <div className="flex gap-3">

@@ -17,7 +17,7 @@ Table.displayName = 'Table';
 
 const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <thead ref={ref} className={clsx('[&_tr]:border-b border-dark-700', className)} {...props} />
+    <thead ref={ref} className={clsx('[&_tr]:border-b border-border', className)} {...props} />
   )
 );
 TableHeader.displayName = 'TableHeader';
@@ -37,7 +37,7 @@ const TableFooter = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTable
   ({ className, ...props }, ref) => (
     <tfoot
       ref={ref}
-      className={clsx('bg-dark-800/50 font-medium [&>tr]:last:border-b-0', className)}
+      className={clsx('bg-card/50 font-medium [&>tr]:last:border-b-0', className)}
       {...props}
     />
   )
@@ -49,7 +49,7 @@ const TableRow = forwardRef<HTMLTableRowElement, HTMLAttributes<HTMLTableRowElem
     <tr
       ref={ref}
       className={clsx(
-        'border-b border-dark-700 transition-colors hover:bg-dark-800/50 data-[state=selected]:bg-dark-800',
+        'border-b border-border transition-colors hover:bg-card/50 data-[state=selected]:bg-card',
         className
       )}
       {...props}
@@ -63,7 +63,7 @@ const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLTableCel
     <th
       ref={ref}
       className={clsx(
-        'h-12 px-4 text-left align-middle font-medium text-gray-400 [&:has([role=checkbox])]:pr-0',
+        'h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
         className
       )}
       {...props}
@@ -76,7 +76,7 @@ const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCel
   ({ className, ...props }, ref) => (
     <td
       ref={ref}
-      className={clsx('p-4 align-middle [&:has([role=checkbox])]:pr-0 text-gray-300', className)}
+      className={clsx('p-4 align-middle [&:has([role=checkbox])]:pr-0 text-muted-foreground', className)}
       {...props}
     />
   )
@@ -87,7 +87,7 @@ const TableCaption = forwardRef<HTMLTableCaptionElement, HTMLAttributes<HTMLTabl
   ({ className, ...props }, ref) => (
     <caption
       ref={ref}
-      className={clsx('mt-4 text-sm text-gray-500', className)}
+      className={clsx('mt-4 text-sm text-muted-foreground', className)}
       {...props}
     />
   )

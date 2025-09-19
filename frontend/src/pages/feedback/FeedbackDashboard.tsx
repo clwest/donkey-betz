@@ -62,21 +62,21 @@ export const FeedbackDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Feedback Analytics</h1>
-        <p className="text-gray-400">Track and analyze user feedback across all content</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Feedback Analytics</h1>
+        <p className="text-muted-foreground">Track and analyze user feedback across all content</p>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-8">
-        <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg p-1">
+        <div className="flex items-center gap-2 bg-card/50 rounded-lg p-1">
           {[7, 30, 90].map((days) => (
             <button
               key={days}
               onClick={() => setSelectedPeriod(days)}
               className={`px-4 py-2 rounded-md transition-all ${
                 selectedPeriod === days
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-purple-600 text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {days}d
@@ -87,7 +87,7 @@ export const FeedbackDashboard: React.FC = () => {
         <select
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
-          className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white"
+          className="px-4 py-2 bg-card/50 border border-gray-700 rounded-lg text-foreground"
         >
           <option value="all">All Content Types</option>
           <option value="text">Text</option>
@@ -100,7 +100,7 @@ export const FeedbackDashboard: React.FC = () => {
           <option value="research">Research</option>
         </select>
 
-        <button className="ml-auto px-4 py-2 bg-gray-800/50 text-gray-400 rounded-lg hover:text-white transition-colors flex items-center gap-2">
+        <button className="ml-auto px-4 py-2 bg-card/50 text-muted-foreground rounded-lg hover:text-foreground transition-colors flex items-center gap-2">
           <Download className="w-4 h-4" />
           Export
         </button>
@@ -113,27 +113,27 @@ export const FeedbackDashboard: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
+              className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
             >
               <div className="flex items-center justify-between mb-4">
                 <MessageSquare className="w-8 h-8 text-purple-500" />
-                <span className="text-2xl font-bold text-white">
+                <span className="text-2xl font-bold text-foreground">
                   {analytics?.total_feedback || 0}
                 </span>
               </div>
-              <p className="text-gray-400 text-sm">Total Feedback</p>
-              <p className="text-xs text-gray-500 mt-1">Last {selectedPeriod} days</p>
+              <p className="text-muted-foreground text-sm">Total Feedback</p>
+              <p className="text-xs text-muted-foreground mt-1">Last {selectedPeriod} days</p>
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
+              className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
             >
               <div className="flex items-center justify-between mb-4">
                 <Star className="w-8 h-8 text-yellow-500" />
-                <span className="text-2xl font-bold text-white">
+                <span className="text-2xl font-bold text-foreground">
                   {analytics?.by_content_type && Object.keys(analytics.by_content_type).length > 0 ? (
                     (Object.values(analytics.by_content_type)
                       .reduce((sum: number, item: any) => sum + (item.average_rating || 0), 0) / 
@@ -142,7 +142,7 @@ export const FeedbackDashboard: React.FC = () => {
                   ) : '0.0'}
                 </span>
               </div>
-              <p className="text-gray-400 text-sm">Average Rating</p>
+              <p className="text-muted-foreground text-sm">Average Rating</p>
               <div className="flex items-center gap-1 mt-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
@@ -161,18 +161,18 @@ export const FeedbackDashboard: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
+              className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
             >
               <div className="flex items-center justify-between mb-4">
                 <ThumbsUp className="w-8 h-8 text-green-500" />
-                <span className="text-2xl font-bold text-white">
+                <span className="text-2xl font-bold text-foreground">
                   {analytics?.by_content_type 
                     ? Object.values(analytics.by_content_type)
                         .reduce((sum: number, item: any) => sum + (item.positive || 0), 0)
                     : 0}
                 </span>
               </div>
-              <p className="text-gray-400 text-sm">Positive Feedback</p>
+              <p className="text-muted-foreground text-sm">Positive Feedback</p>
               <p className="text-xs text-green-500 mt-1">4-5 star ratings</p>
             </motion.div>
 
@@ -180,35 +180,35 @@ export const FeedbackDashboard: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
+              className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
             >
               <div className="flex items-center justify-between mb-4">
                 <TrendingUp className="w-8 h-8 text-blue-500" />
-                <span className="text-2xl font-bold text-white">
+                <span className="text-2xl font-bold text-foreground">
                   {analytics?.user_contribution || 0}
                 </span>
               </div>
-              <p className="text-gray-400 text-sm">Your Contribution</p>
-              <p className="text-xs text-gray-500 mt-1">Feedback given</p>
+              <p className="text-muted-foreground text-sm">Your Contribution</p>
+              <p className="text-xs text-muted-foreground mt-1">Feedback given</p>
             </motion.div>
           </div>
 
           {/* Content Type Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-6">Feedback by Content Type</h3>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <h3 className="text-lg font-semibold text-foreground mb-6">Feedback by Content Type</h3>
               <div className="space-y-4">
                 {analytics?.by_content_type ? Object.entries(analytics.by_content_type).map(([type, data]: [string, any]) => (
                   <div key={type} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-300 capitalize">{type}</span>
+                      <span className="text-muted-foreground capitalize">{type}</span>
                       <div className="flex items-center gap-4">
-                        <span className="text-sm text-gray-400">
+                        <span className="text-sm text-muted-foreground">
                           {data.total_feedback || 0} reviews
                         </span>
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                          <span className="text-white font-medium">
+                          <span className="text-foreground font-medium">
                             {(data.average_rating || 0).toFixed(1)}
                           </span>
                         </div>
@@ -230,7 +230,7 @@ export const FeedbackDashboard: React.FC = () => {
                     </div>
                   </div>
                 )) : (
-                  <div className="text-center text-gray-400 py-8">
+                  <div className="text-center text-muted-foreground py-8">
                     No feedback data available
                   </div>
                 )}
@@ -238,19 +238,19 @@ export const FeedbackDashboard: React.FC = () => {
             </div>
 
             {/* Recent Feedback */}
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-6">Recent Feedback</h3>
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <h3 className="text-lg font-semibold text-foreground mb-6">Recent Feedback</h3>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {(feedbackHistory || []).slice(0, 5).map((feedback) => (
                   <div
                     key={feedback.id}
-                    className="p-3 bg-gray-900/50 rounded-lg border border-gray-700"
+                    className="p-3 bg-background/50 rounded-lg border border-gray-700"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded text-xs font-medium bg-gradient-to-r ${
                           getTypeColor(feedback.content_type)
-                        } text-white`}>
+                        } text-foreground`}>
                           {feedback.content_type}
                         </span>
                         <div className="flex items-center gap-1">
@@ -266,12 +266,12 @@ export const FeedbackDashboard: React.FC = () => {
                           ))}
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(feedback.created_at).toLocaleDateString()}
                       </span>
                     </div>
                     {feedback.comments && (
-                      <p className="text-sm text-gray-300 line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
                         {feedback.comments}
                       </p>
                     )}

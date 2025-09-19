@@ -17,7 +17,7 @@ const PlatformSelector: React.FC<PlatformSelectorProps> = ({ platforms, onPlatfo
             transition-all duration-300 transform hover:scale-105
             ${platform.selected 
               ? `${platform.color} shadow-lg` 
-              : 'border-dark-700 bg-dark-800/50 hover:bg-dark-800 hover:border-dark-600'
+              : 'border-border bg-card/50 hover:bg-card hover:border-dark-600'
             }
           `}
         >
@@ -34,10 +34,10 @@ const PlatformSelector: React.FC<PlatformSelectorProps> = ({ platforms, onPlatfo
           )}
           <div className="flex flex-col items-center gap-2">
             <span className="text-3xl">{platform.icon}</span>
-            <span className={`text-xs font-medium ${platform.selected ? 'text-white' : 'text-gray-400'}`}>
+            <span className={`text-xs font-medium ${platform.selected ? 'text-foreground' : 'text-muted-foreground'}`}>
               {platform.name}
             </span>
-            <span className={`text-xs ${platform.selected ? 'text-gray-200' : 'text-gray-500'}`}>
+            <span className={`text-xs ${platform.selected ? 'text-foreground' : 'text-muted-foreground'}`}>
               {platform.charLimit.toLocaleString()} chars
             </span>
           </div>

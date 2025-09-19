@@ -71,15 +71,15 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
 
   if (loading) {
     return (
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <Brain className="w-6 h-6 text-cyan-400 animate-pulse" />
-            <h3 className="text-xl font-bold gaming-text-primary">VEGAS AI BOOKMAKER</h3>
+            <h3 className="text-xl font-bold bg-card">VEGAS AI BOOKMAKER</h3>
           </div>
-          <div className="text-center py-8 gaming-text-secondary">
-            <div className="gaming-loading w-12 h-12 mx-auto mb-4"></div>
+          <div className="text-center py-8 bg-card">
+            <div className="bg-card w-12 h-12 mx-auto mb-4"></div>
             Analyzing odds patterns...
           </div>
         </div>
@@ -89,14 +89,14 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
 
   if (!analysis) {
     return (
-      <Card className="gaming-card">
-        <div className="gaming-border-glow"></div>
+      <Card className="bg-card">
+        <div className="bg-card"></div>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <Brain className="w-6 h-6 text-cyan-400" />
-            <h3 className="text-xl font-bold gaming-text-primary">VEGAS AI BOOKMAKER</h3>
+            <h3 className="text-xl font-bold bg-card">VEGAS AI BOOKMAKER</h3>
           </div>
-          <div className="text-center py-8 gaming-text-secondary">
+          <div className="text-center py-8 bg-card">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>AI analysis not available for this game yet</p>
           </div>
@@ -111,19 +111,19 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
     const isExpanded = expandedSection === id;
 
     return (
-      <div className="border border-gaming-border/30 rounded-lg overflow-hidden">
+      <div className="border border-bg-card/30 rounded-lg overflow-hidden">
         <button
           onClick={() => setExpandedSection(isExpanded ? null : id)}
-          className="w-full p-4 flex items-center justify-between hover:bg-gaming-bg-secondary/20 transition-all"
+          className="w-full p-4 flex items-center justify-between hover:bg-bg-card/20 transition-all"
         >
           <div className="flex items-center gap-3">
             {icon}
-            <span className="font-bold gaming-text-primary">{title}</span>
+            <span className="font-bold bg-card">{title}</span>
           </div>
-          <ChevronRight className={`w-4 h-4 gaming-text-secondary transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+          <ChevronRight className={`w-4 h-4 bg-card transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
         </button>
         {isExpanded && (
-          <div className="p-4 border-t border-gaming-border/30 bg-gaming-background/30">
+          <div className="p-4 border-t border-bg-card/30 bg-bg-card/30">
             {content}
           </div>
         )}
@@ -132,17 +132,17 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
   };
 
   return (
-    <Card className="gaming-card">
-      <div className="gaming-border-glow"></div>
+    <Card className="bg-card">
+      <div className="bg-card"></div>
       <div className="p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gaming-border">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-bg-card">
           <div className="flex items-center gap-3">
             <Brain className="w-6 h-6 text-cyan-400" />
-            <h3 className="text-xl font-bold gaming-text-primary">VEGAS AI BOOKMAKER</h3>
+            <h3 className="text-xl font-bold bg-card">VEGAS AI BOOKMAKER</h3>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-sm gaming-text-secondary">Confidence:</div>
+            <div className="text-sm bg-card">Confidence:</div>
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <div
@@ -150,12 +150,12 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
                   className={`w-2 h-4 rounded ${
                     i < Math.round((analysis.analysis.confidence_rating || 0) * 5)
                       ? 'bg-cyan-400'
-                      : 'bg-gaming-border'
+                      : 'bg-bg-card'
                   }`}
                 />
               ))}
             </div>
-            <span className="text-sm font-bold gaming-text-primary ml-1">
+            <span className="text-sm font-bold bg-card ml-1">
               {((analysis.analysis.confidence_rating || 0) * 100).toFixed(0)}%
             </span>
           </div>
@@ -174,11 +174,11 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
                 }`}
               >
                 <AlertTriangle className={`w-4 h-4 mt-0.5 ${
-                  alert.urgency === 'HIGH' ? 'text-red-400' : 'text-yellow-400'
+                  alert.urgency === 'HIGH' ? 'text-red-500' : 'text-yellow-500'
                 }`} />
                 <div className="flex-1">
-                  <div className="font-bold gaming-text-primary text-sm">{alert.type}</div>
-                  <div className="text-xs gaming-text-secondary mt-1">{alert.message}</div>
+                  <div className="font-bold bg-card text-sm">{alert.type}</div>
+                  <div className="text-xs bg-card mt-1">{alert.message}</div>
                   <div className="mt-2">
                     <Badge className="text-xs">{alert.action}</Badge>
                   </div>
@@ -190,16 +190,16 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
 
         {/* Key Factors */}
         {key_factors && key_factors.length > 0 && (
-          <div className="mb-6 p-4 bg-gaming-bg-secondary/30 rounded-lg border border-gaming-border/30">
+          <div className="mb-6 p-4 bg-bg-card/30 rounded-lg border border-bg-card/30">
             <div className="flex items-center gap-2 mb-3">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              <span className="font-bold gaming-text-primary text-sm">KEY FACTORS</span>
+              <Zap className="w-4 h-4 text-yellow-500" />
+              <span className="font-bold bg-card text-sm">KEY FACTORS</span>
             </div>
             <div className="space-y-2">
               {key_factors.map((factor, idx) => (
                 <div key={idx} className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5"></div>
-                  <span className="text-xs gaming-text-primary">{factor}</span>
+                  <span className="text-xs bg-card">{factor}</span>
                 </div>
               ))}
             </div>
@@ -212,37 +212,37 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
           {renderSection(
             'recommendations',
             'AI RECOMMENDATIONS',
-            <Target className="w-4 h-4 text-green-400" />,
+            <Target className="w-4 h-4 text-green-500" />,
             <div className="space-y-3">
               {analysis.recommendations && analysis.recommendations.length > 0 ? (
                 analysis.recommendations.map((rec, idx) => (
-                  <div key={idx} className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
+                  <div key={idx} className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge className={rec.priority === 'HIGH' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
+                      <Badge className={rec.priority === 'HIGH' ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'}>
                         {rec.priority} PRIORITY
                       </Badge>
-                      <span className="text-sm font-bold gaming-text-accent">{rec.units} Units</span>
+                      <span className="text-sm font-bold bg-card">{rec.units} Units</span>
                     </div>
-                    <div className="font-bold gaming-text-primary mb-1">
+                    <div className="font-bold bg-card mb-1">
                       {rec.type} - {rec.pick}
                     </div>
-                    <div className="text-xs gaming-text-secondary">{rec.reasoning}</div>
+                    <div className="text-xs bg-card">{rec.reasoning}</div>
                     <div className="mt-2 flex items-center gap-2">
-                      <div className="text-xs gaming-text-secondary">Confidence:</div>
-                      <div className="flex-1 h-2 bg-gaming-border rounded-full overflow-hidden">
+                      <div className="text-xs bg-card">Confidence:</div>
+                      <div className="flex-1 h-2 bg-bg-card rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-cyan-500 to-green-500"
                           style={{ width: `${(rec.confidence || 0) * 100}%` }}
                         />
                       </div>
-                      <span className="text-xs font-bold gaming-text-primary">
+                      <span className="text-xs font-bold bg-card">
                         {((rec.confidence || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 gaming-text-secondary text-sm">
+                <div className="text-center py-4 bg-card text-sm">
                   No specific recommendations at this time
                 </div>
               )}
@@ -255,29 +255,29 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
             'SHARP VS PUBLIC',
             <Users className="w-4 h-4 text-purple-400" />,
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                <div className="text-xs gaming-text-secondary mb-2">SHARP MONEY</div>
-                <div className="font-bold text-lg gaming-text-primary">
+              <div className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                <div className="text-xs bg-card mb-2">SHARP MONEY</div>
+                <div className="font-bold text-lg bg-card">
                   {sharp_money?.sharp_side || 'UNKNOWN'}
                 </div>
-                <div className="text-sm gaming-text-accent mt-1">
+                <div className="text-sm bg-card mt-1">
                   {(sharp_money?.sharp_probability * 100).toFixed(0)}% Confidence
                 </div>
               </div>
-              <div className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                <div className="text-xs gaming-text-secondary mb-2">PUBLIC MONEY</div>
-                <div className="font-bold text-lg gaming-text-primary">
+              <div className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                <div className="text-xs bg-card mb-2">PUBLIC MONEY</div>
+                <div className="font-bold text-lg bg-card">
                   {public_bias?.public_side || 'UNKNOWN'}
                 </div>
-                <div className="text-sm gaming-text-accent mt-1">
+                <div className="text-sm bg-card mt-1">
                   {public_bias?.public_percentage?.toFixed(0)}% of Bets
                 </div>
               </div>
               {public_bias?.fade_opportunity && (
                 <div className="col-span-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                    <span className="text-sm font-bold text-yellow-400">FADE OPPORTUNITY DETECTED</span>
+                    <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                    <span className="text-sm font-bold text-yellow-500">FADE OPPORTUNITY DETECTED</span>
                   </div>
                 </div>
               )}
@@ -288,39 +288,39 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
           {renderSection(
             'line_movement',
             'LINE MOVEMENT',
-            <Activity className="w-4 h-4 text-blue-400" />,
+            <Activity className="w-4 h-4 text-blue-500" />,
             <div className="space-y-3">
               {line_prediction && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                      <div className="text-xs gaming-text-secondary mb-1">Current Line</div>
-                      <div className="text-xl font-bold gaming-text-primary">
+                    <div className="text-center p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                      <div className="text-xs bg-card mb-1">Current Line</div>
+                      <div className="text-xl font-bold bg-card">
                         {line_prediction.current_line?.toFixed(1) || 'N/A'}
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                      <div className="text-xs gaming-text-secondary mb-1">Predicted Close</div>
+                    <div className="text-center p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                      <div className="text-xs bg-card mb-1">Predicted Close</div>
                       <div className="text-xl font-bold text-cyan-400">
                         {line_prediction.predicted_close?.toFixed(1) || 'N/A'}
                       </div>
                     </div>
                   </div>
-                  <div className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
+                  <div className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm gaming-text-secondary">Movement Direction:</span>
+                      <span className="text-sm bg-card">Movement Direction:</span>
                       <div className="flex items-center gap-2">
                         {line_prediction.predicted_movement > 0 ? (
-                          <TrendingUp className="w-4 h-4 text-green-400" />
+                          <TrendingUp className="w-4 h-4 text-green-500" />
                         ) : (
-                          <TrendingDown className="w-4 h-4 text-red-400" />
+                          <TrendingDown className="w-4 h-4 text-red-500" />
                         )}
-                        <span className="font-bold gaming-text-primary">
+                        <span className="font-bold bg-card">
                           {line_prediction.direction}
                         </span>
                       </div>
                     </div>
-                    <div className="text-xs gaming-text-secondary mt-2">
+                    <div className="text-xs bg-card mt-2">
                       {line_prediction.recommendation}
                     </div>
                   </div>
@@ -333,22 +333,22 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
           {renderSection(
             'value_bets',
             'VALUE BETS',
-            <DollarSign className="w-4 h-4 text-green-400" />,
+            <DollarSign className="w-4 h-4 text-green-500" />,
             <div className="space-y-2">
               {value_bets && value_bets.length > 0 ? (
                 value_bets.slice(0, 3).map((bet, idx) => (
-                  <div key={idx} className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
+                  <div key={idx} className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge className="bg-green-500/20 text-green-400">{bet.type}</Badge>
-                      <span className="text-sm font-bold text-green-400">
+                      <Badge className="bg-green-500/20 text-green-500">{bet.type}</Badge>
+                      <span className="text-sm font-bold text-green-500">
                         +{bet.expected_value || bet.edge}% Edge
                       </span>
                     </div>
-                    <div className="font-bold gaming-text-primary text-sm mb-1">
+                    <div className="font-bold bg-card text-sm mb-1">
                       {bet.team || bet.direction} @ {bet.book}
                     </div>
                     {bet.odds && (
-                      <div className="text-xs gaming-text-secondary">
+                      <div className="text-xs bg-card">
                         Odds: {bet.odds > 0 ? '+' : ''}{bet.odds}
                       </div>
                     )}
@@ -356,8 +356,8 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
                       <div className="mt-2">
                         <Badge className={`text-xs ${
                           bet.confidence === 'HIGH'
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-yellow-500/20 text-yellow-400'
+                            ? 'bg-green-500/20 text-green-500'
+                            : 'bg-yellow-500/20 text-yellow-500'
                         }`}>
                           {bet.confidence} CONFIDENCE
                         </Badge>
@@ -366,7 +366,7 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 gaming-text-secondary text-sm">
+                <div className="text-center py-4 bg-card text-sm">
                   No value bets identified
                 </div>
               )}
@@ -382,29 +382,29 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
               {true_odds && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                      <div className="text-xs gaming-text-secondary mb-2">Home Win Probability</div>
-                      <div className="text-xl font-bold gaming-text-primary">
+                    <div className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                      <div className="text-xs bg-card mb-2">Home Win Probability</div>
+                      <div className="text-xl font-bold bg-card">
                         {(true_odds.true_odds?.home_win_probability * 100).toFixed(1)}%
                       </div>
                     </div>
-                    <div className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                      <div className="text-xs gaming-text-secondary mb-2">Away Win Probability</div>
-                      <div className="text-xl font-bold gaming-text-primary">
+                    <div className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                      <div className="text-xs bg-card mb-2">Away Win Probability</div>
+                      <div className="text-xl font-bold bg-card">
                         {(true_odds.true_odds?.away_win_probability * 100).toFixed(1)}%
                       </div>
                     </div>
                   </div>
-                  <div className="p-3 bg-gaming-background/50 rounded border border-gaming-border/20">
-                    <div className="text-xs gaming-text-secondary mb-2">Model Confidence</div>
+                  <div className="p-3 bg-bg-card/50 rounded border border-bg-card/20">
+                    <div className="text-xs bg-card mb-2">Model Confidence</div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-gaming-border rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-bg-card rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
                           style={{ width: `${(true_odds.model_confidence || 0) * 100}%` }}
                         />
                       </div>
-                      <span className="text-sm font-bold gaming-text-primary">
+                      <span className="text-sm font-bold bg-card">
                         {((true_odds.model_confidence || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
@@ -416,7 +416,7 @@ export function BookmakerAgentCard({ gameId, onAnalysisUpdate }: BookmakerAgentC
         </div>
 
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-gaming-border/30 flex items-center justify-between text-xs gaming-text-secondary">
+        <div className="mt-6 pt-4 border-t border-bg-card/30 flex items-center justify-between text-xs bg-card">
           <span>Powered by Vegas AI™</span>
           <span className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>

@@ -125,7 +125,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
   const stats = calculateStats(content);
 
   return (
-    <div className={`border border-dark-600 rounded-lg bg-dark-800 ${className}`}>
+    <div className={`border border-dark-600 rounded-lg bg-card ${className}`}>
       {/* Toolbar */}
       <div className="border-b border-dark-600 p-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -216,7 +216,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           )}
 
           {/* Stats */}
-          <div className="ml-auto flex items-center gap-4 text-xs text-gray-400">
+          <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <DocumentDuplicateIcon className="h-3 w-3" />
               <span>{stats.words.toLocaleString()} words</span>
@@ -226,7 +226,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
               <span>{stats.readingTime} min read</span>
             </div>
             {lastSaved && (
-              <div className="text-green-400">
+              <div className="text-green-500">
                 Saved {lastSaved.toLocaleTimeString()}
               </div>
             )}
@@ -243,13 +243,13 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
-          className="w-full h-96 bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none font-mono text-sm leading-relaxed"
+          className="w-full h-96 bg-transparent text-foreground placeholder-gray-500 resize-none focus:outline-none font-mono text-sm leading-relaxed"
           style={{ minHeight: '24rem' }}
         />
       </div>
 
       {/* Status bar */}
-      <div className="border-t border-dark-600 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
+      <div className="border-t border-dark-600 px-4 py-2 flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <span>Lines: {content.split('\n').length}</span>
           <span>Characters: {content.length.toLocaleString()}</span>
@@ -257,7 +257,7 @@ export const RichTextEditor = forwardRef<HTMLTextAreaElement, RichTextEditorProp
         </div>
         <div className="flex items-center gap-2">
           {onAutoSave && (
-            <span className="text-gray-400">
+            <span className="text-muted-foreground">
               Auto-save every {autoSaveInterval}s
             </span>
           )}

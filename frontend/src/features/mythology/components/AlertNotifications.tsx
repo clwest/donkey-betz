@@ -124,11 +124,11 @@ export const AlertNotifications: React.FC<AlertNotificationsProps> = ({
                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {notification.message}
             </p>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 {format(new Date(notification.created_at), 'MMM d, HH:mm')}
               </span>
               {config && (

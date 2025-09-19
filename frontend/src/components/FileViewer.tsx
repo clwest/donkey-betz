@@ -144,17 +144,17 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
 
       // Lists
       if (line.match(/^\d+\./)) {
-        return <li key={index} className="ml-6 list-decimal text-gray-300">{line.replace(/^\d+\.\s*/, '')}</li>;
+        return <li key={index} className="ml-6 list-decimal text-muted-foreground">{line.replace(/^\d+\.\s*/, '')}</li>;
       }
       if (line.startsWith('- ')) {
-        return <li key={index} className="ml-6 list-disc text-gray-300">{line.slice(2)}</li>;
+        return <li key={index} className="ml-6 list-disc text-muted-foreground">{line.slice(2)}</li>;
       }
 
       // Links
       if (line.includes('http')) {
         const parts = line.split(' ');
         return (
-          <p key={index} className="my-1 text-gray-300">
+          <p key={index} className="my-1 text-muted-foreground">
             {parts.map((part, i) => {
               if (part.startsWith('http')) {
                 return (
@@ -171,7 +171,7 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
 
       // Regular text
       if (line.trim()) {
-        return <p key={index} className="my-1 text-gray-300">{line}</p>;
+        return <p key={index} className="my-1 text-muted-foreground">{line}</p>;
       }
 
       return <br key={index} />;
@@ -179,12 +179,12 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
   };
 
   return (
-    <Card className="fixed inset-4 z-50 flex flex-col bg-gray-900 shadow-2xl border-gray-700">
+    <Card className="fixed inset-4 z-50 flex flex-col bg-background shadow-2xl border-gray-700">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-800">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-card">
         <div className="flex items-center gap-3">
           <FileText className="h-5 w-5 text-cyan-400" />
-          <h2 className="text-lg font-semibold text-gray-100">{filename}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{filename}</h2>
         </div>
 
         <div className="flex items-center gap-2">
@@ -238,13 +238,13 @@ export const FileViewer: React.FC<FileViewerProps> = ({ filename, onClose }) => 
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1 p-6 bg-gray-900">
+      <ScrollArea className="flex-1 p-6 bg-background">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
           </div>
         ) : (
-          <div className="prose prose-invert max-w-none text-gray-200">
+          <div className="prose prose-invert max-w-none text-foreground">
             {renderMarkdown(content)}
           </div>
         )}

@@ -122,32 +122,32 @@ const SocialMediaGenerator: React.FC = () => {
     <div className="space-y-6">
       {/* Platform Selection */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Select Platforms</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Select Platforms</h3>
         <PlatformSelector 
           platforms={platforms} 
           onPlatformToggle={handlePlatformToggle} 
         />
-        <p className="text-sm text-gray-400 mt-3">
+        <p className="text-sm text-muted-foreground mt-3">
           {selectedPlatformCount} platform{selectedPlatformCount !== 1 ? 's' : ''} selected
         </p>
       </Card>
 
       {/* Generation Options */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Content Options</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">Content Options</h3>
         
         <div className="space-y-4">
           {/* Topic Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Topic or Content Brief *
             </label>
             <textarea
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Enter your topic or describe what you want to post about..."
-              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg 
-                       text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 
+              className="w-full px-4 py-3 bg-card border border-border rounded-lg 
+                       text-foreground placeholder-gray-500 focus:ring-2 focus:ring-primary-500 
                        focus:border-primary-500 transition-all"
               rows={3}
             />
@@ -155,14 +155,14 @@ const SocialMediaGenerator: React.FC = () => {
 
           {/* Tone Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Tone
             </label>
             <select
               value={tone}
               onChange={(e) => setTone(e.target.value as SocialGenerationRequest['tone'])}
-              className="w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg 
-                       text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-4 py-3 bg-card border border-border rounded-lg 
+                       text-foreground focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="professional">Professional</option>
               <option value="casual">Casual</option>
@@ -176,7 +176,7 @@ const SocialMediaGenerator: React.FC = () => {
 
           {/* Variations Slider */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Variations per Platform: {variations}
             </label>
             <input
@@ -187,7 +187,7 @@ const SocialMediaGenerator: React.FC = () => {
               onChange={(e) => setVariations(Number(e.target.value))}
               className="w-full accent-primary-500"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>1</span>
               <span>2</span>
               <span>3</span>
@@ -198,23 +198,23 @@ const SocialMediaGenerator: React.FC = () => {
 
           {/* Options Row */}
           <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-gray-300">
+            <label className="flex items-center gap-2 text-muted-foreground">
               <input
                 type="checkbox"
                 checked={includeHashtags}
                 onChange={(e) => setIncludeHashtags(e.target.checked)}
-                className="rounded bg-dark-800 border-dark-600 text-primary-500 
+                className="rounded bg-card border-dark-600 text-primary-500 
                          focus:ring-primary-500 focus:ring-2"
               />
               <span className="text-sm">Include Hashtags</span>
             </label>
             
-            <label className="flex items-center gap-2 text-gray-300">
+            <label className="flex items-center gap-2 text-muted-foreground">
               <input
                 type="checkbox"
                 checked={includeEmojis}
                 onChange={(e) => setIncludeEmojis(e.target.checked)}
-                className="rounded bg-dark-800 border-dark-600 text-primary-500 
+                className="rounded bg-card border-dark-600 text-primary-500 
                          focus:ring-primary-500 focus:ring-2"
               />
               <span className="text-sm">Include Emojis</span>
@@ -222,14 +222,14 @@ const SocialMediaGenerator: React.FC = () => {
           </div>
 
           {/* Advanced Options */}
-          <details className="border-t border-dark-700 pt-4">
-            <summary className="cursor-pointer text-sm font-medium text-gray-300 mb-3 hover:text-white transition-colors">
+          <details className="border-t border-border pt-4">
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground mb-3 hover:text-foreground transition-colors">
               Advanced Options
             </summary>
             
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Target Audience
                 </label>
                 <input
@@ -237,13 +237,13 @@ const SocialMediaGenerator: React.FC = () => {
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="e.g., marketers, developers, entrepreneurs"
-                  className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg 
-                           text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 bg-card border border-border rounded-lg 
+                           text-foreground placeholder-gray-500 focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Call to Action
                 </label>
                 <input
@@ -251,8 +251,8 @@ const SocialMediaGenerator: React.FC = () => {
                   value={cta}
                   onChange={(e) => setCta(e.target.value)}
                   placeholder="e.g., Visit our website, Sign up today"
-                  className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg 
-                           text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 bg-card border border-border rounded-lg 
+                           text-foreground placeholder-gray-500 focus:ring-2 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -261,7 +261,7 @@ const SocialMediaGenerator: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="mt-4 p-3 bg-red-900/20 border border-red-500/50 text-red-400 rounded-lg">
+          <div className="mt-4 p-3 bg-red-900/20 border border-red-500/50 text-red-500 rounded-lg">
             {error}
           </div>
         )}
@@ -290,10 +290,10 @@ const SocialMediaGenerator: React.FC = () => {
       {/* Generated Posts */}
       {generatedPosts && generatedPosts.social_posts && (
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Generated Posts</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Generated Posts</h3>
           
           {/* Platform Tabs */}
-          <div className="border-b border-dark-700 mb-4">
+          <div className="border-b border-border mb-4">
             <div className="flex gap-2 overflow-x-auto">
               {Object.keys(generatedPosts.social_posts.platforms).map(platformId => {
                 const platform = platforms.find(p => p.id === platformId);
@@ -306,7 +306,7 @@ const SocialMediaGenerator: React.FC = () => {
                     className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors whitespace-nowrap ${
                       activeTab === platformId
                         ? 'border-primary-500 text-primary-400'
-                        : 'border-transparent text-gray-400 hover:text-gray-200'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <span className="text-lg">{platform.icon}</span>

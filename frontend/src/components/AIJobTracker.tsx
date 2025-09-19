@@ -356,7 +356,7 @@ const AIJobTracker: React.FC = () => {
       virtual_assistant: 'bg-yellow-500',
       prompt_engineering: 'bg-pink-500',
       web_scraping: 'bg-orange-500',
-      default: 'bg-gray-500'
+      default: 'bg-muted/50'
     };
     return colors[category] || colors.default;
   };
@@ -367,7 +367,7 @@ const AIJobTracker: React.FC = () => {
       analyzed: <Badge className="bg-yellow-100 text-yellow-700">Analyzed</Badge>,
       applied: <Badge className="bg-green-100 text-green-700">Applied</Badge>,
       responded: <Badge className="bg-purple-100 text-purple-700">Response</Badge>,
-      won: <Badge className="bg-emerald-500 text-white">Won</Badge>
+      won: <Badge className="bg-emerald-500 text-foreground">Won</Badge>
     };
     return badges[status] || badges.new;
   };
@@ -380,7 +380,7 @@ const AIJobTracker: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Active Spiders</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">Active Spiders</p>
                 <p className="text-2xl font-bold">{stats.active_spiders}/13</p>
               </div>
               <Activity className="h-8 w-8 text-purple-500 animate-pulse" />
@@ -392,7 +392,7 @@ const AIJobTracker: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Jobs Analyzed</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">Jobs Analyzed</p>
                 <p className="text-2xl font-bold">{stats.total_analyzed}</p>
               </div>
               <Brain className="h-8 w-8 text-blue-500" />
@@ -404,7 +404,7 @@ const AIJobTracker: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">AI Suitable</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">AI Suitable</p>
                 <p className="text-2xl font-bold">{stats.ai_suitable}</p>
               </div>
               <Target className="h-8 w-8 text-green-500" />
@@ -416,7 +416,7 @@ const AIJobTracker: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Applied</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">Applied</p>
                 <p className="text-2xl font-bold">{stats.applications_sent}</p>
               </div>
               <Briefcase className="h-8 w-8 text-yellow-500" />
@@ -428,7 +428,7 @@ const AIJobTracker: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Avg AI Score</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">Avg AI Score</p>
                 <p className="text-2xl font-bold">{(stats.avg_ai_score * 100).toFixed(0)}%</p>
               </div>
               <Sparkles className="h-8 w-8 text-emerald-500" />
@@ -440,7 +440,7 @@ const AIJobTracker: React.FC = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Potential</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">Potential</p>
                 <p className="text-2xl font-bold">${stats.potential_revenue}</p>
               </div>
               <DollarSign className="h-8 w-8 text-indigo-500" />
@@ -479,7 +479,7 @@ const AIJobTracker: React.FC = () => {
                 className={`p-3 rounded-lg border ${
                   spider.active
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+                    : 'bg-muted/5 dark:bg-background/20 border-border dark:border-gray-800'
                 }`}
               >
                 <div className="flex items-start justify-between mb-1">
@@ -487,7 +487,7 @@ const AIJobTracker: React.FC = () => {
                   <div className={`w-2 h-2 rounded-full ${spider.active ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
                 </div>
                 <div className="text-lg font-bold">{spider.data_collected}</div>
-                <div className="text-xs text-gray-500">{spider.last_update}</div>
+                <div className="text-xs text-muted-foreground">{spider.last_update}</div>
               </div>
             ))}
           </div>
@@ -515,7 +515,7 @@ const AIJobTracker: React.FC = () => {
                       <h3 className="font-semibold">{job.title}</h3>
                       {getStatusBadge(job.status)}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
                         {job.platform}
@@ -534,7 +534,7 @@ const AIJobTracker: React.FC = () => {
                     <div className="text-2xl font-bold text-green-600">
                       {(job.ai_score * 100).toFixed(0)}%
                     </div>
-                    <div className="text-xs text-gray-500">AI Score</div>
+                    <div className="text-xs text-muted-foreground">AI Score</div>
                   </div>
                 </div>
 

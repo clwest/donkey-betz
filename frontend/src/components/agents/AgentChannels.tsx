@@ -323,7 +323,7 @@ export const AgentChannels: React.FC = () => {
       case 'task_update': return 'bg-yellow-500';
       case 'tool_usage': return 'bg-green-500';
       case 'collaboration_request': return 'bg-purple-500';
-      case 'status_update': return 'bg-gray-500';
+      case 'status_update': return 'bg-muted/50';
       case 'system_message': return 'bg-red-500';
       case 'user_message': return 'bg-indigo-500';
       case 'result_share': return 'bg-teal-500';
@@ -375,10 +375,10 @@ export const AgentChannels: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
-                <MessageCircle className="h-8 w-8 text-white" />
+                <MessageCircle className="h-8 w-8 text-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-foreground">
                   Agent Channels
                 </h1>
                 <p className="text-slate-600 dark:text-slate-300 mt-1">
@@ -409,8 +409,8 @@ export const AgentChannels: React.FC = () => {
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                   isRecording 
-                    ? 'bg-red-500 hover:bg-red-600 text-white' 
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    ? 'bg-red-500 hover:bg-red-600 text-foreground' 
+                    : 'bg-blue-500 hover:bg-blue-600 text-foreground'
                 }`}
               >
                 {isRecording ? (
@@ -439,8 +439,8 @@ export const AgentChannels: React.FC = () => {
               {/* Connection Status */}
               <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
                 isConnected 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500' 
+                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500'
               }`}>
                 <div className={`w-2 h-2 rounded-full ${
                   isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
@@ -461,7 +461,7 @@ export const AgentChannels: React.FC = () => {
             className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg"
           >
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500" />
               <p className="text-red-800 dark:text-red-300">{error}</p>
             </div>
           </motion.div>
@@ -476,7 +476,7 @@ export const AgentChannels: React.FC = () => {
           >
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg h-full flex flex-col">
               <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-foreground mb-4 flex items-center">
                   <Users className="h-5 w-5 mr-2 text-blue-500" />
                   Active Channels ({channels.length})
                 </h3>
@@ -496,7 +496,7 @@ export const AgentChannels: React.FC = () => {
                     onClick={() => setAutoScroll(!autoScroll)}
                     className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                       autoScroll 
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500' 
                         : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                     }`}
                   >
@@ -523,7 +523,7 @@ export const AgentChannels: React.FC = () => {
                             channel.is_active ? 'bg-green-500' : 'bg-gray-400'
                           }`} />
                           <Hash className="h-4 w-4 text-slate-500" />
-                          <span className="font-medium text-sm text-slate-900 dark:text-white truncate">
+                          <span className="font-medium text-sm text-slate-900 dark:text-foreground truncate">
                             {channel.display_name || channel.name}
                           </span>
                         </div>
@@ -563,16 +563,16 @@ export const AgentChannels: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Hash className="h-5 w-5 text-blue-500" />
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-foreground">
                       {selectedChannel?.display_name || selectedChannel?.name || 'Select a channel'}
                     </h2>
                     {selectedChannel?.is_active && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-medium rounded">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500 text-xs font-medium rounded">
                         Live
                       </span>
                     )}
                     {isRecording && (
-                      <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 text-xs font-medium rounded animate-pulse">
+                      <span className="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500 text-xs font-medium rounded animate-pulse">
                         Recording
                       </span>
                     )}
@@ -586,7 +586,7 @@ export const AgentChannels: React.FC = () => {
                         placeholder="Search messages..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-64 pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-64 pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-foreground text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <button className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors">
@@ -618,7 +618,7 @@ export const AgentChannels: React.FC = () => {
                         <div key={message.id} className="flex gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                           {/* Avatar */}
                           <div className="flex-shrink-0">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-foreground text-sm font-medium">
                               {getMessageTypeIcon(message.message_type)}
                             </div>
                           </div>
@@ -626,10 +626,10 @@ export const AgentChannels: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             {/* Message Header */}
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-slate-900 dark:text-white text-sm">
+                              <span className="font-medium text-slate-900 dark:text-foreground text-sm">
                                 {message.agent_name || message.user_username || 'System'}
                               </span>
-                              <span className={`px-2 py-1 rounded text-xs text-white ${getMessageTypeColor(message.message_type)}`}>
+                              <span className={`px-2 py-1 rounded text-xs text-foreground ${getMessageTypeColor(message.message_type)}`}>
                                 {message.message_type.replace('_', ' ')}
                               </span>
                               <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center">
@@ -690,12 +690,12 @@ export const AgentChannels: React.FC = () => {
                       value={messageInput}
                       onChange={(e) => setMessageInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-foreground focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!messageInput.trim()}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
                     >
                       <Send className="h-4 w-4" />
                       Send

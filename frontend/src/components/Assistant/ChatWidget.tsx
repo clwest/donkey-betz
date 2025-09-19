@@ -319,7 +319,7 @@ export function ChatWidget() {
           className={clsx(
             "fixed bottom-6 right-6 p-5",
             "bg-gradient-to-br from-cyan-600 to-purple-800",
-            "text-white rounded-lg shadow-2xl",
+            "text-foreground rounded-lg shadow-2xl",
             "hover:shadow-cyan-500/50 hover:scale-110",
             "transition-all duration-300 z-50 group",
             "ring-2 ring-cyan-500/30 border-2 border-cyan-500/50",
@@ -335,7 +335,7 @@ export function ChatWidget() {
           {/* Tooltip */}
           <span className={clsx(
             "absolute bottom-full right-0 mb-2 px-3 py-1",
-            "bg-dark-800 text-white text-sm rounded-lg",
+            "bg-card text-foreground text-sm rounded-lg",
             "opacity-0 group-hover:opacity-100 transition-opacity",
             "whitespace-nowrap pointer-events-none"
           )}>
@@ -377,7 +377,7 @@ export function ChatWidget() {
                   </div>
                   <div>
                     <h3 className="text-cyan-400 font-bold text-lg uppercase font-mono tracking-wider drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]">NEURAL AI ASSISTANT</h3>
-                    <p className="text-gray-300 text-sm opacity-90 font-mono">
+                    <p className="text-muted-foreground text-sm opacity-90 font-mono">
                       {pageContext ? `>>> ${pageContext.page.toUpperCase()} PROTOCOL ACTIVE` : '>>> NEURAL ASSISTANT ONLINE'}
                     </p>
                   </div>
@@ -385,7 +385,7 @@ export function ChatWidget() {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setIsMinimized(!isMinimized)}
-                    className="text-white/80 hover:text-white transition-colors p-1"
+                    className="text-foreground/80 hover:text-foreground transition-colors p-1"
                   >
                     <ChevronDownIcon className={clsx(
                       "h-5 w-5 transition-transform",
@@ -394,7 +394,7 @@ export function ChatWidget() {
                   </button>
                   <button
                     onClick={() => setIsOpen(false)}
-                    className="text-white/80 hover:text-white transition-colors p-1"
+                    className="text-foreground/80 hover:text-foreground transition-colors p-1"
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
@@ -413,7 +413,7 @@ export function ChatWidget() {
                       <p className="text-cyan-400 mb-2 text-lg font-bold uppercase font-mono tracking-wider">
                         &gt;&gt;&gt; NEURAL LINK ESTABLISHED: {currentUser.username.toUpperCase()}
                       </p>
-                      <p className="text-gray-300 text-base font-mono">
+                      <p className="text-muted-foreground text-base font-mono">
                         Neural AI Assistant ready. Query content generation protocols?
                       </p>
                       {userStats?.favorite_styles?.length > 0 && (
@@ -436,14 +436,14 @@ export function ChatWidget() {
                         className={clsx(
                           'max-w-[85%] rounded-2xl px-5 py-3',
                           msg.role === 'user'
-                            ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white'
-                            : 'glass-dark text-gray-100'
+                            ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-foreground'
+                            : 'glass-dark text-foreground'
                         )}
                       >
                         <p className="text-base whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                         <p className={clsx(
                           "text-xs mt-1 opacity-70",
-                          msg.role === 'user' ? 'text-purple-100' : 'text-gray-400'
+                          msg.role === 'user' ? 'text-purple-100' : 'text-muted-foreground'
                         )}>
                           {formatTime(msg.timestamp)}
                         </p>
@@ -453,7 +453,7 @@ export function ChatWidget() {
                   
                   {loading && (
                     <div className="flex justify-start">
-                      <div className="bg-gray-900/80 px-4 py-3 rounded-lg border border-gray-700">
+                      <div className="bg-background/80 px-4 py-3 rounded-lg border border-gray-700">
                         <div className="flex space-x-2">
                           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" />
                           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -476,7 +476,7 @@ export function ChatWidget() {
                       placeholder={isListening ? ">>> NEURAL INTERFACE LISTENING..." : ">>> INPUT NEURAL COMMAND..."}
                       disabled={loading}
                       className={clsx(
-                        "flex-1 bg-gray-900/80 text-white text-base font-mono",
+                        "flex-1 bg-background/80 text-foreground text-base font-mono",
                         "px-5 py-3 rounded-lg",
                         "border border-cyan-500/30 focus:border-cyan-500",
                         "focus:outline-none placeholder-gray-500",
@@ -492,8 +492,8 @@ export function ChatWidget() {
                         className={clsx(
                           "px-4 py-3 rounded-lg border",
                           isListening 
-                            ? "bg-red-500/20 hover:bg-red-500/30 animate-pulse border-red-500 text-red-400"
-                            : "bg-gray-800/50 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-500 text-cyan-400",
+                            ? "bg-red-500/20 hover:bg-red-500/30 animate-pulse border-red-500 text-red-500"
+                            : "bg-card/50 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-500 text-cyan-400",
                           "disabled:opacity-50 disabled:cursor-not-allowed",
                           "transition-all duration-200",
                           "flex items-center justify-center"
@@ -513,7 +513,7 @@ export function ChatWidget() {
                       className={clsx(
                         "px-4 py-3 rounded-lg border border-cyan-500/50",
                         "bg-gradient-to-r from-cyan-600 to-purple-700",
-                        "text-white hover:shadow-lg hover:shadow-cyan-500/50",
+                        "text-foreground hover:shadow-lg hover:shadow-cyan-500/50",
                         "disabled:opacity-50 disabled:cursor-not-allowed",
                         "transition-all duration-200 hover:scale-105",
                         "flex items-center justify-center",
@@ -523,7 +523,7 @@ export function ChatWidget() {
                       <PaperAirplaneIcon className="h-5 w-5" />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2 text-center font-mono">
+                  <p className="text-xs text-muted-foreground mt-2 text-center font-mono">
                     &gt;&gt;&gt; POWERED BY NEURAL GPT-5 • {pageContext?.page?.toUpperCase() || 'NEURAL CONTENT MATRIX'}
                     {speechSupported && ' • 🎤 VOICE INTERFACE ACTIVE'}
                   </p>

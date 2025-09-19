@@ -62,7 +62,7 @@ export function ContentTransformModal({ isOpen, onClose, blog, onSuccess }: Cont
       title: 'Social Media Posts',
       description: 'Convert to social media posts for multiple platforms',
       icon: HashtagIcon,
-      color: 'text-blue-400',
+      color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
       platforms: ['Twitter', 'LinkedIn', 'Facebook', 'Instagram']
     },
@@ -80,7 +80,7 @@ export function ContentTransformModal({ isOpen, onClose, blog, onSuccess }: Cont
       title: 'eBook Chapter',
       description: 'Expand into a comprehensive eBook chapter',
       icon: BookOpenIcon,
-      color: 'text-green-400',
+      color: 'text-green-500',
       bgColor: 'bg-green-500/10',
       features: ['Detailed Expansion', 'Chapter Structure', 'Additional Sections']
     }
@@ -175,10 +175,10 @@ export function ContentTransformModal({ isOpen, onClose, blog, onSuccess }: Cont
         <div className="bg-dark-700 rounded-lg p-4 border border-dark-600">
           <div className="flex items-center gap-3 mb-2">
             <DocumentTextIcon className="h-5 w-5 text-primary-400" />
-            <h3 className="font-semibold text-white">Source: Blog Post</h3>
+            <h3 className="font-semibold text-foreground">Source: Blog Post</h3>
           </div>
-          <p className="text-gray-300 font-medium">{blog.title}</p>
-          <div className="flex items-center gap-4 text-sm text-gray-400 mt-2">
+          <p className="text-muted-foreground font-medium">{blog.title}</p>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
             <span>{blog.word_count} words</span>
             <span className="capitalize">{blog.tone} tone</span>
             <span className="capitalize">{blog.length} length</span>
@@ -187,7 +187,7 @@ export function ContentTransformModal({ isOpen, onClose, blog, onSuccess }: Cont
 
         {/* Transformation Options */}
         <div className="space-y-3">
-          <h4 className="text-lg font-semibold text-white mb-3">Choose Transformation Type:</h4>
+          <h4 className="text-lg font-semibold text-foreground mb-3">Choose Transformation Type:</h4>
           
           {transformOptions.map((option) => (
             <div
@@ -204,14 +204,14 @@ export function ContentTransformModal({ isOpen, onClose, blog, onSuccess }: Cont
                   <option.icon className={`h-6 w-6 ${option.color}`} />
                 </div>
                 <div className="flex-1">
-                  <h5 className="font-semibold text-white mb-1">{option.title}</h5>
-                  <p className="text-gray-300 text-sm mb-3">{option.description}</p>
+                  <h5 className="font-semibold text-foreground mb-1">{option.title}</h5>
+                  <p className="text-muted-foreground text-sm mb-3">{option.description}</p>
                   
                   <div className="flex flex-wrap gap-2">
                     {('platforms' in option ? option.platforms : option.features).map((item, index) => (
                       <span
                         key={index}
-                        className="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded"
+                        className="px-2 py-1 text-xs bg-gray-600 text-muted-foreground rounded"
                       >
                         {item}
                       </span>
@@ -231,7 +231,7 @@ export function ContentTransformModal({ isOpen, onClose, blog, onSuccess }: Cont
 
         {/* Actions */}
         <div className="flex justify-between items-center pt-4 border-t border-dark-600">
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-muted-foreground">
             {selectedType && `Ready to transform to ${transformOptions.find(o => o.type === selectedType)?.title}`}
           </div>
           <div className="flex gap-3">

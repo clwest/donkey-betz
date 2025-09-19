@@ -341,7 +341,7 @@ const DecisionCommand: React.FC = () => {
       'advanced': 'bg-orange-500',
       'expert': 'bg-red-500'
     };
-    return colors[difficulty] || 'bg-gray-500';
+    return colors[difficulty] || 'bg-muted/50';
   };
 
   return (
@@ -507,16 +507,16 @@ const DecisionCommand: React.FC = () => {
                             <div className="flex items-center gap-2">
                               {getIconForStream(opp.stream_type)}
                               <h3 className="font-semibold">{opp.title}</h3>
-                              {opp.is_real && <Badge className="bg-green-600 text-white">REAL</Badge>}
+                              {opp.is_real && <Badge className="bg-green-600 text-foreground">REAL</Badge>}
                               <Badge
-                                className={`${getDifficultyColor(opp.difficulty)} text-white`}
+                                className={`${getDifficultyColor(opp.difficulty)} text-foreground`}
                               >
                                 {opp.difficulty}
                               </Badge>
                             </div>
 
                             {opp.company && (
-                              <p className="text-sm text-gray-500 mt-1">at {opp.company}</p>
+                              <p className="text-sm text-muted-foreground mt-1">at {opp.company}</p>
                             )}
 
                             {opp.salary_range && (
@@ -525,15 +525,15 @@ const DecisionCommand: React.FC = () => {
 
                             <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
                               <div>
-                                <span className="text-gray-500">Potential</span>
+                                <span className="text-muted-foreground">Potential</span>
                                 <p className="font-medium">{opp.potential_monthly}/mo</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Time to Income</span>
+                                <span className="text-muted-foreground">Time to Income</span>
                                 <p className="font-medium">{opp.time_to_income}</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Success Rate</span>
+                                <span className="text-muted-foreground">Success Rate</span>
                                 <p className="font-medium">{opp.success_probability || 75}%</p>
                               </div>
                             </div>
@@ -610,7 +610,7 @@ const DecisionCommand: React.FC = () => {
                                   stroke="currentColor"
                                   strokeWidth="4"
                                   fill="none"
-                                  className="text-gray-200"
+                                  className="text-foreground"
                                 />
                                 <circle
                                   cx="32"
@@ -639,7 +639,7 @@ const DecisionCommand: React.FC = () => {
 
               {opportunities.length === 0 && !loading && (
                 <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-gray-600">
                     Click "Analyze Opportunities" to get personalized recommendations
                   </p>
@@ -662,7 +662,7 @@ const DecisionCommand: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="relative">
-                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-muted/20"></div>
                 <div className="space-y-6">
                   {[
                     {
@@ -693,7 +693,7 @@ const DecisionCommand: React.FC = () => {
                     <div key={index} className="relative flex items-start gap-4">
                       <div className={`
                         w-16 h-16 rounded-full flex items-center justify-center
-                        ${index === 0 ? 'bg-purple-600 text-white' : 'bg-gray-100'}
+                        ${index === 0 ? 'bg-purple-600 text-foreground' : 'bg-muted/10'}
                       `}>
                         <Clock className="w-6 h-6" />
                       </div>
@@ -778,29 +778,29 @@ const DecisionCommand: React.FC = () => {
                   </AlertDescription>
                 </Alert>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-50">
-                  <Card className="border-gray-200">
+                  <Card className="border-border">
                     <CardContent className="p-4">
-                      <Lock className="w-5 h-5 mb-2 text-gray-400" />
+                      <Lock className="w-5 h-5 mb-2 text-muted-foreground" />
                       <h3 className="font-semibold text-gray-600">Stocks & ETFs</h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Unlocks at $100+ balance
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="border-gray-200">
+                  <Card className="border-border">
                     <CardContent className="p-4">
-                      <Lock className="w-5 h-5 mb-2 text-gray-400" />
+                      <Lock className="w-5 h-5 mb-2 text-muted-foreground" />
                       <h3 className="font-semibold text-gray-600">Crypto DCA</h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Unlocks at $50+ balance
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="border-gray-200">
+                  <Card className="border-border">
                     <CardContent className="p-4">
-                      <Lock className="w-5 h-5 mb-2 text-gray-400" />
+                      <Lock className="w-5 h-5 mb-2 text-muted-foreground" />
                       <h3 className="font-semibold text-gray-600">AI Trading</h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Unlocks at $500+ balance
                       </p>
                     </CardContent>

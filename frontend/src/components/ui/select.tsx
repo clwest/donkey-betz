@@ -15,15 +15,15 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <label className="block text-sm font-medium text-gray-300">
+          <label className="block text-sm font-medium text-muted-foreground">
             {label}
           </label>
         )}
         <select
           ref={ref}
           className={clsx(
-            'w-full bg-dark-800 border border-dark-700 rounded-lg px-3 py-2',
-            'text-gray-100 placeholder-gray-400',
+            'w-full bg-card border border-border rounded-lg px-3 py-2',
+            'text-foreground placeholder-gray-400',
             'focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
             'transition-colors duration-200',
             error && 'border-red-500 focus:ring-red-500 focus:border-red-500',
@@ -34,7 +34,7 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
           {children}
         </select>
         {error && (
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-red-500">{error}</p>
         )}
       </div>
     );

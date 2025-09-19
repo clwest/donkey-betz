@@ -202,7 +202,7 @@ const PaymentMethods: React.FC<Props> = ({ onUpdate }) => {
       {paymentMethods.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Payment Methods</h3>
             <p className="text-muted-foreground mb-4">
               Add a payment method to manage your subscription and make purchases

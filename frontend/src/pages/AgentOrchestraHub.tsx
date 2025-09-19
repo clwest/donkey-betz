@@ -44,7 +44,6 @@ import { agentChannelsService } from '@/services/agentChannels.service';
 import { useAgentOrchestraStore } from '@/store/agentOrchestraStore';
 
 // Styles
-import '../styles/gaming-theme.css';
 
 // Types
 interface Agent {
@@ -345,12 +344,12 @@ export default function AgentOrchestraHub() {
 
   // Mount Effects
   useEffect(() => {
-    document.body.classList.add('gaming-theme');
+    document.body.classList.add('bg-card');
     loadAllData();
     connectWebSocket();
 
     return () => {
-      document.body.classList.remove('gaming-theme');
+      document.body.classList.remove('bg-card');
       if (wsRef.current) {
         wsRef.current.close(1000, 'Component unmounting');
         wsRef.current = null;
@@ -360,38 +359,40 @@ export default function AgentOrchestraHub() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 mx-auto mb-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full animate-ping opacity-20"></div>
-            <div className="relative w-24 h-24 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full animate-pulse flex items-center justify-center">
+            <div className="absolute inset-0 bg-gradient-primary rounded-full animate-ping opacity-20"></div>
+            <div className="relative w-24 h-24 bg-gradient-primary rounded-full animate-pulse flex items-center justify-center shadow-glow-primary">
               <CpuChipIcon className="w-12 h-12 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-cyan-400 font-mono animate-pulse">INITIALIZING NEURAL MATRIX...</h2>
+          <h2 className="text-2xl font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-mono animate-pulse">
+            INITIALIZING NEURAL MATRIX...
+          </h2>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Cyberpunk Header */}
-      <div className="gaming-card border-b border-cyan-500/30 sticky top-0 z-50 backdrop-blur-xl bg-black/80">
+    <div className="min-h-screen bg-background">
+      {/* Enhanced Header */}
+      <div className="bg-card/95 border-b border-border/50 sticky top-0 z-50 backdrop-blur-xl shadow-dark-lg">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg blur opacity-30 animate-pulse"></div>
-                <div className="relative p-3 bg-black border-2 border-cyan-500 rounded-lg">
-                  <CpuChipIcon className="w-8 h-8 text-cyan-400" />
+                <div className="absolute -inset-2 bg-gradient-primary rounded-lg blur opacity-30 animate-pulse"></div>
+                <div className="relative p-3 bg-background border-2 border-primary rounded-lg shadow-glow-primary">
+                  <CpuChipIcon className="w-8 h-8 text-primary" />
                 </div>
               </div>
               <div>
-                <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 font-mono">
+                <h1 className="text-3xl font-black text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-mono">
                   NEURAL ORCHESTRA MATRIX
                 </h1>
-                <p className="text-sm text-cyan-400/80 font-mono">
+                <p className="text-sm text-primary/80 font-mono">
                   {'>>>'} UNIFIED AGENT COMMAND CENTER v2.0
                 </p>
               </div>
@@ -399,10 +400,10 @@ export default function AgentOrchestraHub() {
             
             {/* Status Indicators */}
             <div className="flex items-center gap-4">
-              <div className={`px-4 py-2 rounded-lg border ${wsConnected ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'}`}>
+              <div className={`px-4 py-2 rounded-lg border backdrop-blur-sm ${wsConnected ? 'border-accent-emerald-500/30 bg-accent-emerald-500/10' : 'border-destructive/30 bg-destructive/10'}`}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                  <span className={`text-sm font-mono ${wsConnected ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-accent-emerald-500 animate-pulse shadow-glow-success' : 'bg-destructive'}`} />
+                  <span className={`text-sm font-mono ${wsConnected ? 'text-accent-emerald-500' : 'text-destructive'}`}>
                     {wsConnected ? 'NEURAL LINK ACTIVE' : 'NEURAL LINK OFFLINE'}
                   </span>
                 </div>
@@ -410,7 +411,8 @@ export default function AgentOrchestraHub() {
               
               <Button
                 onClick={loadAllData}
-                className="gaming-btn-active"
+                variant="secondary"
+                className="hover:shadow-glow-secondary"
               >
                 <ArrowPathIcon className="w-4 h-4" />
                 SYNC
@@ -423,24 +425,24 @@ export default function AgentOrchestraHub() {
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="gaming-card p-1 bg-gray-900/80 border border-cyan-500/30">
-            <TabsTrigger value="dashboard" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+          <TabsList className="bg-card/95 p-1 backdrop-blur-sm border border-border/50 shadow-dark-md">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-glow-subtle">
               <ChartBarIcon className="w-4 h-4 mr-2" />
               DASHBOARD
             </TabsTrigger>
-            <TabsTrigger value="agents" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+            <TabsTrigger value="agents" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-glow-subtle">
               <CpuChipIcon className="w-4 h-4 mr-2" />
               AGENTS
             </TabsTrigger>
-            <TabsTrigger value="workflows" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+            <TabsTrigger value="workflows" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-glow-subtle">
               <CircleStackIcon className="w-4 h-4 mr-2" />
               WORKFLOWS
             </TabsTrigger>
-            <TabsTrigger value="executions" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+            <TabsTrigger value="executions" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-glow-subtle">
               <BoltIcon className="w-4 h-4 mr-2" />
               EXECUTIONS
             </TabsTrigger>
-            <TabsTrigger value="channels" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+            <TabsTrigger value="channels" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-glow-subtle">
               <ChatBubbleLeftRightIcon className="w-4 h-4 mr-2" />
               CHANNELS
             </TabsTrigger>
@@ -453,15 +455,17 @@ export default function AgentOrchestraHub() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="gaming-card border border-cyan-500/30 hover:border-cyan-400/50 transition-all"
+                className="bg-card/95 backdrop-blur-sm rounded-xl p-6 border border-border/50 hover:border-primary/40 hover:shadow-glow-subtle transition-all duration-300"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-purple-400 font-mono uppercase">NEURAL AGENTS</p>
-                    <p className="text-3xl font-black text-cyan-400 font-mono">{stats.totalAgents}</p>
-                    <p className="text-xs text-green-400 font-mono">{stats.activeAgents} ACTIVE</p>
+                    <p className="text-xs text-muted-foreground font-mono uppercase">NEURAL AGENTS</p>
+                    <p className="text-3xl font-bold text-gradient bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-mono">{stats.totalAgents}</p>
+                    <p className="text-xs text-accent-emerald-500 font-mono">{stats.activeAgents} ACTIVE</p>
                   </div>
-                  <CpuChipIcon className="w-10 h-10 text-cyan-400/50" />
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20">
+                    <CpuChipIcon className="w-8 h-8 text-primary" />
+                  </div>
                 </div>
               </motion.div>
 
@@ -469,7 +473,7 @@ export default function AgentOrchestraHub() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="gaming-card border border-purple-500/30 hover:border-purple-400/50 transition-all"
+                className="bg-card border border-purple-500/30 hover:border-purple-400/50 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -485,15 +489,15 @@ export default function AgentOrchestraHub() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="gaming-card border border-green-500/30 hover:border-green-400/50 transition-all"
+                className="bg-card border border-green-500/30 hover:border-green-400/50 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-purple-400 font-mono uppercase">EXECUTIONS</p>
-                    <p className="text-3xl font-black text-green-400 font-mono">{stats.completedExecutions}</p>
-                    <p className="text-xs text-yellow-400 font-mono">{stats.runningExecutions} ACTIVE</p>
+                    <p className="text-3xl font-black text-green-500 font-mono">{stats.completedExecutions}</p>
+                    <p className="text-xs text-yellow-500 font-mono">{stats.runningExecutions} ACTIVE</p>
                   </div>
-                  <BoltIcon className="w-10 h-10 text-green-400/50" />
+                  <BoltIcon className="w-10 h-10 text-green-500/50" />
                 </div>
               </motion.div>
 
@@ -501,7 +505,7 @@ export default function AgentOrchestraHub() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="gaming-card border border-orange-500/30 hover:border-orange-400/50 transition-all"
+                className="bg-card border border-orange-500/30 hover:border-orange-400/50 transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -515,14 +519,14 @@ export default function AgentOrchestraHub() {
             </div>
 
             {/* Recent Activity */}
-            <div className="gaming-card border border-cyan-500/30">
+            <div className="bg-card border border-cyan-500/30">
               <h3 className="text-xl font-bold text-cyan-400 mb-4 font-mono flex items-center">
                 <SignalIcon className="w-5 h-5 mr-2" />
                 NEURAL ACTIVITY STREAM
               </h3>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {executions.slice(0, 5).map((exec, index) => (
-                  <div key={exec.id || `recent-exec-${index}`} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-cyan-500/30 transition-all">
+                  <div key={exec.id || `recent-exec-${index}`} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-gray-800 hover:border-cyan-500/30 transition-all">
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${
                         exec.status === 'running' ? 'bg-yellow-400 animate-pulse' :
@@ -531,15 +535,15 @@ export default function AgentOrchestraHub() {
                       }`} />
                       <div>
                         <p className="text-sm font-mono text-cyan-400">{exec.workflow_name}</p>
-                        <p className="text-xs font-mono text-gray-500">
+                        <p className="text-xs font-mono text-muted-foreground">
                           ID: {exec.id ? exec.id.slice(0, 8) + '...' : 'N/A'} | {exec.started_at ? new Date(exec.started_at).toLocaleTimeString() : 'N/A'}
                         </p>
                       </div>
                     </div>
                     <Badge className={`font-mono text-xs ${
-                      exec.status === 'running' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
-                      exec.status === 'completed' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                      'bg-red-500/20 text-red-400 border-red-500/30'
+                      exec.status === 'running' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' :
+                      exec.status === 'completed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                      'bg-red-500/20 text-red-500 border-red-500/30'
                     }`}>
                       {exec.status.toUpperCase()}
                     </Badge>
@@ -555,7 +559,7 @@ export default function AgentOrchestraHub() {
               <h2 className="text-2xl font-bold text-cyan-400 font-mono">NEURAL AGENT REGISTRY</h2>
               <Button
                 onClick={() => agentDiscoveryService.refreshDiscovery()}
-                className="gaming-btn-active"
+                className="bg-card"
               >
                 <ArrowPathIcon className="w-4 h-4" />
                 SCAN AGENTS
@@ -568,12 +572,12 @@ export default function AgentOrchestraHub() {
                   key={agent.id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="gaming-card border border-purple-500/30 hover:border-cyan-400/50 transition-all"
+                  className="bg-card border border-purple-500/30 hover:border-cyan-400/50 transition-all"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-bold text-cyan-400 font-mono text-sm uppercase">{agent.name}</h3>
-                      <p className="text-xs text-gray-400 mt-1">{agent.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{agent.description}</p>
                     </div>
                     <div className={`w-2 h-2 rounded-full ${
                       agent.status === 'active' ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
@@ -594,7 +598,7 @@ export default function AgentOrchestraHub() {
                     
                     {agent.usage_stats && (
                       <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-green-400">
+                        <span className="text-green-500">
                           {agent.usage_stats.usage_count} RUNS
                         </span>
                         <span className="text-cyan-400">
@@ -620,7 +624,7 @@ export default function AgentOrchestraHub() {
               <h2 className="text-2xl font-bold text-cyan-400 font-mono">WORKFLOW MATRICES</h2>
               <Button
                 onClick={() => setCreateWorkflowOpen(true)}
-                className="gaming-btn-active"
+                className="bg-card"
               >
                 <PlusIcon className="w-4 h-4" />
                 CREATE MATRIX
@@ -633,12 +637,12 @@ export default function AgentOrchestraHub() {
                   key={workflow.id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="gaming-card border border-cyan-500/30 hover:border-purple-400/50 transition-all"
+                  className="bg-card border border-cyan-500/30 hover:border-purple-400/50 transition-all"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-bold text-purple-400 font-mono text-sm uppercase">{workflow.name}</h3>
-                      <p className="text-xs text-gray-400 mt-1">{workflow.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{workflow.description}</p>
                     </div>
                     {workflow.status && (
                       <div className={`w-2 h-2 rounded-full ${
@@ -693,7 +697,7 @@ export default function AgentOrchestraHub() {
                   key={execution.id || `execution-${index}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="gaming-card border border-gray-800 hover:border-cyan-500/30 transition-all"
+                  className="bg-card border border-gray-800 hover:border-cyan-500/30 transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -705,7 +709,7 @@ export default function AgentOrchestraHub() {
                       }`} />
                       <div>
                         <p className="font-mono text-cyan-400 font-bold">{execution.workflow_name}</p>
-                        <p className="text-xs font-mono text-gray-500">
+                        <p className="text-xs font-mono text-muted-foreground">
                           MATRIX_ID: {execution.id ? execution.id.slice(0, 8) + '...' : 'N/A'} | INITIATED: {execution.started_at ? new Date(execution.started_at).toLocaleString() : 'N/A'}
                         </p>
                       </div>
@@ -717,7 +721,7 @@ export default function AgentOrchestraHub() {
                           <p className="text-xs font-mono text-purple-400">
                             STEP {execution.progress.current_step}/{execution.progress.total_steps}
                           </p>
-                          <div className="w-32 h-1 bg-gray-800 rounded-full mt-1">
+                          <div className="w-32 h-1 bg-card rounded-full mt-1">
                             <div 
                               className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full transition-all"
                               style={{ width: `${(execution.progress.current_step / execution.progress.total_steps) * 100}%` }}
@@ -727,10 +731,10 @@ export default function AgentOrchestraHub() {
                       )}
                       
                       <Badge className={`font-mono text-xs ${
-                        execution.status === 'running' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
-                        execution.status === 'completed' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                        execution.status === 'failed' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                        'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                        execution.status === 'running' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' :
+                        execution.status === 'completed' ? 'bg-green-500/20 text-green-500 border-green-500/30' :
+                        execution.status === 'failed' ? 'bg-red-500/20 text-red-500 border-red-500/30' :
+                        'bg-muted/50/20 text-muted-foreground border-gray-500/30'
                       }`}>
                         {execution.status.toUpperCase()}
                       </Badge>
@@ -739,7 +743,7 @@ export default function AgentOrchestraHub() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-red-400 hover:text-red-300"
+                          className="text-red-500 hover:text-red-300"
                         >
                           <XCircleIcon className="w-4 h-4" />
                         </Button>
@@ -764,7 +768,7 @@ export default function AgentOrchestraHub() {
             <div className="grid grid-cols-12 gap-6">
               {/* Channel List */}
               <div className="col-span-3">
-                <div className="gaming-card border border-purple-500/30">
+                <div className="bg-card border border-purple-500/30">
                   <h3 className="text-sm font-mono text-purple-400 uppercase mb-3">ACTIVE CHANNELS</h3>
                   <div className="space-y-2">
                     {channels.map((channel) => (
@@ -788,7 +792,7 @@ export default function AgentOrchestraHub() {
                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                           )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{channel.message_count} messages</p>
+                        <p className="text-xs text-muted-foreground mt-1">{channel.message_count} messages</p>
                       </div>
                     ))}
                   </div>
@@ -797,7 +801,7 @@ export default function AgentOrchestraHub() {
               
               {/* Messages */}
               <div className="col-span-9">
-                <div className="gaming-card border border-cyan-500/30 h-[600px] flex flex-col">
+                <div className="bg-card border border-cyan-500/30 h-[600px] flex flex-col">
                   {selectedChannel ? (
                     <>
                       <div className="border-b border-gray-800 pb-3 mb-3">
@@ -805,25 +809,25 @@ export default function AgentOrchestraHub() {
                           <HashtagIcon className="w-4 h-4" />
                           {selectedChannel.display_name || selectedChannel.name}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">{selectedChannel.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{selectedChannel.description}</p>
                       </div>
                       
                       <div className="flex-1 overflow-y-auto space-y-3">
                         {channelMessages.map((message) => (
                           <div key={message.id} className="flex gap-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                              <CpuChipIcon className="w-4 h-4 text-white" />
+                              <CpuChipIcon className="w-4 h-4 text-foreground" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs font-mono text-cyan-400 font-bold">
                                   {message.agent_name || 'SYSTEM'}
                                 </span>
-                                <span className="text-xs font-mono text-gray-500">
+                                <span className="text-xs font-mono text-muted-foreground">
                                   {new Date(message.timestamp).toLocaleTimeString()}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-300">{message.content}</p>
+                              <p className="text-sm text-muted-foreground">{message.content}</p>
                             </div>
                           </div>
                         ))}
@@ -833,7 +837,7 @@ export default function AgentOrchestraHub() {
                     <div className="flex-1 flex items-center justify-center">
                       <div className="text-center">
                         <ChatBubbleLeftRightIcon className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-500 font-mono">SELECT A CHANNEL</p>
+                        <p className="text-muted-foreground font-mono">SELECT A CHANNEL</p>
                       </div>
                     </div>
                   )}
@@ -846,7 +850,7 @@ export default function AgentOrchestraHub() {
 
       {/* Create Workflow Dialog */}
       <Dialog open={createWorkflowOpen} onOpenChange={setCreateWorkflowOpen}>
-        <DialogContent className="max-w-3xl bg-gray-900 border border-cyan-500/30">
+        <DialogContent className="max-w-3xl bg-background border border-cyan-500/30">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-cyan-400 font-mono">
               CREATE NEURAL WORKFLOW MATRIX
@@ -935,13 +939,13 @@ export default function AgentOrchestraHub() {
               <Button
                 variant="outline"
                 onClick={() => setCreateWorkflowOpen(false)}
-                className="border-gray-700 text-gray-400 hover:border-gray-600"
+                className="border-gray-700 text-muted-foreground hover:border-gray-600"
               >
                 CANCEL
               </Button>
               <Button
                 onClick={handleCreateWorkflow}
-                className="gaming-btn-active"
+                className="bg-card"
               >
                 <PlusIcon className="w-4 h-4" />
                 CREATE MATRIX

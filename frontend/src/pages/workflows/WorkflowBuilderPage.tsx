@@ -188,12 +188,12 @@ export function WorkflowBuilderPage() {
           onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
-          className="bg-dark-900"
+          className="bg-background"
         >
           <Background color="#374151" gap={16} />
-          <Controls className="!bg-dark-900 !border-dark-700" />
+          <Controls className="!bg-background !border-border" />
           <MiniMap 
-            className="!bg-dark-900 !border-dark-700"
+            className="!bg-background !border-border"
             nodeColor="#8b5cf6"
             maskColor="rgba(0, 0, 0, 0.8)"
           />
@@ -205,11 +205,11 @@ export function WorkflowBuilderPage() {
               Back
             </Button>
             <div className="h-6 w-px bg-dark-700" />
-            <span className="text-white font-medium">
+            <span className="text-foreground font-medium">
               {currentWorkflow?.name || 'New Workflow'}
             </span>
             {isDirty && (
-              <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 rounded-full">
+              <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-500 rounded-full">
                 Unsaved changes
               </span>
             )}

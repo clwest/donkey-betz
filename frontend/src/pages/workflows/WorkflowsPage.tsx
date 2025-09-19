@@ -194,8 +194,8 @@ export function WorkflowsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white">Workflow Templates</h1>
-          <p className="text-gray-400 mt-1">Choose a template or create your own custom workflow</p>
+          <h1 className="text-3xl font-bold text-foreground">Workflow Templates</h1>
+          <p className="text-muted-foreground mt-1">Choose a template or create your own custom workflow</p>
         </div>
         <Button onClick={() => handleCreateCustom()}>
           <PlusIcon className="h-4 w-4" />
@@ -206,16 +206,16 @@ export function WorkflowsPage() {
       {/* Recently Created Campaigns */}
       {createdCampaigns.length > 0 && (
         <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-green-400 mb-2">Recently Created Campaigns</h2>
+          <h2 className="text-lg font-semibold text-green-500 mb-2">Recently Created Campaigns</h2>
           <div className="space-y-2">
             {createdCampaigns.map((campaign, index) => (
               <div key={campaign.id} className="flex items-center justify-between text-sm">
-                <span className="text-gray-300">
+                <span className="text-muted-foreground">
                   {index + 1}. {campaign.title} 
-                  <span className="text-gray-500 ml-2">(ID: {campaign.id.substring(0, 8)}...)</span>
+                  <span className="text-muted-foreground ml-2">(ID: {campaign.id.substring(0, 8)}...)</span>
                 </span>
                 <button 
-                  className="px-3 py-1 text-xs bg-primary-500 hover:bg-primary-600 text-white rounded"
+                  className="px-3 py-1 text-xs bg-primary-500 hover:bg-primary-600 text-foreground rounded"
                   onClick={() => navigate(`/campaigns/${campaign.id}`)}
                 >
                   View
@@ -236,10 +236,10 @@ export function WorkflowsPage() {
         >
           <div className="mb-4">
             <div className="flex items-start justify-between">
-              <h3 className="font-semibold text-white">Create Custom Workflow</h3>
+              <h3 className="font-semibold text-foreground">Create Custom Workflow</h3>
               <SparklesIcon className="h-5 w-5 text-primary-400" />
             </div>
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               Build your own AI-powered workflow from scratch with custom prompts and settings
             </p>
           </div>
@@ -248,7 +248,7 @@ export function WorkflowsPage() {
             <span className="text-xs text-primary-400 bg-primary-500/10 px-2 py-1 rounded">
               AI Assistant
             </span>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Fully customizable
             </div>
           </div>
@@ -263,12 +263,12 @@ export function WorkflowsPage() {
           >
             <div className="mb-4">
               <div className="flex items-start justify-between">
-                <h3 className="font-semibold text-white">{template.name}</h3>
+                <h3 className="font-semibold text-foreground">{template.name}</h3>
                 <span className="px-2 py-1 text-xs bg-primary-500/20 text-primary-400 rounded-full">
                   {template.category}
                 </span>
               </div>
-              <p className="text-sm text-gray-400 mt-2">{template.description}</p>
+              <p className="text-sm text-muted-foreground mt-2">{template.description}</p>
             </div>
             
             <div className="flex items-center justify-between">
@@ -277,7 +277,7 @@ export function WorkflowsPage() {
                   <div key={i} className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 border-2 border-dark-900" />
                 ))}
               </div>
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 {template.popularity}% popularity
               </div>
             </div>

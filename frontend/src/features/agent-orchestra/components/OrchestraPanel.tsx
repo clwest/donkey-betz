@@ -121,7 +121,7 @@ export const OrchestraPanel: React.FC<OrchestraPanelProps> = ({
       case 'unhealthy':
         return <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />;
       default:
-        return <ExclamationTriangleIcon className="h-5 w-5 text-gray-500" />;
+        return <ExclamationTriangleIcon className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -216,7 +216,7 @@ export const OrchestraPanel: React.FC<OrchestraPanelProps> = ({
               </div>
             </div>
             {agentsError && (
-              <p className="mt-2 text-xs text-red-400">{agentsError}</p>
+              <p className="mt-2 text-xs text-red-500">{agentsError}</p>
             )}
           </Card>
 
@@ -356,7 +356,7 @@ export const OrchestraPanel: React.FC<OrchestraPanelProps> = ({
       {/* Error States */}
       {(agentsError || instancesError) && (
         <Card className="p-6 border-red-500/20 bg-red-500/5">
-          <h3 className="text-lg font-semibold text-red-400 mb-2 flex items-center">
+          <h3 className="text-lg font-semibold text-red-500 mb-2 flex items-center">
             <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
             Errors
           </h3>

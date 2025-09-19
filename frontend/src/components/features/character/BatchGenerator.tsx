@@ -102,24 +102,24 @@ export function BatchGenerator() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Batch Scene Generation</h2>
-        <p className="text-gray-400">Generate multiple scenes with the same character</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Batch Scene Generation</h2>
+        <p className="text-muted-foreground">Generate multiple scenes with the same character</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Configuration Panel */}
         <Card>
           <div className="p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-white">Configuration</h3>
+            <h3 className="text-lg font-semibold text-foreground">Configuration</h3>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Character
               </label>
               <select
                 value={selectedCharacter}
                 onChange={(e) => setSelectedCharacter(e.target.value)}
-                className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white focus:border-primary-500 focus:outline-none"
+                className="w-full px-4 py-2 bg-card border border-border rounded-xl text-foreground focus:border-primary-500 focus:outline-none"
               >
                 <option value="">Select a character...</option>
                 {characters.map((char) => (
@@ -133,10 +133,10 @@ export function BatchGenerator() {
             {selectedCharacterData && (
               <Card className="bg-primary-500/10 border-primary-500/30">
                 <div className="p-4">
-                  <p className="text-sm text-white font-medium mb-1">
+                  <p className="text-sm text-foreground font-medium mb-1">
                     Selected: {selectedCharacterData.name}
                   </p>
-                  <p className="text-xs text-gray-300">
+                  <p className="text-xs text-muted-foreground">
                     {selectedCharacterData.description}
                   </p>
                 </div>
@@ -144,20 +144,20 @@ export function BatchGenerator() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Batch Name
               </label>
               <input
                 type="text"
                 value={batchName}
                 onChange={(e) => setBatchName(e.target.value)}
-                className="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-xl text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none"
+                className="w-full px-4 py-2 bg-card border border-border rounded-xl text-foreground placeholder-gray-400 focus:border-primary-500 focus:outline-none"
                 placeholder="My Scene Collection"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Variation Strength: {variationStrength.toFixed(1)}
               </label>
               <input
@@ -169,7 +169,7 @@ export function BatchGenerator() {
                 step="0.1"
                 className="w-full"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>Subtle</span>
                 <span>Normal</span>
                 <span>Strong</span>
@@ -184,7 +184,7 @@ export function BatchGenerator() {
                   onChange={(e) => setPreserveOutfit(e.target.checked)}
                   className="rounded border-gray-600 text-primary-500 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-300">Preserve Outfit</span>
+                <span className="text-sm text-muted-foreground">Preserve Outfit</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -193,7 +193,7 @@ export function BatchGenerator() {
                   onChange={(e) => setPreserveStyle(e.target.checked)}
                   className="rounded border-gray-600 text-primary-500 focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-300">Preserve Style</span>
+                <span className="text-sm text-muted-foreground">Preserve Style</span>
               </label>
             </div>
           </div>
@@ -203,7 +203,7 @@ export function BatchGenerator() {
         <Card>
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Scenes ({scenes.length})
               </h3>
               <Button
@@ -218,15 +218,15 @@ export function BatchGenerator() {
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {scenes.map((scene, index) => (
-                <Card key={index} className="bg-dark-800/50">
+                <Card key={index} className="bg-card/50">
                   <div className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-foreground">
                         Scene {index + 1}
                       </span>
                       <button
                         onClick={() => handleRemoveScene(index)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        className="text-muted-foreground hover:text-red-500 transition-colors"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -236,7 +236,7 @@ export function BatchGenerator() {
                       type="text"
                       value={scene.description}
                       onChange={(e) => handleSceneChange(index, 'description', e.target.value)}
-                      className="w-full px-3 py-2 bg-dark-900 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
                       placeholder="Scene description (e.g., standing in snow)"
                     />
 
@@ -245,14 +245,14 @@ export function BatchGenerator() {
                         type="text"
                         value={scene.action || ''}
                         onChange={(e) => handleSceneChange(index, 'action', e.target.value)}
-                        className="px-3 py-2 bg-dark-900 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
+                        className="px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
                         placeholder="Action (optional)"
                       />
                       <input
                         type="text"
                         value={scene.mood || ''}
                         onChange={(e) => handleSceneChange(index, 'mood', e.target.value)}
-                        className="px-3 py-2 bg-dark-900 border border-dark-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
+                        className="px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
                         placeholder="Mood (optional)"
                       />
                     </div>
@@ -291,10 +291,10 @@ export function BatchGenerator() {
       {generating && (
         <Card>
           <div className="p-4">
-            <div className="w-full bg-dark-800 rounded-full h-2">
+            <div className="w-full bg-card rounded-full h-2">
               <div className="bg-gradient-primary h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
             </div>
-            <p className="text-sm text-gray-400 text-center mt-2">
+            <p className="text-sm text-muted-foreground text-center mt-2">
               Generating scenes... This may take a few moments
             </p>
           </div>
@@ -309,13 +309,13 @@ export function BatchGenerator() {
               onClick={() => setExpandedResults(!expandedResults)}
               className="flex items-center justify-between w-full mb-4"
             >
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 Generated Results ({results.length})
               </h3>
               {expandedResults ? (
-                <ChevronUpIcon className="h-5 w-5 text-gray-400" />
+                <ChevronUpIcon className="h-5 w-5 text-muted-foreground" />
               ) : (
-                <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                <ChevronDownIcon className="h-5 w-5 text-muted-foreground" />
               )}
             </button>
 
@@ -329,10 +329,10 @@ export function BatchGenerator() {
                       className="w-full h-48 object-cover"
                     />
                     <div className="p-4">
-                      <p className="text-sm font-medium text-white mb-1">
+                      <p className="text-sm font-medium text-foreground mb-1">
                         Scene {index + 1}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         {result.scene.description}
                         {result.scene.action && ` - ${result.scene.action}`}
                         {result.scene.mood && ` (${result.scene.mood})`}

@@ -157,7 +157,7 @@ export function MonetizationDashboard() {
           <p className="text-muted-foreground mt-1">Transform intelligence into income</p>
         </div>
         <Button
-          className="gaming-button"
+          className="bg-card"
           onClick={() => window.location.href = '/income-builder'}
         >
           <Rocket className="mr-2 h-4 w-4" />
@@ -167,29 +167,29 @@ export function MonetizationDashboard() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-neon-green">${totalEarnings.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-500">${totalEarnings.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">+20.1% from last month</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Streams</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-neon-cyan">{activeStreams}</div>
+            <div className="text-2xl font-bold text-primary">{activeStreams}</div>
             <p className="text-xs text-muted-foreground">Of {revenueStreams.length} available</p>
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Potential Revenue</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -200,7 +200,7 @@ export function MonetizationDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="gaming-card">
+        <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Next Payout</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
@@ -214,7 +214,7 @@ export function MonetizationDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="opportunities" className="space-y-4">
-        <TabsList className="gaming-tabs">
+        <TabsList className="bg-card">
           <TabsTrigger value="opportunities">Revenue Opportunities</TabsTrigger>
           <TabsTrigger value="income-builder">Zero-to-Income Builder</TabsTrigger>
           <TabsTrigger value="automation">Content Automation</TabsTrigger>
@@ -225,7 +225,7 @@ export function MonetizationDashboard() {
         <TabsContent value="opportunities" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {revenueStreams.map(stream => (
-              <Card key={stream.id} className="gaming-card hover-glow">
+              <Card key={stream.id} className="bg-card hover-glow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -246,7 +246,7 @@ export function MonetizationDashboard() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Potential:</span>
-                      <span className="font-bold text-neon-cyan">{stream.potential}</span>
+                      <span className="font-bold text-primary">{stream.potential}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Timeframe:</span>
@@ -255,7 +255,7 @@ export function MonetizationDashboard() {
                     {stream.earnings && (
                       <div className="flex justify-between text-sm">
                         <span>Earned:</span>
-                        <span className="font-bold text-neon-green">${stream.earnings}</span>
+                        <span className="font-bold text-green-500">${stream.earnings}</span>
                       </div>
                     )}
                   </div>
@@ -277,7 +277,7 @@ export function MonetizationDashboard() {
 
                   {stream.status === 'available' && (
                     <Button
-                      className="w-full gaming-button"
+                      className="w-full bg-card"
                       onClick={() => handleActivateStream(stream.id)}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
@@ -303,7 +303,7 @@ export function MonetizationDashboard() {
 
         {/* Content Automation Tab */}
         <TabsContent value="automation" className="space-y-4">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle>Content Automation Pipeline</CardTitle>
               <CardDescription>Automated content creation and distribution</CardDescription>
@@ -313,15 +313,15 @@ export function MonetizationDashboard() {
                 <div className="space-y-2">
                   <h4 className="font-semibold">Active Campaigns</h4>
                   <div className="space-y-1">
-                    <div className="flex justify-between p-2 rounded bg-gray-800">
+                    <div className="flex justify-between p-2 rounded bg-card">
                       <span>Blog Content Pipeline</span>
                       <Badge className="bg-neon-green">Running</Badge>
                     </div>
-                    <div className="flex justify-between p-2 rounded bg-gray-800">
+                    <div className="flex justify-between p-2 rounded bg-card">
                       <span>Social Media Automation</span>
                       <Badge className="bg-neon-green">Running</Badge>
                     </div>
-                    <div className="flex justify-between p-2 rounded bg-gray-800">
+                    <div className="flex justify-between p-2 rounded bg-card">
                       <span>Email Newsletter</span>
                       <Badge variant="secondary">Scheduled</Badge>
                     </div>
@@ -337,11 +337,11 @@ export function MonetizationDashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Engagement Rate</span>
-                      <span className="font-bold text-neon-green">4.8%</span>
+                      <span className="font-bold text-green-500">4.8%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Revenue Generated</span>
-                      <span className="font-bold text-neon-green">$3,421</span>
+                      <span className="font-bold text-green-500">$3,421</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Time Saved</span>
@@ -352,7 +352,7 @@ export function MonetizationDashboard() {
               </div>
 
               <Button
-                className="w-full gaming-button"
+                className="w-full bg-card"
                 onClick={() => window.location.href = '/studio'}
               >
                 <Zap className="mr-2 h-4 w-4" />
@@ -364,7 +364,7 @@ export function MonetizationDashboard() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-4">
-          <Card className="gaming-card">
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle>Revenue Analytics</CardTitle>
               <CardDescription>Track your monetization performance</CardDescription>

@@ -132,7 +132,7 @@ const BillingDashboard: React.FC = () => {
   const getTierIcon = (tier: string) => {
     switch (tier.toLowerCase()) {
       case 'free':
-        return <Zap className="h-5 w-5 text-gray-500" />;
+        return <Zap className="h-5 w-5 text-muted-foreground" />;
       case 'starter':
         return <TrendingUp className="h-5 w-5 text-blue-500" />;
       case 'professional':
@@ -334,7 +334,7 @@ const BillingDashboard: React.FC = () => {
                         <p className="font-semibold text-sm">
                           {feature.total_usage} credits
                         </p>
-                        <div className="w-20 bg-gray-200 rounded-full h-1">
+                        <div className="w-20 bg-muted/20 rounded-full h-1">
                           <div
                             className="bg-blue-500 h-1 rounded-full"
                             style={{
