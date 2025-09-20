@@ -5,6 +5,8 @@ import RevenueStream from './components/RevenueStream'
 import TrendingContent from './components/TrendingContent'
 import LiveOpportunities from './components/LiveOpportunities'
 import AgentNetwork from './components/AgentNetwork'
+import FreelanceOpportunities from './components/FreelanceOpportunities'
+import AgentActivity from './components/AgentActivity'
 import { useWebSocket } from './hooks/useWebSocket'
 
 // Django backend URL
@@ -199,6 +201,16 @@ function App() {
         {/* Agent Network Section */}
         <div className="mt-6">
           <AgentNetwork />
+        </div>
+
+        {/* Freelance Pipeline Section */}
+        <div className="mt-6">
+          <FreelanceOpportunities />
+        </div>
+
+        {/* Activity Stream */}
+        <div className="mt-6">
+          <AgentActivity />
         </div>
       </main>
     </div>

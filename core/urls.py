@@ -279,6 +279,14 @@ urlpatterns = [
     # Real-time opportunities for Income Builder
     path('api/v1/opportunities/live/', opportunities_api_view, name='live-opportunities-real'),
 
+    # Freelance Pipeline API endpoints
+    path('api/freelance/opportunities/', lambda r: __import__('backend.api.freelance_api', fromlist=['get_freelance_opportunities']).get_freelance_opportunities(r), name='freelance_opportunities'),
+    path('api/freelance/analyze/<str:job_id>/', lambda r, job_id: __import__('backend.api.freelance_api', fromlist=['analyze_opportunity']).analyze_opportunity(r, job_id), name='analyze_opportunity'),
+    path('api/freelance/approvals/', lambda r: __import__('backend.api.freelance_api', fromlist=['get_pending_approvals']).get_pending_approvals(r), name='pending_approvals'),
+    path('api/freelance/approve/<str:approval_id>/', lambda r, approval_id: __import__('backend.api.freelance_api', fromlist=['process_approval']).process_approval(r, approval_id), name='process_approval'),
+    path('api/freelance/projects/', lambda r: __import__('backend.api.freelance_api', fromlist=['get_active_projects']).get_active_projects(r), name='active_projects'),
+    path('api/freelance/spider/start/', lambda r: __import__('backend.api.freelance_api', fromlist=['start_freelance_spider']).start_freelance_spider(r), name='start_freelance_spider'),
+
     # Dashboard Statistics - The Heart of Everything!
     path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),
     path('api/dashboard/agents/', live_agent_activity, name='live-agent-activity'),

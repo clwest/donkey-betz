@@ -381,7 +381,7 @@ REST_FRAMEWORK = {
 # SECURITY: Never use CORS_ALLOW_ALL_ORIGINS in production!
 if DEBUG:
     # Development - allow specific origins only
-    default_dev_origins = 'http://localhost:3000,http://localhost:8080,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173'
+    default_dev_origins = 'http://localhost:3000,http://localhost:8080,http://localhost:5173,http://localhost:5174,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:5174'
     CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', default_dev_origins).split(',')
     # SECURITY WARNING: Set to False for better security even in development
     CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'false').lower() == 'true'
