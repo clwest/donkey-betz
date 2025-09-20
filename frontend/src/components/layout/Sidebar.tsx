@@ -56,6 +56,8 @@ const navigation = [
   { name: 'Command Center', href: '/command-center', icon: UserCircleIcon, iconActive: UserCircleIconSolid, badge: '🎯 UNIFIED' },
   { name: 'Neural Orchestra', href: '/neural-orchestra', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: 'LIVE' },
   { name: 'Agent Hub', href: '/agent-hub', icon: UserGroupIcon, iconActive: UserGroupIconSolid },
+  { name: 'Agent Work Platform', href: '/agent-work-platform', icon: BanknotesIcon, iconActive: BanknotesIconSolid, badge: '💰 LIVE' },
+  { name: 'Real Job Execution', href: '/real-job-execution', icon: CpuChipIcon, iconActive: CpuChipIconSolid, badge: '🎬 STUDIO' },
   { name: 'Workflow Engine', href: '/workflows', icon: CircleStackIcon, iconActive: CircleStackIconSolid },
   { name: 'Content Studio', href: '/studio', icon: SparklesIcon, iconActive: SparklesIconSolid },
   { name: 'Media Vault', href: '/gallery', icon: PhotoIcon, iconActive: PhotoIconSolid },

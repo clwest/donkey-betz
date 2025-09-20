@@ -39,6 +39,7 @@ import AssistantChatPage from './pages/assistant/AssistantChatPage';
 
 // Unified Agent Orchestra Hub
 import AgentOrchestraHub from './pages/AgentOrchestraHub';
+import UnifiedAgentHub from './pages/UnifiedAgentHub';
 
 // Universal Decision Command Center
 import { DecisionDetailPage } from './pages/DecisionDetailPage';
@@ -75,6 +76,9 @@ import RevenueOpportunities from './components/RevenueOpportunities';
 import RevenueDashboard from './components/RevenueDashboard';
 import RevenueCommandCenter from './components/RevenueCommandCenter';
 import AIJobTrackerPage from './pages/AIJobTrackerPage';
+import AgentWorkPlatformFixed from './components/AgentWorkPlatformFixed';
+import AutonomousSystemPage from './pages/AutonomousSystemPage';
+import RealJobExecution from './components/RealJobExecution';
 
 // Stores
 import { useAuthStore } from './store/authStore';
@@ -152,7 +156,7 @@ function App() {
 
             {/* New Enhanced UI/UX Components */}
             <Route path="decision-command" element={<DecisionCommand />} />
-            <Route path="neural-orchestra" element={<NeuralOrchestra />} />
+            <Route path="neural-orchestra" element={<Navigate to="/agent-hub" replace />} />
             <Route path="control-center" element={<ControlCenterPage />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="gallery" element={<GalleryPage />} />
@@ -161,9 +165,18 @@ function App() {
             <Route path="character" element={<CharacterPage />} />
             <Route path="profile" element={<Navigate to="/command-center" state={{ tab: 'profile' }} />} />
             <Route path="ai-settings" element={<AISettingsPageUnified />} />
-            
-            {/* Unified Agent Orchestra Hub - replaces all individual agent pages */}
-            <Route path="agent-hub" element={<AgentOrchestraHub />} />
+
+            {/* Unified Agent Hub - replaces both agent-hub and neural-orchestra */}
+            <Route path="agent-hub" element={<UnifiedAgentHub />} />
+
+            {/* Agent Work Platform - Live money-making dashboard */}
+            <Route path="agent-work-platform" element={<AgentWorkPlatformFixed />} />
+
+            {/* Autonomous Revenue System - 30-day self-running platform */}
+            <Route path="autonomous-system" element={<AutonomousSystemPage />} />
+
+            {/* Real Job Execution Studio - For recording and portfolio generation */}
+            <Route path="real-job-execution" element={<RealJobExecution />} />
 
             {/* Redirects for backwards compatibility */}
             {/* Agent Hub redirects */}

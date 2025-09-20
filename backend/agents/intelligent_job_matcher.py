@@ -99,7 +99,11 @@ class IntelligentJobMatcher:
         # Get all agents and score them
         agent_scores = []
 
-        for agent_id, agent in self.agent_registry.agents.items():
+        # Get agents using the correct method
+        all_agents = self.agent_registry.list_agents()
+
+        for agent in all_agents:
+            agent_id = agent.get('id', agent.get('name', ''))
             # Base score from agent capabilities
             base_score = await self._calculate_base_agent_score(agent, job)
 
@@ -424,14 +428,24 @@ class IntelligentJobMatcher:
 
     def _find_similar_agents(self, agent_id: str) -> List[str]:
         """Find agents similar to the given agent"""
-        target_agent = self.agent_registry.agents.get(agent_id, {})
+        # Get all agents
+        all_agents = self.agent_registry.list_agents()
+
+        # Find target agent
+        target_agent = None
+        for agent in all_agents:
+            if agent.get('id', agent.get('name', '')) == agent_id:
+                target_agent = agent
+                break
+
         if not target_agent:
             return []
 
         similar = []
         target_spec = target_agent.get('specialization', '').lower()
 
-        for aid, agent in self.agent_registry.agents.items():
+        for agent in all_agents:
+            aid = agent.get('id', agent.get('name', ''))
             if aid != agent_id:
                 if agent.get('specialization', '').lower() == target_spec:
                     similar.append(aid)
