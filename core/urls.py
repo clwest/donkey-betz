@@ -257,6 +257,25 @@ urlpatterns = [
     path('api/opportunities/', get_opportunities, name='get-opportunities'),
     path('api/opportunities/actionable/', get_actionable, name='get-actionable'),
 
+    # Spider Dashboard API endpoints
+    path('api/spider/stats/', lambda r: __import__('backend.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
+    path('api/spider/data/', lambda r: __import__('backend.api.spider_api', fromlist=['SpiderDataAPI']).SpiderDataAPI.as_view()(r), name='spider_data'),
+    path('api/opportunities/live/', lambda r: __import__('backend.api.spider_api', fromlist=['OpportunitiesAPI']).OpportunitiesAPI.as_view()(r), name='opportunities_api'),
+    path('api/revenue/', lambda r: __import__('backend.api.spider_api', fromlist=['RevenueAPI']).RevenueAPI.as_view()(r), name='revenue_api'),
+    path('api/agents/status/', lambda r: __import__('backend.api.spider_api', fromlist=['AgentStatusAPI']).AgentStatusAPI.as_view()(r), name='agent_status_api'),
+    path('api/trending/', lambda r: __import__('backend.api.spider_api', fromlist=['TrendingContentAPI']).TrendingContentAPI.as_view()(r), name='trending_api'),
+
+    # Agent Dashboard API endpoints
+    path('api/agents/stats/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentStatsAPI']).AgentStatsAPI.as_view()(r), name='agent_stats'),
+    path('api/agents/activity/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentActivityAPI']).AgentActivityAPI.as_view()(r), name='agent_activity'),
+    path('api/agents/execute/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentExecuteAPI']).AgentExecuteAPI.as_view()(r), name='agent_execute'),
+    path('api/agents/connections/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentSpiderConnectionAPI']).AgentSpiderConnectionAPI.as_view()(r), name='agent_spider_connections'),
+
+    # Simple Agent API endpoints (without complex models)
+    path('api/agents/simple/list/', lambda r: __import__('backend.api.agent_simple_api', fromlist=['agent_list']).agent_list(r), name='agent_simple_list'),
+    path('api/agents/simple/categories/', lambda r: __import__('backend.api.agent_simple_api', fromlist=['agent_categories']).agent_categories(r), name='agent_simple_categories'),
+    path('api/agents/execute/<str:agent_name>/', lambda r, agent_name: __import__('backend.api.agent_simple_api', fromlist=['execute_agent']).execute_agent(r, agent_name), name='agent_execute'),
+
     # Real-time opportunities for Income Builder
     path('api/v1/opportunities/live/', opportunities_api_view, name='live-opportunities-real'),
 

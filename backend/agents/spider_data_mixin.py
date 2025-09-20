@@ -28,14 +28,14 @@ import asyncio
 import json
 import logging
 import redis
-import aioredis
+from redis import asyncio as aioredis
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
 import uuid
 
-from .spider_data_receiver import (
+from backend.spiders.agent_data_receiver import (
     AgentSpiderDataReceiver, IntelligenceData, AgentDataSubscription,
     ProcessingMetrics, DataProcessingPriority, ProcessingStatus
 )

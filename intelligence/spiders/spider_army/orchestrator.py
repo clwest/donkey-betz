@@ -115,7 +115,7 @@ class SpiderArmyOrchestrator:
         job_spider_configs = [
             SpiderConfig(
                 spider_name='upwork_opportunities',
-                spider_class='spider_army.spiders.job_hunter_spider.UpworkOpportunitiesSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.job_hunter_spider.UpworkOpportunitiesSpider',
                 target_agents=['income_builder', 'freelance_scout_agent', 'opportunity_analyzer'],
                 target_advisors=[],
                 priority=8,
@@ -123,7 +123,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='freelancer_opportunities',
-                spider_class='spider_army.spiders.job_hunter_spider.FreelancerOpportunitiesSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.job_hunter_spider.FreelancerOpportunitiesSpider',
                 target_agents=['income_builder', 'freelance_scout_agent'],
                 target_advisors=[],
                 priority=7,
@@ -131,7 +131,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='fiverr_gig_analyzer',
-                spider_class='spider_army.spiders.job_hunter_spider.FiverrGigAnalyzerSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.job_hunter_spider.FiverrGigAnalyzerSpider',
                 target_agents=['income_builder', 'gig_optimizer'],
                 target_advisors=[],
                 priority=6,
@@ -139,7 +139,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='indeed_jobs',
-                spider_class='spider_army.spiders.job_hunter_spider.IndeedJobSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.job_hunter_spider.IndeedJobSpider',
                 target_agents=['career_development_agent', 'job_market_analyzer'],
                 target_advisors=[],
                 priority=7,
@@ -151,7 +151,7 @@ class SpiderArmyOrchestrator:
         financial_spider_configs = [
             SpiderConfig(
                 spider_name='stock_news',
-                spider_class='spider_army.spiders.financial_spider.StockNewsSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.financial_spider.StockNewsSpider',
                 target_agents=['financial_analysis_agent', 'market_research_agent'],
                 target_advisors=['warren_buffett', 'cathie_wood', 'ray_dalio'],
                 priority=9,
@@ -159,7 +159,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='crypto_intelligence',
-                spider_class='spider_army.spiders.financial_spider.CryptoIntelligenceSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.financial_spider.CryptoIntelligenceSpider',
                 target_agents=['crypto_trader', 'blockchain_analyst'],
                 target_advisors=['cathie_wood', 'michael_saylor'],
                 priority=8,
@@ -167,7 +167,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='market_data',
-                spider_class='spider_army.spiders.financial_spider.MarketDataSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.financial_spider.MarketDataSpider',
                 target_agents=['trading_agent_1', 'trading_agent_2', 'trading_agent_3'],
                 target_advisors=['ray_dalio', 'paul_tudor_jones'],
                 priority=10,
@@ -175,7 +175,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='sec_filings',
-                spider_class='spider_army.spiders.financial_spider.SECFilingsSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.financial_spider.SECFilingsSpider',
                 target_agents=['value_investing_agent', 'fundamental_analyst'],
                 target_advisors=['warren_buffett', 'charlie_munger'],
                 priority=8,
@@ -187,7 +187,7 @@ class SpiderArmyOrchestrator:
         content_spider_configs = [
             SpiderConfig(
                 spider_name='youtube_analyzer',
-                spider_class='spider_army.spiders.content_monetization_spider.YouTubeChannelAnalyzerSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.content_monetization_spider.YouTubeChannelAnalyzerSpider',
                 target_agents=['content_creator_agent', 'viral_content_analyzer'],
                 target_advisors=[],
                 priority=7,
@@ -195,7 +195,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='substack_analyzer',
-                spider_class='spider_army.spiders.content_monetization_spider.SubstackNewsletterSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.content_monetization_spider.SubstackNewsletterSpider',
                 target_agents=['newsletter_creator', 'subscription_optimizer'],
                 target_advisors=[],
                 priority=6,
@@ -203,7 +203,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='twitter_trends',
-                spider_class='spider_army.spiders.content_monetization_spider.TwitterInfluencerSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.content_monetization_spider.TwitterInfluencerSpider',
                 target_agents=['social_media_agent', 'trend_analyzer'],
                 target_advisors=[],
                 priority=5,
@@ -215,7 +215,7 @@ class SpiderArmyOrchestrator:
         advisor_spider_configs = [
             SpiderConfig(
                 spider_name='berkshire_intelligence',
-                spider_class='spider_army.spiders.advisor_intelligence_spider.BerkshireHathawaySpider',
+                spider_class='intelligence.spiders.spider_army.spiders.advisor_intelligence_spider.BerkshireHathawaySpider',
                 target_agents=['berkshire_analyzer', 'value_investing_agent'],
                 target_advisors=['warren_buffett', 'charlie_munger'],
                 priority=10,
@@ -223,7 +223,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='cathie_wood_innovation',
-                spider_class='spider_army.spiders.advisor_intelligence_spider.CathieWoodInnovationSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.advisor_intelligence_spider.CathieWoodInnovationSpider',
                 target_agents=['innovation_scout', 'disruptive_tech_analyzer'],
                 target_advisors=['cathie_wood', 'marc_andreessen'],
                 priority=9,
@@ -231,7 +231,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='ray_dalio_macro',
-                spider_class='spider_army.spiders.advisor_intelligence_spider.RayDalioMacroSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.advisor_intelligence_spider.RayDalioMacroSpider',
                 target_agents=['macro_analyst', 'economic_cycle_tracker'],
                 target_advisors=['ray_dalio', 'paul_tudor_jones'],
                 priority=9,
@@ -239,7 +239,7 @@ class SpiderArmyOrchestrator:
             ),
             SpiderConfig(
                 spider_name='peter_thiel_startups',
-                spider_class='spider_army.spiders.advisor_intelligence_spider.PeterThielStartupSpider',
+                spider_class='intelligence.spiders.spider_army.spiders.advisor_intelligence_spider.PeterThielStartupSpider',
                 target_agents=['startup_analyzer', 'venture_scout'],
                 target_advisors=['peter_thiel', 'paul_graham'],
                 priority=8,

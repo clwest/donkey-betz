@@ -30,6 +30,9 @@ websocket_urlpatterns = [
     # Generic WebSocket endpoint for basic connections
     re_path(r'^ws/$', generic_consumer.GenericWebSocketConsumer.as_asgi()),
 
+    # Spider Dashboard WebSocket for real-time updates
+    re_path(r'^ws/spider-updates/$', lambda: __import__('backend.api.spider_websocket', fromlist=['SpiderWebSocketConsumer']).SpiderWebSocketConsumer.as_asgi()()),
+
     # Agent Work Platform WebSocket - Real money-making system!
     re_path(r'^ws/agent-platform/$', AgentPlatformConsumer.as_asgi()),
 

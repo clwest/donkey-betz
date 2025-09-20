@@ -13,26 +13,37 @@ from datetime import datetime
 from django.utils import timezone
 
 from backend.agents.ai_enforced_base import AIEnforcedAgent
+from backend.agents.mythology_validator import mythology_enforcer
+
+# Import Content Studio Integration (lazy import to avoid circular deps)
+content_studio_integration = None
 
 # Lazy imports to avoid circular dependencies and import issues
 def get_agent_classes():
-    """Lazy load agent classes to avoid import issues"""
-    agent_classes = {}
-
+    """Load ALL 151 agents from database and create executable classes"""
     try:
-        from backend.agents.real_content_creator import RealContentCreator
-        agent_classes['real_content_creator'] = RealContentCreator
-    except ImportError as e:
-        logger.warning(f"Could not import RealContentCreator: {e}")
+        from backend.agents.universal_agent_loader import get_all_agent_classes
+        agent_classes = get_all_agent_classes()
+        logger.info(f"🚀 Loaded {len(agent_classes)} agent classes from universal loader")
+        return agent_classes
+    except Exception as e:
+        logger.error(f"Failed to load agents from universal loader: {e}")
 
-    try:
-        from backend.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
-        agent_classes['zero_capital_income_generator'] = ZeroCapitalIncomeGenerator
-    except ImportError as e:
-        logger.warning(f"Could not import ZeroCapitalIncomeGenerator: {e}")
+        # Fallback to minimal agents
+        agent_classes = {}
+        try:
+            from backend.agents.real_content_creator import RealContentCreator
+            agent_classes['real_content_creator'] = RealContentCreator
+        except ImportError as e:
+            logger.warning(f"Could not import RealContentCreator: {e}")
 
-    # Additional agents can be added later
-    return agent_classes
+        try:
+            from backend.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
+            agent_classes['zero_capital_income_generator'] = ZeroCapitalIncomeGenerator
+        except ImportError as e:
+            logger.warning(f"Could not import ZeroCapitalIncomeGenerator: {e}")
+
+        return agent_classes
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +57,39 @@ class ConcreteAgentExecutor:
         """Initialize the executor with agent registry"""
         # Use lazy loading to avoid import issues
         self.agent_classes = get_agent_classes()
+        self.agent_registry = self.agent_classes  # Expose for spider connector
 
         self.execution_history = []
+        self.content_studio_connected = False
+        self.spider_connector = None
+        self.llm_integration = None
         logger.info(f"🚀 Initialized ConcreteAgentExecutor with {len(self.agent_classes)} agent types")
+
+        # Initialize Content Studio integration
+        self._initialize_content_studio()
+
+        # Initialize Spider-Agent connector
+        self._initialize_spider_connector()
+
+        # Initialize LLM integration
+        self._initialize_llm_integration()
+
+    async def get_spider_data_for_agent(self, agent_name: str) -> List[Dict[str, Any]]:
+        """Get pending spider data for an agent"""
+        if not self.spider_connector:
+            return []
+        await self._ensure_spider_connector_initialized()
+        return await self.spider_connector.get_agent_data(agent_name)
+
+    async def enable_agent_with_intelligence(self, agent_name: str, agent_instance: Any):
+        """Enable an agent with both spider data access and LLM capabilities"""
+        # Enable spider data access
+        if self.spider_connector:
+            agent_instance.get_spider_data = lambda: self.get_spider_data_for_agent(agent_name)
+
+        # Enable LLM capabilities
+        if self.llm_integration:
+            await self.llm_integration.enable_agent_with_llm(agent_name, agent_instance)
 
     async def execute_agent(self, agent_name: str, task: Dict[str, Any], user=None) -> Dict[str, Any]:
         """
@@ -80,7 +121,10 @@ class ConcreteAgentExecutor:
             agent_class = self.agent_classes[agent_name]
             agent_instance = agent_class(user=user) if user else agent_class()
 
-            logger.info(f"🏃 Executing agent: {agent_name}")
+            # Enable intelligence capabilities (spider data + LLM)
+            await self.enable_agent_with_intelligence(agent_name, agent_instance)
+
+            logger.info(f"🏃 Executing agent: {agent_name} (with spider data + LLM)")
 
             # Prepare task input
             task_input = task.get('input', {})
@@ -106,15 +150,25 @@ class ConcreteAgentExecutor:
                 ai_stats = agent_instance.get_ai_usage_stats()
                 logger.info(f"✅ Agent {agent_name} AI usage verified: {ai_used}")
 
-            # Build success response
+            # Validate output with mythology enforcer
+            validated_result = mythology_enforcer.enforce(agent_name, result)
+
+            # Build success response with validation
             execution_result = {
                 'success': True,
                 'agent': agent_name,
                 'execution_time': execution_time,
-                'result': result,
+                'result': validated_result.get('result', result),
                 'ai_stats': ai_stats,
+                'mythology_validated': validated_result.get('mythology_validated', False),
+                'mythology_corrected': validated_result.get('mythology_corrected', False),
                 'timestamp': timezone.now().isoformat()
             }
+
+            # Add warning if mythology corrections were made
+            if validated_result.get('mythology_corrected'):
+                execution_result['warning'] = validated_result.get('warning', 'Output was adjusted for realism')
+                logger.warning(f"⚠️ Mythology corrections applied to {agent_name} output")
 
             # Store in history
             self.execution_history.append(execution_result)
@@ -208,6 +262,59 @@ class ConcreteAgentExecutor:
         """Clear execution history"""
         self.execution_history = []
         logger.info("🧹 Cleared execution history")
+
+    def _initialize_content_studio(self):
+        """Initialize Content Studio integration"""
+        global content_studio_integration
+        try:
+            from backend.agents.content_studio_integration import content_studio_integration as csi
+            content_studio_integration = csi
+            self.content_studio_connected = True
+            logger.info("🎨 Content Studio integration connected successfully")
+        except Exception as e:
+            logger.warning(f"Content Studio integration not available: {e}")
+            self.content_studio_connected = False
+
+    def _initialize_spider_connector(self):
+        """Initialize Spider-Agent data connector"""
+        try:
+            from backend.agents.spider_agent_connector import spider_agent_connector
+            self.spider_connector = spider_agent_connector
+            logger.info("🕷️ Spider-Agent connector will be initialized on first use")
+        except Exception as e:
+            logger.warning(f"Spider-Agent connector not available: {e}")
+            self.spider_connector = None
+
+    async def _ensure_spider_connector_initialized(self):
+        """Ensure spider connector is initialized before use"""
+        if self.spider_connector and not self.spider_connector.initialized:
+            await self.spider_connector.initialize()
+            logger.info("🕷️ Spider-Agent connector initialized successfully")
+
+    def _initialize_llm_integration(self):
+        """Initialize LLM integration for agent intelligence"""
+        try:
+            from backend.agents.agent_llm_integration import agent_llm_integration
+            self.llm_integration = agent_llm_integration
+            logger.info(f"🧠 LLM integration initialized with provider: {self.llm_integration.default_provider}")
+        except Exception as e:
+            logger.warning(f"LLM integration not available: {e}")
+            self.llm_integration = None
+
+    async def create_content(self, agent_name: str, content_type: str, topic: str, user=None, **kwargs):
+        """Create content through the Content Studio using a specific agent"""
+        if not self.content_studio_connected:
+            self._initialize_content_studio()
+
+        if content_studio_integration:
+            return await content_studio_integration.create_content_through_agent(
+                agent_name, content_type, topic, user, **kwargs
+            )
+        else:
+            return {
+                'success': False,
+                'error': 'Content Studio integration not available'
+            }
 
 
 class SpecializedExecutors:
