@@ -48,6 +48,12 @@ except Exception as e:
     logger.error(f"❌ Unexpected error importing Personal Assistant Interviewer: {e}")
     personal_assistant_interviewer = None
 
+# Import autonomous system consumer
+try:
+    from backend.consumers.autonomous_system_consumer import AutonomousSystemConsumer
+except ImportError:
+    AutonomousSystemConsumer = None
+
 
 class SafeWebSocketMixin:
     """Mixin for safe WebSocket send operations"""

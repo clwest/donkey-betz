@@ -21,12 +21,21 @@ from core.intelligence_api import (
 
 # Import opportunity aggregator
 from backend.api.opportunity_aggregator import get_opportunities, get_actionable
+# Import real opportunities API
+from backend.api.opportunities_api import opportunities_api_view
 # Import AI opportunity pipeline
 from backend.ai_opportunity_api import (
     execute_ai_opportunity_pipeline,
     get_ai_strategies,
     build_ai_project,
     get_generated_projects
+)
+# Import Autonomous Revenue System APIs
+from backend.api.autonomous_system_api import (
+    AutonomousSystemStartView,
+    AutonomousSystemStatusView,
+    AutonomousSystemPauseView,
+    AutonomousSystemResumeView
 )
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
@@ -62,6 +71,10 @@ from core.profile_views import (
 from core.views_user_profile import (
     profile_extended, ai_configuration, agents_assigned, execute_command
 )
+from core.views_real_income_builder import (
+    real_income_opportunities, analyze_real_opportunities
+)
+from core import views_portfolio
 from core.views_profile import (
     ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
 )
@@ -150,6 +163,8 @@ from core.views_job_application_system import (
 )
 # Import enhanced agent execution views
 from core import views_agent_execution
+from core import views_categorized_opportunities
+from core import views_agent_work_platform
 
 # Create API router
 router = DefaultRouter()
@@ -211,6 +226,15 @@ urlpatterns = [
     path('api/v1/intelligence/income-builder/execute/', execute_action_plan_view, name='execute-action-plan'),
     path('api/v1/intelligence/income-builder/file/<str:filename>/', view_generated_file, name='view-generated-file'),
 
+    # Real Income Builder APIs (with actual jobs from spiders and simulator)
+    path('api/v1/intelligence/real-income-builder/', real_income_opportunities, name='real-income-builder'),
+    path('api/v1/intelligence/real-income-builder/analyze/', analyze_real_opportunities, name='real-income-analyze'),
+
+    # Portfolio Management APIs (for saving and managing project deliverables)
+    path('api/v1/portfolio/projects/', views_portfolio.portfolio_projects, name='portfolio-projects'),
+    path('api/v1/portfolio/projects/<str:project_id>/delete/', views_portfolio.delete_portfolio_project, name='delete-portfolio-project'),
+    path('api/v1/portfolio/projects/<str:project_id>/export/', views_portfolio.export_portfolio_project, name='export-portfolio-project'),
+
     # Unified Monetization Engine
     path('api/v1/monetization/opportunities/', monetization_opportunities, name='monetization-opportunities'),
     path('api/v1/monetization/plan/', create_monetization_plan, name='create-monetization-plan'),
@@ -223,9 +247,18 @@ urlpatterns = [
     path('api/v1/ai-opportunities/build/', build_ai_project, name='ai-build-project'),
     path('api/v1/ai-opportunities/projects/', get_generated_projects, name='ai-generated-projects'),
 
+    # Autonomous Revenue System - 30-day self-running platform
+    path('api/autonomous-system/start', AutonomousSystemStartView.as_view(), name='autonomous-start'),
+    path('api/autonomous-system/status', AutonomousSystemStatusView.as_view(), name='autonomous-status'),
+    path('api/autonomous-system/pause', AutonomousSystemPauseView.as_view(), name='autonomous-pause'),
+    path('api/autonomous-system/resume', AutonomousSystemResumeView.as_view(), name='autonomous-resume'),
+
     # Opportunity Aggregator endpoints
     path('api/opportunities/', get_opportunities, name='get-opportunities'),
     path('api/opportunities/actionable/', get_actionable, name='get-actionable'),
+
+    # Real-time opportunities for Income Builder
+    path('api/v1/opportunities/live/', opportunities_api_view, name='live-opportunities-real'),
 
     # Dashboard Statistics - The Heart of Everything!
     path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),
@@ -305,6 +338,18 @@ urlpatterns = [
     path('api/v1/agents/execution-history/', views_agent_execution.agent_execution_history, name='agent-execution-history'),
     path('api/v1/agents/test-execution/', views_agent_execution.test_agent_execution, name='agent-test-execution'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
+
+    # Categorized Opportunities with ML Pipeline
+    path('api/v1/categorized-opportunities/', views_categorized_opportunities.async_categorized_opportunities_view, name='categorized-opportunities'),
+    path('api/v1/select-opportunity/', views_categorized_opportunities.select_opportunity, name='select-opportunity'),
+    path('api/v1/category-stats/', views_categorized_opportunities.category_stats, name='category-stats'),
+
+    # Agent Work Platform - Where Agents Actually Make Money
+    path('api/v1/agent-work-platform/', views_agent_work_platform.async_agent_work_platform_view, name='agent-work-platform'),
+    path('api/v1/agent-revenue-dashboard/', views_agent_work_platform.agent_revenue_dashboard, name='agent-revenue-dashboard'),
+    path('api/v1/agent-workforce-status/', views_agent_work_platform.agent_workforce_status, name='agent-workforce-status'),
+    path('api/v1/assign-job/', views_agent_work_platform.assign_specific_job, name='assign-specific-job'),
+    path('api/v1/revenue-analytics/', views_agent_work_platform.revenue_analytics, name='revenue-analytics'),
 
     # Personal memory endpoints (secure access)
     path('api/v1/personal-memories/search/', search_personal_memories_api, name='personal-memories-search'),

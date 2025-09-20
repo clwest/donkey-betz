@@ -34,8 +34,12 @@ class UnifiedSpiderJobBridge:
         # Process results through Job Tracker
         processed_jobs = await self._process_through_job_tracker(spider_results)
 
-        # Update unified cache
-        cache.set(self.job_cache_key, processed_jobs, 3600)  # Cache for 1 hour
+        # Apply ML categorization to all opportunities
+        categorized_jobs = await self._apply_ml_categorization(processed_jobs)
+
+        # Update unified cache with categorized opportunities
+        cache.set(self.job_cache_key, categorized_jobs, 3600)  # Cache for 1 hour
+        cache.set('categorized_opportunities', categorized_jobs, 3600)  # Separate cache for categorized data
 
         # Notify all connected components
         await self._notify_components(processed_jobs, deployment_id)
@@ -43,17 +47,39 @@ class UnifiedSpiderJobBridge:
         deployment_result = {
             'deployment_id': deployment_id,
             'spider_count': len(spider_results),
-            'jobs_found': len(processed_jobs),
-            'sources': list(set(job.get('source', 'unknown') for job in processed_jobs)),
+            'jobs_found': len(categorized_jobs),
+            'categorized_jobs': len(categorized_jobs),
+            'sources': list(set(job.get('source', 'unknown') for job in categorized_jobs)),
             'timestamp': timezone.now().isoformat(),
             'user_request': user_request
         }
 
         self.active_deployments[deployment_id] = deployment_result
 
-        logger.info(f"✅ Spider deployment complete: {len(processed_jobs)} jobs from {len(spider_results)} sources")
+        logger.info(f"✅ Spider deployment complete: {len(categorized_jobs)} categorized jobs from {len(spider_results)} sources")
 
         return deployment_result
+
+    async def _apply_ml_categorization(self, jobs: List[Dict]) -> List[Dict]:
+        """Apply ML categorization to all jobs"""
+        try:
+            from ml_pipeline.opportunity_categorizer import get_opportunity_categorizer
+
+            categorizer = get_opportunity_categorizer()
+            categorized_jobs = await categorizer.categorize_batch(jobs)
+
+            # Generate and cache summary
+            summary = categorizer.get_category_summary(categorized_jobs)
+            cache.set('opportunity_category_summary', summary, 3600)
+
+            logger.info(f"🏷️ Categorized {len(categorized_jobs)} opportunities into {len(summary['categories'])} categories")
+
+            return categorized_jobs
+
+        except Exception as e:
+            logger.error(f"ML categorization failed: {e}")
+            # Return original jobs if categorization fails
+            return jobs
 
     async def _deploy_job_spiders(self, criteria: Dict) -> List[Dict]:
         """Deploy multiple job spiders concurrently"""

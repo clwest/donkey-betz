@@ -14,6 +14,7 @@ import {
 import { IntelligencePanel } from '@/components/intelligence/IntelligencePanel';
 import { MemorySearch } from '@/components/intelligence/MemorySearch';
 import { PatternLibrary } from '@/components/intelligence/PatternLibrary';
+import { JobDiscoveryPanel } from '@/components/intelligence/JobDiscoveryPanel';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import {
   getUniversalIntelligence,
@@ -323,8 +324,9 @@ export function CommandCenter() {
 
       {/* Main Content */}
       <Tabs defaultValue="decisions" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
           <TabsTrigger value="decisions">Active Decisions</TabsTrigger>
+          <TabsTrigger value="discover">Discover</TabsTrigger>
           <TabsTrigger value="intelligence">Intelligence Hub</TabsTrigger>
           <TabsTrigger value="patterns">Pattern Analysis</TabsTrigger>
           <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
@@ -533,6 +535,10 @@ export function CommandCenter() {
               </Card>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="discover" className="space-y-6">
+          <JobDiscoveryPanel />
         </TabsContent>
 
         <TabsContent value="portfolio" className="space-y-6">

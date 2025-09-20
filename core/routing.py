@@ -10,6 +10,9 @@ from . import consumers
 from . import orchestra_consumers
 from .unified_hub import UnifiedWebSocketHub
 from . import generic_consumer
+from .agent_platform_consumer import AgentPlatformConsumer
+from .decision_command_consumer import DecisionCommandConsumer
+from .real_job_execution_consumer import RealJobExecutionConsumer
 
 # Import sports routing if available
 try:
@@ -19,14 +22,20 @@ except ImportError:
 
 # Import intelligence routing for new UI components
 try:
-    from intelligence.routing import websocket_urlpatterns as intelligence_ws_patterns
+    from backend.intelligence.routing import websocket_urlpatterns as intelligence_ws_patterns
 except ImportError:
     intelligence_ws_patterns = []
 
 websocket_urlpatterns = [
     # Generic WebSocket endpoint for basic connections
     re_path(r'^ws/$', generic_consumer.GenericWebSocketConsumer.as_asgi()),
-    
+
+    # Agent Work Platform WebSocket - Real money-making system!
+    re_path(r'^ws/agent-platform/$', AgentPlatformConsumer.as_asgi()),
+
+    # Autonomous Revenue System WebSocket - 30-day autonomous run!
+    re_path(r'^ws/autonomous-system/$', consumers.AutonomousSystemConsumer.as_asgi()),
+
     # Test endpoints
     re_path(r'^ws/test/echo/$', consumers.TestEchoConsumer.as_asgi()),
 
@@ -41,6 +50,12 @@ websocket_urlpatterns = [
     re_path(r'^ws/intelligence/$', consumers.CommandCenterConsumer.as_asgi()),
     re_path(r'^ws/decisions/$', consumers.CommandCenterConsumer.as_asgi()),
     re_path(r'^ws/decision/$', consumers.CommandCenterConsumer.as_asgi()),  # Add singular route
+
+    # Real Decision Command WebSocket
+    re_path(r'^ws/decision-command/$', DecisionCommandConsumer.as_asgi()),
+
+    # Real Job Execution WebSocket - for recording and portfolio generation
+    re_path(r'^ws/real-job-execution/$', RealJobExecutionConsumer.as_asgi()),
 
     # Agent orchestration WebSocket (for orchestra frontend)
     re_path(r'^ws/agents/$', consumers.AgentProgressConsumer.as_asgi()),

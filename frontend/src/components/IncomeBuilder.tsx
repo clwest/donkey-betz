@@ -491,16 +491,34 @@ export default function IncomeBuilder() {
 
   const fetchOpportunities = async () => {
     try {
-      console.log('🔍 Fetching opportunities from:', `${API_BASE_URL}/v1/intelligence/income-builder/`);
-      const response = await fetch(`${API_BASE_URL}/v1/intelligence/income-builder/`);
+      // Fetch REAL opportunities from the new endpoint
+      console.log('🔍 Fetching REAL opportunities from:', `${API_BASE_URL}/api/v1/intelligence/real-income-builder/`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/intelligence/real-income-builder/`);
       const data = await response.json();
-      console.log('📊 Opportunities data received:', data);
+      console.log('📊 REAL opportunities data received:', data);
       if (data.success) {
-        console.log('✅ Setting opportunities:', data.opportunities);
+        console.log('✅ Setting REAL opportunities:', data.opportunities);
         setOpportunities(data.opportunities);
+
+        // Also update revenue data if provided
+        if (data.revenue) {
+          console.log('💰 Updating revenue data from opportunities');
+          setRevenueData(data.revenue);
+        }
       }
     } catch (error) {
-      console.error('❌ Error fetching opportunities:', error);
+      console.error('❌ Error fetching real opportunities:', error);
+      // Fallback to old endpoint if new one fails
+      try {
+        console.log('🔄 Trying fallback endpoint...');
+        const fallbackResponse = await fetch(`${API_BASE_URL}/api/v1/intelligence/income-builder/`);
+        const fallbackData = await fallbackResponse.json();
+        if (fallbackData.success) {
+          setOpportunities(fallbackData.opportunities);
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
