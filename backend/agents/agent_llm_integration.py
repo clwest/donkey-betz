@@ -1,0 +1,300 @@
+"""
+Agent LLM Integration Module
+Connects AI agents to actual LLM providers for real intelligence
+"""
+import os
+import json
+import asyncio
+import logging
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+import openai
+import anthropic
+from abc import ABC, abstractmethod
+
+logger = logging.getLogger(__name__)
+
+
+class LLMProvider(ABC):
+    """Base class for LLM providers"""
+
+    @abstractmethod
+    async def generate(self, prompt: str, **kwargs) -> str:
+        pass
+
+    @abstractmethod
+    def get_cost(self, tokens_in: int, tokens_out: int) -> float:
+        pass
+
+
+class OpenAIProvider(LLMProvider):
+    """OpenAI GPT provider"""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        if self.api_key:
+            openai.api_key = self.api_key
+            self.client = openai.AsyncOpenAI(api_key=self.api_key)
+        else:
+            self.client = None
+            logger.warning("OpenAI API key not found")
+
+    async def generate(self, prompt: str, model: str = "gpt-4o-mini",
+                      temperature: float = 0.7, max_tokens: int = 1000,
+                      **kwargs) -> str:
+        """Generate response using OpenAI"""
+        if not self.client:
+            return "OpenAI API key not configured"
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"OpenAI generation error: {e}")
+            return f"Error generating response: {e}"
+
+    def get_cost(self, tokens_in: int, tokens_out: int) -> float:
+        """Calculate cost for OpenAI usage"""
+        # GPT-4o-mini pricing (per 1M tokens)
+        input_cost = (tokens_in / 1_000_000) * 0.15
+        output_cost = (tokens_out / 1_000_000) * 0.60
+        return input_cost + output_cost
+
+
+class AnthropicProvider(LLMProvider):
+    """Anthropic Claude provider"""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        if self.api_key:
+            self.client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        else:
+            self.client = None
+            logger.warning("Anthropic API key not found")
+
+    async def generate(self, prompt: str, model: str = "claude-3-haiku-20240307",
+                      temperature: float = 0.7, max_tokens: int = 1000,
+                      **kwargs) -> str:
+        """Generate response using Anthropic Claude"""
+        if not self.client:
+            return "Anthropic API key not configured"
+
+        try:
+            response = await self.client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=[{"role": "user", "content": prompt}],
+                **kwargs
+            )
+            return response.content[0].text
+        except Exception as e:
+            logger.error(f"Anthropic generation error: {e}")
+            return f"Error generating response: {e}"
+
+    def get_cost(self, tokens_in: int, tokens_out: int) -> float:
+        """Calculate cost for Anthropic usage"""
+        # Claude Haiku pricing (per 1M tokens)
+        input_cost = (tokens_in / 1_000_000) * 0.25
+        output_cost = (tokens_out / 1_000_000) * 1.25
+        return input_cost + output_cost
+
+
+class MockLLMProvider(LLMProvider):
+    """Mock LLM for testing without API costs"""
+
+    async def generate(self, prompt: str, **kwargs) -> str:
+        """Generate mock response"""
+        await asyncio.sleep(0.1)  # Simulate API delay
+
+        # Generate contextual mock responses
+        if "sports" in prompt.lower() or "betting" in prompt.lower():
+            return "Based on analysis: Chiefs have 65% win probability. Recommended bet: Under 48.5 total points with confidence 72%."
+        elif "job" in prompt.lower() or "opportunity" in prompt.lower():
+            return "Identified 3 high-value opportunities matching your skills. Senior Developer role at TechCorp offers $150k with remote flexibility."
+        elif "content" in prompt.lower() or "viral" in prompt.lower():
+            return "Trending topic analysis: AI productivity tools gaining 340% engagement. Suggested content angle: '5 AI Tools That Save 10 Hours Weekly'."
+        elif "trading" in prompt.lower() or "crypto" in prompt.lower():
+            return "Market signal detected: BTC showing bullish divergence on 4H chart. Entry point: $42,350 with stop loss at $41,800."
+        else:
+            return f"Processed request: {prompt[:100]}... Generated intelligent response based on context."
+
+    def get_cost(self, tokens_in: int, tokens_out: int) -> float:
+        """No cost for mock provider"""
+        return 0.0
+
+
+class AgentLLMIntegration:
+    """Main integration class connecting agents to LLMs"""
+
+    def __init__(self):
+        self.providers = {
+            'openai': OpenAIProvider(),
+            'anthropic': AnthropicProvider(),
+            'mock': MockLLMProvider()
+        }
+
+        # Default to mock if no API keys are configured
+        self.default_provider = 'mock'
+        if os.getenv('OPENAI_API_KEY'):
+            self.default_provider = 'openai'
+        elif os.getenv('ANTHROPIC_API_KEY'):
+            self.default_provider = 'anthropic'
+
+        self.usage_stats = {
+            'total_requests': 0,
+            'total_tokens_in': 0,
+            'total_tokens_out': 0,
+            'total_cost': 0.0,
+            'by_agent': {}
+        }
+
+        logger.info(f"LLM Integration initialized with default provider: {self.default_provider}")
+
+    async def generate_for_agent(self, agent_name: str, prompt: str,
+                                provider: Optional[str] = None,
+                                **kwargs) -> Dict[str, Any]:
+        """Generate LLM response for a specific agent"""
+        provider_name = provider or self.default_provider
+        llm_provider = self.providers.get(provider_name)
+
+        if not llm_provider:
+            return {
+                'success': False,
+                'error': f'Provider {provider_name} not found',
+                'response': None
+            }
+
+        try:
+            # Add agent context to prompt
+            enhanced_prompt = f"[Agent: {agent_name}]\n{prompt}"
+
+            # Generate response
+            response = await llm_provider.generate(enhanced_prompt, **kwargs)
+
+            # Track usage
+            self._track_usage(agent_name, provider_name, len(prompt), len(response))
+
+            return {
+                'success': True,
+                'response': response,
+                'provider': provider_name,
+                'agent': agent_name,
+                'timestamp': datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"LLM generation failed for {agent_name}: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'response': None
+            }
+
+    async def process_spider_data_with_llm(self, agent_name: str,
+                                          spider_data: Dict[str, Any],
+                                          analysis_type: str = "general") -> Dict[str, Any]:
+        """Process spider data through LLM for intelligent analysis"""
+
+        prompt_templates = {
+            'betting': "Analyze this sports betting data and provide recommendations:\n{data}",
+            'trading': "Analyze this market data and identify trading opportunities:\n{data}",
+            'content': "Analyze these trending topics and suggest content strategies:\n{data}",
+            'jobs': "Review these job opportunities and rank by fit:\n{data}",
+            'general': "Analyze this data and provide actionable insights:\n{data}"
+        }
+
+        template = prompt_templates.get(analysis_type, prompt_templates['general'])
+        prompt = template.format(data=json.dumps(spider_data, indent=2)[:2000])
+
+        result = await self.generate_for_agent(agent_name, prompt)
+
+        if result['success']:
+            return {
+                'success': True,
+                'analysis': result['response'],
+                'original_data': spider_data,
+                'analysis_type': analysis_type,
+                'timestamp': datetime.now().isoformat()
+            }
+        else:
+            return result
+
+    def _track_usage(self, agent_name: str, provider: str,
+                    tokens_in: int, tokens_out: int):
+        """Track LLM usage statistics"""
+        self.usage_stats['total_requests'] += 1
+        self.usage_stats['total_tokens_in'] += tokens_in
+        self.usage_stats['total_tokens_out'] += tokens_out
+
+        # Calculate cost
+        if provider in self.providers:
+            cost = self.providers[provider].get_cost(tokens_in, tokens_out)
+            self.usage_stats['total_cost'] += cost
+
+        # Track per-agent usage
+        if agent_name not in self.usage_stats['by_agent']:
+            self.usage_stats['by_agent'][agent_name] = {
+                'requests': 0,
+                'tokens_in': 0,
+                'tokens_out': 0,
+                'cost': 0.0
+            }
+
+        agent_stats = self.usage_stats['by_agent'][agent_name]
+        agent_stats['requests'] += 1
+        agent_stats['tokens_in'] += tokens_in
+        agent_stats['tokens_out'] += tokens_out
+        agent_stats['cost'] += cost if provider in self.providers else 0
+
+    def get_usage_stats(self) -> Dict[str, Any]:
+        """Get current usage statistics"""
+        return self.usage_stats
+
+    async def enable_agent_with_llm(self, agent_name: str,
+                                   agent_instance: Any) -> bool:
+        """Enable an agent with LLM capabilities"""
+        try:
+            # Add LLM methods to agent instance
+            agent_instance.generate_llm_response = lambda prompt: self.generate_for_agent(
+                agent_name, prompt
+            )
+            agent_instance.process_with_llm = lambda data, analysis_type: self.process_spider_data_with_llm(
+                agent_name, data, analysis_type
+            )
+
+            logger.info(f"Enabled LLM for agent: {agent_name}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to enable LLM for {agent_name}: {e}")
+            return False
+
+
+# Singleton instance
+agent_llm_integration = AgentLLMIntegration()
+
+
+# Helper functions for easy integration
+async def enable_agent_intelligence(agent_name: str, agent_instance: Any):
+    """Enable AI intelligence for an agent"""
+    return await agent_llm_integration.enable_agent_with_llm(agent_name, agent_instance)
+
+
+async def analyze_with_ai(agent_name: str, data: Dict[str, Any],
+                         analysis_type: str = "general") -> Dict[str, Any]:
+    """Analyze data using AI"""
+    return await agent_llm_integration.process_spider_data_with_llm(
+        agent_name, data, analysis_type
+    )
+
+
+def get_llm_usage_stats() -> Dict[str, Any]:
+    """Get current LLM usage statistics"""
+    return agent_llm_integration.get_usage_stats()

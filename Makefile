@@ -167,12 +167,15 @@ unified-dev: ## Start complete development environment with all services
 	@sleep 3
 	@echo ""
 	@echo "$(CYAN)⚛️  Starting frontend services...$(NC)"
-	@if [ ! -d "frontend" ]; then \
-		echo "$(YELLOW)Frontend not found. Creating with implementation script...$(NC)"; \
-		python implement_frontend.py; \
+	@if [ -d "frontend" ]; then \
+		echo "  • React frontend on port $(FRONTEND_PORT)"; \
+		make _start-frontend & \
+		sleep 2; \
+	else \
+		echo "  • $(YELLOW)React frontend not found, skipping...$(NC)"; \
 	fi
-	@echo "  • React frontend on port $(FRONTEND_PORT)"
-	@make _start-frontend &
+	@echo "  • Spider Dashboard on port 5173"
+	@make _start-spider-dashboard &
 	@sleep 2
 	@echo ""
 	@echo "$(CYAN)🔄 Starting background workers...$(NC)"
@@ -189,6 +192,7 @@ unified-dev: ## Start complete development environment with all services
 	@echo "  $(YELLOW)Backend API:$(NC)          http://localhost:$(BACKEND_PORT)/api/"
 	@echo "  $(YELLOW)Admin Panel:$(NC)          http://localhost:$(BACKEND_PORT)/admin/"
 	@echo "  $(YELLOW)Frontend App:$(NC)         http://localhost:$(FRONTEND_PORT)"
+	@echo "  $(YELLOW)Spider Dashboard:$(NC)      http://localhost:5173"
 	@echo "  $(YELLOW)WebSocket:$(NC)            ws://localhost:$(WEBSOCKET_PORT)/ws/"
 	@echo "  $(YELLOW)Flower (Celery):$(NC)      http://localhost:$(FLOWER_PORT)"
 	@echo ""
@@ -254,6 +258,14 @@ _start-frontend: ## Internal: Start React frontend
 		cd frontend && npm install; \
 	fi
 	@cd frontend && PORT=$(FRONTEND_PORT) npm start
+
+_start-spider-dashboard: ## Internal: Start Spider Dashboard frontend
+	@echo "$(CYAN)Starting Spider Dashboard...$(NC)"
+	@if [ ! -d "spider-dashboard/node_modules" ]; then \
+		echo "$(YELLOW)Installing Spider Dashboard dependencies...$(NC)"; \
+		cd spider-dashboard && npm install; \
+	fi
+	@cd spider-dashboard && npm run dev
 
 _start-celery: ## Internal: Start Celery workers and beat
 	@echo "$(CYAN)Starting Celery services...$(NC)"

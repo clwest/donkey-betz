@@ -31,7 +31,7 @@ import asyncio
 import json
 import logging
 import redis
-import aioredis
+from redis import asyncio as aioredis
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta

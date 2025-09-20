@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     # 'memory',                  # Unified Memory System
     'agents',                  # Agent Registry & Orchestration
     # 'ai_services',            # Multi-Provider AI Interface
+    'backend.spiders',         # Spider Army System
     'sports',                 # Sports Analytics Engine
     'content',                # Content Generation System
     'persistence',            # Data Persistence Infrastructure (NEW)

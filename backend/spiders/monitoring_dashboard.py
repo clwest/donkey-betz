@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, field
 import redis
-import aioredis
+from redis import asyncio as aioredis
 from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
 import threading

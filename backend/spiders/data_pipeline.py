@@ -23,7 +23,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any, Set, Callable
 from dataclasses import dataclass, field
 import redis
-import aioredis
+from redis import asyncio as aioredis
 from enum import Enum
 import hashlib
 import uuid

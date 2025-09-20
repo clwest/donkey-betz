@@ -7,14 +7,14 @@ import json
 import asyncio
 import logging
 from datetime import datetime
-from channels.generic.websocket import AsyncWebSocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from pathlib import Path
 import time
 
 logger = logging.getLogger(__name__)
 
-class RealJobExecutionConsumer(AsyncWebSocketConsumer):
+class RealJobExecutionConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for real-time job execution display"""
 
     async def connect(self):
