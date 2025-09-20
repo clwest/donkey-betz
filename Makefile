@@ -144,6 +144,9 @@ dev: unified-dev ## Alias for unified-dev (start complete development environmen
 unified-dev: ## Start complete development environment with all services
 	@echo "$(BLUE)=====================================================================$(NC)"
 	@echo "$(BLUE)🚀 STARTING UNIFIED DONKEY BETZ PLATFORM - DEVELOPMENT MODE$(NC)"
+	@echo "$(GREEN)⚛️  Frontend Operations:$(NC)"
+	@grep -E '^frontend-[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
 	@echo "$(BLUE)=====================================================================$(NC)"
 	@echo ""
 	@echo "$(CYAN)📦 Pre-flight checks...$(NC)"
@@ -164,6 +167,10 @@ unified-dev: ## Start complete development environment with all services
 	@sleep 3
 	@echo ""
 	@echo "$(CYAN)⚛️  Starting frontend services...$(NC)"
+	@if [ ! -d "frontend" ]; then \
+		echo "$(YELLOW)Frontend not found. Creating with implementation script...$(NC)"; \
+		python implement_frontend.py; \
+	fi
 	@echo "  • React frontend on port $(FRONTEND_PORT)"
 	@make _start-frontend &
 	@sleep 2
@@ -216,6 +223,8 @@ unified-stop: ## Stop all development services
 	@pkill -f "react-scripts" 2>/dev/null || true
 	@pkill -f "webpack" 2>/dev/null || true
 	@echo "$(CYAN)Stopping mobile services...$(NC)"
+	@pkill -f "react-scripts start" 2>/dev/null || true
+	@pkill -f "node.*react-scripts" 2>/dev/null || true
 	@pkill -f "expo" 2>/dev/null || true
 	@pkill -f "metro" 2>/dev/null || true
 	@echo "$(CYAN)Clearing any lingering ports...$(NC)"
@@ -240,7 +249,11 @@ _start-backend: ## Internal: Start Django backend with WebSocket support
 
 _start-frontend: ## Internal: Start React frontend
 	@echo "$(CYAN)Starting React frontend...$(NC)"
-	@cd frontend && npm run dev -- --port $(FRONTEND_PORT)
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "$(YELLOW)Installing frontend dependencies...$(NC)"; \
+		cd frontend && npm install; \
+	fi
+	@cd frontend && PORT=$(FRONTEND_PORT) npm start
 
 _start-celery: ## Internal: Start Celery workers and beat
 	@echo "$(CYAN)Starting Celery services...$(NC)"
@@ -256,7 +269,7 @@ install: ## Install all dependencies and set up the platform
 	$(ACTIVATE) && $(PIP) install -r requirements.txt
 	@echo "$(GREEN)Dependencies installed successfully!$(NC)"
 
-setup: install migrate superuser ## Full platform setup (install + migrate + superuser)
+setup: install migrate superuser frontend-setup ## Full platform setup (install + migrate + superuser + frontend)
 	@echo "$(GREEN)Platform setup complete! Run 'make run' to start development server.$(NC)"
 
 install-deps: ## Install core dependencies only
@@ -381,6 +394,59 @@ status: ## Show platform status
 	@echo "  Debug Mode: $(shell $(ACTIVATE) && $(PYTHON) -c 'from core.settings import DEBUG; print(DEBUG)')"
 	@echo "  Secret Key: $(shell $(ACTIVATE) && $(PYTHON) -c 'from core.settings import SECRET_KEY; print(\"Set\" if SECRET_KEY else \"Not Set\")')"
 
+
+# =============================================================================
+# FRONTEND OPERATIONS (React)
+# =============================================================================
+
+frontend-install: ## Install React frontend dependencies
+	@echo "$(CYAN)Installing React frontend dependencies...$(NC)"
+	@if [ ! -d "frontend" ]; then \
+		echo "$(YELLOW)Frontend directory not found. Run 'python implement_frontend.py' first$(NC)"; \
+		exit 1; \
+	fi
+	@cd frontend && npm install
+	@echo "$(GREEN)✅ Frontend dependencies installed$(NC)"
+
+frontend-start: ## Start React frontend standalone
+	@echo "$(CYAN)Starting React frontend on port $(FRONTEND_PORT)...$(NC)"
+	@if [ ! -d "frontend/node_modules" ]; then \
+		make frontend-install; \
+	fi
+	@cd frontend && PORT=$(FRONTEND_PORT) npm start
+
+frontend-build: ## Build React frontend for production
+	@echo "$(CYAN)Building React frontend for production...$(NC)"
+	@if [ ! -d "frontend/node_modules" ]; then \
+		make frontend-install; \
+	fi
+	@cd frontend && npm run build
+	@echo "$(GREEN)✅ Frontend built in frontend/build/$(NC)"
+
+frontend-test: ## Run frontend tests
+	@echo "$(CYAN)Running frontend tests...$(NC)"
+	@cd frontend && npm test --watchAll=false
+
+frontend-lint: ## Lint frontend code
+	@echo "$(CYAN)Linting frontend code...$(NC)"
+	@cd frontend && npx eslint src/
+
+frontend-clean: ## Clean frontend build and dependencies
+	@echo "$(YELLOW)Cleaning frontend...$(NC)"
+	@rm -rf frontend/node_modules frontend/build frontend/package-lock.json
+	@echo "$(GREEN)✅ Frontend cleaned$(NC)"
+
+frontend-reset: frontend-clean frontend-install ## Reset frontend (clean + reinstall)
+	@echo "$(GREEN)✅ Frontend reset complete$(NC)"
+
+frontend-dev: ## Start frontend in development mode with hot reload
+	@echo "$(CYAN)Starting React frontend in development mode...$(NC)"
+	@if [ ! -d "frontend/node_modules" ]; then \
+		make frontend-install; \
+	fi
+	@cd frontend && PORT=$(FRONTEND_PORT) npm start
+
+# =============================================================================
 # =============================================================================
 # DOCKER AND CONTAINERIZATION
 # =============================================================================

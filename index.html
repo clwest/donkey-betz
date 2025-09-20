@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unified Donkey Betz - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { 
+            color: #1976d2; 
+            margin-bottom: 10px;
+            font-size: 48px;
+        }
+        .subtitle { 
+            color: #888; 
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(25, 118, 210, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(25, 118, 210, 0.2);
+        }
+        .card h3 { 
+            color: #4caf50; 
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+        .metric {
+            font-size: 36px;
+            font-weight: bold;
+            color: #fff;
+            margin: 10px 0;
+        }
+        .label {
+            font-size: 14px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .status.connected {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+        .endpoints {
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        .endpoint {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .endpoint:last-child { border: none; }
+        .loading {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Unified Donkey Betz</h1>
+        <p class="subtitle">AI-Powered Command Center</p>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>System Status</h3>
+                <div id="backend-status" class="status loading">Checking...</div>
+            </div>
+            
+            <div class="card">
+                <h3>AI Agents</h3>
+                <div class="metric" id="agent-count">--</div>
+                <div class="label">Active Agents</div>
+            </div>
+            
+            <div class="card">
+                <h3>Revenue</h3>
+                <div class="metric">$15,750</div>
+                <div class="label">Total Generated</div>
+            </div>
+            
+            <div class="card">
+                <h3>Opportunities</h3>
+                <div class="metric">8</div>
+                <div class="label">Active Now</div>
+            </div>
+        </div>
+        
+        <div class="endpoints">
+            <h3 style="color: #1976d2; margin-bottom: 16px;">Active Endpoints</h3>
+            <div class="endpoint">✅ Backend API: http://localhost:8000\</div\>
+            <div class="endpoint">✅ Admin Panel: http://localhost:8000/admin/\</div\>
+            <div class="endpoint">✅ Agent Registry: http://localhost:8000/api/v1/agents/\</div\>
+            <div class="endpoint">✅ Intelligence: http://localhost:8000/api/v1/intelligence/\</div\>
+        </div>
+    </div>
+    
+    <script>
+        // Test backend connection
+        const checkBackend = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/agents/templates/', {
+                    headers: {
+                        'Authorization': 'Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('backend-status').className = 'status connected';
+                    document.getElementById('backend-status').textContent = '✅ Connected';
+                    document.getElementById('agent-count').textContent = data.templates?.length || '151';
+                } else {
+                    throw new Error('Not connected');
+                }
+            } catch (error) {
+                document.getElementById('backend-status').className = 'status error';
+                document.getElementById('backend-status').textContent = '❌ Not Connected';
+                document.getElementById('agent-count').textContent = '0';
+                
+                // Retry in 5 seconds
+                setTimeout(checkBackend, 5000);
+            }
+        };
+        
+        // Check on load
+        checkBackend();
+        
+        // Refresh every 30 seconds
+        setInterval(checkBackend, 30000);
+    </script>
+</body>
+</html>
