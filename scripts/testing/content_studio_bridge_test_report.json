@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-09-20T16:15:57.802765",
+  "results": {
+    "connection": true,
+    "blog": true,
+    "social": true,
+    "image": true,
+    "campaign": true,
+    "library": true,
+    "logging": false
+  },
+  "summary": {
+    "total": 7,
+    "passed": 6,
+    "failed": 1
+  }
+}

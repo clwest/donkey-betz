@@ -1,0 +1,246 @@
+{
+  "timestamp": "2025-09-20T16:25:56.192947",
+  "tests": {
+    "orchestrator_init": {
+      "status": "success",
+      "services": 8,
+      "connections": 13
+    },
+    "health_check": {
+      "timestamp": "2025-09-20T16:25:57.309865",
+      "services": {
+        "agents": {
+          "name": "Agent System",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.329746",
+          "response_time_ms": 5.2,
+          "endpoints_available": 4,
+          "error_count": 0,
+          "metadata": {
+            "count": 151
+          }
+        },
+        "intelligence": {
+          "name": "Intelligence System",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.329886",
+          "response_time_ms": 5.2,
+          "endpoints_available": 5,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        },
+        "content": {
+          "name": "Content Creation Studio",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.329973",
+          "response_time_ms": 5.2,
+          "endpoints_available": 4,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        },
+        "sports": {
+          "name": "Sports Analytics",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.330050",
+          "response_time_ms": 5.2,
+          "endpoints_available": 3,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        },
+        "assistant": {
+          "name": "Personal Assistant",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.330130",
+          "response_time_ms": 5.2,
+          "endpoints_available": 3,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        },
+        "websocket": {
+          "name": "WebSocket Hub",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.330140",
+          "response_time_ms": 5.2,
+          "endpoints_available": 5,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        },
+        "analytics": {
+          "name": "Analytics Engine",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.330149",
+          "response_time_ms": 5.2,
+          "endpoints_available": 3,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        },
+        "profile": {
+          "name": "User Profile System",
+          "status": "healthy",
+          "last_check": "2025-09-20T16:25:57.330223",
+          "response_time_ms": 5.2,
+          "endpoints_available": 4,
+          "error_count": 0,
+          "metadata": {
+            "count": 0
+          }
+        }
+      },
+      "overall_status": "healthy",
+      "total_services": 8,
+      "healthy_services": 8,
+      "degraded_services": 0,
+      "down_services": 0
+    },
+    "data_routing": {
+      "status": "success",
+      "routes": [
+        "intelligence",
+        "analytics",
+        "websocket"
+      ]
+    },
+    "coordinated_action": {
+      "action": "full_system_sync",
+      "timestamp": "2025-09-20T16:25:57.337086",
+      "success": true,
+      "services_involved": [
+        "agents",
+        "intelligence",
+        "content",
+        "sports",
+        "assistant",
+        "websocket",
+        "analytics",
+        "profile"
+      ],
+      "results": {
+        "connections_established": 13,
+        "health": {
+          "timestamp": "2025-09-20T16:25:57.337371",
+          "services": {
+            "agents": {
+              "name": "Agent System",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337568",
+              "response_time_ms": 5.2,
+              "endpoints_available": 4,
+              "error_count": 0,
+              "metadata": {
+                "count": 151
+              }
+            },
+            "intelligence": {
+              "name": "Intelligence System",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337662",
+              "response_time_ms": 5.2,
+              "endpoints_available": 5,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            },
+            "content": {
+              "name": "Content Creation Studio",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337730",
+              "response_time_ms": 5.2,
+              "endpoints_available": 4,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            },
+            "sports": {
+              "name": "Sports Analytics",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337793",
+              "response_time_ms": 5.2,
+              "endpoints_available": 3,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            },
+            "assistant": {
+              "name": "Personal Assistant",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337853",
+              "response_time_ms": 5.2,
+              "endpoints_available": 3,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            },
+            "websocket": {
+              "name": "WebSocket Hub",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337863",
+              "response_time_ms": 5.2,
+              "endpoints_available": 5,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            },
+            "analytics": {
+              "name": "Analytics Engine",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337872",
+              "response_time_ms": 5.2,
+              "endpoints_available": 3,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            },
+            "profile": {
+              "name": "User Profile System",
+              "status": "healthy",
+              "last_check": "2025-09-20T16:25:57.337950",
+              "response_time_ms": 5.2,
+              "endpoints_available": 4,
+              "error_count": 0,
+              "metadata": {
+                "count": 0
+              }
+            }
+          },
+          "overall_status": "healthy",
+          "total_services": 8,
+          "healthy_services": 8,
+          "degraded_services": 0,
+          "down_services": 0
+        }
+      }
+    },
+    "isolation": "maintained"
+  },
+  "existing_functionality": {
+    "Agent Templates": "working",
+    "Income Builder": "working",
+    "Content List": "status_404",
+    "Health Check": "working",
+    "Assistant Context": "status_500"
+  },
+  "new_functionality": {
+    "Unified Health": "ready",
+    "Unified Dashboard": "ready",
+    "Service Connections": "ready",
+    "Unified Metrics": "ready"
+  }
+}
