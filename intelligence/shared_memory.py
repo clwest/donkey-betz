@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 # Redis connection for persistent shared memory
 redis_client = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
+    host=getattr(settings, 'REDIS_HOST', 'localhost'),
+    port=getattr(settings, 'REDIS_PORT', 6379),
     db=2,  # Use db=2 for shared memory
     decode_responses=True
 )

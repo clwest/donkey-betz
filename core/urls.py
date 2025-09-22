@@ -110,6 +110,21 @@ from core.views_enhanced_profile import (
     get_enhanced_profile, update_enhanced_profile,
     get_user_memories, get_profile_suggestions
 )
+# Import Unified Bridge views for REAL money-making functionality
+from core.views_unified_bridge import (
+    sync_user_profile, get_real_opportunities, submit_real_application,
+    record_user_revenue, get_opportunity_decision, get_user_dashboard_data,
+    trigger_component_sync
+)
+from core.views_unified_metrics import unified_platform_metrics
+from core.views_unified_placeholders import (
+    unified_assistant_chat,
+    unified_assistant_context,
+    execute_agent_with_memory,
+    get_agent_recommendations,
+    rate_agent_execution,
+    unified_assistant_chat_dev
+)
 from agents.views import orchestrations_list
 
 # Import ecosystem activation views
@@ -365,6 +380,7 @@ urlpatterns = [
     path('api/unified/recommendations/', get_agent_recommendations, name='unified-agent-recommendations'),
     path('api/unified/rate/', rate_agent_execution, name='unified-rate-execution'),
     path('api/unified/dev/chat/', unified_assistant_chat_dev, name='unified-assistant-chat-dev'),
+    path('api/unified/metrics/', unified_platform_metrics, name='unified-metrics'),
     
     # Research endpoints
     path('api/v1/research/books/', research_books, name='research-books'),
@@ -437,6 +453,16 @@ urlpatterns = [
     path('api/profile/enhanced/update/', update_enhanced_profile, name='enhanced-profile-update'),
     path('api/profile/memories/', get_user_memories, name='user-memories'),
     path('api/profile/suggestions/', get_profile_suggestions, name='profile-suggestions'),
+
+    # ===== UNIFIED BRIDGE: REAL MONEY-MAKING ENDPOINTS =====
+    # These endpoints connect all components and enable actual revenue generation
+    path('api/bridge/profile/sync/', sync_user_profile, name='bridge-profile-sync'),
+    path('api/bridge/opportunities/real/', get_real_opportunities, name='bridge-real-opportunities'),
+    path('api/bridge/apply/submit/', submit_real_application, name='bridge-submit-application'),
+    path('api/bridge/revenue/record/', record_user_revenue, name='bridge-record-revenue'),
+    path('api/bridge/decision/analyze/', get_opportunity_decision, name='bridge-opportunity-decision'),
+    path('api/bridge/dashboard/unified/', get_user_dashboard_data, name='bridge-dashboard-data'),
+    path('api/bridge/sync/trigger/', trigger_component_sync, name='bridge-component-sync'),
 
     # Aliases for extended profile (used by ProfessionalProfile component)
     path('api/profile/extended/', get_enhanced_profile, name='extended-profile'),
@@ -553,6 +579,9 @@ urlpatterns = [
 
     # System Reality Self-Awareness Engine
     path('truth/', include('core.truth_urls')),  # Truth Dashboard and Reality APIs
+
+    # AI Platform Learning and Verification APIs
+    path('', include('ai_platform.urls')),  # AI Platform endpoints
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
