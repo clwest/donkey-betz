@@ -39,6 +39,8 @@ class FreelancePipeline:
     def __init__(self, redis_client=None):
         self.redis_client = redis_client
         self.active_projects = {}
+        self.dry_run = True  # Default to safe mode
+        self.max_bid_amount = 100.0  # Safety limit for automatic bidding
 
     async def process_opportunity(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
         """

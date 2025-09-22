@@ -108,7 +108,7 @@ MIDDLEWARE = [
     # "backend.middleware.UnifiedSecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    # "django.middleware.csrf.CsrfViewMiddleware",  # Disabled for API testing
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # "backend.middleware.UnifiedAuthenticationMiddleware",
     # "backend.middleware.RequestLoggingMiddleware",

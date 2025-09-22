@@ -22,11 +22,31 @@ from backend.agents.freelance_job_analyzer import FreelanceJobAnalyzer
 from backend.agents.freelance_pipeline import FreelancePipeline
 
 
-async def test_complete_freelance_flow():
-    """Test the complete freelance pipeline from opportunity to payment"""
+async def test_complete_freelance_flow(real_mode: bool = False, dry_run: bool = True):
+    """
+    Test the complete freelance pipeline from opportunity to payment
+
+    Args:
+        real_mode: If True, uses real Upwork RSS feeds instead of mock data
+        dry_run: If True, simulates actions without real submissions/payments
+    """
     print("\n" + "="*70)
     print("💼 FREELANCE PIPELINE TEST - Complete Flow")
+    print(f"🔧 Mode: {'REAL DATA' if real_mode else 'MOCK DATA'} | {'DRY RUN' if dry_run else 'LIVE MODE'}")
     print("="*70)
+
+    if real_mode and not dry_run:
+        print("⚠️  WARNING: LIVE MODE with REAL DATA")
+        print("   This will:")
+        print("   • Access real Upwork job feeds")
+        print("   • Generate actual proposals")
+        print("   • Could submit real applications")
+        print("   • May involve real money")
+        print()
+        confirm = input("Type 'CONFIRM' to continue with live mode: ")
+        if confirm != 'CONFIRM':
+            print("❌ Live mode cancelled. Running in dry-run mode instead.")
+            dry_run = True
 
     redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
@@ -37,7 +57,8 @@ async def test_complete_freelance_flow():
     spider = FreelanceOpportunitySpider(redis_client=redis_client)
     await spider.initialize()
 
-    opportunities = await spider.find_opportunities()
+    # Use real data if requested
+    opportunities = await spider.find_opportunities(use_real_data=real_mode)
 
     print(f"\n✅ Found {len(opportunities)} suitable opportunities:\n")
 
@@ -76,11 +97,17 @@ async def test_complete_freelance_flow():
             'estimated_completion_time': best_opportunity.estimated_completion_time
         }
 
-        # Initialize pipeline
+        # Initialize pipeline with safety settings
         pipeline = FreelancePipeline(redis_client=redis_client)
+        pipeline.dry_run = dry_run  # Set dry-run mode
 
         print("\n🚀 STARTING COMPLETE PIPELINE")
         print("="*70)
+
+        if dry_run:
+            print("🔒 DRY RUN MODE: No real submissions will be made")
+        else:
+            print("🔴 LIVE MODE: Real actions will be taken!")
 
         # Process through complete pipeline
         project = await pipeline.process_opportunity(opp_dict)
@@ -119,6 +146,10 @@ async def test_complete_freelance_flow():
     print("\n" + "="*70)
     print("📈 PIPELINE STATISTICS")
     print("="*70)
+
+    # Initialize pipeline for stats (if not already done)
+    if 'pipeline' not in locals():
+        pipeline = FreelancePipeline(redis_client=redis_client)
 
     # Check pending approvals
     pending_approvals = await pipeline.get_pending_approvals()
@@ -178,12 +209,25 @@ async def test_complete_freelance_flow():
 
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Test Freelance Pipeline')
+    parser.add_argument('--real-mode', action='store_true',
+                       help='Use real Upwork data instead of mock data')
+    parser.add_argument('--live', action='store_true',
+                       help='Disable dry-run mode (DANGER: will make real submissions)')
+    args = parser.parse_args()
+
     print("\n🚀 Starting Freelance Pipeline Test")
     print("This demonstrates the complete flow from finding jobs to getting paid")
     print("="*70)
 
+    # Determine modes
+    real_mode = args.real_mode
+    dry_run = not args.live  # By default, always dry-run unless --live is specified
+
     try:
-        asyncio.run(test_complete_freelance_flow())
+        asyncio.run(test_complete_freelance_flow(real_mode=real_mode, dry_run=dry_run))
     except KeyboardInterrupt:
         print("\n\n⚠️ Test interrupted by user")
     except Exception as e:

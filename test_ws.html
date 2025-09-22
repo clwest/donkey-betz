@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>Freelance Pipeline WebSocket Test</h1>
+    <button onclick="testWebSocket()">Test WebSocket Connection</button>
+    <button onclick="testHTTP()">Test HTTP API</button>
+    <div id="results"></div>
+
+    <script>
+        let ws = null;
+
+        function log(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+
+        async function testHTTP() {
+            log('Testing HTTP API...');
+            try {
+                const response = await fetch('http://localhost:8000/api/freelance/opportunities/');
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ HTTP API Success: Found ${data.opportunities?.length || 0} opportunities`);
+                    if (data.opportunities?.length > 0) {
+                        log(`Latest: ${data.opportunities[0].title} - $${data.opportunities[0].budget}`);
+                        log(`Timestamp: ${data.opportunities[0].found_at}`);
+                    }
+                } else {
+                    log(`❌ HTTP API Failed: ${response.status}`);
+                }
+            } catch (error) {
+                log(`💥 HTTP Error: ${error.message}`);
+            }
+        }
+
+        function testWebSocket() {
+            log('Testing WebSocket connection...');
+
+            // Try different WebSocket URLs
+            const wsUrls = [
+                'ws://localhost:8000/ws/freelance/',
+                'ws://localhost:8000/ws/freelance/updates/',
+                'ws://localhost:8000/ws/pipeline/',
+                'ws://localhost:8000/freelance/'
+            ];
+
+            let urlIndex = 0;
+
+            function tryNextUrl() {
+                if (urlIndex >= wsUrls.length) {
+                    log('❌ All WebSocket URLs failed');
+                    return;
+                }
+
+                const url = wsUrls[urlIndex++];
+                log(`Trying WebSocket URL: ${url}`);
+
+                ws = new WebSocket(url);
+
+                ws.onopen = function(event) {
+                    log(`✅ WebSocket connected to: ${url}`);
+                    // Send a test message
+                    ws.send(JSON.stringify({
+                        type: 'ping',
+                        timestamp: new Date().toISOString()
+                    }));
+                };
+
+                ws.onmessage = function(event) {
+                    log(`📩 WebSocket message: ${event.data}`);
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`📊 Parsed data: ${JSON.stringify(data, null, 2)}`);
+                    } catch (e) {
+                        log(`📝 Raw text message: ${event.data}`);
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    log(`❌ WebSocket error on ${url}: ${error}`);
+                    ws.close();
+                    setTimeout(tryNextUrl, 1000);
+                };
+
+                ws.onclose = function(event) {
+                    log(`🔌 WebSocket closed: ${event.code} - ${event.reason}`);
+                    if (event.code !== 1000 && urlIndex < wsUrls.length) {
+                        setTimeout(tryNextUrl, 1000);
+                    }
+                };
+            }
+
+            tryNextUrl();
+        }
+
+        // Auto-run tests
+        window.onload = function() {
+            testHTTP();
+            setTimeout(testWebSocket, 2000);
+        };
+    </script>
+</body>
+</html>

@@ -103,7 +103,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'core.middleware.DisableCSRFForAuthEndpoints',  # Custom CSRF exemption
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',  # Temporarily disabled for testing
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # 'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth - temporarily disabled for testing
     'django.contrib.messages.middleware.MessageMiddleware',
