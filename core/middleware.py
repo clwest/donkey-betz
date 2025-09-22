@@ -17,10 +17,16 @@ class DisableCSRFForAuthEndpoints(MiddlewareMixin):
             '/api/v1/auth/register/',
             '/api/v1/auth/forgot-password/',
             '/api/v1/auth/reset-password/',
+            '/api/freelance/analyze/',
+            '/api/freelance/',
         ]
         
         # Check if the current path should be exempt
-        if request.path in csrf_exempt_paths:
+        path_to_check = request.path
+        if (path_to_check in csrf_exempt_paths or
+            any(path_to_check.startswith(path) for path in csrf_exempt_paths) or
+            '/api/freelance/' in path_to_check or
+            path_to_check.startswith('/api/freelance/')):
             setattr(request, '_dont_enforce_csrf_checks', True)
         
         return None

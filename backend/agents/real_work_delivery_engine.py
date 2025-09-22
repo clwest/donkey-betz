@@ -160,7 +160,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert project manager who breaks down freelance projects into specific, deliverable tasks."},
                     {"role": "user", "content": deliverable_prompt}
@@ -260,7 +260,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert Python developer who writes clean, production-ready code."},
                     {"role": "user", "content": code_prompt}
@@ -337,7 +337,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert content writer who creates compelling, original content that engages readers and meets client objectives."},
                     {"role": "user", "content": content_prompt}
@@ -403,7 +403,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert data analyst who creates thorough, insightful analyses with actionable recommendations."},
                     {"role": "user", "content": analysis_prompt}
@@ -461,7 +461,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert virtual assistant who completes tasks efficiently and professionally."},
                     {"role": "user", "content": va_prompt}
@@ -515,7 +515,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert freelancer who delivers high-quality work across multiple disciplines."},
                     {"role": "user", "content": general_prompt}
@@ -574,7 +574,7 @@ class RealWorkDeliveryEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a quality assessor who rates deliverables objectively."},
                     {"role": "user", "content": quality_prompt}

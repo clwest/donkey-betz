@@ -13,6 +13,16 @@ from . import generic_consumer
 from .agent_platform_consumer import AgentPlatformConsumer
 from .decision_command_consumer import DecisionCommandConsumer
 from .real_job_execution_consumer import RealJobExecutionConsumer
+from .project_progress_consumer import ProjectProgressConsumer, AllProjectsConsumer
+from .agent_monitor_consumer_simple import AgentMonitorConsumer
+from .deliverables_consumer import DeliverablesConsumer
+from .freelance_consumer import FreelanceConsumer
+
+# Import SpiderWebSocketConsumer properly
+try:
+    from backend.api.spider_websocket import SpiderWebSocketConsumer
+except ImportError:
+    SpiderWebSocketConsumer = None
 
 # Import sports routing if available
 try:
@@ -30,11 +40,23 @@ websocket_urlpatterns = [
     # Generic WebSocket endpoint for basic connections
     re_path(r'^ws/$', generic_consumer.GenericWebSocketConsumer.as_asgi()),
 
+    # Activity Stream WebSocket for real-time agent activity
+    re_path(r'^ws/activity/$', consumers.AgentProgressConsumer.as_asgi()),
+
     # Spider Dashboard WebSocket for real-time updates
-    re_path(r'^ws/spider-updates/$', lambda: __import__('backend.api.spider_websocket', fromlist=['SpiderWebSocketConsumer']).SpiderWebSocketConsumer.as_asgi()()),
+    re_path(r'^ws/spider-updates/$', SpiderWebSocketConsumer.as_asgi() if SpiderWebSocketConsumer else consumers.AgentProgressConsumer.as_asgi()),
+
+    # Freelance Opportunities WebSocket for real-time updates
+    re_path(r'^ws/freelance/$', FreelanceConsumer.as_asgi()),
 
     # Agent Work Platform WebSocket - Real money-making system!
     re_path(r'^ws/agent-platform/$', AgentPlatformConsumer.as_asgi()),
+
+    # 152 Agent Army Monitor WebSocket - Real agent status monitoring
+    re_path(r'^ws/agent-monitor/$', AgentMonitorConsumer.as_asgi()),
+
+    # Live Deliverables WebSocket - Real deliverable tracking
+    re_path(r'^ws/deliverables/$', DeliverablesConsumer.as_asgi()),
 
     # Autonomous Revenue System WebSocket - 30-day autonomous run!
     re_path(r'^ws/autonomous-system/$', consumers.AutonomousSystemConsumer.as_asgi()),
@@ -109,6 +131,10 @@ websocket_urlpatterns = [
     
     # Mythology/Content Review notifications
     re_path(r'^ws/mythology/$', consumers.MythologyConsumer.as_asgi()),
+
+    # Project Progress WebSocket for real-time agent work tracking
+    re_path(r'^ws/project-progress/(?P<project_id>[^/]+)/$', ProjectProgressConsumer.as_asgi()),
+    re_path(r'^ws/all-projects/$', AllProjectsConsumer.as_asgi()),
 ]
 
 # Add sports WebSocket patterns if available

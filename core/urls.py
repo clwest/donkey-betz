@@ -23,6 +23,19 @@ from core.intelligence_api import (
 from backend.api.opportunity_aggregator import get_opportunities, get_actionable
 # Import real opportunities API
 from backend.api.opportunities_api import opportunities_api_view
+# Import freelance API
+from backend.api.freelance_api import (
+    get_freelance_opportunities,
+    analyze_opportunity,
+    get_pending_approvals,
+    process_approval,
+    get_active_projects,
+    start_freelance_spider,
+    project_decision,
+    deploy_deliverable,
+    completed_deliverables,
+    deliverable_content
+)
 # Import AI opportunity pipeline
 from backend.ai_opportunity_api import (
     execute_ai_opportunity_pipeline,
@@ -280,12 +293,16 @@ urlpatterns = [
     path('api/v1/opportunities/live/', opportunities_api_view, name='live-opportunities-real'),
 
     # Freelance Pipeline API endpoints
-    path('api/freelance/opportunities/', lambda r: __import__('backend.api.freelance_api', fromlist=['get_freelance_opportunities']).get_freelance_opportunities(r), name='freelance_opportunities'),
-    path('api/freelance/analyze/<str:job_id>/', lambda r, job_id: __import__('backend.api.freelance_api', fromlist=['analyze_opportunity']).analyze_opportunity(r, job_id), name='analyze_opportunity'),
-    path('api/freelance/approvals/', lambda r: __import__('backend.api.freelance_api', fromlist=['get_pending_approvals']).get_pending_approvals(r), name='pending_approvals'),
-    path('api/freelance/approve/<str:approval_id>/', lambda r, approval_id: __import__('backend.api.freelance_api', fromlist=['process_approval']).process_approval(r, approval_id), name='process_approval'),
-    path('api/freelance/projects/', lambda r: __import__('backend.api.freelance_api', fromlist=['get_active_projects']).get_active_projects(r), name='active_projects'),
-    path('api/freelance/spider/start/', lambda r: __import__('backend.api.freelance_api', fromlist=['start_freelance_spider']).start_freelance_spider(r), name='start_freelance_spider'),
+    path('api/freelance/opportunities/', get_freelance_opportunities, name='freelance_opportunities'),
+    path('api/freelance/analyze/<str:job_id>/', analyze_opportunity, name='analyze_opportunity'),
+    path('api/freelance/project-decision/', project_decision, name='project_decision'),
+    path('api/freelance/deploy-deliverable/', deploy_deliverable, name='deploy_deliverable'),
+    path('api/freelance/completed-deliverables/', completed_deliverables, name='completed_deliverables'),
+    path('api/freelance/deliverable/<str:deliverable_id>/content/', deliverable_content, name='deliverable_content'),
+    path('api/freelance/approvals/', get_pending_approvals, name='pending_approvals'),
+    path('api/freelance/approve/<str:approval_id>/', process_approval, name='process_approval'),
+    path('api/freelance/projects/', get_active_projects, name='active_projects'),
+    path('api/freelance/spider/start/', start_freelance_spider, name='start_freelance_spider'),
 
     # Dashboard Statistics - The Heart of Everything!
     path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),

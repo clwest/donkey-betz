@@ -282,7 +282,7 @@ class RealClientAcquisitionEngine:
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert freelance proposal writer who wins high-paying projects."},
                     {"role": "user", "content": prompt}

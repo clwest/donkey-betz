@@ -181,7 +181,7 @@ Ready to start today and make your life easier!
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert freelance consultant who understands client psychology."},
                     {"role": "user", "content": analysis_prompt}
@@ -333,7 +333,7 @@ Ready to start today and make your life easier!
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert freelance proposal writer who wins 30%+ of projects."},
                     {"role": "user", "content": personalization_prompt}
@@ -431,7 +431,7 @@ Ready to start today and make your life easier!
             """
 
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert sales communicator who converts prospects into clients."},
                     {"role": "user", "content": follow_up_prompt}

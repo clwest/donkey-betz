@@ -59,7 +59,7 @@ class RealContentCreatorAgent:
 
             # Generate the content
             response = self.client.chat.completions.create(
-                model="gpt-5-nano",  # Fast content generation
+                model="gpt-4o-mini",  # Fast content generation
                 messages=[
                     {"role": "system", "content": "You are a professional content writer creating high-quality, sellable content."},
                     {"role": "user", "content": prompt}
@@ -132,7 +132,7 @@ class RealContentCreatorAgent:
             """
 
             response = self.client.chat.completions.create(
-                model="gpt-5-nano",  # Fast content generation
+                model="gpt-4o-mini",  # Fast content generation
                 messages=[
                     {"role": "system", "content": "You are a technical writer creating professional documentation."},
                     {"role": "user", "content": prompt}
@@ -197,7 +197,7 @@ class RealContentCreatorAgent:
             """
 
             response = self.client.chat.completions.create(
-                model="gpt-5-nano",  # Fast content generation
+                model="gpt-4o-mini",  # Fast content generation
                 messages=[
                     {"role": "system", "content": f"You are a social media expert creating content for {platform}."},
                     {"role": "user", "content": prompt}

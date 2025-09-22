@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Activity, TrendingUp, DollarSign, Zap, Eye, Target } from 'lucide-react'
+import { Activity, TrendingUp, DollarSign, Zap, Eye, Target, Bot, FileText, Award } from 'lucide-react'
 import SpiderDashboard from './components/SpiderDashboard'
 import RevenueStream from './components/RevenueStream'
 import TrendingContent from './components/TrendingContent'
@@ -7,6 +7,9 @@ import LiveOpportunities from './components/LiveOpportunities'
 import AgentNetwork from './components/AgentNetwork'
 import FreelanceOpportunities from './components/FreelanceOpportunities'
 import AgentActivity from './components/AgentActivity'
+import RealTimeAgentMonitor from './components/RealTimeAgentMonitor'
+import LiveDeliverableViewer from './components/LiveDeliverableViewer'
+import CompletedWorkReview from './components/CompletedWorkReview'
 import { useWebSocket } from './hooks/useWebSocket'
 
 // Django backend URL
@@ -206,6 +209,42 @@ function App() {
         {/* Freelance Pipeline Section */}
         <div className="mt-6">
           <FreelanceOpportunities />
+        </div>
+
+        {/* Real-Time Agent Monitor - Shows all 152 agents working */}
+        <div className="mt-6">
+          <div className="bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <div className="flex items-center space-x-2 p-4 border-b border-gray-700">
+              <Bot className="h-6 w-6 text-blue-500" />
+              <h2 className="text-xl font-bold">152 Agent Army - Live Activity Monitor</h2>
+              <span className="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">REAL-TIME</span>
+            </div>
+            <RealTimeAgentMonitor />
+          </div>
+        </div>
+
+        {/* Live Deliverable Generation Viewer */}
+        <div className="mt-6">
+          <div className="bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <div className="flex items-center space-x-2 p-4 border-b border-gray-700">
+              <FileText className="h-6 w-6 text-purple-500" />
+              <h2 className="text-xl font-bold">Live Deliverable Generation</h2>
+              <span className="text-xs bg-yellow-900 text-yellow-300 px-2 py-1 rounded animate-pulse">GENERATING NOW</span>
+            </div>
+            <LiveDeliverableViewer />
+          </div>
+        </div>
+
+        {/* Completed Work Review - Review agent deliverables */}
+        <div className="mt-6">
+          <div className="bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <div className="flex items-center space-x-2 p-4 border-b border-gray-700">
+              <Award className="h-6 w-6 text-green-500" />
+              <h2 className="text-xl font-bold">Completed Work Review</h2>
+              <span className="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">6 PROJECTS COMPLETE</span>
+            </div>
+            <CompletedWorkReview />
+          </div>
         </div>
 
         {/* Activity Stream */}
