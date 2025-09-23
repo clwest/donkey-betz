@@ -261,3 +261,121 @@ def cleanup_isolation_metadata():
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }
+
+# Spider and Agent Learning Tasks
+@shared_task
+def collect_spider_data():
+    """Collect spider data every 15 minutes - called by Celery Beat"""
+    from core.models_unified_system import SpiderData
+    from intelligence.spider_agent_connector import SpiderAgentConnector
+    import random
+    from django.utils import timezone
+
+    logger.info("Starting automated spider data collection...")
+
+    # Simulate spider data collection
+    spider_types = [
+        'Job Opportunity Spider',
+        'Finance Monitor Spider',
+        'Content Discovery Spider',
+        'Market Intelligence Spider',
+        'Lead Generation Spider',
+        'Research Paper Spider',
+        'Investment Tracker Spider'
+    ]
+
+    data_types = [
+        'job_posting', 'market_data', 'content_opportunity',
+        'research_paper', 'lead', 'financial_metric', 'investment'
+    ]
+
+    # Create 5-10 new spider data items
+    num_items = random.randint(5, 10)
+    created_items = []
+
+    for i in range(num_items):
+        spider_name = random.choice(spider_types)
+        data_type = random.choice(data_types)
+
+        spider_data = SpiderData.objects.create(
+            spider_name=spider_name,
+            data_type=data_type,
+            raw_data={
+                'title': f'Auto-collected {data_type} #{SpiderData.objects.count() + i}',
+                'description': f'Automated collection from {spider_name}',
+                'value': random.randint(100, 10000),
+                'timestamp': timezone.now().isoformat()
+            },
+            source_url=f'https://example.com/{data_type}/{i}'
+        )
+        created_items.append(spider_data)
+
+    # Process the spider data through agents
+    try:
+        connector = SpiderAgentConnector()
+        for item in created_items:
+            try:
+                connector.process_spider_data(item)
+            except Exception as e:
+                logger.error(f"Error processing spider data {item.id}: {e}")
+    except Exception as e:
+        logger.error(f"Error initializing connector: {e}")
+
+    logger.info(f"Collected and processed {len(created_items)} spider data items")
+    return f"Collected {len(created_items)} items"
+
+@shared_task
+def process_agent_solutions():
+    """Process agent solutions and create learning events - called by Celery Beat"""
+    from core.models_unified_system import AgentSolution, AgentLearning, Agent
+    from django.utils import timezone
+    from datetime import timedelta
+    import random
+
+    logger.info("Starting agent solution processing...")
+
+    # Get recent solutions
+    recent = timezone.now() - timedelta(hours=1)
+    recent_solutions = AgentSolution.objects.filter(
+        created_at__gte=recent
+    ).select_related('agent')
+
+    # Create learning events from solutions
+    learning_events = []
+    for solution in recent_solutions[:10]:  # Process up to 10 solutions
+        # Find another agent to learn from this solution
+        other_agents = Agent.objects.exclude(id=solution.agent.id)
+        if other_agents.exists():
+            student_agent = random.choice(list(other_agents))
+
+            learning_event = AgentLearning.objects.create(
+                teacher_agent=solution.agent,
+                student_agent=student_agent,
+                learning_type='solution_transfer',
+                knowledge_gained={
+                    'solution_id': str(solution.id),
+                    'solution_type': solution.solution_type,
+                    'knowledge': solution.implementation_details or {}
+                },
+                effectiveness_improvement=random.uniform(0.5, 5.0)
+            )
+            learning_events.append(learning_event)
+
+    logger.info(f"Created {len(learning_events)} learning events")
+    return f"Processed {len(learning_events)} learning events"
+
+@shared_task
+def activate_spiders_task():
+    """Task to activate spiders via management command - called by Celery Beat"""
+    from django.core.management import call_command
+    logger.info("Activating spiders via Celery task...")
+    call_command('activate_spiders', '--simulate')
+    return "Spider activation complete"
+
+@shared_task
+def process_spider_data_task():
+    """Task to process spider data via management command"""
+    from django.core.management import call_command
+    logger.info("Processing spider data via Celery task...")
+    call_command('process_spider_data')
+    return "Spider data processing complete"
