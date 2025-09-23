@@ -448,8 +448,8 @@
             <h1>Living AI Ecosystem</h1>
             <p>Watch 149 AI Agents Learn, Collaborate & Evolve in Real-Time</p>
             <div style="display: flex; gap: 15px; justify-content: center; margin-top: 15px; pointer-events: auto;">
-                <div style="background: #00ff00; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; animation: pulse 2s infinite;">
-                    🔴 LIVE DATA - Not a Demo
+                <div id="dataStatusBadge" style="background: #00ff00; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; animation: pulse 2s infinite;">
+                    🔴 CHECKING DATA SOURCE...
                 </div>
                 <div style="background: rgba(102, 126, 234, 0.2); border: 1px solid #667eea; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; cursor: pointer; pointer-events: auto;" onclick="showHowItWorks()">
                     ℹ️ How It Works
@@ -599,6 +599,8 @@
                 <li>🤖 Our custom ML model + GPT-4, Claude-3, and Stable Diffusion</li>
                 <li>🔄 Runs autonomously 24/7 (91,000+ learning events last night alone)</li>
                 <li>📊 117,000+ real solutions generated from actual data</li>
+                <li>✅ <strong>Data Verification:</strong> All stats pulled from live PostgreSQL database</li>
+                <li>🔍 <strong>Transparency:</strong> Green badge = Live DB | Yellow badge = Demo Mode</li>
             </ul>
         </div>
 
@@ -1151,15 +1153,27 @@
         let isPaused = false;
         let animationSpeed = 1;
         let time = 0;
+        let isUsingRealData = false;  // Track if we're using real data
+        let realDataAttempts = 0;     // Count connection attempts
 
         // Fetch REAL feed data from API
         async function fetchRealFeedData() {
+            realDataAttempts++;
             try {
                 const response = await fetch('/api/ecosystem/live-feed/');
                 const data = await response.json();
-                return data.feed;
+
+                // If we got real data, update the badge
+                if (data && data.feed && data.feed.length > 0) {
+                    updateDataStatusBadge(true);
+                    isUsingRealData = true;
+                }
+
+                return data.feed || [];
             } catch (error) {
-                console.error('Error fetching feed:', error);
+                // Expected when running locally - return empty array
+                updateDataStatusBadge(false);
+                isUsingRealData = false;
                 return [];
             }
         }
@@ -1167,6 +1181,13 @@
         // Add new feed item from real data
         async function addFeedItem() {
             const feedContent = document.getElementById('feedContent');
+
+            if (!feedContent) {
+                console.error('Feed content element not found');
+                return;
+            }
+
+            let dataAdded = false;
 
             try {
                 const feedData = await fetchRealFeedData();
@@ -1191,9 +1212,15 @@
                         `;
                         feedContent.insertBefore(feedItem, feedContent.firstChild);
                     });
+                    dataAdded = true;
                 }
             } catch (error) {
-                // Fallback to demo mode when API is unavailable
+                // Error in try block
+                dataAdded = false;
+            }
+
+            // If no data was added (either error or empty response), use demo
+            if (!dataAdded) {
                 addDemoFeedItem();
             }
 
@@ -1202,7 +1229,7 @@
                 feedContent.removeChild(feedContent.lastChild);
             }
 
-            // Trigger visual effect
+            // Trigger visual effect (safe)
             triggerKnowledgeBurst();
         }
 
@@ -1294,6 +1321,11 @@
 
         // Visual knowledge burst effect
         function triggerKnowledgeBurst() {
+            // Check if agentMeshes exists before using it
+            if (typeof agentMeshes === 'undefined' || !agentMeshes || agentMeshes.length === 0) {
+                return; // Exit early if not ready
+            }
+
             const agent1 = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
             const agent2 = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
 
@@ -1560,6 +1592,26 @@
             addInfrastructureActivity('api', tool.userData.name, agentName, detail);
         }
 
+        // Update data status badge
+        function updateDataStatusBadge(isReal) {
+            const badge = document.getElementById('dataStatusBadge');
+            if (badge) {
+                if (isReal) {
+                    badge.innerHTML = '🟢 LIVE DATA - Connected to Database';
+                    badge.style.background = '#00ff00';
+                    badge.style.color = '#000';
+                } else if (realDataAttempts > 2) {
+                    badge.innerHTML = '🟡 DEMO MODE - For Local Viewing';
+                    badge.style.background = '#ffd93d';
+                    badge.style.color = '#000';
+                } else {
+                    badge.innerHTML = '🔴 CONNECTING TO DATABASE...';
+                    badge.style.background = '#ff6b6b';
+                    badge.style.color = '#fff';
+                }
+            }
+        }
+
         // Update stats
         async function updateStats() {
             try {
@@ -1567,6 +1619,9 @@
                 const data = await response.json();
 
                 if (data && data.stats) {
+                    // We have real stats!
+                    isUsingRealData = true;
+                    updateDataStatusBadge(true);
                     // Update with REAL data from database
                     document.getElementById('knowledgeTransfers').textContent = data.stats.knowledge_transfers.toLocaleString();
                     document.getElementById('solutionsCount').textContent = data.stats.solutions.toLocaleString();
@@ -1660,6 +1715,28 @@
 
         // Start animation
         animate();
+
+        // Clear initial static content and start fresh
+        const feedContent = document.getElementById('feedContent');
+        const infraFeedContent = document.getElementById('infraFeedContent');
+
+        if (feedContent) {
+            feedContent.innerHTML = ''; // Clear static HTML
+            // Add initial learning feed items
+            addFeedItem();
+            setTimeout(() => addFeedItem(), 500);
+            setTimeout(() => addFeedItem(), 1000);
+        }
+
+        if (infraFeedContent) {
+            // Add initial infrastructure activity
+            setTimeout(() => {
+                if (typeof activateTool !== 'undefined') activateTool();
+            }, 1500);
+            setTimeout(() => {
+                if (typeof activateDatabase !== 'undefined') activateDatabase();
+            }, 2000);
+        }
 
         // Periodic updates
         setInterval(() => {
