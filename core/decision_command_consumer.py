@@ -61,42 +61,29 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
             }))
 
     async def send_initial_decisions(self):
-        """Send initial decision data with real opportunities"""
+        """Send initial decision data with real opportunities from spider bridge"""
         try:
-            from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
-            from backend.agents.real_job_simulator import real_job_simulator
+            from intelligence.spider_decision_bridge import spider_decision_bridge
 
-            # Get real job matches
-            matcher = IntelligentJobMatcher()
-            available_jobs = matcher.get_available_jobs(limit=10)
+            # Initialize bridge if not already done
+            await spider_decision_bridge.initialize()
 
-            # Get active sessions to show what's already being worked on
-            active_sessions = real_job_simulator.generate_active_sessions(5)
+            # Get real opportunities from spider bridge
+            real_opportunities = await spider_decision_bridge.get_active_opportunities(limit=10)
 
-            # Create decision opportunities
-            opportunities = []
-            for job in available_jobs[:5]:
-                opportunity = {
-                    'id': f"decision_{job.get('id', '')}",
-                    'type': 'income',
-                    'title': job.get('title', 'Opportunity'),
-                    'description': job.get('description', ''),
-                    'value': job.get('budget', 1000),
-                    'time_commitment': f"{job.get('duration', '1-2 weeks')}",
-                    'success_probability': 0.75,
-                    'required_skills': job.get('skills_required', []),
-                    'decision_factors': [
-                        {'factor': 'Budget Match', 'score': 85},
-                        {'factor': 'Skill Alignment', 'score': 90},
-                        {'factor': 'Time Available', 'score': 80},
-                        {'factor': 'Competition Level', 'score': 70}
-                    ],
-                    'recommended_action': 'APPLY NOW',
-                    'reasoning': f"High match score with your skills. Budget of ${job.get('budget', 0)} fits your target range.",
-                    'platform': job.get('source', 'Freelancer'),
-                    'urgency': 'high' if 'urgent' in job.get('title', '').lower() else 'medium'
-                }
-                opportunities.append(opportunity)
+            logger.info(f"🌉 Retrieved {len(real_opportunities)} real opportunities from spider bridge")
+
+            # Use real opportunities from spider bridge - they're already in the correct format
+            opportunities = real_opportunities[:5]  # Limit to top 5 opportunities
+
+            # Convert to Decision Command format if needed
+            formatted_opportunities = []
+            for opp in opportunities:
+                # Opportunities from spider bridge are already properly formatted
+                # Just ensure they have the 'type' field for Decision Command
+                decision_opp = dict(opp)  # Create a copy
+                decision_opp['type'] = 'income'  # Ensure type is set
+                formatted_opportunities.append(decision_opp)
 
             # Add investment decisions
             investment_decisions = [
@@ -127,10 +114,10 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
             ]
 
             # Combine all decisions
-            all_decisions = opportunities + investment_decisions
+            all_decisions = formatted_opportunities + investment_decisions
 
             # Calculate earnings projections based on real data
-            total_potential = sum(opp['value'] for opp in opportunities if opp['value'] > 0)
+            total_potential = sum(opp.get('value', 0) for opp in formatted_opportunities if opp.get('value', 0) > 0)
 
             projections = {
                 'week_1': total_potential * 0.2,
@@ -143,8 +130,8 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 'type': 'decision_update',
                 'decisions': all_decisions,
-                'active_decisions': len(active_sessions),
-                'pending_decisions': len(opportunities),
+                'active_decisions': len(formatted_opportunities),
+                'pending_decisions': len(formatted_opportunities),
                 'projections': projections,
                 'recommendation': {
                     'primary': 'Focus on high-value freelance opportunities',

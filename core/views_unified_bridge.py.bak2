@@ -374,7 +374,7 @@ async def simulate_spider_results(user_id: int, search_params: dict):
     cache.set(f'opportunities_updated_{user_id}', timezone.now().isoformat(), 1800)
 
 
-async def get_match_reasons(user_id: int, opportunity: dict) -> list[str]:
+async def get_match_reasons(user_id: int, opportunity: dict) -> List[str]:
     """Get reasons why this opportunity matches the user."""
     try:
         user = await User.objects.aget(id=user_id)
@@ -393,7 +393,7 @@ async def get_match_reasons(user_id: int, opportunity: dict) -> list[str]:
         return ["Good opportunity match"]
 
 
-async def get_opportunity_action_plan(user_id: int, opportunity: dict) -> list[str]:
+async def get_opportunity_action_plan(user_id: int, opportunity: dict) -> List[str]:
     """Get action plan for pursuing this opportunity."""
     return [
         "Review job requirements thoroughly",

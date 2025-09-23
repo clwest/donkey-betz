@@ -19,6 +19,12 @@ except ImportError:
 # Import sports updates consumer
 from .consumers_sports import SportsUpdatesConsumer
 
+# Import hallucination monitor consumer
+from .consumers_hallucination import HallucinationMonitorConsumer
+
+# Import AI Training consumer
+from .consumers_ai_training import AITrainingConsumer
+
 # Import interview consumer
 try:
     from intelligence.interview_consumer import InterviewConsumer
@@ -2257,44 +2263,309 @@ class SportsDashboardConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     """
     Sports dashboard WebSocket for live dashboard updates.
     """
-    
+
     async def connect(self):
         self.room_group_name = 'sports_dashboard'
-        
+
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
-        
+
         await self.accept()
-        
+
         # Log connection with user info
         user = self.scope.get('user', AnonymousUser())
         if not isinstance(user, AnonymousUser):
             print(f"INFO WebSocket connected: {user.username}")
         else:
             print("INFO WebSocket connected: anonymous user")
-    
+
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
         print("INFO WebSocket disconnected: ")
-    
+
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message_type = text_data_json.get('type', 'ping')
-        
+
         if message_type == 'ping':
             await self.safe_send({
                 'type': 'pong',
                 'timestamp': datetime.now().isoformat()
             })
-    
+
     async def dashboard_update(self, event):
         """Send dashboard update to WebSocket"""
         await self.safe_send({
             'type': 'dashboard_update',
+            'data': event['data']
+        })
+
+
+class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Neural Orchestra WebSocket Consumer for real-time agent learning workflow
+
+    Provides live updates for:
+    - Learning workflow progress
+    - Agent team formation
+    - Real-time agent conversations
+    - Knowledge transfer visualization
+    - Spider data feeds
+    - Content generation
+    """
+
+    async def connect(self):
+        self.room_group_name = 'neural_orchestra'
+        self.user = self.scope.get('user', AnonymousUser())
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+        # Send connection established with current state
+        await self.safe_send({
+            'type': 'connection_established',
+            'data': {
+                'message': 'Connected to Neural Orchestra - Live Agent Learning Dashboard',
+                'timestamp': datetime.now().isoformat(),
+                'features': {
+                    'real_time_learning': True,
+                    'agent_conversations': True,
+                    'team_formation': True,
+                    'knowledge_transfer': True,
+                    'spider_integration': True,
+                    'content_generation': True
+                }
+            }
+        })
+
+        # Send initial data if available
+        await self.send_initial_data()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        try:
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type', 'ping')
+
+            if message_type == 'ping':
+                await self.safe_send({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                })
+            elif message_type == 'request_current_data':
+                await self.send_current_data()
+            elif message_type == 'subscribe_workflow':
+                workflow_id = text_data_json.get('workflow_id')
+                await self.subscribe_to_workflow(workflow_id)
+            else:
+                await self.safe_send({
+                    'type': 'error',
+                    'data': {'message': f'Unknown message type: {message_type}'}
+                })
+        except json.JSONDecodeError:
+            await self.safe_send({
+                'type': 'error',
+                'data': {'message': 'Invalid JSON format'}
+            })
+
+    async def send_initial_data(self):
+        """Send initial data from Redis"""
+        try:
+            import redis
+            r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+
+            # Get learning metrics
+            learning_metrics = r.hgetall("learning:system:metrics")
+            final_metrics = r.hgetall("learning:system:final")
+
+            if learning_metrics or final_metrics:
+                metrics = {
+                    'totalAgents': int(learning_metrics.get('total_agents', 0)) or int(final_metrics.get('agents_trained', 0)),
+                    'knowledgeItems': int(final_metrics.get('total_knowledge_items', 0)) or int(learning_metrics.get('total_learnings', 0)),
+                    'collaborations': int(final_metrics.get('total_collaborations', 0)),
+                    'tokensUsed': int(learning_metrics.get('total_tokens', 0)) or int(final_metrics.get('total_tokens_used', 0))
+                }
+
+                await self.safe_send({
+                    'type': 'metrics_update',
+                    'data': {'metrics': metrics}
+                })
+
+            # Send recent agent conversations
+            recent_conversations = []
+            for i in range(3):  # Get recent conversations
+                conversation_data = r.lrange("agent_teaching", i, i)
+                if conversation_data:
+                    try:
+                        conv = json.loads(conversation_data[0])
+                        recent_conversations.append({
+                            'agent': conv.get('teacher', 'Unknown Agent'),
+                            'message': f"Teaching {conv.get('student', 'another agent')} about {conv.get('topic', 'a topic')}",
+                            'type': 'agent',
+                            'timestamp': conv.get('timestamp', datetime.now().isoformat())
+                        })
+                    except:
+                        pass
+
+            if recent_conversations:
+                for conv in recent_conversations:
+                    await self.safe_send({
+                        'type': 'agent_conversation',
+                        'data': conv
+                    })
+
+        except Exception as e:
+            print(f"Error sending initial data: {e}")
+
+    async def send_current_data(self):
+        """Send current workflow data"""
+        try:
+            import redis
+            r = redis.Redis(host='localhost', port=6379, db=4, decode_responses=True)
+
+            # Compile current state
+            current_data = {
+                'agents': [],
+                'conversations': [],
+                'knowledgeTransfers': [],
+                'spiderData': [],
+                'metrics': {
+                    'totalAgents': 0,
+                    'knowledgeItems': 0,
+                    'collaborations': 0,
+                    'tokensUsed': 0
+                },
+                'generatedContent': []
+            }
+
+            # Get metrics
+            learning_metrics = r.hgetall("learning:system:metrics")
+            final_metrics = r.hgetall("learning:system:final")
+
+            if learning_metrics or final_metrics:
+                current_data['metrics'] = {
+                    'totalAgents': int(learning_metrics.get('total_agents', 0)) or int(final_metrics.get('agents_trained', 0)),
+                    'knowledgeItems': int(final_metrics.get('total_knowledge_items', 0)) or int(learning_metrics.get('total_learnings', 0)),
+                    'collaborations': int(final_metrics.get('total_collaborations', 0)),
+                    'tokensUsed': int(learning_metrics.get('total_tokens', 0)) or int(final_metrics.get('total_tokens_used', 0))
+                }
+
+            # Get agents (simulate from metrics)
+            if current_data['metrics']['totalAgents'] > 0:
+                agent_names = ['ContentExpert', 'MarketAnalyst', 'SkillAdvisor', 'TechSpecialist', 'ResearchAgent']
+                for i in range(min(current_data['metrics']['totalAgents'], len(agent_names))):
+                    current_data['agents'].append({
+                        'name': agent_names[i],
+                        'specialization': f"{agent_names[i]} specialization",
+                        'knowledgeCount': current_data['metrics']['knowledgeItems'] // current_data['metrics']['totalAgents']
+                    })
+
+            # Get generated content
+            content_list = r.lrange("generated_content", 0, 2)  # Get last 3
+            for content_json in content_list:
+                try:
+                    content = json.loads(content_json)
+                    current_data['generatedContent'].append({
+                        'type': content.get('type', 'content'),
+                        'title': content.get('topic', 'Generated Content'),
+                        'summary': content.get('content', '')[:100] + '...',
+                        'agent': content.get('agent', 'AI Agent'),
+                        'tokens': content.get('tokens_used', 0),
+                        'timestamp': content.get('timestamp', datetime.now().isoformat())
+                    })
+                except:
+                    pass
+
+            await self.safe_send({
+                'type': 'current_data',
+                'data': current_data
+            })
+
+        except Exception as e:
+            print(f"Error sending current data: {e}")
+
+    async def subscribe_to_workflow(self, workflow_id):
+        """Subscribe to a specific workflow"""
+        if workflow_id:
+            await self.safe_send({
+                'type': 'workflow_subscribed',
+                'data': {'workflow_id': workflow_id}
+            })
+
+    # WebSocket event handlers
+    async def workflow_started(self, event):
+        """Handle workflow started event"""
+        await self.safe_send({
+            'type': 'workflow_started',
+            'data': event['data']
+        })
+
+    async def phase_update(self, event):
+        """Handle phase update event"""
+        await self.safe_send({
+            'type': 'phase_update',
+            'data': event['data']
+        })
+
+    async def agent_created(self, event):
+        """Handle agent created event"""
+        await self.safe_send({
+            'type': 'agent_created',
+            'data': event['data']
+        })
+
+    async def agent_conversation(self, event):
+        """Handle agent conversation event"""
+        await self.safe_send({
+            'type': 'agent_conversation',
+            'data': event['data']
+        })
+
+    async def knowledge_transfer(self, event):
+        """Handle knowledge transfer event"""
+        await self.safe_send({
+            'type': 'knowledge_transfer',
+            'data': event['data']
+        })
+
+    async def spider_data(self, event):
+        """Handle spider data event"""
+        await self.safe_send({
+            'type': 'spider_data',
+            'data': event['data']
+        })
+
+    async def metrics_update(self, event):
+        """Handle metrics update event"""
+        await self.safe_send({
+            'type': 'metrics_update',
+            'data': event['data']
+        })
+
+    async def content_generated(self, event):
+        """Handle content generated event"""
+        await self.safe_send({
+            'type': 'content_generated',
+            'data': event['data']
+        })
+
+    async def workflow_complete(self, event):
+        """Handle workflow complete event"""
+        await self.safe_send({
+            'type': 'workflow_complete',
             'data': event['data']
         })

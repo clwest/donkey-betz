@@ -66,7 +66,8 @@ websocket_urlpatterns = [
 
     # Orchestra and Control Panel WebSockets
     re_path(r'^ws/orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
-    re_path(r'^ws/neural-orchestra/$', UnifiedWebSocketHub.as_asgi()),
+    re_path(r'^ws/neural-orchestra/$', consumers.NeuralOrchestraConsumer.as_asgi()),
+    re_path(r'^ws/enhanced-neural-orchestra/$', consumers.NeuralOrchestraConsumer.as_asgi()),
     re_path(r'^ws/control/$', orchestra_consumers.ControlConsumer.as_asgi()),
 
     # Command Center & Intelligence WebSockets
@@ -132,9 +133,15 @@ websocket_urlpatterns = [
     # Mythology/Content Review notifications
     re_path(r'^ws/mythology/$', consumers.MythologyConsumer.as_asgi()),
 
+    # Hallucination Monitor WebSocket for real-time blocking display
+    re_path(r'^ws/hallucination-monitor/$', consumers.HallucinationMonitorConsumer.as_asgi()),
+
     # Project Progress WebSocket for real-time agent work tracking
     re_path(r'^ws/project-progress/(?P<project_id>[^/]+)/$', ProjectProgressConsumer.as_asgi()),
     re_path(r'^ws/all-projects/$', AllProjectsConsumer.as_asgi()),
+
+    # AI Job Market Intelligence Training WebSocket for real-time training loop
+    re_path(r'^ws/ai-training/$', consumers.AITrainingConsumer.as_asgi()),
 ]
 
 # Add sports WebSocket patterns if available

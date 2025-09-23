@@ -141,6 +141,12 @@ from core.views_dashboard_api import (
     dashboard_cost_data, dashboard_health_data, dashboard_feed_data,
     dashboard_verification_data
 )
+# Import Verification API views
+from core.views_verification_api import (
+    start_verification_session, run_baseline_test, expose_learning_material,
+    run_post_learning_test, get_session_status, list_verification_sessions,
+    run_quick_verification_demo
+)
 from agents.views import orchestrations_list
 
 # Import ecosystem activation views
@@ -636,6 +642,15 @@ urlpatterns = [
     path('api/dashboard/health/', dashboard_health_data, name='dashboard-health-data'),
     path('api/dashboard/feed/', dashboard_feed_data, name='dashboard-feed-data'),
     path('api/dashboard/verification/', dashboard_verification_data, name='dashboard-verification-data'),
+
+    # Agent Learning Verification API - Prove agents actually learn
+    path('api/verify/start/', start_verification_session, name='verification-start'),
+    path('api/verify/baseline/', run_baseline_test, name='verification-baseline'),
+    path('api/verify/expose/', expose_learning_material, name='verification-expose'),
+    path('api/verify/post-learning/', run_post_learning_test, name='verification-post-learning'),
+    path('api/verify/status/', get_session_status, name='verification-status'),
+    path('api/verify/sessions/', list_verification_sessions, name='verification-sessions'),
+    path('api/verify/demo/', run_quick_verification_demo, name='verification-demo'),
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
