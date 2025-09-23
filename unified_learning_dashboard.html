@@ -838,7 +838,7 @@
         async function fetchLearningData() {
             try {
                 // Try the new agent dashboard endpoint with real database data
-                const response = await fetch('/api/agent-dashboard/learning/');
+                const response = await fetch('http://localhost:8000/api/agent-dashboard/learning/');
                 if (response.ok) {
                     const data = await response.json();
                     return {
@@ -873,7 +873,7 @@
         async function fetchCollaborationData() {
             try {
                 // Try the new agent dashboard endpoint with real database data
-                const response = await fetch('/api/agent-dashboard/collaboration/');
+                const response = await fetch('http://localhost:8000/api/agent-dashboard/collaboration/');
                 if (response.ok) {
                     const data = await response.json();
 
@@ -910,7 +910,7 @@
         async function fetchCostData() {
             try {
                 // Try the new agent dashboard endpoint with real database data
-                const response = await fetch('/api/agent-dashboard/costs/');
+                const response = await fetch('http://localhost:8000/api/agent-dashboard/costs/');
                 if (response.ok) {
                     const data = await response.json();
 
@@ -962,7 +962,7 @@
         async function fetchSystemHealth() {
             try {
                 // Try the new agent dashboard endpoint with real database data
-                const response = await fetch('/api/agent-dashboard/health/');
+                const response = await fetch('http://localhost:8000/api/agent-dashboard/health/');
                 if (response.ok) {
                     const data = await response.json();
                     return {
@@ -1004,7 +1004,7 @@
         async function fetchLearningFeed() {
             try {
                 // Try the new agent dashboard endpoint with real database data
-                const response = await fetch('/api/agent-dashboard/feed/');
+                const response = await fetch('http://localhost:8000/api/agent-dashboard/feed/');
                 if (response.ok) {
                     const data = await response.json();
                     return data.feedItems.map(item => ({
@@ -1049,9 +1049,11 @@
         // Function to load all 151 agents
         async function loadAllAgents() {
             try {
-                const response = await fetch('/api/agent-dashboard/agents/');
+                // Use full URL for file:// access
+                const response = await fetch('http://localhost:8000/api/agent-dashboard/agents/');
                 if (response.ok) {
                     const data = await response.json();
+                    console.log(`Loaded ${data.agents.length} agents from database`);
                     displayAgents(data.agents);
 
                     // Update counts
