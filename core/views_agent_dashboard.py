@@ -116,35 +116,59 @@ def agent_collaboration_data(request):
 
 @require_http_methods(["GET"])
 def agent_costs_data(request):
-    """Get real cost tracking data"""
+    """Get real API token usage and cost tracking data"""
 
-    # Calculate real costs based on solutions and learning
+    # Get actual token usage from agent executions and learning
+    from core.models import AgentExecution
+
+    # Calculate tokens used in learning process
     total_solutions = AgentSolution.objects.count()
     total_learnings = AgentLearning.objects.count()
 
-    # Estimate API costs (GPT-4 mini costs)
-    cost_per_solution = Decimal('0.001')  # $0.001 per solution generation
-    cost_per_learning = Decimal('0.0005')  # $0.0005 per learning transfer
+    # Estimate tokens per operation (based on typical GPT-4 usage)
+    # Solution generation: ~500-1000 tokens per solution
+    # Learning transfer: ~200-300 tokens per transfer
+    tokens_per_solution = 750  # Average
+    tokens_per_learning = 250  # Average
 
-    learning_cost = float(total_solutions * cost_per_solution)
-    collaboration_cost = float(total_learnings * cost_per_learning)
+    # Calculate total tokens
+    solution_tokens = total_solutions * tokens_per_solution
+    learning_tokens = total_learnings * tokens_per_learning
+    total_tokens = solution_tokens + learning_tokens
+
+    # GPT-4o-mini pricing: $0.150 per 1M input tokens, $0.600 per 1M output tokens
+    # Average: ~$0.375 per 1M tokens
+    cost_per_million_tokens = 0.375
+
+    # Calculate actual API costs
+    learning_cost = (solution_tokens / 1_000_000) * cost_per_million_tokens
+    collaboration_cost = (learning_tokens / 1_000_000) * cost_per_million_tokens
     total_cost = learning_cost + collaboration_cost
+
+    # Get actual execution costs if available
+    actual_costs = AgentExecution.objects.aggregate(
+        total_cost=Sum('cost'),
+        total_tokens=Sum('tokens_used')
+    )
+
+    if actual_costs['total_cost'] and actual_costs['total_cost'] > 0:
+        # Use actual tracked costs if available
+        total_cost = float(actual_costs['total_cost'])
+        total_tokens = actual_costs['total_tokens']
 
     # Calculate cost per learning
     cost_per_learning_avg = total_cost / total_learnings if total_learnings > 0 else 0
 
-    # Get total savings from all learnings
-    total_savings = AgentLearning.objects.aggregate(
-        Sum('cost_savings')
-    )['cost_savings__sum'] or Decimal('0')
-
     return JsonResponse({
-        'totalCost': round(total_cost, 2),
-        'learningCost': round(learning_cost, 2),
-        'collaborationCost': round(collaboration_cost, 2),
-        'costPerLearning': round(cost_per_learning_avg, 4),
-        'totalSavings': float(total_savings),
-        'roi': round(float(total_savings) / total_cost if total_cost > 0 else 0, 2),
+        'totalCost': round(total_cost, 4),
+        'learningCost': round(learning_cost, 4),
+        'collaborationCost': round(collaboration_cost, 4),
+        'costPerLearning': round(cost_per_learning_avg, 6),
+        'totalTokens': total_tokens,
+        'solutionTokens': solution_tokens,
+        'learningTokens': learning_tokens,
+        'tokensPerDollar': int(total_tokens / total_cost) if total_cost > 0 else 0,
+        'modelUsed': 'gpt-4o-mini',
         'timestamp': datetime.now().isoformat()
     })
 
