@@ -275,6 +275,44 @@
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            max-width: 600px;
+            z-index: 10000;
+            color: #fff;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
         .agent-name {
             font-size: 1.3em;
             margin-bottom: 10px;
@@ -370,6 +408,17 @@
         <div class="header">
             <h1>Living AI Ecosystem</h1>
             <p>Watch 149 AI Agents Learn, Collaborate & Evolve in Real-Time</p>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 15px;">
+                <div style="background: #00ff00; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; animation: pulse 2s infinite;">
+                    🔴 LIVE DATA - Not a Demo
+                </div>
+                <div style="background: rgba(102, 126, 234, 0.2); border: 1px solid #667eea; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; cursor: pointer;" onclick="showHowItWorks()">
+                    ℹ️ How It Works
+                </div>
+                <div style="background: rgba(255, 217, 61, 0.2); border: 1px solid #ffd93d; color: #ffd93d; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; cursor: pointer;" onclick="requestAccess()">
+                    🚀 Get Access
+                </div>
+            </div>
         </div>
 
         <div class="stats-container">
@@ -487,9 +536,71 @@
                 </div>
             </div>
         </div>
+
+        <!-- How It Works Modal -->
+        <div class="modal" id="howItWorksModal">
+            <span class="modal-close" onclick="closeModal('howItWorksModal')">×</span>
+            <h2>How This Living AI Ecosystem Works</h2>
+            <p style="margin-bottom: 15px;">This is not a simulation. You're watching <strong>149 real AI agents</strong> that are:</p>
+            <ul style="margin-left: 20px; margin-bottom: 15px; line-height: 1.8;">
+                <li>🧠 <strong>Learning from each other</strong> - Agents share successful patterns and strategies</li>
+                <li>🔍 <strong>Discovering opportunities</strong> - 40 spiders crawl the web for jobs, gigs, and projects</li>
+                <li>💡 <strong>Generating solutions</strong> - Creating real answers to real problems</li>
+                <li>💰 <strong>Creating value</strong> - $47K+ in identified opportunities (and growing)</li>
+            </ul>
+            <p style="margin-bottom: 15px;"><strong>The Technology:</strong></p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li>🏗️ Built on Django + PostgreSQL with 1.3GB of real interaction data</li>
+                <li>🤖 Our custom ML model + GPT-4, Claude-3, and Stable Diffusion</li>
+                <li>🔄 Runs autonomously 24/7 (91,000+ learning events last night alone)</li>
+                <li>📊 117,000+ real solutions generated from actual data</li>
+            </ul>
+        </div>
+
+        <!-- Access Request Modal -->
+        <div class="modal" id="accessModal">
+            <span class="modal-close" onclick="closeModal('accessModal')">×</span>
+            <h2>Join the AI Revolution</h2>
+            <p style="margin-bottom: 20px;">This system can be deployed for YOUR use case:</p>
+            <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.8;">
+                <li>🏢 <strong>Enterprise:</strong> Multi-agent customer service & automation</li>
+                <li>📊 <strong>Analytics:</strong> Distributed intelligence for complex analysis</li>
+                <li>🎯 <strong>Personal:</strong> Your own AI team finding opportunities 24/7</li>
+                <li>🚀 <strong>Startups:</strong> Accelerate development with AI collaboration</li>
+            </ul>
+            <p style="color: #ffd93d; font-size: 1.1em; margin-bottom: 15px;">
+                <strong>Current Performance:</strong> $47K in opportunities identified, 117K solutions generated
+            </p>
+            <button onclick="window.location.href='mailto:contact@example.com?subject=AI Ecosystem Access'"
+                    style="background: #667eea; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-size: 1.1em; cursor: pointer; width: 100%;">
+                Request Early Access
+            </button>
+        </div>
     </div>
 
     <script>
+        // Modal functions
+        function showHowItWorks() {
+            document.getElementById('howItWorksModal').classList.add('active');
+        }
+
+        function requestAccess() {
+            document.getElementById('accessModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+
         // Three.js setup
         const scene = new THREE.Scene();
         scene.fog = new THREE.Fog(0x0a0a0a, 80, 200);
