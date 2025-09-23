@@ -22,6 +22,9 @@ from core.intelligence_api import (
 # Import ecosystem views
 from core.views_ecosystem import ecosystem_stats, ecosystem_live_feed, get_project_status, ai_building_products, code_preview
 
+# Import visualization views
+from core.views_visualization import ai_agents_visualization
+
 # Import project builder views
 from core.views_projects import (
     switch_project, build_project_module, execute_latest_code,
@@ -286,6 +289,9 @@ urlpatterns = [
 
     # AI Building Products page (moved up to ensure it's matched first)
     path('ai-building-products/', ai_building_products, name='ai-building-products'),
+
+    # AI Agents Visualization page
+    path('visualization/', ai_agents_visualization, name='ai-agents-visualization'),
 
     # Real data endpoints for demo/recording
     path('', include('core.urls_real_data')),

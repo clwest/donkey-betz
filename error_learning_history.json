@@ -89,6 +89,402 @@
       "context": {
         "line_number": 9
       }
+    },
+    {
+      "timestamp": "2025-09-23T21:38:06.452153",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory_3.0/models.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:38:11.010598",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory_3.0/models.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:40:08.635970",
+      "error_type": "SyntaxError",
+      "error_message": "'(' was never closed",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/ecommerce/test_error.py",
+      "context": {
+        "line_number": 8
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:40:20.551656",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'nonexistent_module_that_will_never_exist'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/ecommerce/test_error.py",
+      "context": {
+        "line_number": 6
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:41:03.096050",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory_3.0/models.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:57:15.208168",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 8
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:57:33.155670",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 8
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:59:59.593583",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": null
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:03:31.416203",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 55
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:06:58.893646",
+      "error_type": "SyntaxError",
+      "error_message": "f-string expression part cannot include a backslash",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 110
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:08:36.128126",
+      "error_type": "SyntaxError",
+      "error_message": "f-string expression part cannot include a backslash",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 110
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:12:36.660202",
+      "error_type": "SyntaxError",
+      "error_message": "f-string expression part cannot include a backslash",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 110
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:12:38.608208",
+      "error_type": "SyntaxError",
+      "error_message": "f-string expression part cannot include a backslash",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 110
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:14:33.325362",
+      "error_type": "SyntaxError",
+      "error_message": "f-string expression part cannot include a backslash",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 110
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:14:35.365508",
+      "error_type": "SyntaxError",
+      "error_message": "f-string expression part cannot include a backslash",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/crypto_trading_bot/api.py",
+      "context": {
+        "line_number": 110
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:33:18.845652",
+      "error_type": "NameError",
+      "error_message": "name 'logger' is not defined",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/test_logger_fix.py",
+      "context": {
+        "line_number": 9
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:34:25.736987",
+      "error_type": "NameError",
+      "error_message": "name 'logger' is not defined",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/test_logger_fix.py",
+      "context": {
+        "line_number": 9
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:36:59.336583",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:03.369281",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:11.138805",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:15.894531",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:57.789076",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:39:38.587287",
+      "error_type": "ImproperlyConfigured",
+      "error_message": "Requested setting INSTALLED_APPS, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": null
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:40:07.417696",
+      "error_type": "ImproperlyConfigured",
+      "error_message": "Requested setting INSTALLED_APPS, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": null
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:07.874158",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:38.387000",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:41.548226",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:46.132445",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:48.816480",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:59.892560",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:45:43.662410",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:45:55.151178",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:46:02.299208",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:46:07.063389",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:47:01.369360",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:47:15.194585",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:48:51.109115",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:50:15.407774",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:51:06.879762",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": null
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:53:26.161361",
+      "error_type": "ImproperlyConfigured",
+      "error_message": "Requested setting REST_FRAMEWORK, but settings are not configured",
+      "file_path": "ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:55:49.469236",
+      "error_type": "ImproperlyConfigured",
+      "error_message": "Requested setting REST_FRAMEWORK, but settings are not configured",
+      "file_path": "ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:58:55.220029",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 4
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:59:05.308712",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:59:14.183089",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py",
+      "context": {
+        "line_number": 2
+      }
     }
   ],
   "successful_fixes": [
@@ -154,6 +550,69 @@
       "details": {
         "changes_made": "Code fixed and runs successfully"
       }
+    },
+    {
+      "timestamp": "2025-09-23T21:40:08.657972",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:03:31.442349",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:34:25.763734",
+      "error_type": "NameError",
+      "fix_strategy": "NameError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:40:07.441656",
+      "error_type": "ImproperlyConfigured",
+      "fix_strategy": "ImproperlyConfigured_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:07.904050",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:45:43.694340",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:58:55.253186",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
     }
   ],
   "failed_fixes": [
@@ -174,20 +633,290 @@
       "details": {
         "reason": "No changes made"
       }
+    },
+    {
+      "timestamp": "2025-09-23T22:06:58.894425",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:08:36.130133",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:12:36.661117",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:12:38.609207",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:14:33.326327",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:14:35.366566",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:33:18.846639",
+      "error_type": "NameError",
+      "fix_strategy": "NameError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:36:59.368080",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py\", line 63, in <module>\n    print(f\"\ud83d\udcc4 JSON: {model"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:03.411013",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py\", line 63, in <module>\n    print(f\"\ud83d\udcc4 JSON: {model"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:11.169739",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py\", line 63, in <module>\n    print(f\"\ud83d\udcc4 JSON: {model"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:15.947023",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py\", line 63, in <module>\n    print(f\"\ud83d\udcc4 JSON: {model"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:37:57.820566",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py\", line 63, in <module>\n    print(f\"\ud83d\udcc4 JSON: {model"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:39:38.614015",
+      "error_type": "ImproperlyConfigured",
+      "fix_strategy": "ImproperlyConfigured_fix",
+      "success": false,
+      "details": {
+        "new_error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py\", line 63, in <module>\n    print(f\"\ud83d\udcc4 JSON: {model"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:38.408098",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:41.586921",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:46.155016",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:48.846305",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:41:59.915060",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:45:55.174300",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:46:02.342006",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:46:07.088380",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:47:01.418723",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:47:15.217270",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:48:51.125126",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:50:15.425571",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:51:06.898288",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:53:26.177855",
+      "error_type": "ImproperlyConfigured",
+      "fix_strategy": "ImproperlyConfigured_fix",
+      "success": false,
+      "details": {
+        "new_error": "  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py\", line 102\n    print(f\"\\n\ud83d\udca1 Test with: curl -X POST http://localhost:{self.port}/process"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T16:55:54.475737",
+      "error_type": "ImproperlyConfigured",
+      "fix_strategy": "ImproperlyConfigured_fix",
+      "success": false,
+      "details": {
+        "exception": "Command '['python', 'ai_generated_projects/e-commerce_revenue_engine/api.py']' timed out after 5 seconds"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:59:10.321221",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "exception": "Command '['python', '/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/api.py']' timed out after 5 seconds"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T22:59:14.184883",
+      "error_type": "ModuleNotFoundError",
+      "fix_strategy": "ModuleNotFoundError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
     }
   ],
   "patterns": {
     "AttributeError:'ContentFactory' object has no attribute '_load_se": {
-      "count": 6,
+      "count": 7,
       "fixes_attempted": 0,
       "fixes_successful": 0,
-      "last_seen": "2025-09-23T19:23:05.679323"
+      "last_seen": "2025-09-23T16:03:31.416213"
     },
     "ModuleNotFoundError:No module named 'backend'": {
-      "count": 1,
+      "count": 30,
       "fixes_attempted": 0,
       "fixes_successful": 0,
-      "last_seen": "2025-09-23T20:58:16.720326"
+      "last_seen": "2025-09-23T22:59:14.183102"
     },
     "NameError:name 'undefined_variable' is not defined": {
       "count": 1,
@@ -206,6 +935,42 @@
       "fixes_attempted": 0,
       "fixes_successful": 0,
       "last_seen": "2025-09-23T21:08:35.551085"
+    },
+    "SyntaxError:'(' was never closed": {
+      "count": 1,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T21:40:08.635980"
+    },
+    "ModuleNotFoundError:No module named 'nonexistent_module_that_will_neve": {
+      "count": 1,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T21:40:20.551667"
+    },
+    "SyntaxError:f-string expression part cannot include a backslas": {
+      "count": 6,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T22:14:35.365527"
+    },
+    "NameError:name 'logger' is not defined": {
+      "count": 2,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T16:34:25.737006"
+    },
+    "ImproperlyConfigured:Requested setting INSTALLED_APPS, but settings are": {
+      "count": 2,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T16:40:07.417706"
+    },
+    "ImproperlyConfigured:Requested setting REST_FRAMEWORK, but settings are": {
+      "count": 2,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T16:55:49.469248"
     }
   }
 }

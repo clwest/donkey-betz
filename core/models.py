@@ -1480,3 +1480,300 @@ class UserMemoryContext(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.memory_type}: {self.content[:50]}..."
+
+
+# ===============================================
+# AGENT ERROR LEARNING MODELS
+# ===============================================
+
+class ErrorPattern(models.Model):
+    """Store error patterns and their solutions for agent learning"""
+
+    error_type = models.CharField(max_length=100)  # NameError, SyntaxError, ImportError, etc.
+    error_message_pattern = models.TextField()  # Regex pattern to match error messages
+    file_extension = models.CharField(max_length=10, default='.py')  # .py, .js, .html, etc.
+    project_type = models.CharField(max_length=50, blank=True)  # ecommerce, trading_bot, etc.
+
+    # Solution strategy
+    solution_strategy = models.CharField(max_length=50)  # 'add_import', 'fix_syntax', 'add_attribute', etc.
+    solution_template = models.TextField()  # Template for the fix
+    confidence_score = models.FloatField(default=0.5)  # How confident we are in this solution
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    usage_count = models.IntegerField(default=0)  # How many times this pattern was used
+    success_rate = models.FloatField(default=0.0)  # Success rate of this pattern
+
+    class Meta:
+        unique_together = ['error_type', 'error_message_pattern', 'file_extension']
+        ordering = ['-confidence_score', '-success_rate']
+        verbose_name = "Error Pattern"
+        verbose_name_plural = "Error Patterns"
+
+    def __str__(self):
+        return f"{self.error_type}: {self.solution_strategy} ({self.confidence_score:.1%})"
+
+
+class ErrorInstance(models.Model):
+    """Store individual error instances and their resolutions"""
+
+    project_name = models.CharField(max_length=100)
+    file_name = models.CharField(max_length=255)
+    file_path = models.TextField()
+
+    # Error details
+    error_type = models.CharField(max_length=100)
+    error_message = models.TextField()
+    error_line_number = models.IntegerField(null=True, blank=True)
+    error_context = models.TextField(blank=True)  # Code context around the error
+
+    # Original problematic code
+    original_code = models.TextField()
+
+    # Solution applied
+    solution_applied = models.TextField()
+    fixed_code = models.TextField()
+    fix_method = models.CharField(max_length=50)  # 'agent_handler', 'gpt4o_mini', 'manual'
+
+    # Resolution status
+    was_successful = models.BooleanField(default=False)
+    attempts_count = models.IntegerField(default=1)
+    resolution_time_seconds = models.FloatField(null=True, blank=True)
+
+    # Learning metadata
+    pattern_used = models.ForeignKey(ErrorPattern, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Error Instance"
+        verbose_name_plural = "Error Instances"
+
+    def __str__(self):
+        return f"{self.project_name}: {self.error_type} ({'✅' if self.was_successful else '❌'})"
+
+
+class AgentLearningSession(models.Model):
+    """Track agent learning sessions and improvements over time"""
+
+    session_id = models.CharField(max_length=100, unique=True)
+    agent_type = models.CharField(max_length=50)  # 'AgentErrorHandler', 'GPT4oMini', etc.
+
+    # Session statistics
+    total_errors_encountered = models.IntegerField(default=0)
+    total_errors_fixed = models.IntegerField(default=0)
+    success_rate = models.FloatField(default=0.0)
+    average_resolution_time = models.FloatField(default=0.0)
+
+    # Learning metrics
+    new_patterns_learned = models.IntegerField(default=0)
+    patterns_improved = models.IntegerField(default=0)
+    knowledge_base_size_before = models.IntegerField(default=0)
+    knowledge_base_size_after = models.IntegerField(default=0)
+
+    # Session metadata
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    session_duration_minutes = models.FloatField(default=0.0)
+
+    class Meta:
+        ordering = ['-started_at']
+        verbose_name = "Agent Learning Session"
+        verbose_name_plural = "Agent Learning Sessions"
+
+    def __str__(self):
+        return f"{self.agent_type} - {self.session_id} ({self.success_rate:.1%})"
+
+
+class AgentCollaboration(models.Model):
+    """Track how different agents collaborate and learn from each other"""
+
+    primary_agent = models.CharField(max_length=50)
+    assisting_agent = models.CharField(max_length=50)
+    collaboration_type = models.CharField(max_length=50)  # 'fallback', 'consultation', 'parallel'
+
+    # Problem context
+    problem_domain = models.CharField(max_length=100)  # 'code_generation', 'error_fixing', 'optimization'
+    problem_complexity = models.CharField(max_length=20)  # 'simple', 'moderate', 'complex'
+
+    # Outcome
+    collaboration_successful = models.BooleanField(default=False)
+    primary_agent_contribution = models.TextField(blank=True)
+    assisting_agent_contribution = models.TextField(blank=True)
+    final_solution = models.TextField()
+
+    # Learning transfer
+    knowledge_transferred = models.TextField(blank=True)  # What the primary agent learned
+    pattern_reinforced = models.ForeignKey(ErrorPattern, on_delete=models.SET_NULL, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Agent Collaboration"
+        verbose_name_plural = "Agent Collaborations"
+
+    def __str__(self):
+        return f"{self.primary_agent} + {self.assisting_agent}: {self.problem_domain}"
+
+
+class LearningInsight(models.Model):
+    """Store insights and patterns discovered by the AI system"""
+
+    insight_type = models.CharField(max_length=50)  # 'error_pattern', 'code_pattern', 'project_pattern'
+    insight_category = models.CharField(max_length=100)  # 'common_mistakes', 'best_practices', 'optimization'
+
+    # Insight content
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    code_example = models.TextField(blank=True)
+    solution_approach = models.TextField()
+
+    # Evidence and confidence
+    supporting_instances = models.IntegerField(default=1)  # How many times this was observed
+    confidence_level = models.FloatField(default=0.5)
+    applicability_scope = models.JSONField(default=dict)  # Where this insight applies
+
+    # Impact tracking
+    times_applied = models.IntegerField(default=0)
+    success_when_applied = models.IntegerField(default=0)
+    impact_score = models.FloatField(default=0.0)
+
+    discovered_at = models.DateTimeField(auto_now_add=True)
+    last_validated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-confidence_level', '-impact_score']
+        verbose_name = "Learning Insight"
+        verbose_name_plural = "Learning Insights"
+
+    def __str__(self):
+        return f"{self.insight_category}: {self.title} ({self.confidence_level:.1%})"
+
+
+class GeneratedProject(UnifiedBaseModel):
+    """
+    Stores information about AI-generated projects
+    """
+    name = models.CharField(max_length=255, help_text="Project name")
+    project_type = models.CharField(max_length=100, help_text="Type of project (e.g., ecommerce, content_factory)")
+    description = models.TextField(blank=True, help_text="Project description")
+    agents_used = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        help_text="List of agent names that worked on this project"
+    )
+    advisors_consulted = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        help_text="List of advisors consulted for this project"
+    )
+    status = models.CharField(
+        max_length=50,
+        choices=[
+            ('generating', 'Generating'),
+            ('completed', 'Completed'),
+            ('error', 'Error'),
+            ('cancelled', 'Cancelled')
+        ],
+        default='generating'
+    )
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='generated_projects',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'core_generated_projects'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.project_type})"
+
+
+class GeneratedCode(UnifiedBaseModel):
+    """
+    Stores AI-generated code files with full persistence
+    """
+    project = models.ForeignKey(
+        GeneratedProject,
+        on_delete=models.CASCADE,
+        related_name='code_files'
+    )
+    filename = models.CharField(max_length=255, help_text="Name of the file")
+    file_path = models.CharField(max_length=500, help_text="Relative path from project root")
+    content = models.TextField(help_text="The actual code content")
+    language = models.CharField(
+        max_length=50,
+        choices=[
+            ('python', 'Python'),
+            ('javascript', 'JavaScript'),
+            ('html', 'HTML'),
+            ('css', 'CSS'),
+            ('sql', 'SQL'),
+            ('json', 'JSON'),
+            ('yaml', 'YAML'),
+            ('other', 'Other')
+        ],
+        default='python'
+    )
+    agent_creator = models.CharField(
+        max_length=100,
+        help_text="Name of the agent that created this code"
+    )
+    task_description = models.TextField(
+        blank=True,
+        help_text="Description of the task this code was created for"
+    )
+    is_latest = models.BooleanField(
+        default=True,
+        help_text="Whether this is the latest version of this file"
+    )
+    execution_status = models.CharField(
+        max_length=50,
+        choices=[
+            ('untested', 'Untested'),
+            ('success', 'Executed Successfully'),
+            ('error', 'Execution Error'),
+            ('timeout', 'Execution Timeout'),
+            ('fixed', 'Auto-Fixed and Working')
+        ],
+        default='untested'
+    )
+    execution_output = models.TextField(
+        blank=True,
+        help_text="Output from code execution or error messages"
+    )
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='generated_code',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'core_generated_code'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', 'filename']),
+            models.Index(fields=['project', 'is_latest']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.filename} - {self.project.name}"
+
+    def save(self, *args, **kwargs):
+        # When saving a new version, mark others as not latest
+        if self.is_latest:
+            GeneratedCode.objects.filter(
+                project=self.project,
+                filename=self.filename
+            ).exclude(id=self.id).update(is_latest=False)
+        super().save(*args, **kwargs)
