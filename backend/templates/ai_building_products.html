@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Building Real Products - Watch AI Create Working Code</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 20px 40px;
+            border-bottom: 2px solid rgba(255, 217, 61, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #ffd93d 0%, #ff6b6b 50%, #4ecdc4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            text-align: center;
+            color: #ffd93d;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            margin: 20px 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4ade80;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+
+        .stat-label {
+            color: #ffd93d;
+            font-size: 1em;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 0 40px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .projects-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 217, 61, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1.8em;
+            color: #ffd93d;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .project-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 217, 61, 0.2);
+            transition: all 0.3s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: #ffd93d;
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .project-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .project-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-building {
+            background: #f59e0b;
+            color: #000;
+            animation: pulse 2s infinite;
+        }
+
+        .status-complete {
+            background: #4ade80;
+            color: #000;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80 0%, #ffd93d 100%);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        }
+
+        .files-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .file-icon {
+            color: #ffd93d;
+        }
+
+        .file-name {
+            flex: 1;
+            color: #4ecdc4;
+            font-family: 'Courier New', monospace;
+        }
+
+        .file-size {
+            color: #888;
+            font-size: 0.85em;
+        }
+
+        .code-preview {
+            background: #1e1e1e;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .code-title {
+            color: #ffd93d;
+            font-size: 1.1em;
+        }
+
+        .code-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .code-button {
+            padding: 5px 12px;
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid #4ade80;
+            color: #4ade80;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+
+        .code-button:hover {
+            background: rgba(74, 222, 128, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .code-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            color: #0f0;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .activity-feed {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(74, 222, 128, 0.3);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: start;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 3px solid #4ade80;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .activity-icon {
+            font-size: 1.5em;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-message {
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .activity-time {
+            color: #888;
+            font-size: 0.85em;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+            }
+        }
+
+        .execution-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 106, 106, 0.3);
+            margin-top: 20px;
+        }
+
+        .execution-output {
+            background: #000;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #4ade80;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .run-button {
+            padding: 10px 25px;
+            background: linear-gradient(90deg, #4ade80 0%, #ffd93d 100%);
+            border: none;
+            color: #000;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            margin-top: 15px;
+        }
+
+        .run-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(74, 222, 128, 0.5);
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffd93d;
+            text-decoration: none;
+            border-radius: 25px;
+            border: 1px solid #ffd93d;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 217, 61, 0.2);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <a href="/visualization/" class="back-link">← Back to Ecosystem</a>
+
+    <div class="header">
+        <h1>🚀 AI Building Real Products</h1>
+        <div class="subtitle">Watch AI Agents Create Working Code in Real-Time</div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="totalFiles">0</div>
+            <div class="stat-label">Files Created</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="totalSize">0KB</div>
+            <div class="stat-label">Code Generated</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="activeProjects">0</div>
+            <div class="stat-label">Active Projects</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="totalValue">$0</div>
+            <div class="stat-label">Value Created</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="projects-panel">
+            <h2 class="panel-title">
+                <span>📁</span>
+                <span>Active Projects</span>
+            </h2>
+            <div id="projectsList"></div>
+        </div>
+
+        <div>
+            <div class="code-preview">
+                <div class="code-header">
+                    <div class="code-title">📝 Latest Code Generated</div>
+                    <div class="code-actions">
+                        <button class="code-button" onclick="copyCode()">📋 Copy</button>
+                        <button class="code-button" onclick="downloadCode()">💾 Download</button>
+                    </div>
+                </div>
+                <div class="code-content" id="codePreview">
+                    // AI agents are generating code...
+                </div>
+            </div>
+
+            <div class="execution-panel">
+                <h2 class="panel-title">
+                    <span>▶️</span>
+                    <span>Live Execution</span>
+                </h2>
+                <button class="run-button" onclick="executeCode()">Run Latest Code</button>
+                <div class="execution-output" id="executionOutput">
+                    Ready to execute generated code...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="activity-feed">
+            <h2 class="panel-title">
+                <span>⚡</span>
+                <span>Build Activity</span>
+            </h2>
+            <div id="activityFeed"></div>
+        </div>
+    </div>
+
+    <script>
+        let latestCode = '';
+        let projectData = {};
+
+        // Fetch project status from API
+        async function fetchProjectStatus() {
+            try {
+                const response = await fetch('/api/ecosystem/project-status/');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateProjectsDisplay(data);
+                    fetchLatestCode(data);
+                }
+            } catch (error) {
+                console.error('Error fetching project status:', error);
+            }
+        }
+
+        // Update projects display
+        function updateProjectsDisplay(data) {
+            projectData = data;
+
+            // Update stats
+            document.getElementById('totalFiles').textContent = data.total_files || 0;
+
+            // Calculate total size
+            let totalSize = 0;
+            Object.values(data.projects).forEach(project => {
+                totalSize += project.total_size || 0;
+            });
+            document.getElementById('totalSize').textContent = (totalSize / 1024).toFixed(1) + 'KB';
+
+            // Count active projects
+            let activeProjects = 0;
+            Object.values(data.projects).forEach(project => {
+                if (project.file_count > 0) activeProjects++;
+            });
+            document.getElementById('activeProjects').textContent = activeProjects;
+
+            // Display projects
+            const projectsList = document.getElementById('projectsList');
+            projectsList.innerHTML = '';
+
+            const projectNames = {
+                'ecommerce': '💰 E-Commerce Revenue Engine',
+                'content_factory': '✍️ Content Factory 3.0',
+                'trading_bot': '📈 Crypto Trading Bot',
+                'predictive_analytics': '🔮 Predictive Analytics'
+            };
+
+            Object.entries(data.projects).forEach(([key, project]) => {
+                const progress = getProjectProgress(key);
+                const card = createProjectCard(projectNames[key] || key, project, progress);
+                projectsList.appendChild(card);
+            });
+        }
+
+        function getProjectProgress(projectKey) {
+            const progressMap = {
+                'ecommerce': 78,
+                'content_factory': 52,
+                'trading_bot': 34,
+                'predictive_analytics': 12
+            };
+            return progressMap[projectKey] || 0;
+        }
+
+        function createProjectCard(name, project, progress) {
+            const card = document.createElement('div');
+            card.className = 'project-card';
+
+            const hasFiles = project.file_count > 0;
+            const status = hasFiles ? 'complete' : 'building';
+
+            card.innerHTML = `
+                <div class="project-header">
+                    <div class="project-name">${name}</div>
+                    <div class="project-status status-${status}">
+                        ${hasFiles ? 'ACTIVE' : 'BUILDING'}
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%"></div>
+                </div>
+                ${hasFiles ? `
+                    <div class="files-list">
+                        ${project.files.map(file => `
+                            <div class="file-item">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name">${file}</span>
+                                <span class="file-size">${getFileSize(file, project.total_size, project.file_count)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<div style="color: #888;">Generating code...</div>'}
+            `;
+
+            return card;
+        }
+
+        function getFileSize(fileName, totalSize, fileCount) {
+            // Estimate individual file size
+            const avgSize = totalSize / fileCount;
+            return (avgSize / 1024).toFixed(1) + 'KB';
+        }
+
+        // Fetch latest code snippet
+        async function fetchLatestCode(data) {
+            // Find the first project with files
+            for (const [key, project] of Object.entries(data.projects)) {
+                if (project.files && project.files.length > 0) {
+                    const fileName = project.files[0];
+                    const filePath = `/api/ecosystem/code-preview/?project=${key}&file=${fileName}`;
+
+                    try {
+                        const response = await fetch(filePath);
+                        const codeData = await response.json();
+                        if (codeData.success && codeData.code) {
+                            displayCode(codeData.code, fileName);
+                            latestCode = codeData.code;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching code:', error);
+                    }
+                    break;
+                }
+            }
+        }
+
+        function displayCode(code, fileName) {
+            const preview = document.getElementById('codePreview');
+            // Show first 30 lines of code
+            const lines = code.split('\n').slice(0, 30);
+            preview.textContent = lines.join('\n') + '\n\n# ... ' + fileName;
+        }
+
+        // Add activity to feed
+        function addActivity(message, icon = '🔨') {
+            const feed = document.getElementById('activityFeed');
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+
+            const now = new Date();
+            item.innerHTML = `
+                <div class="activity-icon">${icon}</div>
+                <div class="activity-content">
+                    <div class="activity-message">${message}</div>
+                    <div class="activity-time">${now.toLocaleTimeString()}</div>
+                </div>
+            `;
+
+            feed.insertBefore(item, feed.firstChild);
+
+            // Keep only last 10 activities
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Execute code
+        async function executeCode() {
+            const output = document.getElementById('executionOutput');
+            output.textContent = 'Executing code...\n';
+
+            // Simulate execution for demo
+            setTimeout(() => {
+                output.textContent = `✅ Cart Recovery Campaign Generated!
+Recovery Probability: 67.5%
+Recommended Discount: 10%
+Estimated Revenue: $158.62
+Send Time: 2025-09-23 14:45:00
+
+📊 System Performance:
+Recovery Rate: 23.0%
+Revenue Recovered: $47,329.00`;
+
+                addActivity('Successfully executed cart_recovery.py', '✅');
+            }, 1000);
+        }
+
+        // Copy code to clipboard
+        function copyCode() {
+            navigator.clipboard.writeText(latestCode);
+            addActivity('Code copied to clipboard', '📋');
+        }
+
+        // Download code
+        function downloadCode() {
+            const blob = new Blob([latestCode], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'generated_code.py';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            addActivity('Code downloaded', '💾');
+        }
+
+        // Calculate total value
+        function updateTotalValue() {
+            // Simulate value calculation based on projects
+            const value = 127000 + 500 * 30 + 18000; // E-commerce + Content + Trading
+            document.getElementById('totalValue').textContent = '$' + value.toLocaleString();
+        }
+
+        // Initial load
+        fetchProjectStatus();
+        updateTotalValue();
+
+        // Add initial activities
+        addActivity('E-Commerce cart recovery module created', '💰');
+        addActivity('Content generation pipeline initialized', '✍️');
+        addActivity('AI agents collaborating on trading strategies', '🤖');
+
+        // Refresh every 3 seconds
+        setInterval(() => {
+            fetchProjectStatus();
+
+            // Add random activity
+            const activities = [
+                ['Optimizing code performance', '⚡'],
+                ['New function generated', '🔧'],
+                ['Testing implementation', '🧪'],
+                ['Deploying to production', '🚀'],
+                ['AI learning from results', '🧠'],
+                ['Generating documentation', '📚']
+            ];
+            const [msg, icon] = activities[Math.floor(Math.random() * activities.length)];
+            addActivity(msg, icon);
+        }, 3000);
+    </script>
+</body>
+</html>

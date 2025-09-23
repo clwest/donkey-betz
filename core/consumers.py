@@ -2569,3 +2569,119 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             'type': 'workflow_complete',
             'data': event['data']
         })
+
+
+class RealAgentOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
+    """
+    Real Agent Orchestra WebSocket Consumer for live project building activity.
+
+    Shows real-time updates as agents build actual projects with real code generation.
+    This replaces mock data with actual agent execution status.
+    """
+
+    async def connect(self):
+        self.room_group_name = 'real_agent_orchestra'
+        self.user = self.scope.get('user', AnonymousUser())
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+        # Send connection established
+        await self.safe_send({
+            'type': 'connection_established',
+            'data': {
+                'message': 'Connected to Real Agent Orchestra - Live Project Building',
+                'timestamp': datetime.now().isoformat(),
+                'features': {
+                    'real_agent_execution': True,
+                    'live_code_generation': True,
+                    'file_creation': True,
+                    'project_deployment': True
+                }
+            }
+        })
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        try:
+            text_data_json = json.loads(text_data)
+            message_type = text_data_json.get('type', 'ping')
+
+            if message_type == 'ping':
+                await self.safe_send({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                })
+            elif message_type == 'subscribe_project':
+                project_id = text_data_json.get('project_id', 'all')
+                await self.safe_send({
+                    'type': 'subscribed',
+                    'data': {
+                        'project_id': project_id,
+                        'status': 'subscribed to real project updates'
+                    }
+                })
+        except json.JSONDecodeError:
+            await self.safe_send({
+                'type': 'error',
+                'data': {'message': 'Invalid JSON format'}
+            })
+
+    # Event handlers for real agent orchestra activity
+    async def agent_started(self, event):
+        """Handle agent started working on a component"""
+        await self.safe_send({
+            'type': 'agent_started',
+            'data': event['data']
+        })
+
+    async def agent_progress(self, event):
+        """Handle agent progress update"""
+        await self.safe_send({
+            'type': 'agent_progress',
+            'data': event['data']
+        })
+
+    async def agent_completed(self, event):
+        """Handle agent completed component"""
+        await self.safe_send({
+            'type': 'agent_completed',
+            'data': event['data']
+        })
+
+    async def file_generated(self, event):
+        """Handle file generation completion"""
+        await self.safe_send({
+            'type': 'file_generated',
+            'data': event['data']
+        })
+
+    async def project_update(self, event):
+        """Handle overall project status update"""
+        await self.safe_send({
+            'type': 'project_update',
+            'data': event['data']
+        })
+
+    async def advisor_consultation(self, event):
+        """Handle advisor consultation events"""
+        await self.safe_send({
+            'type': 'advisor_consultation',
+            'data': event['data']
+        })
+
+    async def orchestration_complete(self, event):
+        """Handle orchestration completion"""
+        await self.safe_send({
+            'type': 'orchestration_complete',
+            'data': event['data']
+        })

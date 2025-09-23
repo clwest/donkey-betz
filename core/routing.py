@@ -142,6 +142,10 @@ websocket_urlpatterns = [
 
     # AI Job Market Intelligence Training WebSocket for real-time training loop
     re_path(r'^ws/ai-training/$', consumers.AITrainingConsumer.as_asgi()),
+
+    # Real Agent Orchestra WebSocket for live project building activity
+    re_path(r'^ws/real-agent-orchestra/$', consumers.RealAgentOrchestraConsumer.as_asgi()),
+    re_path(r'^ws/build-activity/$', consumers.RealAgentOrchestraConsumer.as_asgi()),
 ]
 
 # Add sports WebSocket patterns if available

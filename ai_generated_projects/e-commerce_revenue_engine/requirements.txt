@@ -1,0 +1,4 @@
+django>=4.2
+djangorestframework>=3.14
+react>=18.0
+stripe>=5.0
