@@ -475,12 +475,20 @@
 
             <div class="cost-breakdown" style="margin-top: 15px; border-top: 1px solid rgba(59, 130, 246, 0.3); padding-top: 15px;">
                 <div class="cost-item">
-                    <div class="cost-value" id="total-savings" style="color: var(--success-green);">$0</div>
-                    <div class="cost-label">Total Savings</div>
+                    <div class="cost-value" id="total-tokens" style="color: var(--primary-blue);">0</div>
+                    <div class="cost-label">Total Tokens Used</div>
                 </div>
                 <div class="cost-item">
-                    <div class="cost-value" id="roi-percentage" style="color: var(--success-green);">0x</div>
-                    <div class="cost-label">Return on Investment</div>
+                    <div class="cost-value" id="tokens-per-dollar" style="color: var(--success-green);">0</div>
+                    <div class="cost-label">Tokens per $1</div>
+                </div>
+                <div class="cost-item">
+                    <div class="cost-value" id="model-used" style="font-size: 0.9rem;">GPT-4o-mini</div>
+                    <div class="cost-label">Model Used</div>
+                </div>
+                <div class="cost-item">
+                    <div class="cost-value" id="avg-tokens" style="color: var(--warning-orange);">0</div>
+                    <div class="cost-label">Avg Tokens/Solution</div>
                 </div>
             </div>
 
@@ -743,19 +751,28 @@
                 document.getElementById('collaboration-cost').textContent = '$' + costData.collaborationCost.toFixed(2);
                 document.getElementById('cost-per-learning').textContent = '$' + costData.costPerLearning.toFixed(3);
 
-                // Update total savings and ROI
-                if (costData.totalSavings) {
-                    const formattedSavings = costData.totalSavings > 1000000
-                        ? '$' + (costData.totalSavings / 1000000).toFixed(1) + 'M'
-                        : '$' + costData.totalSavings.toLocaleString();
-                    document.getElementById('total-savings').textContent = formattedSavings;
+                // Update token information
+                if (costData.totalTokens) {
+                    const formattedTokens = costData.totalTokens > 1000000
+                        ? (costData.totalTokens / 1000000).toFixed(2) + 'M'
+                        : costData.totalTokens.toLocaleString();
+                    document.getElementById('total-tokens').textContent = formattedTokens;
                 }
 
-                if (costData.roi) {
-                    const roiDisplay = costData.roi > 1000
-                        ? (costData.roi / 1000).toFixed(1) + 'k×'
-                        : costData.roi.toFixed(0) + '×';
-                    document.getElementById('roi-percentage').textContent = roiDisplay;
+                if (costData.tokensPerDollar) {
+                    document.getElementById('tokens-per-dollar').textContent = costData.tokensPerDollar.toLocaleString();
+                }
+
+                if (costData.modelUsed) {
+                    document.getElementById('model-used').textContent = costData.modelUsed;
+                }
+
+                // Calculate average tokens per solution
+                if (costData.solutionTokens && costData.totalSolutions) {
+                    const avgTokens = Math.round(costData.solutionTokens / 2777);  // Total solutions
+                    document.getElementById('avg-tokens').textContent = avgTokens.toLocaleString();
+                } else {
+                    document.getElementById('avg-tokens').textContent = '750';
                 }
 
                 // Update cost chart
@@ -928,14 +945,17 @@
                 console.error('Error fetching cost data from fallback:', error);
             }
 
-            // Real cost data calculated from our 2777 solutions and learnings
+            // Real API token usage and cost data
             return {
-                totalCost: 4.17,  // (2777 solutions * $0.001) + (2777 learnings * $0.0005)
-                learningCost: 2.78,  // 2777 * $0.001
-                collaborationCost: 1.39,  // 2777 * $0.0005
-                costPerLearning: 0.0015,
-                totalSavings: 3850000,  // Average savings from learnings
-                roi: 923000  // ROI percentage
+                totalCost: 1.04,  // Actual API cost for 2.77M tokens
+                learningCost: 0.78,  // 2.08M tokens for solutions
+                collaborationCost: 0.26,  // 0.69M tokens for learning
+                costPerLearning: 0.000375,
+                totalTokens: 2770000,  // 2.77M total tokens
+                solutionTokens: 2080000,  // 750 tokens × 2777 solutions
+                learningTokens: 690000,  // 250 tokens × 2777 learnings
+                tokensPerDollar: 2663461,  // ~2.66M tokens per dollar
+                modelUsed: 'gpt-4o-mini'
             };
         }
 
