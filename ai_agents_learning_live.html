@@ -286,18 +286,19 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
+            background: rgba(10,10,10,0.98);
             backdrop-filter: blur(20px);
             padding: 30px;
             border-radius: 20px;
             border: 1px solid rgba(102, 126, 234, 0.5);
             max-width: 600px;
-            z-index: 10000;
+            z-index: 100000;
             color: #fff;
+            box-shadow: 0 0 50px rgba(102, 126, 234, 0.5);
         }
 
         .modal.active {
-            display: block;
+            display: block !important;
         }
 
         .modal h2 {
@@ -581,15 +582,31 @@
     <script>
         // Modal functions
         function showHowItWorks() {
-            document.getElementById('howItWorksModal').classList.add('active');
+            console.log('Showing How It Works modal');
+            const modal = document.getElementById('howItWorksModal');
+            if (modal) {
+                modal.classList.add('active');
+                modal.style.display = 'block';
+            } else {
+                console.error('Modal not found');
+            }
         }
 
         function requestAccess() {
-            document.getElementById('accessModal').classList.add('active');
+            console.log('Showing Access modal');
+            const modal = document.getElementById('accessModal');
+            if (modal) {
+                modal.classList.add('active');
+                modal.style.display = 'block';
+            }
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
         }
 
         // Close modal on ESC key
