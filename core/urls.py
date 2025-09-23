@@ -32,6 +32,28 @@ from core.views_agent_dashboard import (
     all_agents_list
 )
 
+# Import spider dashboard views
+from core.views_spider_dashboard import (
+    spider_network_data,
+    spider_activity_feed,
+    spider_data_stats,
+    execute_spider
+)
+from core.views_spider_data import (
+    get_spider_items,
+    get_spider_summary,
+    mark_spider_item_processed
+)
+
+# Import learning path views
+from core.views_learning_path import (
+    trigger_learning_query,
+    get_learning_status,
+    get_agent_knowledge_map,
+    get_learning_feed,
+    get_agent_solutions_recent
+)
+
 # Import opportunity aggregator
 from backend.api.opportunity_aggregator import get_opportunities, get_actionable
 # Import real opportunities API
@@ -660,6 +682,24 @@ urlpatterns = [
     path('api/agent-dashboard/health/', system_health_data, name='agent-dashboard-health'),
     path('api/agent-dashboard/feed/', learning_feed_data, name='agent-dashboard-feed'),
     path('api/agent-dashboard/agents/', all_agents_list, name='agent-dashboard-agents'),
+
+    # Spider network dashboard endpoints
+    path('api/spider-dashboard/network/', spider_network_data, name='spider-dashboard-network'),
+    path('api/spider-dashboard/activity/', spider_activity_feed, name='spider-dashboard-activity'),
+    path('api/spider-dashboard/data/', spider_data_stats, name='spider-dashboard-stats'),
+    path('api/spider-dashboard/execute/', execute_spider, name='spider-dashboard-execute'),
+
+    # Spider Data Viewer API - See what spiders actually collected
+    path('api/spider-data/<str:spider_name>/items/', get_spider_items, name='spider-data-items'),
+    path('api/spider-data/summary/', get_spider_summary, name='spider-data-summary'),
+    path('api/spider-data/item/<str:item_id>/process/', mark_spider_item_processed, name='spider-data-process'),
+
+    # Learning path endpoints
+    path('api/learning/trigger/', trigger_learning_query, name='learning-trigger'),
+    path('api/learning/status/<str:session_id>/', get_learning_status, name='learning-status'),
+    path('api/learning/knowledge-map/<str:agent_id>/', get_agent_knowledge_map, name='agent-knowledge-map'),
+    path('api/learning/feed/', get_learning_feed, name='learning-feed'),
+    path('api/agents/<str:agent_name>/solutions/recent/', get_agent_solutions_recent, name='agent-solutions-recent'),
 
     # Agent Learning Verification API - Prove agents actually learn
     path('api/verify/start/', start_verification_session, name='verification-start'),
