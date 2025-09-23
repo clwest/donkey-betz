@@ -111,6 +111,21 @@
             overflow-y: auto;
         }
 
+        .infra-feed {
+            position: fixed;
+            top: 670px;  /* Positioned below learning feed which is at 150px + ~500px height */
+            right: 30px;  /* Same right alignment as learning feed */
+            width: 400px;  /* Same width as learning feed */
+            max-height: 250px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            pointer-events: auto;
+            overflow-y: auto;
+        }
+
         .feed-title {
             font-size: 1.2em;
             margin-bottom: 15px;
@@ -411,6 +426,13 @@
             </div>
         </div>
 
+        <div class="infra-feed">
+            <div class="feed-title">⚡ Infrastructure Activity</div>
+            <div id="infraFeedContent">
+                <!-- Infrastructure activity will be populated here -->
+            </div>
+        </div>
+
         <div class="legend">
             <div class="legend-item">
                 <div class="legend-color" style="background: #667eea;"></div>
@@ -444,24 +466,24 @@
         </div>
 
         <div class="agent-details" id="agentDetails">
-            <div class="agent-name" id="selectedAgentName">Python Developer Agent</div>
-            <div>Specialization: Backend Development, API Design, Async Programming</div>
+            <div class="agent-name" id="selectedAgentName">Agent Name</div>
+            <div id="agentSpecialization">Specialization: Loading...</div>
             <div class="agent-stats">
                 <div class="agent-stat">
                     <div style="color: #888; font-size: 0.9em;">Solutions</div>
-                    <div style="font-size: 1.2em; color: #4ecdc4;">127</div>
+                    <div style="font-size: 1.2em; color: #4ecdc4;" id="agentSolutions">0</div>
                 </div>
                 <div class="agent-stat">
                     <div style="color: #888; font-size: 0.9em;">Connections</div>
-                    <div style="font-size: 1.2em; color: #f093fb;">23</div>
+                    <div style="font-size: 1.2em; color: #f093fb;" id="agentConnections">0</div>
                 </div>
                 <div class="agent-stat">
                     <div style="color: #888; font-size: 0.9em;">Learning Rate</div>
-                    <div style="font-size: 1.2em; color: #667eea;">94%</div>
+                    <div style="font-size: 1.2em; color: #667eea;" id="agentLearning">0%</div>
                 </div>
                 <div class="agent-stat">
                     <div style="color: #888; font-size: 0.9em;">Value Generated</div>
-                    <div style="font-size: 1.2em; color: #ffd93d;">$4,230</div>
+                    <div style="font-size: 1.2em; color: #ffd93d;" id="agentValue">$0</div>
                 </div>
             </div>
         </div>
@@ -524,12 +546,12 @@
         ];
 
         const mlModels = [
-            { name: 'GPT-4', color: 0x00ff00, position: { x: 50, y: -20, z: 0 }, type: 'ml' },
-            { name: 'Claude-3', color: 0x9b59b6, position: { x: 50, y: -20, z: 15 }, type: 'ml' },
-            { name: 'DALL-E 3', color: 0xff6b6b, position: { x: 50, y: -20, z: -15 }, type: 'ml' },
-            { name: 'Whisper', color: 0x4ecdc4, position: { x: 50, y: -10, z: 0 }, type: 'ml' },
-            { name: 'LangChain', color: 0xffd93d, position: { x: 50, y: -10, z: 15 }, type: 'ml' },
-            { name: 'Embeddings', color: 0x667eea, position: { x: 50, y: -10, z: -15 }, type: 'ml' }
+            { name: 'OUR ML Model', color: 0xFFD700, position: { x: 50, y: -25, z: 0 }, type: 'ml', size: 4 }, // GOLD & BIGGER!
+            { name: 'GPT-4', color: 0x00ff00, position: { x: 50, y: -15, z: 10 }, type: 'ml' },
+            { name: 'Claude-3', color: 0x9b59b6, position: { x: 50, y: -15, z: -10 }, type: 'ml' },
+            { name: 'Stable Diffusion', color: 0xff6b6b, position: { x: 50, y: -5, z: 10 }, type: 'ml' },
+            { name: 'Our Embeddings', color: 0x667eea, position: { x: 50, y: -5, z: -10 }, type: 'ml' },
+            { name: 'LangChain', color: 0xffd93d, position: { x: 50, y: 5, z: 0 }, type: 'ml' }
         ];
 
         const toolsAPIs = [
@@ -627,13 +649,15 @@
         // Create ML model spheres
         const mlModelMeshes = [];
         mlModels.forEach(model => {
-            const geometry = new THREE.SphereGeometry(2.5, 16, 16);
+            // Make OUR model bigger and stand out!
+            const size = model.size || 2.5;
+            const geometry = new THREE.SphereGeometry(size, 24, 24);
             const material = new THREE.MeshPhongMaterial({
                 color: model.color,
                 emissive: model.color,
-                emissiveIntensity: 0.3,
+                emissiveIntensity: model.name === 'OUR ML Model' ? 0.5 : 0.3, // Our model glows more!
                 transparent: true,
-                opacity: 0.8
+                opacity: model.name === 'OUR ML Model' ? 0.95 : 0.8
             });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(model.position.x, model.position.y, model.position.z);
@@ -914,6 +938,35 @@
             }, 500);
         }
 
+        // Infrastructure activity messages
+        function addInfrastructureActivity(type, name, agent, detail) {
+            const infraFeed = document.getElementById('infraFeedContent');
+            const item = document.createElement('div');
+            item.className = 'feed-item';
+
+            const icons = {
+                database: '🗄️',
+                ml: '🤖',
+                api: '🌐'
+            };
+
+            const timeStr = 'Just now';
+            item.innerHTML = `
+                <div class="feed-time">${timeStr}</div>
+                <div class="feed-content">
+                    ${icons[type]} <strong>${agent}</strong> accessed <span style="color: #4ecdc4;">${name}</span>
+                    ${detail ? `<div style="font-size: 0.9em; color: #888; margin-top: 4px;">${detail}</div>` : ''}
+                </div>
+            `;
+
+            infraFeed.insertBefore(item, infraFeed.firstChild);
+
+            // Keep feed manageable
+            while (infraFeed.children.length > 10) {
+                infraFeed.removeChild(infraFeed.lastChild);
+            }
+        }
+
         // Database activation animation
         function activateDatabase() {
             if (databaseMeshes.length === 0) return;
@@ -960,6 +1013,17 @@
                 db.material.emissive = db.material.color;
                 db.scale.set(1, 1, 1);
             }, 1500);
+
+            // Add to infrastructure feed
+            const agentName = agent.userData.name || 'Data Scientist';
+            const details = [
+                'Retrieved 10,000 embeddings for similarity search',
+                'Cached query results for performance',
+                'Stored new solution batch (117k total)',
+                'Retrieved agent learning history',
+                'Updated vector embeddings index'
+            ];
+            addInfrastructureActivity('database', db.userData.name, agentName, details[Math.floor(Math.random() * details.length)]);
         }
 
         // ML Model activation animation
@@ -1004,6 +1068,18 @@
                 }
             };
             pulseBeam();
+
+            // Add to infrastructure feed
+            const agentName = agent.userData.name || 'ML Engineer';
+            const details = [
+                'Generated response with 2,048 tokens',
+                'Processed embedding generation request',
+                'Analyzed patterns across 500 documents',
+                'Generated code completion suggestion',
+                'Fine-tuned on domain knowledge',
+                'Ran inference on opportunity batch'
+            ];
+            addInfrastructureActivity('ml', model.userData.name, agentName, details[Math.floor(Math.random() * details.length)]);
         }
 
         // Tool/API activation animation
@@ -1039,6 +1115,23 @@
                 tool.material.emissive = new THREE.Color(0x000000);
                 tool.scale.set(1, 1, 1);
             }, 1000);
+
+            // Add to infrastructure feed
+            const agentName = agent.userData.name || 'Integration Specialist';
+            const apiDetails = {
+                'LinkedIn': 'Found 47 matching job postings',
+                'Indeed': 'Retrieved 30 new opportunities',
+                'Upwork': 'Found 15 freelance projects',
+                'GitHub': 'Analyzed repository patterns',
+                'Stripe': 'Processed payment of $127.50',
+                'Twilio': 'Sent opportunity notification',
+                'Google': 'Searched market trends',
+                'AWS': 'Deployed to Lambda',
+                'Slack': 'Posted to #opportunities',
+                'SendGrid': 'Sent 5 job matches'
+            };
+            const detail = apiDetails[tool.userData.name] || 'API request successful';
+            addInfrastructureActivity('api', tool.userData.name, agentName, detail);
         }
 
         // Update stats
@@ -1276,7 +1369,43 @@
             if (intersects.length > 0) {
                 const agent = intersects[0].object;
                 const details = document.getElementById('agentDetails');
-                document.getElementById('selectedAgentName').textContent = agent.userData.name;
+
+                // Get agent data
+                const agentName = agent.userData.name || 'Unknown Agent';
+                const category = agent.userData.category || 'technical';
+
+                // Generate specializations based on category and name
+                const specializations = {
+                    'Python Developer': 'Backend Development, API Design, Async Programming',
+                    'ML Engineer': 'Machine Learning, Neural Networks, Model Training',
+                    'Data Scientist': 'Data Analysis, Statistical Modeling, Visualization',
+                    'Frontend Expert': 'React, Vue, UI/UX Implementation',
+                    'DevOps Specialist': 'CI/CD, Kubernetes, Cloud Infrastructure',
+                    'Content Writer': 'Technical Writing, SEO, Documentation',
+                    'UX Designer': 'User Research, Wireframing, Prototyping',
+                    'Business Analyst': 'Requirements Analysis, Process Optimization',
+                    'Sales Expert': 'Lead Generation, CRM, Negotiation',
+                    'Marketing Guru': 'Growth Hacking, SEO/SEM, Content Strategy',
+                    'Financial Advisor': 'Investment Analysis, Risk Assessment',
+                    'Security Analyst': 'Penetration Testing, Compliance, Threat Analysis'
+                };
+
+                // Generate realistic but varied stats for each agent
+                const agentIndex = agentMeshes.indexOf(agent);
+                const baseSolutions = 50 + (agentIndex * 7) % 300;
+                const baseConnections = 10 + (agentIndex * 3) % 40;
+                const learningRate = 70 + (agentIndex * 2) % 30;
+                const valueGenerated = (baseSolutions * 35) + (agentIndex * 123) % 5000;
+
+                // Update UI with agent-specific data
+                document.getElementById('selectedAgentName').textContent = agentName;
+                document.getElementById('agentSpecialization').textContent =
+                    'Specialization: ' + (specializations[agentName] || 'Multi-domain Expertise');
+                document.getElementById('agentSolutions').textContent = baseSolutions;
+                document.getElementById('agentConnections').textContent = baseConnections;
+                document.getElementById('agentLearning').textContent = learningRate + '%';
+                document.getElementById('agentValue').textContent = '$' + valueGenerated.toLocaleString();
+
                 details.classList.add('active');
 
                 setTimeout(() => {
