@@ -299,17 +299,73 @@ class Application(models.Model):
     assisted_by = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
     ai_confidence = models.IntegerField(default=0)  # 0-100
 
-    # Dates
-    created_at = models.DateTimeField(auto_now_add=True)
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    responded_at = models.DateTimeField(null=True, blank=True)
 
-    # Feedback
-    feedback = models.TextField(blank=True)
-    metadata = models.JSONField(default=dict)
+class AgentSolution(models.Model):
+    """
+    Represents a solution created by an agent
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='solutions')
+
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    solution_type = models.CharField(max_length=50)
+
+    # Solution content
+    code_snippet = models.TextField(blank=True)
+    language = models.CharField(max_length=20, blank=True)
+
+    # Metrics
+    metrics = models.JSONField(default=dict)
+    tags = models.JSONField(default=list)
+
+    # Usage tracking
+    times_used = models.IntegerField(default=0)
+    success_rate = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Application: {self.user.username} -> {self.opportunity.title}"
+        return f"{self.agent.name}: {self.title}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class AgentLearning(models.Model):
+    """
+    Tracks learning and knowledge transfer between agents
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    teacher_agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='teachings')
+    student_agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='learnings')
+    solution = models.ForeignKey(AgentSolution, on_delete=models.CASCADE, related_name='learning_records')
+
+    # Learning details
+    learning_type = models.CharField(max_length=50)
+    effectiveness_before = models.FloatField()
+    effectiveness_after = models.FloatField()
+
+    # Impact metrics
+    time_saved_hours = models.IntegerField(default=0)
+    cost_savings = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+
+    # Status
+    implementation_success = models.BooleanField(default=True)
+    feedback = models.TextField(blank=True)
+
+    # Metadata
+    metadata = models.JSONField(default=dict)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.teacher_agent.name} → {self.student_agent.name}"
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class SpiderData(models.Model):
