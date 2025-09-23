@@ -19,6 +19,9 @@ from core.intelligence_api import (
     content_automation_plan, track_revenue
 )
 
+# Import AI Training dashboard view
+from core.views_ai_training import ai_job_market_dashboard
+
 # Import opportunity aggregator
 from backend.api.opportunity_aggregator import get_opportunities, get_actionable
 # Import real opportunities API
@@ -125,6 +128,19 @@ from core.views_unified_placeholders import (
     rate_agent_execution,
     unified_assistant_chat_dev
 )
+from core.views_learning_dashboard import (
+    learning_dashboard_data, learning_updates_stream
+)
+from core.views_ai_learning_api import (
+    baseline_knowledge, collect_data, analyze_data, synthesize_knowledge,
+    learning_history, save_learning_session
+)
+# Import Dashboard API views for unified learning dashboard
+from core.views_dashboard_api import (
+    dashboard_all_data, dashboard_learning_data, dashboard_collaboration_data,
+    dashboard_cost_data, dashboard_health_data, dashboard_feed_data,
+    dashboard_verification_data
+)
 from agents.views import orchestrations_list
 
 # Import ecosystem activation views
@@ -194,6 +210,12 @@ from core import views_agent_execution
 from core import views_categorized_opportunities
 from core import views_agent_work_platform
 
+# Import enhanced learning workflow API
+try:
+    from enhanced_learning_workflow_api import learning_workflow_api
+except ImportError:
+    learning_workflow_api = None
+
 # Create API router
 router = DefaultRouter()
 
@@ -237,6 +259,14 @@ urlpatterns = [
     # Intelligence endpoints (temporary fix)
     path('api/v1/intelligence/skynet/status/', skynet_status, name='skynet-status'),
     path('api/v1/intelligence/opportunities/', live_opportunities, name='live-opportunities'),
+
+    # Enhanced Neural Orchestra API endpoints (conditionally included)
+] + ([
+    # TODO: Fix learning workflow API integration
+    # path('api/neural-orchestra/start-learning/', learning_workflow_api.StartLearningWorkflowView.as_view(), name='start_learning_workflow'),
+    # path('api/neural-orchestra/workflow-status/<str:workflow_id>/', learning_workflow_api.WorkflowStatusView.as_view(), name='workflow_status'),
+    # path('api/neural-orchestra/current-data/', learning_workflow_api.CurrentDataView.as_view(), name='current_learning_data'),
+] if learning_workflow_api else []) + [
     path('api/v1/intelligence/predictions/', live_predictions, name='live-predictions'),
 
     # Real Data Ecosystem Activation
@@ -324,6 +354,9 @@ urlpatterns = [
     path('api/dashboard/agents/', live_agent_activity, name='live-agent-activity'),
     path('api/dashboard/advisors/', advisor_insights, name='advisor-insights'),
     path('api/public/system-stats/', public_system_stats, name='public-system-stats'),
+
+    # AI Job Market Intelligence Training Dashboard
+    path('ai-job-market-dashboard/', ai_job_market_dashboard, name='ai-job-market-dashboard'),
 
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     
@@ -582,6 +615,27 @@ urlpatterns = [
 
     # AI Platform Learning and Verification APIs
     path('', include('ai_platform.urls')),  # AI Platform endpoints
+
+    # Learning Dashboard APIs for real-time proof
+    path('api/learning/dashboard/', learning_dashboard_data, name='learning-dashboard-data'),
+    path('api/learning/updates/', learning_updates_stream, name='learning-updates-stream'),
+
+    # AI Learning System APIs - Real user-facing learning system
+    path('api/learning/baseline/', baseline_knowledge, name='learning-baseline'),
+    path('api/learning/collect/', collect_data, name='learning-collect'),
+    path('api/learning/analyze/', analyze_data, name='learning-analyze'),
+    path('api/learning/synthesize/', synthesize_knowledge, name='learning-synthesize'),
+    path('api/learning/history/', learning_history, name='learning-history'),
+    path('api/learning/save/', save_learning_session, name='learning-save'),
+
+    # Unified Learning Dashboard API - Real data for frontend
+    path('api/dashboard/all/', dashboard_all_data, name='dashboard-all-data'),
+    path('api/dashboard/learning/', dashboard_learning_data, name='dashboard-learning-data'),
+    path('api/dashboard/collaboration/', dashboard_collaboration_data, name='dashboard-collaboration-data'),
+    path('api/dashboard/costs/', dashboard_cost_data, name='dashboard-cost-data'),
+    path('api/dashboard/health/', dashboard_health_data, name='dashboard-health-data'),
+    path('api/dashboard/feed/', dashboard_feed_data, name='dashboard-feed-data'),
+    path('api/dashboard/verification/', dashboard_verification_data, name='dashboard-verification-data'),
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
