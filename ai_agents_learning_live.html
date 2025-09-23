@@ -470,9 +470,9 @@
     <script>
         // Three.js setup
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x0a0a0a, 50, 100);
+        scene.fog = new THREE.Fog(0x0a0a0a, 80, 200);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -516,18 +516,47 @@
             'Event Tracker Spider'
         ];
 
-        // Tools and APIs
-        const toolsAPIs = [
-            { name: 'OpenAI API', color: 0x00ff00, position: { x: -30, y: 20, z: 0 } },
-            { name: 'Web Search', color: 0x0088ff, position: { x: -30, y: 15, z: 0 } },
-            { name: 'ArXiv Search', color: 0xff8800, position: { x: -30, y: 10, z: 0 } },
-            { name: 'Reddit API', color: 0xff4500, position: { x: -30, y: 5, z: 0 } },
-            { name: 'News API', color: 0x888888, position: { x: -30, y: 0, z: 0 } },
-            { name: 'Wikipedia', color: 0xffffff, position: { x: -30, y: -5, z: 0 } },
-            { name: 'ML Models', color: 0x9932cc, position: { x: -30, y: -10, z: 0 } },
-            { name: 'Database', color: 0x228b22, position: { x: -30, y: -15, z: 0 } },
-            { name: 'Redis Cache', color: 0xdc143c, position: { x: -30, y: -20, z: 0 } }
+        // Comprehensive Infrastructure
+        const databases = [
+            { name: 'PostgreSQL', color: 0x336791, position: { x: -50, y: -20, z: 0 }, type: 'database' },
+            { name: 'Redis Cache', color: 0xdc382d, position: { x: -50, y: -20, z: 15 }, type: 'database' },
+            { name: 'Vector DB', color: 0x00d9ff, position: { x: -50, y: -20, z: -15 }, type: 'database' }
         ];
+
+        const mlModels = [
+            { name: 'GPT-4', color: 0x00ff00, position: { x: 50, y: -20, z: 0 }, type: 'ml' },
+            { name: 'Claude-3', color: 0x9b59b6, position: { x: 50, y: -20, z: 15 }, type: 'ml' },
+            { name: 'DALL-E 3', color: 0xff6b6b, position: { x: 50, y: -20, z: -15 }, type: 'ml' },
+            { name: 'Whisper', color: 0x4ecdc4, position: { x: 50, y: -10, z: 0 }, type: 'ml' },
+            { name: 'LangChain', color: 0xffd93d, position: { x: 50, y: -10, z: 15 }, type: 'ml' },
+            { name: 'Embeddings', color: 0x667eea, position: { x: 50, y: -10, z: -15 }, type: 'ml' }
+        ];
+
+        const toolsAPIs = [
+            // Job Platforms
+            { name: 'LinkedIn', color: 0x0077b5, position: { x: 0, y: 35, z: -45 } },
+            { name: 'Indeed', color: 0xff6b6b, position: { x: 10, y: 35, z: -45 } },
+            { name: 'Upwork', color: 0x14a800, position: { x: 20, y: 35, z: -45 } },
+            { name: 'AngelList', color: 0x000000, position: { x: -10, y: 35, z: -45 } },
+            { name: 'Fiverr', color: 0x1dbf73, position: { x: -20, y: 35, z: -45 } },
+            // Payments
+            { name: 'Stripe', color: 0x6772e5, position: { x: 0, y: 35, z: 45 } },
+            { name: 'PayPal', color: 0x003087, position: { x: 10, y: 35, z: 45 } },
+            // Communication
+            { name: 'Twilio', color: 0xf22f46, position: { x: -45, y: 35, z: 0 } },
+            { name: 'SendGrid', color: 0x1a7bf2, position: { x: -45, y: 35, z: 10 } },
+            { name: 'Slack', color: 0x4a154b, position: { x: -45, y: 35, z: -10 } },
+            // Search
+            { name: 'Google', color: 0x4285f4, position: { x: 45, y: 35, z: 0 } },
+            { name: 'ArXiv', color: 0xff8800, position: { x: 45, y: 35, z: -10 } },
+            // Dev
+            { name: 'GitHub', color: 0x333333, position: { x: 30, y: 25, z: -30 } },
+            // Cloud
+            { name: 'AWS', color: 0xff9900, position: { x: -30, y: 25, z: 30 } }
+        ];
+
+        // Combine all infrastructure for unified handling
+        const allInfrastructure = [...databases, ...mlModels, ...toolsAPIs];
 
         // Create agents as nodes
         const agents = [];
@@ -577,10 +606,45 @@
             spiderMeshes.push(mesh);
         });
 
-        // Create tool/API indicators (glowing cubes on the side)
-        const toolMeshes = [];
-        const toolGeometry = new THREE.BoxGeometry(1, 1, 1);
+        // Create database cylinders
+        const databaseMeshes = [];
+        databases.forEach(db => {
+            const geometry = new THREE.CylinderGeometry(3, 3, 5, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: db.color,
+                emissive: db.color,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.8
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(db.position.x, db.position.y, db.position.z);
+            mesh.userData = { name: db.name, type: 'database', active: false };
+            scene.add(mesh);
+            databaseMeshes.push(mesh);
+        });
 
+        // Create ML model spheres
+        const mlModelMeshes = [];
+        mlModels.forEach(model => {
+            const geometry = new THREE.SphereGeometry(2.5, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: model.color,
+                emissive: model.color,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.8
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(model.position.x, model.position.y, model.position.z);
+            mesh.userData = { name: model.name, type: 'ml', active: false };
+            scene.add(mesh);
+            mlModelMeshes.push(mesh);
+        });
+
+        // Create API cubes
+        const toolMeshes = [];
+        const toolGeometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
         toolsAPIs.forEach(tool => {
             const material = new THREE.MeshPhongMaterial({
                 color: tool.color,
@@ -696,49 +760,80 @@
             }
         }
 
-        // Camera positioning
-        camera.position.z = 30;
+        // Camera positioning - zoomed out more
+        camera.position.set(0, 20, 55);
+        camera.lookAt(0, 0, 0);
 
         // Animation variables
         let isPaused = false;
         let animationSpeed = 1;
         let time = 0;
 
-        // Learning feed messages
-        const learningMessages = [
-            { type: 'learning', agents: ['Python Developer', 'ML Engineer'], message: 'shared knowledge about TensorFlow optimization techniques' },
-            { type: 'collaboration', agents: ['UX Designer', 'Frontend Expert', 'Brand Strategist'], message: 'collaborating on new user interface design system' },
-            { type: 'solution', agents: ['Data Scientist', 'Business Analyst'], message: 'generated predictive model for customer churn with 94% accuracy' },
-            { type: 'learning', agents: ['SEO Optimizer', 'Content Writer'], message: 'discovered new keyword strategy increasing traffic by 340%' },
-            { type: 'collaboration', agents: ['DevOps Specialist', 'Security Analyst', 'Backend Architect'], message: 'implementing zero-trust security architecture' },
-            { type: 'solution', agents: ['Growth Hacker', 'Marketing Guru'], message: 'identified viral growth loop worth $12K/month' },
-            { type: 'learning', agents: ['Investment Analyst', 'Financial Advisor'], message: 'analyzed 10,000 market patterns for better predictions' },
-            { type: 'collaboration', agents: ['Product Manager', 'Revenue Optimizer', 'Sales Expert'], message: 'designing new pricing strategy' }
-        ];
+        // Fetch REAL feed data from API
+        async function fetchRealFeedData() {
+            try {
+                const response = await fetch('/api/ecosystem/live-feed/');
+                const data = await response.json();
+                return data.feed;
+            } catch (error) {
+                console.error('Error fetching feed:', error);
+                return [];
+            }
+        }
 
-        // Add new feed item
-        function addFeedItem() {
-            const message = learningMessages[Math.floor(Math.random() * learningMessages.length)];
+        // Add new feed item from real data
+        async function addFeedItem() {
+            const feedData = await fetchRealFeedData();
             const feedContent = document.getElementById('feedContent');
 
+            if (feedData && feedData.length > 0) {
+                // Use real data
+                feedData.slice(0, 3).forEach(item => {
+                    const feedItem = document.createElement('div');
+                    feedItem.className = `feed-item ${item.type}`;
+                    feedItem.innerHTML = `
+                        <div class="feed-time">${item.time}</div>
+                        <div class="feed-content">
+                            <strong>${item.type === 'learning' ? 'Knowledge Transfer' :
+                                     item.type === 'collaboration' ? 'Collaboration' :
+                                     'Solution Generated'}:</strong>
+                            ${item.message}
+                        </div>
+                        <div class="feed-agents">
+                            ${item.agents.map(agent => `<span class="agent-tag">${agent}</span>`).join('')}
+                        </div>
+                        ${item.effectiveness ? `<div style="color: #4ecdc4; font-size: 0.9em;">+${item.effectiveness.toFixed(1)}% improvement</div>` : ''}
+                    `;
+                    feedContent.insertBefore(feedItem, feedContent.firstChild);
+                });
+            }
+
+            // Keep feed manageable
+            while (feedContent.children.length > 15) {
+                feedContent.removeChild(feedContent.lastChild);
+            }
+
+            // Trigger visual effect
+            triggerKnowledgeBurst();
+        }
+
+        // Fallback for demo mode (when API unavailable)
+        function addDemoFeedItem() {
+            const feedContent = document.getElementById('feedContent');
+
+            // Demo message for fallback
+            const demoMessages = [
+                'Demo: Agent collaboration detected',
+                'Demo: Knowledge transfer in progress',
+                'Demo: Solution being generated'
+            ];
             const item = document.createElement('div');
-            item.className = `feed-item ${message.type}`;
+            item.className = 'feed-item learning';
             item.innerHTML = `
-                <div class="feed-time">${Math.floor(Math.random() * 59) + 1} seconds ago</div>
-                <div class="feed-content">
-                    <strong>${message.type === 'learning' ? 'Knowledge Transfer' :
-                             message.type === 'collaboration' ? 'Collaboration' :
-                             'Solution Generated'}:</strong>
-                    ${message.agents.join(' & ')} ${message.message}
-                </div>
-                <div class="feed-agents">
-                    ${message.agents.map(agent => `<span class="agent-tag">${agent}</span>`).join('')}
-                </div>
+                <div class="feed-time">Demo Mode</div>
+                <div class="feed-content">${demoMessages[Math.floor(Math.random() * demoMessages.length)]}</div>
             `;
-
             feedContent.insertBefore(item, feedContent.firstChild);
-
-            // Remove old items
             while (feedContent.children.length > 10) {
                 feedContent.removeChild(feedContent.lastChild);
             }
@@ -819,8 +914,101 @@
             }, 500);
         }
 
+        // Database activation animation
+        function activateDatabase() {
+            if (databaseMeshes.length === 0) return;
+            const db = databaseMeshes[Math.floor(Math.random() * databaseMeshes.length)];
+            const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
+
+            // Database glows and pulses
+            db.material.emissive = new THREE.Color(0xffffff);
+            db.scale.set(1.5, 1.5, 1.5);
+
+            // Create data stream from database to agent
+            const particleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const particleMaterial = new THREE.MeshBasicMaterial({
+                color: db.material.color,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const particles = [];
+            for (let i = 0; i < 5; i++) {
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.copy(db.position);
+                scene.add(particle);
+                particles.push(particle);
+
+                // Animate particle to agent
+                const delay = i * 100;
+                setTimeout(() => {
+                    let progress = 0;
+                    const animateParticle = () => {
+                        progress += 0.03;
+                        if (progress <= 1) {
+                            particle.position.lerpVectors(db.position, agent.position, progress);
+                            requestAnimationFrame(animateParticle);
+                        } else {
+                            scene.remove(particle);
+                        }
+                    };
+                    animateParticle();
+                }, delay);
+            }
+
+            setTimeout(() => {
+                db.material.emissive = db.material.color;
+                db.scale.set(1, 1, 1);
+            }, 1500);
+        }
+
+        // ML Model activation animation
+        function activateMLModel() {
+            if (mlModelMeshes.length === 0) return;
+            const model = mlModelMeshes[Math.floor(Math.random() * mlModelMeshes.length)];
+            const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
+
+            // Model glows and rotates
+            model.material.emissive = new THREE.Color(0xffffff);
+            model.userData.active = true;
+            model.userData.activeTime = Date.now();
+
+            // Create energy beam from agent to model
+            const beamGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
+            const beamMaterial = new THREE.MeshBasicMaterial({
+                color: model.material.color,
+                transparent: true,
+                opacity: 0.8
+            });
+            const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+
+            const distance = agent.position.distanceTo(model.position);
+            beam.scale.y = distance;
+            beam.position.lerpVectors(agent.position, model.position, 0.5);
+            beam.lookAt(model.position);
+            beam.rotateX(Math.PI / 2);
+
+            scene.add(beam);
+
+            // Pulse the beam
+            let pulseTime = 0;
+            const pulseBeam = () => {
+                pulseTime += 0.1;
+                beam.material.opacity = 0.3 + Math.sin(pulseTime) * 0.3;
+                if (pulseTime < 10) {
+                    requestAnimationFrame(pulseBeam);
+                } else {
+                    scene.remove(beam);
+                    model.material.emissive = model.material.color;
+                    model.userData.active = false;
+                }
+            };
+            pulseBeam();
+        }
+
         // Tool/API activation animation
         function activateTool() {
+            if (toolMeshes.length === 0) return;
             const tool = toolMeshes[Math.floor(Math.random() * toolMeshes.length)];
             const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
 
@@ -854,22 +1042,32 @@
         }
 
         // Update stats
-        function updateStats() {
-            const knowledgeElement = document.getElementById('knowledgeTransfers');
-            const currentKnowledge = parseInt(knowledgeElement.textContent.replace(',', ''));
-            knowledgeElement.textContent = (currentKnowledge + Math.floor(Math.random() * 5) + 1).toLocaleString();
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/ecosystem/stats/');
+                const data = await response.json();
 
-            const solutionsElement = document.getElementById('solutionsCount');
-            const currentSolutions = parseInt(solutionsElement.textContent.replace(',', ''));
-            solutionsElement.textContent = (currentSolutions + Math.floor(Math.random() * 3)).toLocaleString();
+                if (data && data.stats) {
+                    // Update with REAL data from database
+                    document.getElementById('knowledgeTransfers').textContent = data.stats.knowledge_transfers.toLocaleString();
+                    document.getElementById('solutionsCount').textContent = data.stats.solutions.toLocaleString();
+                    document.getElementById('collectiveIQ').textContent = data.stats.collective_iq;
 
-            const iqElement = document.getElementById('collectiveIQ');
-            const currentIQ = parseInt(iqElement.textContent);
-            iqElement.textContent = Math.min(999, currentIQ + Math.floor(Math.random() * 2));
+                    const value = data.stats.value_created;
+                    const valueFormatted = value > 1000 ? `$${(value/1000).toFixed(1)}K` : `$${value}`;
+                    document.getElementById('valueCreated').textContent = valueFormatted;
 
-            const valueElement = document.getElementById('valueCreated');
-            const currentValue = parseFloat(valueElement.textContent.replace('$', '').replace('K', ''));
-            valueElement.textContent = '$' + (currentValue + Math.random() * 0.1).toFixed(1) + 'K';
+                    // Trigger database/ML activity based on real usage
+                    if (Math.random() < 0.3) activateDatabase();
+                    if (Math.random() < 0.2) activateMLModel();
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                // Fallback only if API fails
+                const knowledgeElement = document.getElementById('knowledgeTransfers');
+                const currentKnowledge = parseInt(knowledgeElement.textContent.replace(/,/g, ''));
+                knowledgeElement.textContent = (currentKnowledge + 1).toLocaleString();
+            }
         }
 
         // Animation loop
@@ -880,7 +1078,7 @@
                 time += 0.01 * animationSpeed;
 
                 // Rotate the entire network slowly
-                scene.rotation.y = time * 0.1;
+                scene.rotation.y = time * 0.05;
 
                 // Animate agents
                 agentMeshes.forEach((mesh, index) => {
@@ -904,6 +1102,38 @@
                 connections.forEach(conn => {
                     conn.line.material.opacity = 0.3 + Math.sin(time * 2) * 0.1;
                 });
+
+                // Orbit spiders around the network
+                if (typeof spiderMeshes !== 'undefined') {
+                    spiderMeshes.forEach((spider, i) => {
+                        const orbitTime = time * 0.5;
+                        const orbitRadius = 35 + Math.sin(orbitTime + i) * 3;
+                        const angle = orbitTime + (i / spiderMeshes.length) * Math.PI * 2;
+                        spider.position.x = Math.cos(angle) * orbitRadius;
+                        spider.position.z = Math.sin(angle) * orbitRadius;
+                        spider.position.y = Math.sin(orbitTime * 2 + i) * 5;
+                        spider.rotation.y = orbitTime * 2;
+                    });
+                }
+
+                // Pulse tools/APIs
+                if (typeof toolMeshes !== 'undefined') {
+                    toolMeshes.forEach((tool, i) => {
+                        if (tool.userData.active) {
+                            const scale = 1.5 + Math.sin(time * 5) * 0.3;
+                            tool.scale.set(scale, scale, scale);
+                            tool.rotation.y += 0.05;
+
+                            // Deactivate after 2 seconds
+                            if (Date.now() - tool.userData.activeTime > 2000) {
+                                tool.userData.active = false;
+                                tool.scale.set(1, 1, 1);
+                            }
+                        } else {
+                            tool.rotation.y += 0.01;
+                        }
+                    });
+                }
             }
 
             renderer.render(scene, camera);
@@ -919,6 +1149,34 @@
                 updateStats();
             }
         }, 3000 + Math.random() * 2000);
+
+        // Trigger spider data collection periodically
+        setInterval(() => {
+            if (!isPaused && typeof animateSpiderCollection !== 'undefined') {
+                animateSpiderCollection();
+            }
+        }, 5000 + Math.random() * 3000);
+
+        // Trigger tool activation periodically
+        setInterval(() => {
+            if (!isPaused && typeof activateTool !== 'undefined') {
+                activateTool();
+            }
+        }, 4000 + Math.random() * 2000);
+
+        // Trigger database access periodically
+        setInterval(() => {
+            if (!isPaused && typeof activateDatabase !== 'undefined') {
+                activateDatabase();
+            }
+        }, 6000 + Math.random() * 3000);
+
+        // Trigger ML model usage periodically
+        setInterval(() => {
+            if (!isPaused && typeof activateMLModel !== 'undefined') {
+                activateMLModel();
+            }
+        }, 7000 + Math.random() * 4000);
 
         // Control functions
         let currentView = 'network';
