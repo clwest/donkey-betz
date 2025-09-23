@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Network Chat - Real AI Interactions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .network-status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            animation: pulse 1.5s infinite;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .agents-list {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .agents-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+        }
+
+        .agent-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(78, 205, 196, 0.3);
+        }
+
+        .agent-item.active {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+        }
+
+        .agent-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .agent-avatar.primary {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+        }
+
+        .agent-avatar.specialist {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+        }
+
+        .agent-info h4 {
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+
+        .agent-info p {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .agent-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            margin-left: auto;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 1.2rem;
+            color: #4ecdc4;
+        }
+
+        .chat-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .message-info {
+            flex: 1;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        .message-type {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        .message-type.learning {
+            background: rgba(255, 217, 61, 0.3);
+            color: #ffd93d;
+        }
+
+        .message-type.teaching {
+            background: rgba(78, 205, 196, 0.3);
+            color: #4ecdc4;
+        }
+
+        .message-type.specialist {
+            background: rgba(69, 183, 209, 0.3);
+            color: #45b7d1;
+        }
+
+        .message-content {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid;
+            margin-left: 42px;
+            line-height: 1.5;
+        }
+
+        .message.learning .message-content {
+            border-left-color: #ffd93d;
+        }
+
+        .message.teaching .message-content {
+            border-left-color: #4ecdc4;
+        }
+
+        .message.specialist .message-content {
+            border-left-color: #45b7d1;
+        }
+
+        .message.spider .message-content {
+            border-left-color: #ff6b6b;
+        }
+
+        .knowledge-transfer {
+            background: rgba(249, 202, 36, 0.1);
+            border: 1px solid rgba(249, 202, 36, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .tokens-cost {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .activity-panel {
+            width: 280px;
+            background: rgba(255,255,255,0.05);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .activity-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+        }
+
+        .activity-item {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid;
+        }
+
+        .activity-item.teaching {
+            border-left-color: #4ecdc4;
+        }
+
+        .activity-item.learning {
+            border-left-color: #ffd93d;
+        }
+
+        .activity-item.specialist {
+            border-left-color: #45b7d1;
+        }
+
+        .activity-time {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-bottom: 5px;
+        }
+
+        .activity-description {
+            font-size: 0.9rem;
+        }
+
+        .refresh-button {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(78, 205, 196, 0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.6;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(78, 205, 196, 0.3);
+            border-top: 3px solid #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Agent Network Chat</h1>
+        <div class="network-status">
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span id="agentCount">Loading...</span> Agents
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span id="messageCount">0</span> Messages
+            </div>
+            <div class="status-item">
+                <div class="status-dot"></div>
+                $<span id="totalCost">0.00</span> Cost
+            </div>
+            <button class="refresh-button" onclick="refreshData()">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="agents-list">
+                <div class="agents-title">
+                    🤖 Active Agents
+                </div>
+                <div id="agentsList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading agents...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">Agent Learning Network</div>
+                <div class="chat-stats">
+                    <span>🎓 <span id="teachingSessions">0</span> Teaching Sessions</span>
+                    <span>📚 <span id="knowledgeItems">0</span> Knowledge Items</span>
+                    <span>🔄 Last Update: <span id="lastUpdate">Never</span></span>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messagesContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading agent conversations...
+                </div>
+            </div>
+        </div>
+
+        <div class="activity-panel">
+            <div class="activity-title">📊 Live Activity</div>
+            <div id="activityFeed">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading activity...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let agents = [];
+        let messages = [];
+        let activities = [];
+        let selectedAgent = null;
+        let totalCost = 0;
+        let messageCount = 0;
+        let teachingSessions = 0;
+        let knowledgeItems = 0;
+
+        // Load real agent data from JSON file
+        async function loadAgentData() {
+            try {
+                const response = await fetch('agent_network_data.json');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error loading agent data:', error);
+                // Fallback data if file doesn't exist
+                return {
+                    agents: [],
+                    messages: [],
+                    activities: [],
+                    stats: {
+                        total_agents: 0,
+                        total_messages: 0,
+                        teaching_sessions: 0,
+                        knowledge_items: 0,
+                        total_cost: 0,
+                        last_update: new Date().toISOString()
+                    }
+                };
+            }
+        }
+
+        async function loadAgents() {
+            try {
+                const data = await loadAgentData();
+                agents = data.agents || [];
+                console.log('Loaded agents:', agents);
+                renderAgents();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading agents:', error);
+                agents = [];
+                renderAgents();
+            }
+        }
+
+        async function loadMessages() {
+            try {
+                const data = await loadAgentData();
+                messages = data.messages || [];
+                activities = data.activities || [];
+                console.log('Loaded messages:', messages.length);
+                console.log('Loaded activities:', activities.length);
+
+                renderMessages();
+                renderActivities();
+                updateStats();
+
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messagesContainer').innerHTML = '<div class="loading">Error loading messages</div>';
+            }
+        }
+
+        function renderAgents() {
+            const agentsList = document.getElementById('agentsList');
+
+            if (agents.length === 0) {
+                agentsList.innerHTML = '<div class="loading">No agents found</div>';
+                return;
+            }
+
+            agentsList.innerHTML = agents.map(agent => `
+                <div class="agent-item ${selectedAgent === agent.id ? 'active' : ''}" onclick="selectAgent('${agent.id}')">
+                    <div class="agent-avatar ${agent.type}">
+                        ${agent.name.split(' ').map(w => w[0]).join('')}
+                    </div>
+                    <div class="agent-info">
+                        <h4>${agent.name}</h4>
+                        <p>${agent.specialization}</p>
+                    </div>
+                    <div class="agent-status" title="Active"></div>
+                </div>
+            `).join('');
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="loading">No messages found</div>';
+                return;
+            }
+
+            let filteredMessages = messages;
+            if (selectedAgent && selectedAgent !== 'all') {
+                filteredMessages = messages.filter(msg =>
+                    msg.sender_id === selectedAgent ||
+                    msg.content.toLowerCase().includes(agents.find(a => a.id === selectedAgent)?.name.toLowerCase() || '')
+                );
+            }
+
+            container.innerHTML = filteredMessages.map(message => {
+                const agent = agents.find(a => a.id === message.sender_id) || { type: 'spider' };
+                return `
+                    <div class="message ${message.type}">
+                        <div class="message-header">
+                            <div class="message-avatar ${agent.type || 'spider'}">${message.sender[0]}</div>
+                            <div class="message-info">
+                                <div class="message-sender">${message.sender}</div>
+                                <div class="message-time">${formatTime(message.timestamp)}</div>
+                            </div>
+                            <div class="message-type ${message.type}">${message.type}</div>
+                        </div>
+                        <div class="message-content">
+                            ${message.content.replace(/\n/g, '<br>')}
+                            ${message.knowledge_transfer ? `<div class="knowledge-transfer">💡 ${message.knowledge_transfer}</div>` : ''}
+                            ${message.tokens ? `<div class="tokens-cost">🔢 ${message.tokens} tokens • $${(message.tokens * 0.000375).toFixed(6)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateStats() {
+            messageCount = messages.length;
+            teachingSessions = messages.filter(m => m.type === 'teaching').length;
+            knowledgeItems = messages.filter(m => m.knowledge_transfer).length;
+            totalCost = messages.reduce((sum, msg) => sum + (msg.tokens ? msg.tokens * 0.000375 : 0), 0);
+
+            document.getElementById('agentCount').textContent = agents.length;
+            document.getElementById('messageCount').textContent = messageCount;
+            document.getElementById('teachingSessions').textContent = teachingSessions;
+            document.getElementById('knowledgeItems').textContent = knowledgeItems;
+            document.getElementById('totalCost').textContent = totalCost.toFixed(6);
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        function renderActivities() {
+            const activityFeed = document.getElementById('activityFeed');
+
+            if (activities.length === 0) {
+                activityFeed.innerHTML = '<div class="loading">No activities found</div>';
+                return;
+            }
+
+            activityFeed.innerHTML = activities.slice(0, 10).map(activity => `
+                <div class="activity-item ${activity.type}">
+                    <div class="activity-time">${formatTime(activity.timestamp)}</div>
+                    <div class="activity-description">${activity.description}</div>
+                    ${activity.tokens ? `<div style="font-size: 0.8rem; opacity: 0.6; margin-top: 3px;">${activity.tokens} tokens</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function selectAgent(agentId) {
+            selectedAgent = agentId;
+            renderAgents();
+            renderMessages();
+
+            const agent = agents.find(a => a.id === agentId);
+            if (agent) {
+                document.getElementById('chatTitle').textContent = `${agent.name} - ${agent.specialization}`;
+            }
+        }
+
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString();
+        }
+
+        async function refreshData() {
+            console.log('Refreshing data...');
+            // Re-run the Python script to update the JSON data
+            try {
+                const response = await fetch('/update-data', { method: 'POST' });
+                console.log('Update response:', response);
+            } catch (error) {
+                console.log('Could not trigger data update, loading existing data');
+            }
+
+            // Reload the data
+            await loadAgents();
+            await loadMessages();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadAgents();
+            await loadMessages();
+
+            // Select first agent by default
+            if (agents.length > 0) {
+                selectAgent(agents[0].id);
+            }
+        });
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>

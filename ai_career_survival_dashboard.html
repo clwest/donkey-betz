@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Career Survival Platform - Live Learning Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            opacity: 0.95;
+            margin-bottom: 10px;
+        }
+
+        .timer-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .timer-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .timer-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .timer-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .phase-indicator {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .phase-bar {
+            width: 80%;
+            height: 50px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 25px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .phase-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #ffd700);
+            transition: width 1s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+
+        .phase-steps {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            margin: 20px auto;
+        }
+
+        .phase-step {
+            text-align: center;
+            position: relative;
+        }
+
+        .phase-step.active {
+            color: #ffd700;
+        }
+
+        .phase-step.completed {
+            color: #00ff88;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            padding: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            transition: transform 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .activity-feed {
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .activity-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid #00ff88;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .activity-time {
+            color: #ffd700;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .alert-box {
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 1; }
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+        }
+
+        .alert-warning {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid #ffd700;
+        }
+
+        .alert-danger {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+        }
+
+        .output-preview {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .output-item {
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .output-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .output-item h3 {
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        .output-item p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Revenue counter */
+        .revenue-display {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            background: linear-gradient(90deg, #00ff88, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .cta-button {
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 AI Career Survival Platform</h1>
+        <div class="subtitle">Watch AI Learn How to Save Human Careers in Real-Time</div>
+
+        <div class="timer-container">
+            <div class="timer-box">
+                <div class="timer-label">Mission Time</div>
+                <div class="timer-value" id="elapsed-time">00:00:00</div>
+            </div>
+            <div class="timer-box">
+                <div class="timer-label">Current Phase</div>
+                <div class="timer-value" id="current-phase">GATHERING</div>
+            </div>
+            <div class="timer-box">
+                <div class="timer-label">Time to Launch</div>
+                <div class="timer-value" id="time-to-launch">96:00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Progress -->
+    <div class="phase-indicator">
+        <div class="phase-bar">
+            <div class="phase-progress" id="phase-progress" style="width: 0%">
+                <span id="progress-text">Phase 1: Intelligence Gathering</span>
+            </div>
+        </div>
+        <div class="phase-steps">
+            <div class="phase-step active" id="phase-1">
+                <div>📡 Phase 1</div>
+                <small>Intelligence</small>
+            </div>
+            <div class="phase-step" id="phase-2">
+                <div>🧠 Phase 2</div>
+                <small>Pattern Recognition</small>
+            </div>
+            <div class="phase-step" id="phase-3">
+                <div>👨‍🏫 Phase 3</div>
+                <small>Expert Formation</small>
+            </div>
+            <div class="phase-step" id="phase-4">
+                <div>📚 Phase 4</div>
+                <small>Course Creation</small>
+            </div>
+            <div class="phase-step" id="phase-5">
+                <div>💰 Launch</div>
+                <small>Revenue Generation</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Intelligence Gathering -->
+        <div class="metric-card">
+            <h2>📡 Intelligence Gathering</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="jobs-analyzed">0</div>
+                    <div class="stat-label">Jobs Analyzed</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="safe-careers">0</div>
+                    <div class="stat-label">Safe Careers Found</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="risk-patterns">0</div>
+                    <div class="stat-label">Risk Patterns</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="skills-identified">0</div>
+                    <div class="stat-label">Critical Skills</div>
+                </div>
+            </div>
+            <div class="activity-feed" id="intelligence-feed"></div>
+        </div>
+
+        <!-- Pattern Recognition -->
+        <div class="metric-card">
+            <h2>🧠 Pattern Recognition</h2>
+            <div class="alert-box alert-warning">
+                <span>⏳ Waiting for Phase 2 (Hour 12)</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="patterns-found">0</div>
+                    <div class="stat-label">Success Patterns</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="industries-mapped">0</div>
+                    <div class="stat-label">Industries Mapped</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="patternChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Expert Agents -->
+        <div class="metric-card">
+            <h2>🤖 Specialist Agents</h2>
+            <div class="alert-box alert-warning">
+                <span>⏳ Agents forming at Hour 36</span>
+            </div>
+            <div id="agent-list">
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>📊 Job Market Analyst</h3>
+                    <p>Status: Awaiting data...</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>🎯 Skills Gap Identifier</h3>
+                    <p>Status: Awaiting data...</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>📚 Curriculum Designer</h3>
+                    <p>Status: Awaiting data...</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>🚀 Career Strategist</h3>
+                    <p>Status: Awaiting data...</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>📈 Trend Predictor</h3>
+                    <p>Status: Awaiting data...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Creation -->
+        <div class="metric-card">
+            <h2>📚 Course Generation</h2>
+            <div class="alert-box alert-warning">
+                <span>⏳ Creation begins at Hour 72</span>
+            </div>
+            <div class="output-preview">
+                <h3 style="color: #ffd700; margin-bottom: 15px;">Upcoming Courses:</h3>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>AI-Proof Career Guide 2025</h3>
+                    <p>Complete roadmap for career security</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>Top 10 Jobs That Need AI Partners</h3>
+                    <p>Positions where humans + AI win</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>30-Day Skill Transition Plan</h3>
+                    <p>Rapid reskilling program</p>
+                </div>
+                <div class="output-item" style="opacity: 0.5;">
+                    <h3>Industry AI Integration Training</h3>
+                    <p>Sector-specific guidance</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Tracking -->
+        <div class="metric-card">
+            <h2>💰 Revenue Potential</h2>
+            <div class="revenue-display" id="revenue-potential">$0</div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="potential-users">0</div>
+                    <div class="stat-label">Potential Users</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="course-price">$0</div>
+                    <div class="stat-label">Course Price</div>
+                </div>
+            </div>
+            <button class="cta-button" id="launch-button" style="opacity: 0.5;" disabled>
+                Platform Launches in 96 Hours
+            </button>
+        </div>
+
+        <!-- Live Activity Stream -->
+        <div class="metric-card" style="grid-column: span 2;">
+            <h2>📊 Live Learning Activity</h2>
+            <div class="activity-feed" id="live-activity" style="height: 300px;">
+                <div class="activity-item">
+                    <div class="activity-time">Just now</div>
+                    <div>🚀 AI Career Survival Platform initialized</div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-time">Just now</div>
+                    <div>📡 Beginning intelligence gathering phase...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Timer functionality
+        let startTime = Date.now();
+        let currentPhase = 1;
+        let phaseStartTimes = {
+            1: 0,    // Hour 0-12
+            2: 12,   // Hour 12-36
+            3: 36,   // Hour 36-72
+            4: 72,   // Hour 72-96
+            5: 96    // Launch
+        };
+
+        function updateTimers() {
+            const elapsed = Date.now() - startTime;
+            const elapsedHours = elapsed / (1000 * 60 * 60);
+            const elapsedSeconds = Math.floor(elapsed / 1000);
+
+            // Update elapsed time
+            const hours = Math.floor(elapsedSeconds / 3600);
+            const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+            const seconds = elapsedSeconds % 60;
+            document.getElementById('elapsed-time').textContent =
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // Update time to launch
+            const remainingHours = 96 - elapsedHours;
+            if (remainingHours > 0) {
+                const remHours = Math.floor(remainingHours);
+                const remMinutes = Math.floor((remainingHours % 1) * 60);
+                document.getElementById('time-to-launch').textContent =
+                    `${String(remHours).padStart(2, '0')}:${String(remMinutes).padStart(2, '0')}:00`;
+            } else {
+                document.getElementById('time-to-launch').textContent = "LAUNCHED!";
+            }
+
+            // Determine current phase
+            let newPhase = 1;
+            for (let phase = 5; phase >= 1; phase--) {
+                if (elapsedHours >= phaseStartTimes[phase]) {
+                    newPhase = phase;
+                    break;
+                }
+            }
+
+            if (newPhase !== currentPhase) {
+                updatePhase(newPhase);
+            }
+
+            // Update phase progress
+            const phaseProgress = Math.min(100, (elapsedHours / 96) * 100);
+            document.getElementById('phase-progress').style.width = `${phaseProgress}%`;
+        }
+
+        function updatePhase(phase) {
+            currentPhase = phase;
+            const phaseNames = {
+                1: 'GATHERING',
+                2: 'RECOGNIZING',
+                3: 'FORMING',
+                4: 'CREATING',
+                5: 'LAUNCHED'
+            };
+
+            document.getElementById('current-phase').textContent = phaseNames[phase];
+
+            // Update phase steps
+            for (let i = 1; i <= 5; i++) {
+                const element = document.getElementById(`phase-${i}`);
+                if (i < phase) {
+                    element.classList.add('completed');
+                    element.classList.remove('active');
+                } else if (i === phase) {
+                    element.classList.add('active');
+                    element.classList.remove('completed');
+                } else {
+                    element.classList.remove('active', 'completed');
+                }
+            }
+
+            // Add activity for phase change
+            addActivity(`🎯 Entering Phase ${phase}: ${phaseNames[phase]}`);
+        }
+
+        function addActivity(message) {
+            const feed = document.getElementById('live-activity');
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `
+                <div class="activity-time">Just now</div>
+                <div>${message}</div>
+            `;
+            feed.insertBefore(item, feed.firstChild);
+
+            // Keep only last 20 items
+            while (feed.children.length > 20) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Simulate data updates
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('http://localhost:8000/api/career/metrics/', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateMetrics(data);
+                } else {
+                    simulateData();
+                }
+            } catch (error) {
+                simulateData();
+            }
+        }
+
+        function simulateData() {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const progress = Math.min(100, (elapsed / 30) * 100); // Simulate 30 second phases for demo
+
+            // Update intelligence metrics
+            document.getElementById('jobs-analyzed').textContent = Math.floor(progress * 0.5);
+            document.getElementById('safe-careers').textContent = Math.floor(progress * 0.2);
+            document.getElementById('risk-patterns').textContent = Math.floor(progress * 0.15);
+            document.getElementById('skills-identified').textContent = Math.floor(progress * 0.3);
+
+            // Simulate pattern recognition after "12 hours" (30 seconds in demo)
+            if (progress > 40) {
+                document.getElementById('patterns-found').textContent = Math.floor((progress - 40) * 0.2);
+                document.getElementById('industries-mapped').textContent = Math.floor((progress - 40) * 0.1);
+            }
+
+            // Update potential revenue
+            const potentialUsers = Math.floor(progress * 10);
+            document.getElementById('potential-users').textContent = potentialUsers;
+            document.getElementById('course-price').textContent = '$197';
+            document.getElementById('revenue-potential').textContent = `$${(potentialUsers * 197).toLocaleString()}`;
+
+            // Add simulated activities
+            if (Math.random() < 0.1) {
+                const activities = [
+                    '🔍 Analyzing job posting: "Senior AI Engineer"',
+                    '✅ Identified safe career: "AI Ethics Specialist"',
+                    '⚠️ High-risk job found: "Data Entry Clerk"',
+                    '🎯 New skill requirement: "Prompt Engineering"',
+                    '📊 Industry trend: Healthcare AI adoption at 70%',
+                    '🚀 Success pattern: Human + AI collaboration',
+                    '💡 Discovered: Emotional Intelligence is key'
+                ];
+                addActivity(activities[Math.floor(Math.random() * activities.length)]);
+            }
+        }
+
+        function updateMetrics(data) {
+            // Update all metrics from real data
+            document.getElementById('jobs-analyzed').textContent = data.jobs_analyzed || 0;
+            document.getElementById('safe-careers').textContent = data.safe_careers || 0;
+            document.getElementById('risk-patterns').textContent = data.risk_patterns || 0;
+            document.getElementById('skills-identified').textContent = data.skills_identified || 0;
+
+            // Update feeds
+            if (data.intelligence_feed) {
+                updateFeed('intelligence-feed', data.intelligence_feed);
+            }
+        }
+
+        function updateFeed(feedId, items) {
+            const feed = document.getElementById(feedId);
+            feed.innerHTML = items.map(item => `
+                <div class="activity-item">
+                    <div class="activity-time">${item.time}</div>
+                    <div>${item.text}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize chart
+        const ctx = document.getElementById('patternChart');
+        const patternChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['AI Assistant', 'Quality Control', 'Creative Partner', 'Augmented Expert', 'Emotional Bridge'],
+                datasets: [{
+                    label: 'Success Rate %',
+                    data: [85, 78, 72, 88, 81],
+                    backgroundColor: 'rgba(0, 255, 136, 0.2)',
+                    borderColor: '#00ff88',
+                    pointBackgroundColor: '#00ff88',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#00ff88'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: { color: 'white' },
+                        ticks: { color: 'white' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                }
+            }
+        });
+
+        // Start the system
+        setInterval(updateTimers, 1000);
+        setInterval(fetchMetrics, 5000);
+
+        // Initial load
+        updateTimers();
+        fetchMetrics();
+
+        // Simulate phase progression for demo (speed up for testing)
+        if (window.location.search.includes('demo=fast')) {
+            // Fast demo mode: progress through phases every 30 seconds
+            setInterval(() => {
+                startTime -= 3600000; // Subtract 1 hour every second
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

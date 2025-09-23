@@ -1,0 +1,25 @@
+# Minimal requirements for viral demo deployment
+Django==4.2.5
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+channels==4.0.0
+channels-redis==4.1.0
+redis==5.0.0
+aiohttp==3.8.5
+requests==2.31.0
+python-dotenv==1.0.0
+gunicorn==21.2.0
+psycopg2-binary==2.9.7
+whitenoise==6.5.0
+
+# For the learning system
+openai==0.28.1
+sentence-transformers==2.2.2
+
+# For the ML components (optional for basic demo)
+scikit-learn==1.3.0
+numpy==1.24.3
+
+# For web scraping (spiders)
+beautifulsoup4==4.12.2
+lxml==4.9.3

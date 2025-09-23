@@ -279,12 +279,49 @@ class UnifiedLearningDashboardAPI:
                 'databases': {}
             }
 
+    def get_agent_solution_counts(self) -> Dict[str, int]:
+        """Get solution counts by agent name"""
+        agent_counts = {}
+
+        try:
+            # Get all solution keys
+            solution_keys = self.redis_learning.keys("solution:*")
+
+            for key in solution_keys:
+                try:
+                    # Parse agent name from key format: solution:hash:agent_name:timestamp
+                    parts = key.split(':')
+                    if len(parts) >= 3:
+                        agent_name = parts[2]
+                        agent_counts[agent_name] = agent_counts.get(agent_name, 0) + 1
+                except Exception:
+                    continue
+
+            # Sort by solution count (descending) and return top 10
+            sorted_agents = sorted(agent_counts.items(), key=lambda x: x[1], reverse=True)
+            return dict(sorted_agents[:10])
+
+        except Exception as e:
+            print(f"Error getting agent solution counts: {e}")
+            return {}
+
     def get_learning_feed(self) -> List[Dict[str, str]]:
         """Get recent learning activity feed"""
         feed = []
         now = datetime.now()
 
         try:
+            # Get agent solution counts for display
+            agent_counts = self.get_agent_solution_counts()
+
+            # Add agent solution counts to feed
+            for agent_name, count in list(agent_counts.items())[:5]:
+                feed.append({
+                    'timestamp': now.strftime('%H:%M'),
+                    'content': f'🤖 {agent_name}: {count} solutions',
+                    'type': 'agent_progress'
+                })
+
             # Get recent solutions
             solution_keys = list(self.redis_learning.keys("solution:*"))[-5:]
             for key in solution_keys:
@@ -293,7 +330,7 @@ class UnifiedLearningDashboardAPI:
                     parts = key.split(':')
                     if len(parts) >= 4:
                         agent_id = parts[2]
-                        timestamp = datetime.fromtimestamp(float(parts[3]))
+                        timestamp = datetime.fromtimestamp(float(parts[3]) / 1000000)  # Convert microseconds
                         time_str = timestamp.strftime('%H:%M')
 
                         feed.append({

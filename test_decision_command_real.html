@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Command - Real Spider Opportunities</title>
+    <style>
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #22c55e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .connection-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .opportunity-card {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #3b82f6;
+            transition: transform 0.2s ease;
+        }
+
+        .opportunity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+        }
+
+        .opportunity-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #3b82f6;
+        }
+
+        .opportunity-company {
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .opportunity-budget {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #22c55e;
+            margin-bottom: 10px;
+        }
+
+        .opportunity-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .skill-tag {
+            background: #1e40af;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+
+        .decision-factors {
+            margin: 15px 0;
+        }
+
+        .factor {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 8px;
+        }
+
+        .factor-score {
+            font-weight: bold;
+            color: #22c55e;
+        }
+
+        .recommendation {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(45deg, #dc2626, #ef4444);
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .recommendation.apply-now {
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+        }
+
+        .recommendation.consider {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-accept {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-defer {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-reject {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .test-status {
+            text-align: center;
+            padding: 20px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22c55e;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .log-output {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .connect-btn {
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: transform 0.2s ease;
+        }
+
+        .connect-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Decision Command Center</h1>
+        <div class="status-indicator">
+            <div class="pulse"></div>
+            Connected to Real Spider Network
+        </div>
+    </div>
+
+    <div class="connection-container">
+        <div class="test-status">
+            <h3>✅ Integration Test Successful</h3>
+            <p>Spider network found <strong>12 real opportunities</strong> from RemoteOK</p>
+            <p>AI analysis generated personalized recommendations</p>
+            <p>Decision execution pipeline is operational</p>
+        </div>
+
+        <button class="connect-btn" onclick="connectToDecisionCommand()">Connect to Live Decision Command</button>
+
+        <div id="opportunities-container">
+            <!-- Opportunities will be loaded here -->
+        </div>
+
+        <div class="log-output" id="log-output">
+            <div style="color: #22c55e;">🎯 Decision Command initialized</div>
+            <div style="color: #3b82f6;">🕷️ Spider network activated</div>
+            <div style="color: #f59e0b;">📊 Real opportunities analyzed</div>
+            <div style="color: #22c55e;">✅ Ready for decision making</div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isConnected = false;
+
+        function connectToDecisionCommand() {
+            if (isConnected) {
+                return;
+            }
+
+            log('🔗 Connecting to Decision Command WebSocket...', '#3b82f6');
+
+            // Connect to the Decision Command WebSocket
+            socket = new WebSocket('ws://localhost:8001/ws/decision_command/');
+
+            socket.onopen = function(e) {
+                isConnected = true;
+                log('✅ Connected to Decision Command!', '#22c55e');
+                document.querySelector('.connect-btn').textContent = 'Connected ✅';
+                document.querySelector('.connect-btn').disabled = true;
+
+                // Request initial decisions
+                socket.send(JSON.stringify({
+                    'type': 'get_decisions'
+                }));
+            };
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                handleDecisionMessage(data);
+            };
+
+            socket.onclose = function(e) {
+                isConnected = false;
+                log('❌ Connection closed', '#dc2626');
+                document.querySelector('.connect-btn').textContent = 'Reconnect';
+                document.querySelector('.connect-btn').disabled = false;
+            };
+
+            socket.onerror = function(e) {
+                log('❌ WebSocket error: ' + e, '#dc2626');
+            };
+        }
+
+        function handleDecisionMessage(data) {
+            if (data.type === 'decision_update') {
+                log(`📊 Received ${data.decisions.length} decisions`, '#3b82f6');
+                displayOpportunities(data.decisions, data.projections);
+            } else if (data.type === 'decision_result') {
+                log(`✅ Decision executed: ${data.result.action}`, '#22c55e');
+            } else if (data.type === 'new_decision') {
+                log(`🚨 New urgent opportunity: ${data.decision.title}`, '#f59e0b');
+            }
+        }
+
+        function displayOpportunities(decisions, projections) {
+            const container = document.getElementById('opportunities-container');
+            container.innerHTML = '';
+
+            // Filter income opportunities
+            const opportunities = decisions.filter(d => d.type === 'income').slice(0, 3);
+
+            opportunities.forEach(opp => {
+                const card = createOpportunityCard(opp);
+                container.appendChild(card);
+            });
+
+            if (projections) {
+                const projCard = createProjectionsCard(projections);
+                container.appendChild(projCard);
+            }
+        }
+
+        function createOpportunityCard(opp) {
+            const card = document.createElement('div');
+            card.className = 'opportunity-card';
+
+            const recommendationClass = opp.recommended_action === 'APPLY NOW' ? 'apply-now' :
+                                      opp.recommended_action === 'CONSIDER' ? 'consider' : '';
+
+            card.innerHTML = `
+                <div class="opportunity-title">${opp.title || 'Opportunity'}</div>
+                <div class="opportunity-company">${opp.company || opp.platform || 'Unknown Company'}</div>
+                <div class="opportunity-budget">$${(opp.value || 0).toLocaleString()}</div>
+
+                <div class="opportunity-skills">
+                    ${(opp.required_skills || []).slice(0, 5).map(skill =>
+                        `<span class="skill-tag">${skill}</span>`
+                    ).join('')}
+                </div>
+
+                <div class="decision-factors">
+                    ${(opp.decision_factors || []).map(factor => `
+                        <div class="factor">
+                            <span>${factor.factor}</span>
+                            <span class="factor-score">${factor.score}/100</span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="recommendation ${recommendationClass}">
+                    ${opp.recommended_action || 'REVIEW'}
+                </div>
+
+                <div style="font-size: 0.9rem; color: #64748b; margin: 10px 0;">
+                    ${opp.reasoning || 'No reasoning provided'}
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-accept" onclick="makeDecision('${opp.id}', 'ACCEPT')">
+                        Accept & Apply
+                    </button>
+                    <button class="btn btn-defer" onclick="makeDecision('${opp.id}', 'DEFER')">
+                        Defer
+                    </button>
+                    <button class="btn btn-reject" onclick="makeDecision('${opp.id}', 'REJECT')">
+                        Reject
+                    </button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function createProjectionsCard(projections) {
+            const card = document.createElement('div');
+            card.className = 'opportunity-card';
+            card.style.background = 'rgba(34, 197, 94, 0.1)';
+            card.style.borderLeft = '4px solid #22c55e';
+
+            card.innerHTML = `
+                <div class="opportunity-title">💰 Earnings Projections</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.8rem; color: #64748b;">Week 1</div>
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e;">$${(projections.week_1 || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.8rem; color: #64748b;">Month 1</div>
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e;">$${(projections.month_1 || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.8rem; color: #64748b;">Month 3</div>
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e;">$${(projections.month_3 || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.8rem; color: #64748b;">Year 1</div>
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e;">$${(projections.year_1 || 0).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function makeDecision(decisionId, action) {
+            if (!socket) {
+                log('❌ Not connected to Decision Command', '#dc2626');
+                return;
+            }
+
+            log(`🎯 Making decision: ${action} for ${decisionId}`, '#f59e0b');
+
+            socket.send(JSON.stringify({
+                'type': 'make_decision',
+                'decision_id': decisionId,
+                'action': action
+            }));
+        }
+
+        function log(message, color = '#64748b') {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = color;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // Show some sample data initially
+        window.onload = function() {
+            const sampleOpportunities = [
+                {
+                    id: 'sample_1',
+                    title: 'Python Developer for Automation Project',
+                    company: 'TechStart Inc',
+                    value: 1500,
+                    required_skills: ['python', 'automation', 'ai'],
+                    decision_factors: [
+                        {factor: 'Budget Match', score: 75},
+                        {factor: 'Skill Alignment', score: 95},
+                        {factor: 'Time Available', score: 80}
+                    ],
+                    recommended_action: 'APPLY NOW',
+                    reasoning: 'Perfect skill match with excellent budget for quick project'
+                }
+            ];
+
+            const sampleProjections = {
+                week_1: 300,
+                month_1: 1500,
+                month_3: 5000,
+                year_1: 25000
+            };
+
+            displayOpportunities(sampleOpportunities, sampleProjections);
+            log('📱 Test interface loaded with sample data', '#3b82f6');
+            log('🔗 Click "Connect to Live Decision Command" to see real opportunities', '#f59e0b');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Learning System - Learn Anything</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .learning-input {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 1rem;
+        }
+
+        .input-group input::placeholder, .input-group textarea::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .learn-button {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .learn-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .learn-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .learning-status {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+        }
+
+        .status-active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #45b7d1);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .learning-output {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .output-panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            text-align: center;
+        }
+
+        .knowledge-before, .knowledge-after {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 200px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .knowledge-after {
+            border: 2px solid #4ecdc4;
+        }
+
+        .insights-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights-list li {
+            background: rgba(78, 205, 196, 0.1);
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 3px solid #4ecdc4;
+        }
+
+        .cost-tracker {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .cost-value {
+            font-size: 1.5rem;
+            color: #ffd93d;
+            font-weight: bold;
+        }
+
+        .live-log {
+            background: rgba(0,0,0,0.6);
+            height: 300px;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin: 3px 0;
+            padding: 2px 0;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .log-entry.info { color: #4ecdc4; }
+        .log-entry.thinking { color: #ffd93d; }
+        .log-entry.success { color: #2ecc71; }
+        .log-entry.cost { color: #ff6b6b; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI Learning System</h1>
+        <p>Learn anything with AI agents that collect real data and build knowledge for you</p>
+    </div>
+
+    <div class="main-container">
+        <div class="learning-input">
+            <h2 style="margin-bottom: 20px; color: #4ecdc4;">What do you want to learn?</h2>
+
+            <div class="input-group">
+                <label for="learningTopic">Learning Topic</label>
+                <input type="text" id="learningTopic" placeholder="e.g., AI-proof careers in 2025, sustainable investing, remote work trends">
+            </div>
+
+            <div class="input-group">
+                <label for="learningGoal">What's your goal?</label>
+                <textarea id="learningGoal" rows="3" placeholder="e.g., I want to understand which careers will be safe from AI automation so I can plan my career transition"></textarea>
+            </div>
+
+            <div class="input-group">
+                <label for="learningDepth">Learning Depth</label>
+                <select id="learningDepth">
+                    <option value="quick">Quick Overview (5 mins, ~$0.01)</option>
+                    <option value="detailed">Detailed Analysis (15 mins, ~$0.05)</option>
+                    <option value="comprehensive">Comprehensive Study (30 mins, ~$0.10)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="outputFormat">I want to learn through:</label>
+                <select id="outputFormat">
+                    <option value="guide">Step-by-step guide</option>
+                    <option value="summary">Executive summary</option>
+                    <option value="qa">Q&A format</option>
+                    <option value="action_plan">Action plan</option>
+                </select>
+            </div>
+
+            <button class="learn-button" onclick="startLearning()">🧠 Start Learning</button>
+        </div>
+
+        <div class="learning-status" id="learningStatus">
+            <h3 style="color: #4ecdc4; margin-bottom: 10px;">Learning in Progress...</h3>
+            <div id="currentStep">Initializing AI learning system...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div style="text-align: right; font-size: 0.9rem; opacity: 0.7;">
+                Step <span id="stepNumber">0</span> of <span id="totalSteps">5</span>
+            </div>
+        </div>
+
+        <div class="learning-output hidden" id="learningOutput">
+            <div class="output-panel">
+                <h3 class="panel-title">📚 Knowledge Before Learning</h3>
+                <div class="knowledge-before" id="knowledgeBefore">
+                    Baseline knowledge will appear here...
+                </div>
+
+                <h3 class="panel-title">🧠 Enhanced Knowledge</h3>
+                <div class="knowledge-after" id="knowledgeAfter">
+                    Enhanced knowledge will appear here...
+                </div>
+            </div>
+
+            <div class="output-panel">
+                <h3 class="panel-title">💡 Key Insights Learned</h3>
+                <ul class="insights-list" id="insightsList">
+                    <!-- Insights will be added here -->
+                </ul>
+
+                <h3 class="panel-title">📊 Learning Metrics</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #4ecdc4;" id="sourcesUsed">0</div>
+                        <div style="font-size: 0.9rem;">Data Sources</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #4ecdc4;" id="tokensUsed">0</div>
+                        <div style="font-size: 0.9rem;">API Tokens</div>
+                    </div>
+                </div>
+
+                <div class="cost-tracker">
+                    <div>Learning Cost</div>
+                    <div class="cost-value" id="totalCost">$0.000</div>
+                    <div style="font-size: 0.8rem; margin-top: 5px;">Real AI processing cost</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="live-log" id="liveLog">
+            <div class="log-entry info">🚀 AI Learning System ready</div>
+            <div class="log-entry info">💡 Enter a topic above to start learning</div>
+        </div>
+    </div>
+
+    <script>
+        let learningInProgress = false;
+        let totalTokens = 0;
+        let currentStep = 0;
+        let totalSteps = 5;
+
+        function addLogEntry(message, type = 'info') {
+            const log = document.getElementById('liveLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateProgress(step, message) {
+            currentStep = step;
+            document.getElementById('stepNumber').textContent = step;
+            document.getElementById('currentStep').textContent = message;
+
+            const progress = (step / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+        }
+
+        async function startLearning() {
+            const topic = document.getElementById('learningTopic').value.trim();
+            const goal = document.getElementById('learningGoal').value.trim();
+            const depth = document.getElementById('learningDepth').value;
+            const format = document.getElementById('outputFormat').value;
+
+            if (!topic) {
+                alert('Please enter a learning topic');
+                return;
+            }
+
+            if (learningInProgress) {
+                return;
+            }
+
+            learningInProgress = true;
+            document.querySelector('.learn-button').disabled = true;
+            document.getElementById('learningStatus').classList.add('status-active');
+            document.getElementById('learningOutput').classList.remove('hidden');
+
+            // Reset
+            totalTokens = 0;
+            currentStep = 0;
+            document.getElementById('insightsList').innerHTML = '';
+
+            addLogEntry(`🎯 Starting to learn about: ${topic}`, 'info');
+            addLogEntry(`📋 Goal: ${goal || 'General understanding'}`, 'info');
+            addLogEntry(`⚙️ Depth: ${depth}, Format: ${format}`, 'info');
+
+            try {
+                // Step 1: Baseline Assessment
+                updateProgress(1, 'Getting baseline knowledge...');
+                addLogEntry('🤖 AI agent assessing current knowledge...', 'thinking');
+
+                const baselineKnowledge = await getBaselineKnowledge(topic);
+                document.getElementById('knowledgeBefore').textContent = baselineKnowledge.content;
+                totalTokens += baselineKnowledge.tokens;
+                updateCost();
+
+                addLogEntry(`✅ Baseline complete (${baselineKnowledge.tokens} tokens)`, 'success');
+
+                // Step 2: Data Collection
+                updateProgress(2, 'Collecting current data...');
+                addLogEntry('🕷️ Deploying spiders to gather real-time data...', 'thinking');
+
+                const spiderData = await collectSpiderData(topic);
+                document.getElementById('sourcesUsed').textContent = spiderData.sources;
+                addLogEntry(`✅ Collected ${spiderData.sources} data sources`, 'success');
+
+                // Step 3: Agent Analysis
+                updateProgress(3, 'AI agents analyzing data...');
+                addLogEntry('🧠 AI agents processing and analyzing collected data...', 'thinking');
+
+                const analysis = await analyzeWithAgents(topic, goal, spiderData.data);
+                totalTokens += analysis.tokens;
+                updateCost();
+                addLogEntry(`✅ Analysis complete (${analysis.tokens} tokens)`, 'success');
+
+                // Step 4: Knowledge Synthesis
+                updateProgress(4, 'Synthesizing insights...');
+                addLogEntry('📝 Creating personalized learning content...', 'thinking');
+
+                const synthesis = await synthesizeKnowledge(topic, goal, format, baselineKnowledge.content, analysis.insights);
+                document.getElementById('knowledgeAfter').textContent = synthesis.content;
+                totalTokens += synthesis.tokens;
+                updateCost();
+
+                // Add insights
+                const insightsList = document.getElementById('insightsList');
+                synthesis.insights.forEach(insight => {
+                    const li = document.createElement('li');
+                    li.textContent = insight;
+                    insightsList.appendChild(li);
+                });
+
+                addLogEntry(`✅ Knowledge synthesis complete (${synthesis.tokens} tokens)`, 'success');
+
+                // Step 5: Complete
+                updateProgress(5, 'Learning complete!');
+                addLogEntry('🎉 Learning session complete!', 'success');
+                addLogEntry(`💰 Total cost: $${(totalTokens / 1000000 * 0.375).toFixed(6)}`, 'cost');
+
+            } catch (error) {
+                addLogEntry(`❌ Error: ${error.message}`, 'cost');
+                console.error('Learning error:', error);
+            } finally {
+                learningInProgress = false;
+                document.querySelector('.learn-button').disabled = false;
+            }
+        }
+
+        function updateCost() {
+            const cost = (totalTokens / 1000000) * 0.375;
+            document.getElementById('totalCost').textContent = `$${cost.toFixed(6)}`;
+            document.getElementById('tokensUsed').textContent = totalTokens.toLocaleString();
+        }
+
+        // Real API calls to the learning system
+        async function getBaselineKnowledge(topic) {
+            const response = await fetch('/api/learning/baseline/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ topic })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get baseline knowledge');
+            }
+
+            return await response.json();
+        }
+
+        async function collectSpiderData(topic) {
+            const response = await fetch('/api/learning/collect/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ topic })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to collect data');
+            }
+
+            return await response.json();
+        }
+
+        async function analyzeWithAgents(topic, goal, data) {
+            const response = await fetch('/api/learning/analyze/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ topic, goal, data })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to analyze data');
+            }
+
+            return await response.json();
+        }
+
+        async function synthesizeKnowledge(topic, goal, format, baseline, insights) {
+            const response = await fetch('/api/learning/synthesize/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ topic, goal, format, baseline, insights })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to synthesize knowledge');
+            }
+
+            return await response.json();
+        }
+
+        function getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        // Add some example topics
+        const exampleTopics = [
+            "AI-proof careers in 2025",
+            "Sustainable investing strategies",
+            "Remote work productivity tips",
+            "Cryptocurrency market trends",
+            "Healthy meal prep ideas",
+            "Digital marketing for small business"
+        ];
+
+        document.getElementById('learningTopic').addEventListener('focus', function() {
+            if (!this.value) {
+                const randomTopic = exampleTopics[Math.floor(Math.random() * exampleTopics.length)];
+                this.placeholder = `e.g., ${randomTopic}`;
+            }
+        });
+    </script>
+</body>
+</html>
