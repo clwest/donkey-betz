@@ -22,6 +22,16 @@ from core.intelligence_api import (
 # Import AI Training dashboard view
 from core.views_ai_training import ai_job_market_dashboard
 
+# Import agent dashboard views
+from core.views_agent_dashboard import (
+    agent_learning_data,
+    agent_collaboration_data,
+    agent_costs_data,
+    system_health_data,
+    learning_feed_data,
+    all_agents_list
+)
+
 # Import opportunity aggregator
 from backend.api.opportunity_aggregator import get_opportunities, get_actionable
 # Import real opportunities API
@@ -642,6 +652,14 @@ urlpatterns = [
     path('api/dashboard/health/', dashboard_health_data, name='dashboard-health-data'),
     path('api/dashboard/feed/', dashboard_feed_data, name='dashboard-feed-data'),
     path('api/dashboard/verification/', dashboard_verification_data, name='dashboard-verification-data'),
+
+    # Real agent dashboard endpoints with database data
+    path('api/agent-dashboard/learning/', agent_learning_data, name='agent-dashboard-learning'),
+    path('api/agent-dashboard/collaboration/', agent_collaboration_data, name='agent-dashboard-collaboration'),
+    path('api/agent-dashboard/costs/', agent_costs_data, name='agent-dashboard-costs'),
+    path('api/agent-dashboard/health/', system_health_data, name='agent-dashboard-health'),
+    path('api/agent-dashboard/feed/', learning_feed_data, name='agent-dashboard-feed'),
+    path('api/agent-dashboard/agents/', all_agents_list, name='agent-dashboard-agents'),
 
     # Agent Learning Verification API - Prove agents actually learn
     path('api/verify/start/', start_verification_session, name='verification-start'),
