@@ -470,10 +470,25 @@
     <script>
         // Three.js setup
         const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x0a0a0a, 50, 100);
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Add lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(25, 25, 25);
+        scene.add(pointLight);
+
+        const pointLight2 = new THREE.PointLight(0x667eea, 0.5);
+        pointLight2.position.set(-25, -25, -25);
+        scene.add(pointLight2);
 
         // Agent categories and colors
         const agentCategories = {
@@ -482,6 +497,37 @@
             business: { color: 0x4ecdc4, agents: 35 },
             analytics: { color: 0xffd93d, agents: 24 }
         };
+
+        // Spider types (40 total)
+        const spiderTypes = [
+            'Job Opportunity Spider', 'Finance Monitor Spider', 'Content Discovery Spider',
+            'Market Intelligence Spider', 'Lead Generation Spider', 'Research Paper Spider',
+            'Investment Tracker Spider', 'Freelance Hunter Spider', 'News Aggregator Spider',
+            'Social Media Spider', 'E-commerce Spider', 'Real Estate Spider',
+            'Crypto Market Spider', 'Stock Analysis Spider', 'Patent Search Spider',
+            'Academic Research Spider', 'GitHub Trends Spider', 'Product Hunt Spider',
+            'Reddit Insights Spider', 'LinkedIn Jobs Spider', 'Indeed Scraper Spider',
+            'Upwork Monitor Spider', 'Fiverr Gigs Spider', 'Angel List Spider',
+            'TechCrunch Spider', 'Hacker News Spider', 'Stack Overflow Spider',
+            'Medium Articles Spider', 'YouTube Trends Spider', 'Twitter Trends Spider',
+            'Instagram Hashtag Spider', 'TikTok Viral Spider', 'Pinterest Trends Spider',
+            'Etsy Market Spider', 'Amazon Reviews Spider', 'eBay Deals Spider',
+            'Alibaba Sourcing Spider', 'Weather Data Spider', 'Sports Odds Spider',
+            'Event Tracker Spider'
+        ];
+
+        // Tools and APIs
+        const toolsAPIs = [
+            { name: 'OpenAI API', color: 0x00ff00, position: { x: -30, y: 20, z: 0 } },
+            { name: 'Web Search', color: 0x0088ff, position: { x: -30, y: 15, z: 0 } },
+            { name: 'ArXiv Search', color: 0xff8800, position: { x: -30, y: 10, z: 0 } },
+            { name: 'Reddit API', color: 0xff4500, position: { x: -30, y: 5, z: 0 } },
+            { name: 'News API', color: 0x888888, position: { x: -30, y: 0, z: 0 } },
+            { name: 'Wikipedia', color: 0xffffff, position: { x: -30, y: -5, z: 0 } },
+            { name: 'ML Models', color: 0x9932cc, position: { x: -30, y: -10, z: 0 } },
+            { name: 'Database', color: 0x228b22, position: { x: -30, y: -15, z: 0 } },
+            { name: 'Redis Cache', color: 0xdc143c, position: { x: -30, y: -20, z: 0 } }
+        ];
 
         // Create agents as nodes
         const agents = [];
@@ -500,26 +546,113 @@
             'Contract Negotiator', 'Legal Advisor', 'HR Specialist', 'Project Manager'
         ];
 
-        // Create agent nodes
-        Object.entries(agentCategories).forEach(([category, config]) => {
-            const geometry = new THREE.SphereGeometry(0.3, 32, 16);
-            const material = new THREE.MeshBasicMaterial({
-                color: config.color,
+        // Create spider nodes (smaller, red, orbiting around edges)
+        const spiderMeshes = [];
+        const spiderGeometry = new THREE.SphereGeometry(0.2, 16, 8);
+        const spiderMaterial = new THREE.MeshPhongMaterial({
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.7
+        });
+
+        spiderTypes.forEach((spiderName, index) => {
+            const mesh = new THREE.Mesh(spiderGeometry.clone(), spiderMaterial.clone());
+
+            // Position spiders in outer ring
+            const angle = (index / spiderTypes.length) * Math.PI * 2;
+            const radius = 25;
+            mesh.position.x = radius * Math.cos(angle);
+            mesh.position.z = radius * Math.sin(angle);
+            mesh.position.y = Math.sin(angle * 3) * 5;
+
+            mesh.userData = {
+                type: 'spider',
+                name: spiderName,
+                dataCollected: Math.floor(Math.random() * 1000)
+            };
+
+            scene.add(mesh);
+            spiderMeshes.push(mesh);
+        });
+
+        // Create tool/API indicators (glowing cubes on the side)
+        const toolMeshes = [];
+        const toolGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+        toolsAPIs.forEach(tool => {
+            const material = new THREE.MeshPhongMaterial({
+                color: tool.color,
+                emissive: tool.color,
+                emissiveIntensity: 0.2,
                 transparent: true,
-                opacity: 0.8
+                opacity: 0.6
             });
 
-            for (let i = 0; i < config.agents; i++) {
-                const mesh = new THREE.Mesh(geometry.clone(), material.clone());
+            const mesh = new THREE.Mesh(toolGeometry, material);
+            mesh.position.set(tool.position.x, tool.position.y, tool.position.z);
+            mesh.userData = {
+                type: 'tool',
+                name: tool.name,
+                active: false
+            };
 
-                // Random positioning in 3D space
-                const radius = 15;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.random() * Math.PI;
+            scene.add(mesh);
+            toolMeshes.push(mesh);
+
+            // Add text label (using sprite)
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            context.font = 'Bold 20px Arial';
+            context.fillStyle = 'white';
+            context.fillText(tool.name, 10, 40);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(tool.position.x + 3, tool.position.y, tool.position.z);
+            sprite.scale.set(8, 2, 1);
+            scene.add(sprite);
+        });
+
+        // Store original positions for network view
+        const originalPositions = [];
+
+        // Create agent nodes
+        Object.entries(agentCategories).forEach(([category, config], categoryIndex) => {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 16);
+
+            for (let i = 0; i < config.agents; i++) {
+                // Create unique material for each agent
+                const material = new THREE.MeshPhongMaterial({
+                    color: config.color,
+                    emissive: config.color,
+                    emissiveIntensity: 0.3,
+                    shininess: 100,
+                    transparent: true,
+                    opacity: 0.9
+                });
+
+                const mesh = new THREE.Mesh(geometry.clone(), material);
+
+                // Better distributed positioning
+                const radius = 12 + Math.random() * 8; // Vary radius
+                const theta = (i / config.agents) * Math.PI * 2 + (categoryIndex * Math.PI / 2);
+                const phi = (Math.random() * 0.6 + 0.2) * Math.PI;
 
                 mesh.position.x = radius * Math.sin(phi) * Math.cos(theta);
-                mesh.position.y = radius * Math.sin(phi) * Math.sin(theta);
-                mesh.position.z = radius * Math.cos(phi);
+                mesh.position.y = (Math.random() - 0.5) * 10; // Spread vertically
+                mesh.position.z = radius * Math.sin(phi) * Math.sin(theta);
+
+                // Store original position
+                originalPositions.push({
+                    x: mesh.position.x,
+                    y: mesh.position.y,
+                    z: mesh.position.z
+                });
 
                 // Store agent data
                 mesh.userData = {
@@ -528,7 +661,8 @@
                     category: category,
                     connections: [],
                     knowledge: Math.random() * 100,
-                    solutions: Math.floor(Math.random() * 200)
+                    solutions: Math.floor(Math.random() * 200),
+                    originalIndex: agentMeshes.length // Store index for position restoration
                 };
 
                 scene.add(mesh);
@@ -640,6 +774,85 @@
             }, 1000);
         }
 
+        // Spider data collection animation
+        function animateSpiderCollection() {
+            const spider = spiderMeshes[Math.floor(Math.random() * spiderMeshes.length)];
+            const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
+
+            // Create data packet (small sphere traveling from spider to agent)
+            const packetGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const packetMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                emissive: 0xff0000,
+                transparent: true,
+                opacity: 0.8
+            });
+            const packet = new THREE.Mesh(packetGeometry, packetMaterial);
+            packet.position.copy(spider.position);
+            scene.add(packet);
+
+            // Animate packet traveling to agent
+            const startPos = spider.position.clone();
+            const endPos = agent.position.clone();
+            let progress = 0;
+
+            const animatePacket = () => {
+                progress += 0.02;
+                if (progress <= 1) {
+                    packet.position.lerpVectors(startPos, endPos, progress);
+                    requestAnimationFrame(animatePacket);
+                } else {
+                    scene.remove(packet);
+                    // Agent processes data
+                    agent.material.emissive = new THREE.Color(0xff4444);
+                    setTimeout(() => {
+                        agent.material.emissive = agent.material.color;
+                    }, 500);
+                }
+            };
+            animatePacket();
+
+            // Make spider pulse
+            spider.material.emissive = new THREE.Color(0xffff00);
+            setTimeout(() => {
+                spider.material.emissive = new THREE.Color(0xff0000);
+            }, 500);
+        }
+
+        // Tool/API activation animation
+        function activateTool() {
+            const tool = toolMeshes[Math.floor(Math.random() * toolMeshes.length)];
+            const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
+
+            // Create beam from agent to tool
+            const beamGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
+            const beamMaterial = new THREE.MeshBasicMaterial({
+                color: tool.material.color,
+                transparent: true,
+                opacity: 0.8
+            });
+            const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+
+            // Position and orient beam
+            const distance = agent.position.distanceTo(tool.position);
+            beam.scale.y = distance;
+            beam.position.lerpVectors(agent.position, tool.position, 0.5);
+            beam.lookAt(tool.position);
+            beam.rotateX(Math.PI / 2);
+
+            scene.add(beam);
+
+            // Tool glows
+            tool.material.emissive = tool.material.color;
+            tool.scale.set(1.5, 1.5, 1.5);
+
+            setTimeout(() => {
+                scene.remove(beam);
+                tool.material.emissive = new THREE.Color(0x000000);
+                tool.scale.set(1, 1, 1);
+            }, 1000);
+        }
+
         // Update stats
         function updateStats() {
             const knowledgeElement = document.getElementById('knowledgeTransfers');
@@ -708,25 +921,39 @@
         }, 3000 + Math.random() * 2000);
 
         // Control functions
+        let currentView = 'network';
+
         function toggleView(view) {
             document.querySelectorAll('.control-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
+            currentView = view;
 
             // Rearrange agents based on view
-            if (view === 'clusters') {
+            if (view === 'network') {
+                // Restore original network positions
+                agentMeshes.forEach((mesh, index) => {
+                    const originalPos = originalPositions[index];
+                    if (originalPos) {
+                        mesh.position.x = originalPos.x;
+                        mesh.position.y = originalPos.y;
+                        mesh.position.z = originalPos.z;
+                    }
+                });
+            } else if (view === 'clusters') {
                 // Group by category
-                let offset = 0;
+                let offset = -20;
                 Object.entries(agentCategories).forEach(([category, config]) => {
-                    agentMeshes.filter(mesh => mesh.userData.category === category).forEach((mesh, index) => {
-                        const angle = (index / config.agents) * Math.PI * 2;
-                        const radius = 5;
+                    const categoryMeshes = agentMeshes.filter(mesh => mesh.userData.category === category);
+                    categoryMeshes.forEach((mesh, index) => {
+                        const angle = (index / categoryMeshes.length) * Math.PI * 2;
+                        const radius = 6;
                         mesh.position.x = offset + radius * Math.cos(angle);
                         mesh.position.z = radius * Math.sin(angle);
                         mesh.position.y = 0;
                     });
-                    offset += 15;
+                    offset += 12;
                 });
             } else if (view === 'flow') {
                 // Arrange in flow pattern
