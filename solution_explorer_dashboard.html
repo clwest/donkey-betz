@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Solution Explorer | Agent Intelligence Platform</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --primary-purple: #8b5cf6;
+            --success-green: #22c55e;
+            --warning-orange: #f59e0b;
+            --danger-red: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: rgba(59, 130, 246, 0.3);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background: rgba(30, 41, 59, 0.9);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            background: linear-gradient(45deg, var(--primary-blue), var(--primary-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 30px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-blue);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .search-section {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .filter-select {
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        .solutions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .solution-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .solution-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(59, 130, 246, 0.3);
+            border-color: var(--primary-blue);
+        }
+
+        .solution-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .solution-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 5px;
+        }
+
+        .solution-agent {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .solution-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid var(--primary-purple);
+            border-radius: 15px;
+            font-size: 0.8rem;
+            color: var(--primary-purple);
+        }
+
+        .solution-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .solution-code {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+
+        .solution-metrics {
+            display: flex;
+            gap: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .metric {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .metric-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-blue);
+        }
+
+        .data-flow-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .flow-arrow {
+            color: var(--primary-blue);
+            font-size: 1.2rem;
+        }
+
+        .apply-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, var(--primary-blue), var(--primary-purple));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .apply-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 4px solid var(--card-bg);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .page-button {
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-button:hover:not(:disabled) {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .page-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-button.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>🔍 Solution Explorer</h1>
+                <span style="color: var(--text-secondary);">Browse and Apply Agent Solutions</span>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalSolutions">0</div>
+                    <div class="stat-label">Total Solutions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activeAgents">0</div>
+                    <div class="stat-label">Active Agents</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="successRate">0%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-section">
+        <div class="search-controls">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search solutions by title, description, or agent...">
+            <select class="filter-select" id="typeFilter">
+                <option value="">All Types</option>
+                <option value="optimization">Optimization</option>
+                <option value="analysis">Analysis</option>
+                <option value="automation">Automation</option>
+                <option value="strategy">Strategy</option>
+            </select>
+            <select class="filter-select" id="sortBy">
+                <option value="-created_at">Newest First</option>
+                <option value="created_at">Oldest First</option>
+                <option value="-success_rate">Highest Success</option>
+                <option value="-times_used">Most Used</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="solutions-container" id="solutionsContainer">
+            <div class="loading-spinner" id="loadingSpinner"></div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-card">
+                <div class="sidebar-title">🌊 Data Flow Pipeline</div>
+                <div id="dataFlowContainer"></div>
+            </div>
+
+            <div class="sidebar-card">
+                <div class="sidebar-title">📈 Learning Progress</div>
+                <canvas id="progressChart"></canvas>
+            </div>
+
+            <div class="sidebar-card">
+                <div class="sidebar-title">🎯 Quick Actions</div>
+                <button class="apply-button" onclick="personalizeExperience()">
+                    Personalize My Learning
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+
+    <!-- Solution Detail Modal -->
+    <div class="modal" id="solutionModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeSolutionModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchTimeout = null;
+        let progressChart = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSolutions();
+            loadDataFlow();
+            loadLearningProgress();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentPage = 1;
+                    loadSolutions();
+                }, 500);
+            });
+
+            document.getElementById('typeFilter').addEventListener('change', () => {
+                currentPage = 1;
+                loadSolutions();
+            });
+
+            document.getElementById('sortBy').addEventListener('change', () => {
+                currentPage = 1;
+                loadSolutions();
+            });
+        }
+
+        async function loadSolutions() {
+            const searchInput = document.getElementById('searchInput').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            const params = new URLSearchParams({
+                page: currentPage,
+                page_size: 10,
+                search: searchInput,
+                sort: sortBy
+            });
+
+            if (typeFilter) params.append('type', typeFilter);
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/solutions/?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySolutions(data.solutions);
+                    updatePagination(data.pagination);
+                    updateStats(data.pagination.total_count);
+                }
+            } catch (error) {
+                console.error('Error loading solutions:', error);
+                showError('Failed to load solutions');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displaySolutions(solutions) {
+            const container = document.getElementById('solutionsContainer');
+
+            if (solutions.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">No solutions found</div>';
+                return;
+            }
+
+            container.innerHTML = solutions.map(solution => `
+                <div class="solution-card" onclick="showSolutionDetail('${solution.id}')">
+                    <div class="solution-header">
+                        <div>
+                            <div class="solution-title">${solution.title}</div>
+                            <div class="solution-agent">
+                                <span>🤖</span>
+                                <span>${solution.agent.name} - ${solution.agent.specialty}</span>
+                            </div>
+                        </div>
+                        <span class="solution-type">${solution.solution_type}</span>
+                    </div>
+                    <div class="solution-description">
+                        ${solution.description.substring(0, 200)}${solution.description.length > 200 ? '...' : ''}
+                    </div>
+                    ${solution.code_snippet ? `
+                        <div class="solution-code">
+                            <pre><code class="language-${solution.language || 'python'}">${escapeHtml(solution.code_snippet.substring(0, 200))}${solution.code_snippet.length > 200 ? '...' : ''}</code></pre>
+                        </div>
+                    ` : ''}
+                    <div class="solution-metrics">
+                        <div class="metric">
+                            <span>📊</span>
+                            <span>Success: ${Math.round(solution.success_rate)}%</span>
+                        </div>
+                        <div class="metric">
+                            <span>🔄</span>
+                            <span>Used ${solution.times_used} times</span>
+                        </div>
+                        <div class="metric">
+                            <span>🏷️</span>
+                            <span>${solution.tags.slice(0, 3).join(', ')}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Re-initialize syntax highlighting
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        }
+
+        async function showSolutionDetail(solutionId) {
+            try {
+                const response = await fetch(`http://localhost:8000/api/solutions/${solutionId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const modal = document.getElementById('solutionModal');
+                    const modalContent = document.getElementById('modalContent');
+
+                    modalContent.innerHTML = `
+                        <h2 style="color: var(--primary-blue); margin-bottom: 20px;">${data.solution.title}</h2>
+
+                        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                            <span class="solution-type">${data.solution.solution_type}</span>
+                            <span style="color: var(--text-secondary);">by ${data.solution.agent.name}</span>
+                        </div>
+
+                        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;">
+                            ${data.solution.description}
+                        </p>
+
+                        ${data.solution.code_snippet ? `
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 10px;">Implementation</h3>
+                                <div class="solution-code">
+                                    <pre><code class="language-${data.solution.language || 'python'}">${escapeHtml(data.solution.code_snippet)}</code></pre>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${data.learning_paths.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 10px;">Learning Paths</h3>
+                                ${data.learning_paths.map(path => `
+                                    <div class="data-flow-item">
+                                        <span>👨‍🏫 ${path.teacher}</span>
+                                        <span class="flow-arrow">→</span>
+                                        <span>👨‍🎓 ${path.student}</span>
+                                        <span style="color: var(--text-secondary); margin-left: 10px;">${path.topic}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${data.spider_sources.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 10px;">Data Sources</h3>
+                                ${data.spider_sources.map(spider => `
+                                    <div class="data-flow-item">
+                                        <span>🕷️ ${spider.spider_name}</span>
+                                        <span style="color: var(--text-secondary); margin-left: 10px;">${spider.data_type}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <button class="apply-button" onclick="applySolution('${solutionId}')">
+                            Apply This Solution
+                        </button>
+                    `;
+
+                    modal.style.display = 'flex';
+                    if (window.Prism) {
+                        Prism.highlightAll();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading solution detail:', error);
+            }
+        }
+
+        async function applySolution(solutionId) {
+            const context = {
+                user_id: 'current_user',
+                timestamp: new Date().toISOString(),
+                parameters: {}
+            };
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/solutions/${solutionId}/apply/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ context })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Solution applied successfully!\n\nNext steps:\n${data.next_steps.join('\n')}`);
+                    closeSolutionModal();
+                    loadSolutions(); // Refresh to show updated usage count
+                }
+            } catch (error) {
+                console.error('Error applying solution:', error);
+                alert('Failed to apply solution');
+            }
+        }
+
+        function closeSolutionModal() {
+            document.getElementById('solutionModal').style.display = 'none';
+        }
+
+        async function loadDataFlow() {
+            try {
+                const response = await fetch('http://localhost:8000/api/learning/data-flow/');
+                const data = await response.json();
+
+                if (data.success) {
+                    const container = document.getElementById('dataFlowContainer');
+
+                    if (data.flows.length === 0) {
+                        container.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No recent data flows</div>';
+                        return;
+                    }
+
+                    container.innerHTML = data.flows.slice(0, 3).map(flow => `
+                        <div style="margin-bottom: 15px; padding: 10px; background: rgba(59, 130, 246, 0.05); border-radius: 8px;">
+                            <div class="data-flow-item">
+                                <span>🕷️ ${flow.spider.name}</span>
+                            </div>
+                            <div style="text-align: center; color: var(--primary-blue);">↓</div>
+                            <div class="data-flow-item">
+                                <span>🤖 ${flow.agents[0]?.name || 'Processing'}</span>
+                            </div>
+                            <div style="text-align: center; color: var(--primary-blue);">↓</div>
+                            <div class="data-flow-item">
+                                <span>💡 ${flow.solutions[0]?.title || 'Solution'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading data flow:', error);
+            }
+        }
+
+        async function loadLearningProgress() {
+            try {
+                const response = await fetch('http://localhost:8000/api/learning/progress/?days=7');
+                const data = await response.json();
+
+                if (data.success) {
+                    const ctx = document.getElementById('progressChart').getContext('2d');
+
+                    if (progressChart) {
+                        progressChart.destroy();
+                    }
+
+                    progressChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.progress.map(p => p.date.split('-').slice(1).join('/')),
+                            datasets: [
+                                {
+                                    label: 'Solutions Created',
+                                    data: data.progress.map(p => p.solutions_created),
+                                    borderColor: '#3b82f6',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    tension: 0.4
+                                },
+                                {
+                                    label: 'Learning Events',
+                                    data: data.progress.map(p => p.learning_events),
+                                    borderColor: '#8b5cf6',
+                                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                    tension: 0.4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    labels: {
+                                        color: '#94a3b8'
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(148, 163, 184, 0.1)'
+                                    },
+                                    ticks: {
+                                        color: '#94a3b8'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        color: 'rgba(148, 163, 184, 0.1)'
+                                    },
+                                    ticks: {
+                                        color: '#94a3b8'
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Update success rate
+                    const successRate = data.summary.avg_success_rate || 0;
+                    document.getElementById('successRate').textContent = `${Math.round(successRate)}%`;
+                }
+            } catch (error) {
+                console.error('Error loading learning progress:', error);
+            }
+        }
+
+        async function personalizeExperience() {
+            const interests = prompt('What are your interests? (comma-separated)');
+            const skills = prompt('What are your skills? (comma-separated)');
+            const goals = prompt('What are your goals? (comma-separated)');
+
+            if (!interests || !skills || !goals) return;
+
+            try {
+                const response = await fetch('http://localhost:8000/api/learning/personalize/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        interests: interests.split(',').map(i => i.trim()),
+                        skills: skills.split(',').map(s => s.trim()),
+                        goals: goals.split(',').map(g => g.trim())
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Personalization complete!\n\nRecommended agents: ${data.personalized.recommended_agents.length}\nRelevant solutions: ${data.personalized.recommended_solutions.length}`);
+                    currentPage = 1;
+                    loadSolutions();
+                }
+            } catch (error) {
+                console.error('Error personalizing:', error);
+            }
+        }
+
+        function updatePagination(pagination) {
+            totalPages = pagination.total_pages;
+            const paginationDiv = document.getElementById('pagination');
+
+            let html = '';
+
+            if (pagination.has_previous) {
+                html += `<button class="page-button" onclick="goToPage(${currentPage - 1})">Previous</button>`;
+            }
+
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                html += `<button class="page-button ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+
+            if (pagination.has_next) {
+                html += `<button class="page-button" onclick="goToPage(${currentPage + 1})">Next</button>`;
+            }
+
+            paginationDiv.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadSolutions();
+        }
+
+        function updateStats(totalCount) {
+            document.getElementById('totalSolutions').textContent = totalCount;
+            // Active agents would come from a separate endpoint
+            fetch('http://localhost:8000/api/agent-dashboard/agents/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.agents) {
+                        document.getElementById('activeAgents').textContent = data.agents.filter(a => a.is_active).length;
+                    }
+                });
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const container = document.getElementById('solutionsContainer');
+            container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--danger-red);">${message}</div>`;
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>

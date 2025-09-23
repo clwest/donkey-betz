@@ -243,6 +243,11 @@ from core.views_profile_management import (
 from core.views_job_application_system import (
     JobOpportunityView, QuickApplyView, ApplicationStatusView
 )
+# Import AI Ecosystem views
+from core.views_ai_ecosystem import (
+    get_ecosystem_stats, get_live_learning_feed,
+    get_agent_network, trigger_learning_event
+)
 # Import enhanced agent execution views
 from core import views_agent_execution
 from core import views_categorized_opportunities
@@ -701,6 +706,22 @@ urlpatterns = [
     path('api/learning/feed/', get_learning_feed, name='learning-feed'),
     path('api/agents/<str:agent_name>/solutions/recent/', get_agent_solutions_recent, name='agent-solutions-recent'),
 
+    # Solution Explorer and Learning Pipeline APIs
+    path('api/solutions/', lambda r: __import__('core.views_solution_explorer', fromlist=['get_solutions']).get_solutions(r), name='solutions-list'),
+    path('api/solutions/<str:solution_id>/', lambda r, solution_id: __import__('core.views_solution_explorer', fromlist=['get_solution_detail']).get_solution_detail(r, solution_id), name='solution-detail'),
+    path('api/solutions/<str:solution_id>/apply/', lambda r, solution_id: __import__('core.views_solution_explorer', fromlist=['apply_solution']).apply_solution(r, solution_id), name='apply-solution'),
+    path('api/learning/data-flow/', lambda r: __import__('core.views_solution_explorer', fromlist=['get_data_flow']).get_data_flow(r), name='learning-data-flow'),
+    path('api/learning/progress/', lambda r: __import__('core.views_solution_explorer', fromlist=['get_learning_progress']).get_learning_progress(r), name='learning-progress'),
+    path('api/learning/personalize/', lambda r: __import__('core.views_solution_explorer', fromlist=['personalize_learning']).personalize_learning(r), name='personalize-learning'),
+
+    # Learning Journey APIs - Interactive learning paths with progress tracking
+    path('api/journey/start/', lambda r: __import__('core.views_learning_journey', fromlist=['start_learning_journey']).start_learning_journey(r), name='journey-start'),
+    path('api/journey/<str:journey_id>/status/', lambda r, journey_id: __import__('core.views_learning_journey', fromlist=['get_journey_status']).get_journey_status(r, journey_id), name='journey-status'),
+    path('api/journey/<str:journey_id>/step/<int:step_id>/start/', lambda r, journey_id, step_id: __import__('core.views_learning_journey', fromlist=['start_journey_step']).start_journey_step(r, journey_id, step_id), name='journey-step-start'),
+    path('api/journey/<str:journey_id>/step/<int:step_id>/complete/', lambda r, journey_id, step_id: __import__('core.views_learning_journey', fromlist=['complete_journey_step']).complete_journey_step(r, journey_id, step_id), name='journey-step-complete'),
+    path('api/journey/active/', lambda r: __import__('core.views_learning_journey', fromlist=['get_active_journeys']).get_active_journeys(r), name='journey-active'),
+    path('api/journey/<str:journey_id>/reset/', lambda r, journey_id: __import__('core.views_learning_journey', fromlist=['reset_journey']).reset_journey(r, journey_id), name='journey-reset'),
+
     # Agent Learning Verification API - Prove agents actually learn
     path('api/verify/start/', start_verification_session, name='verification-start'),
     path('api/verify/baseline/', run_baseline_test, name='verification-baseline'),
@@ -709,6 +730,12 @@ urlpatterns = [
     path('api/verify/status/', get_session_status, name='verification-status'),
     path('api/verify/sessions/', list_verification_sessions, name='verification-sessions'),
     path('api/verify/demo/', run_quick_verification_demo, name='verification-demo'),
+
+    # AI Ecosystem Visualization APIs
+    path('api/ecosystem/stats/', get_ecosystem_stats, name='ecosystem-stats'),
+    path('api/ecosystem/feed/', get_live_learning_feed, name='ecosystem-feed'),
+    path('api/ecosystem/network/', get_agent_network, name='ecosystem-network'),
+    path('api/ecosystem/trigger/', trigger_learning_event, name='ecosystem-trigger'),
     
     # Advanced Workflow Orchestration APIs (BACKUP/FALLBACK - these should NOT conflict now)
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
