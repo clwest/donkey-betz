@@ -499,6 +499,76 @@
         </div>
     </div>
 
+    <!-- Dancing Robot Orchestra Loader -->
+    <div id="dancingRobotModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 9999; backdrop-filter: blur(10px);">
+        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center;">
+            <!-- Dancing Robot -->
+            <div id="dancingRobot" style="font-size: 8em; margin-bottom: 30px; animation: robotDance 1s infinite ease-in-out;">
+                🤖
+            </div>
+
+            <!-- Orchestra Status -->
+            <div style="color: #ffd93d; font-size: 2.5em; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255, 217, 61, 0.5);">
+                🎭 REAL AGENT ORCHESTRA ACTIVE
+            </div>
+
+            <!-- Dynamic Status Text -->
+            <div id="orchestraStatus" style="color: #4ade80; font-size: 1.5em; margin-bottom: 30px; min-height: 2em;">
+                Initializing 152 agents and 25 legendary advisors...
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="width: 600px; background: rgba(255, 255, 255, 0.2); border-radius: 25px; padding: 5px; margin-bottom: 30px;">
+                <div id="orchestraProgress" style="width: 0%; height: 20px; background: linear-gradient(90deg, #ffd93d, #4ade80); border-radius: 20px; transition: width 0.3s ease; animation: progressGlow 2s infinite ease-in-out;"></div>
+            </div>
+
+            <!-- Agent Activity -->
+            <div id="agentActivity" style="color: #94a3b8; font-size: 1.2em; max-width: 800px; line-height: 1.6;">
+                🧠 Loading agent networks...
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes robotDance {
+            0%, 100% {
+                transform: rotate(-5deg) scale(1);
+            }
+            25% {
+                transform: rotate(5deg) scale(1.1);
+            }
+            50% {
+                transform: rotate(-3deg) scale(0.95);
+            }
+            75% {
+                transform: rotate(3deg) scale(1.05);
+            }
+        }
+
+        @keyframes progressGlow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 217, 61, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(74, 222, 128, 0.6);
+            }
+        }
+
+        /* More dancing robot animations */
+        @keyframes robotBounce {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        @keyframes robotSpin {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(90deg) scale(1.1); }
+            50% { transform: rotate(180deg) scale(0.9); }
+            75% { transform: rotate(270deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+    </style>
+
     <script>
         let latestCode = '';
         let currentProject = 'ecommerce';
@@ -508,10 +578,13 @@
         // Switch project
         async function switchProject() {
             const selector = document.getElementById('projectSelect');
-            const currentProject = selector.value;
+            const selectedProject = selector.value;
+
+            // Update the global currentProject variable FIRST
+            currentProject = selectedProject;
 
             // Store in sessionStorage for persistence
-            sessionStorage.setItem('activeProject', currentProject);
+            sessionStorage.setItem('activeProject', selectedProject);
 
             addActivity(`Switched to project: ${selector.options[selector.selectedIndex].text}`);
 
@@ -521,13 +594,19 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ project: currentProject })
+                    body: JSON.stringify({ project: selectedProject })
                 });
 
                 const data = await response.json();
                 if (data.success) {
                     addActivity(`✅ Project activated: ${data.name}`);
+
+                    // Update all UI components for the new project
                     fetchLatestCode();
+                    fetchProjectStats();  // Refresh stats
+
+                    // Also set window variable for compatibility
+                    window.currentProject = selectedProject;
                 }
             } catch (error) {
                 console.error('Error switching project:', error);
@@ -620,16 +699,23 @@
         // Fetch latest generated code
         async function fetchLatestCode() {
             try {
+                console.log(`Fetching latest code for project: ${currentProject}`);
                 const response = await fetch(`/api/projects/latest-code/?project=${currentProject}`);
                 const data = await response.json();
 
                 if (data.success) {
                     latestCode = data.code;
                     document.getElementById('codePreview').textContent = data.code;
-                    addActivity(`📄 Loaded: ${data.file}`);
+                    addActivity(`📄 Loaded latest code: ${data.file}`);
+                    console.log(`Successfully loaded code for ${currentProject}: ${data.file}`);
+                } else {
+                    console.log(`No latest code found for ${currentProject}:`, data);
+                    addActivity(`📄 No recent code found for ${currentProject}`);
+                    document.getElementById('codePreview').textContent = `// No recent code generated for ${currentProject}\n// Try building a new module to see code here!`;
                 }
             } catch (error) {
                 console.error('Error fetching code:', error);
+                addActivity(`❌ Error loading latest code for ${currentProject}`);
             }
         }
 
@@ -976,6 +1062,9 @@
             button.textContent = '⏳ Orchestrating Real Agents...';
             button.disabled = true;
 
+            // 🤖💃 SHOW THE DANCING ROBOT! 💃🤖
+            showDancingRobot();
+
             // Show agent info first
             await fetchRealAgents();
 
@@ -1083,6 +1172,92 @@
             } finally {
                 button.textContent = '🎭 Real Agent Orchestra';
                 button.disabled = false;
+                hideDancingRobot(); // Hide the dancing robot when done
+            }
+        }
+
+        // 🤖💃 DANCING ROBOT FUNCTIONS 💃🤖
+        function showDancingRobot() {
+            const modal = document.getElementById('dancingRobotModal');
+            const robot = document.getElementById('dancingRobot');
+            const status = document.getElementById('orchestraStatus');
+            const progress = document.getElementById('orchestraProgress');
+            const activity = document.getElementById('agentActivity');
+
+            modal.style.display = 'block';
+
+            // Animation sequence with different robot dances
+            const danceSequence = [
+                'robotDance 1s infinite ease-in-out',
+                'robotBounce 0.8s infinite ease-in-out',
+                'robotSpin 2s infinite linear',
+                'robotDance 1.2s infinite ease-in-out'
+            ];
+
+            const statusMessages = [
+                "🚀 Booting up 152 AI agents...",
+                "🧠 Loading Warren Buffett, Jeff Bezos, and 23 more advisors...",
+                "⚡ Establishing neural pathways...",
+                "🎭 Orchestrating real agent collaboration...",
+                "💡 Agents analyzing project requirements...",
+                "🔧 Generating optimized code architecture...",
+                "🌟 Creating working components...",
+                "✨ Finalizing agent symphony..."
+            ];
+
+            const activityMessages = [
+                "🔥 CodeArchitectAgent: Designing scalable structure...",
+                "💰 RevenueOptimizationAgent: Calculating profit margins...",
+                "🚀 PerformanceAgent: Optimizing for speed...",
+                "🛡️ SecurityAgent: Implementing protection layers...",
+                "📊 AnalyticsAgent: Building tracking systems...",
+                "🎨 UIDesignAgent: Crafting beautiful interfaces...",
+                "🧪 TestingAgent: Ensuring quality assurance..."
+            ];
+
+            let messageIndex = 0;
+            let danceIndex = 0;
+            let progressValue = 0;
+
+            // Update messages and progress
+            const updateInterval = setInterval(() => {
+                if (modal.style.display === 'none') {
+                    clearInterval(updateInterval);
+                    return;
+                }
+
+                // Update dance animation
+                robot.style.animation = danceSequence[danceIndex % danceSequence.length];
+                danceIndex++;
+
+                // Update status message
+                if (messageIndex < statusMessages.length) {
+                    status.textContent = statusMessages[messageIndex];
+                    messageIndex++;
+                }
+
+                // Update progress
+                progressValue = Math.min(95, progressValue + Math.random() * 15);
+                progress.style.width = progressValue + '%';
+
+                // Update activity
+                const randomActivity = activityMessages[Math.floor(Math.random() * activityMessages.length)];
+                activity.textContent = randomActivity;
+
+            }, 1500);
+
+            // Store interval so we can clear it
+            window.robotInterval = updateInterval;
+        }
+
+        function hideDancingRobot() {
+            const modal = document.getElementById('dancingRobotModal');
+            modal.style.display = 'none';
+
+            // Clear the update interval
+            if (window.robotInterval) {
+                clearInterval(window.robotInterval);
+                window.robotInterval = null;
             }
         }
 
@@ -1208,6 +1383,7 @@
         function showFileViewer(files, projectName) {
             // Create modal overlay
             const modal = document.createElement('div');
+            modal.className = 'file-viewer-modal';
             modal.style.cssText = `
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 background: rgba(0,0,0,0.8); z-index: 1000; display: flex;
@@ -1225,7 +1401,7 @@
             let filesHtml = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="color: #ffd93d;">📂 ${projectName} - Generated Files</h2>
-                    <button onclick="this.closest('.modal').remove()"
+                    <button onclick="this.closest('.file-viewer-modal').remove()"
                             style="background: #ff6b6b; border: none; border-radius: 50%; width: 30px; height: 30px; color: white; cursor: pointer; font-weight: bold;">×</button>
                 </div>
                 <div style="display: grid; gap: 15px;">
@@ -1362,12 +1538,16 @@
                     `;
                     addActivity(`✅ ${fileName} executed successfully`);
                 } else {
+                    const errorMessage = result.error || result.output;
                     outputDiv.innerHTML = `
                         <div style="background: rgba(239,68,68,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(239,68,68,0.3);">
                             <div style="color: #ef4444; font-weight: bold; margin-bottom: 5px;">❌ Execution Failed</div>
-                            <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; font-size: 11px; color: #fca5a5; overflow-x: auto; margin-bottom: 10px;">${result.error || result.output}</pre>
+                            <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; font-size: 11px; color: #fca5a5; overflow-x: auto; margin-bottom: 10px;">${errorMessage}</pre>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <button onclick="autoFixCode('${fileName}', '${projectName}', '${(result.error || result.output).replace(/'/g, '\\\'')}')"
+                                <button onclick="autoFixCodeFromButton(this)"
+                                        data-filename="${fileName}"
+                                        data-project="${projectName}"
+                                        data-error="${errorMessage.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"
                                         style="padding: 6px 12px; background: linear-gradient(135deg, #f59e0b, #d97706);
                                                border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; font-size: 11px;">
                                     🔧 Auto-Fix Error
@@ -1390,6 +1570,14 @@
                 `;
                 addActivity(`❌ Failed to run ${fileName}: ${error.message}`);
             }
+        }
+
+        async function autoFixCodeFromButton(button) {
+            const fileName = button.getAttribute('data-filename');
+            const projectName = button.getAttribute('data-project');
+            const errorMessage = button.getAttribute('data-error').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+            autoFixCode(fileName, projectName, errorMessage);
         }
 
         async function autoFixCode(fileName, projectName, errorMessage) {

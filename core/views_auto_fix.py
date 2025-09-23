@@ -35,20 +35,9 @@ def auto_fix_code(request):
                 'error': 'Missing required parameters: project, file, error'
             })
 
-        # Find the project directory using the same logic as other functions
-        possible_dirs = [
-            PROJECTS_BASE_DIR / project,
-            PROJECTS_BASE_DIR / project.lower().replace(" ", "_").replace("-", "_"),
-            PROJECTS_BASE_DIR / project.lower(),
-            PROJECTS_BASE_DIR / project.replace(" ", "_"),
-            PROJECTS_BASE_DIR / project.replace(" ", "-")
-        ]
-
-        project_dir = None
-        for test_dir in possible_dirs:
-            if test_dir.exists():
-                project_dir = test_dir
-                break
+        # Find the project directory using intelligent matching
+        from .views_projects import find_project_directory
+        project_dir = find_project_directory(PROJECTS_BASE_DIR, project)
 
         if not project_dir:
             return JsonResponse({

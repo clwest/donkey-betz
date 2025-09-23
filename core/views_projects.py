@@ -12,7 +12,11 @@ import random
 import time
 import sys
 import os
+import logging
 from datetime import datetime
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +28,87 @@ import asyncio
 
 # Project configuration
 PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
+
+def find_project_directory(base_dir, project_name):
+    """
+    Intelligent project directory finder with fuzzy matching
+    Handles dynamic project names created by agents with versions, underscores, hyphens, dots, etc.
+    """
+    if not project_name:
+        return None
+
+    # Clean project name for comparison
+    project_lower = project_name.lower()
+    project_clean = project_lower.replace(" ", "_").replace("-", "_")
+
+    # Exact match attempts first
+    exact_candidates = [
+        project_name,
+        project_clean,
+        project_lower,
+        project_name.replace(" ", "_"),
+        project_name.replace(" ", "-"),
+        project_name.replace("_", "-"),
+        project_clean.replace("_", "-"),
+        project_name.replace(".", "_"),  # Handle version dots
+        project_name.replace("_", "."),  # Handle version dots reverse
+    ]
+
+    # Check exact matches first
+    for candidate in exact_candidates:
+        test_path = base_dir / candidate
+        if test_path.exists() and test_path.is_dir():
+            return test_path
+
+    # If no exact match, do fuzzy matching on existing directories
+    try:
+        existing_dirs = [d for d in base_dir.iterdir() if d.is_dir()]
+    except:
+        return None
+
+    # Fuzzy matching - find directories that contain the project name or vice versa
+    project_base = project_clean.replace("_", "").replace("-", "").replace(".", "")
+
+    best_match = None
+    best_score = 0
+
+    for dir_path in existing_dirs:
+        dir_name = dir_path.name.lower()
+        dir_base = dir_name.replace("_", "").replace("-", "").replace(".", "")
+
+        # Calculate similarity score
+        score = 0
+
+        # Exact substring match
+        if project_base in dir_base or dir_base in project_base:
+            score += 10
+
+        # Common prefix match
+        common_prefix = 0
+        for i in range(min(len(project_base), len(dir_base))):
+            if project_base[i] == dir_base[i]:
+                common_prefix += 1
+            else:
+                break
+
+        if common_prefix > 0:
+            score += common_prefix
+
+        # Version number handling (e.g., content_factory matches content_factory_3_0)
+        if "_" in dir_name or "." in dir_name:
+            # Remove version numbers and check again
+            dir_base_no_version = dir_base.split("_")[0].split(".")[0]
+            project_base_no_version = project_base.split("_")[0].split(".")[0]
+
+            if dir_base_no_version == project_base_no_version:
+                score += 15  # Higher score for version match
+
+        # Update best match if this is better
+        if score > best_score and score >= 5:  # Minimum threshold
+            best_score = score
+            best_match = dir_path
+
+    return best_match
 
 PROJECTS = {
     "ecommerce": {
@@ -136,21 +221,8 @@ def execute_latest_code(request):
         project = data.get('project', request.session.get('active_project', 'ecommerce'))
         specific_file = data.get('file', None)  # Allow executing a specific file
 
-        # Get the project directory - handle Orchestra-generated projects
-        project_clean = project.lower().replace(" ", "_").replace("-", "_")
-        possible_dirs = [
-            PROJECTS_BASE_DIR / project,
-            PROJECTS_BASE_DIR / project_clean,
-            PROJECTS_BASE_DIR / project.lower(),
-            PROJECTS_BASE_DIR / project.replace(" ", "_"),
-            PROJECTS_BASE_DIR / project.replace(" ", "-")
-        ]
-
-        project_dir = None
-        for test_dir in possible_dirs:
-            if test_dir.exists():
-                project_dir = test_dir
-                break
+        # Get the project directory - handle Orchestra-generated projects with intelligent matching
+        project_dir = find_project_directory(PROJECTS_BASE_DIR, project)
 
         if not project_dir:
             return JsonResponse({
@@ -179,14 +251,31 @@ def execute_latest_code(request):
 
         latest_file = target_file
 
-        # Execute the code
-        result = subprocess.run(
-            ['python', str(latest_file)],
-            capture_output=True,
-            text=True,
-            cwd=str(project_dir),
-            timeout=5
-        )
+        # Check if this is server code that needs test mode
+        with open(latest_file, 'r') as f:
+            file_content = f.read()
+
+        is_server_code = 'serve_forever()' in file_content or 'HTTPServer' in file_content
+
+        # Execute the code with appropriate timeout and flags
+        if is_server_code:
+            # Run server code in test mode with longer timeout
+            result = subprocess.run(
+                ['python', str(latest_file), '--test'],
+                capture_output=True,
+                text=True,
+                cwd=str(project_dir),
+                timeout=10  # Longer timeout for server tests
+            )
+        else:
+            # Regular code execution
+            result = subprocess.run(
+                ['python', str(latest_file)],
+                capture_output=True,
+                text=True,
+                cwd=str(project_dir),
+                timeout=5
+            )
 
         # If there's an error, try to fix it automatically
         if result.returncode != 0 and result.stderr:
@@ -194,19 +283,52 @@ def execute_latest_code(request):
             fix_success, fix_message = error_handler.attempt_fix(str(latest_file), result.stderr)
 
             if fix_success:
+                # Check if the fixed code is server code
+                with open(latest_file, 'r') as f:
+                    fixed_content = f.read()
+
+                is_fixed_server_code = 'serve_forever()' in fixed_content or 'HTTPServer' in fixed_content
+
                 # Try running the fixed code
-                retry_result = subprocess.run(
-                    ['python', str(latest_file)],
-                    capture_output=True,
-                    text=True,
-                    cwd=str(project_dir),
-                    timeout=5
-                )
+                if is_fixed_server_code:
+                    retry_result = subprocess.run(
+                        ['python', str(latest_file), '--test'],
+                        capture_output=True,
+                        text=True,
+                        cwd=str(project_dir),
+                        timeout=10
+                    )
+                else:
+                    retry_result = subprocess.run(
+                        ['python', str(latest_file)],
+                        capture_output=True,
+                        text=True,
+                        cwd=str(project_dir),
+                        timeout=5
+                    )
+
+                # Update execution status in database after auto-fix
+                retry_output = retry_result.stdout if retry_result.stdout else retry_result.stderr
+                try:
+                    from core.models import GeneratedProject, GeneratedCode
+                    project_obj = GeneratedProject.objects.get(name=project)
+                    code_obj = GeneratedCode.objects.filter(
+                        project=project_obj,
+                        filename=latest_file.name,
+                        is_latest=True
+                    ).first()
+
+                    if code_obj:
+                        code_obj.execution_status = 'fixed' if retry_result.returncode == 0 else 'error'
+                        code_obj.execution_output = retry_output
+                        code_obj.save()
+                except Exception as e:
+                    logger.warning(f"Could not update execution status after auto-fix: {e}")
 
                 return JsonResponse({
                     'success': retry_result.returncode == 0,
                     'file': latest_file.name,
-                    'output': retry_result.stdout if retry_result.stdout else retry_result.stderr,
+                    'output': retry_output,
                     'project': project,
                     'auto_fixed': True,
                     'fix_message': fix_message
@@ -224,6 +346,23 @@ def execute_latest_code(request):
 
         output = result.stdout if result.stdout else result.stderr
 
+        # Update execution status in database if available
+        try:
+            from core.models import GeneratedProject, GeneratedCode
+            project_obj = GeneratedProject.objects.get(name=project)
+            code_obj = GeneratedCode.objects.filter(
+                project=project_obj,
+                filename=latest_file.name,
+                is_latest=True
+            ).first()
+
+            if code_obj:
+                code_obj.execution_status = 'success' if result.returncode == 0 else 'error'
+                code_obj.execution_output = output
+                code_obj.save()
+        except Exception as e:
+            logger.warning(f"Could not update execution status in database: {e}")
+
         return JsonResponse({
             'success': result.returncode == 0,
             'file': latest_file.name,
@@ -235,7 +374,7 @@ def execute_latest_code(request):
         return JsonResponse({
             'success': False,
             'error': 'Execution timeout',
-            'output': 'Code execution exceeded 5 seconds'
+            'output': 'Code execution exceeded time limit (5s for scripts, 10s for servers)'
         })
     except Exception as e:
         return JsonResponse({
@@ -247,10 +386,36 @@ def execute_latest_code(request):
 @require_http_methods(["GET"])
 def get_latest_code(request):
     """Get the latest generated code for a project"""
+    from core.models import GeneratedProject, GeneratedCode
+
     try:
         project = request.GET.get('project', request.session.get('active_project', 'ecommerce'))
 
-        # Get the latest Python file
+        # First, try to get code from database
+        try:
+            project_obj = GeneratedProject.objects.get(name=project)
+            latest_code = GeneratedCode.objects.filter(
+                project=project_obj,
+                is_latest=True
+            ).order_by('-created_at').first()
+
+            if latest_code:
+                return JsonResponse({
+                    'success': True,
+                    'project': project,
+                    'file': latest_code.filename,
+                    'code': latest_code.content,
+                    'timestamp': latest_code.created_at.isoformat(),
+                    'agent_creator': latest_code.agent_creator,
+                    'task_description': latest_code.task_description,
+                    'language': latest_code.language,
+                    'execution_status': latest_code.execution_status,
+                    'source': 'database'
+                })
+        except GeneratedProject.DoesNotExist:
+            pass  # Fall back to file system
+
+        # Fallback: Get from file system (for backward compatibility)
         project_dir = PROJECTS_BASE_DIR / project
 
         if not project_dir.exists():
@@ -268,7 +433,8 @@ def get_latest_code(request):
                 'project': project,
                 'file': latest_file.name,
                 'code': code,
-                'timestamp': datetime.fromtimestamp(latest_file.stat().st_mtime).isoformat()
+                'timestamp': datetime.fromtimestamp(latest_file.stat().st_mtime).isoformat(),
+                'source': 'filesystem'
             })
 
         # Return sample code if no files exist yet
