@@ -59,6 +59,17 @@ class LLMAdvisor(AIEnforcedAgent):
         logger.info(f"🧠 Initialized LLM Advisor: {advisor_name}")
         logger.info(f"   Expertise: {self.expertise_level} in {self.domain}")
 
+    async def execute(self, **kwargs) -> Dict[str, Any]:
+        """
+        Implementation of abstract execute method from AIEnforcedAgent.
+        Routes to provide_consultation for advisors.
+        """
+        topic = kwargs.get('topic', kwargs.get('task', 'General consultation'))
+        context = kwargs.get('context', {})
+        consultation_type = kwargs.get('consultation_type', 'strategic')
+
+        return self.provide_consultation(topic, context, consultation_type)
+
     def provide_consultation(self,
                            topic: str,
                            context: Dict[str, Any],

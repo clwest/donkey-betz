@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Building Real Products - Watch AI Create Working Code</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 20px 40px;
+            border-bottom: 2px solid rgba(255, 217, 61, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #ffd93d 0%, #ff6b6b 50%, #4ecdc4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            text-align: center;
+            color: #ffd93d;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .project-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .project-selector label {
+            font-size: 1.1em;
+            color: #ffd93d;
+            font-weight: bold;
+        }
+
+        .project-dropdown {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #ffd93d;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .project-dropdown:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .project-dropdown option {
+            background: #333;
+            color: #fff;
+        }
+
+        .build-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .build-button {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .build-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .build-button:active {
+            transform: translateY(0);
+        }
+
+        .build-button.running {
+            background: linear-gradient(135deg, #f59e0b, #dc2626);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            margin: 20px 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4ade80;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+
+        .stat-label {
+            color: #ffd93d;
+            font-size: 1em;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 0 40px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .projects-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 217, 61, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1.8em;
+            color: #ffd93d;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .project-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 217, 61, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: #ffd93d;
+        }
+
+        .project-card.active {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .project-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .project-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-building {
+            background: #f59e0b;
+            color: #000;
+            animation: pulse 2s infinite;
+        }
+
+        .status-complete {
+            background: #4ade80;
+            color: #000;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            transition: width 0.5s ease;
+        }
+
+        .project-details {
+            display: flex;
+            justify-content: space-between;
+            color: #ccc;
+            font-size: 0.9em;
+        }
+
+        .code-preview {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .code-title {
+            font-size: 1.3em;
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+
+        .code-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .code-button {
+            padding: 5px 15px;
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid #4ecdc4;
+            border-radius: 5px;
+            color: #4ecdc4;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .code-button:hover {
+            background: rgba(78, 205, 196, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .code-content {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre;
+        }
+
+        .execution-panel {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .run-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .run-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .execution-output {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            color: #4ade80;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .activity-feed {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 217, 61, 0.3);
+        }
+
+        .activity-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 3px solid #4ecdc4;
+        }
+
+        .activity-time {
+            color: #ffd93d;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .activity-message {
+            color: #fff;
+        }
+
+        .loading-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-indicator {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .error-indicator {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+            box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 AI Building Real Products</h1>
+        <p class="subtitle">Watch AI Agents Generate & Execute Real Code in Real-Time</p>
+        <div style="margin-top: 20px;">
+            <a href="/visualization/" class="back-button">← Back to Ecosystem</a>
+        </div>
+    </div>
+
+    <!-- Project Selector -->
+    <div class="project-selector">
+        <label>Select Active Project:</label>
+        <select id="projectSelect" class="project-dropdown" onchange="switchProject()">
+            <option value="ecommerce">🛒 E-Commerce Revenue Engine</option>
+            <option value="content_factory">✍️ Content Factory 3.0</option>
+            <option value="trading_bot">📈 Crypto Trading Bot</option>
+            <option value="predictive_analytics">🔮 Predictive Analytics</option>
+        </select>
+        <div class="build-controls">
+            <button id="buildButton" class="build-button" onclick="buildNewModule()">🔨 Build New Module</button>
+            <button id="continuousButton" class="build-button" onclick="toggleContinuous()">🔄 Start Auto-Build</button>
+            <button id="suggestButton" class="build-button" onclick="getAgentSuggestions()">🤖 Get Agent Suggestions</button>
+            <button id="realOrchestraButton" class="build-button" onclick="triggerRealOrchestra()" style="background: linear-gradient(135deg, #10b981, #059669);">🎭 Real Agent Orchestra</button>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="totalFiles">0</div>
+            <div class="stat-label">Files Generated</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="totalSize">0KB</div>
+            <div class="stat-label">Code Written</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="activeProjects">0</div>
+            <div class="stat-label">Active Projects</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="projects-panel">
+            <h2 class="panel-title">
+                <span>📁</span>
+                <span>Projects Being Built</span>
+            </h2>
+            <div id="projectsList"></div>
+        </div>
+
+        <div>
+            <div class="code-preview">
+                <div class="code-header">
+                    <div class="code-title">📝 Latest Code Generated</div>
+                    <div class="code-actions">
+                        <button class="code-button" onclick="copyCode()">📋 Copy</button>
+                        <button class="code-button" onclick="downloadCode()">💾 Download</button>
+                    </div>
+                </div>
+                <div class="code-content" id="codePreview">
+                    // AI agents are generating code...
+                </div>
+            </div>
+
+            <div class="execution-panel">
+                <h2 class="panel-title">
+                    <span>▶️</span>
+                    <span>Live Execution</span>
+                </h2>
+                <button class="run-button" onclick="executeCode()">Run Latest Code</button>
+                <div class="execution-output" id="executionOutput">
+                    Ready to execute generated code...
+                </div>
+            </div>
+
+            <div class="execution-panel" id="suggestionsPanel" style="display: none;">
+                <h2 class="panel-title">
+                    <span>💡</span>
+                    <span>AI Agent Suggestions</span>
+                </h2>
+                <div id="agentSuggestions" class="execution-output">
+                    <!-- Suggestions will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="activity-feed">
+            <h2 class="panel-title">
+                <span>⚡</span>
+                <span>Build Activity</span>
+            </h2>
+            <div id="activityFeed"></div>
+        </div>
+    </div>
+
+    <script>
+        let latestCode = '';
+        let currentProject = 'ecommerce';
+        let continuousMode = false;
+        let continuousInterval = null;
+
+        // Switch project
+        async function switchProject() {
+            const selector = document.getElementById('projectSelect');
+            const currentProject = selector.value;
+
+            // Store in sessionStorage for persistence
+            sessionStorage.setItem('activeProject', currentProject);
+
+            addActivity(`Switched to project: ${selector.options[selector.selectedIndex].text}`);
+
+            try {
+                const response = await fetch('/api/projects/switch/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ project: currentProject })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addActivity(`✅ Project activated: ${data.name}`);
+                    fetchLatestCode();
+                }
+            } catch (error) {
+                console.error('Error switching project:', error);
+                addActivity('❌ Error switching project');
+            }
+        }
+
+        // Build new module
+        async function buildNewModule() {
+            const button = document.getElementById('buildButton');
+            button.classList.add('running');
+            button.textContent = '⏳ Building...';
+
+            addActivity(`🔨 Building new module for ${currentProject}...`);
+
+            try {
+                const response = await fetch('/api/projects/build/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ project: currentProject })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    latestCode = data.code;
+                    document.getElementById('codePreview').textContent = data.code;
+                    addActivity(`✅ Generated: ${data.file}`);
+
+                    // Update stats
+                    fetchProjectStats();
+                } else {
+                    addActivity(`❌ Build failed: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error building module:', error);
+                addActivity('❌ Error building module');
+            } finally {
+                button.classList.remove('running');
+                button.textContent = '🔨 Build New Module';
+            }
+        }
+
+        // Execute the latest code
+        async function executeCode() {
+            const output = document.getElementById('executionOutput');
+            output.textContent = 'Executing code...';
+
+            addActivity('▶️ Executing latest code...');
+
+            try {
+                const response = await fetch('/api/projects/execute/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ project: currentProject })
+                });
+
+                const data = await response.json();
+
+                if (data.auto_fixed) {
+                    addActivity('🔧 Agent automatically fixed an error!');
+                    addActivity(`✨ Fix: ${data.fix_message}`);
+                }
+
+                if (data.fix_attempted && !data.auto_fixed) {
+                    addActivity('⚠️ Agent tried to fix error but needs help');
+                    addActivity(`💭 ${data.fix_message}`);
+                }
+
+                if (data.success) {
+                    output.textContent = data.output;
+                    output.className = 'execution-output';
+                    addActivity(`✅ Code executed successfully`);
+                } else {
+                    output.textContent = data.error || data.output;
+                    output.className = 'execution-output error-indicator';
+                    addActivity(`❌ Execution error`);
+                }
+            } catch (error) {
+                console.error('Error executing code:', error);
+                output.textContent = `Error: ${error.message}`;
+                addActivity('❌ Failed to execute code');
+            }
+        }
+
+        // Fetch latest generated code
+        async function fetchLatestCode() {
+            try {
+                const response = await fetch(`/api/projects/latest-code/?project=${currentProject}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    latestCode = data.code;
+                    document.getElementById('codePreview').textContent = data.code;
+                    addActivity(`📄 Loaded: ${data.file}`);
+                }
+            } catch (error) {
+                console.error('Error fetching code:', error);
+            }
+        }
+
+        // Fetch project statistics
+        async function fetchProjectStats() {
+            try {
+                const response = await fetch('/api/projects/stats/');
+                const data = await response.json();
+
+                if (data.success) {
+                    updateProjectsDisplay(data);
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        // Update projects display
+        function updateProjectsDisplay(data) {
+            // Update stats
+            document.getElementById('totalFiles').textContent = data.total_files || 0;
+
+            // Calculate total size
+            let totalSize = 0;
+            Object.values(data.stats).forEach(project => {
+                totalSize += project.total_size || 0;
+            });
+            document.getElementById('totalSize').textContent = (totalSize / 1024).toFixed(1) + 'KB';
+
+            // Count active projects
+            let activeProjects = 0;
+            Object.values(data.stats).forEach(project => {
+                if (project.file_count > 0) activeProjects++;
+            });
+            document.getElementById('activeProjects').textContent = activeProjects;
+
+            // Display projects
+            const projectsList = document.getElementById('projectsList');
+            projectsList.innerHTML = '';
+
+            Object.entries(data.stats).forEach(([key, project]) => {
+                const card = createProjectCard(project, key === currentProject);
+                projectsList.appendChild(card);
+            });
+        }
+
+        function createProjectCard(project, isActive) {
+            const card = document.createElement('div');
+            card.className = `project-card ${isActive ? 'active' : ''}`;
+
+            const status = project.progress === 100 ? 'complete' : 'building';
+
+            card.innerHTML = `
+                <div class="project-header">
+                    <div class="project-name">${project.icon} ${project.name}</div>
+                    <div class="project-status status-${status}">
+                        ${status === 'building' ? 'BUILDING' : 'READY'}
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${project.progress}%"></div>
+                </div>
+                <div class="project-details">
+                    <span>${project.file_count} files</span>
+                    <span>${project.modules.length} modules</span>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Toggle continuous build mode
+        function toggleContinuous() {
+            const button = document.getElementById('continuousButton');
+
+            if (continuousMode) {
+                continuousMode = false;
+                button.textContent = '🔄 Start Auto-Build';
+                button.classList.remove('running');
+
+                if (continuousInterval) {
+                    clearInterval(continuousInterval);
+                }
+
+                addActivity('⏹ Auto-build stopped');
+            } else {
+                continuousMode = true;
+                button.textContent = '⏹ Stop Auto-Build';
+                button.classList.add('running');
+
+                addActivity('🔄 Auto-build started (every 30s)');
+
+                // Build immediately
+                buildNewModule();
+
+                // Then build every 30 seconds
+                continuousInterval = setInterval(() => {
+                    if (continuousMode) {
+                        buildNewModule();
+                    }
+                }, 30000);
+            }
+        }
+
+        // Add activity to feed
+        function addActivity(message) {
+            const feed = document.getElementById('activityFeed');
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+
+            const time = new Date().toLocaleTimeString();
+            item.innerHTML = `
+                <div class="activity-time">${time}</div>
+                <div class="activity-message">${message}</div>
+            `;
+
+            feed.insertBefore(item, feed.firstChild);
+
+            // Keep only last 10 activities
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Copy code to clipboard
+        function copyCode() {
+            navigator.clipboard.writeText(latestCode);
+            addActivity('📋 Code copied to clipboard');
+        }
+
+        // Download code
+        function downloadCode() {
+            const blob = new Blob([latestCode], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentProject}_generated.py`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            addActivity('💾 Code downloaded');
+        }
+
+        // Get agent suggestions
+        async function getAgentSuggestions() {
+            const button = document.getElementById('suggestButton');
+            button.textContent = '⏳ Getting Suggestions...';
+            button.disabled = true;
+
+            addActivity('🤖 Consulting specialized agents...');
+
+            try {
+                const response = await fetch('/api/projects/suggestions/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ project: currentProject })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySuggestions(data);
+                    addActivity(`✅ Received suggestions from ${data.suggestions.length} agents`);
+                } else {
+                    addActivity('❌ Failed to get suggestions');
+                }
+            } catch (error) {
+                console.error('Error getting suggestions:', error);
+                addActivity('❌ Error getting agent suggestions');
+            } finally {
+                button.textContent = '🤖 Get Agent Suggestions';
+                button.disabled = false;
+            }
+        }
+
+        // Display agent suggestions
+        function displaySuggestions(data) {
+            const panel = document.getElementById('suggestionsPanel');
+            const container = document.getElementById('agentSuggestions');
+
+            // Store suggestions globally for apply functionality
+            window.currentSuggestions = data;
+
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: #4ade80;">Estimated Impact: ${data.estimated_impact.estimated_improvement}</h3>
+                    <p style="color: #ffd93d;">High Priority Items: ${data.estimated_impact.high_priority_items}</p>
+                    <button class="code-button" onclick="applyAllPriority()" style="background: linear-gradient(135deg, #4ade80, #22c55e);">
+                        ✨ Apply All Priority Actions
+                    </button>
+                </div>
+            `;
+
+            // Display priority actions
+            if (data.priority_actions.length > 0) {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #ff6b6b;">🎯 Priority Actions:</h3>
+                        <ul style="list-style: none; padding-left: 0;">
+                `;
+                data.priority_actions.forEach((action, index) => {
+                    html += `
+                        <li style="margin: 10px 0; display: flex; align-items: center; justify-content: space-between;">
+                            <span>⚡ ${action}</span>
+                            <button class="code-button" onclick="applyPriorityAction(${index})"
+                                    style="margin-left: 10px; padding: 5px 10px; font-size: 0.9em;">
+                                Apply
+                            </button>
+                        </li>`;
+                });
+                html += '</ul></div>';
+            }
+
+            // Display suggestions from each agent
+            data.suggestions.forEach(agent => {
+                html += `
+                    <div style="margin-bottom: 20px; border-left: 3px solid #4ecdc4; padding-left: 15px;">
+                        <h3>${agent.icon} ${agent.agent}</h3>
+                        <p style="color: ${agent.priority === 'high' ? '#ff6b6b' : '#4ecdc4'}">
+                            Priority: ${agent.priority.toUpperCase()}
+                            ${agent.priority === 'high' ? `
+                                <button class="code-button" onclick="applyAgentSuggestions('${agent.agent_id}')"
+                                        style="margin-left: 10px; padding: 3px 8px; font-size: 0.85em;">
+                                    Apply All
+                                </button>` : ''}
+                        </p>
+                        <ul style="list-style: none; padding-left: 0;">
+                `;
+
+                agent.suggestions.forEach(suggestion => {
+                    html += `<li style="margin: 8px 0;">• ${suggestion}</li>`;
+                });
+
+                if (agent.code_improvements && agent.code_improvements.length > 0) {
+                    html += `
+                        <li style="margin: 12px 0; padding: 10px; background: rgba(255, 217, 61, 0.1); border-radius: 5px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span style="color: #ffd93d;">📝 ${agent.code_improvements.length} code improvements available</span>
+                                <button class="code-button" onclick="applySuggestion('${agent.agent_id}', 0)"
+                                        style="background: linear-gradient(135deg, #ffd93d, #f59e0b);">
+                                    Apply Code Fix
+                                </button>
+                            </div>
+                    `;
+
+                    // Show details of code improvements
+                    agent.code_improvements.forEach((improvement, idx) => {
+                        html += `
+                            <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 3px;">
+                                <div style="font-size: 0.9em; color: #4ecdc4;">
+                                    ${improvement.description}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</li>';
+                }
+
+                if (agent.estimated_value > 0) {
+                    html += `<li style="margin: 8px 0; color: #4ade80;">📈 Estimated improvement: ${agent.estimated_value}%</li>`;
+                }
+
+                html += '</ul></div>';
+            });
+
+            container.innerHTML = html;
+            panel.style.display = 'block';
+        }
+
+        // Apply a specific suggestion
+        async function applySuggestion(agentId, suggestionIndex) {
+            addActivity(`🔧 Applying suggestion from agent ${agentId}...`);
+
+            try {
+                const response = await fetch('/api/projects/apply-suggestion/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        project: currentProject,
+                        agent_id: agentId,
+                        suggestion_index: suggestionIndex
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    addActivity(`✅ ${data.message}`);
+                    // Update the code preview
+                    document.getElementById('codePreview').textContent = data.code;
+                    latestCode = data.code;
+                } else {
+                    addActivity(`❌ Failed to apply suggestion: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error applying suggestion:', error);
+                addActivity('❌ Error applying suggestion');
+            }
+        }
+
+        // Apply all priority actions
+        function applyAllPriority() {
+            addActivity('🚀 Applying all priority actions...');
+            // This would apply multiple suggestions at once
+            // For now, we'll apply the first code improvement from high-priority agents
+            if (window.currentSuggestions) {
+                window.currentSuggestions.suggestions.forEach(agent => {
+                    if (agent.priority === 'high' && agent.code_improvements && agent.code_improvements.length > 0) {
+                        applySuggestion(agent.agent_id, 0);
+                    }
+                });
+            }
+        }
+
+        // Apply suggestions from a specific agent
+        function applyAgentSuggestions(agentId) {
+            addActivity(`🤖 Applying all suggestions from ${agentId}...`);
+            applySuggestion(agentId, 0);
+        }
+
+        // Apply a specific priority action
+        function applyPriorityAction(actionIndex) {
+            addActivity(`⚡ Applying priority action #${actionIndex + 1}...`);
+
+            // Find the first high-priority agent with code improvements
+            if (window.currentSuggestions) {
+                for (let agent of window.currentSuggestions.suggestions) {
+                    if (agent.priority === 'high' && agent.code_improvements && agent.code_improvements.length > 0) {
+                        // Apply the first code improvement from this agent
+                        applySuggestion(agent.agent_id, 0);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Trigger REAL Agent Orchestra with actual agents and advisors
+        async function triggerRealOrchestra() {
+            const button = document.getElementById('realOrchestraButton');
+            button.textContent = '⏳ Orchestrating Real Agents...';
+            button.disabled = true;
+
+            // Show agent info first
+            await fetchRealAgents();
+
+            try {
+                // Get current project from session storage or dropdown
+                const currentProject = sessionStorage.getItem('activeProject') || 'ecommerce';
+
+                // Get project name safely
+                const projectSelect = document.getElementById('projectSelect');
+                const selectedOption = projectSelect ? projectSelect.options[projectSelect.selectedIndex] : null;
+                const projectName = selectedOption ?
+                    selectedOption.textContent.replace(/[🛒✍️📈🔮] /, '') :
+                    'AI Project';
+
+                const response = await fetch('/api/projects/orchestrate-real/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project: currentProject,
+                        name: projectName
+                    })
+                });
+
+                const data = await response.json();
+
+                // Debug log to see what we're actually getting
+                console.log('Orchestra Response:', data);
+
+                if (data.success) {
+                    addActivity('🎭 REAL AGENT ORCHESTRA ACTIVATED!');
+
+                    // Check if we actually have results
+                    if (!data.result || Object.keys(data.result).length === 0) {
+                        addActivity('⚠️ Warning: No actual results returned - might be mock data!');
+                    }
+
+                    // Safely handle the arrays
+                    const agentsUsed = data.result.agents_used || [];
+                    const advisors = data.result.advisors || [];
+
+                    if (agentsUsed.length > 0) {
+                        addActivity(`👥 Agents Used: ${agentsUsed.join(', ')}`);
+                    } else {
+                        addActivity('⚠️ No agents were actually used!');
+                    }
+
+                    if (advisors.length > 0) {
+                        addActivity(`🧠 Advisors: ${advisors.join(', ')}`);
+                    } else {
+                        addActivity('⚠️ No advisors were consulted!');
+                    }
+
+                    // Display the results
+                    const outputDiv = document.getElementById('executionOutput');
+                    outputDiv.innerHTML = `
+                        <div style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 10px;">
+                            <h3 style="color: #10b981;">🎭 Real Agent Orchestra Results</h3>
+                            <p><strong>Project:</strong> ${data.result.project}</p>
+                            <p><strong>Status:</strong> ${data.result.status}</p>
+                            <div style="margin: 10px 0;">
+                                <strong>Components Built:</strong>
+                                <ul style="margin: 5px 0;">
+                                    ${data.result.components_built.map(c => `<li>${c}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div style="margin: 10px 0;">
+                                <strong>Agents Used:</strong>
+                                <span style="color: #ffd93d;">${data.result.agents_used.join(', ')}</span>
+                            </div>
+                            <div style="margin: 10px 0;">
+                                <strong>Advisors Consulted:</strong>
+                                <span style="color: #4ecdc4;">${data.result.advisors.join(', ')}</span>
+                            </div>
+                            <div style="margin: 20px 0; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
+                                <h4 style="color: #ffd93d; margin-bottom: 10px;">📂 Project Actions</h4>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button onclick="viewProjectFiles('${data.result.project}')"
+                                            style="padding: 8px 16px; background: linear-gradient(135deg, #4ecdc4, #44a08d); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold;">
+                                        👁️ View Files
+                                    </button>
+                                    <button onclick="downloadProject('${data.result.project}')"
+                                            style="padding: 8px 16px; background: linear-gradient(135deg, #ffd93d, #ff6b6b); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold;">
+                                        📥 Download ZIP
+                                    </button>
+                                    <button onclick="deployProject('${data.result.project}')"
+                                            style="padding: 8px 16px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold;">
+                                        🚀 Deploy
+                                    </button>
+                                </div>
+                            </div>
+                            <p style="margin-top: 15px; color: #10b981;"><strong>Next Steps:</strong> Review generated code and deploy components</p>
+                        </div>
+                    `;
+
+                    // Refresh code to show what was built
+                    await fetchLatestCode();
+
+                } else {
+                    addActivity(`❌ Orchestra Error: ${data.error}`);
+                }
+
+            } catch (error) {
+                console.error('Orchestra error:', error);
+                addActivity(`❌ Failed to orchestrate: ${error.message}`);
+            } finally {
+                button.textContent = '🎭 Real Agent Orchestra';
+                button.disabled = false;
+            }
+        }
+
+        // Fetch and display real agents available in the system
+        async function fetchRealAgents() {
+            try {
+                const response = await fetch('/api/projects/real-agents/');
+                const data = await response.json();
+
+                if (data.success) {
+                    addActivity(`✅ ${data.total_agents} Real Agents Available!`);
+                    addActivity(`✅ ${data.total_advisors} Expert Advisors Ready!`);
+
+                    // Show first few agents
+                    if (data.agents.length > 0) {
+                        const agentNames = data.agents.slice(0, 5).map(a => a.name).join(', ');
+                        addActivity(`🤖 Sample Agents: ${agentNames}...`);
+                    }
+
+                    // Show first few advisors
+                    if (data.advisors.length > 0) {
+                        const advisorNames = data.advisors.slice(0, 3).map(a => a.name).join(', ');
+                        addActivity(`🧠 Sample Advisors: ${advisorNames}...`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching real agents:', error);
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            // Set initial active project
+            const selector = document.getElementById('projectSelect');
+            if (selector) {
+                const savedProject = sessionStorage.getItem('activeProject');
+                if (savedProject && selector.querySelector(`option[value="${savedProject}"]`)) {
+                    selector.value = savedProject;
+                } else {
+                    sessionStorage.setItem('activeProject', selector.value);
+                }
+            }
+
+            fetchProjectStats();
+            fetchLatestCode();
+            addActivity('🚀 System initialized');
+
+            // Refresh stats every 10 seconds
+            setInterval(() => {
+                fetchProjectStats();
+            }, 10000);
+        });
+        // Project Action Functions for Real Agent Orchestra Results
+        async function viewProjectFiles(projectName) {
+            try {
+                addActivity(`👁️ Opening file viewer for ${projectName}...`);
+
+                const response = await fetch(`/api/projects/${encodeURIComponent(projectName)}/files/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Create a modal to display files
+                    showFileViewer(data.files, projectName);
+                    addActivity(`✅ Loaded ${data.total_files} files for ${projectName}`);
+                } else {
+                    addActivity(`❌ Error viewing files: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error viewing files:', error);
+                addActivity(`❌ Failed to view files: ${error.message}`);
+            }
+        }
+
+        async function downloadProject(projectName) {
+            try {
+                addActivity(`📥 Preparing download for ${projectName}...`);
+
+                // Create a download link
+                const downloadUrl = `/api/projects/${encodeURIComponent(projectName)}/download/`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = `${projectName}.zip`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                addActivity(`✅ Download started for ${projectName}.zip`);
+            } catch (error) {
+                console.error('Error downloading project:', error);
+                addActivity(`❌ Failed to download: ${error.message}`);
+            }
+        }
+
+        async function deployProject(projectName) {
+            try {
+                addActivity(`🚀 Deploying ${projectName}...`);
+
+                const response = await fetch('/api/projects/deploy/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project_name: projectName,
+                        deploy_type: 'local'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showDeploymentInfo(data.deployment, projectName);
+                    addActivity(`✅ ${projectName} deployment ready!`);
+                } else {
+                    addActivity(`❌ Deployment error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error deploying project:', error);
+                addActivity(`❌ Failed to deploy: ${error.message}`);
+            }
+        }
+
+        function showFileViewer(files, projectName) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 1000; display: flex;
+                align-items: center; justify-content: center; backdrop-filter: blur(5px);
+            `;
+
+            // Create modal content
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 15px; padding: 30px; max-width: 80%; max-height: 80%;
+                overflow-y: auto; color: white; border: 2px solid #ffd93d;
+            `;
+
+            let filesHtml = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: #ffd93d;">📂 ${projectName} - Generated Files</h2>
+                    <button onclick="this.closest('.modal').remove()"
+                            style="background: #ff6b6b; border: none; border-radius: 50%; width: 30px; height: 30px; color: white; cursor: pointer; font-weight: bold;">×</button>
+                </div>
+                <div style="display: grid; gap: 15px;">
+            `;
+
+            files.forEach(file => {
+                const isPythonFile = file.name.endsWith('.py');
+                const runButton = isPythonFile ? `
+                    <button onclick="runPythonFile('${file.name}', '${projectName}')"
+                            style="padding: 6px 12px; background: linear-gradient(135deg, #10b981, #059669);
+                                   border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold;
+                                   margin-left: 10px; font-size: 11px;">
+                        ▶️ Run Code
+                    </button>
+                ` : '';
+
+                filesHtml += `
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; border-left: 4px solid #4ecdc4;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="color: #4ecdc4; margin: 0;">📄 ${file.name} (${file.size} bytes)</h4>
+                            <div style="display: flex; align-items: center;">
+                                <span style="background: rgba(${isPythonFile ? '16,185,129' : '255,255,255'}, 0.2);
+                                           padding: 2px 8px; border-radius: 12px; font-size: 10px; color: #ffd93d;">
+                                    ${file.language.toUpperCase()}
+                                </span>
+                                ${runButton}
+                            </div>
+                        </div>
+                        <pre style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 12px; max-height: 200px; overflow-y: auto;">${file.content}</pre>
+                        <div id="output-${file.name.replace('.', '_')}" style="margin-top: 10px; display: none;"></div>
+                    </div>
+                `;
+            });
+
+            filesHtml += '</div>';
+            modalContent.innerHTML = filesHtml;
+            modal.appendChild(modalContent);
+            modal.className = 'modal';
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        function showDeploymentInfo(deployment, projectName) {
+            // Create modal for deployment info
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 1000; display: flex;
+                align-items: center; justify-content: center; backdrop-filter: blur(5px);
+            `;
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+                border-radius: 15px; padding: 30px; max-width: 600px; color: white;
+                border: 2px solid #ffd93d;
+            `;
+
+            modalContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: #ffd93d;">🚀 Deployment Ready: ${projectName}</h2>
+                    <button onclick="this.closest('.modal').remove()"
+                            style="background: #ff6b6b; border: none; border-radius: 50%; width: 30px; height: 30px; color: white; cursor: pointer; font-weight: bold;">×</button>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+                    <p><strong>Status:</strong> ${deployment.status}</p>
+                    <p><strong>Message:</strong> ${deployment.message}</p>
+                    ${deployment.setup_command ? `
+                        <div style="margin-top: 15px;">
+                            <p><strong>Setup Command:</strong></p>
+                            <code style="background: rgba(0,0,0,0.3); padding: 10px; display: block; border-radius: 5px; margin-top: 5px;">${deployment.setup_command}</code>
+                        </div>
+                    ` : ''}
+                    ${deployment.files_created ? `
+                        <div style="margin-top: 15px;">
+                            <p><strong>Files Created:</strong> ${deployment.files_created.join(', ')}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            modal.appendChild(modalContent);
+            modal.className = 'modal';
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        async function runPythonFile(fileName, projectName) {
+            try {
+                const outputDiv = document.getElementById(`output-${fileName.replace('.', '_')}`);
+                outputDiv.style.display = 'block';
+                outputDiv.innerHTML = `
+                    <div style="background: rgba(16,185,129,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(16,185,129,0.3);">
+                        <div style="color: #10b981; font-weight: bold; margin-bottom: 5px;">⚡ Executing ${fileName}...</div>
+                        <div style="color: #ffd93d; font-size: 12px;">Running code with Live Execution engine</div>
+                    </div>
+                `;
+
+                addActivity(`⚡ Running ${fileName} from ${projectName}...`);
+
+                // Create a temporary file mapping for the existing execute endpoint
+                // We need to set the project context for execution
+                const tempResponse = await fetch('/api/projects/execute/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project: projectName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+                        file: fileName
+                    })
+                });
+
+                const result = await tempResponse.json();
+
+                if (result.success) {
+                    outputDiv.innerHTML = `
+                        <div style="background: rgba(16,185,129,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(16,185,129,0.3);">
+                            <div style="color: #10b981; font-weight: bold; margin-bottom: 5px;">✅ Execution Complete</div>
+                            <div style="color: #ffd93d; font-size: 12px; margin-bottom: 8px;">File: ${result.file}</div>
+                            ${result.auto_fixed ? `<div style="color: #f59e0b; font-size: 11px; margin-bottom: 8px;">🔧 Code was auto-fixed: ${result.fix_message}</div>` : ''}
+                            <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; font-size: 11px; color: #e5e7eb; overflow-x: auto;">${result.output}</pre>
+                        </div>
+                    `;
+                    addActivity(`✅ ${fileName} executed successfully`);
+                } else {
+                    outputDiv.innerHTML = `
+                        <div style="background: rgba(239,68,68,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(239,68,68,0.3);">
+                            <div style="color: #ef4444; font-weight: bold; margin-bottom: 5px;">❌ Execution Failed</div>
+                            <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; font-size: 11px; color: #fca5a5; overflow-x: auto; margin-bottom: 10px;">${result.error || result.output}</pre>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button onclick="autoFixCode('${fileName}', '${projectName}', '${(result.error || result.output).replace(/'/g, '\\\'')}')"
+                                        style="padding: 6px 12px; background: linear-gradient(135deg, #f59e0b, #d97706);
+                                               border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; font-size: 11px;">
+                                    🔧 Auto-Fix Error
+                                </button>
+                                <span style="color: #94a3b8; font-size: 10px;">Let AI agents fix the code automatically</span>
+                            </div>
+                        </div>
+                    `;
+                    addActivity(`❌ ${fileName} execution failed: ${result.error || result.output}`);
+                }
+            } catch (error) {
+                console.error('Error running Python file:', error);
+                const outputDiv = document.getElementById(`output-${fileName.replace('.', '_')}`);
+                outputDiv.style.display = 'block';
+                outputDiv.innerHTML = `
+                    <div style="background: rgba(239,68,68,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(239,68,68,0.3);">
+                        <div style="color: #ef4444; font-weight: bold; margin-bottom: 5px;">❌ Connection Error</div>
+                        <pre style="background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; font-size: 11px; color: #fca5a5; overflow-x: auto;">${error.message}</pre>
+                    </div>
+                `;
+                addActivity(`❌ Failed to run ${fileName}: ${error.message}`);
+            }
+        }
+
+        async function autoFixCode(fileName, projectName, errorMessage) {
+            try {
+                const outputDiv = document.getElementById(`output-${fileName.replace('.', '_')}`);
+
+                // Show fixing in progress
+                outputDiv.innerHTML = `
+                    <div style="background: rgba(245,158,11,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(245,158,11,0.3);">
+                        <div style="color: #f59e0b; font-weight: bold; margin-bottom: 5px;">🔧 Auto-Fixing Code...</div>
+                        <div style="color: #ffd93d; font-size: 12px; margin-bottom: 8px;">AI agents are analyzing the error and generating a fix</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 16px; height: 16px; border: 2px solid #f59e0b; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span style="color: #94a3b8; font-size: 11px;">Please wait while agents debug...</span>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                `;
+
+                addActivity(`🔧 Auto-fixing ${fileName} - agents analyzing error...`);
+
+                // Call the auto-fix API endpoint
+                const fixResponse = await fetch('/api/projects/auto-fix/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project: projectName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+                        file: fileName,
+                        error: errorMessage
+                    })
+                });
+
+                const fixResult = await fixResponse.json();
+
+                if (fixResult.success) {
+                    outputDiv.innerHTML = `
+                        <div style="background: rgba(16,185,129,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(16,185,129,0.3);">
+                            <div style="color: #10b981; font-weight: bold; margin-bottom: 5px;">✅ Auto-Fix Complete!</div>
+                            <div style="color: #ffd93d; font-size: 12px; margin-bottom: 8px;">🤖 Agent: ${fixResult.agent_used || 'Code Debug Agent'}</div>
+                            <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
+                                <div style="color: #4ade80; font-weight: bold;">Fix Applied:</div>
+                                <div style="color: #e5e7eb;">${fixResult.fix_description}</div>
+                            </div>
+                            ${fixResult.auto_test_result ? `
+                                <div style="background: rgba(16,185,129,0.1); padding: 6px; border-radius: 4px; margin-bottom: 8px;">
+                                    <div style="color: #10b981; font-weight: bold; font-size: 10px;">Auto-Test Result:</div>
+                                    <pre style="color: #e5e7eb; font-size: 10px; margin: 0;">${fixResult.auto_test_result}</pre>
+                                </div>
+                            ` : ''}
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="runPythonFile('${fileName}', '${projectName}')"
+                                        style="padding: 4px 8px; background: linear-gradient(135deg, #10b981, #059669);
+                                               border: none; border-radius: 3px; color: white; cursor: pointer; font-weight: bold; font-size: 10px;">
+                                    ▶️ Run Fixed Code
+                                </button>
+                                <button onclick="viewFixedCode('${fileName}', '${projectName}')"
+                                        style="padding: 4px 8px; background: linear-gradient(135deg, #4ecdc4, #44a08d);
+                                               border: none; border-radius: 3px; color: white; cursor: pointer; font-weight: bold; font-size: 10px;">
+                                    👁️ View Changes
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    addActivity(`✅ ${fileName} successfully auto-fixed by AI agents!`);
+                } else {
+                    outputDiv.innerHTML = `
+                        <div style="background: rgba(239,68,68,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(239,68,68,0.3);">
+                            <div style="color: #ef4444; font-weight: bold; margin-bottom: 5px;">❌ Auto-Fix Failed</div>
+                            <div style="color: #fca5a5; font-size: 12px; margin-bottom: 8px;">Reason: ${fixResult.error}</div>
+                            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;">
+                                <div style="color: #94a3b8; font-size: 10px;">
+                                    The agents couldn't automatically fix this error. Manual intervention may be required.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    addActivity(`❌ Auto-fix failed for ${fileName}: ${fixResult.error}`);
+                }
+
+            } catch (error) {
+                console.error('Error in auto-fix:', error);
+                const outputDiv = document.getElementById(`output-${fileName.replace('.', '_')}`);
+                outputDiv.innerHTML = `
+                    <div style="background: rgba(239,68,68,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(239,68,68,0.3);">
+                        <div style="color: #ef4444; font-weight: bold; margin-bottom: 5px;">❌ Auto-Fix Error</div>
+                        <div style="color: #fca5a5; font-size: 11px;">Failed to connect to auto-fix service: ${error.message}</div>
+                    </div>
+                `;
+                addActivity(`❌ Auto-fix connection failed for ${fileName}`);
+            }
+        }
+
+        async function viewFixedCode(fileName, projectName) {
+            // Re-fetch the project files to show the updated code
+            addActivity(`👁️ Refreshing ${fileName} to show fixed code...`);
+            await viewProjectFiles(projectName);
+        }
+
+    </script>
+</body>
+</html>

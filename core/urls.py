@@ -19,6 +19,24 @@ from core.intelligence_api import (
     content_automation_plan, track_revenue
 )
 
+# Import ecosystem views
+from core.views_ecosystem import ecosystem_stats, ecosystem_live_feed, get_project_status, ai_building_products, code_preview
+
+# Import project builder views
+from core.views_projects import (
+    switch_project, build_project_module, execute_latest_code,
+    get_latest_code, get_project_stats, get_agent_suggestions, apply_suggestion,
+    orchestrate_real_build, get_real_agents
+)
+
+# Import deployment views
+from core.views_deploy import (
+    view_generated_files, download_project, deploy_project
+)
+
+# Import auto-fix views
+from core.views_auto_fix import auto_fix_code
+
 # Import AI Training dashboard view
 from core.views_ai_training import ai_job_market_dashboard
 
@@ -266,9 +284,37 @@ urlpatterns = [
     # Django admin
     path('admin/', admin.site.urls),
 
+    # AI Building Products page (moved up to ensure it's matched first)
+    path('ai-building-products/', ai_building_products, name='ai-building-products'),
+
     # Real data endpoints for demo/recording
     path('', include('core.urls_real_data')),
-    
+
+    # Ecosystem endpoints for visualization
+    path('api/ecosystem/stats/', ecosystem_stats, name='ecosystem-stats'),
+    path('api/ecosystem/live-feed/', ecosystem_live_feed, name='ecosystem-live-feed'),
+    path('api/ecosystem/project-status/', get_project_status, name='project-status'),
+    path('api/ecosystem/code-preview/', code_preview, name='code-preview'),
+
+    # Project Builder endpoints for dynamic code generation
+    path('api/projects/switch/', switch_project, name='switch-project'),
+    path('api/projects/build/', build_project_module, name='build-project'),
+    path('api/projects/execute/', execute_latest_code, name='execute-code'),
+    path('api/projects/latest-code/', get_latest_code, name='get-latest-code'),
+    path('api/projects/stats/', get_project_stats, name='project-stats'),
+    path('api/projects/suggestions/', get_agent_suggestions, name='project-suggestions'),
+    path('api/projects/apply-suggestion/', apply_suggestion, name='apply-suggestion'),
+    path('api/projects/orchestrate-real/', orchestrate_real_build, name='orchestrate-real-build'),
+    path('api/projects/real-agents/', get_real_agents, name='get-real-agents'),
+
+    # Deployment endpoints for generated projects
+    path('api/projects/<str:project_name>/files/', view_generated_files, name='view-generated-files'),
+    path('api/projects/<str:project_name>/download/', download_project, name='download-project'),
+    path('api/projects/deploy/', deploy_project, name='deploy-project'),
+
+    # Auto-fix endpoint for agent debugging
+    path('api/projects/auto-fix/', auto_fix_code, name='auto-fix-code'),
+
     # Authentication endpoints (original)
     path('api/v1/auth/login/', login_view, name='auth-login'),
     path('api/auth/login/', login_view, name='auth-login-compat'),  # Backward compatibility

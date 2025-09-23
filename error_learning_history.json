@@ -1,0 +1,211 @@
+{
+  "errors_encountered": [
+    {
+      "timestamp": "2025-09-23T12:50:08.243267",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 55
+      }
+    },
+    {
+      "timestamp": "2025-09-23T18:51:53.780951",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 55
+      }
+    },
+    {
+      "timestamp": "2025-09-23T18:52:01.248043",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 55
+      }
+    },
+    {
+      "timestamp": "2025-09-23T18:52:59.198693",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 55
+      }
+    },
+    {
+      "timestamp": "2025-09-23T19:18:33.546148",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 72
+      }
+    },
+    {
+      "timestamp": "2025-09-23T19:23:05.679258",
+      "error_type": "AttributeError",
+      "error_message": "'ContentFactory' object has no attribute '_load_seo_data'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py",
+      "context": {
+        "line_number": 55
+      }
+    },
+    {
+      "timestamp": "2025-09-23T20:58:16.720303",
+      "error_type": "ModuleNotFoundError",
+      "error_message": "No module named 'backend'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/models.py",
+      "context": {
+        "line_number": 2
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:08:05.461885",
+      "error_type": "NameError",
+      "error_message": "name 'undefined_variable' is not defined",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/buggy_test.py",
+      "context": {
+        "line_number": 9
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:08:17.254603",
+      "error_type": "NameError",
+      "error_message": "name undefined_variable is not defined",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/buggy_test.py",
+      "context": {
+        "line_number": null
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:08:35.551056",
+      "error_type": "SyntaxError",
+      "error_message": "expected ':'",
+      "file_path": "/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/e-commerce_revenue_engine/syntax_error_test.py",
+      "context": {
+        "line_number": 9
+      }
+    }
+  ],
+  "successful_fixes": [
+    {
+      "timestamp": "2025-09-23T12:50:08.271105",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T18:51:53.824465",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T18:52:01.291517",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T18:52:59.246809",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T19:18:33.585787",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T19:23:05.721289",
+      "error_type": "AttributeError",
+      "fix_strategy": "AttributeError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:08:35.571820",
+      "error_type": "SyntaxError",
+      "fix_strategy": "SyntaxError_fix",
+      "success": true,
+      "details": {
+        "changes_made": "Code fixed and runs successfully"
+      }
+    }
+  ],
+  "failed_fixes": [
+    {
+      "timestamp": "2025-09-23T21:08:05.462541",
+      "error_type": "NameError",
+      "fix_strategy": "NameError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T21:08:17.255069",
+      "error_type": "NameError",
+      "fix_strategy": "NameError_fix",
+      "success": false,
+      "details": {
+        "reason": "No changes made"
+      }
+    }
+  ],
+  "patterns": {
+    "AttributeError:'ContentFactory' object has no attribute '_load_se": {
+      "count": 6,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T19:23:05.679323"
+    },
+    "ModuleNotFoundError:No module named 'backend'": {
+      "count": 1,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T20:58:16.720326"
+    },
+    "NameError:name 'undefined_variable' is not defined": {
+      "count": 1,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T21:08:05.461929"
+    },
+    "NameError:name undefined_variable is not defined": {
+      "count": 1,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T21:08:17.254615"
+    },
+    "SyntaxError:expected ':'": {
+      "count": 1,
+      "fixes_attempted": 0,
+      "fixes_successful": 0,
+      "last_seen": "2025-09-23T21:08:35.551085"
+    }
+  }
+}

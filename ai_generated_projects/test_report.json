@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-09-23T12:19:03.347435",
+  "summary": {
+    "total": 15,
+    "passed": 14,
+    "failed": 1,
+    "errors": 0
+  },
+  "details": [
+    {
+      "test": "Switch to ecommerce project",
+      "status": "PASSED"
+    },
+    {
+      "test": "Switch to content_factory project",
+      "status": "PASSED"
+    },
+    {
+      "test": "Generate cart_recovery module (1st time)",
+      "status": "PASSED"
+    },
+    {
+      "test": "Generate cart_recovery module (2nd time)",
+      "status": "PASSED"
+    },
+    {
+      "test": "Switch to ecommerce",
+      "status": "PASSED"
+    },
+    {
+      "test": "Build cart_recovery in ecommerce",
+      "status": "PASSED"
+    },
+    {
+      "test": "Execute cart_recovery.py directly",
+      "status": "PASSED"
+    },
+    {
+      "test": "Switch to content_factory",
+      "status": "PASSED"
+    },
+    {
+      "test": "Build content_generator in content_factory",
+      "status": "PASSED"
+    },
+    {
+      "test": "Execute content_generator.py directly",
+      "status": "FAILED",
+      "error": "Traceback (most recent call last):\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py\", line 55, in <module>\n    factory = ContentFactory()\n              ^^^^^^^^^^^^^^^^\n  File \"/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/content_generator.py\", line 16, in __init__\n    self.seo_keywords = self._load_seo_data()\n                        ^^^^^^^^^^^^^^^^^^^\nAttributeError: 'ContentFactory' object has no attribute '_load_seo_data'\n"
+    },
+    {
+      "test": "Switch to trading_bot",
+      "status": "PASSED"
+    },
+    {
+      "test": "Build market_analyzer in trading_bot",
+      "status": "PASSED"
+    },
+    {
+      "test": "Generate build",
+      "status": "PASSED"
+    },
+    {
+      "test": "Generate build",
+      "status": "PASSED"
+    },
+    {
+      "test": "Generate build",
+      "status": "PASSED"
+    }
+  ]
+}
