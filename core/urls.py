@@ -73,7 +73,8 @@ from core.views_learning_path import (
     get_learning_status,
     get_agent_knowledge_map,
     get_learning_feed,
-    get_agent_solutions_recent
+    get_agent_solutions_recent,
+    get_overall_learning_status
 )
 
 # Import opportunity aggregator
@@ -763,6 +764,7 @@ urlpatterns = [
 
     # Learning path endpoints
     path('api/learning/trigger/', trigger_learning_query, name='learning-trigger'),
+    path('api/learning/status/', get_overall_learning_status, name='learning-status-overall'),
     path('api/learning/status/<str:session_id>/', get_learning_status, name='learning-status'),
     path('api/learning/knowledge-map/<str:agent_id>/', get_agent_knowledge_map, name='agent-knowledge-map'),
     path('api/learning/feed/', get_learning_feed, name='learning-feed'),
