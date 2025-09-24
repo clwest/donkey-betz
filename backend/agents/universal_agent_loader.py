@@ -62,68 +62,75 @@ def get_all_agent_classes() -> Dict[str, type]:
             }
 
             # Create a dynamic class that uses UniversalLLMAgent
-            class DynamicAgent(AIEnforcedAgent):
-                """Dynamically created agent from template"""
+            # Use a factory function to avoid closure issues
+            def create_dynamic_agent_class(template_copy, config_copy, agent_name_copy):
+                class DynamicAgent(AIEnforcedAgent):
+                    """Dynamically created agent from template"""
 
-                def __init__(self, user=None):
-                    # Store template configuration
-                    self.template = template
-                    self.config = agent_config
+                    def __init__(self, user=None):
+                        # Store template configuration
+                        self.template = template_copy
+                        self.config = config_copy
 
-                    # Initialize as AI-enforced agent
-                    super().__init__(agent_name=agent_name, user=user)
+                        # Initialize as AI-enforced agent
+                        super().__init__(agent_name=agent_name_copy, user=user)
 
-                    # Store capabilities
-                    self.capabilities = agent_config.get('capabilities', [])
-                    self.specialization = agent_config.get('type', 'general')
+                        # Store capabilities
+                        self.capabilities = config_copy.get('capabilities', [])
+                        self.specialization = config_copy.get('type', 'general')
 
-                    logger.info(f"Initialized {agent_name} with specialization: {self.specialization}")
+                        logger.info(f"Initialized {agent_name_copy} with specialization: {self.specialization}")
 
-                async def execute(self, **kwargs):
-                    """Execute agent task using AI"""
-                    # Build context from template
-                    context = {
-                        'agent_type': self.specialization,
-                        'capabilities': self.capabilities,
-                        'configuration': self.config.get('configuration', {}),
-                        'user_input': kwargs
-                    }
+                    async def execute(self, **kwargs):
+                        """Execute agent task using AI"""
+                        # Build context from template
+                        context = {
+                            'agent_type': self.specialization,
+                            'capabilities': self.capabilities,
+                            'configuration': self.config.get('configuration', {}),
+                            'user_input': kwargs
+                        }
 
-                    # Generate prompt based on specialization
-                    task = kwargs.get('task', 'Complete the requested task')
+                        # Generate prompt based on specialization
+                        task = kwargs.get('task', 'Complete the requested task')
 
-                    prompt = f"""
-                    You are a specialized {self.specialization} agent named {self.config['name']}.
+                        prompt = f"""
+                        You are a specialized {self.specialization} agent named {self.config['name']}.
 
-                    Your capabilities include: {', '.join(self.capabilities) if self.capabilities else 'general task execution'}
+                        Your capabilities include: {', '.join(self.capabilities) if self.capabilities else 'general task execution'}
 
-                    Task: {task}
+                        Task: {task}
 
-                    Additional context: {json.dumps(kwargs, default=str)}
+                        Additional context: {json.dumps(kwargs, default=str)}
 
-                    Please complete this task using your specialized knowledge and capabilities.
-                    Provide detailed, actionable output appropriate for a {self.specialization} agent.
-                    """
+                        Please complete this task using your specialized knowledge and capabilities.
+                        Provide detailed, actionable output appropriate for a {self.specialization} agent.
+                        """
 
-                    # Use AI to generate response
-                    response = super().generate_ai_text(
-                        prompt=prompt,
-                        context=json.dumps(context, default=str),
-                        task_type=self.specialization
-                    )
+                        # Use AI to generate response
+                        response = super().generate_ai_text(
+                            prompt=prompt,
+                            context=json.dumps(context, default=str),
+                            task_type=self.specialization
+                        )
 
-                    # Track AI usage if method exists
-                    if hasattr(self, 'track_ai_usage'):
-                        self.track_ai_usage('execute', prompt, response)
+                        # Track AI usage if method exists
+                        if hasattr(self, 'track_ai_usage'):
+                            self.track_ai_usage('execute', prompt, response)
 
-                    return {
-                        'success': True,
-                        'agent': self.config['name'],
-                        'specialization': self.specialization,
-                        'output': response,
-                        'ai_used': True,
-                        'timestamp': datetime.now().isoformat()
-                    }
+                        return {
+                            'success': True,
+                            'agent': self.config['name'],
+                            'specialization': self.specialization,
+                            'output': response,
+                            'ai_used': True,
+                            'timestamp': datetime.now().isoformat()
+                        }
+
+                return DynamicAgent
+
+            # Create the agent class using the factory
+            DynamicAgent = create_dynamic_agent_class(template, agent_config, agent_name)
 
             # Set class name dynamically
             DynamicAgent.__name__ = f"{agent_name.title().replace('_', '')}Agent"
@@ -205,67 +212,74 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
                 }
 
                 # Create a dynamic class that uses UniversalLLMAgent
-                class DynamicAgent(AIEnforcedAgent):
-                    """Dynamically created agent from template"""
+                # Use a factory function to avoid closure issues
+                def create_sync_dynamic_agent_class(template_copy, config_copy, agent_name_copy):
+                    class DynamicAgent(AIEnforcedAgent):
+                        """Dynamically created agent from template"""
 
-                    def __init__(self, user=None):
-                        # Store template configuration
-                        self.template = template
-                        self.config = agent_config
+                        def __init__(self, user=None):
+                            # Store template configuration
+                            self.template = template_copy
+                            self.config = config_copy
 
-                        # Initialize as AI-enforced agent
-                        super().__init__(agent_name=agent_name, user=user)
+                            # Initialize as AI-enforced agent
+                            super().__init__(agent_name=agent_name_copy, user=user)
 
-                        # Store capabilities
-                        self.capabilities = agent_config.get('capabilities', [])
-                        self.specialization = agent_config.get('type', 'general')
+                            # Store capabilities
+                            self.capabilities = config_copy.get('capabilities', [])
+                            self.specialization = config_copy.get('type', 'general')
 
-                        logger.debug(f"Initialized {agent_name} with specialization: {self.specialization}")
+                            logger.debug(f"Initialized {agent_name_copy} with specialization: {self.specialization}")
 
-                    async def execute(self, **kwargs):
-                        """Execute agent task using AI"""
-                        # Build context from template
-                        context = {
-                            'agent_type': self.specialization,
-                            'capabilities': self.capabilities,
-                            'configuration': self.config.get('configuration', {}),
-                            'user_input': kwargs
-                        }
+                        async def execute(self, **kwargs):
+                            """Execute agent task using AI"""
+                            # Build context from template
+                            context = {
+                                'agent_type': self.specialization,
+                                'capabilities': self.capabilities,
+                                'configuration': self.config.get('configuration', {}),
+                                'user_input': kwargs
+                            }
 
-                        # Generate prompt based on specialization
-                        task = kwargs.get('task', 'Complete the requested task')
+                            # Generate prompt based on specialization
+                            task = kwargs.get('task', 'Complete the requested task')
 
-                        prompt = f"""
-                        You are a specialized {self.specialization} agent with the following capabilities:
-                        {', '.join(self.capabilities)}
+                            prompt = f"""
+                            You are a specialized {self.specialization} agent with the following capabilities:
+                            {', '.join(self.capabilities)}
 
-                        Task: {task}
+                            Task: {task}
 
-                        Additional context: {json.dumps(kwargs, default=str)}
+                            Additional context: {json.dumps(kwargs, default=str)}
 
-                        Please complete this task using your specialized knowledge and capabilities.
-                        Provide detailed, actionable output appropriate for a {self.specialization} agent.
-                        """
+                            Please complete this task using your specialized knowledge and capabilities.
+                            Provide detailed, actionable output appropriate for a {self.specialization} agent.
+                            """
 
-                        # Use AI to generate response
-                        response = self.generate_ai_text(
-                            prompt=prompt,
-                            context=json.dumps(context, default=str),
-                            task_type=self.specialization
-                        )
+                            # Use AI to generate response
+                            response = super().generate_ai_text(
+                                prompt=prompt,
+                                context=json.dumps(context, default=str),
+                                task_type=self.specialization
+                            )
 
-                        # Track AI usage if method exists
-                        if hasattr(self, 'track_ai_usage'):
-                            self.track_ai_usage('execute', prompt, response)
+                            # Track AI usage if method exists
+                            if hasattr(self, 'track_ai_usage'):
+                                self.track_ai_usage('execute', prompt, response)
 
-                        return {
-                            'success': True,
-                            'agent': self.config['name'],
-                            'specialization': self.specialization,
-                            'output': response,
-                            'ai_used': True,
-                            'timestamp': datetime.now().isoformat()
-                        }
+                            return {
+                                'success': True,
+                                'agent': self.config['name'],
+                                'specialization': self.specialization,
+                                'output': response,
+                                'ai_used': True,
+                                'timestamp': datetime.now().isoformat()
+                            }
+
+                    return DynamicAgent
+
+                # Create the agent class using the factory
+                DynamicAgent = create_sync_dynamic_agent_class(template, agent_config, agent_name)
 
                 # Set class name dynamically
                 DynamicAgent.__name__ = f"{agent_name.title().replace('_', '')}Agent"

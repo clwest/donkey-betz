@@ -11,3 +11,10 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 def ai_agents_visualization(request):
     """Serve the AI agents learning visualization"""
     return render(request, 'visualization.html')
+
+
+@csrf_exempt
+@xframe_options_exempt
+def activity_monitor(request):
+    """Serve the activity monitor page for learning and infrastructure"""
+    return render(request, 'activity_monitor.html')
