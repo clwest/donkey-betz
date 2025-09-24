@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Selection & Deployment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* Project Panel */
+        .project-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .project-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .project-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .project-status {
+            float: right;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-generating {
+            background: #f59e0b;
+            color: white;
+        }
+
+        /* Agent Browser */
+        .agent-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .agent-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .agent-card.selected {
+            border-color: #10b981;
+            background: #f0fff4;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .agent-specialization {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .agent-metrics {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .agent-rating {
+            color: #f59e0b;
+        }
+
+        .agent-checkbox {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Deployment Panel */
+        .deployment-section {
+            margin-bottom: 24px;
+        }
+
+        .deployment-section h3 {
+            color: #555;
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .selected-agents {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .selected-agent-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .selected-agent-chip .remove {
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .deployment-strategy {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .strategy-option {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .strategy-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .ml-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .ml-feature {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .ml-feature input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .deploy-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .deploy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .deploy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Real-time Updates */
+        .updates-panel {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 20px;
+        }
+
+        .update-message {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            font-size: 12px;
+            border-left: 3px solid #667eea;
+        }
+
+        .update-timestamp {
+            color: #999;
+            font-size: 10px;
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Success Animation */
+        .success-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #10b981;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agent Selection & Deployment</h1>
+            <p>Deploy specialized AI agents to your projects</p>
+        </div>
+
+        <div class="main-grid">
+            <!-- Projects Panel -->
+            <div class="panel">
+                <h2>📁 Your Projects</h2>
+                <div id="projects-list">
+                    <!-- Projects will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Agent Browser -->
+            <div class="panel">
+                <h2>🔍 Agent Browser (149 Available)</h2>
+
+                <div class="agent-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="ml">Machine Learning</button>
+                    <button class="filter-btn" data-filter="research">Research</button>
+                    <button class="filter-btn" data-filter="content">Content</button>
+                    <button class="filter-btn" data-filter="technical">Technical</button>
+                </div>
+
+                <div class="agent-grid" id="agents-grid">
+                    <!-- Agents will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Deployment Configuration -->
+            <div class="panel">
+                <h2>⚙️ Deployment Configuration</h2>
+
+                <div class="deployment-section">
+                    <h3>Selected Agents</h3>
+                    <div class="selected-agents" id="selected-agents">
+                        <p style="color: #999; font-size: 14px;">No agents selected</p>
+                    </div>
+                </div>
+
+                <div class="deployment-section">
+                    <h3>Execution Strategy</h3>
+                    <div class="deployment-strategy">
+                        <div class="strategy-option selected" data-strategy="sequential">
+                            Sequential
+                        </div>
+                        <div class="strategy-option" data-strategy="parallel">
+                            Parallel
+                        </div>
+                        <div class="strategy-option" data-strategy="adaptive">
+                            Adaptive
+                        </div>
+                    </div>
+                </div>
+
+                <div class="deployment-section" id="ml-features-section" style="display: none;">
+                    <h3>ML Features</h3>
+                    <div class="ml-features">
+                        <div class="ml-feature">
+                            <input type="checkbox" id="ml-recommendation" value="recommendation">
+                            <label for="ml-recommendation">Recommendation Engine</label>
+                        </div>
+                        <div class="ml-feature">
+                            <input type="checkbox" id="ml-pricing" value="pricing">
+                            <label for="ml-pricing">Dynamic Pricing</label>
+                        </div>
+                        <div class="ml-feature">
+                            <input type="checkbox" id="ml-segmentation" value="segmentation">
+                            <label for="ml-segmentation">Customer Segmentation</label>
+                        </div>
+                        <div class="ml-feature">
+                            <input type="checkbox" id="ml-inventory" value="inventory">
+                            <label for="ml-inventory">Inventory Prediction</label>
+                        </div>
+                        <div class="ml-feature">
+                            <input type="checkbox" id="ml-fraud" value="fraud">
+                            <label for="ml-fraud">Fraud Detection</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="deploy-btn" id="deploy-btn" disabled>
+                    Deploy Selected Agents
+                </button>
+
+                <div class="updates-panel" id="updates-panel">
+                    <!-- Real-time updates will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        const projects = [
+            {
+                id: 1,
+                name: 'E-Commerce Revenue Engine',
+                type: 'ecommerce',
+                status: 'completed',
+                description: 'Full-stack e-commerce platform with ML capabilities'
+            },
+            {
+                id: 2,
+                name: 'Content Factory 3.0',
+                type: 'content_factory',
+                status: 'completed',
+                description: 'AI-powered content generation system'
+            },
+            {
+                id: 3,
+                name: 'Crypto Trading Bot',
+                type: 'crypto_trading',
+                status: 'generating',
+                description: 'Algorithmic cryptocurrency trading system'
+            }
+        ];
+
+        const agents = [
+            // ML Agents
+            { id: 'ml-1', name: 'ML Recommendation Engine', specialization: 'Machine Learning', category: 'ml', rating: 4.8, executions: 234 },
+            { id: 'ml-2', name: 'Dynamic Pricing Optimizer', specialization: 'Machine Learning', category: 'ml', rating: 4.7, executions: 189 },
+            { id: 'ml-3', name: 'Customer Segmentation ML', specialization: 'Machine Learning', category: 'ml', rating: 4.9, executions: 312 },
+            { id: 'ml-4', name: 'Demand Forecasting Agent', specialization: 'Machine Learning', category: 'ml', rating: 4.6, executions: 156 },
+            { id: 'ml-5', name: 'Fraud Detection ML', specialization: 'Machine Learning', category: 'ml', rating: 4.9, executions: 423 },
+
+            // Research Agents
+            { id: 'res-1', name: 'Market Research Analyst', specialization: 'Research & Analysis', category: 'research', rating: 4.5, executions: 167 },
+            { id: 'res-2', name: 'Competitor Analysis Agent', specialization: 'Research & Analysis', category: 'research', rating: 4.4, executions: 89 },
+            { id: 'res-3', name: 'Trend Forecaster', specialization: 'Research & Analysis', category: 'research', rating: 4.6, executions: 234 },
+
+            // Content Agents
+            { id: 'con-1', name: 'Product Description Writer', specialization: 'Content Creation', category: 'content', rating: 4.7, executions: 445 },
+            { id: 'con-2', name: 'SEO Content Optimizer', specialization: 'Content Creation', category: 'content', rating: 4.8, executions: 367 },
+            { id: 'con-3', name: 'Email Campaign Creator', specialization: 'Content Creation', category: 'content', rating: 4.5, executions: 201 },
+
+            // Technical Agents
+            { id: 'tech-1', name: 'API Integration Specialist', specialization: 'Technical Analysis', category: 'technical', rating: 4.9, executions: 512 },
+            { id: 'tech-2', name: 'Database Optimizer', specialization: 'Technical Analysis', category: 'technical', rating: 4.7, executions: 278 },
+            { id: 'tech-3', name: 'Security Auditor', specialization: 'Technical Analysis', category: 'technical', rating: 4.8, executions: 189 },
+        ];
+
+        let selectedProject = null;
+        let selectedAgents = new Set();
+        let selectedStrategy = 'sequential';
+
+        // Load projects
+        function loadProjects() {
+            const projectsList = document.getElementById('projects-list');
+            projectsList.innerHTML = projects.map(project => `
+                <div class="project-card" data-id="${project.id}">
+                    <h3>${project.name}</h3>
+                    <p style="color: #666; font-size: 14px; margin: 8px 0;">${project.description}</p>
+                    <span class="project-type">${project.type}</span>
+                    <span class="project-status status-${project.status}">${project.status}</span>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.project-card').forEach(card => {
+                card.addEventListener('click', () => selectProject(card));
+            });
+        }
+
+        // Load agents
+        function loadAgents(filter = 'all') {
+            const agentsGrid = document.getElementById('agents-grid');
+            const filteredAgents = filter === 'all' ? agents : agents.filter(a => a.category === filter);
+
+            agentsGrid.innerHTML = filteredAgents.map(agent => `
+                <div class="agent-card" data-id="${agent.id}">
+                    <input type="checkbox" class="agent-checkbox" data-agent-id="${agent.id}">
+                    <div class="agent-name">${agent.name}</div>
+                    <div class="agent-specialization">${agent.specialization}</div>
+                    <div class="agent-metrics">
+                        <span class="agent-rating">★ ${agent.rating}</span>
+                        <span>${agent.executions} runs</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.agent-card').forEach(card => {
+                const checkbox = card.querySelector('.agent-checkbox');
+                card.addEventListener('click', (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        toggleAgent(card.dataset.id, checkbox.checked);
+                    }
+                });
+                checkbox.addEventListener('change', (e) => {
+                    toggleAgent(card.dataset.id, e.target.checked);
+                });
+            });
+        }
+
+        // Select project
+        function selectProject(card) {
+            document.querySelectorAll('.project-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedProject = parseInt(card.dataset.id);
+
+            // Show ML features for e-commerce projects
+            const project = projects.find(p => p.id === selectedProject);
+            if (project && project.type === 'ecommerce') {
+                document.getElementById('ml-features-section').style.display = 'block';
+            } else {
+                document.getElementById('ml-features-section').style.display = 'none';
+            }
+
+            updateDeployButton();
+        }
+
+        // Toggle agent selection
+        function toggleAgent(agentId, isSelected) {
+            const card = document.querySelector(`.agent-card[data-id="${agentId}"]`);
+
+            if (isSelected) {
+                selectedAgents.add(agentId);
+                card.classList.add('selected');
+            } else {
+                selectedAgents.delete(agentId);
+                card.classList.remove('selected');
+            }
+
+            updateSelectedAgentsDisplay();
+            updateDeployButton();
+        }
+
+        // Update selected agents display
+        function updateSelectedAgentsDisplay() {
+            const container = document.getElementById('selected-agents');
+
+            if (selectedAgents.size === 0) {
+                container.innerHTML = '<p style="color: #999; font-size: 14px;">No agents selected</p>';
+            } else {
+                container.innerHTML = Array.from(selectedAgents).map(agentId => {
+                    const agent = agents.find(a => a.id === agentId);
+                    return `
+                        <span class="selected-agent-chip">
+                            ${agent.name}
+                            <span class="remove" data-id="${agentId}">×</span>
+                        </span>
+                    `;
+                }).join('');
+
+                // Add remove handlers
+                document.querySelectorAll('.selected-agent-chip .remove').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const agentId = btn.dataset.id;
+                        selectedAgents.delete(agentId);
+                        document.querySelector(`.agent-checkbox[data-agent-id="${agentId}"]`).checked = false;
+                        document.querySelector(`.agent-card[data-id="${agentId}"]`).classList.remove('selected');
+                        updateSelectedAgentsDisplay();
+                        updateDeployButton();
+                    });
+                });
+            }
+        }
+
+        // Update deploy button state
+        function updateDeployButton() {
+            const btn = document.getElementById('deploy-btn');
+            if (selectedProject && selectedAgents.size > 0) {
+                btn.disabled = false;
+                btn.textContent = `Deploy ${selectedAgents.size} Agent${selectedAgents.size > 1 ? 's' : ''}`;
+            } else {
+                btn.disabled = true;
+                btn.textContent = 'Deploy Selected Agents';
+            }
+        }
+
+        // Deploy agents
+        function deployAgents() {
+            const btn = document.getElementById('deploy-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Deploying...';
+
+            // Get ML features if applicable
+            const mlFeatures = Array.from(document.querySelectorAll('.ml-feature input:checked'))
+                .map(input => input.value);
+
+            // Simulate deployment
+            addUpdateMessage('🚀 Starting agent deployment...');
+
+            setTimeout(() => {
+                addUpdateMessage(`✅ Successfully deployed ${selectedAgents.size} agents`);
+
+                if (mlFeatures.length > 0) {
+                    addUpdateMessage(`🤖 ML features enabled: ${mlFeatures.join(', ')}`);
+                }
+
+                btn.innerHTML = 'Deployment Complete <span class="success-badge">SUCCESS</span>';
+
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Deploy Selected Agents';
+                }, 3000);
+            }, 2000);
+        }
+
+        // Add update message
+        function addUpdateMessage(message) {
+            const panel = document.getElementById('updates-panel');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'update-message';
+            messageDiv.innerHTML = `
+                ${message}
+                <div class="update-timestamp">${timestamp}</div>
+            `;
+
+            panel.insertBefore(messageDiv, panel.firstChild);
+
+            // Keep only last 10 messages
+            while (panel.children.length > 10) {
+                panel.removeChild(panel.lastChild);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProjects();
+            loadAgents();
+
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    loadAgents(btn.dataset.filter);
+                });
+            });
+
+            // Strategy selection
+            document.querySelectorAll('.strategy-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.strategy-option').forEach(o => o.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedStrategy = option.dataset.strategy;
+                });
+            });
+
+            // Deploy button
+            document.getElementById('deploy-btn').addEventListener('click', deployAgents);
+
+            // Initial message
+            addUpdateMessage('👋 Welcome to Agent Deployment System');
+        });
+    </script>
+</body>
+</html>

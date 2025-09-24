@@ -24,6 +24,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from core.views_visualization import ai_agents_visualization
+from core.views_master_demo import master_ai_demo, get_learning_stats
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -114,6 +115,10 @@ urlpatterns = [
 
     # AI Agents Visualization
     path('visualization/', ai_agents_visualization, name='ai-visualization'),
+
+    # Master Demo Page
+    path('master-demo/', master_ai_demo, name='master-demo'),
+    path('api/learning/stats/', get_learning_stats, name='learning-stats'),
 
     # Root and API root endpoints
     path('', platform_info, name='platform-info'),

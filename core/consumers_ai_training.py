@@ -5,6 +5,7 @@ import json
 import asyncio
 import redis.asyncio as redis
 from channels.generic.websocket import AsyncWebsocketConsumer
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,13 @@ class AITrainingConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         """Accept WebSocket connection and set up Redis subscription"""
+        # Join the channel layer group for agent execution updates
+        self.room_group_name = 'ai_training'
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
         await self.accept()
 
         # Initialize Redis connection
@@ -45,6 +53,13 @@ class AITrainingConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         """Clean up on disconnect"""
+        # Leave the channel layer group
+        if hasattr(self, 'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+
         if hasattr(self, 'redis_task'):
             self.redis_task.cancel()
 
@@ -196,3 +211,29 @@ class AITrainingConsumer(AsyncWebsocketConsumer):
             }))
         except Exception as e:
             logger.error(f"Error sending content: {e}")
+
+    async def broadcast_learning_update(self, event):
+        """Broadcast agent learning updates"""
+        await self.send(json.dumps({
+            'type': 'learning_update',
+            'data': event['data']
+        }))
+
+    async def broadcast_agent_collaboration(self, event):
+        """Broadcast when agents collaborate"""
+        await self.send(json.dumps({
+            'type': 'agent_collaboration',
+            'agents': event['agents'],
+            'knowledge_shared': event['knowledge'],
+            'timestamp': event.get('timestamp', str(datetime.now().isoformat()))
+        }))
+
+    async def broadcast_code_evolution(self, event):
+        """Show code getting better over time"""
+        await self.send(json.dumps({
+            'type': 'code_evolution',
+            'agent': event['agent'],
+            'version': event['version'],
+            'improvements': event['improvements'],
+            'metrics': event['metrics']
+        }))

@@ -17,6 +17,7 @@ from .project_progress_consumer import ProjectProgressConsumer, AllProjectsConsu
 from .agent_monitor_consumer_simple import AgentMonitorConsumer
 from .deliverables_consumer import DeliverablesConsumer
 from .freelance_consumer import FreelanceConsumer
+from .consumers_ai_training import AITrainingConsumer
 
 # Import SpiderWebSocketConsumer properly
 try:
@@ -42,6 +43,9 @@ websocket_urlpatterns = [
 
     # Activity Stream WebSocket for real-time agent activity
     re_path(r'^ws/activity/$', consumers.AgentProgressConsumer.as_asgi()),
+
+    # AI Training WebSocket for learning updates
+    re_path(r'^ws/ai-training/$', AITrainingConsumer.as_asgi()),
 
     # Spider Dashboard WebSocket for real-time updates
     re_path(r'^ws/spider-updates/$', SpiderWebSocketConsumer.as_asgi() if SpiderWebSocketConsumer else consumers.AgentProgressConsumer.as_asgi()),

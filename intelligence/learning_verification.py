@@ -396,6 +396,69 @@ class LearningVerificationSystem:
         # Basic heuristic: solution should contain most expected patterns
         return pattern_matches >= len(problem.solution_patterns) * 0.6
 
+    def verify_capability_improvement(self, agent_name: str, task_type: str, generated_code: str = None) -> Dict[str, Any]:
+        """
+        Quick verification of agent capability improvement for real-time tracking.
+        This is a simplified version for integration with deployment system.
+        """
+        try:
+            # Calculate basic quality metrics
+            quality_score = 70  # Base quality
+
+            if generated_code:
+                lines = generated_code.splitlines()
+
+                # Quality indicators
+                if 'try:' in generated_code and 'except' in generated_code:
+                    quality_score += 5  # Error handling
+                if 'class' in generated_code:
+                    quality_score += 5  # Object-oriented
+                if 'def ' in generated_code:
+                    quality_score += 3  # Functions
+                if any(comment in generated_code for comment in ['#', '"""']):
+                    quality_score += 2  # Documentation
+                if 'async' in generated_code:
+                    quality_score += 5  # Async support
+
+                # Complexity score based on code structure
+                complexity = len(lines) / 10
+                if 'for' in generated_code or 'while' in generated_code:
+                    complexity += 10
+                if 'if' in generated_code:
+                    complexity += 5
+
+            # Track improvement over time (retrieve from Redis)
+            previous_score = 70
+            improvement_key = f"agent:{agent_name}:last_quality"
+
+            if self.redis.exists(improvement_key):
+                try:
+                    previous_score = float(self.redis.get(improvement_key))
+                except:
+                    previous_score = 70
+
+            # Store current score
+            self.redis.set(improvement_key, str(quality_score))
+
+            improvement = quality_score - previous_score
+
+            return {
+                'quality': quality_score,
+                'improvement': improvement,
+                'complexity': complexity if generated_code else 50,
+                'verified': True
+            }
+
+        except Exception as e:
+            # Return default values on error
+            return {
+                'quality': 70,
+                'improvement': 0,
+                'complexity': 50,
+                'verified': False,
+                'error': str(e)
+            }
+
     def _rate_solution_quality(self, problem: TestProblem, solution: str) -> float:
         """Rate solution quality on scale 0-10"""
         if not solution:

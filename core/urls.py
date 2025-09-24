@@ -34,7 +34,8 @@ from core.views_projects import (
 
 # Import deployment views
 from core.views_deploy import (
-    view_generated_files, download_project, deploy_project
+    view_generated_files, download_project, deploy_project,
+    get_recent_project, get_database_files
 )
 
 # Import auto-fix views
@@ -290,6 +291,9 @@ urlpatterns = [
     # AI Building Products page (moved up to ensure it's matched first)
     path('ai-building-products/', ai_building_products, name='ai-building-products'),
 
+    # Agent Deployment System for AI Building Products
+    path('api/agent-deployment/', include('agents.urls_deployment')),
+
     # AI Agents Visualization page
     path('visualization/', ai_agents_visualization, name='ai-agents-visualization'),
 
@@ -317,6 +321,8 @@ urlpatterns = [
     path('api/projects/<str:project_name>/files/', view_generated_files, name='view-generated-files'),
     path('api/projects/<str:project_name>/download/', download_project, name='download-project'),
     path('api/projects/deploy/', deploy_project, name='deploy-project'),
+    path('api/projects/recent/', get_recent_project, name='recent-project'),
+    path('api/projects/database-files/', get_database_files, name='database-files'),
 
     # Auto-fix endpoint for agent debugging
     path('api/projects/auto-fix/', auto_fix_code, name='auto-fix-code'),
@@ -422,6 +428,10 @@ urlpatterns = [
     path('api/agents/stats/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentStatsAPI']).AgentStatsAPI.as_view()(r), name='agent_stats'),
     path('api/agents/activity/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentActivityAPI']).AgentActivityAPI.as_view()(r), name='agent_activity'),
     path('api/agents/execute/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentExecuteAPI']).AgentExecuteAPI.as_view()(r), name='agent_execute'),
+    path('api/agents/debug-registry/', lambda r: __import__('agents.views_deployment_execute_improved', fromlist=['debug_agent_registry']).debug_agent_registry(r), name='debug_agent_registry'),
+    path('api/agents/run-tests/', lambda r: __import__('agents.agent_testing_system', fromlist=['run_agent_tests']).run_agent_tests(r), name='run_agent_tests'),
+    path('api/agents/test-status/', lambda r: __import__('agents.agent_testing_system', fromlist=['get_agent_test_status']).get_agent_test_status(r), name='get_agent_test_status'),
+    path('agent-testing/', lambda r: __import__('django.shortcuts', fromlist=['render']).render(r, 'agent_testing_dashboard.html'), name='agent_testing_dashboard'),
     path('api/agents/connections/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentSpiderConnectionAPI']).AgentSpiderConnectionAPI.as_view()(r), name='agent_spider_connections'),
 
     # Simple Agent API endpoints (without complex models)
