@@ -106,7 +106,7 @@ def get_all_agent_classes() -> Dict[str, type]:
                     """
 
                     # Use AI to generate response
-                    response = self.generate_ai_text(
+                    response = super().generate_ai_text(
                         prompt=prompt,
                         context=json.dumps(context, default=str),
                         task_type=self.specialization
