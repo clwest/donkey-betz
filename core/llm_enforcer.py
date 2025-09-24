@@ -124,7 +124,7 @@ class LLMEnforcer:
                 # Use OpenAI
                 response = self._call_openai(full_prompt, max_tokens, temperature, task_type)
                 provider = "openai"
-                model = "gpt-5-nano"  # Fast and efficient
+                model = "gpt-4o-mini"  # Reliable and efficient
             else:
                 raise Exception("No LLM client available")
 
@@ -198,23 +198,27 @@ class LLMEnforcer:
 
         system_msg = system_messages.get(task_type, system_messages['general'])
 
-        # Build parameters for GPT-5 models
-        # GPT-5 models only support default temperature (1.0)
+        # Build parameters - switching to GPT-4o-mini for reliable content generation
+        # GPT-5-nano has issues with returning empty content
         params = {
-            'model': "gpt-5-nano",  # Using GPT-5-nano for fast operations
+            'model': "gpt-4o-mini",  # Using GPT-4o-mini for reliable content generation
             'messages': [
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": prompt}
             ],
-            'max_completion_tokens': max_tokens  # GPT-5 uses max_completion_tokens
+            'max_tokens': max_tokens,  # GPT-4 uses max_tokens
+            'temperature': temperature
         }
-
-        # Note: GPT-5 models only support temperature=1.0 (default)
-        # Omitting temperature parameter to use default value
 
         response = self.openai_client.chat.completions.create(**params)
 
         content = response.choices[0].message.content
+        # Debug: check if content is empty
+        if not content:
+            logger.warning(f"⚠️ OpenAI returned empty content for prompt: {prompt[:100]}...")
+            logger.warning(f"⚠️ Response object: {response}")
+            content = "[AI Response Error: Empty content returned from OpenAI]"
+
         tokens = response.usage.total_tokens
 
         # Estimate cost (GPT-5-nano pricing)
