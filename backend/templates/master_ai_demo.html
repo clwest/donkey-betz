@@ -93,6 +93,10 @@
             position: relative;
             transition: all 0.3s ease;
             cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Important for text overflow to work */
         }
 
         .project-card:hover {
@@ -124,13 +128,21 @@
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: #e0e6ed;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .project-description {
-            color: #94a3b8;
-            font-size: 0.9rem;
+            color: #64748b;
+            font-size: 0.8rem;
             margin-bottom: 1rem;
-            line-height: 1.4;
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'Monaco', 'Courier New', monospace;
+            opacity: 0.8;
         }
 
         .project-stats {
@@ -200,12 +212,17 @@
         }
 
         .project-agent-chip {
+            display: inline-block;
             padding: 0.25rem 0.5rem;
             background: rgba(139, 92, 246, 0.1);
             border: 1px solid rgba(139, 92, 246, 0.3);
             border-radius: 12px;
             font-size: 0.75rem;
             color: #c4b5fd;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* Main Layout */
@@ -643,6 +660,7 @@
             <a href="/visualization/" class="nav-link">3D Ecosystem</a>
             <a href="/activity-monitor/" class="nav-link">Activity Monitor</a>
             <a href="/master-demo/" class="nav-link active">Master Demo</a>
+            <a href="/ai-building-products/" class="nav-link">AI Building Products</a>
         </div>
     </div>
 
@@ -828,7 +846,7 @@
                 </div>
             </div>
 
-            <div id="projects-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; padding: 1rem;">
+            <div id="projects-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; padding: 1rem; max-width: 100%; overflow-x: auto;">
                 <!-- Project cards will be populated here -->
             </div>
 
@@ -905,10 +923,16 @@
 
         // Project Management Functions
         async function refreshProjects() {
+            console.log('🔄 Refreshing projects...');
             try {
-                // Load from build_status.json
-                const buildStatusResponse = await fetch('/ai_generated_projects/build_status.json');
+                // Load from build_status.json with cache busting
+                const buildStatusResponse = await fetch(`/ai_generated_projects/build_status.json?t=${Date.now()}`);
+                if (!buildStatusResponse.ok) {
+                    console.error('❌ Failed to fetch build_status.json:', buildStatusResponse.status);
+                    return;
+                }
                 const buildStatus = await buildStatusResponse.json();
+                console.log('📁 Loaded build_status.json:', buildStatus);
 
                 // Also fetch from database
                 const dbResponse = await fetch('/api/projects/stats/');
@@ -947,6 +971,8 @@
                     }
                 });
 
+                console.log(`📊 Total projects loaded: ${activeProjects.length}`);
+                console.log('📦 Projects data:', activeProjects);
                 displayProjects();
             } catch (error) {
                 console.error('Error refreshing projects:', error);
@@ -959,6 +985,8 @@
             const noProjectsMsg = document.getElementById('no-projects-message');
             const projectsCount = document.getElementById('projects-count');
 
+            console.log(`📊 Displaying ${activeProjects.length} projects:`, activeProjects);
+
             if (activeProjects.length === 0) {
                 container.style.display = 'none';
                 noProjectsMsg.style.display = 'block';
@@ -970,11 +998,16 @@
             noProjectsMsg.style.display = 'none';
             projectsCount.textContent = `${activeProjects.length} project${activeProjects.length !== 1 ? 's' : ''}`;
 
-            container.innerHTML = activeProjects.map(project => `
+            container.innerHTML = activeProjects.map(project => {
+                // Extract just the project folder name from the path
+                const shortPath = project.path ? project.path.split('/').pop() : 'AI-generated project';
+                console.log(`🏗️ Project ${project.name}: path="${project.path}" -> shortPath="${shortPath}", files=${project.filesCount}`);
+
+                return `
                 <div class="project-card" onclick="selectProject('${project.id}')">
                     <div class="project-status ${project.status}">${project.status === 'complete' ? '✅ Complete' : '🔨 Building'}</div>
-                    <div class="project-title">${project.name}</div>
-                    <div class="project-description">${project.path || 'AI-generated project'}</div>
+                    <div class="project-title" title="${project.name}">${project.name}</div>
+                    <div class="project-description" title="${project.path || 'AI-generated project'}">/${shortPath}</div>
 
                     <div class="project-stats">
                         <div class="project-stat">
@@ -1006,7 +1039,7 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function selectProject(projectId) {
@@ -1345,18 +1378,26 @@
             });
         }
 
-        // Make refreshFiles globally available
+        // Make refresh functions globally available
         window.refreshFiles = refreshFiles;
+        window.refreshProjects = refreshProjects;
 
         // Initialize the page
         async function init() {
-            await fetchAgents();  // Fetch all agents from API
-            populateAgents();
-            connectWebSocket();
-            startMetricsUpdate();
-            await fetchActiveSessionsCount();  // Load real metrics immediately
-            await refreshFiles();  // Load existing files
-            await refreshProjects();  // Load existing projects
+            console.log('🚀 Initializing page...');
+            try {
+                await fetchAgents();  // Fetch all agents from API
+                populateAgents();
+                connectWebSocket();
+                startMetricsUpdate();
+                await fetchActiveSessionsCount();  // Load real metrics immediately
+                await refreshFiles();  // Load existing files
+                console.log('📦 About to refresh projects...');
+                await refreshProjects();  // Load existing projects
+                console.log('✅ Init complete');
+            } catch (error) {
+                console.error('❌ Error during initialization:', error);
+            }
         }
 
         // Fetch all agents from API
@@ -1749,9 +1790,19 @@
             };
 
             ws.onmessage = (event) => {
-                console.log('📨 WebSocket message received:', event.data);
                 try {
                     const data = JSON.parse(event.data);
+                    // Format console output nicely
+                    console.log('📨 WebSocket message received:');
+                    console.log('   Type:', data.type);
+                    if (data.status) console.log('   Status:', data.status);
+                    if (data.message) console.log('   Message:', data.message);
+                    if (data.events && Array.isArray(data.events)) {
+                        console.log('   Events:', data.events.length, 'events');
+                    }
+                    if (data.metrics) {
+                        console.log('   Metrics:', data.metrics);
+                    }
                     handleWebSocketMessage(data);
                 } catch (e) {
                     console.error('❌ Failed to parse WebSocket message:', e, event.data);
@@ -1780,7 +1831,7 @@
 
         // Handle WebSocket messages
         function handleWebSocketMessage(data) {
-            console.log('WebSocket message:', data);  // Debug logging
+            // Debug logging already done in onmessage handler
 
             switch(data.type) {
                 case 'learning_update':
@@ -1801,10 +1852,42 @@
 
                 case 'history':
                     // Handle historical events
+                    console.log(`📜 Processing ${data.events?.length || 0} historical events`);
                     if (data.events && data.events.length > 0) {
+                        // Process different event types
                         data.events.forEach(event => {
-                            if (event.type === 'learning_update') {
-                                handleLearningUpdate(event.data);
+                            switch(event.type) {
+                                case 'team_formed':
+                                    addEvent('success', `Team formed: ${event.team} led by ${event.lead}`);
+                                    break;
+                                case 'insight':
+                                    addEvent('insight', `Insight #${event.number}: ${event.insight}`);
+                                    break;
+                                case 'content_created':
+                                    addEvent('success', `${event.content_type} created: "${event.title}" by ${event.author}`);
+                                    break;
+                                case 'job_recommendation':
+                                    addEvent('info', `Job #${event.rank}: ${event.title} (${event.salary})`);
+                                    break;
+                                case 'vulnerability_assessment':
+                                    const riskColor = event.risk_level.includes('HIGH') ? 'error' :
+                                                     event.risk_level.includes('MODERATE') ? 'warning' : 'success';
+                                    addEvent(riskColor, `${event.industry}: ${event.risk_percentage}% risk - ${event.recommendation}`);
+                                    break;
+                                case 'final_metrics':
+                                    addEvent('success', `Training complete! Accuracy: ${event.metrics.accuracy}%, Insights: ${event.metrics.unique_insights_generated}`);
+                                    // Update accuracy display if element exists
+                                    const accuracyEl = document.getElementById('accuracy');
+                                    if (accuracyEl && event.metrics.accuracy) {
+                                        accuracyEl.textContent = event.metrics.accuracy + '%';
+                                    }
+                                    break;
+                                case 'learning_update':
+                                    handleLearningUpdate(event.data);
+                                    break;
+                                default:
+                                    // Log other event types for debugging
+                                    console.log(`Event type: ${event.type}`, event);
                             }
                         });
                     }
@@ -2066,6 +2149,18 @@
 
         // Initialize on page load
         window.addEventListener('load', init);
+
+        // Also try calling refreshProjects after a short delay as a fallback
+        setTimeout(() => {
+            console.log('⏰ Delayed project refresh (fallback)...');
+            refreshProjects().then(() => {
+                console.log('✅ Delayed refresh completed, activeProjects:', activeProjects);
+                console.log('🖥️ Projects container display:', document.getElementById('projects-container').style.display);
+                console.log('📝 Projects container innerHTML length:', document.getElementById('projects-container').innerHTML.length);
+            }).catch(error => {
+                console.error('❌ Failed to refresh projects:', error);
+            });
+        }, 2000);
     </script>
 </body>
 </html>
