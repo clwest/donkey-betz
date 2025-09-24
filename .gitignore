@@ -203,3 +203,7 @@ master.key
 *_api_key.txt
 *_secret.txt
 *_token.txt
+
+# API Key Vault
+.vault_key
+api_keys.vault
