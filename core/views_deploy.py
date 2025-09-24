@@ -278,3 +278,78 @@ def get_language_from_extension(ext):
         '.sql': 'sql'
     }
     return language_map.get(ext, 'text')
+
+
+@csrf_exempt
+def get_recent_project(request):
+    """Get the most recently created project"""
+    try:
+        from core.models import GeneratedProject
+
+        recent_project = GeneratedProject.objects.order_by('-created_at').first()
+
+        if not recent_project:
+            return JsonResponse({
+                'success': False,
+                'error': 'No projects found'
+            }, status=404)
+
+        return JsonResponse({
+            'success': True,
+            'project_name': recent_project.name,
+            'project_id': str(recent_project.id),
+            'created_at': recent_project.created_at.isoformat()
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+def get_database_files(request):
+    """Get all generated files from database for the most recent project"""
+    try:
+        from core.models import GeneratedProject, GeneratedCode
+
+        # Get the most recent project
+        recent_project = GeneratedProject.objects.order_by('-created_at').first()
+
+        if not recent_project:
+            return JsonResponse({
+                'success': False,
+                'error': 'No projects found'
+            })
+
+        # Get all files for this project
+        files = GeneratedCode.objects.filter(
+            project=recent_project,
+            is_latest=True
+        ).order_by('-created_at')
+
+        file_data = []
+        for file in files:
+            file_data.append({
+                'name': file.filename,
+                'content': file.content,
+                'size': len(file.content.encode('utf-8')),
+                'language': file.language or 'text',
+                'created_at': file.created_at.isoformat(),
+                'agent': file.agent_creator or 'unknown'
+            })
+
+        return JsonResponse({
+            'success': True,
+            'project': recent_project.name,
+            'project_id': str(recent_project.id),
+            'files': file_data,
+            'total_files': len(file_data)
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

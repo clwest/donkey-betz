@@ -103,8 +103,8 @@ def ecosystem_live_feed(request):
 
 def ai_building_products(request):
     """Render the AI Building Products page"""
-    # Use enhanced version with project switching and real execution
-    return render(request, 'ai_building_products_enhanced.html')
+    # Use version with full agent deployment system (149+ agents)
+    return render(request, 'ai_building_products_with_agents.html')
 
 @csrf_exempt
 @require_GET

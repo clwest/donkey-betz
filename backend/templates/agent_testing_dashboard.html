@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Testing Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+        }
+
+        .controls {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f7fafc;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-item label {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.9rem;
+        }
+
+        .control-item input, .control-item select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+        }
+
+        .status-panel {
+            padding: 20px;
+            display: none;
+        }
+
+        .status-panel.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #3182ce);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .results {
+            padding: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #4299e1;
+        }
+
+        .summary-card.success {
+            border-left-color: #48bb78;
+        }
+
+        .summary-card.error {
+            border-left-color: #f56565;
+        }
+
+        .summary-card.warning {
+            border-left-color: #ed8936;
+        }
+
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .summary-card p {
+            margin: 0;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .results-section {
+            margin: 30px 0;
+        }
+
+        .results-section h3 {
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .agent-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+
+        .agent-item {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .agent-item:last-child {
+            border-bottom: none;
+        }
+
+        .agent-item.success {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+        }
+
+        .agent-item.error {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .agent-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .agent-status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .agent-status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .agent-time {
+            margin-left: 10px;
+            font-size: 0.8rem;
+            color: #718096;
+        }
+
+        .logs {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Agent Testing Dashboard</h1>
+            <p>Comprehensive testing system for all 157 agents</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-item">
+                    <label>Test Mode</label>
+                    <select id="testMode">
+                        <option value="sample">Quick Sample (5 agents)</option>
+                        <option value="extended">Extended Test (15 agents)</option>
+                        <option value="all">Full Test (All agents)</option>
+                        <option value="specific">Specific Agents</option>
+                    </select>
+                </div>
+
+                <div class="control-item">
+                    <label>Concurrent Tests</label>
+                    <input type="number" id="maxConcurrent" value="3" min="1" max="10">
+                </div>
+
+                <div class="control-item">
+                    <label>Timeout (seconds)</label>
+                    <input type="number" id="timeout" value="30" min="10" max="120">
+                </div>
+
+                <div class="control-item" style="margin-top: 20px;">
+                    <button class="btn" id="runTestsBtn" onclick="runTests()">🚀 Start Testing</button>
+                    <button class="btn btn-secondary" id="getStatusBtn" onclick="getStatus()">📊 Get Status</button>
+                </div>
+            </div>
+
+            <div class="control-item hidden" id="specificAgentsInput" style="margin-top: 15px;">
+                <label>Specific Agents (comma-separated)</label>
+                <input type="text" id="specificAgents" placeholder="Business Agent, ML Recommendation Engine, Data Scientist" style="width: 100%;">
+            </div>
+        </div>
+
+        <div class="status-panel" id="statusPanel">
+            <h3>🔄 Testing in Progress...</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="currentStatus">Initializing tests...</p>
+        </div>
+
+        <div class="results hidden" id="resultsPanel">
+            <div class="summary-grid" id="summaryGrid">
+                <!-- Summary cards will be inserted here -->
+            </div>
+
+            <div class="results-section">
+                <h3>✅ Successful Agents</h3>
+                <div class="agent-list" id="successfulAgents">
+                    <!-- Successful agents will be listed here -->
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3>❌ Registry Errors</h3>
+                <div class="agent-list" id="registryErrors">
+                    <!-- Registry error agents will be listed here -->
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3>⚠️ Execution Errors</h3>
+                <div class="agent-list" id="executionErrors">
+                    <!-- Execution error agents will be listed here -->
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3>🔧 Fix Recommendations</h3>
+                <div id="recommendations">
+                    <!-- Recommendations will be listed here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="logs hidden" id="logsPanel">
+            <!-- Live logs will appear here -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('testMode').addEventListener('change', function() {
+            const specificInput = document.getElementById('specificAgentsInput');
+            if (this.value === 'specific') {
+                specificInput.classList.remove('hidden');
+            } else {
+                specificInput.classList.add('hidden');
+            }
+        });
+
+        async function getStatus() {
+            try {
+                const response = await fetch('/api/agents/test-status/');
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Agent Testing System Status:
+• Total Agents to Test: ${data.total_agents_to_test}
+• Registry Agents: ${data.registry_status.total_agents}
+• Ready to test!`);
+                } else {
+                    alert('Error getting status: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function runTests() {
+            const testMode = document.getElementById('testMode').value;
+            const maxConcurrent = parseInt(document.getElementById('maxConcurrent').value);
+            const timeout = parseInt(document.getElementById('timeout').value);
+            const specificAgentsInput = document.getElementById('specificAgents').value;
+
+            // Prepare request data
+            const requestData = {
+                max_concurrent: maxConcurrent,
+                timeout_per_agent: timeout
+            };
+
+            // Handle specific agents
+            if (testMode === 'specific' && specificAgentsInput.trim()) {
+                requestData.agents = specificAgentsInput.split(',').map(s => s.trim());
+            }
+
+            // Show loading state
+            document.getElementById('runTestsBtn').disabled = true;
+            document.getElementById('statusPanel').classList.add('active');
+            document.getElementById('resultsPanel').classList.add('hidden');
+
+            document.getElementById('currentStatus').textContent = 'Starting agent tests...';
+            document.getElementById('progressFill').style.width = '10%';
+
+            try {
+                const response = await fetch('/api/agents/run-tests/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                document.getElementById('progressFill').style.width = '50%';
+                document.getElementById('currentStatus').textContent = 'Processing results...';
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('progressFill').style.width = '100%';
+                    document.getElementById('currentStatus').textContent = 'Tests completed!';
+
+                    setTimeout(() => {
+                        displayResults(data.report);
+                    }, 1000);
+                } else {
+                    throw new Error(data.error);
+                }
+
+            } catch (error) {
+                document.getElementById('statusPanel').classList.remove('active');
+                alert('Error running tests: ' + error.message);
+            } finally {
+                document.getElementById('runTestsBtn').disabled = false;
+            }
+        }
+
+        function displayResults(report) {
+            document.getElementById('statusPanel').classList.remove('active');
+            document.getElementById('resultsPanel').classList.remove('hidden');
+
+            // Display summary
+            const summaryGrid = document.getElementById('summaryGrid');
+            const summary = report.test_summary;
+
+            summaryGrid.innerHTML = `
+                <div class="summary-card success">
+                    <h3>${summary.successful}</h3>
+                    <p>Successful (${summary.success_rate})</p>
+                </div>
+                <div class="summary-card error">
+                    <h3>${summary.registry_errors}</h3>
+                    <p>Registry Errors</p>
+                </div>
+                <div class="summary-card warning">
+                    <h3>${summary.execution_errors}</h3>
+                    <p>Execution Errors</p>
+                </div>
+                <div class="summary-card">
+                    <h3>${summary.average_execution_time}</h3>
+                    <p>Avg Execution Time</p>
+                </div>
+            `;
+
+            // Display successful agents
+            const successfulAgents = document.getElementById('successfulAgents');
+            successfulAgents.innerHTML = report.successful_agents.map(agent => `
+                <div class="agent-item success">
+                    <div class="agent-name">${agent.name}</div>
+                    <div class="agent-status success">SUCCESS</div>
+                    <div class="agent-time">${agent.execution_time}</div>
+                </div>
+            `).join('');
+
+            // Display registry errors
+            const registryErrors = document.getElementById('registryErrors');
+            registryErrors.innerHTML = report.registry_errors.map(agent => `
+                <div class="agent-item error">
+                    <div class="agent-name">${agent.name}</div>
+                    <div class="agent-status error">REGISTRY ERROR</div>
+                    <div style="font-size: 0.8rem; color: #718096;">${agent.executor_name}</div>
+                </div>
+            `).join('');
+
+            // Display execution errors
+            const executionErrors = document.getElementById('executionErrors');
+            executionErrors.innerHTML = report.execution_errors.map(agent => `
+                <div class="agent-item error">
+                    <div class="agent-name">${agent.name}</div>
+                    <div class="agent-status error">EXEC ERROR</div>
+                    <div style="font-size: 0.8rem; color: #718096;">${agent.error.substring(0, 50)}...</div>
+                </div>
+            `).join('');
+
+            // Display recommendations
+            const recommendations = document.getElementById('recommendations');
+            recommendations.innerHTML = report.fix_recommendations.map(rec => `
+                <div style="background: #f7fafc; padding: 15px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #4299e1;">
+                    <strong>${rec.type}:</strong> ${rec.action}
+                    ${rec.suggested_mappings ? '<br><small>Suggested: ' + rec.suggested_mappings.join(', ') + '</small>' : ''}
+                </div>
+            `).join('');
+
+            console.log('Full test report:', report);
+        }
+
+        // Initialize
+        getStatus();
+    </script>
+</body>
+</html>
