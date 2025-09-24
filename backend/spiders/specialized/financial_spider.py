@@ -21,8 +21,14 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 import yfinance as yf
+import os
+import sys
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+from ..web_request_layer import web_request_layer
 
 
 class FinancialIntelligenceSpider(BaseIntelligenceSpider):
@@ -126,15 +132,101 @@ class FinancialIntelligenceSpider(BaseIntelligenceSpider):
             self.logger.error(f"Error processing SEC filing: {e}")
             return None
 
-    async def _process_yahoo_finance(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Yahoo Finance data"""
-        try:
-            # Use yfinance for real-time stock data
-            financial_data = {}
+    async def fetch_real_financial_data(self, symbols: List[str]) -> Dict[str, Any]:
+        """Fetch real financial data from multiple sources"""
+        financial_data = {}
 
+        # Initialize web request layer
+        await web_request_layer.initialize()
+
+        # 1. Fetch from Alpha Vantage (if API key available)
+        alpha_vantage_key = os.environ.get('ALPHA_VANTAGE_KEY')
+        if alpha_vantage_key:
+            for symbol in symbols[:3]:  # Limit to avoid rate limits
+                url = f"https://www.alphavantage.co/query"
+                params = {
+                    'function': 'GLOBAL_QUOTE',
+                    'symbol': symbol,
+                    'apikey': alpha_vantage_key
+                }
+                response = await web_request_layer.fetch(url, params=params)
+                if response['json'] and 'Global Quote' in response['json']:
+                    quote = response['json']['Global Quote']
+                    financial_data[symbol] = {
+                        'source': 'alpha_vantage',
+                        'price': float(quote.get('05. price', 0)),
+                        'volume': int(quote.get('06. volume', 0)),
+                        'change': quote.get('09. change'),
+                        'change_percent': quote.get('10. change percent')
+                    }
+
+        # 2. Fetch from IEX Cloud (sandbox/free tier)
+        for symbol in symbols[:5]:
+            # Using IEX sandbox endpoint (free)
+            url = f"https://sandbox.iexapis.com/stable/stock/{symbol.lower()}/quote"
+            params = {'token': 'Tpk_053b8dd1b9684e2c9816ab4f6b8a1e7a'}  # Sandbox token
+            response = await web_request_layer.fetch(url, params=params)
+            if response['json']:
+                quote = response['json']
+                financial_data[f"{symbol}_iex"] = {
+                    'source': 'iex_cloud',
+                    'price': quote.get('latestPrice'),
+                    'volume': quote.get('volume'),
+                    'market_cap': quote.get('marketCap'),
+                    'pe_ratio': quote.get('peRatio'),
+                    '52_week_high': quote.get('week52High'),
+                    '52_week_low': quote.get('week52Low')
+                }
+
+        # 3. Fetch crypto data from CoinGecko (no auth required)
+        crypto_url = "https://api.coingecko.com/api/v3/simple/price"
+        crypto_params = {
+            'ids': 'bitcoin,ethereum,cardano,polkadot,chainlink',
+            'vs_currencies': 'usd',
+            'include_market_cap': 'true',
+            'include_24hr_vol': 'true',
+            'include_24hr_change': 'true'
+        }
+        crypto_response = await web_request_layer.fetch(crypto_url, params=crypto_params)
+        if crypto_response['json']:
+            for coin, data in crypto_response['json'].items():
+                financial_data[f"crypto_{coin}"] = {
+                    'source': 'coingecko',
+                    'price': data.get('usd'),
+                    'market_cap': data.get('usd_market_cap'),
+                    'volume_24h': data.get('usd_24h_vol'),
+                    'change_24h': data.get('usd_24h_change')
+                }
+
+        # 4. Fetch market news from NewsAPI (if key available)
+        news_api_key = os.environ.get('NEWS_API_KEY')
+        if news_api_key:
+            news_url = "https://newsapi.org/v2/top-headlines"
+            news_params = {
+                'category': 'business',
+                'country': 'us',
+                'apiKey': news_api_key,
+                'pageSize': 5
+            }
+            news_response = await web_request_layer.fetch(news_url, params=news_params)
+            if news_response['json'] and 'articles' in news_response['json']:
+                financial_data['market_news'] = {
+                    'source': 'newsapi',
+                    'articles': news_response['json']['articles']
+                }
+
+        return financial_data
+
+    async def _process_yahoo_finance(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
+        """Process Yahoo Finance data with real API calls"""
+        try:
             # Extract stock symbols from URL or use tracked symbols
             symbols = self._extract_symbols_from_url(target.url) or self.tracked_symbols[:5]
 
+            # Fetch real financial data from multiple sources
+            financial_data = await self.fetch_real_financial_data(symbols)
+
+            # Also try yfinance for additional data
             for symbol in symbols:
                 try:
                     ticker = yf.Ticker(symbol)
@@ -143,7 +235,8 @@ class FinancialIntelligenceSpider(BaseIntelligenceSpider):
 
                     if not hist.empty:
                         latest = hist.iloc[-1]
-                        financial_data[symbol] = {
+                        financial_data[f"{symbol}_yfinance"] = {
+                            'source': 'yfinance',
                             'price': float(latest['Close']),
                             'volume': int(latest['Volume']),
                             'open': float(latest['Open']),
@@ -162,7 +255,7 @@ class FinancialIntelligenceSpider(BaseIntelligenceSpider):
                             'recommendation': info.get('recommendationMean')
                         }
                 except Exception as e:
-                    self.logger.warning(f"Failed to get data for {symbol}: {e}")
+                    self.logger.warning(f"Failed to get yfinance data for {symbol}: {e}")
 
             # Calculate quality score
             quality_score = self._calculate_market_data_quality(financial_data)
