@@ -672,6 +672,7 @@
                 <a href="/visualization/" class="nav-link active">3D Ecosystem</a>
                 <a href="/activity-monitor/" class="nav-link">Activity Monitor</a>
                 <a href="/master-demo/" class="nav-link">Master Demo</a>
+                <a href="/ai-building-products/" class="nav-link">AI Building Products</a>
             </div>
             <div style="display: flex; gap: 15px; justify-content: center; margin-top: 15px; pointer-events: auto;">
                 <div id="dataStatusBadge" style="background: #00ff00; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; animation: pulse 2s infinite;">
@@ -1586,6 +1587,10 @@ class OptimizedPipeline:
         // Fallback for demo mode (when API unavailable)
         function addDemoFeedItem() {
             const feedContent = document.getElementById('feedContent');
+            if (!feedContent) {
+                // Element not present on this page - skip silently
+                return;
+            }
 
             const agentNames = [
                 'Python Developer', 'ML Engineer', 'Data Scientist', 'Frontend Expert',
@@ -1674,7 +1679,7 @@ class OptimizedPipeline:
             item.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const details = this.querySelector('.feed-details');
-                const allDetails = feedContent.querySelectorAll('.feed-details');
+                const allDetails = feedContent ? feedContent.querySelectorAll('.feed-details') : [];
 
                 // Close all other expanded items
                 allDetails.forEach(detail => {
@@ -1695,9 +1700,11 @@ class OptimizedPipeline:
                 }
             });
 
-            feedContent.insertBefore(item, feedContent.firstChild);
-            while (feedContent.children.length > 10) {
-                feedContent.removeChild(feedContent.lastChild);
+            if (feedContent) {
+                feedContent.insertBefore(item, feedContent.firstChild);
+                while (feedContent.children.length > 10) {
+                    feedContent.removeChild(feedContent.lastChild);
+                }
             }
 
             // Trigger visual effect
@@ -1726,13 +1733,21 @@ class OptimizedPipeline:
                 }, 1000);
             }
 
-            // Make agents glow
-            agent1.material.emissive = new THREE.Color(0xffd93d);
-            agent2.material.emissive = new THREE.Color(0xffd93d);
+            // Make agents glow (only if materials support emissive)
+            if (agent1.material && agent1.material.emissive !== undefined) {
+                agent1.material.emissive = new THREE.Color(0xffd93d);
+            }
+            if (agent2.material && agent2.material.emissive !== undefined) {
+                agent2.material.emissive = new THREE.Color(0xffd93d);
+            }
 
             setTimeout(() => {
-                agent1.material.emissive = new THREE.Color(0x000000);
-                agent2.material.emissive = new THREE.Color(0x000000);
+                if (agent1.material && agent1.material.emissive !== undefined) {
+                    agent1.material.emissive = new THREE.Color(0x000000);
+                }
+                if (agent2.material && agent2.material.emissive !== undefined) {
+                    agent2.material.emissive = new THREE.Color(0x000000);
+                }
             }, 1000);
         }
 
@@ -1745,7 +1760,6 @@ class OptimizedPipeline:
             const packetGeometry = new THREE.SphereGeometry(0.1, 8, 8);
             const packetMaterial = new THREE.MeshBasicMaterial({
                 color: 0xff0000,
-                emissive: 0xff0000,
                 transparent: true,
                 opacity: 0.8
             });
@@ -1765,25 +1779,33 @@ class OptimizedPipeline:
                     requestAnimationFrame(animatePacket);
                 } else {
                     scene.remove(packet);
-                    // Agent processes data
-                    agent.material.emissive = new THREE.Color(0xff4444);
-                    setTimeout(() => {
-                        agent.material.emissive = agent.material.color;
-                    }, 500);
+                    // Agent processes data (only if material supports emissive)
+                    if (agent.material && agent.material.emissive !== undefined) {
+                        agent.material.emissive = new THREE.Color(0xff4444);
+                        setTimeout(() => {
+                            agent.material.emissive = agent.material.color;
+                        }, 500);
+                    }
                 }
             };
             animatePacket();
 
-            // Make spider pulse
-            spider.material.emissive = new THREE.Color(0xffff00);
-            setTimeout(() => {
-                spider.material.emissive = new THREE.Color(0xff0000);
-            }, 500);
+            // Make spider pulse (only if it supports emissive)
+            if (spider.material && spider.material.emissive !== undefined) {
+                spider.material.emissive = new THREE.Color(0xffff00);
+                setTimeout(() => {
+                    spider.material.emissive = new THREE.Color(0xff0000);
+                }, 500);
+            }
         }
 
         // Infrastructure activity messages
         function addInfrastructureActivity(type, name, agent, detail) {
             const infraFeed = document.getElementById('infraFeedContent');
+            if (!infraFeed) {
+                // Element not present on this page - skip silently
+                return;
+            }
             const item = document.createElement('div');
             item.className = 'feed-item';
 
@@ -1816,8 +1838,10 @@ class OptimizedPipeline:
             const db = databaseMeshes[Math.floor(Math.random() * databaseMeshes.length)];
             const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
 
-            // Database glows and pulses
-            db.material.emissive = new THREE.Color(0xffffff);
+            // Database glows and pulses (only if material supports emissive)
+            if (db.material && db.material.emissive !== undefined) {
+                db.material.emissive = new THREE.Color(0xffffff);
+            }
             db.scale.set(1.5, 1.5, 1.5);
 
             // Create data stream from database to agent
@@ -1853,7 +1877,9 @@ class OptimizedPipeline:
             }
 
             setTimeout(() => {
-                db.material.emissive = db.material.color;
+                if (db.material && db.material.emissive !== undefined) {
+                    db.material.emissive = db.material.color;
+                }
                 db.scale.set(1, 1, 1);
             }, 1500);
 
@@ -1875,8 +1901,10 @@ class OptimizedPipeline:
             const model = mlModelMeshes[Math.floor(Math.random() * mlModelMeshes.length)];
             const agent = agentMeshes[Math.floor(Math.random() * agentMeshes.length)];
 
-            // Model glows and rotates
-            model.material.emissive = new THREE.Color(0xffffff);
+            // Model glows and rotates (only if material supports emissive)
+            if (model.material && model.material.emissive !== undefined) {
+                model.material.emissive = new THREE.Color(0xffffff);
+            }
             model.userData.active = true;
             model.userData.activeTime = Date.now();
 
@@ -1906,7 +1934,9 @@ class OptimizedPipeline:
                     requestAnimationFrame(pulseBeam);
                 } else {
                     scene.remove(beam);
-                    model.material.emissive = model.material.color;
+                    if (model.material && model.material.emissive !== undefined) {
+                        model.material.emissive = model.material.color;
+                    }
                     model.userData.active = false;
                 }
             };
@@ -1949,13 +1979,17 @@ class OptimizedPipeline:
 
             scene.add(beam);
 
-            // Tool glows
-            tool.material.emissive = tool.material.color;
+            // Tool glows (only if material supports emissive)
+            if (tool.material && tool.material.emissive !== undefined) {
+                tool.material.emissive = tool.material.color;
+            }
             tool.scale.set(1.5, 1.5, 1.5);
 
             setTimeout(() => {
                 scene.remove(beam);
-                tool.material.emissive = new THREE.Color(0x000000);
+                if (tool.material && tool.material.emissive !== undefined) {
+                    tool.material.emissive = new THREE.Color(0x000000);
+                }
                 tool.scale.set(1, 1, 1);
             }, 1000);
 
@@ -2410,12 +2444,18 @@ class OptimizedPipeline:
             const intersects = raycaster.intersectObjects(agentMeshes);
 
             agentMeshes.forEach(mesh => {
-                mesh.material.emissive = new THREE.Color(0x000000);
+                // Only reset emissive on materials that support it
+                if (mesh.material && mesh.material.emissive !== undefined) {
+                    mesh.material.emissive = new THREE.Color(0x000000);
+                }
             });
 
             if (intersects.length > 0) {
                 const agent = intersects[0].object;
-                agent.material.emissive = new THREE.Color(0x444444);
+                // Only set emissive on materials that support it
+                if (agent.material && agent.material.emissive !== undefined) {
+                    agent.material.emissive = new THREE.Color(0x444444);
+                }
                 document.body.style.cursor = 'pointer';
             } else {
                 document.body.style.cursor = 'default';
