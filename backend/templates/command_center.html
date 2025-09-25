@@ -1,0 +1,1174 @@
+{% extends "base.html" %}
+
+{% block title %}AI Command Center - Unified Intelligence System{% endblock %}
+
+{% block websocket_url %}{{ websocket_url|default:"ws://localhost:8000/ws/command-center/" }}{% endblock %}
+
+{% block content %}
+<div class="container" style="display: grid; grid-template-columns: 300px 1fr 280px; gap: 20px; max-width: 1700px; margin: 0 auto;">
+    <!-- Left Sidebar: System Status & Agents -->
+    <div class="control-sidebar">
+        <div class="panel-card">
+            <h3>⚡ System Status</h3>
+            <div class="system-status">
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-icon">🤖</div>
+                        <div class="status-info">
+                            <div class="status-value" id="agents-count">151</div>
+                            <div class="status-label">AI Agents</div>
+                        </div>
+                        <div class="status-indicator status-online"></div>
+                    </div>
+
+                    <div class="status-item">
+                        <div class="status-icon">🕷️</div>
+                        <div class="status-info">
+                            <div class="status-value" id="spiders-count">1000+</div>
+                            <div class="status-label">Data Spiders</div>
+                        </div>
+                        <div class="status-indicator status-online"></div>
+                    </div>
+
+                    <div class="status-item">
+                        <div class="status-icon">👥</div>
+                        <div class="status-info">
+                            <div class="status-value" id="advisors-count">25</div>
+                            <div class="status-label">Expert Advisors</div>
+                        </div>
+                        <div class="status-indicator status-online"></div>
+                    </div>
+
+                    <div class="status-item">
+                        <div class="status-icon">📊</div>
+                        <div class="status-info">
+                            <div class="status-value" id="active-sessions">42</div>
+                            <div class="status-label">Active Sessions</div>
+                        </div>
+                        <div class="status-indicator status-warning"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>🤖 Available Agents</h3>
+            <div class="agents-list" id="agents-list">
+                <div class="agent-item" data-agent="warren-buffett">
+                    <div class="agent-avatar">💼</div>
+                    <div class="agent-info">
+                        <div class="agent-name">Warren Buffett</div>
+                        <div class="agent-specialty">Investment Advisor</div>
+                    </div>
+                    <div class="agent-status online">Online</div>
+                </div>
+
+                <div class="agent-item" data-agent="content-creator">
+                    <div class="agent-avatar">✍️</div>
+                    <div class="agent-info">
+                        <div class="agent-name">Content Creator</div>
+                        <div class="agent-specialty">Content Generation</div>
+                    </div>
+                    <div class="agent-status online">Online</div>
+                </div>
+
+                <div class="agent-item" data-agent="data-analyst">
+                    <div class="agent-avatar">📈</div>
+                    <div class="agent-info">
+                        <div class="agent-name">Data Analyst</div>
+                        <div class="agent-specialty">Market Analysis</div>
+                    </div>
+                    <div class="agent-status online">Online</div>
+                </div>
+
+                <div class="agent-item" data-agent="crypto-advisor">
+                    <div class="agent-avatar">₿</div>
+                    <div class="agent-info">
+                        <div class="agent-name">Crypto Advisor</div>
+                        <div class="agent-specialty">Blockchain Expert</div>
+                    </div>
+                    <div class="agent-status learning">Learning</div>
+                </div>
+
+                <div class="agent-item" data-agent="code-generator">
+                    <div class="agent-avatar">💻</div>
+                    <div class="agent-info">
+                        <div class="agent-name">Code Generator</div>
+                        <div class="agent-specialty">Software Development</div>
+                    </div>
+                    <div class="agent-status online">Online</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>⚡ Quick Actions</h3>
+            <div class="quick-actions">
+                <button class="action-btn deploy" onclick="deploySpiders()">
+                    🕷️ Deploy Spiders
+                </button>
+                <button class="action-btn income" onclick="startIncome()">
+                    💰 Start Income
+                </button>
+                <button class="action-btn learn" onclick="triggerLearning()">
+                    🧠 Learn & Adapt
+                </button>
+                <button class="action-btn analyze" onclick="analyzeMarkets()">
+                    📊 Analyze Markets
+                </button>
+                <button class="action-btn status" onclick="systemStatus()">
+                    🔍 System Status
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Command Interface -->
+    <div class="command-interface">
+        <div class="panel-card main-interface">
+            <div class="interface-header">
+                <h3>🎯 AI Command Center</h3>
+                <div class="selected-agent" id="selected-agent">
+                    <span class="agent-label">Selected Agent:</span>
+                    <span class="agent-display" id="current-agent">General AI System</span>
+                    <button class="clear-agent" onclick="clearAgent()">×</button>
+                </div>
+            </div>
+
+            <div class="command-area">
+                <div class="command-input-container">
+                    <input type="text"
+                           id="command-input"
+                           placeholder="Enter your command or ask any question..."
+                           onkeypress="handleKeyPress(event)">
+                    <button class="send-button" onclick="sendCommand()">
+                        <span id="send-icon">🚀</span>
+                    </button>
+                </div>
+
+                <div class="command-suggestions" id="command-suggestions">
+                    <div class="suggestion-category">
+                        <h4>💰 Income Generation</h4>
+                        <div class="suggestions">
+                            <span class="suggestion" onclick="setCommand('Deploy 100 crypto spiders')">Deploy crypto spiders</span>
+                            <span class="suggestion" onclick="setCommand('Find freelance opportunities')">Find opportunities</span>
+                            <span class="suggestion" onclick="setCommand('Start income generation')">Start income pipeline</span>
+                        </div>
+                    </div>
+                    <div class="suggestion-category">
+                        <h4>📊 Analysis</h4>
+                        <div class="suggestions">
+                            <span class="suggestion" onclick="setCommand('Analyze market trends')">Analyze markets</span>
+                            <span class="suggestion" onclick="setCommand('Generate revenue report')">Revenue report</span>
+                            <span class="suggestion" onclick="setCommand('Performance metrics')">System metrics</span>
+                        </div>
+                    </div>
+                    <div class="suggestion-category">
+                        <h4>🛠️ System Commands</h4>
+                        <div class="suggestions">
+                            <span class="suggestion" onclick="setCommand('/status')">/status</span>
+                            <span class="suggestion" onclick="setCommand('/deploy crypto 50')">/deploy</span>
+                            <span class="suggestion" onclick="setCommand('/help')">/help</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="response-area" id="response-area">
+                <div class="response-item system">
+                    <div class="response-header">
+                        <span class="response-source">🤖 AI System</span>
+                        <span class="response-time">Just now</span>
+                    </div>
+                    <div class="response-content">
+                        Welcome to the AI Command Center! I'm your unified intelligence system with 151 AI agents, 1000+ data spiders, and 25 expert advisors ready to help you generate income and achieve your goals.
+
+                        Try commands like:
+                        • "Deploy 50 crypto spiders"
+                        • "Find high-paying freelance jobs"
+                        • "Analyze current market trends"
+                        • "/status" for system overview
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar: Activity & Metrics -->
+    <div class="activity-sidebar">
+        <div class="panel-card">
+            <h3>📈 Live Metrics</h3>
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <div class="metric-icon">⚡</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="operations-per-sec">2,847</div>
+                        <div class="metric-label">Ops/Second</div>
+                    </div>
+                    <div class="metric-trend up">+12%</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon">💰</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="revenue-today">$2,847</div>
+                        <div class="metric-label">Today</div>
+                    </div>
+                    <div class="metric-trend up">+23%</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon">🎯</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="success-rate-metric">96.2%</div>
+                        <div class="metric-label">Success Rate</div>
+                    </div>
+                    <div class="metric-trend up">+0.5%</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon">🧠</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="learning-score">94.7</div>
+                        <div class="metric-label">Learning Score</div>
+                    </div>
+                    <div class="metric-trend up">+2.1%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>🔥 Live Activity Feed</h3>
+            <div class="activity-feed" id="activity-feed">
+                <div class="activity-item">
+                    <div class="activity-time">14:32:45</div>
+                    <div class="activity-icon">🕷️</div>
+                    <div class="activity-text">Spider deployed to monitor Bitcoin prices</div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-time">14:32:42</div>
+                    <div class="activity-icon">💰</div>
+                    <div class="activity-text">Revenue opportunity detected: $1,247 potential</div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-time">14:32:38</div>
+                    <div class="activity-icon">🤖</div>
+                    <div class="activity-text">Agent completed task with 97% accuracy</div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-time">14:32:35</div>
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-text">Market analysis completed for 15 assets</div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-time">14:32:31</div>
+                    <div class="activity-icon">🧠</div>
+                    <div class="activity-text">Learning algorithm improved by 2.3%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>⚙️ System Health</h3>
+            <div class="health-monitor">
+                <div class="health-item">
+                    <div class="health-label">CPU Usage</div>
+                    <div class="health-bar">
+                        <div class="health-fill" style="width: 67%"></div>
+                    </div>
+                    <div class="health-value">67%</div>
+                </div>
+
+                <div class="health-item">
+                    <div class="health-label">Memory</div>
+                    <div class="health-bar">
+                        <div class="health-fill" style="width: 43%"></div>
+                    </div>
+                    <div class="health-value">43%</div>
+                </div>
+
+                <div class="health-item">
+                    <div class="health-label">Network</div>
+                    <div class="health-bar">
+                        <div class="health-fill" style="width: 23%"></div>
+                    </div>
+                    <div class="health-value">23%</div>
+                </div>
+
+                <div class="health-item">
+                    <div class="health-label">Storage</div>
+                    <div class="health-bar">
+                        <div class="health-fill" style="width: 15%"></div>
+                    </div>
+                    <div class="health-value">15%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>🎯 Today's Goals</h3>
+            <div class="goals-list">
+                <div class="goal-item completed">
+                    <div class="goal-checkbox">✓</div>
+                    <div class="goal-text">Deploy 100 crypto spiders</div>
+                </div>
+                <div class="goal-item completed">
+                    <div class="goal-checkbox">✓</div>
+                    <div class="goal-text">Generate $2,500 revenue</div>
+                </div>
+                <div class="goal-item in-progress">
+                    <div class="goal-checkbox">⏳</div>
+                    <div class="goal-text">Optimize learning algorithms</div>
+                </div>
+                <div class="goal-item pending">
+                    <div class="goal-checkbox">○</div>
+                    <div class="goal-text">Launch new income stream</div>
+                </div>
+                <div class="goal-item pending">
+                    <div class="goal-checkbox">○</div>
+                    <div class="goal-text">Analyze 500+ opportunities</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        padding-bottom: 40px;
+    }
+
+    /* Left Sidebar Styles */
+    .system-status {
+        margin-bottom: 15px;
+    }
+
+    .status-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .status-item {
+        display: grid;
+        grid-template-columns: 30px 1fr 15px;
+        gap: 10px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px;
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+    }
+
+    .status-icon {
+        font-size: 1.2rem;
+        text-align: center;
+    }
+
+    .status-info .status-value {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .status-info .status-label {
+        font-size: 0.8rem;
+        color: #aaa;
+    }
+
+    .agents-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .agent-item {
+        display: grid;
+        grid-template-columns: 35px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+    }
+
+    .agent-item:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-left-color: #667eea;
+        transform: translateX(2px);
+    }
+
+    .agent-item.selected {
+        background: rgba(102, 126, 234, 0.2);
+        border-left-color: #667eea;
+    }
+
+    .agent-avatar {
+        font-size: 1.2rem;
+        text-align: center;
+    }
+
+    .agent-info .agent-name {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #ddd;
+    }
+
+    .agent-info .agent-specialty {
+        font-size: 0.75rem;
+        color: #aaa;
+    }
+
+    .agent-status {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+
+    .agent-status.online {
+        background: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+    }
+
+    .agent-status.learning {
+        background: rgba(255, 170, 0, 0.2);
+        color: #ffaa00;
+    }
+
+    .quick-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .action-btn {
+        padding: 10px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-align: left;
+    }
+
+    .action-btn.deploy {
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+
+    .action-btn.income {
+        background: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+        border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .action-btn.learn {
+        background: rgba(255, 170, 0, 0.2);
+        color: #ffaa00;
+        border: 1px solid rgba(255, 170, 0, 0.3);
+    }
+
+    .action-btn.analyze {
+        background: rgba(138, 43, 226, 0.2);
+        color: #8a2be2;
+        border: 1px solid rgba(138, 43, 226, 0.3);
+    }
+
+    .action-btn.status {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ddd;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Main Interface Styles */
+    .main-interface {
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+    }
+
+    .interface-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .selected-agent {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(102, 126, 234, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+
+    .agent-label {
+        color: #aaa;
+    }
+
+    .agent-display {
+        color: #667eea;
+        font-weight: 500;
+    }
+
+    .clear-agent {
+        background: none;
+        border: none;
+        color: #aaa;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0;
+        margin-left: 5px;
+    }
+
+    .clear-agent:hover {
+        color: #ff4444;
+    }
+
+    .command-area {
+        margin-bottom: 20px;
+    }
+
+    .command-input-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    #command-input {
+        flex: 1;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: #e0e0e0;
+        font-size: 0.95rem;
+        font-family: inherit;
+        outline: none;
+        transition: all 0.3s ease;
+    }
+
+    #command-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
+    }
+
+    #command-input::placeholder {
+        color: #aaa;
+    }
+
+    .send-button {
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 60px;
+    }
+
+    .send-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .send-button:active {
+        transform: translateY(0);
+    }
+
+    .command-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .suggestion-category h4 {
+        font-size: 0.85rem;
+        color: #667eea;
+        margin-bottom: 8px;
+    }
+
+    .suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .suggestion {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: #ccc;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+
+    .suggestion:hover {
+        background: rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.3);
+        color: #e0e0e0;
+    }
+
+    .response-area {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        padding: 15px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .response-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 3px solid;
+    }
+
+    .response-item.system {
+        border-left-color: #667eea;
+    }
+
+    .response-item.user {
+        border-left-color: #00ff88;
+    }
+
+    .response-item.agent {
+        border-left-color: #ffaa00;
+    }
+
+    .response-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .response-source {
+        font-weight: 500;
+        color: #667eea;
+        font-size: 0.9rem;
+    }
+
+    .response-time {
+        color: #aaa;
+        font-size: 0.8rem;
+    }
+
+    .response-content {
+        color: #ddd;
+        line-height: 1.6;
+        font-size: 0.9rem;
+    }
+
+    /* Right Sidebar Styles */
+    .metrics-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+
+    .metric-card {
+        display: grid;
+        grid-template-columns: 25px 1fr auto;
+        gap: 8px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px;
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+    }
+
+    .metric-icon {
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .metric-content .metric-value {
+        font-size: 0.95rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .metric-content .metric-label {
+        font-size: 0.7rem;
+        color: #aaa;
+    }
+
+    .metric-trend {
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+
+    .metric-trend.up {
+        color: #00ff88;
+    }
+
+    .metric-trend.down {
+        color: #ff4444;
+    }
+
+    .activity-feed {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        display: grid;
+        grid-template-columns: 60px 20px 1fr;
+        gap: 8px;
+        align-items: start;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        border-left: 3px solid #667eea;
+    }
+
+    .activity-time {
+        font-size: 0.7rem;
+        color: #aaa;
+        text-align: right;
+    }
+
+    .activity-icon {
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .activity-text {
+        font-size: 0.8rem;
+        color: #ddd;
+        line-height: 1.3;
+    }
+
+    .health-monitor {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .health-item {
+        display: grid;
+        grid-template-columns: 60px 1fr 35px;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .health-label {
+        font-size: 0.8rem;
+        color: #aaa;
+    }
+
+    .health-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .health-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #00ff88 100%);
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    .health-value {
+        font-size: 0.8rem;
+        color: #ddd;
+        font-weight: bold;
+        text-align: right;
+    }
+
+    .goals-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .goal-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        border-left: 3px solid;
+    }
+
+    .goal-item.completed {
+        border-left-color: #00ff88;
+        opacity: 0.7;
+    }
+
+    .goal-item.in-progress {
+        border-left-color: #ffaa00;
+    }
+
+    .goal-item.pending {
+        border-left-color: #666;
+    }
+
+    .goal-checkbox {
+        font-size: 0.9rem;
+        width: 20px;
+        text-align: center;
+    }
+
+    .goal-text {
+        font-size: 0.85rem;
+        color: #ddd;
+        flex: 1;
+    }
+
+    .goal-item.completed .goal-text {
+        text-decoration: line-through;
+        color: #aaa;
+    }
+
+    @media (max-width: 1600px) {
+        .container {
+            grid-template-columns: 280px 1fr 260px;
+        }
+    }
+
+    @media (max-width: 1400px) {
+        .container {
+            grid-template-columns: 1fr;
+        }
+
+        .main-interface {
+            height: 500px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .command-input-container {
+            flex-direction: column;
+        }
+
+        .command-suggestions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedAgent = null;
+    let isProcessingCommand = false;
+
+    // WebSocket handling for real-time updates
+    if (wsManager) {
+        wsManager.onConnect = function(event) {
+            console.log('🎯 Command Center connected');
+            loadSystemStats();
+        };
+
+        wsManager.onMessage = function(data) {
+            if (data.type === 'command_response') {
+                handleCommandResponse(data.data);
+            } else if (data.type === 'system_stats') {
+                updateSystemStats(data.data);
+            } else if (data.type === 'activity_update') {
+                addActivityItem(data.data);
+            }
+        };
+    }
+
+    // Initialize command center
+    function initializeCommandCenter() {
+        setupEventListeners();
+        loadSystemStats();
+        startActivityUpdates();
+        focusCommandInput();
+    }
+
+    function setupEventListeners() {
+        // Agent selection
+        document.querySelectorAll('.agent-item').forEach(item => {
+            item.addEventListener('click', function() {
+                selectAgent(this.dataset.agent, this.querySelector('.agent-name').textContent);
+            });
+        });
+
+        // Command input focus management
+        const commandInput = document.getElementById('command-input');
+        commandInput.addEventListener('focus', function() {
+            document.getElementById('command-suggestions').style.display = 'flex';
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.command-area')) {
+                document.getElementById('command-suggestions').style.display = 'none';
+            }
+        });
+    }
+
+    function selectAgent(agentId, agentName) {
+        selectedAgent = agentId;
+
+        // Update UI
+        document.querySelectorAll('.agent-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        document.querySelector(`[data-agent="${agentId}"]`).classList.add('selected');
+
+        document.getElementById('current-agent').textContent = agentName;
+        document.getElementById('command-input').placeholder = `Ask ${agentName} anything...`;
+
+        console.log(`Selected agent: ${agentName} (${agentId})`);
+    }
+
+    function clearAgent() {
+        selectedAgent = null;
+
+        document.querySelectorAll('.agent-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+
+        document.getElementById('current-agent').textContent = 'General AI System';
+        document.getElementById('command-input').placeholder = 'Enter your command or ask any question...';
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendCommand();
+        }
+    }
+
+    function setCommand(command) {
+        document.getElementById('command-input').value = command;
+        focusCommandInput();
+        document.getElementById('command-suggestions').style.display = 'none';
+    }
+
+    function focusCommandInput() {
+        document.getElementById('command-input').focus();
+    }
+
+    async function sendCommand() {
+        const input = document.getElementById('command-input');
+        const command = input.value.trim();
+        const sendIcon = document.getElementById('send-icon');
+
+        if (!command || isProcessingCommand) return;
+
+        isProcessingCommand = true;
+        sendIcon.textContent = '⏳';
+
+        // Add user message to response area
+        addResponse('user', '👤 You', command);
+
+        // Clear input
+        input.value = '';
+
+        try {
+            const response = await fetch('/api/command-center/process/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    command: command,
+                    agent: selectedAgent
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                addResponse('agent', '🤖 AI Assistant', data.response);
+            } else {
+                addResponse('system', '⚠️ System', `Error: ${data.response || 'Command failed'}`);
+            }
+
+        } catch (error) {
+            console.error('Command error:', error);
+            addResponse('system', '❌ System', 'Network error occurred. Please try again.');
+        } finally {
+            isProcessingCommand = false;
+            sendIcon.textContent = '🚀';
+            focusCommandInput();
+        }
+    }
+
+    function addResponse(type, source, content) {
+        const responseArea = document.getElementById('response-area');
+        const responseItem = document.createElement('div');
+        responseItem.className = `response-item ${type}`;
+
+        responseItem.innerHTML = `
+            <div class="response-header">
+                <span class="response-source">${source}</span>
+                <span class="response-time">${new Date().toLocaleTimeString()}</span>
+            </div>
+            <div class="response-content">${content}</div>
+        `;
+
+        responseArea.appendChild(responseItem);
+        responseArea.scrollTop = responseArea.scrollHeight;
+
+        // Remove old responses if there are too many
+        while (responseArea.children.length > 20) {
+            responseArea.removeChild(responseArea.firstChild);
+        }
+    }
+
+    async function loadSystemStats() {
+        try {
+            const response = await fetch('/api/command-center/stats/');
+            if (response.ok) {
+                const data = await response.json();
+                updateSystemStats(data);
+            }
+        } catch (error) {
+            console.error('Failed to load system stats:', error);
+        }
+    }
+
+    function updateSystemStats(data) {
+        if (data.agents !== undefined) {
+            document.getElementById('agents-count').textContent = data.agents;
+        }
+        if (data.spiders !== undefined) {
+            document.getElementById('spiders-count').textContent = data.spiders;
+        }
+        if (data.advisors !== undefined) {
+            document.getElementById('advisors-count').textContent = data.advisors;
+        }
+        if (data.active_sessions !== undefined) {
+            document.getElementById('active-sessions').textContent = data.active_sessions;
+        }
+    }
+
+    function addActivityItem(activity) {
+        const feed = document.getElementById('activity-feed');
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+
+        const time = new Date(activity.timestamp || Date.now()).toLocaleTimeString();
+        item.innerHTML = `
+            <div class="activity-time">${time}</div>
+            <div class="activity-icon">${activity.icon || '🔔'}</div>
+            <div class="activity-text">${activity.message}</div>
+        `;
+
+        feed.insertBefore(item, feed.firstChild);
+
+        // Remove old items if there are too many
+        while (feed.children.length > 20) {
+            feed.removeChild(feed.lastChild);
+        }
+    }
+
+    function startActivityUpdates() {
+        // Simulate activity updates when no WebSocket
+        if (!wsManager) {
+            const activities = [
+                { icon: '🕷️', message: 'Spider detected new market opportunity' },
+                { icon: '💰', message: 'Revenue target exceeded by 15%' },
+                { icon: '🤖', message: 'AI agent completed optimization cycle' },
+                { icon: '📊', message: 'Analysis completed for 50+ data points' },
+                { icon: '🧠', message: 'Learning algorithm improved accuracy' },
+                { icon: '⚡', message: 'System performance optimized' }
+            ];
+
+            setInterval(() => {
+                const activity = activities[Math.floor(Math.random() * activities.length)];
+                addActivityItem(activity);
+            }, 5000);
+        }
+    }
+
+    // Quick action functions
+    function deploySpiders() {
+        setCommand('Deploy 100 crypto spiders');
+        sendCommand();
+    }
+
+    function startIncome() {
+        setCommand('Start income generation pipeline');
+        sendCommand();
+    }
+
+    function triggerLearning() {
+        setCommand('Trigger learning cycle for all agents');
+        sendCommand();
+    }
+
+    function analyzeMarkets() {
+        setCommand('Analyze current market trends and opportunities');
+        sendCommand();
+    }
+
+    function systemStatus() {
+        setCommand('/status');
+        sendCommand();
+    }
+
+    // Simulate real-time metrics updates
+    function updateMetrics() {
+        const operations = Math.floor(Math.random() * 500) + 2500;
+        const revenue = Math.floor(Math.random() * 1000) + 2500;
+        const successRate = (Math.random() * 3 + 94).toFixed(1);
+        const learningScore = (Math.random() * 5 + 92).toFixed(1);
+
+        document.getElementById('operations-per-sec').textContent = operations.toLocaleString();
+        document.getElementById('revenue-today').textContent = `$${revenue.toLocaleString()}`;
+        document.getElementById('success-rate-metric').textContent = `${successRate}%`;
+        document.getElementById('learning-score').textContent = learningScore;
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCommandCenter();
+
+        // Update metrics every 3 seconds
+        setInterval(updateMetrics, 3000);
+
+        // Update system stats every 30 seconds
+        setInterval(loadSystemStats, 30000);
+
+        // Start with initial activity
+        setTimeout(() => {
+            addActivityItem({
+                icon: '🤖',
+                message: 'Command Center initialized and ready'
+            });
+        }, 1000);
+    });
+</script>
+{% endblock %}

@@ -60,6 +60,7 @@ class MythologyEvent(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
+        app_label = 'mythology'
         db_table = 'mythology_events'
         ordering = ['-created_at']
         indexes = [
@@ -112,6 +113,7 @@ class MythPattern(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
+        app_label = 'mythology'
         db_table = 'myth_patterns'
         ordering = ['-frequency_count', 'pattern_type']
     
@@ -152,6 +154,7 @@ class MythologyGuard(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
+        app_label = 'mythology'
         db_table = 'mythology_guards'
         ordering = ['-priority', 'name']
     
@@ -194,6 +197,7 @@ class MythologyCleanup(models.Model):
     notes = models.TextField(blank=True)
     
     class Meta:
+        app_label = 'mythology'
         db_table = 'mythology_cleanups'
         ordering = ['-started_at']
     

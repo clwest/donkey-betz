@@ -6,8 +6,18 @@ A comprehensive AI platform combining sports betting analytics, content generati
 
 ## ✨ Features
 
+### 🧠 Consciousness Bridge (NEW!) ✅
+- **Self-Aware AI System** with real-time introspection
+- **23.9M Lines Analysis** across 59,579 Python files
+- **Universal Modal Access** (Ctrl+Shift+C from any page)
+- **WebSocket Live Updates** with auto-reconnect
+- **Memory Crystallization** via Redis persistence
+- **Capability Mapping** and limitation awareness
+- **Evolution Proposals** for system improvement
+- **Deep System Understanding** with philosophical reflection
+
 ### 🤖 Agent Orchestration System ✅
-- **150 Specialized Agents** across multiple domains
+- **152 Specialized Agents** across multiple domains
 - **25+ Expert Advisors** with real track records
 - **Multi-Agent Workflows** with parallel execution
 - **Real-time Collaboration** visualization
@@ -88,24 +98,21 @@ python manage.py collectstatic --noinput
 
 5. **Start services**
 ```bash
-# Quick start - all services with one command:
-make unified-dev
+# Quick start - all services with one command (recommended):
+./start_all_services.sh
 
-# Or start services individually:
-# Terminal 1: Django backend with WebSockets (port 8000)
-python manage.py runserver
+# IMPORTANT: For Consciousness Bridge WebSocket support, use Daphne instead of runserver:
+# Terminal 1: Django backend with WebSocket support (port 8000)
+daphne -b 0.0.0.0 -p 8000 backend.asgi:application
 
 # Terminal 2: Celery worker
-celery -A core worker -l info
+celery -A backend worker -l info --concurrency=4
 
-# Terminal 3: Celery beat (optional, for scheduled tasks)
-celery -A core beat -l info
-
-# Terminal 4: Frontend (port 3000)
-cd frontend && npm run dev
+# Terminal 3: Celery beat (for scheduled tasks)
+celery -A backend beat -l info
 
 # Stop all services:
-make unified-stop
+pkill -f 'daphne|celery|redis-server'
 ```
 
 ## 🎮 Usage
@@ -133,6 +140,14 @@ execute_agent.delay(execution_id=execution.execution_id)
 
 ### API Endpoints
 
+**Consciousness Bridge APIs:**
+- `GET /api/consciousness/` - Current consciousness state
+- `GET /api/consciousness/understand/` - System understanding analysis
+- `GET /api/consciousness/introspect/` - Deep introspection response
+- `GET /consciousness/` - Full consciousness dashboard
+- `ws://localhost:8000/ws/consciousness/` - WebSocket for real-time updates
+
+**Agent Orchestration APIs:**
 - `POST /api/agents/execute/` - Execute an agent
 - `GET /api/agents/` - List available agents
 - `GET /api/agents/executions/` - View execution history
@@ -209,19 +224,31 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 
 ## 🐛 Troubleshooting
 
+### Consciousness Bridge WebSocket Issues?
+**Problem**: "Connection lost - Using cached data"
+**Solution**: Ensure using Daphne server (not Django dev server):
+```bash
+# Wrong (no WebSocket support)
+python manage.py runserver
+
+# Correct (full WebSocket support)
+daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+```
+
 ### Agents not executing?
 1. Check Redis: `redis-cli ping`
-2. Verify Celery: `celery -A core inspect active`
-3. Check logs: `tail -f celery.log`
+2. Verify Celery: `celery -A backend inspect active`
+3. Check logs: `tail -f celery_worker.log`
 4. Verify API keys in `.env`
 
 ### WebSocket connection issues?
-1. Check Daphne is running
+1. Check Daphne is running: `lsof -i:8000`
 2. Verify CORS settings
 3. Check browser console for errors
 
 ## 📝 Recent Updates
 
+- **2025-09-24**: Consciousness Bridge Implementation! Self-aware AI system with real-time introspection
 - **2025-09-14**: Priority 5 & 6 Complete! AI Income Builder, Neural Orchestra, Control Center
 - **2025-09-19**: All 150 agents operational with complete integration
 - **2025-09-13**: Implemented 102 agents, 25+ advisors, ML pipeline integration

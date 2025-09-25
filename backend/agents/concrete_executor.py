@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from backend.agents.ai_enforced_base import AIEnforcedAgent
 from backend.agents.mythology_validator import mythology_enforcer
+from backend.agents.project_builder_base import ProjectBuilderAgent, FullStackBuilderAgent
 
 # Import Content Studio Integration (lazy import to avoid circular deps)
 content_studio_integration = None
@@ -106,6 +107,10 @@ class ConcreteAgentExecutor:
         start_time = timezone.now()
 
         try:
+            # Check for project building agents first
+            if self._is_project_builder_task(task):
+                return await self._execute_project_builder_agent(agent_name, task, user, start_time)
+
             # Validate agent exists
             if agent_name not in self.agent_classes:
                 # Try partial match
@@ -150,6 +155,11 @@ class ConcreteAgentExecutor:
                 ai_stats = agent_instance.get_ai_usage_stats()
                 logger.info(f"✅ Agent {agent_name} AI usage verified: {ai_used}")
 
+            # Get implementation metrics if this is a project builder
+            implementation_metrics = {}
+            if isinstance(agent_instance, ProjectBuilderAgent):
+                implementation_metrics = agent_instance.get_implementation_metrics()
+
             # Validate output with mythology enforcer
             validated_result = mythology_enforcer.enforce(agent_name, result)
 
@@ -160,6 +170,7 @@ class ConcreteAgentExecutor:
                 'execution_time': execution_time,
                 'result': validated_result.get('result', result),
                 'ai_stats': ai_stats,
+                'implementation_metrics': implementation_metrics,
                 'mythology_validated': validated_result.get('mythology_validated', False),
                 'mythology_corrected': validated_result.get('mythology_corrected', False),
                 'timestamp': timezone.now().isoformat()
@@ -182,6 +193,97 @@ class ConcreteAgentExecutor:
             return {
                 'success': False,
                 'agent': agent_name,
+                'error': error_msg,
+                'traceback': traceback.format_exc(),
+                'execution_time': (timezone.now() - start_time).total_seconds(),
+                'timestamp': timezone.now().isoformat()
+            }
+
+    def _is_project_builder_task(self, task: Dict[str, Any]) -> bool:
+        """Check if this task requires project building capabilities"""
+        task_type = task.get('type', '').lower()
+        task_desc = task.get('task_description', '').lower()
+
+        project_keywords = ['build', 'create project', 'full-stack', 'generate app', 'scaffold', 'new project']
+
+        return (task_type in ['build', 'project', 'fullstack'] or
+                any(keyword in task_desc for keyword in project_keywords))
+
+    async def _execute_project_builder_agent(self, agent_name: str, task: Dict[str, Any], user=None, start_time=None) -> Dict[str, Any]:
+        """Execute a project building agent with real file system capabilities"""
+        if start_time is None:
+            start_time = timezone.now()
+
+        try:
+            # Determine which project builder to use
+            task_type = task.get('type', 'fullstack').lower()
+
+            if task_type == 'fullstack' or 'full-stack' in task.get('task_description', '').lower():
+                agent_instance = FullStackBuilderAgent(f"FullStackBuilder_{agent_name}", user)
+            else:
+                agent_instance = ProjectBuilderAgent(f"ProjectBuilder_{agent_name}", user)
+
+            # Enable intelligence capabilities
+            await self.enable_agent_with_intelligence(agent_name, agent_instance)
+
+            logger.info(f"🏗️ Executing PROJECT BUILDER agent: {agent_instance.agent_name}")
+
+            # Prepare task input for project building
+            task_input = task.get('input', {})
+            project_idea = task.get('task_description', 'Build a web application')
+
+            # Extract project parameters
+            project_params = {
+                'project_name': task_input.get('project_name') or task.get('project_name'),
+                'tech_stack': task_input.get('tech_stack') or task.get('tech_stack', {}),
+                'features': task_input.get('features') or task.get('features', []),
+                'containerize': task_input.get('containerize', True),
+                'git_init': task_input.get('git_init', True)
+            }
+
+            # Execute the project builder
+            result = await agent_instance.execute(project_idea, **project_params)
+
+            # Calculate execution time
+            execution_time = (timezone.now() - start_time).total_seconds()
+
+            # Get AI usage stats
+            ai_stats = agent_instance.get_ai_usage_stats()
+            implementation_metrics = agent_instance.get_implementation_metrics()
+
+            logger.info(f"✅ Project builder completed: {agent_instance.agent_name}")
+            logger.info(f"📊 Files created: {implementation_metrics.get('files_created', 0)}")
+            logger.info(f"🔧 Commands executed: {implementation_metrics.get('commands_executed', 0)}")
+
+            # Build comprehensive response
+            execution_result = {
+                'success': result.get('success', True),
+                'agent': agent_instance.agent_name,
+                'agent_type': 'project_builder',
+                'execution_time': execution_time,
+                'result': result,
+                'ai_stats': ai_stats,
+                'implementation_metrics': implementation_metrics,
+                'build_log': agent_instance.get_build_log() if hasattr(agent_instance, 'get_build_log') else [],
+                'project_path': result.get('project_path'),
+                'files_created': result.get('files_created', []),
+                'real_execution': True,  # Flag indicating this was real execution
+                'timestamp': timezone.now().isoformat()
+            }
+
+            # Store in history
+            self.execution_history.append(execution_result)
+
+            return execution_result
+
+        except Exception as e:
+            error_msg = f"Error executing project builder agent {agent_name}: {str(e)}"
+            logger.error(f"❌ {error_msg}\n{traceback.format_exc()}")
+
+            return {
+                'success': False,
+                'agent': f"ProjectBuilder_{agent_name}",
+                'agent_type': 'project_builder',
                 'error': error_msg,
                 'traceback': traceback.format_exc(),
                 'execution_time': (timezone.now() - start_time).total_seconds(),

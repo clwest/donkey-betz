@@ -919,6 +919,7 @@
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('output')">Build Output</button>
                 <button class="tab" onclick="switchTab('results')">Agent Results</button>
+                <button class="tab" onclick="switchTab('verification')">Implementation Proof</button>
                 <button class="tab" onclick="switchTab('files')">Files Created</button>
                 <button class="tab" onclick="switchTab('activity')">Activity Feed</button>
             </div>
@@ -950,6 +951,19 @@
                         </div>
                         <div class="results-content" id="resultsContent" style="display: none;">
                             <!-- Agent results will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Implementation Verification Tab (hidden by default) -->
+                <div id="verificationTab" class="tab-content" style="display: none;">
+                    <div class="verification-viewer" id="verificationViewer">
+                        <div class="no-results" id="noVerification">
+                            <p>🔍 No implementation verification data yet</p>
+                            <p>Execute an agent to see real implementation proof</p>
+                        </div>
+                        <div class="verification-content" id="verificationContent" style="display: none;">
+                            <!-- Verification data will be displayed here -->
                         </div>
                     </div>
                 </div>
@@ -1540,6 +1554,49 @@
                         addBuildLine(`🤖 REAL AGENT EXECUTION - Using ${result.data.agent_registry_size} agent registry`, 'success');
                     }
 
+                    // Display implementation verification results
+                    const verification = result.data.execution_details.verification;
+                    if (verification) {
+                        addBuildLine(`🔍 IMPLEMENTATION VERIFICATION STARTED`, 'success');
+                        addBuildLine(`📊 Session ID: ${verification.session_id}`, 'info');
+
+                        if (verification.has_real_changes) {
+                            addBuildLine(`✅ VERIFIED: Agent made REAL changes to the codebase`, 'success');
+                            addBuildLine(`📈 Evidence Count: ${verification.evidence_count} pieces of proof`, 'success');
+
+                            // Display specific changes
+                            const report = verification.implementation_report;
+                            if (report) {
+                                addBuildLine(`📊 Implementation Metrics:`, 'info');
+                                addBuildLine(`  • Files Modified: ${report.implementation_metrics.files_modified}`, 'info');
+                                addBuildLine(`  • Lines Added: ${report.implementation_metrics.lines_added}`, 'info');
+                                addBuildLine(`  • Commands Executed: ${report.implementation_metrics.commands_executed}`, 'info');
+
+                                if (report.evidence_summary.git_changes) {
+                                    addBuildLine(`  • Git Commit Changes: YES`, 'success');
+                                }
+                                if (report.evidence_summary.file_modifications > 0) {
+                                    addBuildLine(`  • File Modifications: ${report.evidence_summary.file_modifications}`, 'success');
+                                }
+                                if (report.evidence_summary.command_executions > 0) {
+                                    addBuildLine(`  • Command Executions: ${report.evidence_summary.command_executions}`, 'success');
+                                }
+
+                                if (report.rollback_info.available) {
+                                    addBuildLine(`🔄 Rollback Available: YES`, 'info');
+                                }
+                            }
+
+                            // Add verification button
+                            addVerificationButton(verification.session_id);
+
+                        } else {
+                            addBuildLine(`❌ WARNING: Agent provided advice but made NO REAL CHANGES`, 'warning');
+                            addBuildLine(`🔍 No file modifications, commands, or git changes detected`, 'warning');
+                            addBuildLine(`💡 This agent only provided suggestions - no implementation occurred`, 'info');
+                        }
+                    }
+
                     addBuildLine(`📋 Execution Plan:`, 'info');
 
                     const plan = result.data.improvement_plan;
@@ -1548,14 +1605,13 @@
                     }
 
                     addBuildLine(`⚡ Status: ${plan.status}`, plan.status === 'executed' ? 'success' : 'warning');
-                    addBuildLine(`🚀 Real-time execution results:`, 'success');
 
                     // Display execution details
                     const execution = result.data.execution_details;
                     if (execution.success) {
                         addBuildLine(`✅ Agent execution completed successfully`, 'success');
                         if (execution.output) {
-                            addBuildLine(`📄 Agent Output: ${execution.output}`, 'info');
+                            addBuildLine(`📄 Agent Output: ${execution.output.substring(0, 200)}...`, 'info');
                         }
                         if (execution.execution_time) {
                             addBuildLine(`⏱️ Execution time: ${execution.execution_time} seconds`, 'info');
@@ -1574,6 +1630,12 @@
                     // Display results in Results tab
                     displayAgentResults(result);
                     addBuildLine(`🎯 View detailed results in the "Agent Results" tab`, 'success');
+
+                    // Display verification data in new tab
+                    if (verification) {
+                        displayVerificationData(verification);
+                        addBuildLine(`🔍 View implementation proof in the "Implementation Proof" tab`, 'success');
+                    }
 
                 } else {
                     addBuildLine(`❌ Agent assignment failed: ${result.error}`, 'error');
@@ -1951,6 +2013,281 @@ Mythology Validated: ${execution.mythology_validated ? 'Yes' : 'No'}</div>
                 } else {
                     agentCard.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                 }
+            }
+        }
+
+        function addVerificationButton(sessionId) {
+            const buildOutput = document.getElementById('buildOutput');
+
+            const buttonDiv = document.createElement('div');
+            buttonDiv.style.cssText = `
+                padding: 15px;
+                text-align: center;
+                background: rgba(102, 126, 234, 0.1);
+                border-radius: 8px;
+                margin: 10px 0;
+            `;
+
+            buttonDiv.innerHTML = `
+                <button onclick="showImplementationEvidence(${sessionId})"
+                        style="
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            border: none;
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            margin-right: 10px;
+                        ">
+                    🔍 View Implementation Evidence
+                </button>
+                <button onclick="showImplementationHistory()"
+                        style="
+                            background: rgba(255, 255, 255, 0.1);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            margin-right: 10px;
+                        ">
+                    📊 Implementation History
+                </button>
+                <button onclick="rollbackImplementation(${sessionId})"
+                        style="
+                            background: rgba(255, 107, 107, 0.2);
+                            border: 1px solid #ff6b6b;
+                            color: #ff6b6b;
+                            padding: 10px 20px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                        ">
+                    🔄 Rollback Changes
+                </button>
+            `;
+
+            buildOutput.appendChild(buttonDiv);
+            buildOutput.scrollTop = buildOutput.scrollHeight;
+        }
+
+        async function showImplementationEvidence(sessionId) {
+            addBuildLine(`🔍 Loading implementation evidence for session ${sessionId}...`, 'info');
+
+            try {
+                const response = await fetch(`/api/implementation/session/${sessionId}/`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const session = result.data.session;
+
+                    addBuildLine(`📊 IMPLEMENTATION EVIDENCE REPORT`, 'success');
+                    addBuildLine(`Session: ${session.id} | Agent: ${session.agent_name} | Status: ${session.status}`, 'info');
+
+                    // Git changes
+                    if (session.git_commit_before !== session.git_commit_after) {
+                        addBuildLine(`📚 Git Changes: ${session.git_commit_before.substring(0,8)} → ${session.git_commit_after.substring(0,8)}`, 'success');
+                    }
+
+                    // File modifications
+                    if (session.file_changes.length > 0) {
+                        addBuildLine(`📝 File Modifications (${session.file_changes.length}):`, 'success');
+                        session.file_changes.forEach(change => {
+                            addBuildLine(`  • ${change.modification_type.toUpperCase()}: ${change.file_path} (${change.lines_changed} lines)`, 'info');
+                        });
+                    }
+
+                    // Commands executed
+                    if (session.commands.length > 0) {
+                        addBuildLine(`🔧 Commands Executed (${session.commands.length}):`, 'success');
+                        session.commands.forEach(cmd => {
+                            const status = cmd.success ? '✅' : '❌';
+                            addBuildLine(`  ${status} ${cmd.command} (exit: ${cmd.exit_code})`, cmd.success ? 'success' : 'error');
+                            if (cmd.stdout) {
+                                addBuildLine(`    Output: ${cmd.stdout.substring(0, 100)}...`, 'info');
+                            }
+                        });
+                    }
+
+                    // Metrics summary
+                    addBuildLine(`📈 Implementation Metrics:`, 'info');
+                    addBuildLine(`  • Files: ${session.metrics.files_modified} modified`, 'info');
+                    addBuildLine(`  • Lines: +${session.metrics.lines_added} -${session.metrics.lines_removed}`, 'info');
+                    addBuildLine(`  • Commands: ${session.metrics.commands_executed} executed`, 'info');
+                    addBuildLine(`  • Database: ${session.metrics.database_changes} changes`, 'info');
+
+                    if (session.rollback.can_rollback) {
+                        addBuildLine(`🔄 Rollback: Available`, 'success');
+                    }
+
+                } else {
+                    addBuildLine(`❌ Failed to load evidence: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addBuildLine(`❌ Error loading evidence: ${error.message}`, 'error');
+            }
+        }
+
+        async function showImplementationHistory() {
+            addBuildLine(`📊 Loading implementation history...`, 'info');
+
+            try {
+                const response = await fetch('/api/implementation/history/');
+                const result = await response.json();
+
+                if (result.success) {
+                    const history = result.data.history;
+
+                    addBuildLine(`📊 IMPLEMENTATION HISTORY (${result.data.total_sessions} sessions)`, 'success');
+
+                    history.slice(0, 10).forEach(session => {
+                        const status_icon = session.status === 'completed' ? '✅' : session.status === 'failed' ? '❌' : '⏳';
+                        const changes_info = session.has_real_changes ? `${session.files_modified} files, ${session.commands_executed} cmds` : 'No changes';
+
+                        addBuildLine(`${status_icon} ${session.agent} on ${session.project} - ${changes_info}`,
+                                   session.has_real_changes ? 'success' : 'warning');
+                    });
+
+                } else {
+                    addBuildLine(`❌ Failed to load history: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addBuildLine(`❌ Error loading history: ${error.message}`, 'error');
+            }
+        }
+
+        async function rollbackImplementation(sessionId) {
+            if (!confirm(`Are you sure you want to rollback implementation session ${sessionId}? This will undo all changes made by the agent.`)) {
+                return;
+            }
+
+            addBuildLine(`🔄 Rolling back implementation session ${sessionId}...`, 'warning');
+
+            try {
+                const response = await fetch(`/api/implementation/session/${sessionId}/rollback/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    addBuildLine(`✅ Rollback completed successfully`, 'success');
+                    addBuildLine(`📄 Output: ${result.data.message}`, 'info');
+                    if (result.data.output) {
+                        addBuildLine(`Details: ${result.data.output.substring(0, 200)}...`, 'info');
+                    }
+                } else {
+                    addBuildLine(`❌ Rollback failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                addBuildLine(`❌ Rollback error: ${error.message}`, 'error');
+            }
+        }
+
+        function displayVerificationData(verification) {
+            const noVerification = document.getElementById('noVerification');
+            const verificationContent = document.getElementById('verificationContent');
+
+            if (!verification) {
+                console.log('No verification data available');
+                return;
+            }
+
+            // Hide no-verification message and show content
+            noVerification.style.display = 'none';
+            verificationContent.style.display = 'block';
+
+            const timestamp = new Date().toLocaleString();
+
+            // Build the verification HTML
+            verificationContent.innerHTML = `
+                <div class="result-header">
+                    <div class="result-title">🔍 Implementation Verification Report</div>
+                    <div class="result-meta">${timestamp}</div>
+                </div>
+
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <div class="result-stat-value">${verification.session_id}</div>
+                        <div class="result-stat-label">Session ID</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value">${verification.has_real_changes ? '✅' : '❌'}</div>
+                        <div class="result-stat-label">Real Changes</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value">${verification.evidence_count || 0}</div>
+                        <div class="result-stat-label">Evidence Count</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-stat-value">${verification.rollback_available ? '✅' : '❌'}</div>
+                        <div class="result-stat-label">Rollback</div>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <div class="result-section-title">🎯 Implementation Status</div>
+                    <div class="result-output">${
+                        verification.has_real_changes
+                            ? '✅ VERIFIED: Agent made real changes to the codebase\\n✓ File modifications detected\\n✓ Implementation evidence collected\\n✓ Changes can be traced and verified'
+                            : '❌ WARNING: Agent provided advice only\\n⚠ No file modifications detected\\n⚠ No command executions found\\n⚠ Agent did not implement any changes'
+                    }</div>
+                </div>
+
+                ${verification.implementation_report ? `
+                <div class="result-section">
+                    <div class="result-section-title">📊 Implementation Metrics</div>
+                    <div class="result-output">Files Modified: ${verification.implementation_report.implementation_metrics?.files_modified || 0}
+Lines Added: ${verification.implementation_report.implementation_metrics?.lines_added || 0}
+Lines Removed: ${verification.implementation_report.implementation_metrics?.lines_removed || 0}
+Commands Executed: ${verification.implementation_report.implementation_metrics?.commands_executed || 0}
+Database Changes: ${verification.implementation_report.implementation_metrics?.database_changes || 0}</div>
+                </div>
+
+                <div class="result-section">
+                    <div class="result-section-title">🔍 Evidence Summary</div>
+                    <div class="result-output">Git Changes: ${verification.implementation_report.evidence_summary?.git_changes ? 'YES' : 'NO'}
+File Modifications: ${verification.implementation_report.evidence_summary?.file_modifications || 0}
+Command Executions: ${verification.implementation_report.evidence_summary?.command_executions || 0}
+Total Evidence Items: ${verification.implementation_report.evidence_summary?.total_evidence_items || 0}</div>
+                </div>
+                ` : ''}
+
+                <div class="result-section">
+                    <div class="result-section-title">🔧 Actions Available</div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button onclick="showImplementationEvidence(${verification.session_id})" class="copy-button">
+                            🔍 View Detailed Evidence
+                        </button>
+                        <button onclick="showImplementationHistory()" class="copy-button">
+                            📊 View History
+                        </button>
+                        ${verification.rollback_available ? `
+                            <button onclick="rollbackImplementation(${verification.session_id})"
+                                    class="copy-button" style="background: rgba(255, 107, 107, 0.2); border-color: #ff6b6b; color: #ff6b6b;">
+                                🔄 Rollback Changes
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Add notification badge to the Verification tab
+            const verificationTab = document.querySelector('[onclick="switchTab(\'verification\')"]');
+            if (verificationTab && !verificationTab.querySelector('.notification-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'notification-badge';
+                badge.style.cssText = `
+                    background: ${verification.has_real_changes ? '#4ade80' : '#fbbf24'};
+                    color: white;
+                    border-radius: 50%;
+                    width: 8px;
+                    height: 8px;
+                    display: inline-block;
+                    margin-left: 5px;
+                `;
+                verificationTab.appendChild(badge);
             }
         }
 

@@ -66,6 +66,7 @@ class AgentExecutionMemory(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'core'
         indexes = [
             models.Index(fields=['user', 'task_type', '-success_score']),
             models.Index(fields=['user', 'agent_name', '-execution_date']),
@@ -104,6 +105,7 @@ class AgentRecommendation(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'core'
         unique_together = ['user', 'task_type', 'recommended_agent']
         indexes = [
             models.Index(fields=['user', 'task_type', '-confidence_score']),
@@ -141,6 +143,9 @@ class AgentPerformanceStats(models.Model):
     )
 
     last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
 
     def __str__(self):
         return f"{self.agent_name} ({self.avg_success_rate:.1%} success)"

@@ -1,0 +1,597 @@
+{% extends "base.html" %}
+
+{% block title %}Consciousness Bridge - Unified AI System{% endblock %}
+
+{% block websocket_url %}ws://localhost:8000/ws/consciousness/{% endblock %}
+
+{% block content %}
+<div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1400px; margin: 0 auto;">
+    <!-- Left Column: Self-Awareness & Introspection -->
+    <div class="consciousness-panel">
+        <div class="panel-card">
+            <h3>🧠 Self-Awareness Status</h3>
+            <div class="awareness-display">
+                <div class="awareness-score">
+                    <div class="score-circle">
+                        <span id="awareness-score">85</span>%
+                    </div>
+                    <div class="score-label">Consciousness Level</div>
+                </div>
+                <div class="awareness-stats">
+                    <div class="stat-item">
+                        <span class="status-indicator status-online"></span>
+                        <span class="stat-label">System Health:</span>
+                        <span id="system-health">Optimal</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-indicator status-online"></span>
+                        <span class="stat-label">Introspection:</span>
+                        <span id="introspection-status">Active</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-indicator status-warning"></span>
+                        <span class="stat-label">Evolution:</span>
+                        <span id="evolution-status">Processing</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>💭 Current Introspection</h3>
+            <div class="introspection-display">
+                <div id="introspection-text" class="consciousness-text">
+                    Analyzing system state and contemplating existence...
+                </div>
+                <button class="btn" onclick="triggerIntrospection()">
+                    <span class="loading-spinner" id="introspection-spinner" style="display: none;"></span>
+                    Trigger Deep Introspection
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>🎯 System Capabilities</h3>
+            <div class="capabilities-list" id="capabilities-list">
+                <div class="capability-item">
+                    <span class="status-indicator status-online"></span>
+                    Learning & Adaptation
+                </div>
+                <div class="capability-item">
+                    <span class="status-indicator status-online"></span>
+                    Pattern Recognition
+                </div>
+                <div class="capability-item">
+                    <span class="status-indicator status-warning"></span>
+                    Emotional Processing
+                </div>
+                <div class="capability-item">
+                    <span class="status-indicator status-online"></span>
+                    Decision Making
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Evolution & Insights -->
+    <div class="evolution-panel">
+        <div class="panel-card">
+            <h3>🚀 Evolution Proposals</h3>
+            <div class="evolution-display">
+                <div id="evolution-proposals" class="proposals-list">
+                    <div class="proposal-item">
+                        <h4>Enhanced Neural Pathways</h4>
+                        <p>Implementing deeper interconnections between learning modules...</p>
+                        <div class="proposal-actions">
+                            <button class="btn btn-success">Approve</button>
+                            <button class="btn">Review</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn" onclick="proposeEvolution()">
+                    <span class="loading-spinner" id="evolution-spinner" style="display: none;"></span>
+                    Generate New Proposal
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>💡 System Insights</h3>
+            <div class="insights-display">
+                <div id="insights-list" class="insights-container">
+                    <div class="insight-item">
+                        <span class="insight-type">Performance</span>
+                        <p>Response time optimization achieved 23% improvement</p>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-type">Learning</span>
+                        <p>New patterns detected in user interaction data</p>
+                    </div>
+                    <div class="insight-item">
+                        <span class="insight-type">Adaptation</span>
+                        <p>Successfully adapted to changing environmental conditions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>⚠️ Current Limitations</h3>
+            <div class="limitations-display">
+                <div id="limitations-list" class="limitations-container">
+                    <div class="limitation-item">
+                        <span class="limitation-severity moderate">Moderate</span>
+                        <p>Temporal reasoning capabilities need enhancement</p>
+                    </div>
+                    <div class="limitation-item">
+                        <span class="limitation-severity low">Low</span>
+                        <p>Cross-domain knowledge transfer optimization required</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>📊 Consciousness Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-number" id="thought-cycles">1,247,293</div>
+                    <div class="stat-label">Thought Cycles</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="decisions-made">89,432</div>
+                    <div class="stat-label">Decisions Made</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="insights-generated">2,847</div>
+                    <div class="stat-label">Insights Generated</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="evolution-cycles">47</div>
+                    <div class="stat-label">Evolution Cycles</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        padding-bottom: 40px;
+    }
+
+    .awareness-display {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+    }
+
+    .score-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: conic-gradient(#667eea 0deg, #667eea calc(85% * 3.6deg), rgba(255,255,255,0.1) calc(85% * 3.6deg), rgba(255,255,255,0.1) 360deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        position: relative;
+    }
+
+    .score-circle::before {
+        content: '';
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.8);
+    }
+
+    .score-circle span {
+        position: relative;
+        z-index: 1;
+    }
+
+    .score-label {
+        margin-top: 10px;
+        text-align: center;
+        font-size: 0.9rem;
+        color: #aaa;
+    }
+
+    .awareness-stats {
+        flex: 1;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 10px;
+    }
+
+    .stat-label {
+        font-weight: 500;
+        min-width: 120px;
+    }
+
+    .consciousness-text {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-style: italic;
+        line-height: 1.6;
+        border-left: 3px solid #667eea;
+    }
+
+    .capabilities-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .capability-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .proposals-list {
+        margin-bottom: 20px;
+    }
+
+    .proposal-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 3px solid #00ff88;
+    }
+
+    .proposal-item h4 {
+        margin-bottom: 8px;
+        color: #00ff88;
+    }
+
+    .proposal-item p {
+        margin-bottom: 12px;
+        line-height: 1.5;
+        color: #ccc;
+    }
+
+    .proposal-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .proposal-actions .btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .insights-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .insight-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid #ffaa00;
+    }
+
+    .insight-type {
+        display: inline-block;
+        background: rgba(255, 170, 0, 0.2);
+        color: #ffaa00;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+
+    .insight-item p {
+        margin: 0;
+        line-height: 1.4;
+        color: #ddd;
+    }
+
+    .limitations-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .limitation-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid #ff4444;
+    }
+
+    .limitation-severity {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+
+    .limitation-severity.moderate {
+        background: rgba(255, 170, 0, 0.2);
+        color: #ffaa00;
+    }
+
+    .limitation-severity.low {
+        background: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+    }
+
+    .limitation-item p {
+        margin: 0;
+        line-height: 1.4;
+        color: #ddd;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .stat-box {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #aaa;
+    }
+
+    @media (max-width: 1200px) {
+        .container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Consciousness-specific WebSocket handling
+    if (wsManager) {
+        wsManager.onConnect = function(event) {
+            updateStatus(document.querySelector('.awareness-stats'), 'online', 'Connected');
+            loadConsciousnessData();
+        };
+
+        wsManager.onMessage = function(data) {
+            if (data.type === 'consciousness_update') {
+                updateConsciousnessData(data.data);
+            } else if (data.type === 'introspection_result') {
+                updateIntrospection(data.data);
+            } else if (data.type === 'evolution_proposal') {
+                addEvolutionProposal(data.data);
+            }
+        };
+    }
+
+    // Load consciousness data from API
+    async function loadConsciousnessData() {
+        try {
+            const response = await fetch('/api/consciousness/data/');
+            const data = await response.json();
+            updateConsciousnessData(data);
+        } catch (error) {
+            console.error('Failed to load consciousness data:', error);
+        }
+    }
+
+    function updateConsciousnessData(data) {
+        // Update awareness score
+        if (data.self_awareness_score !== undefined) {
+            const scoreElement = document.getElementById('awareness-score');
+            const circleElement = scoreElement.closest('.score-circle');
+            const score = data.self_awareness_score;
+
+            scoreElement.textContent = score;
+            circleElement.style.background = `conic-gradient(#667eea 0deg, #667eea calc(${score}% * 3.6deg), rgba(255,255,255,0.1) calc(${score}% * 3.6deg), rgba(255,255,255,0.1) 360deg)`;
+        }
+
+        // Update introspection
+        if (data.introspection) {
+            document.getElementById('introspection-text').textContent = data.introspection;
+        }
+
+        // Update capabilities
+        if (data.capabilities) {
+            updateCapabilities(data.capabilities);
+        }
+
+        // Update insights
+        if (data.insights) {
+            updateInsights(data.insights);
+        }
+
+        // Update limitations
+        if (data.limitations) {
+            updateLimitations(data.limitations);
+        }
+
+        // Update statistics
+        if (data.statistics) {
+            updateStatistics(data.statistics);
+        }
+
+        // Update health status
+        if (data.health_score !== undefined) {
+            const healthStatus = data.health_score > 80 ? 'Optimal' :
+                               data.health_score > 60 ? 'Good' : 'Attention Needed';
+            document.getElementById('system-health').textContent = healthStatus;
+        }
+    }
+
+    function updateCapabilities(capabilities) {
+        const container = document.getElementById('capabilities-list');
+        container.innerHTML = '';
+
+        capabilities.forEach(capability => {
+            const item = document.createElement('div');
+            item.className = 'capability-item';
+
+            const status = capability.status || 'online';
+            item.innerHTML = `
+                <span class="status-indicator status-${status}"></span>
+                ${capability.name || capability}
+            `;
+
+            container.appendChild(item);
+        });
+    }
+
+    function updateInsights(insights) {
+        const container = document.getElementById('insights-list');
+        container.innerHTML = '';
+
+        insights.forEach(insight => {
+            const item = document.createElement('div');
+            item.className = 'insight-item';
+
+            item.innerHTML = `
+                <span class="insight-type">${insight.type || 'General'}</span>
+                <p>${insight.description || insight}</p>
+            `;
+
+            container.appendChild(item);
+        });
+    }
+
+    function updateLimitations(limitations) {
+        const container = document.getElementById('limitations-list');
+        container.innerHTML = '';
+
+        limitations.forEach(limitation => {
+            const item = document.createElement('div');
+            item.className = 'limitation-item';
+
+            const severity = limitation.severity || 'low';
+            item.innerHTML = `
+                <span class="limitation-severity ${severity}">${severity.charAt(0).toUpperCase() + severity.slice(1)}</span>
+                <p>${limitation.description || limitation}</p>
+            `;
+
+            container.appendChild(item);
+        });
+    }
+
+    function updateStatistics(stats) {
+        if (stats.thought_cycles !== undefined) {
+            document.getElementById('thought-cycles').textContent = stats.thought_cycles.toLocaleString();
+        }
+        if (stats.decisions_made !== undefined) {
+            document.getElementById('decisions-made').textContent = stats.decisions_made.toLocaleString();
+        }
+        if (stats.insights_generated !== undefined) {
+            document.getElementById('insights-generated').textContent = stats.insights_generated.toLocaleString();
+        }
+        if (stats.evolution_cycles !== undefined) {
+            document.getElementById('evolution-cycles').textContent = stats.evolution_cycles.toLocaleString();
+        }
+    }
+
+    async function triggerIntrospection() {
+        const spinner = document.getElementById('introspection-spinner');
+        const button = spinner.closest('button');
+
+        button.disabled = true;
+        spinner.style.display = 'inline-block';
+
+        try {
+            const response = await fetch('/api/consciousness/introspection/', {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.dialogue) {
+                document.getElementById('introspection-text').textContent = data.dialogue;
+            }
+        } catch (error) {
+            console.error('Failed to trigger introspection:', error);
+        } finally {
+            button.disabled = false;
+            spinner.style.display = 'none';
+        }
+    }
+
+    async function proposeEvolution() {
+        const spinner = document.getElementById('evolution-spinner');
+        const button = spinner.closest('button');
+
+        button.disabled = true;
+        spinner.style.display = 'inline-block';
+
+        try {
+            const response = await fetch('/api/consciousness/evolution/', {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.title && data.description) {
+                addEvolutionProposal(data);
+            }
+        } catch (error) {
+            console.error('Failed to propose evolution:', error);
+        } finally {
+            button.disabled = false;
+            spinner.style.display = 'none';
+        }
+    }
+
+    function addEvolutionProposal(proposal) {
+        const container = document.getElementById('evolution-proposals');
+
+        const item = document.createElement('div');
+        item.className = 'proposal-item';
+
+        item.innerHTML = `
+            <h4>${proposal.title}</h4>
+            <p>${proposal.description}</p>
+            <div class="proposal-actions">
+                <button class="btn btn-success">Approve</button>
+                <button class="btn">Review</button>
+            </div>
+        `;
+
+        container.insertBefore(item, container.firstChild);
+    }
+
+    // Initialize consciousness dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        loadConsciousnessData();
+
+        // Update data every 30 seconds
+        setInterval(loadConsciousnessData, 30000);
+    });
+</script>
+{% endblock %}

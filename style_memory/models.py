@@ -61,6 +61,7 @@ class StyleMemory(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
+        app_label = 'style_memory'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', '-created_at']),
@@ -89,6 +90,7 @@ class StylePattern(models.Model):
     last_seen = models.DateTimeField(default=timezone.now)
     
     class Meta:
+        app_label = 'style_memory'
         unique_together = ['user', 'pattern_type', 'pattern_value']
         ordering = ['-confidence', '-frequency']
         
@@ -127,6 +129,7 @@ class StyleSuggestion(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
+        app_label = 'style_memory'
         ordering = ['-confidence', '-created_at']
         
     def __str__(self):
@@ -156,6 +159,7 @@ class ContentLineage(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
+        app_label = 'style_memory'
         ordering = ['root_id', 'generation', 'created_at']
         indexes = [
             models.Index(fields=['content_id']),

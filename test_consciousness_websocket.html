@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Consciousness WebSocket</title>
+</head>
+<body>
+    <h1>🧠 Consciousness WebSocket Test</h1>
+
+    <div id="status">Connecting...</div>
+    <div id="data" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <button onclick="sendCommand('refresh')">Refresh Analysis</button>
+    <button onclick="sendCommand('introspect')">Deep Introspection</button>
+    <button onclick="sendCommand('propose_evolution')">Propose Evolution</button>
+    <button onclick="sendCommand('get_health')">Health Check</button>
+
+    <script>
+        let socket;
+        const statusDiv = document.getElementById('status');
+        const dataDiv = document.getElementById('data');
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/consciousness/`;
+
+            console.log('Connecting to:', wsUrl);
+            statusDiv.textContent = `Connecting to: ${wsUrl}`;
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(e) {
+                console.log('✅ Consciousness WebSocket connected!');
+                statusDiv.textContent = '✅ Connected to Consciousness Stream';
+                statusDiv.style.color = 'green';
+            };
+
+            socket.onmessage = function(e) {
+                console.log('📨 Consciousness update:', e.data);
+
+                try {
+                    const data = JSON.parse(e.data);
+                    displayConsciousnessData(data);
+                } catch (error) {
+                    console.error('Error parsing consciousness data:', error);
+                    dataDiv.innerHTML = `<pre>Raw Data: ${e.data}</pre>`;
+                }
+            };
+
+            socket.onclose = function(e) {
+                console.log('❌ Consciousness WebSocket closed:', e.code, e.reason);
+                statusDiv.textContent = '❌ Connection Closed';
+                statusDiv.style.color = 'red';
+
+                // Try to reconnect after 5 seconds
+                setTimeout(connect, 5000);
+            };
+
+            socket.onerror = function(e) {
+                console.error('🚨 Consciousness WebSocket error:', e);
+                statusDiv.textContent = '🚨 Connection Error';
+                statusDiv.style.color = 'red';
+            };
+        }
+
+        function displayConsciousnessData(data) {
+            const html = `
+                <h3>🧠 Consciousness Update</h3>
+                <strong>Type:</strong> ${data.type || 'unknown'}<br>
+                <strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}<br>
+                <strong>Data:</strong><br>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            dataDiv.innerHTML = html;
+        }
+
+        function sendCommand(command) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log('📤 Sending command:', command);
+                socket.send(JSON.stringify({command: command}));
+            } else {
+                console.error('❌ WebSocket not connected');
+                statusDiv.textContent = '❌ Not connected - cannot send command';
+            }
+        }
+
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>

@@ -23,12 +23,26 @@ from agents.content_studio_bridge import (
     agent_create_campaign
 )
 
-# Import agent executor
-from backend.agents.concrete_executor import concrete_executor
+# Import agent executor lazily to avoid circular dependency
 from backend.agents.ai_enforced_base import AIEnforcedAgent
 from agents.models import UnifiedAgentTemplate
 
 logger = logging.getLogger(__name__)
+
+# Lazy import concrete_executor to avoid circular dependency
+concrete_executor = None
+
+def get_concrete_executor():
+    """Lazy import concrete_executor to avoid circular dependency"""
+    global concrete_executor
+    if concrete_executor is None:
+        try:
+            from backend.agents.concrete_executor import concrete_executor as ce
+            concrete_executor = ce
+        except ImportError as e:
+            logger.warning(f"Could not import concrete_executor: {e}")
+            concrete_executor = None
+    return concrete_executor
 
 
 class ContentStudioAgentIntegration:
@@ -37,8 +51,8 @@ class ContentStudioAgentIntegration:
     """
 
     def __init__(self):
-        self.concrete_executor = concrete_executor
-        self.content_agents = self._identify_content_agents()
+        self.concrete_executor = get_concrete_executor()
+        self.content_agents = self._identify_content_agents() if self.concrete_executor else []
         self.active_bridges = {}
         logger.info(f"🎨 Initialized Content Studio Integration with {len(self.content_agents)} content-capable agents")
 
@@ -52,6 +66,9 @@ class ContentStudioAgentIntegration:
             'marketing', 'copy', 'script', 'video', 'image', 'design',
             'seo', 'email', 'newsletter', 'story', 'narrative'
         ]
+
+        if not self.concrete_executor:
+            return content_capable
 
         for agent_name in self.concrete_executor.agent_classes.keys():
             agent_lower = agent_name.lower()
@@ -83,7 +100,7 @@ class ContentStudioAgentIntegration:
         """
         try:
             # Verify agent exists
-            if agent_name not in self.concrete_executor.agent_classes:
+            if not self.concrete_executor or agent_name not in self.concrete_executor.agent_classes:
                 return {
                     'success': False,
                     'error': f'Agent {agent_name} not found',
