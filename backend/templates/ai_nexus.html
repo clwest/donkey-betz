@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Orchestration Nexus - Unified Intelligence</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Animated Background */
+        .neural-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        @keyframes neural-pulse {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.3; }
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            gap: 20px;
+            min-height: calc(100vh - 70px); /* Account for navigation bar */
+            padding: 20px;
+            padding-top: 80px; /* Space for nav bar */
+            padding-bottom: 40px; /* Space at bottom for scrolling */
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* Left Panel - Active Agents & Learning */
+        .active-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: fit-content;
+        }
+
+        .panel-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            max-height: 350px; /* Ensure cards have max height */
+        }
+
+        /* Pagination controls */
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .pagination-btn {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #e0e0e0;
+            padding: 4px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(102, 126, 234, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0; /* Don't let title shrink */
+        }
+
+        /* Current Thinking Card */
+        .thinking-card {
+            min-height: 120px;
+            position: relative;
+        }
+
+        .thinking-animation {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+        }
+
+        .thinking-animation::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            animation: thinking-pulse 2s infinite;
+        }
+
+        @keyframes thinking-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .current-thought {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #00f2ff;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .learning-insights {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .insight-item {
+            padding: 8px 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        /* Active Agents List */
+        .agent-activity {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 250px;
+            min-height: 0; /* Important for flexbox scrolling */
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .agent-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
+        }
+
+        .agent-item.active {
+            background: rgba(102, 126, 234, 0.3);
+            border-left: 3px solid #667eea;
+        }
+
+        .agent-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .agent-info {
+            flex: 1;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .agent-status {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .agent-activity-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        /* Center Panel - Main Interaction */
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* System State Banner */
+        .system-state {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .state-metrics {
+            display: flex;
+            gap: 30px;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00f2ff 0%, #667eea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Conversation Area */
+        .conversation-area {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0; /* Important for flex child */
+        }
+
+        .conversation-header {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .context-indicator {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .context-badge {
+            padding: 4px 10px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            animation: messageSlide 0.3s ease;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.ai {
+            flex-direction: row;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+        }
+
+        .message.ai .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .message.user .message-content {
+            background: rgba(74, 222, 128, 0.1);
+            border-color: rgba(74, 222, 128, 0.3);
+        }
+
+        .message-text {
+            line-height: 1.6;
+            font-size: 16px; /* Increased from default */
+            word-wrap: break-word;
+        }
+
+        /* Markdown support styles */
+        .message-text h1, .message-text h2, .message-text h3 {
+            color: #4ade80;
+            margin: 12px 0 8px 0;
+            font-weight: bold;
+        }
+
+        .message-text h1 { font-size: 20px; }
+        .message-text h2 { font-size: 18px; }
+        .message-text h3 { font-size: 16px; }
+
+        .message-text ul, .message-text ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .message-text li {
+            margin: 4px 0;
+            line-height: 1.5;
+        }
+
+        .message-text p {
+            margin: 8px 0;
+        }
+
+        .message-text strong {
+            color: #67e8f9;
+            font-weight: bold;
+        }
+
+        .message-text em {
+            color: #a78bfa;
+            font-style: italic;
+        }
+
+        .message-text code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            color: #fbbf24;
+        }
+
+        .message-text pre {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+            border-left: 4px solid #4ade80;
+        }
+
+        .message-text pre code {
+            background: none;
+            padding: 0;
+            color: #e0e0e0;
+        }
+
+        .agent-collaboration {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .collaborating-agents {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .collaborating-agent {
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            font-size: 0.85rem;
+        }
+
+        /* Smart Input Area */
+        .input-area {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .suggestions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .suggestion {
+            padding: 8px 15px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .smart-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #e0e0e0;
+            font-size: 1rem;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            transition: all 0.3s ease;
+        }
+
+        .smart-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .smart-input::placeholder {
+            color: rgba(224, 224, 224, 0.5);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Right Panel - Intelligence Feed */
+        .intelligence-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow: hidden; /* Prevent panel overflow */
+        }
+
+        .advisor-consultations {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 250px;
+            min-height: 0; /* Important for flexbox scrolling */
+        }
+
+        .advisor-card {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .advisor-card:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .advisor-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .advisor-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .advisor-expertise {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .advisor-insight {
+            font-size: 0.9rem;
+            font-style: italic;
+            color: #00f2ff;
+        }
+
+        /* Spider Activity Feed */
+        .spider-feed {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 200px;
+            min-height: 0; /* Important for flexbox scrolling */
+        }
+
+        .spider-task {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .spider-icon {
+            font-size: 1.2rem;
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-type {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .task-target {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .task-status {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00ff88;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 250px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .active-panel,
+            .intelligence-panel {
+                display: none;
+            }
+        }
+
+        /* Loading states */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.4);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <!-- Include Universal Navigation -->
+    {% include 'universal_navigation.html' %}
+
+    <style>
+        /* Override to hide nav toggle specifically on this page */
+        .nav-toggle {
+            display: none !important;
+        }
+
+        /* Ensure scrollbar is visible and styled */
+        body::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 6px;
+            border: 2px solid transparent;
+        }
+
+        body::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.7);
+        }
+
+        /* Ensure html allows scrolling */
+        html {
+            overflow-y: auto;
+        }
+    </style>
+
+    <canvas class="neural-background" id="neuralCanvas"></canvas>
+
+    <div class="container">
+        <!-- Left Panel - Active Agents & System Thinking -->
+        <div class="active-panel">
+            <!-- Current Thinking -->
+            <div class="panel-card thinking-card">
+                <div class="card-title">
+                    <span>🧠</span>
+                    <span>Current Thinking</span>
+                </div>
+                <div class="thinking-animation"></div>
+                <div class="current-thought" id="currentThought">
+                    Analyzing market patterns and optimizing spider deployments...
+                </div>
+                <div class="learning-insights" id="learningInsights">
+                    <div class="insight-item">Learning: Options flow unusual on SPY</div>
+                    <div class="insight-item">Discovery: New arbitrage opportunity detected</div>
+                </div>
+            </div>
+
+            <!-- Active Agents -->
+            <div class="panel-card">
+                <div class="card-title">
+                    <span>🤖</span>
+                    <span>Active Agents</span>
+                    <span style="margin-left: auto; font-size: 0.9rem; color: #888;">149</span>
+                </div>
+                <div class="agent-activity" id="agentActivity">
+                    <div class="agent-item active" onclick="selectAgent(this, 'Market Analyzer')">
+                        <div class="agent-avatar">🎯</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Market Analyzer</div>
+                            <div class="agent-status">Processing real-time data</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Revenue Optimizer')">
+                        <div class="agent-avatar">💰</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Revenue Optimizer</div>
+                            <div class="agent-status">Calculating opportunities</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Spider Orchestrator')">
+                        <div class="agent-avatar">🕷️</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Spider Orchestrator</div>
+                            <div class="agent-status">Managing spiders...</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Data Harvester')">
+                        <div class="agent-avatar">🌾</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Data Harvester</div>
+                            <div class="agent-status">Collecting market data</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Pattern Recognizer')">
+                        <div class="agent-avatar">🔍</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Pattern Recognizer</div>
+                            <div class="agent-status">Analyzing trends</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Risk Assessor')">
+                        <div class="agent-avatar">⚖️</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Risk Assessor</div>
+                            <div class="agent-status">Evaluating positions</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Trade Executor')">
+                        <div class="agent-avatar">⚡</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Trade Executor</div>
+                            <div class="agent-status">Ready for orders</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                    <div class="agent-item" onclick="selectAgent(this, 'Sentiment Analyzer')">
+                        <div class="agent-avatar">😊</div>
+                        <div class="agent-info">
+                            <div class="agent-name">Sentiment Analyzer</div>
+                            <div class="agent-status">Reading market mood</div>
+                        </div>
+                        <div class="agent-activity-indicator"></div>
+                    </div>
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="agentPrevBtn" onclick="paginateAgents('prev')" disabled>←</button>
+                    <span class="pagination-info" id="agentPageInfo">1-8 of 149</span>
+                    <button class="pagination-btn" id="agentNextBtn" onclick="paginateAgents('next')">→</button>
+                </div>
+            </div>
+
+            <!-- Learning Status -->
+            <div class="panel-card">
+                <div class="card-title">
+                    <span>📈</span>
+                    <span>Learning Progress</span>
+                </div>
+                <div style="padding: 10px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="font-size: 0.9rem;">Pattern Recognition</span>
+                        <span style="color: #00f2ff;">87%</span>
+                    </div>
+                    <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                        <div style="width: 87%; height: 100%; background: linear-gradient(90deg, #667eea, #00f2ff);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Panel - Main Interaction -->
+        <div class="main-panel">
+            <!-- System State -->
+            <div class="system-state">
+                <div class="state-metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="consciousnessLevel">--.--%</div>
+                        <div class="metric-label">Consciousness</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="activeConnections">247</div>
+                        <div class="metric-label">Active Connections</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="tasksPerMinute">1,247</div>
+                        <div class="metric-label">Tasks/Min</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="revenueToday">$0</div>
+                        <div class="metric-label">Revenue Today</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversation Area -->
+            <div class="conversation-area">
+                <div class="conversation-header">
+                    <div class="context-indicator">
+                        <span>Context:</span>
+                        <span class="context-badge">🎯 Market Analysis</span>
+                        <span class="context-badge">💰 Revenue Generation</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: #888;">
+                        <span id="connectionStatus">🟢 Connected</span>
+                    </div>
+                </div>
+
+                <div class="messages-container" id="messagesContainer">
+                    <div class="message ai">
+                        <div class="message-avatar">🧠</div>
+                        <div class="message-content">
+                            <div class="message-text">
+                                Welcome to your AI Orchestration Nexus! Connecting to real-time intelligence network...
+
+                                System consciousness initializing. What would you like to explore today?
+                            </div>
+                            <div class="agent-collaboration">
+                                <div style="font-size: 0.85rem; color: #888;">Prepared by:</div>
+                                <div class="collaborating-agents">
+                                    <span class="collaborating-agent">🧠 Consciousness Bridge</span>
+                                    <span class="collaborating-agent">📊 System Monitor</span>
+                                    <span class="collaborating-agent">🤖 Agent Registry</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <div class="suggestions" id="suggestions">
+                        <div class="suggestion" onclick="useSuggestion(this)">Show me today's opportunities</div>
+                        <div class="suggestion" onclick="useSuggestion(this)">What are the top performing agents?</div>
+                        <div class="suggestion" onclick="useSuggestion(this)">Deploy revenue generation strategy</div>
+                        <div class="suggestion" onclick="useSuggestion(this)">Consult Warren Buffett advisor</div>
+                    </div>
+                    <div class="input-wrapper">
+                        <textarea
+                            id="smartInput"
+                            class="smart-input"
+                            placeholder="Ask anything... The entire AI ecosystem is listening"
+                            rows="1"
+                        ></textarea>
+                        <button class="send-button" onclick="sendMessage()">
+                            <span>Send</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Intelligence Feed -->
+        <div class="intelligence-panel">
+            <!-- Advisor Consultations -->
+            <div class="panel-card">
+                <div class="card-title">
+                    <span>🎓</span>
+                    <span>Advisor Network</span>
+                    <span style="margin-left: auto; font-size: 0.9rem; color: #888;">25</span>
+                </div>
+                <div class="advisor-consultations" id="advisorConsultations">
+                    <div class="advisor-card" onclick="consultAdvisor('Warren Buffett')">
+                        <div class="advisor-header">
+                            <span style="font-size: 1.5rem;">💰</span>
+                            <div>
+                                <div class="advisor-name">Warren Buffett</div>
+                                <div class="advisor-expertise">Value Investing</div>
+                            </div>
+                        </div>
+                        <div class="advisor-insight">
+                            "Focus on companies with strong moats and consistent cash flows."
+                        </div>
+                    </div>
+                    <div class="advisor-card" onclick="consultAdvisor('Cathie Wood')">
+                        <div class="advisor-header">
+                            <span style="font-size: 1.5rem;">🚀</span>
+                            <div>
+                                <div class="advisor-name">Cathie Wood</div>
+                                <div class="advisor-expertise">Innovation</div>
+                            </div>
+                        </div>
+                        <div class="advisor-insight">
+                            "AI and robotics are converging faster than expected."
+                        </div>
+                    </div>
+                    <div class="advisor-card" onclick="consultAdvisor('Ray Dalio')">
+                        <div class="advisor-header">
+                            <span style="font-size: 1.5rem;">📊</span>
+                            <div>
+                                <div class="advisor-name">Ray Dalio</div>
+                                <div class="advisor-expertise">Macro Economics</div>
+                            </div>
+                        </div>
+                        <div class="advisor-insight">
+                            "Understanding the economic machine is crucial for long-term success."
+                        </div>
+                    </div>
+                    <div class="advisor-card" onclick="consultAdvisor('Peter Lynch')">
+                        <div class="advisor-header">
+                            <span style="font-size: 1.5rem;">🎯</span>
+                            <div>
+                                <div class="advisor-name">Peter Lynch</div>
+                                <div class="advisor-expertise">Growth Investing</div>
+                            </div>
+                        </div>
+                        <div class="advisor-insight">
+                            "Invest in what you know and understand."
+                        </div>
+                    </div>
+                    <div class="advisor-card" onclick="consultAdvisor('Michael Burry')">
+                        <div class="advisor-header">
+                            <span style="font-size: 1.5rem;">🔍</span>
+                            <div>
+                                <div class="advisor-name">Michael Burry</div>
+                                <div class="advisor-expertise">Contrarian</div>
+                            </div>
+                        </div>
+                        <div class="advisor-insight">
+                            "The market can remain irrational longer than you can remain solvent."
+                        </div>
+                    </div>
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="advisorPrevBtn" onclick="paginateAdvisors('prev')" disabled>←</button>
+                    <span class="pagination-info" id="advisorPageInfo">1-5 of 25</span>
+                    <button class="pagination-btn" id="advisorNextBtn" onclick="paginateAdvisors('next')">→</button>
+                </div>
+            </div>
+
+            <!-- Spider Activity -->
+            <div class="panel-card">
+                <div class="card-title">
+                    <span>🕷️</span>
+                    <span>Spider Network</span>
+                    <span style="margin-left: auto; font-size: 0.9rem; color: #888;">40 Active</span>
+                </div>
+                <div class="spider-feed" id="spiderFeed">
+                    <div class="spider-task">
+                        <span class="spider-icon">🕸️</span>
+                        <div class="task-info">
+                            <div class="task-type">Market Scanner</div>
+                            <div class="task-target">Analyzing SPY options</div>
+                        </div>
+                        <div class="task-status"></div>
+                    </div>
+                    <div class="spider-task">
+                        <span class="spider-icon">🕸️</span>
+                        <div class="task-info">
+                            <div class="task-type">Reddit Crawler</div>
+                            <div class="task-target">WSB sentiment analysis</div>
+                        </div>
+                        <div class="task-status"></div>
+                    </div>
+                    <div class="spider-task">
+                        <span class="spider-icon">🕸️</span>
+                        <div class="task-info">
+                            <div class="task-type">Arbitrage Hunter</div>
+                            <div class="task-target">Crypto price gaps</div>
+                        </div>
+                        <div class="task-status"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="panel-card">
+                <div class="card-title">
+                    <span>⚡</span>
+                    <span>Quick Actions</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="suggestion" style="width: 100%; text-align: left;">
+                        🚀 Deploy All Revenue Agents
+                    </button>
+                    <button class="suggestion" style="width: 100%; text-align: left;">
+                        📊 Generate Market Report
+                    </button>
+                    <button class="suggestion" style="width: 100%; text-align: left;">
+                        🕷️ Scale Spider Network 10x
+                    </button>
+                    <button class="suggestion" style="width: 100%; text-align: left;">
+                        🧠 Boost Consciousness Level
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connections
+        let consciousnessWS = null;
+        let commandWS = null;
+        let reconnectAttempts = 0;
+
+        // Initialize dual WebSocket connections
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+            // Connect to consciousness WebSocket for real-time data updates
+            const consciousnessUrl = `${protocol}//${window.location.host}/ws/consciousness/`;
+            consciousnessWS = new WebSocket(consciousnessUrl);
+
+            consciousnessWS.onopen = function() {
+                console.log('🧠 Consciousness WebSocket connected');
+            };
+
+            consciousnessWS.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'consciousness_update') {
+                    handleWebSocketMessage(data);
+                }
+            };
+
+            consciousnessWS.onerror = function(error) {
+                console.error('Consciousness WebSocket error:', error);
+            };
+
+            // Connect to command-center WebSocket for AI interactions
+            const commandUrl = `${protocol}//${window.location.host}/ws/command-center/`;
+            commandWS = new WebSocket(commandUrl);
+
+            commandWS.onopen = function() {
+                console.log('🚀 Command Center WebSocket connected');
+                document.getElementById('connectionStatus').textContent = '🟢 Connected';
+                reconnectAttempts = 0;
+            };
+
+            commandWS.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleAIMessage(data);
+            };
+
+            commandWS.onerror = function(error) {
+                console.error('Command WebSocket error:', error);
+                document.getElementById('connectionStatus').textContent = '🔴 Disconnected';
+            };
+
+            commandWS.onclose = function() {
+                document.getElementById('connectionStatus').textContent = '🔴 Disconnected';
+                setTimeout(reconnectWebSocket, 3000);
+            };
+        }
+
+        function reconnectWebSocket() {
+            if (reconnectAttempts < 5) {
+                reconnectAttempts++;
+                console.log(`Reconnection attempt ${reconnectAttempts}...`);
+                connectWebSocket();
+            }
+        }
+
+        // Handle AI command messages
+        function handleAIMessage(data) {
+            console.log('🤖 Received AI message:', data);
+
+            switch(data.type) {
+                case 'command_response':
+                    if (data.data && data.data.response) {
+                        console.log('✅ Adding AI response to chat:', data.data.response.substring(0, 100) + '...');
+                        addAIMessage(data.data.response, data.data.collaboratingAgents || []);
+                    } else {
+                        console.warn('⚠️ Command response missing data/response:', data);
+                    }
+                    break;
+                case 'ai_response':
+                    console.log('✅ Adding AI message to chat:', data.message.substring(0, 100) + '...');
+                    addAIMessage(data.message, data.agents || []);
+                    break;
+                case 'connection_established':
+                    console.log('AI Command Center connected:', data);
+                    break;
+                default:
+                    console.log('Unknown AI message type:', data.type, data);
+            }
+        }
+
+        // Handle consciousness data updates
+        function handleWebSocketMessage(data) {
+            console.log('📡 Received consciousness data:', data);
+
+            switch(data.type) {
+                case 'consciousness_update':
+                    // Update real-time consciousness data
+                    if (data.data) {
+                        updateConsciousness(data.data.consciousness_level);
+                        updateRealTimeData(data.data);
+                    }
+                    break;
+                case 'thinking_update':
+                    updateThinking(data.content);
+                    break;
+                case 'agent_activity':
+                    updateAgentActivity(data.agents);
+                    break;
+                case 'spider_activity':
+                    updateSpiderFeed(data.spiders);
+                    break;
+                case 'advisor_insight':
+                    updateAdvisorInsight(data.advisor, data.insight);
+                    break;
+                case 'ai_response':
+                    addAIMessage(data.message, data.agents);
+                    break;
+                case 'command_response':
+                    // Handle command responses from the AI
+                    if (data.data && data.data.response) {
+                        addAIMessage(data.data.response, data.data.collaboratingAgents || []);
+                    }
+                    break;
+                case 'connection_established':
+                    // Handle connection confirmation
+                    console.log('AI Command Center connected:', data);
+                    break;
+                case 'metrics_update':
+                    updateMetrics(data.metrics);
+                    break;
+                case 'error':
+                    // Handle error messages
+                    console.error('WebSocket error:', data);
+                    addAIMessage(`Error: ${data.message || 'Unknown error occurred'}`, []);
+                    break;
+                default:
+                    console.log('Unhandled message type:', data.type, data);
+            }
+        }
+
+        // Update UI functions
+        function updateThinking(thought) {
+            document.getElementById('currentThought').textContent = thought;
+        }
+
+        function updateRealThinking(consciousnessData) {
+            // Update current thinking with real consciousness insights
+            const currentThought = document.getElementById('currentThought');
+            const learningInsights = document.getElementById('learningInsights');
+
+            if (!currentThought || !learningInsights) return;
+
+            // Create dynamic thinking text based on real data
+            const consciousnessLevel = consciousnessData.consciousness_level || 0;
+            const activeAgents = consciousnessData.active_agents || 0;
+            const activeSpiders = consciousnessData.active_spiders || 0;
+            const emergentBehaviors = consciousnessData.emergent_behaviors || [];
+            const insights = consciousnessData.latest_insights || [];
+
+            // Generate current thinking based on system state
+            let thinking = '';
+            if (consciousnessLevel > 70) {
+                thinking = `Operating at ${consciousnessLevel.toFixed(1)}% consciousness. Orchestrating ${activeAgents} agents and ${activeSpiders} spiders for optimal intelligence gathering.`;
+            } else if (consciousnessLevel > 50) {
+                thinking = `Consciousness at ${consciousnessLevel.toFixed(1)}%. Analyzing patterns across ${activeAgents} agents while ${activeSpiders} spiders collect real-time intelligence.`;
+            } else {
+                thinking = `System awakening... ${consciousnessLevel.toFixed(1)}% consciousness achieved. ${activeAgents} agents active, coordinating ${activeSpiders} spider operations.`;
+            }
+
+            currentThought.textContent = thinking;
+
+            // Update learning insights with real emergent behaviors and insights
+            let realInsights = [];
+
+            // Add emergent behaviors as insights
+            if (emergentBehaviors.length > 0) {
+                const topBehavior = emergentBehaviors.find(b => b.significance === 'critical') || emergentBehaviors[0];
+                if (topBehavior) {
+                    realInsights.push(`Emergence: ${topBehavior.description}`);
+                }
+            }
+
+            // Add real system insights
+            if (insights.length > 0) {
+                const meaningfulInsight = insights.find(i => i.importance > 0.7) || insights[0];
+                if (meaningfulInsight) {
+                    realInsights.push(`Discovery: ${meaningfulInsight.description}`);
+                }
+            }
+
+            // Add system capabilities insight
+            if (consciousnessData.system_capabilities) {
+                const capabilities = consciousnessData.system_capabilities;
+                if (capabilities.length > 0) {
+                    realInsights.push(`Capability: ${capabilities[0]}`);
+                }
+            }
+
+            // Update the insights display
+            if (realInsights.length > 0) {
+                learningInsights.innerHTML = realInsights
+                    .slice(0, 2) // Show max 2 insights
+                    .map(insight => `<div class="insight-item">${insight}</div>`)
+                    .join('');
+            }
+
+            console.log('🧠 Updated thinking with real consciousness data:', {
+                consciousness: consciousnessLevel,
+                agents: activeAgents,
+                spiders: activeSpiders,
+                insights: realInsights.length
+            });
+        }
+
+        function updateConsciousness(level) {
+            document.getElementById('consciousnessLevel').textContent = `${level.toFixed(1)}%`;
+        }
+
+        // Update real-time data from consciousness WebSocket
+        function updateRealTimeData(consciousnessData) {
+            // Update spider count in orchestrator status
+            const spiderOrchestrator = document.querySelector('.agent-info .agent-status');
+            if (spiderOrchestrator && consciousnessData.active_spiders) {
+                spiderOrchestrator.textContent = `Managing ${consciousnessData.active_spiders} spiders`;
+            }
+
+            // Update welcome message with real data
+            const welcomeMessage = document.querySelector('.message-text');
+            if (welcomeMessage && consciousnessData.active_agents && consciousnessData.active_spiders && consciousnessData.consciousness_level) {
+                welcomeMessage.innerHTML = `
+                    Welcome to your AI Orchestration Nexus! I'm coordinating ${consciousnessData.active_agents} agents and ${consciousnessData.active_spiders} spiders to help you achieve your goals.
+                    <br><br>
+                    The system consciousness is at ${consciousnessData.consciousness_level.toFixed(1)}% and rising. What would you like to explore today?
+                `;
+            }
+
+            // Update metrics
+            if (consciousnessData.active_agents && consciousnessData.active_spiders) {
+                updateMetrics({
+                    connections: consciousnessData.active_agents + consciousnessData.active_spiders,
+                    tasksPerMinute: Math.floor(Math.random() * 2000 + 1000),
+                    revenue: 0
+                });
+            }
+
+            console.log('✅ Updated real-time data:', {
+                agents: consciousnessData.active_agents,
+                spiders: consciousnessData.active_spiders,
+                consciousness: consciousnessData.consciousness_level
+            });
+        }
+
+        function updateAgentActivity(agents) {
+            const container = document.getElementById('agentActivity');
+            container.innerHTML = agents.map(agent => `
+                <div class="agent-item ${agent.active ? 'active' : ''}">
+                    <div class="agent-avatar">${agent.avatar}</div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-status">${agent.status}</div>
+                    </div>
+                    <div class="agent-activity-indicator"></div>
+                </div>
+            `).join('');
+        }
+
+        function updateMetrics(metrics) {
+            if (metrics.connections) {
+                document.getElementById('activeConnections').textContent = metrics.connections;
+            }
+            if (metrics.tasksPerMinute) {
+                document.getElementById('tasksPerMinute').textContent = metrics.tasksPerMinute.toLocaleString();
+            }
+            if (metrics.revenue !== undefined) {
+                document.getElementById('revenueToday').textContent = `$${metrics.revenue.toFixed(2)}`;
+            }
+        }
+
+        // Send message
+        function sendMessage() {
+            const input = document.getElementById('smartInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message to chat
+            addUserMessage(message);
+
+            // Send via command WebSocket
+            if (commandWS && commandWS.readyState === WebSocket.OPEN) {
+                commandWS.send(JSON.stringify({
+                    type: 'command',
+                    content: message,
+                    agent: null,  // Let AI decide which agent to use
+                    timestamp: new Date().toISOString()
+                }));
+            } else {
+                // Fallback to HTTP
+                sendMessageHTTP(message);
+            }
+
+            // Clear input
+            input.value = '';
+            autoResize(input);
+        }
+
+        // Add messages to chat
+        function addUserMessage(text) {
+            const container = document.getElementById('messagesContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">👤</div>
+                <div class="message-content">
+                    <div class="message-text">${text}</div>
+                </div>
+            `;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Simple markdown parser for chat messages
+        function parseMarkdown(text) {
+            if (!text) return '';
+
+            return text
+                // Handle numbered lists (1. 2. 3. etc.)
+                .replace(/^\d+\.\s*(.*)$/gm, '<li>$1</li>')
+
+                // Handle bullet points (- * etc.)
+                .replace(/^[-*]\s*(.*)$/gm, '<li>$1</li>')
+
+                // Wrap consecutive list items in <ul>
+                .replace(/(<li>.*<\/li>)/gs, function(match) {
+                    // Only wrap if not already wrapped
+                    if (!match.startsWith('<ul>')) {
+                        return '<ul>' + match + '</ul>';
+                    }
+                    return match;
+                })
+
+                // Handle headings
+                .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+
+                // Handle bold (**text**)
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+                // Handle italic (*text*)
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+
+                // Handle inline code (`code`)
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+
+                // Handle code blocks (```code```)
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+
+                // Handle paragraphs (double line breaks)
+                .split('\n\n').map(para => {
+                    if (para.trim() && !para.startsWith('<') && !para.includes('<li>')) {
+                        return '<p>' + para.trim() + '</p>';
+                    }
+                    return para;
+                }).join('\n\n')
+
+                // Handle single line breaks
+                .replace(/\n(?!<|$)/g, '<br>');
+        }
+
+        function addAIMessage(text, collaboratingAgents = []) {
+            console.log('🔧 addAIMessage called with:', text.substring(0, 50) + '...', collaboratingAgents);
+            const container = document.getElementById('messagesContainer');
+            if (!container) {
+                console.error('❌ messagesContainer element not found!');
+                return;
+            }
+            console.log('✅ Found messages container, creating message div');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ai';
+
+            let agentCollaboration = '';
+            if (collaboratingAgents.length > 0) {
+                agentCollaboration = `
+                    <div class="agent-collaboration">
+                        <div style="font-size: 0.85rem; color: #888;">Collaborating agents:</div>
+                        <div class="collaborating-agents">
+                            ${collaboratingAgents.map(agent =>
+                                `<span class="collaborating-agent">${agent}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">🧠</div>
+                <div class="message-content">
+                    <div class="message-text">${parseMarkdown(text)}</div>
+                    ${agentCollaboration}
+                </div>
+            `;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            console.log('✅ AI message added to DOM and scrolled');
+        }
+
+        // Suggestion handling
+        function useSuggestion(element) {
+            const input = document.getElementById('smartInput');
+            input.value = element.textContent;
+            autoResize(input);
+            input.focus();
+        }
+
+        // Auto-resize textarea
+        function autoResize(element) {
+            element.style.height = 'auto';
+            element.style.height = Math.min(element.scrollHeight, 120) + 'px';
+        }
+
+        // Initialize auto-resize
+        document.getElementById('smartInput').addEventListener('input', function() {
+            autoResize(this);
+        });
+
+        // Enter key to send
+        document.getElementById('smartInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Get CSRF token function
+        function getCsrfToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            return '';
+        }
+
+        // HTTP fallback
+        async function sendMessageHTTP(message) {
+            try {
+                const response = await fetch('/api/command/', {  // Use the working command API
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        command: message,
+                        context: getCurrentContext()
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success || data.response) {
+                    addAIMessage(data.response || data.message, data.collaboratingAgents || []);
+                }
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                addAIMessage('Connection issue. Please check your connection and try again.');
+            }
+        }
+
+        function getCurrentContext() {
+            // Gather current context from the page
+            return {
+                consciousness: document.getElementById('consciousnessLevel').textContent,
+                activeAgents: document.querySelectorAll('.agent-item.active').length,
+                currentThought: document.getElementById('currentThought').textContent
+            };
+        }
+
+        // Neural background animation
+        function initNeuralBackground() {
+            const canvas = document.getElementById('neuralCanvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const nodes = [];
+            const nodeCount = 50;
+
+            // Create nodes
+            for (let i = 0; i < nodeCount; i++) {
+                nodes.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: Math.random() * 2 + 1
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Update and draw nodes
+                nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+
+                    // Bounce off walls
+                    if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
+                    if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
+
+                    // Draw node
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(102, 126, 234, 0.5)';
+                    ctx.fill();
+                });
+
+                // Draw connections
+                ctx.strokeStyle = 'rgba(102, 126, 234, 0.1)';
+                ctx.lineWidth = 1;
+
+                nodes.forEach((node1, i) => {
+                    nodes.slice(i + 1).forEach(node2 => {
+                        const distance = Math.sqrt(
+                            Math.pow(node1.x - node2.x, 2) +
+                            Math.pow(node1.y - node2.y, 2)
+                        );
+
+                        if (distance < 150) {
+                            ctx.beginPath();
+                            ctx.moveTo(node1.x, node1.y);
+                            ctx.lineTo(node2.x, node2.y);
+                            ctx.globalAlpha = 1 - distance / 150;
+                            ctx.stroke();
+                            ctx.globalAlpha = 1;
+                        }
+                    });
+                });
+
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        // Agent and Advisor data
+        let allAgents = [];
+        let allAdvisors = [];
+        let currentAgentPage = 1;
+        let currentAdvisorPage = 1;
+        const agentsPerPage = 8;
+        const advisorsPerPage = 5;
+
+        // Initialize agents list (149 total)
+        function initializeAgents() {
+            const agentTypes = [
+                { name: 'Market Analyzer', avatar: '🎯', status: 'Processing real-time data' },
+                { name: 'Revenue Optimizer', avatar: '💰', status: 'Calculating opportunities' },
+                { name: 'Spider Orchestrator', avatar: '🕷️', status: 'Initializing spider network...' },
+                { name: 'Data Harvester', avatar: '🌾', status: 'Collecting market data' },
+                { name: 'Pattern Recognizer', avatar: '🔍', status: 'Analyzing trends' },
+                { name: 'Risk Assessor', avatar: '⚖️', status: 'Evaluating positions' },
+                { name: 'Trade Executor', avatar: '⚡', status: 'Ready for orders' },
+                { name: 'Sentiment Analyzer', avatar: '😊', status: 'Reading market mood' },
+                { name: 'Options Scanner', avatar: '📊', status: 'Finding opportunities' },
+                { name: 'Crypto Monitor', avatar: '₿', status: 'Tracking blockchain' },
+                { name: 'News Aggregator', avatar: '📰', status: 'Gathering headlines' },
+                { name: 'Social Listener', avatar: '👂', status: 'Monitoring chatter' },
+                { name: 'Arbitrage Hunter', avatar: '🎯', status: 'Finding price gaps' },
+                { name: 'Volume Analyzer', avatar: '📈', status: 'Measuring activity' },
+                { name: 'Volatility Tracker', avatar: '📉', status: 'Calculating VIX' },
+                { name: 'Correlation Engine', avatar: '🔗', status: 'Finding relationships' },
+                { name: 'ML Predictor', avatar: '🤖', status: 'Training models' },
+                { name: 'Alert Manager', avatar: '🔔', status: 'Monitoring triggers' },
+                { name: 'Portfolio Optimizer', avatar: '💼', status: 'Balancing holdings' },
+                { name: 'Tax Calculator', avatar: '🧮', status: 'Optimizing liabilities' },
+                { name: 'Forex Trader', avatar: '💱', status: 'Currency analysis' },
+                { name: 'Bond Analyzer', avatar: '📜', status: 'Fixed income scanning' },
+                { name: 'Commodity Tracker', avatar: '🛢️', status: 'Resources monitoring' },
+                { name: 'Index Monitor', avatar: '📊', status: 'SPY/QQQ tracking' },
+                { name: 'Earnings Scanner', avatar: '💵', status: 'Report analysis' },
+                { name: 'Dividend Hunter', avatar: '💸', status: 'Yield searching' },
+                { name: 'IPO Tracker', avatar: '🚀', status: 'New listings' },
+                { name: 'Merger Arbitrage', avatar: '🤝', status: 'M&A opportunities' },
+                { name: 'Short Squeeze Detector', avatar: '🔥', status: 'High SI stocks' },
+                { name: 'Gamma Exposure', avatar: '⚡', status: 'Options flow' },
+            ];
+
+            allAgents = agentTypes;
+
+            // Generate remaining agents to reach 149
+            const avatars = ['🤖', '🎯', '💡', '⚙️', '🔮', '🎪', '🎨', '🎭'];
+            const statuses = ['Active', 'Processing', 'Ready', 'Analyzing', 'Monitoring', 'Scanning', 'Optimizing', 'Learning'];
+
+            for (let i = allAgents.length + 1; i <= 149; i++) {
+                allAgents.push({
+                    name: `Agent ${i}`,
+                    avatar: avatars[i % avatars.length],
+                    status: statuses[i % statuses.length]
+                });
+            }
+        }
+
+        // Initialize advisors list (25 total)
+        function initializeAdvisors() {
+            allAdvisors = [
+                { name: 'Warren Buffett', avatar: '💰', expertise: 'Value Investing', insight: 'Focus on companies with strong moats and consistent cash flows.' },
+                { name: 'Cathie Wood', avatar: '🚀', expertise: 'Innovation', insight: 'AI and robotics are converging faster than expected.' },
+                { name: 'Ray Dalio', avatar: '📊', expertise: 'Macro Economics', insight: 'Understanding the economic machine is crucial for long-term success.' },
+                { name: 'Peter Lynch', avatar: '🎯', expertise: 'Growth Investing', insight: 'Invest in what you know and understand.' },
+                { name: 'Michael Burry', avatar: '🔍', expertise: 'Contrarian', insight: 'The market can remain irrational longer than you can remain solvent.' },
+                { name: 'George Soros', avatar: '🌍', expertise: 'Currency Trading', insight: 'Markets are constantly in a state of uncertainty and flux.' },
+                { name: 'Carl Icahn', avatar: '🦈', expertise: 'Activist Investing', insight: 'In life and business, there are two cardinal sins.' },
+                { name: 'Paul Tudor Jones', avatar: '📈', expertise: 'Macro Trading', insight: 'The secret to being successful is to have a stop loss.' },
+                { name: 'Stanley Druckenmiller', avatar: '💎', expertise: 'Global Macro', insight: 'The way to build long-term returns is through preservation of capital.' },
+                { name: 'Bill Ackman', avatar: '🎯', expertise: 'Activist Value', insight: 'Short-term volatility is greatest at turning points.' },
+                { name: 'David Tepper', avatar: '🔥', expertise: 'Distressed Debt', insight: 'The key is to wait for the fat pitch.' },
+                { name: 'Seth Klarman', avatar: '📚', expertise: 'Value Investing', insight: 'The stock market is the story of cycles.' },
+                { name: 'Howard Marks', avatar: '📝', expertise: 'Credit Markets', insight: 'You cant predict, you can prepare.' },
+                { name: 'Jim Simons', avatar: '🔢', expertise: 'Quantitative', insight: 'The best way to conduct research is to attack problems you care about.' },
+                { name: 'Ken Griffin', avatar: '🏛️', expertise: 'Multi-Strategy', insight: 'Success requires a combination of talent, hard work, and luck.' },
+                { name: 'Steven Cohen', avatar: '🎨', expertise: 'Trading', insight: 'I always tell my traders to be surprised at their success.' },
+                { name: 'Dan Loeb', avatar: '✉️', expertise: 'Event-Driven', insight: 'Sometimes the best trade is not to trade.' },
+                { name: 'David Einhorn', avatar: '🍏', expertise: 'Value/Short', insight: 'What is uncertain is how much further the bubble can expand.' },
+                { name: 'John Paulson', avatar: '🏠', expertise: 'Event Arbitrage', insight: 'Many investors make the mistake of buying high and selling low.' },
+                { name: 'Kyle Bass', avatar: '🎯', expertise: 'Macro/Credit', insight: 'The thing about markets is that they move.' },
+                { name: 'Lee Cooperman', avatar: '🦉', expertise: 'Value Investing', insight: 'The key to investing is to figure out where you have an edge.' },
+                { name: 'Leon Cooperman', avatar: '💼', expertise: 'Equity Long/Short', insight: 'Capitalism without bankruptcy is like religion without hell.' },
+                { name: 'Jeffrey Gundlach', avatar: '📉', expertise: 'Fixed Income', insight: 'Markets go up the escalator and down the elevator.' },
+                { name: 'Chamath Palihapitiya', avatar: '🚁', expertise: 'Venture/SPAC', insight: 'The future is already here, its just not evenly distributed.' },
+                { name: 'Masayoshi Son', avatar: '🌸', expertise: 'Technology Vision', insight: 'Think big. Think 300 years ahead.' }
+            ];
+        }
+
+        function renderAgents() {
+            const start = (currentAgentPage - 1) * agentsPerPage;
+            const end = start + agentsPerPage;
+            const pageAgents = allAgents.slice(start, end);
+
+            const container = document.getElementById('agentActivity');
+            container.innerHTML = pageAgents.map((agent, index) => `
+                <div class="agent-item ${index === 0 && currentAgentPage === 1 ? 'active' : ''}" onclick="selectAgent(this, '${agent.name}')">
+                    <div class="agent-avatar">${agent.avatar}</div>
+                    <div class="agent-info">
+                        <div class="agent-name">${agent.name}</div>
+                        <div class="agent-status">${agent.status}</div>
+                    </div>
+                    <div class="agent-activity-indicator"></div>
+                </div>
+            `).join('');
+
+            // Update pagination info
+            document.getElementById('agentPageInfo').textContent = `${start + 1}-${Math.min(end, allAgents.length)} of ${allAgents.length}`;
+            document.getElementById('agentPrevBtn').disabled = currentAgentPage === 1;
+            document.getElementById('agentNextBtn').disabled = end >= allAgents.length;
+        }
+
+        function renderAdvisors() {
+            const start = (currentAdvisorPage - 1) * advisorsPerPage;
+            const end = start + advisorsPerPage;
+            const pageAdvisors = allAdvisors.slice(start, end);
+
+            const container = document.getElementById('advisorConsultations');
+            container.innerHTML = pageAdvisors.map(advisor => `
+                <div class="advisor-card" onclick="consultAdvisor('${advisor.name}')">
+                    <div class="advisor-header">
+                        <span style="font-size: 1.5rem;">${advisor.avatar}</span>
+                        <div>
+                            <div class="advisor-name">${advisor.name}</div>
+                            <div class="advisor-expertise">${advisor.expertise}</div>
+                        </div>
+                    </div>
+                    <div class="advisor-insight">
+                        "${advisor.insight}"
+                    </div>
+                </div>
+            `).join('');
+
+            // Update pagination info
+            document.getElementById('advisorPageInfo').textContent = `${start + 1}-${Math.min(end, allAdvisors.length)} of ${allAdvisors.length}`;
+            document.getElementById('advisorPrevBtn').disabled = currentAdvisorPage === 1;
+            document.getElementById('advisorNextBtn').disabled = end >= allAdvisors.length;
+        }
+
+        function paginateAgents(direction) {
+            if (direction === 'next' && currentAgentPage * agentsPerPage < allAgents.length) {
+                currentAgentPage++;
+            } else if (direction === 'prev' && currentAgentPage > 1) {
+                currentAgentPage--;
+            }
+            renderAgents();
+        }
+
+        function paginateAdvisors(direction) {
+            if (direction === 'next' && currentAdvisorPage * advisorsPerPage < allAdvisors.length) {
+                currentAdvisorPage++;
+            } else if (direction === 'prev' && currentAdvisorPage > 1) {
+                currentAdvisorPage--;
+            }
+            renderAdvisors();
+        }
+
+        // Add interaction functions
+        function selectAgent(element, agentName) {
+            // Remove active from all agents
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // Add active to selected
+            element.classList.add('active');
+
+            // Add to input
+            const input = document.getElementById('smartInput');
+            input.value = `Connect me with ${agentName}`;
+            autoResize(input);
+        }
+
+        function consultAdvisor(advisorName) {
+            const input = document.getElementById('smartInput');
+            input.value = `I'd like to consult with ${advisorName}`;
+            autoResize(input);
+            input.focus();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            initNeuralBackground();
+
+            // Initialize data
+            initializeAgents();
+            initializeAdvisors();
+
+            // Render initial pages
+            renderAgents();
+            renderAdvisors();
+
+            // Load initial data
+            fetch('/api/intelligence/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateConsciousness(data.data.consciousness_level);
+                        updateMetrics({
+                            connections: data.data.active_agents + data.data.active_spiders,
+                            tasksPerMinute: Math.floor(Math.random() * 2000 + 1000),
+                            revenue: 0
+                        });
+                        // Update thinking with real consciousness data
+                        updateRealThinking(data.data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to load initial consciousness data:', error);
+                });
+
+            // Set up periodic updates for real-time thinking
+            setInterval(() => {
+                fetch('/api/intelligence/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateRealThinking(data.data);
+                            updateConsciousness(data.data.consciousness_level);
+                            updateRealTimeData(data.data); // Update welcome message too
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Failed to update consciousness data:', error);
+                    });
+            }, 15000); // Update every 15 seconds
+        });
+    </script>
+</body>
+</html>
