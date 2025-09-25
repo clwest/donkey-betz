@@ -87,6 +87,13 @@ def auto_register_tools():
         ToolRegistry.register('news_api', NewsAPITool)
     except ImportError as e:
         logger.warning(f"Could not import NewsAPITool: {e}")
+
+    try:
+        from .documentation_fetcher import DocumentationFetcherTool
+        ToolRegistry.register('documentation_fetcher', DocumentationFetcherTool)
+        logger.info("Registered Documentation Fetcher for real-time docs")
+    except ImportError as e:
+        logger.warning(f"Could not import DocumentationFetcherTool: {e}")
     
     # Register sports-specific tools
     try:

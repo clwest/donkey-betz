@@ -43,6 +43,7 @@ class SystemMetrics(models.Model):
     optimization_opportunities = models.IntegerField(default=0)
     
     class Meta:
+        app_label = 'self_awareness'
         ordering = ['-timestamp']
         indexes = [
             models.Index(fields=['timestamp']),
@@ -56,36 +57,37 @@ class SystemMetrics(models.Model):
 
 class CodebaseSnapshot(models.Model):
     """Track codebase state and changes for self-analysis"""
-    
+
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
-    
+
     # Codebase Statistics
     total_files = models.IntegerField(default=0)
     total_lines = models.IntegerField(default=0)
     python_files = models.IntegerField(default=0)
     javascript_files = models.IntegerField(default=0)
-    
+
     # Code Quality Metrics
     complexity_score = models.FloatField(default=0.0)
     test_coverage = models.FloatField(default=0.0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     code_duplication = models.FloatField(default=0.0, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    
+
     # Architecture Analysis
     total_models = models.IntegerField(default=0)
     total_views = models.IntegerField(default=0)
     total_apis = models.IntegerField(default=0)
     total_agents = models.IntegerField(default=0)
-    
+
     # Dependencies
     third_party_packages = models.JSONField(default=list)
     api_integrations = models.JSONField(default=list)
-    
+
     # Change Tracking
     files_changed = models.IntegerField(default=0)
     lines_added = models.IntegerField(default=0)
     lines_removed = models.IntegerField(default=0)
-    
+
     class Meta:
+        app_label = 'self_awareness'
         ordering = ['-timestamp']
         
     def __str__(self):
@@ -125,6 +127,7 @@ class SelfAnalysisReport(models.Model):
     codebase_snapshot = models.ForeignKey(CodebaseSnapshot, on_delete=models.CASCADE, null=True, blank=True)
     
     class Meta:
+        app_label = 'self_awareness'
         ordering = ['-timestamp']
         indexes = [
             models.Index(fields=['analysis_type', 'timestamp']),
@@ -192,6 +195,7 @@ class SystemEvolution(models.Model):
     performance_impact = models.JSONField(default=dict)
     
     class Meta:
+        app_label = 'self_awareness'
         ordering = ['-priority', '-timestamp']
         indexes = [
             models.Index(fields=['status', 'priority']),
@@ -231,6 +235,7 @@ class CodeEmbedding(models.Model):
     imports = models.JSONField(default=list)
     
     class Meta:
+        app_label = 'self_awareness'
         unique_together = ['file_path', 'code_hash']
         ordering = ['-importance_score', '-timestamp']
         indexes = [
@@ -297,6 +302,7 @@ class SelfHealingAction(models.Model):
     metrics_after = models.JSONField(default=dict)
     
     class Meta:
+        app_label = 'self_awareness'
         ordering = ['-timestamp']
         indexes = [
             models.Index(fields=['status', 'issue_severity']),

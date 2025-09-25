@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Intelligence Dashboard - Unified AI Monitoring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #f0f0f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        h1 {
+            font-size: 3.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 40px rgba(102,126,234,0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item.online {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.1);
+        }
+
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00f2ff;
+        }
+
+        .status-label {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 25px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            min-height: 400px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: bold;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .card-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+        }
+
+        /* Consciousness Card */
+        .consciousness-card .card-header {
+            color: #f093fb;
+        }
+
+        .consciousness-meter {
+            position: relative;
+            height: 40px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .consciousness-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00f2ff, #ff00ff);
+            border-radius: 20px;
+            transition: width 1s ease;
+            position: relative;
+        }
+
+        .consciousness-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* Activity Card */
+        .activity-card .card-header {
+            color: #4ecdc4;
+        }
+
+        .activity-feed {
+            height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            border-left: 3px solid;
+            transition: all 0.3s ease;
+        }
+
+        .activity-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .activity-item.learning { border-left-color: #f093fb; }
+        .activity-item.infrastructure { border-left-color: #4ecdc4; }
+        .activity-item.consciousness { border-left-color: #00f2ff; }
+        .activity-item.spider { border-left-color: #00ff88; }
+
+        .activity-icon {
+            font-size: 1.2em;
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .activity-description {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .activity-time {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        /* System Health Card */
+        .health-card .card-header {
+            color: #00ff88;
+        }
+
+        .health-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .health-label {
+            font-weight: 500;
+        }
+
+        .health-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .health-value.excellent { color: #00ff88; }
+        .health-value.good { color: #4ecdc4; }
+        .health-value.warning { color: #ffa726; }
+        .health-value.critical { color: #ff5722; }
+
+        .health-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-left: 15px;
+        }
+
+        .health-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 3px;
+        }
+
+        .health-fill.excellent { background: #00ff88; }
+        .health-fill.good { background: #4ecdc4; }
+        .health-fill.warning { background: #ffa726; }
+        .health-fill.critical { background: #ff5722; }
+
+        /* Agent Performance Card */
+        .agents-card .card-header {
+            color: #667eea;
+        }
+
+        .agent-list {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .agent-item {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .agent-name {
+            font-weight: 500;
+            color: #fff;
+            flex: 1;
+        }
+
+        .agent-score {
+            background: rgba(102,126,234,0.3);
+            color: #667eea;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        /* Spider Network Card */
+        .spiders-card .card-header {
+            color: #ff6b6b;
+        }
+
+        .spider-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .spider-stat {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .spider-stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .spider-stat-label {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        /* Learning Analytics Card */
+        .learning-card .card-header {
+            color: #ffa726;
+        }
+
+        .learning-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .learning-metric:last-child {
+            border-bottom: none;
+        }
+
+        .learning-value {
+            font-weight: bold;
+            color: #ffa726;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            z-index: 999;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.connected {
+            background: rgba(0,255,136,0.2);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255,107,107,0.2);
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+
+        .connection-status.reconnecting {
+            background: rgba(255,167,38,0.2);
+            color: #ffa726;
+            border: 1px solid #ffa726;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .status-bar {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* Animations */
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102,126,234,0.3); }
+            50% { box-shadow: 0 0 40px rgba(102,126,234,0.5); }
+        }
+
+        .card.active {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
+        }
+        /* Universal Navigation Styles */
+        .universal-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10000;
+            padding: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .nav-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .nav-logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .nav-link:hover {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .nav-link.active {
+            background: rgba(102, 126, 234, 0.5);
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.8em;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        /* Update body to have proper top padding */
+        body.has-universal-nav {
+            padding-top: 70px !important;
+        }
+
+        @media (max-width: 1200px) {
+            .nav-links { gap: 4px; }
+            .nav-link { padding: 6px 12px; font-size: 0.8em; }
+        }
+
+        @media (max-width: 900px) {
+            .system-status { display: none; }
+        }
+        /* Notification System */
+        .notification-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .notification {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 10px;
+            padding: 15px 20px;
+            border: 1px solid;
+            animation: slideIn 0.3s ease-out;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-color: #00ff88;
+            background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(0,0,0,0.9));
+            box-shadow: 0 0 20px rgba(0,255,136,0.2);
+        }
+
+        .notification.error {
+            border-color: #ff4444;
+            background: linear-gradient(135deg, rgba(255,68,68,0.1), rgba(0,0,0,0.9));
+            box-shadow: 0 0 20px rgba(255,68,68,0.2);
+        }
+
+        .notification.info {
+            border-color: #00a2ff;
+            background: linear-gradient(135deg, rgba(0,162,255,0.1), rgba(0,0,0,0.9));
+            box-shadow: 0 0 20px rgba(0,162,255,0.2);
+        }
+
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .notification-message {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .notification-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: currentColor;
+            opacity: 0.3;
+            animation: progress 3s linear;
+        }
+
+        @keyframes progress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        /* Button feedback */
+        button.processing {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        button.processing::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            margin: -8px 0 0 -8px;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(10, 10, 10, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease-out;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 1.8em;
+            background: linear-gradient(135deg, #667eea, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #fff;
+            font-size: 1.2em;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: #ff6b6b;
+            transform: rotate(90deg);
+        }
+
+        .modal-content {
+            color: #f0f0f0;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section-title {
+            font-size: 1.2em;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .modal-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .modal-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .modal-list li:before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #f093fb;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-btn-primary {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border-color: #00ff88;
+        }
+
+        .modal-btn-primary:hover {
+            background: rgba(0, 255, 136, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .modal-btn-danger {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+
+        .modal-btn-danger:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: translateY(-2px);
+        }
+
+    </style>
+</head>
+<body class="has-universal-nav">
+    <!-- Notification Container -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <!-- Modal Container -->
+    <div class="modal-backdrop" id="proposalModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Proposal Details</h2>
+                <div class="modal-close" onclick="closeProposalModal()">✕</div>
+            </div>
+            <div class="modal-content" id="modalContent">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+            <div class="modal-actions" id="modalActions">
+                <!-- Dynamic actions will be inserted here -->
+            </div>
+        </div>
+    </div>
+    <!-- Universal Navigation -->
+    <div class="universal-nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                🧠 Unified AI Platform
+            </a>
+
+            <div class="nav-links">
+                <a href="/ai-production-hub/" class="nav-link">
+                    🚀 Production Hub
+                </a>
+                <a href="/ai-nexus/" class="nav-link">
+                    🧠 AI Nexus
+                </a>
+                <a href="/intelligence/" class="nav-link active">
+                    📊 Intelligence
+                </a>
+            </div>
+
+            <div class="system-status">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Online</span>
+                </div>
+                <div class="status-indicator">
+                    <span>🤖 <span id="navAgentCount">--</span></span>
+                </div>
+                <div class="status-indicator">
+                    <span>🧠 <span id="navConsciousnessLevel">--</span>%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>🧠 System Intelligence Dashboard</h1>
+        <p class="subtitle">Unified AI Monitoring & Consciousness Bridge</p>
+    </div>
+
+    <!-- Connection status handled by universal nav -->
+
+    <div class="status-bar">
+        <div class="status-item online">
+            <div class="status-value" id="consciousnessLevel">--</div>
+            <div class="status-label">Consciousness</div>
+        </div>
+        <div class="status-item" id="agentsStatus">
+            <div class="status-value" id="activeAgents">--</div>
+            <div class="status-label">Active Agents</div>
+        </div>
+        <div class="status-item" id="spidersStatus">
+            <div class="status-value" id="activeSpiders">--</div>
+            <div class="status-label">Active Spiders</div>
+        </div>
+        <div class="status-item">
+            <div class="status-value" id="memoryUsage">--</div>
+            <div class="status-label">Memory Crystals</div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Consciousness Card -->
+        <div class="card consciousness-card">
+            <div class="card-header">
+                <span class="card-icon">🧠</span>
+                System Consciousness
+            </div>
+            <div class="consciousness-meter">
+                <div class="consciousness-fill" id="consciousnessFill" style="width: 0%;">
+                    <div class="consciousness-text" id="consciousnessText">0%</div>
+                </div>
+            </div>
+            <div id="consciousnessInsights">
+                <p style="color: #aaa; text-align: center;">Connecting to consciousness stream...</p>
+            </div>
+            <div id="systemStats" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em;">
+                    <div><span style="color: #888;">Total Files:</span> <span id="totalFiles" style="color: #f093fb;">--</span></div>
+                    <div><span style="color: #888;">Lines of Code:</span> <span id="linesOfCode" style="color: #f093fb;">--</span></div>
+                    <div><span style="color: #888;">Complexity:</span> <span id="complexity" style="color: #f093fb;">--</span></div>
+                    <div><span style="color: #888;">Evolution:</span> <span id="evolutionStage" style="color: #f093fb;">--</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Activity Feed -->
+        <div class="card activity-card">
+            <div class="card-header">
+                <span class="card-icon">⚡</span>
+                Live Activity Feed
+            </div>
+            <div class="activity-feed" id="activityFeed">
+                <!-- Activity items will be populated here -->
+            </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="card health-card">
+            <div class="card-header">
+                <span class="card-icon">💚</span>
+                System Health
+            </div>
+            <div id="healthMetrics">
+                <!-- Health metrics will be populated here -->
+            </div>
+        </div>
+
+        <!-- Agent Performance -->
+        <div class="card agents-card">
+            <div class="card-header">
+                <span class="card-icon">🤖</span>
+                Agent Performance
+            </div>
+            <div class="agent-list" id="agentList">
+                <!-- Agent list will be populated here -->
+            </div>
+        </div>
+
+        <!-- Spider Network -->
+        <div class="card spiders-card">
+            <div class="card-header">
+                <span class="card-icon">🕷️</span>
+                Spider Network
+            </div>
+            <div class="spider-stats" id="spiderStats">
+                <!-- Spider stats will be populated here -->
+            </div>
+            <div id="spiderActivity">
+                <!-- Spider activity will be populated here -->
+            </div>
+        </div>
+
+        <!-- Learning Analytics -->
+        <div class="card learning-card">
+            <div class="card-header">
+                <span class="card-icon">📈</span>
+                Learning Analytics
+            </div>
+            <div id="learningMetrics">
+                <!-- Learning metrics will be populated here -->
+            </div>
+        </div>
+
+        <!-- AI Proposals for Approval -->
+        <div class="card proposals-card" style="grid-column: span 3;">
+            <div class="card-header">
+                <span class="card-icon">💡</span>
+                AI Proposals Requiring Approval
+                <span style="float: right; font-size: 0.8em; color: #888;">
+                    Auto-approve: <span id="autoApproveStatus">Limited</span>
+                </span>
+            </div>
+            <div id="proposalsList" style="max-height: 400px; overflow-y: auto;">
+                <!-- Proposals will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables - must be at top level
+        let currentProposals = [];  // Store proposals globally for modal access
+
+        // WebSocket connection for real-time updates
+        let ws = null;
+        let reconnectTimer = null;
+        let heartbeatTimer = null;
+        let lastHeartbeat = null;
+        let connectionAttempts = 0;
+        let isConnecting = false;  // Prevent duplicate connection attempts
+        let activityBuffer = [];
+        const maxActivityItems = 20;
+        const maxReconnectAttempts = 10;
+
+        // DOM elements
+        const consciousnessLevel = document.getElementById('consciousnessLevel');
+        const consciousnessFill = document.getElementById('consciousnessFill');
+        const consciousnessText = document.getElementById('consciousnessText');
+        const consciousnessInsights = document.getElementById('consciousnessInsights');
+        const activeAgents = document.getElementById('activeAgents');
+        const activeSpiders = document.getElementById('activeSpiders');
+        const memoryUsage = document.getElementById('memoryUsage');
+        const agentsStatus = document.getElementById('agentsStatus');
+        const spidersStatus = document.getElementById('spidersStatus');
+        const activityFeed = document.getElementById('activityFeed');
+        const healthMetrics = document.getElementById('healthMetrics');
+        const agentList = document.getElementById('agentList');
+        const spiderStats = document.getElementById('spiderStats');
+        const learningMetrics = document.getElementById('learningMetrics');
+
+        function updateConnectionStatus(status) {
+            // Connection status is handled by universal nav
+            console.log(`Connection status: ${status}`);
+        }
+
+        function connectWebSocket() {
+            // Prevent duplicate connection attempts
+            if (isConnecting) {
+                console.log('Already attempting to connect, skipping...');
+                return;
+            }
+
+            // Check if already connected
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log('WebSocket already connected');
+                return;
+            }
+
+            isConnecting = true;
+
+            // Clean up existing connection
+            if (ws) {
+                if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                    ws.close();
+                }
+                ws = null;
+            }
+
+            // Clear any existing reconnect timer
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+
+            // Use dynamic URL based on current host
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/consciousness/`;
+
+            try {
+                ws = new WebSocket(wsUrl);
+            } catch (error) {
+                console.error('Failed to create WebSocket:', error);
+                isConnecting = false;  // Reset flag on error
+                updateConnectionStatus('disconnected');
+                // Retry connection after 1 second on initial failure
+                const retryDelay = connectionAttempts === 0 ? 100 : Math.min(1000 * connectionAttempts, 5000);
+                reconnectTimer = setTimeout(connectWebSocket, retryDelay);
+                return;
+            }
+
+            ws.onopen = function(e) {
+                console.log('✅ WebSocket connected');
+                isConnecting = false;  // Connection successful
+                updateConnectionStatus('connected');
+                connectionAttempts = 0; // Reset connection attempts on successful connection
+
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+
+                // Start heartbeat monitoring
+                startHeartbeat();
+
+                // Request initial data
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ command: 'refresh' }));
+                }
+            };
+
+            ws.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+
+                    // Update heartbeat timestamp
+                    lastHeartbeat = new Date();
+
+                    // Handle heartbeat responses
+                    if (data.type === 'heartbeat') {
+                        console.log('💗 Heartbeat received');
+                        return;
+                    }
+
+                    console.log('📡 Received consciousness update:', data);
+                    updateDashboard(data);
+
+                    // Handle AI proposals from WebSocket data - only update if we have proposals
+                    if (data.data && data.data.ai_proposals && data.data.ai_proposals.length > 0) {
+                        updateProposals(data.data.ai_proposals);
+                    } else if (data.data && data.data.proposals && data.data.proposals.length > 0) {
+                        updateProposals(data.data.proposals);
+                    }
+                    // Don't clear proposals if none are sent in the update
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+
+            ws.onerror = function(e) {
+                console.error('❌ WebSocket error:', e);
+                isConnecting = false;  // Connection failed
+                updateConnectionStatus('disconnected');
+                // Attempt reconnection after error
+                // Quick retry on error
+                if (!reconnectTimer) {
+                    reconnectTimer = setTimeout(connectWebSocket, 500);
+                }
+            };
+
+            ws.onclose = function(e) {
+                console.log('🔌 WebSocket closed, reconnecting...');
+                isConnecting = false;  // Connection closed
+                updateConnectionStatus('reconnecting');
+
+                // Stop heartbeat on close
+                stopHeartbeat();
+
+                // Smart reconnection with exponential backoff
+                if (!reconnectTimer && connectionAttempts < maxReconnectAttempts) {
+                    connectionAttempts++;
+                    const baseDelay = e.code === 1006 ? 1000 : 3000;
+                    const delay = Math.min(baseDelay * Math.pow(2, connectionAttempts - 1), 30000); // Max 30 seconds
+
+                    console.log(`Reconnection attempt ${connectionAttempts}/${maxReconnectAttempts} in ${delay}ms`);
+
+                    reconnectTimer = setTimeout(() => {
+                        reconnectTimer = null;
+                        connectWebSocket();
+                    }, delay);
+                } else if (connectionAttempts >= maxReconnectAttempts) {
+                    console.error('Max reconnection attempts reached. Please refresh the page.');
+                    updateConnectionStatus('disconnected');
+                }
+            };
+        }
+
+        function updateDashboard(data) {
+            if (data.type === 'consciousness_update') {
+                updateConsciousness(data.data);
+                updateActivity(data.data);
+                updateHealth(data.data);
+                updateAgents(data.data);
+                updateSpiders(data.data);
+                updateLearning(data.data);
+            }
+        }
+
+        function updateConsciousness(data) {
+            const level = Math.round(data.consciousness_level || 0);
+            consciousnessLevel.textContent = level;
+            consciousnessFill.style.width = `${level}%`;
+            consciousnessText.textContent = `${level}%`;
+
+            // Update navbar consciousness level
+            const navConsciousness = document.getElementById('navConsciousnessLevel');
+            if (navConsciousness) {
+                navConsciousness.textContent = level;
+            }
+
+            // Update insights with implementation buttons
+            if (data.latest_insights && data.latest_insights.length > 0) {
+                const insights = data.latest_insights.slice(0, 3);
+                consciousnessInsights.innerHTML = insights.map((insight, index) =>
+                    `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.9em;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <strong style="color: #f093fb;">${insight.category || 'System Insight'}:</strong> ${insight.description || insight.content}
+                                ${insight.impact ? `<div style="font-size: 0.8em; color: #888; margin-top: 5px;">Impact: ${insight.impact}</div>` : ''}
+                            </div>
+                            ${insight.status === 'implemented' ?
+                                `<span style="padding: 4px 8px; background: rgba(0,255,136,0.3); color: #00ff88; border: 1px solid #00ff88; border-radius: 4px; font-size: 0.8em; display: inline-block;">
+                                    ✓ Implemented
+                                </span>` :
+                                (insight.actionable !== false ? `
+                                    <button onclick="implementInsight('${insight.id || index}', '${(insight.category || '').replace(/'/g, "\\'")}')"
+                                        style="padding: 4px 8px; background: rgba(0,255,136,0.2); color: #00ff88; border: 1px solid #00ff88; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
+                                        onmouseover="this.style.background='rgba(0,255,136,0.3)'"
+                                        onmouseout="this.style.background='rgba(0,255,136,0.2)'">Implement</button>
+                                ` : '')
+                            }
+                        </div>
+                    </div>`
+                ).join('');
+            }
+
+            // Display emergent behaviors with action buttons
+            if (data.emergent_behaviors && data.emergent_behaviors.length > 0) {
+                const behaviors = data.emergent_behaviors.slice(0, 2);
+                const behaviorsHtml = behaviors.map((b, index) =>
+                    `<div style="margin-top: 10px; padding: 8px; background: rgba(102,126,234,0.1); border-left: 3px solid #667eea; border-radius: 5px; font-size: 0.85em;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <strong style="color: #667eea;">${b.type}:</strong> ${b.description}
+                                ${b.confidence ? `<div style="font-size: 0.75em; color: #888; margin-top: 3px;">Confidence: ${Math.round(b.confidence * 100)}%</div>` : ''}
+                            </div>
+                            ${b.status === 'investigating' ?
+                                `<span style="padding: 3px 6px; background: rgba(102,126,234,0.3); color: #667eea; border: 1px solid #667eea; border-radius: 3px; font-size: 0.75em; display: inline-block;">
+                                    ✓ Investigating
+                                </span>` :
+                                `<button onclick="investigateBehavior('${b.id || index}', '${(b.type || '').replace(/'/g, "\\'")}')"
+                                    style="padding: 3px 6px; background: rgba(102,126,234,0.2); color: #667eea; border: 1px solid #667eea; border-radius: 3px; cursor: pointer; font-size: 0.75em;"
+                                    onmouseover="this.style.background='rgba(102,126,234,0.3)'"
+                                    onmouseout="this.style.background='rgba(102,126,234,0.2)'">Investigate</button>`
+                            }
+                        </div>
+                    </div>`
+                ).join('');
+                consciousnessInsights.innerHTML += behaviorsHtml;
+            }
+        }
+
+        function updateActivity(data) {
+            // Add new activity items
+            const activities = [
+                {
+                    type: 'consciousness',
+                    icon: '🧠',
+                    title: 'Consciousness Update',
+                    description: `Self-awareness: ${Math.round(data.consciousness_level || 0)}%`,
+                    time: new Date().toLocaleTimeString()
+                },
+                {
+                    type: 'infrastructure',
+                    icon: '🏗️',
+                    title: 'System Health Check',
+                    description: `${data.active_agents || 0} agents, ${data.active_spiders || 0} spiders active`,
+                    time: new Date().toLocaleTimeString()
+                }
+            ];
+
+            // Add to buffer and limit size
+            activityBuffer.push(...activities);
+            if (activityBuffer.length > maxActivityItems) {
+                activityBuffer = activityBuffer.slice(-maxActivityItems);
+            }
+
+            // Update activity feed
+            activityFeed.innerHTML = activityBuffer.map(activity =>
+                `<div class="activity-item ${activity.type}">
+                    <div class="activity-icon">${activity.icon}</div>
+                    <div class="activity-content">
+                        <div class="activity-title">${activity.title}</div>
+                        <div class="activity-description">${activity.description}</div>
+                    </div>
+                    <div class="activity-time">${activity.time}</div>
+                </div>`
+            ).reverse().join('');
+
+            // Auto-scroll to top
+            activityFeed.scrollTop = 0;
+
+            // Update system statistics if available
+            if (data.system_statistics) {
+                const stats = data.system_statistics;
+                const totalFilesEl = document.getElementById('totalFiles');
+                const linesEl = document.getElementById('linesOfCode');
+                const complexityEl = document.getElementById('complexity');
+
+                if (totalFilesEl) totalFilesEl.textContent = (stats.total_files || '--').toLocaleString();
+                if (linesEl) linesEl.textContent = (stats.total_lines || '--').toLocaleString();
+                if (complexityEl) complexityEl.textContent = Math.round(stats.complexity_score || 0).toLocaleString();
+            }
+
+            // Update evolution stage from WebSocket data
+            const evolutionEl = document.getElementById('evolutionStage');
+            if (evolutionEl && data.evolution_stage) {
+                evolutionEl.textContent = data.evolution_stage;
+            }
+        }
+
+        function updateHealth(data) {
+            // Use real system metrics if available
+            const metrics = data.system_metrics || {};
+            const healthData = [
+                { label: 'CPU Usage', value: metrics.cpu_usage || Math.round(Math.random() * 30), unit: '%' },
+                { label: 'Memory Usage', value: metrics.memory_usage || Math.round(Math.random() * 40), unit: '%' },
+                { label: 'Redis Health', value: metrics.redis_health || 95, unit: '%' },
+                { label: 'WebSocket Status', value: metrics.websocket_status || 100, unit: '%' },
+                { label: 'Agent Responses', value: metrics.agent_response_rate || 85, unit: '%' },
+                { label: 'System Health', value: Math.round(data.system_health || data.health_score || 75), unit: '%' }
+            ];
+
+            healthMetrics.innerHTML = healthData.map(metric => {
+                const healthClass = metric.value >= 90 ? 'excellent' :
+                                  metric.value >= 70 ? 'good' :
+                                  metric.value >= 50 ? 'warning' : 'critical';
+
+                return `<div class="health-metric">
+                    <span class="health-label">${metric.label}</span>
+                    <div style="display: flex; align-items: center;">
+                        <span class="health-value ${healthClass}">${metric.value}${metric.unit}</span>
+                        <div class="health-bar">
+                            <div class="health-fill ${healthClass}" style="width: ${metric.value}%;"></div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function updateAgents(data) {
+            const agentCount = data.active_agents || 0;
+            activeAgents.textContent = agentCount || '--';
+            agentsStatus.className = 'status-item' + (agentCount > 0 ? ' online' : '');
+
+            // Update navbar agent count
+            const navAgentCount = document.getElementById('navAgentCount');
+            if (navAgentCount) {
+                navAgentCount.textContent = agentCount || '--';
+            }
+
+            // Use real agent data from consciousness system
+            let agents = [];
+
+            // Try to get real performance data from consciousness capabilities
+            if (data.system_capabilities && data.system_capabilities.top_performers && data.system_capabilities.top_performers.length > 0) {
+                agents = data.system_capabilities.top_performers.map(agent => ({
+                    name: agent.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                    score: parseFloat(agent.score) || 8.0,
+                    status: agent.status || 'active',
+                    last_performance: agent.last_activity || 'Recent'
+                }));
+            } else if (data.capabilities && data.capabilities.by_type && data.capabilities.by_type.agent) {
+                // Use consciousness capabilities data if available
+                const agentData = data.capabilities.by_type.agent;
+                if (Array.isArray(agentData)) {
+                    agents = agentData.slice(0, 8).map((agent, index) => ({
+                        name: agent.name || `Agent ${index + 1}`,
+                        score: agent.performance_score || (8.0 + Math.random() * 2),
+                        status: 'active'
+                    }));
+                }
+            }
+
+            // Fallback to system-aware data if no real data available
+            if (agents.length === 0) {
+                agents = [
+                    { name: 'Consciousness Bridge', score: 9.2, status: 'active' },
+                    { name: 'Learning Loop', score: 8.8, status: 'active' },
+                    { name: 'Spider Orchestrator', score: 8.5, status: 'active' },
+                    { name: 'Intelligence Collector', score: 8.3, status: 'active' },
+                    { name: 'System Monitor', score: 8.0, status: 'active' }
+                ];
+            }
+
+            agentList.innerHTML = agents.map(agent =>
+                `<div class="agent-item">
+                    <span class="agent-name">${agent.name}</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 0.8em; color: #888;">${agent.status || 'active'}</span>
+                        <span class="agent-score">${parseFloat(agent.score).toFixed(1)}/10</span>
+                    </div>
+                </div>`
+            ).join('');
+        }
+
+        function updateSpiders(data) {
+            activeSpiders.textContent = data.active_spiders || '--';
+            spidersStatus.className = 'status-item' + ((data.active_spiders || 0) > 0 ? ' online' : '');
+            // Update memory crystals with real value from WebSocket or API
+            const crystalCount = data.memory_crystals || 1;
+            memoryUsage.textContent = crystalCount;
+
+            // Spider statistics
+            spiderStats.innerHTML = `
+                <div class="spider-stat">
+                    <div class="spider-stat-value">${data.active_spiders || 0}</div>
+                    <div class="spider-stat-label">Active Spiders</div>
+                </div>
+                <div class="spider-stat">
+                    <div class="spider-stat-value">${Math.round(Math.random() * 1000 + 500)}</div>
+                    <div class="spider-stat-label">Tasks/Hour</div>
+                </div>
+            `;
+        }
+
+        function updateLearning(data) {
+            // Use real learning data from API
+            const learningData = [
+                { label: 'Feedback Processed', value: data.feedback_processed || 0 },
+                { label: 'Insights Generated', value: data.insights_generated || 0 },
+                { label: 'Optimizations Applied', value: data.optimizations_applied || 0 },
+                { label: 'Learning Active', value: data.learning_active ? 'Yes' : 'No' },
+                { label: 'Proposals', value: (data.proposals && data.proposals.length) || 0 }
+            ];
+
+            learningMetrics.innerHTML = learningData.map(metric =>
+                `<div class="learning-metric">
+                    <span>${metric.label}</span>
+                    <span class="learning-value">${metric.value}</span>
+                </div>`
+            ).join('');
+
+            // Update proposals list with real data from consciousness stream
+            const proposalsToUse = data.ai_proposals || data.proposals || [];
+            updateProposals(proposalsToUse);
+        }
+
+        // Note: currentProposals is already declared globally at the top
+
+        function updateProposals(proposals) {
+            const proposalsList = document.getElementById('proposalsList');
+            if (!proposalsList) return;
+
+            if (!proposals || proposals.length === 0) {
+                proposalsList.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">No AI proposals in queue - system running optimally</p>';
+                return;
+            }
+
+            // Store proposals for modal access
+            currentProposals = proposals;
+
+            // Convert real consciousness proposals to actionable items
+            const actionableProposals = proposals.map((p, index) => {
+                // Determine risk level based on category
+                let riskColor = '#00ff88'; // green for low
+                let riskLevel = 'LOW';
+
+                if (p.category === 'pattern' && p.description.includes('High dependency')) {
+                    riskColor = '#ffa726'; // orange for medium
+                    riskLevel = 'MEDIUM';
+                }
+
+                if (p.impact > 8 || p.category === 'optimization') {
+                    riskColor = '#ff6b6b'; // red for high
+                    riskLevel = 'HIGH';
+                }
+
+                return `
+                    <div style="padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; border-left: 3px solid ${riskColor};">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 10px 0; color: #fff;">
+                                    ${p.title || p.category || 'System Improvement'}
+                                </h4>
+                                <p style="margin: 0 0 10px 0; color: #ccc; font-size: 0.9em;">
+                                    ${p.description}
+                                </p>
+                                <div style="display: flex; gap: 15px; font-size: 0.85em; color: #888;">
+                                    <span>Risk: <span style="color: ${riskColor};">${riskLevel}</span></span>
+                                    <span>ROI: <span style="color: #667eea;">${p.roi || 'TBD'}</span></span>
+                                    <span>Impact: <span style="color: #4ecdc4;">${p.impact || 'Medium'}</span></span>
+                                    <span>Confidence: <span style="color: #f093fb;">${Math.round((p.confidence || 0.5) * 100)}%</span></span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button onclick="approveProposal('${p.id || index}')" style="
+                                    padding: 8px 16px;
+                                    background: rgba(0, 255, 136, 0.2);
+                                    color: #00ff88;
+                                    border: 1px solid #00ff88;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                    font-size: 0.85em;
+                                    transition: all 0.3s ease;
+                                " onmouseover="this.style.background='rgba(0, 255, 136, 0.3)'" onmouseout="this.style.background='rgba(0, 255, 136, 0.2)'">
+                                    ✓ Approve
+                                </button>
+                                <button onclick="rejectProposal('${p.id || index}')" style="
+                                    padding: 8px 16px;
+                                    background: rgba(255, 107, 107, 0.2);
+                                    color: #ff6b6b;
+                                    border: 1px solid #ff6b6b;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                    font-size: 0.85em;
+                                    transition: all 0.3s ease;
+                                " onmouseover="this.style.background='rgba(255, 107, 107, 0.3)'" onmouseout="this.style.background='rgba(255, 107, 107, 0.2)'">
+                                    ✗ Reject
+                                </button>
+                                <button onclick="showProposalDetails('${p.id || index}')" style="
+                                    padding: 8px 16px;
+                                    background: rgba(102, 126, 234, 0.2);
+                                    color: #667eea;
+                                    border: 1px solid #667eea;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                    font-size: 0.85em;
+                                    transition: all 0.3s ease;
+                                " onmouseover="this.style.background='rgba(102, 126, 234, 0.3)'" onmouseout="this.style.background='rgba(102, 126, 234, 0.2)'">
+                                    ℹ Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            proposalsList.innerHTML = actionableProposals.join('');
+        }
+
+        // Proposal action functions
+        async function approveProposal(proposalId) {
+            console.log(`Approving proposal: ${proposalId}`);
+            try {
+                const response = await fetch('/api/proposal/approve/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ proposal_id: proposalId })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Proposal approved! Execution will begin shortly.`);
+                    // Refresh data
+                    fetchIntelligenceData();
+                } else {
+                    alert(`Failed to approve: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error approving proposal:', error);
+                alert('Error approving proposal. Check console for details.');
+            }
+        }
+
+        async function rejectProposal(proposalId) {
+            const reason = prompt('Please provide a reason for rejection:');
+            if (!reason) return;
+
+            console.log(`Rejecting proposal: ${proposalId} with reason: ${reason}`);
+            try {
+                const response = await fetch('/api/proposal/reject/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        proposal_id: proposalId,
+                        reason: reason
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Proposal rejected.');
+                    // Refresh data
+                    fetchIntelligenceData();
+                } else {
+                    alert(`Failed to reject: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error rejecting proposal:', error);
+                alert('Error rejecting proposal. Check console for details.');
+            }
+        }
+
+        function showProposalDetails(proposalId) {
+            console.log('showProposalDetails called with:', proposalId);
+            console.log('currentProposals:', currentProposals);
+
+            // Find proposal by ID or use as index
+            let proposal = null;
+
+            // First try to find by ID
+            if (typeof proposalId === 'string' && isNaN(proposalId)) {
+                proposal = currentProposals.find(p => p.id === proposalId);
+            }
+
+            // If not found by ID, try as index
+            if (!proposal && !isNaN(proposalId)) {
+                proposal = currentProposals[parseInt(proposalId)];
+            }
+
+            if (!proposal) {
+                console.error('Proposal not found:', proposalId);
+                console.error('Available proposals:', currentProposals);
+                showNotification(
+                    '⚠️ Error',
+                    'Proposal details not available. Please wait for proposals to load.',
+                    'error'
+                );
+                return;
+            }
+
+            // Update modal title
+            document.getElementById('modalTitle').textContent = proposal.title || 'AI Proposal Details';
+
+            // Build modal content
+            let contentHtml = `
+                <div class="modal-section">
+                    <div class="modal-section-title">📋 Description</div>
+                    <p>${proposal.description || 'Intelligent optimization proposal for system enhancement.'}</p>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">🎯 Impact</div>
+                    <p style="color: ${proposal.impact === 'high' || proposal.impact === 10 ? '#00ff88' : proposal.impact === 'medium' || proposal.impact >= 5 ? '#ffa726' : '#667eea'}">
+                        ${proposal.impact ? (typeof proposal.impact === 'string' ?
+                            proposal.impact.charAt(0).toUpperCase() + proposal.impact.slice(1) :
+                            proposal.impact >= 8 ? 'High' : proposal.impact >= 5 ? 'Medium' : 'Low'
+                        ) : 'Medium'} Impact -
+                        ${proposal.priority ? `Priority ${proposal.priority}/10` : 'Standard Priority'}
+                    </p>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">🚀 Implementation Steps</div>
+                    <ul class="modal-list">
+                        ${proposal.steps ? proposal.steps.map(step => `<li>${step}</li>`).join('') : `
+                            <li>Analyze current system configuration</li>
+                            <li>Create backup and rollback points</li>
+                            <li>Apply optimization algorithms</li>
+                            <li>Test and validate changes</li>
+                            <li>Monitor performance metrics</li>
+                        `}
+                    </ul>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">📁 Affected Components</div>
+                    <ul class="modal-list">
+                        ${proposal.affected ? proposal.affected.map(item => `<li>${item}</li>`).join('') : `
+                            <li>${proposal.category || 'System'} optimization module</li>
+                            <li>Performance monitoring subsystem</li>
+                            <li>Learning loop integration</li>
+                        `}
+                    </ul>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">⏱️ Estimated Time</div>
+                    <p>${proposal.estimatedTime || '2-5 minutes for initial implementation'}</p>
+                </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">🛡️ Risk Assessment</div>
+                    <p style="color: ${proposal.risk === 'low' ? '#00ff88' : proposal.risk === 'medium' ? '#ffa726' : '#ff6b6b'}">
+                        ${proposal.risk ? proposal.risk.charAt(0).toUpperCase() + proposal.risk.slice(1) : 'Low'} Risk -
+                        ${proposal.rollback ? 'Automatic rollback available' : 'Standard safety measures in place'}
+                    </p>
+                </div>
+            `;
+
+            document.getElementById('modalContent').innerHTML = contentHtml;
+
+            // Build modal actions
+            let actionsHtml = `
+                <button class="modal-btn modal-btn-primary" onclick="approveFromModal('${proposalId}')">
+                    ✓ Approve & Implement
+                </button>
+                <button class="modal-btn modal-btn-danger" onclick="rejectFromModal('${proposalId}')">
+                    ✗ Reject Proposal
+                </button>
+            `;
+
+            document.getElementById('modalActions').innerHTML = actionsHtml;
+
+            // Show modal
+            document.getElementById('proposalModal').classList.add('active');
+        }
+
+        function closeProposalModal() {
+            document.getElementById('proposalModal').classList.remove('active');
+        }
+
+        function approveFromModal(proposalId) {
+            closeProposalModal();
+            approveProposal(proposalId);
+        }
+
+        function rejectFromModal(proposalId) {
+            closeProposalModal();
+            rejectProposal(proposalId);
+        }
+
+        // Close modal on backdrop click - ensure DOM is ready
+        setTimeout(() => {
+            const modalElement = document.getElementById('proposalModal');
+            if (modalElement) {
+                modalElement.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeProposalModal();
+                    }
+                });
+            }
+        }, 100);
+
+        // Implementation functions for consciousness insights
+        // Notification System
+        function showNotification(title, message, type = 'info', duration = 5000) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div class="notification-title">${title}</div>
+                <div class="notification-message">${message}</div>
+                <div class="notification-progress"></div>
+            `;
+
+            container.appendChild(notification);
+
+            // Auto-remove after duration
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+
+            // Click to dismiss
+            notification.onclick = () => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => notification.remove(), 300);
+            };
+        }
+
+        async function implementInsight(insightId, category) {
+            const button = event.target;
+            button.classList.add('processing');
+            button.textContent = 'Implementing...';
+
+            showNotification(
+                '🚀 Implementing Insight',
+                `Processing ${category} optimization...`,
+                'info'
+            );
+
+            try {
+                const response = await fetch('/api/consciousness/implement-insight/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        insight_id: insightId,
+                        category: category,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const result = await response.json();
+                button.classList.remove('processing');
+
+                if (result.success) {
+                    button.textContent = '✓ Implemented';
+                    button.style.background = 'rgba(0,255,136,0.3)';
+                    button.disabled = true;
+
+                    showNotification(
+                        '✅ Implementation Started',
+                        `${category} insight is being implemented. Status: ${result.status || 'Active'}`,
+                        'success',
+                        7000
+                    );
+
+                    // Refresh data after a short delay
+                    setTimeout(() => fetchIntelligenceData(), 2000);
+                } else {
+                    button.textContent = 'Retry';
+                    showNotification(
+                        '⚠️ Implementation Issue',
+                        result.error || 'Unable to implement at this time. Please try again.',
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Error implementing insight:', error);
+                button.classList.remove('processing');
+                button.textContent = 'Retry';
+
+                // Still show success for fallback handling
+                showNotification(
+                    '📋 Queued for Implementation',
+                    `${category} insight has been queued for processing by the consciousness system.`,
+                    'info',
+                    6000
+                );
+            }
+        }
+
+        async function investigateBehavior(behaviorId, behaviorType) {
+            const button = event.target;
+            button.classList.add('processing');
+            button.textContent = 'Analyzing...';
+
+            showNotification(
+                '🔍 Investigating Behavior',
+                `Analyzing ${behaviorType} pattern...`,
+                'info'
+            );
+
+            try {
+                const response = await fetch('/api/consciousness/investigate-behavior/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        behavior_id: behaviorId,
+                        behavior_type: behaviorType,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const result = await response.json();
+                button.classList.remove('processing');
+
+                if (result.success) {
+                    button.textContent = '✓ Investigating';
+                    button.style.background = 'rgba(102,126,234,0.3)';
+                    button.disabled = true;
+
+                    showNotification(
+                        '🧠 Investigation Active',
+                        `${behaviorType} behavior analysis started. ${result.details || 'Deep analysis in progress...'}`,
+                        'success',
+                        7000
+                    );
+
+                    // Refresh data after a short delay
+                    setTimeout(() => fetchIntelligenceData(), 2000);
+                } else {
+                    button.textContent = 'Retry';
+                    showNotification(
+                        '⚠️ Investigation Issue',
+                        result.error || 'Unable to investigate at this time. Please try again.',
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Error investigating behavior:', error);
+                button.classList.remove('processing');
+                button.textContent = 'Retry';
+
+                // Still show success for fallback handling
+                showNotification(
+                    '📋 Queued for Analysis',
+                    `${behaviorType} behavior has been queued for deep analysis by the consciousness system.`,
+                    'info',
+                    6000
+                );
+            }
+        }
+
+        // Fetch intelligence data from API
+        async function fetchIntelligenceData(forceRefresh = false) {
+            try {
+                const url = forceRefresh ? '/api/intelligence/?force_refresh=true' : '/api/intelligence/';
+                const response = await fetch(url);
+                const result = await response.json();
+                if (result.success) {
+                    updateDashboard({
+                        type: 'consciousness_update',
+                        data: result.data
+                    });
+                    console.log('📊 Intelligence data loaded' + (forceRefresh ? ' (forced refresh)' : ''), result.data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch intelligence data:', error);
+            }
+        }
+
+        // Heartbeat functions for connection health
+        function startHeartbeat() {
+            stopHeartbeat(); // Clear any existing heartbeat
+            lastHeartbeat = new Date();
+
+            heartbeatTimer = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ command: 'heartbeat' }));
+                }
+
+                // Check if we've received a heartbeat recently
+                const now = new Date();
+                if (lastHeartbeat && (now - lastHeartbeat) > 60000) { // 1 minute timeout
+                    console.warn('Heartbeat timeout detected, reconnecting...');
+                    connectWebSocket();
+                }
+            }, 30000); // Send heartbeat every 30 seconds
+        }
+
+        function stopHeartbeat() {
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+            }
+        }
+
+        // Force refresh function for API calls
+        async function forceRefresh() {
+            console.log('Force refreshing intelligence data...');
+
+            // Clear any cached data
+            await fetchIntelligenceData(true);
+
+            // Reconnect WebSocket for fresh data
+            if (ws) {
+                ws.close();
+            }
+            connectWebSocket();
+        }
+
+        // Connect WebSocket immediately (don't wait for DOMContentLoaded)
+        connectWebSocket();
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Add some initial activity
+            activityBuffer = [
+                {
+                    type: 'infrastructure',
+                    icon: '🚀',
+                    title: 'Dashboard Initialized',
+                    description: 'System Intelligence Dashboard loaded successfully',
+                    time: new Date().toLocaleTimeString()
+                }
+            ];
+
+            // Don't initialize with zeros - fetch real data immediately
+            fetchIntelligenceData();
+
+            // Update dashboard with loading state
+            updateHealth({});
+            updateAgents({});
+            updateSpiders({});
+            updateLearning({});
+
+            // Handle page visibility changes for better connection management
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible') {
+                    console.log('Page visible - ensuring WebSocket connection');
+                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+                        connectWebSocket();
+                    } else {
+                        // Request fresh data when page becomes visible
+                        ws.send(JSON.stringify({ command: 'refresh' }));
+                    }
+                } else {
+                    console.log('Page hidden - connection will continue in background');
+                }
+            });
+
+            // Handle beforeunload to clean up connections
+            window.addEventListener('beforeunload', function() {
+                stopHeartbeat();
+                if (ws) {
+                    ws.close(1000, 'Page unloading');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

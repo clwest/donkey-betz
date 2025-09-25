@@ -2,7 +2,7 @@
 Models for AI Opportunities and Generated Projects
 """
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 import json
 
 
@@ -22,6 +22,7 @@ class AIStrategy(models.Model):
     actionable_steps = models.JSONField(default=list)
 
     class Meta:
+        app_label = 'ai_opportunities'
         ordering = ['-final_score', '-discovered_date']
 
     def __str__(self):
@@ -45,7 +46,7 @@ class GeneratedProject(models.Model):
 
     # Relationship to strategy and user
     strategy = models.ForeignKey(AIStrategy, on_delete=models.SET_NULL, null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_projects')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_projects')
 
     # Status and metadata
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='generated')
@@ -61,6 +62,7 @@ class GeneratedProject(models.Model):
     launch_command = models.CharField(max_length=200, blank=True)
 
     class Meta:
+        app_label = 'ai_opportunities'
         ordering = ['-created_at']
 
     def __str__(self):
@@ -91,6 +93,7 @@ class ProjectFile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'ai_opportunities'
         ordering = ['filename']
         unique_together = [['project', 'filename']]
 

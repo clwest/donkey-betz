@@ -24,6 +24,7 @@ class ComponentState(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'core'
         unique_together = ['component_name', 'user_id']
 
     def __str__(self):
@@ -37,6 +38,9 @@ class UserProfile(models.Model):
     completeness_score = models.FloatField(default=0.0)
     last_activity = models.DateTimeField(auto_now=True)
     sync_version = models.IntegerField(default=1)
+
+    class Meta:
+        app_label = 'core'
 
     def __str__(self):
         return f"Profile - {self.user_id}"
@@ -53,6 +57,7 @@ class ActionHistory(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'core'
         ordering = ['-timestamp']
 
     def __str__(self):
@@ -67,6 +72,9 @@ class ComponentDataSync(models.Model):
     sync_data = models.JSONField()
     sync_status = models.CharField(max_length=50, default='pending')
     sync_timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
 
     def __str__(self):
         return f"{self.source_component} -> {self.target_component} ({self.data_type})"

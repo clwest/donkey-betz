@@ -20,6 +20,10 @@ from typing import Dict, Any, Optional, List, Union
 from datetime import datetime
 from functools import wraps
 import inspect
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

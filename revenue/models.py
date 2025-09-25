@@ -82,6 +82,7 @@ class RevenueTransaction(models.Model):
     ai_costs = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
+        app_label = 'revenue'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'status']),
@@ -149,6 +150,7 @@ class RevenueFlow(models.Model):
     )
 
     class Meta:
+        app_label = 'revenue'
         ordering = ['-started_at']
 
     def __str__(self):
@@ -203,6 +205,7 @@ class AgentRevenuePerformance(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'revenue'
         ordering = ['-total_revenue_generated']
 
     def __str__(self):

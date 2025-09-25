@@ -70,17 +70,18 @@ INSTALLED_APPS = [
     
     # Core app only for now
     'core',                    # Core utilities and management
-    
+
     # Unified platform apps (will be created step by step)
     # 'gateway',                 # Unified API Gateway
     # 'memory',                  # Unified Memory System
     'agents',                  # Agent Registry & Orchestration
     # 'ai_services',            # Multi-Provider AI Interface
     'backend.spiders',         # Spider Army System
+    'backend',                 # Backend app for implementation tracking
+    'backend.intelligence',   # Intelligence & Learning System
     'sports',                 # Sports Analytics Engine
     'content',                # Content Generation System
     'persistence',            # Data Persistence Infrastructure (NEW)
-    'intelligence',           # Intelligence System
     'self_awareness',         # Code Introspection & Self-Modification
     'style_memory',           # Style Memory System
     'dashboard',              # Dashboard API endpoints

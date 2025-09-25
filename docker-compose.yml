@@ -216,52 +216,13 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
-  # FRONTEND SERVICES
+  # FRONTEND SERVICES - REMOVED (Using Django Templates)
   # ---------------------------------------------------------------------------
-
-  # React Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development-hot
-    container_name: unified-frontend
-    environment:
-      - VITE_API_URL=http://localhost:8000/api
-      - VITE_WS_URL=ws://localhost:8000
-      - VITE_BACKEND_URL=http://localhost:8000
-    volumes:
-      - ./frontend:/app
-      - node_modules_frontend:/app/node_modules
-    ports:
-      - "3000:3000"
-      - "24678:24678"  # HMR port
-    networks:
-      unified-donkey-betz:
-        ipv4_address: 172.20.0.30
-    depends_on:
-      - backend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
-    stdin_open: true
-    tty: true
-
-  # React Native/Expo Mobile
-  mobile:
-    build:
-      context: ./mobile
-      dockerfile: Dockerfile
-      target: expo-dev
-    container_name: unified-mobile
-    environment:
-      - EXPO_PUBLIC_API_URL=http://localhost:8000/api
-      - EXPO_PUBLIC_WS_URL=ws://localhost:8000
-      - EXPO_PUBLIC_BACKEND_URL=http://localhost:8000
+  # The platform now uses Django templates instead of React
+  # Access the 3 main pages at:
+  # - http://localhost:8000/ai-production-hub/
+  # - http://localhost:8000/ai-nexus/
+  # - http://localhost:8000/intelligence/
     volumes:
       - ./mobile:/app
       - node_modules_mobile:/app/node_modules

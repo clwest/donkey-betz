@@ -14,9 +14,36 @@ from enum import Enum
 import uuid
 import logging
 
-from agents.registry import agent_registry
-from advisors.registry import advisor_registry
-from ml_pipeline.pipeline import MLPipeline
+# Conditional imports to avoid Django dependency issues
+try:
+    from agents.registry import agent_registry
+except ImportError:
+    class MockAgentRegistry:
+        def list_agents(self):
+            return []
+        def get_agent(self, name):
+            return None
+    agent_registry = MockAgentRegistry()
+
+try:
+    from advisors.registry import advisor_registry
+except ImportError:
+    class MockAdvisorRegistry:
+        def list_advisors(self):
+            return []
+        def get_advisor(self, name):
+            return None
+    advisor_registry = MockAdvisorRegistry()
+
+try:
+    from ml_pipeline.pipeline import MLPipeline
+except ImportError:
+    class MockMLPipeline:
+        def __init__(self):
+            pass
+        def process(self, data):
+            return data
+    MLPipeline = MockMLPipeline
 
 logger = logging.getLogger(__name__)
 

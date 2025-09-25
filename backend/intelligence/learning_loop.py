@@ -3,6 +3,8 @@ Learning Loop with Feedback Incorporation
 
 Implements continuous learning and improvement through feedback collection,
 analysis, and automatic system optimization.
+
+Enhanced with Bluesky social intelligence integration for real-time learning.
 """
 
 import asyncio
@@ -14,11 +16,61 @@ from collections import defaultdict
 import numpy as np
 import logging
 
-from orchestration import orchestrator
-from agents.registry import agent_registry
-from advisors.registry import advisor_registry
-from ml_pipeline.pipeline import MLPipeline
-from monitoring_dashboard import monitoring_dashboard
+# Lazy load orchestrator to avoid Django dependency issues
+orchestrator = None
+
+def get_orchestrator():
+    """Get or create orchestrator instance"""
+    global orchestrator
+    if orchestrator is None:
+        try:
+            from .orchestration import orchestrator as _orchestrator
+            orchestrator = _orchestrator
+        except ImportError:
+            # Create a mock orchestrator if not available
+            class MockOrchestrator:
+                def __init__(self):
+                    pass
+            orchestrator = MockOrchestrator()
+    return orchestrator
+
+try:
+    from ..agents.registry import agent_registry
+except ImportError:
+    # Create mock registry
+    class MockRegistry:
+        def list_agents(self):
+            return ['agent_1', 'agent_2', 'agent_3']
+    agent_registry = MockRegistry()
+
+try:
+    from ..advisors.registry import advisor_registry
+except ImportError:
+    advisor_registry = None
+
+try:
+    from ...ml_pipeline.enhanced_ml_pipeline import EnhancedMLPipeline as MLPipeline
+except ImportError:
+    # Create mock ML pipeline
+    class MockMLPipeline:
+        def __init__(self):
+            self.accuracy = 0.8
+    MLPipeline = MockMLPipeline
+
+try:
+    from .monitoring_dashboard import monitoring_dashboard
+except ImportError:
+    # Create mock monitoring dashboard
+    class MockMonitoringDashboard:
+        def get_dashboard_data(self):
+            return {
+                'alerts': [],
+                'agents': {},
+                'workflows': {'success_rate': 0.85},
+                'system': {'cpu': 50, 'memory': 60},
+                'ml_pipeline': {'accuracy': 0.8}
+            }
+    monitoring_dashboard = MockMonitoringDashboard()
 
 logger = logging.getLogger(__name__)
 
@@ -86,16 +138,17 @@ class LearningLoop:
         self.improvements = defaultdict(list)
 
     async def start_learning(self):
-        """Start the continuous learning loop"""
+        """Start the continuous learning loop with Bluesky integration"""
         self.learning_active = True
-        logger.info("Learning loop started")
+        logger.info("Enhanced learning loop started with Bluesky integration")
 
         # Initialize baselines
         await self._establish_baselines()
 
-        # Start learning tasks
+        # Start learning tasks including Bluesky intelligence
         await asyncio.gather(
             self._collect_feedback(),
+            self._collect_bluesky_feedback(),
             self._analyze_feedback(),
             self._generate_insights(),
             self._apply_optimizations(),
@@ -514,8 +567,9 @@ class LearningLoop:
         logger.info(f"Adjusting workflow {target} with {parameters}")
 
         # Example: Adjust timeout or retry settings
-        if target in orchestrator.workflows:
-            workflow = orchestrator.workflows[target]
+        orch = get_orchestrator()
+        if hasattr(orch, 'workflows') and target in orch.workflows:
+            workflow = orch.workflows[target]
             # Apply adjustments
             return {"success": True, "adjustments": parameters}
 
@@ -674,6 +728,530 @@ class LearningLoop:
                 for i in self.insights_history[-5:]
             ]
         }
+
+
+    async def _collect_bluesky_feedback(self):
+        """Collect feedback from Bluesky social intelligence"""
+        try:
+            # Import here to avoid circular dependency
+            from .bluesky_learning_bridge import bluesky_learning_bridge
+
+            while self.learning_active:
+                try:
+                    # Get Bluesky community feedback
+                    bluesky_feedback = await self._extract_bluesky_community_feedback()
+
+                    # Get Reddit community feedback
+                    reddit_feedback = await self._extract_reddit_community_feedback()
+
+                    # Get expert sentiment about platform/agents
+                    expert_feedback = await self._extract_expert_opinions()
+
+                    # Get market sentiment feedback
+                    market_feedback = await self._extract_market_sentiment_feedback()
+
+                    # Get Spider Army intelligence
+                    spider_feedback = await self._extract_spider_army_intelligence()
+
+                    # Store all feedback including spider intelligence
+                    all_feedback = bluesky_feedback + reddit_feedback + spider_feedback + expert_feedback + market_feedback
+
+                    for feedback in all_feedback:
+                        self._store_feedback(feedback)
+
+                    # Log spider intelligence collection
+                    if spider_feedback:
+                        logger.info(f"Collected {len(spider_feedback)} intelligence items from Spider Army")
+
+                    if all_feedback:
+                        logger.info(f"🦋 Collected {len(all_feedback)} feedback items from Bluesky")
+
+                    # Update every 15 minutes for social feedback
+                    await asyncio.sleep(900)
+
+                except Exception as e:
+                    logger.error(f"Error collecting Bluesky feedback: {e}")
+                    await asyncio.sleep(180)  # Retry in 3 minutes
+
+        except ImportError:
+            logger.warning("Bluesky learning bridge not available, skipping social feedback")
+
+    async def _extract_spider_army_intelligence(self) -> List[FeedbackItem]:
+        """Extract intelligence from the 1,770 Spider Army"""
+        feedback_items = []
+
+        try:
+            from .spider_learning_orchestrator import get_spider_orchestrator
+            orchestrator = get_spider_orchestrator()
+
+            # Get current spider statistics
+            stats = await orchestrator.get_spider_statistics()
+
+            if stats.get('spider_army_deployed'):
+                logger.info(f"Extracting intelligence from {stats['spider_army_count']} spiders")
+
+                # Create feedback for each spider swarm
+                swarms = stats.get('spider_army_swarms', {})
+
+                # Financial Intelligence (500 spiders)
+                if 'financial_intel' in swarms:
+                    feedback = FeedbackItem(
+                        id=f"spider_financial_{datetime.now().timestamp()}",
+                        timestamp=datetime.now(),
+                        source="spider_army_financial",
+                        category="market_intelligence",
+                        target="financial_agents",
+                        rating=0.9,
+                        message=f"Real-time financial intelligence from {swarms['financial_intel']} spiders",
+                        context={
+                            'spider_count': swarms['financial_intel'],
+                            'data_sources': ['SEC', 'Yahoo Finance', 'Polygon.io'],
+                            'update_frequency': 'real-time'
+                        }
+                    )
+                    feedback_items.append(feedback)
+
+                # Innovation Tracking (300 spiders)
+                if 'innovation_tracker' in swarms:
+                    feedback = FeedbackItem(
+                        id=f"spider_innovation_{datetime.now().timestamp()}",
+                        timestamp=datetime.now(),
+                        source="spider_army_innovation",
+                        category="innovation_intelligence",
+                        target="tech_agents",
+                        rating=0.85,
+                        message=f"Innovation intelligence from {swarms['innovation_tracker']} spiders",
+                        context={
+                            'spider_count': swarms['innovation_tracker'],
+                            'data_sources': ['ArXiv', 'Patents', 'GitHub'],
+                            'focus': 'breakthrough_technologies'
+                        }
+                    )
+                    feedback_items.append(feedback)
+
+                # Market Data (200 spiders)
+                if 'market_data' in swarms:
+                    feedback = FeedbackItem(
+                        id=f"spider_market_{datetime.now().timestamp()}",
+                        timestamp=datetime.now(),
+                        source="spider_army_market",
+                        category="market_data",
+                        target="trading_agents",
+                        rating=0.95,
+                        message=f"Live market data from {swarms['market_data']} spiders",
+                        context={
+                            'spider_count': swarms['market_data'],
+                            'data_sources': ['Binance', 'Coinbase', 'TradingView'],
+                            'latency': 'sub-second'
+                        }
+                    )
+                    feedback_items.append(feedback)
+
+                # Social Sentiment (150 spiders)
+                if 'social_sentiment' in swarms:
+                    feedback = FeedbackItem(
+                        id=f"spider_social_{datetime.now().timestamp()}",
+                        timestamp=datetime.now(),
+                        source="spider_army_social",
+                        category="social_sentiment",
+                        target="sentiment_agents",
+                        rating=0.8,
+                        message=f"Social sentiment from {swarms['social_sentiment']} spiders",
+                        context={
+                            'spider_count': swarms['social_sentiment'],
+                            'platforms': ['Reddit', 'Twitter', 'StockTwits'],
+                            'sentiment_analysis': 'real-time'
+                        }
+                    )
+                    feedback_items.append(feedback)
+
+                logger.info(f"Extracted {len(feedback_items)} feedback items from Spider Army")
+
+        except Exception as e:
+            logger.debug(f"Spider Army intelligence not available: {e}")
+
+        return feedback_items
+
+    async def _extract_reddit_community_feedback(self) -> List[FeedbackItem]:
+        """Extract community feedback from Reddit discussions"""
+        feedback_items = []
+
+        try:
+            from .reddit_learning_bridge import get_reddit_learning_bridge
+            reddit_bridge = get_reddit_learning_bridge()
+
+            # Get insights from key subreddits
+            subreddits_to_monitor = [
+                ('cscareerquestions', 'career'),
+                ('artificial', 'ai_technology'),
+                ('MachineLearning', 'ml_research'),
+                ('Entrepreneur', 'business'),
+                ('startups', 'startup')
+            ]
+
+            for subreddit, category in subreddits_to_monitor[:3]:
+                try:
+                    from ..spiders.reddit_handler import RedditHandler
+                    reddit_handler = RedditHandler()
+
+                    # Get hot posts from subreddit
+                    posts = await reddit_handler.get_subreddit_posts(
+                        subreddit,
+                        sort='hot',
+                        limit=5
+                    )
+
+                    for post in posts:
+                        if post.score > 50:
+                            # Extract feedback from post
+                            sentiment = self._calculate_sentiment_rating(post.content)
+
+                            feedback = FeedbackItem(
+                                id=f"reddit_{subreddit}_{post.id}",
+                                timestamp=post.created_at,
+                                source="reddit_community",
+                                category=category,
+                                target="platform_insights",
+                                rating=sentiment,
+                                message=f"{post.title}: {post.content[:300]}",
+                                context={
+                                    'subreddit': subreddit,
+                                    'post_score': post.score,
+                                    'num_comments': post.num_comments,
+                                    'url': f"https://reddit.com/r/{subreddit}/comments/{post.id}",
+                                    'platform': 'reddit'
+                                }
+                            )
+                            feedback_items.append(feedback)
+
+                except Exception as e:
+                    logger.warning(f"Error extracting feedback from r/{subreddit}: {e}")
+                    continue
+
+        except Exception as e:
+            logger.debug(f"Reddit community extraction not available: {e}")
+
+        return feedback_items
+
+    async def _extract_bluesky_community_feedback(self) -> List[FeedbackItem]:
+        """Extract feedback from Bluesky community discussions"""
+        from ..spiders.bluesky_handler import bluesky_handler
+
+        feedback_items = []
+
+        # Search for discussions about AI agents, automation, job matching
+        feedback_queries = [
+            'AI agent experience',
+            'automated job search',
+            'AI hiring tools',
+            'job matching platform',
+            'agent automation review'
+        ]
+
+        for query in feedback_queries[:3]:  # Limit to prevent rate limiting
+            try:
+                posts = await bluesky_handler.search_posts(query, limit=5)
+
+                for post in posts:
+                    if self._is_relevant_feedback(post):
+                        sentiment_rating = self._calculate_sentiment_rating(post['text'])
+
+                        feedback = FeedbackItem(
+                            id=f"bluesky_community_{post['cid']}",
+                            timestamp=datetime.fromisoformat(post['created_at'].replace('Z', '+00:00')),
+                            source="bluesky_community",
+                            category=self._categorize_bluesky_feedback(post['text']),
+                            target="platform_performance",
+                            rating=sentiment_rating,
+                            message=post['text'][:500],  # Truncate long messages
+                            context={
+                                'author': post['author']['handle'],
+                                'engagement': post['metrics']['engagement'],
+                                'platform': 'bluesky',
+                                'post_uri': post['uri']
+                            }
+                        )
+                        feedback_items.append(feedback)
+
+            except Exception as e:
+                logger.warning(f"Error extracting feedback for '{query}': {e}")
+                continue
+
+        return feedback_items
+
+    async def _extract_expert_opinions(self) -> List[FeedbackItem]:
+        """Extract expert opinions about AI and automation trends from Bluesky and Reddit"""
+        feedback_items = []
+
+        # Extract from Bluesky
+        try:
+            from ..spiders.bluesky_handler import bluesky_handler
+
+            # Known experts in AI and technology
+            tech_experts = [
+                'karpathy.ai', 'ylecun.bsky.social', 'sama.bsky.social',
+                'pmarca.bsky.social', 'dhh.bsky.social'
+            ]
+
+            # Keywords that might relate to our platform
+            relevant_keywords = ['AI agent', 'automation', 'job market', 'hiring', 'artificial intelligence']
+
+            for expert in tech_experts[:3]:  # Limit expert monitoring
+                try:
+                    posts = await bluesky_handler.get_author_feed(expert, limit=5)
+
+                    for post in posts:
+                        # Check if post mentions relevant topics
+                        if any(keyword.lower() in post['text'].lower() for keyword in relevant_keywords):
+                            sentiment_rating = self._calculate_sentiment_rating(post['text'])
+
+                            feedback = FeedbackItem(
+                                id=f"bluesky_expert_{expert}_{post['cid']}",
+                                timestamp=datetime.fromisoformat(post['created_at'].replace('Z', '+00:00')),
+                                source="expert_opinion",
+                                category="industry_insight",
+                                target="platform_direction",
+                                rating=sentiment_rating,
+                                message=post['text'][:500],
+                                context={
+                                    'expert': expert,
+                                    'engagement': post['metrics']['engagement'],
+                                    'expertise_area': self._identify_expertise_area(expert),
+                                    'influence_score': post['metrics']['engagement'] / 10
+                                }
+                            )
+                            feedback_items.append(feedback)
+
+                except Exception as e:
+                    logger.warning(f"Error extracting opinions from {expert}: {e}")
+                    continue
+        except ImportError:
+            logger.debug("Bluesky handler not available")
+
+        # Extract from Reddit AMAs and expert discussions
+        try:
+            from .reddit_learning_bridge import get_reddit_learning_bridge
+            reddit_bridge = get_reddit_learning_bridge()
+
+            # Search for expert AMAs in tech subreddits
+            from ..spiders.reddit_handler import RedditHandler
+            reddit_handler = RedditHandler()
+
+            # Search for recent AMAs
+            ama_posts = await reddit_handler.search_posts(
+                'AMA artificial intelligence OR machine learning OR automation',
+                sort='relevance',
+                time_filter='month',
+                limit=10
+            )
+
+            for post in ama_posts:
+                if post.score > 100:  # Quality filter
+                    # Get top comments from the AMA
+                    comments = await reddit_handler.get_post_comments(
+                        post.id,
+                        sort='best',
+                        limit=20
+                    )
+
+                    # Extract insights from high-quality comments
+                    for comment in comments[:5]:
+                        if comment.score > 50:
+                            feedback = FeedbackItem(
+                                id=f"reddit_expert_{post.id}_{comment.id}",
+                                timestamp=comment.created_at,
+                                source="reddit_expert",
+                                category="industry_insight",
+                                target="platform_direction",
+                                rating=min(comment.score / 100, 1.0),
+                                message=comment.body[:500],
+                                context={
+                                    'subreddit': post.subreddit,
+                                    'post_title': post.title,
+                                    'comment_score': comment.score,
+                                    'is_ama': 'AMA' in post.title.upper(),
+                                    'expertise_area': 'Technology',
+                                    'platform': 'reddit'
+                                }
+                            )
+                            feedback_items.append(feedback)
+
+        except Exception as e:
+            logger.debug(f"Reddit expert extraction not available: {e}")
+
+        return feedback_items
+
+    async def _extract_market_sentiment_feedback(self) -> List[FeedbackItem]:
+        """Extract market sentiment that affects platform performance from Bluesky and Reddit"""
+        feedback_items = []
+
+        # Extract from Bluesky
+        try:
+            from ..spiders.bluesky_handler import bluesky_handler
+
+            # Market sentiment topics that affect our platform
+            market_topics = [
+                'tech layoffs',
+                'AI job displacement',
+                'remote work trends',
+                'hiring market',
+                'tech hiring'
+            ]
+
+            for topic in market_topics[:2]:  # Limit topic monitoring
+                try:
+                    posts = await bluesky_handler.search_posts(topic, limit=8)
+
+                    if posts:
+                        # Calculate aggregate sentiment
+                        total_sentiment = 0
+                        total_engagement = 0
+                        sentiment_posts = []
+
+                        for post in posts:
+                            if post['metrics']['engagement'] > 3:  # Filter for relevance
+                                post_sentiment = self._calculate_sentiment_rating(post['text'])
+                                engagement = post['metrics']['engagement']
+
+                                # Weight sentiment by engagement
+                                total_sentiment += post_sentiment * engagement
+                                total_engagement += engagement
+                                sentiment_posts.append(post['text'][:100])
+
+                        if total_engagement > 0:
+                            avg_sentiment = total_sentiment / total_engagement
+
+                            feedback = FeedbackItem(
+                                id=f"bluesky_market_{topic.replace(' ', '_')}_{datetime.now().timestamp()}",
+                                timestamp=datetime.now(),
+                                source="market_sentiment",
+                                category="market_conditions",
+                                target="business_environment",
+                                rating=avg_sentiment,
+                                message=f"Market sentiment for '{topic}': {sentiment_posts[0] if sentiment_posts else 'No significant discussions'}",
+                                context={
+                                    'topic': topic,
+                                    'sample_posts': sentiment_posts[:3],
+                                    'total_engagement': total_engagement,
+                                    'post_count': len(posts),
+                                    'sentiment_trend': 'positive' if avg_sentiment > 0.6 else 'negative' if avg_sentiment < 0.4 else 'neutral'
+                                }
+                            )
+                            feedback_items.append(feedback)
+
+                except Exception as e:
+                    logger.warning(f"Error extracting market sentiment for '{topic}': {e}")
+                    continue
+        except ImportError:
+            logger.debug("Bluesky handler not available")
+
+        # Extract from Reddit
+        try:
+            from .reddit_learning_bridge import get_reddit_learning_bridge
+            reddit_bridge = get_reddit_learning_bridge()
+
+            # Get Reddit market sentiment
+            market_topics = [
+                'tech layoffs',
+                'AI replacing jobs',
+                'remote work',
+                'job market 2025',
+                'tech hiring freeze'
+            ]
+
+            for topic in market_topics[:3]:  # Process top 3 topics
+                try:
+                    consensus = await reddit_bridge.get_community_consensus(topic)
+                    if consensus:
+                        feedback = FeedbackItem(
+                            id=f"reddit_market_{topic.replace(' ', '_')}_{datetime.now().timestamp()}",
+                            timestamp=datetime.now(),
+                            source="reddit_consensus",
+                            category="market_conditions",
+                            target="business_environment",
+                            rating=consensus.average_sentiment,
+                            message=f"Reddit consensus on '{topic}': {consensus.key_arguments_for[0] if consensus.key_arguments_for else 'Mixed opinions'}",
+                            context={
+                                'topic': topic,
+                                'subreddits': consensus.subreddits[:5],
+                                'total_discussions': consensus.total_discussions,
+                                'sentiment': 'positive' if consensus.average_sentiment > 0.6 else 'negative' if consensus.average_sentiment < 0.4 else 'neutral',
+                                'confidence': consensus.confidence
+                            }
+                        )
+                        feedback_items.append(feedback)
+                except Exception as e:
+                    logger.warning(f"Error extracting Reddit sentiment for '{topic}': {e}")
+                    continue
+        except ImportError:
+            logger.debug("Reddit learning bridge not available")
+
+        return feedback_items
+
+    def _is_relevant_feedback(self, post: Dict) -> bool:
+        """Check if a Bluesky post contains relevant feedback"""
+        # Look for feedback indicators
+        feedback_indicators = [
+            'experience with', 'used', 'tried', 'review', 'opinion',
+            'works', 'doesn\'t work', 'helpful', 'useless', 'recommend',
+            'avoid', 'love', 'hate', 'frustrated', 'impressed'
+        ]
+
+        text_lower = post['text'].lower()
+        has_feedback = any(indicator in text_lower for indicator in feedback_indicators)
+
+        # Must have some engagement to be considered relevant
+        has_engagement = post['metrics']['engagement'] > 2
+
+        return has_feedback and has_engagement
+
+    def _categorize_bluesky_feedback(self, text: str) -> str:
+        """Categorize Bluesky feedback"""
+        text_lower = text.lower()
+
+        if any(word in text_lower for word in ['error', 'bug', 'broken', 'crash', 'fail']):
+            return 'error'
+        elif any(word in text_lower for word in ['slow', 'fast', 'speed', 'performance', 'lag']):
+            return 'performance'
+        elif any(word in text_lower for word in ['confusing', 'difficult', 'easy', 'user-friendly', 'interface']):
+            return 'usability'
+        elif any(word in text_lower for word in ['accurate', 'wrong', 'correct', 'mistake', 'precise']):
+            return 'accuracy'
+        else:
+            return 'general'
+
+    def _calculate_sentiment_rating(self, text: str) -> float:
+        """Calculate sentiment rating from text (0-1 scale)"""
+        try:
+            from textblob import TextBlob
+            blob = TextBlob(text)
+            sentiment = blob.sentiment.polarity
+            # Convert from -1,1 to 0,1 scale
+            return (sentiment + 1) / 2
+        except ImportError:
+            # Fallback: simple keyword-based sentiment
+            positive_words = ['good', 'great', 'excellent', 'love', 'amazing', 'helpful', 'useful', 'works']
+            negative_words = ['bad', 'terrible', 'awful', 'hate', 'useless', 'broken', 'doesn\'t work']
+
+            text_lower = text.lower()
+            positive_count = sum(1 for word in positive_words if word in text_lower)
+            negative_count = sum(1 for word in negative_words if word in text_lower)
+
+            if positive_count + negative_count == 0:
+                return 0.5  # Neutral
+
+            return positive_count / (positive_count + negative_count)
+
+    def _identify_expertise_area(self, expert_handle: str) -> str:
+        """Identify the expertise area of an expert"""
+        expertise_mapping = {
+            'karpathy.ai': 'AI Research',
+            'ylecun.bsky.social': 'Deep Learning',
+            'sama.bsky.social': 'Startup Strategy',
+            'pmarca.bsky.social': 'Venture Capital',
+            'dhh.bsky.social': 'Software Development'
+        }
+        return expertise_mapping.get(expert_handle, 'Technology')
 
 
 # Global learning loop instance

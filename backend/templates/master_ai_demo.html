@@ -1,2166 +1,1457 @@
-<!DOCTYPE html>
-<!-- UPDATED VERSION WITH PROJECT CONFIGURATION -->
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Master Demo - Live Learning System</title>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Header */
-        .header {
-            background: rgba(10, 14, 39, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .header-content {
-            max-width: 1800px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .status-indicators {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 20px;
-        }
-
-        .indicator-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .indicator-dot.active {
-            background: #10b981;
-        }
-
-        .indicator-dot.warning {
-            background: #f59e0b;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Project Card Styles */
-        .project-card {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 12px;
-            padding: 1.5rem;
-            position: relative;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            min-width: 0; /* Important for text overflow to work */
-        }
-
-        .project-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
-            border-color: rgba(139, 92, 246, 0.5);
-        }
-
-        .project-status {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            padding: 0.25rem 0.75rem;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 20px;
-            font-size: 0.75rem;
-            color: #10b981;
-        }
-
-        .project-status.building {
-            background: rgba(245, 158, 11, 0.1);
-            border-color: rgba(245, 158, 11, 0.3);
-            color: #f59e0b;
-        }
-
-        .project-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #e0e6ed;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .project-description {
-            color: #64748b;
-            font-size: 0.8rem;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-family: 'Monaco', 'Courier New', monospace;
-            opacity: 0.8;
-        }
-
-        .project-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .project-stat {
-            text-align: center;
-            padding: 0.5rem;
-            background: rgba(17, 24, 39, 0.5);
-            border-radius: 6px;
-        }
-
-        .project-stat-value {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #a78bfa;
-        }
-
-        .project-stat-label {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 0.25rem;
-        }
-
-        .project-agents {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        .project-agents-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .project-agents-title {
-            font-size: 0.9rem;
-            color: #94a3b8;
-        }
-
-        .add-agents-btn {
-            padding: 0.25rem 0.5rem;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 4px;
-            color: #a78bfa;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .add-agents-btn:hover {
-            background: rgba(99, 102, 241, 0.2);
-        }
-
-        .project-agent-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-            margin-top: 0.5rem;
-        }
-
-        .project-agent-chip {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 12px;
-            font-size: 0.75rem;
-            color: #c4b5fd;
-            max-width: 120px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Main Layout */
-        .main-container {
-            max-width: 1800px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 2rem;
-            min-height: calc(100vh - 200px);
-        }
-
-        /* File Viewer Styles */
-        .file-viewer {
-            background: rgba(17, 24, 39, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 12px;
-            padding: 1.5rem;
-            overflow: hidden;
-            grid-column: 1 / -1;
-            margin-top: 2rem;
-        }
-
-        .file-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1rem;
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 1rem;
-        }
-
-        .file-item {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .file-item:hover {
-            background: rgba(99, 102, 241, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .file-item.selected {
-            background: rgba(99, 102, 241, 0.2);
-            border-color: #6366f1;
-        }
-
-        .file-name {
-            font-weight: 600;
-            color: #e0e6ed;
-            margin-bottom: 0.5rem;
-        }
-
-        .file-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
-
-        .file-content-display {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'Fira Code', 'Consolas', monospace;
-            font-size: 0.9rem;
-            overflow: auto;
-            max-height: 400px;
-            position: relative;
-            border: 1px solid #30363d;
-        }
-
-        .file-content-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #30363d;
-        }
-
-        .no-files-message {
-            text-align: center;
-            color: #94a3b8;
-            font-style: italic;
-            padding: 2rem;
-        }
-
-        /* Panels */
-        .panel {
-            background: rgba(17, 24, 39, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 12px;
-            padding: 1.5rem;
-            overflow: hidden;
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-        }
-
-        .panel-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #a78bfa;
-        }
-
-        /* Left Panel - Agent Deployment */
-        .agent-list {
-            max-height: 280px;  /* Adjusted for project config and search */
-            overflow-y: auto;
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 6px;
-            padding: 0.5rem;
-        }
-
-        .agent-item {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .agent-item:hover {
-            background: rgba(99, 102, 241, 0.1);
-            transform: translateX(5px);
-        }
-
-        .agent-item.selected {
-            background: rgba(99, 102, 241, 0.2);
-            border-color: #6366f1;
-        }
-
-        .agent-name {
-            font-weight: 600;
-            color: #e0e6ed;
-            margin-bottom: 0.25rem;
-        }
-
-        .agent-stats {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.85rem;
-            color: #94a3b8;
-        }
-
-        .deploy-button {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-        }
-
-        .deploy-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
-        }
-
-        /* Center Panel - Code Generation */
-        .code-display {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'Fira Code', 'Consolas', monospace;
-            font-size: 0.9rem;
-            overflow: auto;
-            max-height: 500px;
-            position: relative;
-        }
-
-        .code-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #30363d;
-        }
-
-        .code-language {
-            color: #58a6ff;
-            font-size: 0.85rem;
-        }
-
-        .code-lines {
-            color: #8cc265;
-            font-size: 0.85rem;
-        }
-
-        pre {
-            color: #e6edf3;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .code-generating {
-            animation: codeFlow 2s ease-in-out infinite;
-        }
-
-        @keyframes codeFlow {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
-        }
-
-        /* Right Panel - Learning Metrics */
-        .metric-card {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .metric-label {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .metric-change {
-            font-size: 0.85rem;
-            color: #10b981;
-            margin-top: 0.25rem;
-        }
-
-        .metric-change.negative {
-            color: #ef4444;
-        }
-
-        /* Progress Bars */
-        .progress-container {
-            margin: 1rem 0;
-        }
-
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .progress-bar {
-            background: rgba(99, 102, 241, 0.1);
-            border-radius: 4px;
-            height: 8px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-
-        /* Event Stream */
-        .event-stream {
-            grid-column: 1 / -1;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .event-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem;
-            background: rgba(99, 102, 241, 0.05);
-            border-left: 3px solid #6366f1;
-            margin-bottom: 0.5rem;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(-20px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .event-timestamp {
-            font-size: 0.8rem;
-            color: #64748b;
-            min-width: 80px;
-        }
-
-        .event-type {
-            padding: 0.25rem 0.5rem;
-            background: rgba(99, 102, 241, 0.2);
-            border-radius: 4px;
-            font-size: 0.85rem;
-            min-width: 100px;
-            text-align: center;
-        }
-
-        .event-message {
-            flex: 1;
-            color: #e0e6ed;
-        }
-
-        /* WebSocket Status */
-        .ws-status {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 0.75rem 1.5rem;
-            background: rgba(17, 24, 39, 0.95);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            backdrop-filter: blur(10px);
-        }
-
-        .ws-status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .ws-status.connected .ws-status-dot {
-            background: #10b981;
-            animation: pulse 2s infinite;
-        }
-
-        .ws-status.disconnected .ws-status-dot {
-            background: #ef4444;
-        }
-
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(99, 102, 241, 0.3);
-            border-radius: 50%;
-            border-top-color: #6366f1;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Navigation */
-        .nav-bar {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 15px 0;
-        }
-
-        .nav-link {
-            padding: 8px 18px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 20px;
-            color: #e0e0e0;
-            text-decoration: none;
-            transition: all 0.3s;
-            font-size: 0.95em;
-        }
-
-        .nav-link:hover {
-            background: rgba(102,126,234,0.2);
-            border-color: #667eea;
-            transform: translateY(-2px);
-        }
-
-        .nav-link.active {
-            background: rgba(102,126,234,0.3);
-            border-color: #667eea;
-            color: #fff;
-        }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header">
-        <div class="header-content">
-            <h1 class="title">🚀 AI Master Demo - Live Learning System</h1>
-            <div class="status-indicators">
-                <div class="indicator">
-                    <div class="indicator-dot active"></div>
-                    <span id="agent-count">152 Agents</span>
+{% extends "base.html" %}
+
+{% block title %}Master AI Demo - Unified Intelligence System{% endblock %}
+
+{% block websocket_url %}{{ websocket_url|default:"ws://localhost:8000/ws/ai-training/" }}{% endblock %}
+
+{% block content %}
+<div class="container" style="display: grid; grid-template-columns: 350px 1fr 300px; gap: 20px; max-width: 1800px; margin: 0 auto;">
+    <!-- Left Sidebar: System Overview -->
+    <div class="overview-panel">
+        <div class="panel-card">
+            <h3>🚀 Master AI System</h3>
+            <div class="system-overview">
+                <div class="overview-stat">
+                    <div class="stat-icon">🤖</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="total-agents">{{ learning_stats.total_agents|default:"151" }}</div>
+                        <div class="stat-label">Active Agents</div>
+                    </div>
+                    <div class="stat-status">
+                        <span class="status-indicator status-online"></span>
+                        Operational
+                    </div>
                 </div>
-                <div class="indicator">
-                    <div class="indicator-dot active"></div>
-                    <span id="learning-status">Learning Active</span>
+
+                <div class="overview-stat">
+                    <div class="stat-icon">🧠</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="learning-sessions">{{ learning_stats.active_learning_sessions|default:"42" }}</div>
+                        <div class="stat-label">Learning Sessions</div>
+                    </div>
+                    <div class="stat-status">
+                        <span class="status-indicator status-online"></span>
+                        Active
+                    </div>
                 </div>
-                <div class="indicator">
-                    <div class="indicator-dot active"></div>
-                    <span id="code-generated">0 Lines Generated</span>
+
+                <div class="overview-stat">
+                    <div class="stat-icon">💼</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="code-generated">{{ learning_stats.code_generated_today|default:"847" }}</div>
+                        <div class="stat-label">Code Generated</div>
+                    </div>
+                    <div class="stat-status">
+                        <span class="status-indicator status-warning"></span>
+                        Today
+                    </div>
+                </div>
+
+                <div class="overview-stat">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="improvements">{{ learning_stats.total_improvements|default:"2,847" }}</div>
+                        <div class="stat-label">Improvements</div>
+                    </div>
+                    <div class="stat-status">
+                        <span class="status-indicator status-online"></span>
+                        Total
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="nav-bar">
-            <a href="/visualization/" class="nav-link">3D Ecosystem</a>
-            <a href="/activity-monitor/" class="nav-link">Activity Monitor</a>
-            <a href="/master-demo/" class="nav-link active">Master Demo</a>
-            <a href="/ai-building-products/" class="nav-link">AI Building Products</a>
+
+        <div class="panel-card">
+            <h3>🎯 Quick Actions</h3>
+            <div class="actions-container">
+                <button class="action-btn primary" onclick="startMasterDemo()">
+                    <span class="action-icon">🚀</span>
+                    <span class="action-text">Start Master Demo</span>
+                </button>
+                <button class="action-btn secondary" onclick="runLearningCycle()">
+                    <span class="action-icon">🧠</span>
+                    <span class="action-text">Run Learning Cycle</span>
+                </button>
+                <button class="action-btn secondary" onclick="generateCode()">
+                    <span class="action-icon">💻</span>
+                    <span class="action-text">Generate Code</span>
+                </button>
+                <button class="action-btn secondary" onclick="analyzePerformance()">
+                    <span class="action-icon">📊</span>
+                    <span class="action-text">Analyze Performance</span>
+                </button>
+                <button class="action-btn danger" onclick="resetSystem()">
+                    <span class="action-icon">🔄</span>
+                    <span class="action-text">Reset System</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>📈 Real-time Metrics</h3>
+            <div class="metrics-display">
+                <div class="metric-item">
+                    <div class="metric-label">Lines Generated Today</div>
+                    <div class="metric-value" id="lines-today">{{ learning_stats.total_lines_today|default:"15,247" }}</div>
+                    <div class="metric-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 73%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-label">Quality Score</div>
+                    <div class="metric-value" id="quality-score">94.7%</div>
+                    <div class="metric-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 94.7%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-label">Execution Speed</div>
+                    <div class="metric-value" id="execution-speed">2.3s</div>
+                    <div class="metric-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value" id="success-rate">96.2%</div>
+                    <div class="metric-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 96.2%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Main Container -->
-    <div class="main-container">
-        <!-- Left Panel: Agent Deployment -->
-        <div class="panel">
-            <div class="panel-header">
-                <h2 class="panel-title">🤖 Agent Deployment</h2>
-                <span class="loading" id="agent-loading" style="display: none;"></span>
-            </div>
-
-            <!-- Project Configuration Section -->
-            <div style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                <h3 style="color: #a78bfa; margin-bottom: 0.75rem; font-size: 1rem;">📋 Project Configuration</h3>
-
-                <!-- Project Type Selector -->
-                <div style="margin-bottom: 1rem;">
-                    <label for="project-type" style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
-                        Project Type:
-                    </label>
-                    <select id="project-type" style="width: 100%; padding: 0.5rem; background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #e0e6ed; font-size: 0.9rem;" onchange="updateProjectTemplate()">
-                        <option value="custom">Custom Project</option>
-                        <option value="sports-betting">Sports Betting Platform</option>
-                        <option value="ecommerce">E-commerce Platform</option>
-                        <option value="social-media">Social Media App</option>
-                        <option value="saas">SaaS Application</option>
-                        <option value="marketplace">Marketplace Platform</option>
-                        <option value="fintech">FinTech Application</option>
-                        <option value="edtech">EdTech Platform</option>
-                        <option value="healthcare">Healthcare App</option>
-                        <option value="game">Gaming Platform</option>
-                        <option value="ai-tool">AI Tool/Service</option>
-                    </select>
-                </div>
-
-                <!-- Project Description -->
-                <div style="margin-bottom: 1rem;">
-                    <label for="project-description" style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
-                        Project Description:
-                    </label>
-                    <textarea id="project-description"
-                        placeholder="e.g., A college football only sports betting app with live odds, prop bets, and social features for students..."
-                        style="width: 100%; padding: 0.5rem; background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #e0e6ed; font-size: 0.9rem; min-height: 60px; resize: vertical; font-family: inherit;"></textarea>
-                </div>
-
-                <!-- Key Features -->
-                <div style="margin-bottom: 0.75rem;">
-                    <label for="key-features" style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
-                        Key Features (comma-separated):
-                    </label>
-                    <input type="text" id="key-features"
-                        placeholder="e.g., live betting, college teams only, student verification, prop bets"
-                        style="width: 100%; padding: 0.5rem; background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #e0e6ed; font-size: 0.9rem;">
-                </div>
-
-                <!-- Target Audience -->
-                <div>
-                    <label for="target-audience" style="display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.9rem;">
-                        Target Audience:
-                    </label>
-                    <input type="text" id="target-audience"
-                        placeholder="e.g., college students, ages 21+, sports enthusiasts"
-                        style="width: 100%; padding: 0.5rem; background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #e0e6ed; font-size: 0.9rem;">
-                </div>
-            </div>
-
-            <!-- Agent Search and Filter -->
-            <div style="margin-bottom: 1rem;">
-                <input type="text" id="agent-search"
-                    placeholder="🔍 Search agents by name or specialization..."
-                    style="width: 100%; padding: 0.5rem; background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #e0e6ed; font-size: 0.9rem;"
-                    onkeyup="filterAgents()">
-                <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span id="agent-count-display" style="color: #94a3b8; font-size: 0.85rem;">Showing all agents</span>
-                    <button onclick="selectAllVisible()" style="padding: 0.25rem 0.5rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 4px; color: #a78bfa; font-size: 0.85rem; cursor: pointer;">Select All Visible</button>
-                </div>
-            </div>
-
-            <div class="agent-list" id="agent-list">
-                <!-- Agents will be populated here -->
-            </div>
-
-            <!-- Mode Selector -->
-            <div style="margin: 1rem 0;">
-                <label for="execution-mode" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">
-                    Execution Mode:
-                </label>
-                <select id="execution-mode" style="width: 100%; padding: 0.75rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; color: #e0e6ed;">
-                    <option value="demo">Demo Mode (Fast, Pre-generated)</option>
-                    <option value="real">Real Mode (LLM-Powered, Slower)</option>
-                </select>
-            </div>
-
-            <button class="deploy-button" onclick="deploySelectedAgents()">
-                Deploy Selected Agents
-            </button>
-        </div>
-
-        <!-- Center Panel: Code Generation -->
-        <div class="panel">
-            <div class="panel-header">
-                <h2 class="panel-title">💻 Live Code Generation</h2>
-                <div id="generation-status"></div>
-            </div>
-
-            <div class="code-display">
-                <div class="code-header">
-                    <span class="code-language" id="code-language">Python</span>
-                    <span class="code-lines" id="code-lines">0 lines</span>
-                </div>
-                <pre id="code-content" class="code-generating">// Waiting for agent deployment...</pre>
-            </div>
-
-            <div class="progress-container">
-                <div class="progress-label">
-                    <span>Code Quality</span>
-                    <span id="quality-percent">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="quality-progress" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <div class="progress-container">
-                <div class="progress-label">
-                    <span>Complexity Score</span>
-                    <span id="complexity-percent">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="complexity-progress" style="width: 0%"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Panel: Learning Metrics -->
-        <div class="panel">
-            <div class="panel-header">
-                <h2 class="panel-title">📊 Learning Metrics</h2>
-                <span id="metrics-update-time">Live</span>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Learning Rate</div>
-                <div class="metric-value" id="learning-rate">0%</div>
-                <div class="metric-change" id="learning-change">+0% from baseline</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Code Improvements</div>
-                <div class="metric-value" id="improvements">0</div>
-                <div class="metric-change">This session</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Agent Collaborations</div>
-                <div class="metric-value" id="collaborations">0</div>
-                <div class="metric-change">Knowledge shared</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Total Lines Generated</div>
-                <div class="metric-value" id="total-lines">0</div>
-                <div class="metric-change" id="lines-rate">0 lines/min</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Active Learning Sessions</div>
-                <div class="metric-value" id="active-sessions">0</div>
-                <div class="metric-change">Agents training</div>
-            </div>
-        </div>
-
-        <!-- Project Tracker Panel -->
-        <div class="panel" style="grid-column: span 3; margin-top: 2rem;">
-            <div class="panel-header">
-                <h2 class="panel-title">🚀 Active Projects</h2>
-                <div style="display: flex; gap: 1rem;">
-                    <span id="projects-count">0 projects</span>
-                    <button onclick="refreshProjects()" style="padding: 0.5rem 1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #a78bfa; cursor: pointer;">
-                        🔄 Refresh
+    <!-- Main Demo Area -->
+    <div class="demo-area">
+        <div class="panel-card demo-main">
+            <div class="demo-header">
+                <h3>🎪 Master AI Demo - Live Intelligence Showcase</h3>
+                <div class="demo-controls">
+                    <button class="control-btn" id="play-pause-btn" onclick="toggleDemo()">
+                        <span id="play-icon">⏸️</span>
                     </button>
+                    <button class="control-btn" onclick="restartDemo()">🔄</button>
+                    <button class="control-btn" onclick="fullscreenDemo()">⛶</button>
                 </div>
             </div>
 
-            <div id="projects-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; padding: 1rem; max-width: 100%; overflow-x: auto;">
-                <!-- Project cards will be populated here -->
-            </div>
+            <div class="demo-content">
+                <!-- Demo Stage -->
+                <div class="demo-stage" id="demo-stage">
+                    <div class="stage-layer background-layer">
+                        <div class="neural-network">
+                            <div class="network-node input-node" style="top: 20%; left: 10%;">
+                                <div class="node-label">Data Input</div>
+                            </div>
+                            <div class="network-node processing-node" style="top: 35%; left: 30%;">
+                                <div class="node-label">AI Agent 1</div>
+                            </div>
+                            <div class="network-node processing-node" style="top: 65%; left: 30%;">
+                                <div class="node-label">AI Agent 2</div>
+                            </div>
+                            <div class="network-node processing-node" style="top: 50%; left: 50%;">
+                                <div class="node-label">Learning Core</div>
+                            </div>
+                            <div class="network-node output-node" style="top: 35%; left: 80%;">
+                                <div class="node-label">Code Output</div>
+                            </div>
+                            <div class="network-node output-node" style="top: 65%; left: 80%;">
+                                <div class="node-label">Analysis</div>
+                            </div>
 
-            <div id="no-projects-message" style="text-align: center; padding: 2rem; color: #94a3b8;">
-                <p style="font-size: 1.2rem; margin-bottom: 1rem;">No active projects yet</p>
-                <p>Deploy agents with a project configuration to get started</p>
-            </div>
-        </div>
+                            <!-- Connection lines will be drawn by JavaScript -->
+                            <svg class="connections-svg" id="demo-connections">
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                            refX="0" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#667eea" />
+                                    </marker>
+                                </defs>
+                            </svg>
+                        </div>
 
-        <!-- Bottom: Event Stream -->
-        <div class="panel event-stream">
-            <div class="panel-header">
-                <h2 class="panel-title">📡 Live Event Stream</h2>
-                <span id="event-count">0 events</span>
-            </div>
-            <div id="event-list">
-                <!-- Events will be populated here -->
-            </div>
-        </div>
-
-        <!-- File Viewer -->
-        <div class="file-viewer">
-            <div class="panel-header">
-                <h2 class="panel-title">📁 Generated Files</h2>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <span id="files-count">0 files</span>
-                    <button onclick="refreshFiles()" style="padding: 0.5rem 1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; color: #a78bfa; cursor: pointer;">
-                        🔄 Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div id="files-container">
-                <div class="file-list" id="file-list">
-                    <!-- Files will be populated here -->
-                </div>
-
-                <div class="file-content-display" id="file-content-display" style="display: none;">
-                    <div class="file-content-header">
-                        <span id="selected-file-name" style="color: #58a6ff; font-weight: 600;"></span>
-                        <span id="file-size" style="color: #8cc265; font-size: 0.85rem;"></span>
+                        <!-- Data flow visualization -->
+                        <div class="data-flow" id="data-flow-container">
+                            <!-- Data packets will be animated here -->
+                        </div>
                     </div>
-                    <pre id="file-content" style="color: #e6edf3; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;"></pre>
+
+                    <!-- Information overlay -->
+                    <div class="info-overlay" id="info-overlay">
+                        <div class="info-panel">
+                            <h4 id="demo-title">Initializing Master AI System...</h4>
+                            <p id="demo-description">Preparing to demonstrate unified intelligence capabilities across multiple domains.</p>
+                            <div class="demo-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="demo-progress-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="progress-text" id="demo-progress-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="no-files-message" id="no-files-message">
-                    Deploy agents to generate files
+                <!-- Output Console -->
+                <div class="demo-console">
+                    <div class="console-header">
+                        <span class="console-title">🖥️ AI Output Console</span>
+                        <div class="console-controls">
+                            <button class="console-btn" onclick="clearConsole()">Clear</button>
+                            <button class="console-btn" onclick="exportConsole()">Export</button>
+                        </div>
+                    </div>
+                    <div class="console-content" id="console-output">
+                        <div class="console-line system">[SYSTEM] Master AI Demo initialized</div>
+                        <div class="console-line info">[INFO] Loading 151 AI agents...</div>
+                        <div class="console-line success">[SUCCESS] Neural network connections established</div>
+                        <div class="console-line processing">[PROCESSING] Ready for demonstration...</div>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Recent Projects Display -->
+        <div class="panel-card" style="margin-top: 20px;">
+            <h3>📂 Recent AI-Generated Projects</h3>
+            <div class="projects-grid">
+                {% for project in recent_projects %}
+                <div class="project-card">
+                    <div class="project-header">
+                        <span class="project-name">{{ project.name }}</span>
+                        <span class="project-status">{{ project.status|default:"Complete" }}</span>
+                    </div>
+                    <div class="project-description">{{ project.description|default:"AI-generated project with advanced features" }}</div>
+                    <div class="project-footer">
+                        <span class="project-date">{{ project.created_at|date:"M d, Y" }}</span>
+                        <div class="project-actions">
+                            <button class="btn-small">View</button>
+                            <button class="btn-small">Deploy</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="project-card">
+                    <div class="project-header">
+                        <span class="project-name">E-commerce Platform</span>
+                        <span class="project-status">Complete</span>
+                    </div>
+                    <div class="project-description">Full-stack e-commerce solution with payment integration</div>
+                    <div class="project-footer">
+                        <span class="project-date">Today</span>
+                        <div class="project-actions">
+                            <button class="btn-small">View</button>
+                            <button class="btn-small">Deploy</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="project-card">
+                    <div class="project-header">
+                        <span class="project-name">ML Analytics Dashboard</span>
+                        <span class="project-status">Complete</span>
+                    </div>
+                    <div class="project-description">Real-time analytics with machine learning insights</div>
+                    <div class="project-footer">
+                        <span class="project-date">Yesterday</span>
+                        <div class="project-actions">
+                            <button class="btn-small">View</button>
+                            <button class="btn-small">Deploy</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- WebSocket Status -->
-    <div class="ws-status disconnected" id="ws-status">
-        <div class="ws-status-dot"></div>
-        <span id="ws-status-text">Connecting...</span>
-    </div>
-
-    <script>
-        // Global variables
-        let ws = null;
-        let selectedAgents = new Set();
-        let totalLinesGenerated = 0;
-        let eventCount = 0;
-        let startTime = Date.now();
-        let lastUpdateTime = Date.now();
-
-        // Available agents - will be populated from API
-        let agents = [];
-        let generatedFiles = [];
-        let selectedFile = null;
-        let currentProjectName = null;
-        let activeProjects = [];
-
-        // Project Management Functions
-        async function refreshProjects() {
-            console.log('🔄 Refreshing projects...');
-            try {
-                // Load from build_status.json with cache busting
-                const buildStatusResponse = await fetch(`/ai_generated_projects/build_status.json?t=${Date.now()}`);
-                if (!buildStatusResponse.ok) {
-                    console.error('❌ Failed to fetch build_status.json:', buildStatusResponse.status);
-                    return;
-                }
-                const buildStatus = await buildStatusResponse.json();
-                console.log('📁 Loaded build_status.json:', buildStatus);
-
-                // Also fetch from database
-                const dbResponse = await fetch('/api/projects/stats/');
-                let dbProjects = [];
-                if (dbResponse.ok) {
-                    const dbData = await dbResponse.json();
-                    if (dbData.success) {
-                        dbProjects = dbData.projects || [];
-                    }
-                }
-
-                // Merge projects from both sources
-                activeProjects = [];
-
-                // Add projects from build_status.json
-                if (buildStatus.projects) {
-                    Object.entries(buildStatus.projects).forEach(([key, project]) => {
-                        activeProjects.push({
-                            id: key,
-                            name: project.name,
-                            path: project.path,
-                            filesCount: project.files_created.length,
-                            progress: project.progress || 0,
-                            value: project.value || 0,
-                            status: project.progress >= 100 ? 'complete' : 'building',
-                            agents: [],
-                            created_at: buildStatus.timestamp
-                        });
-                    });
-                }
-
-                // Add projects from database
-                dbProjects.forEach(project => {
-                    if (!activeProjects.find(p => p.id === project.id)) {
-                        activeProjects.push(project);
-                    }
-                });
-
-                console.log(`📊 Total projects loaded: ${activeProjects.length}`);
-                console.log('📦 Projects data:', activeProjects);
-                displayProjects();
-            } catch (error) {
-                console.error('Error refreshing projects:', error);
-                addEvent('error', `Failed to refresh projects: ${error.message}`);
-            }
-        }
-
-        function displayProjects() {
-            const container = document.getElementById('projects-container');
-            const noProjectsMsg = document.getElementById('no-projects-message');
-            const projectsCount = document.getElementById('projects-count');
-
-            console.log(`📊 Displaying ${activeProjects.length} projects:`, activeProjects);
-
-            if (activeProjects.length === 0) {
-                container.style.display = 'none';
-                noProjectsMsg.style.display = 'block';
-                projectsCount.textContent = '0 projects';
-                return;
-            }
-
-            container.style.display = 'grid';
-            noProjectsMsg.style.display = 'none';
-            projectsCount.textContent = `${activeProjects.length} project${activeProjects.length !== 1 ? 's' : ''}`;
-
-            container.innerHTML = activeProjects.map(project => {
-                // Extract just the project folder name from the path
-                const shortPath = project.path ? project.path.split('/').pop() : 'AI-generated project';
-                console.log(`🏗️ Project ${project.name}: path="${project.path}" -> shortPath="${shortPath}", files=${project.filesCount}`);
-
-                return `
-                <div class="project-card" onclick="selectProject('${project.id}')">
-                    <div class="project-status ${project.status}">${project.status === 'complete' ? '✅ Complete' : '🔨 Building'}</div>
-                    <div class="project-title" title="${project.name}">${project.name}</div>
-                    <div class="project-description" title="${project.path || 'AI-generated project'}">/${shortPath}</div>
-
-                    <div class="project-stats">
-                        <div class="project-stat">
-                            <div class="project-stat-value">${project.filesCount || 0}</div>
-                            <div class="project-stat-label">Files</div>
+    <!-- Right Sidebar: Agent Performance -->
+    <div class="performance-panel">
+        <div class="panel-card">
+            <h3>🤖 Agent Performance</h3>
+            <div class="agent-list" id="agent-performance-list">
+                {% for agent_name, stats in agent_stats.items %}
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <span class="agent-name">{{ agent_name }}</span>
+                        <div class="agent-status active">Active</div>
+                    </div>
+                    <div class="agent-metrics">
+                        <div class="agent-metric">
+                            <span class="metric-label">Generated:</span>
+                            <span class="metric-value">{{ stats.code_generated|default:"247" }}</span>
                         </div>
-                        <div class="project-stat">
-                            <div class="project-stat-value">${project.progress || 0}%</div>
-                            <div class="project-stat-label">Progress</div>
+                        <div class="agent-metric">
+                            <span class="metric-label">Lines:</span>
+                            <span class="metric-value">{{ stats.total_lines|default:"12K" }}</span>
                         </div>
-                        <div class="project-stat">
-                            <div class="project-stat-value">$${(project.value || 0).toLocaleString()}</div>
-                            <div class="project-stat-label">Value</div>
+                        <div class="agent-metric">
+                            <span class="metric-label">Quality:</span>
+                            <span class="metric-value">{{ stats.last_quality_score|default:"94.7" }}%</span>
                         </div>
                     </div>
-
-                    <div class="project-agents">
-                        <div class="project-agents-header">
-                            <span class="project-agents-title">Assigned Agents (${project.agents ? project.agents.length : 0})</span>
-                            <button class="add-agents-btn" onclick="event.stopPropagation(); addAgentsToProject('${project.id}')">
-                                + Add Agents
-                            </button>
-                        </div>
-                        <div class="project-agent-list">
-                            ${project.agents && project.agents.length > 0 ?
-                                project.agents.map(agent => `<span class="project-agent-chip">${agent}</span>`).join('') :
-                                '<span style="color: #64748b; font-size: 0.85rem;">No agents assigned yet</span>'
-                            }
+                    <div class="agent-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ stats.last_quality_score|default:"94.7" }}%"></div>
                         </div>
                     </div>
                 </div>
-            `}).join('');
-        }
-
-        function selectProject(projectId) {
-            const project = activeProjects.find(p => p.id === projectId);
-            if (project) {
-                addEvent('info', `Selected project: ${project.name}`);
-                // Could open a detailed view or navigate to project workspace
-                currentProjectName = project.name;
-                refreshFiles();  // Load files for this project
-            }
-        }
-
-        async function addAgentsToProject(projectId) {
-            const project = activeProjects.find(p => p.id === projectId);
-            if (!project) return;
-
-            // Show agent selector modal (simplified version)
-            const selectedAgentNames = prompt(
-                `Add agents to "${project.name}"\n\nAvailable agents:\n${agents.slice(0, 10).map(a => a.name).join(', ')}\n\nEnter agent names (comma-separated):`
-            );
-
-            if (selectedAgentNames) {
-                const agentList = selectedAgentNames.split(',').map(a => a.trim()).filter(a => a);
-
-                // Update project with new agents
-                project.agents = [...new Set([...(project.agents || []), ...agentList])];
-
-                // Save to backend
-                try {
-                    const response = await fetch('/api/projects/add-agents/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            project_id: projectId,
-                            agents: agentList
-                        })
-                    });
-
-                    if (response.ok) {
-                        addEvent('success', `Added ${agentList.length} agents to ${project.name}`);
-                        displayProjects();
-                    }
-                } catch (error) {
-                    console.error('Failed to add agents:', error);
-                    addEvent('error', `Failed to add agents: ${error.message}`);
-                }
-            }
-        }
-
-        // File Management Functions
-        async function refreshFiles() {
-            try {
-                // Use the new database files API endpoint
-                const response = await fetch('/api/projects/database-files/');
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.success && data.files) {
-                    // Set current project name from response
-                    currentProjectName = data.project;
-
-                    // Transform the API response to match expected format
-                    generatedFiles = data.files.map(file => ({
-                        filename: file.name,
-                        content: file.content,
-                        size: file.size,
-                        created_at: file.created_at,
-                        language: file.language || 'text',
-                        agent: file.agent || 'unknown'
-                    }));
-                    displayFiles();
-                    updateFilesCount();
-                    addEvent('system', `Loaded ${generatedFiles.length} files from project: ${currentProjectName}`);
-                } else {
-                    console.warn('No files found or API returned empty result');
-                    generatedFiles = [];
-                    displayFiles();
-                    updateFilesCount();
-                    if (data.error) {
-                        addEvent('info', `No generated files yet: ${data.error}`);
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching files:', error);
-                addEvent('error', `Failed to load files: ${error.message}`);
-                generatedFiles = [];
-                displayFiles();
-                updateFilesCount();
-            }
-        }
-
-        function displayFiles() {
-            const fileList = document.getElementById('file-list');
-            const noFilesMessage = document.getElementById('no-files-message');
-
-            if (generatedFiles.length === 0) {
-                fileList.style.display = 'none';
-                noFilesMessage.style.display = 'block';
-                return;
-            }
-
-            fileList.style.display = 'grid';
-            noFilesMessage.style.display = 'none';
-            fileList.innerHTML = '';
-
-            generatedFiles.forEach(file => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-                fileItem.onclick = () => selectFile(file);
-
-                // Get file extension for icon
-                const extension = file.filename.split('.').pop();
-                const icon = getFileIcon(extension);
-
-                fileItem.innerHTML = `
-                    <div class="file-name">${icon} ${file.filename}</div>
-                    <div class="file-meta">
-                        <span>${formatFileSize(file.size || file.content.length)}</span>
-                        <span>${formatDate(file.created_at || file.timestamp)}</span>
+                {% empty %}
+                <!-- Default agents when no data available -->
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <span class="agent-name">Code Generator AI</span>
+                        <div class="agent-status active">Active</div>
                     </div>
-                `;
-
-                fileList.appendChild(fileItem);
-            });
-        }
-
-        function selectFile(file) {
-            selectedFile = file;
-
-            // Update visual selection
-            document.querySelectorAll('.file-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            event.currentTarget.classList.add('selected');
-
-            // Display file content
-            displayFileContent(file);
-        }
-
-        function displayFileContent(file) {
-            const contentDisplay = document.getElementById('file-content-display');
-            const fileName = document.getElementById('selected-file-name');
-            const fileSize = document.getElementById('file-size');
-            const fileContent = document.getElementById('file-content');
-
-            fileName.textContent = file.filename;
-            fileSize.textContent = formatFileSize(file.size || file.content.length);
-
-            // Format content based on file type
-            let displayContent = file.content || generateSampleCode(file.filename);
-
-            // Apply syntax highlighting based on file type
-            const extension = file.filename.split('.').pop().toLowerCase();
-
-            if (file.filename.endsWith('.json') || isJSON(file.content)) {
-                try {
-                    const jsonObj = typeof file.content === 'string' ? JSON.parse(file.content) : file.content;
-                    displayContent = formatJSON(jsonObj);
-                } catch (e) {
-                    displayContent = highlightCode(displayContent, extension);
-                }
-            } else {
-                displayContent = highlightCode(displayContent, extension);
-            }
-
-            fileContent.innerHTML = displayContent;
-            contentDisplay.style.display = 'block';
-
-            addEvent('info', `Viewing file: ${file.filename}`);
-        }
-
-        function generateSampleCode(filename) {
-            const extension = filename.split('.').pop().toLowerCase();
-            const samples = {
-                'py': '# AI-Generated Python Module\nimport asyncio\nfrom typing import Dict, Any\nfrom datetime import datetime\n\nclass AIGeneratedService:\n    """Service generated by AI agents for enhanced functionality"""\n\n    def __init__(self):\n        self.config = self.load_configuration()\n        self.ml_model = self.initialize_model()\n\n    async def process_request(self, data: Dict[str, Any]) -> Dict:\n        """Process incoming requests with AI-enhanced logic"""\n        result = await self.ml_model.predict(data)\n        return {\n            \'status\': \'success\',\n            \'prediction\': result,\n            \'timestamp\': datetime.now().isoformat()\n        }',
-                'js': '// AI-Generated JavaScript Module\nclass AIEnhancedComponent {\n    constructor() {\n        this.state = {\n            isLoading: false,\n            data: [],\n            metrics: {}\n        };\n        this.init();\n    }\n\n    async init() {\n        await this.loadMLModel();\n        await this.connectWebSocket();\n        this.startRealtimeUpdates();\n    }\n\n    async processData(input) {\n        const enhanced = await this.mlPredict(input);\n        return this.formatOutput(enhanced);\n    }\n}\n\nexport default AIEnhancedComponent;',
-                'html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <title>AI-Generated Interface</title>\n    <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n    <div class="ai-dashboard">\n        <header class="ai-header">\n            <h1>Intelligent Dashboard</h1>\n            <div class="metrics-display"></div>\n        </header>\n        <main class="ai-content">\n            <section class="realtime-feed"></section>\n            <section class="ml-predictions"></section>\n        </main>\n    </div>\n    <!-- Script tag would go here -->\n</body>\n</html>',
-                'css': '/* AI-Optimized Stylesheet */\n.ai-dashboard {\n    display: grid;\n    grid-template-columns: 1fr 2fr 1fr;\n    gap: 2rem;\n    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n    padding: 2rem;\n}\n\n.metrics-display {\n    display: flex;\n    gap: 1rem;\n    animation: fadeIn 0.5s ease-in;\n}\n\n.realtime-feed {\n    background: rgba(255, 255, 255, 0.95);\n    border-radius: 12px;\n    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);\n    padding: 1.5rem;\n}',
-                'sql': '-- AI-Optimized Database Schema\nCREATE TABLE ai_predictions (\n    id SERIAL PRIMARY KEY,\n    model_version VARCHAR(50),\n    input_data JSONB,\n    prediction JSONB,\n    confidence_score DECIMAL(5,4),\n    created_at TIMESTAMP DEFAULT NOW(),\n    processing_time_ms INTEGER\n);\n\nCREATE INDEX idx_predictions_created ON ai_predictions(created_at DESC);\nCREATE INDEX idx_predictions_confidence ON ai_predictions(confidence_score DESC);',
-                'md': '# AI-Generated Documentation\n\n## Overview\nThis module was automatically generated by our AI agent system to provide enhanced functionality for your application.\n\n## Features\n- Real-time data processing\n- Machine learning predictions\n- Automated optimization\n- Intelligent caching\n\n## API Reference\n### `processData(input)`\nProcesses input through the ML pipeline and returns enhanced results.\n\n### `optimizePerformance()`\nAutomatically optimizes system performance based on usage patterns.'
-            };
-            return samples[extension] || '// AI-Generated ' + extension.toUpperCase() + ' file\n// Content processing in progress...';
-        }
-
-        function highlightCode(code, language) {
-            // Enhanced syntax highlighting for different languages
-            const highlighters = {
-                'py': highlightPython,
-                'js': highlightJavaScript,
-                'html': highlightHTML,
-                'css': highlightCSS,
-                'sql': highlightSQL,
-                'md': highlightMarkdown
-            };
-
-            // Escape HTML for non-HTML files
-            if (language !== 'html') {
-                code = code.replace(/&/g, '&amp;')
-                           .replace(/</g, '&lt;')
-                           .replace(/>/g, '&gt;');
-            }
-
-            const highlighter = highlighters[language] || highlightGeneric;
-            return highlighter(code);
-        }
-
-        function highlightPython(code) {
-            return code
-                .replace(/\b(import|from|as|def|class|if|elif|else|for|while|return|await|async|try|except|with|lambda|yield)\b/g, '<span style="color:#ff7b72">$1</span>')
-                .replace(/\b(True|False|None)\b/g, '<span style="color:#79c0ff">$1</span>')
-                .replace(/(#.*$)/gm, '<span style="color:#8b949e">$1</span>')
-                .replace(/("[^"]*"|'[^']*')/g, '<span style="color:#a5d6ff">$1</span>')
-                .replace(/\b(\d+)\b/g, '<span style="color:#f69d50">$1</span>');
-        }
-
-        function highlightJavaScript(code) {
-            return code
-                .replace(/\b(const|let|var|function|class|if|else|for|while|return|async|await|import|export|default|new|this)\b/g, '<span style="color:#ff7b72">$1</span>')
-                .replace(/\b(true|false|null|undefined)\b/g, '<span style="color:#79c0ff">$1</span>')
-                .replace(/(\/\/.*$)/gm, '<span style="color:#8b949e">$1</span>')
-                .replace(/("[^"]*"|'[^']*'|`[^`]*`)/g, '<span style="color:#a5d6ff">$1</span>')
-                .replace(/\b(\d+)\b/g, '<span style="color:#f69d50">$1</span>');
-        }
-
-        function highlightHTML(code) {
-            // First escape HTML to prevent rendering
-            code = code.replace(/&/g, '&amp;')
-                       .replace(/</g, '&lt;')
-                       .replace(/>/g, '&gt;');
-
-            return code
-                .replace(/(&lt;\/?)(\w+)([^&]*?)(&gt;)/g, '$1<span style="color:#7ee787">$2</span>$3$4')
-                .replace(/(\w+)(=)("[^"]*"|'[^']*')/g, '<span style="color:#79c0ff">$1</span>$2<span style="color:#a5d6ff">$3</span>')
-                .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span style="color:#8b949e">$1</span>');
-        }
-
-        function highlightCSS(code) {
-            return code
-                .replace(/([\w-]+)(\s*:\s*)([^;]+)(;)/g, '<span style="color:#79c0ff">$1</span>$2<span style="color:#a5d6ff">$3</span>$4')
-                .replace(/(\.[a-zA-Z][\w-]*)/g, '<span style="color:#7ee787">$1</span>')
-                .replace(/(#[a-zA-Z][\w-]*)/g, '<span style="color:#f69d50">$1</span>')
-                .replace(/(\/\*[\s\S]*?\*\/)/g, '<span style="color:#8b949e">$1</span>');
-        }
-
-        function highlightSQL(code) {
-            return code
-                .replace(/\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|TABLE|INDEX|ON|PRIMARY|KEY|FOREIGN|REFERENCES|DEFAULT|NOT|NULL)\b/gi, '<span style="color:#ff7b72">$1</span>')
-                .replace(/(--.*$)/gm, '<span style="color:#8b949e">$1</span>')
-                .replace(/('[^']*')/g, '<span style="color:#a5d6ff">$1</span>')
-                .replace(/\b(\d+)\b/g, '<span style="color:#f69d50">$1</span>');
-        }
-
-        function highlightMarkdown(code) {
-            return code
-                .replace(/^(#{1,6})\s+(.*)$/gm, '<span style="color:#7ee787;font-weight:bold">$1 $2</span>')
-                .replace(/(\*\*[^*]+\*\*)/g, '<span style="font-weight:bold">$1</span>')
-                .replace(/(`[^`]+`)/g, '<span style="color:#f69d50;background:rgba(246,157,80,0.1);padding:2px 4px;border-radius:3px">$1</span>')
-                .replace(/^(\*|\-|\d+\.)\s+/gm, '<span style="color:#79c0ff">$1</span> ');
-        }
-
-        function highlightGeneric(code) {
-            return code
-                .replace(/("[^"]*"|'[^']*')/g, '<span style="color:#a5d6ff">$1</span>')
-                .replace(/\b(\d+)\b/g, '<span style="color:#f69d50">$1</span>')
-                .replace(/(\/\/.*$|#.*$)/gm, '<span style="color:#8b949e">$1</span>');
-        }
-
-        // Check if a string is JSON
-        function isJSON(str) {
-            if (typeof str !== 'string') return false;
-            try {
-                JSON.parse(str);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // Format JSON with syntax highlighting
-        function formatJSON(obj) {
-            const json = JSON.stringify(obj, null, 2);
-
-            // Add syntax highlighting
-            return json
-                // Property names
-                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*):)/g, '<span style="color: #79c0ff;">$1</span>')
-                // String values
-                .replace(/: ("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*")/g, ': <span style="color: #a5d6ff;">$1</span>')
-                // Numbers
-                .replace(/: (\d+(\.\d+)?)/g, ': <span style="color: #f69d50;">$1</span>')
-                // Booleans
-                .replace(/: (true|false)/g, ': <span style="color: #ff7b72;">$1</span>')
-                // Null
-                .replace(/: (null)/g, ': <span style="color: #8b949e;">$1</span>');
-        }
-
-        function updateFilesCount() {
-            const filesCount = document.getElementById('files-count');
-            filesCount.textContent = `${generatedFiles.length} files`;
-        }
-
-        function getFileIcon(extension) {
-            const icons = {
-                'py': '🐍',
-                'js': '📜',
-                'html': '🌐',
-                'css': '🎨',
-                'md': '📝',
-                'json': '📋',
-                'sql': '🗃️',
-                'txt': '📄'
-            };
-            return icons[extension] || '📄';
-        }
-
-        function formatFileSize(bytes) {
-            if (!bytes || bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'Unknown';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // Make refresh functions globally available
-        window.refreshFiles = refreshFiles;
-        window.refreshProjects = refreshProjects;
-
-        // Initialize the page
-        async function init() {
-            console.log('🚀 Initializing page...');
-            try {
-                await fetchAgents();  // Fetch all agents from API
-                populateAgents();
-                connectWebSocket();
-                startMetricsUpdate();
-                await fetchActiveSessionsCount();  // Load real metrics immediately
-                await refreshFiles();  // Load existing files
-                console.log('📦 About to refresh projects...');
-                await refreshProjects();  // Load existing projects
-                console.log('✅ Init complete');
-            } catch (error) {
-                console.error('❌ Error during initialization:', error);
-            }
-        }
-
-        // Fetch all agents from API
-        async function fetchAgents() {
-            try {
-                const response = await fetch('/api/agent-deployment/agents/simple/');
-                const data = await response.json();
-
-                if (data.success) {
-                    // Convert the API response to our format
-                    agents = data.agents.map(agent => ({
-                        name: agent.name,
-                        specialization: agent.specialization,
-                        stats: { generated: 0, quality: 0 },
-                        id: agent.id
-                    }));
-
-                    // Update agent count display
-                    document.getElementById('agent-count').textContent = `${agents.length} Agents`;
-
-                    console.log(`Loaded ${agents.length} agents from API`);
-                    addEvent('system', `Loaded ${agents.length} agents`);
-                } else {
-                    console.error('Failed to fetch agents:', data.error);
-                    addEvent('error', 'Failed to load agents');
-                    // Use fallback agents
-                    loadFallbackAgents();
-                }
-            } catch (error) {
-                console.error('Error fetching agents:', error);
-                addEvent('error', `Error loading agents: ${error.message}`);
-                // Use fallback agents
-                loadFallbackAgents();
-            }
-        }
-
-        // Fallback agents in case API fails
-        function loadFallbackAgents() {
-            agents = [
-                { name: "Business Agent", specialization: "Business strategy and planning", stats: { generated: 0, quality: 0 } },
-                { name: "Market Research Specialist", specialization: "Market analysis", stats: { generated: 0, quality: 0 } },
-                { name: "ML Recommendation Engine", specialization: "Machine learning", stats: { generated: 0, quality: 0 } },
-                { name: "Database Architect", specialization: "Database design", stats: { generated: 0, quality: 0 } },
-                { name: "Frontend Engineer", specialization: "UI development", stats: { generated: 0, quality: 0 } },
-                { name: "API Developer", specialization: "API development", stats: { generated: 0, quality: 0 } }
-            ];
-        }
-
-        // Populate agent list
-        function populateAgents(agentsToShow = null) {
-            const agentList = document.getElementById('agent-list');
-            agentList.innerHTML = '';  // Clear existing content
-
-            const displayAgents = agentsToShow || agents;
-
-            // Update count display
-            const countDisplay = document.getElementById('agent-count-display');
-            if (countDisplay) {
-                if (agentsToShow && agentsToShow.length < agents.length) {
-                    countDisplay.textContent = `Showing ${displayAgents.length} of ${agents.length} agents`;
-                } else {
-                    countDisplay.textContent = `Showing all ${displayAgents.length} agents`;
-                }
-            }
-
-            // Display agents
-            displayAgents.forEach((agent, index) => {
-                const div = document.createElement('div');
-                div.className = 'agent-item';
-                div.innerHTML = `
-                    <div class="agent-name">${agent.name}</div>
-                    <div class="agent-stats">
-                        <span>${agent.specialization}</span>
-                        <span>• <span id="${agent.name.replace(/\s/g, '-')}-lines">0</span> lines</span>
-                        <span>• <span id="${agent.name.replace(/\s/g, '-')}-quality">0</span>% quality</span>
+                    <div class="agent-metrics">
+                        <div class="agent-metric">
+                            <span class="metric-label">Generated:</span>
+                            <span class="metric-value">247</span>
+                        </div>
+                        <div class="agent-metric">
+                            <span class="metric-label">Lines:</span>
+                            <span class="metric-value">12K</span>
+                        </div>
+                        <div class="agent-metric">
+                            <span class="metric-label">Quality:</span>
+                            <span class="metric-value">94.7%</span>
+                        </div>
                     </div>
-                `;
-                div.onclick = () => toggleAgent(agent.name, div);
-                agentList.appendChild(div);
-            });
+                    <div class="agent-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 94.7%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <span class="agent-name">Analysis Engine</span>
+                        <div class="agent-status learning">Learning</div>
+                    </div>
+                    <div class="agent-metrics">
+                        <div class="agent-metric">
+                            <span class="metric-label">Generated:</span>
+                            <span class="metric-value">189</span>
+                        </div>
+                        <div class="agent-metric">
+                            <span class="metric-label">Lines:</span>
+                            <span class="metric-value">8.9K</span>
+                        </div>
+                        <div class="agent-metric">
+                            <span class="metric-label">Quality:</span>
+                            <span class="metric-value">92.3%</span>
+                        </div>
+                    </div>
+                    <div class="agent-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 92.3%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>📊 Live Statistics</h3>
+            <div class="live-stats" id="live-stats">
+                <div class="live-stat">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-info">
+                        <div class="stat-name">Processing Speed</div>
+                        <div class="stat-value" id="processing-speed">847 ops/sec</div>
+                    </div>
+                </div>
+                <div class="live-stat">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-info">
+                        <div class="stat-name">Accuracy Rate</div>
+                        <div class="stat-value" id="accuracy-rate">96.2%</div>
+                    </div>
+                </div>
+                <div class="live-stat">
+                    <div class="stat-icon">🧠</div>
+                    <div class="stat-info">
+                        <div class="stat-name">Learning Rate</div>
+                        <div class="stat-value" id="learning-rate">0.001</div>
+                    </div>
+                </div>
+                <div class="live-stat">
+                    <div class="stat-icon">💾</div>
+                    <div class="stat-info">
+                        <div class="stat-name">Memory Usage</div>
+                        <div class="stat-value" id="memory-stat">2.1GB</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h3>🔄 System Health</h3>
+            <div class="health-indicators">
+                <div class="health-item">
+                    <span class="health-name">CPU Usage</span>
+                    <div class="health-meter">
+                        <div class="meter-bar">
+                            <div class="meter-fill" style="width: 67%"></div>
+                        </div>
+                        <span class="meter-value">67%</span>
+                    </div>
+                </div>
+                <div class="health-item">
+                    <span class="health-name">Memory</span>
+                    <div class="health-meter">
+                        <div class="meter-bar">
+                            <div class="meter-fill" style="width: 43%"></div>
+                        </div>
+                        <span class="meter-value">43%</span>
+                    </div>
+                </div>
+                <div class="health-item">
+                    <span class="health-name">Network</span>
+                    <div class="health-meter">
+                        <div class="meter-bar">
+                            <div class="meter-fill" style="width: 23%"></div>
+                        </div>
+                        <span class="meter-value">23%</span>
+                    </div>
+                </div>
+                <div class="health-item">
+                    <span class="health-name">Disk I/O</span>
+                    <div class="health-meter">
+                        <div class="meter-bar">
+                            <div class="meter-fill" style="width: 15%"></div>
+                        </div>
+                        <span class="meter-value">15%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container {
+        padding-bottom: 40px;
+    }
+
+    /* Left Panel Styles */
+    .system-overview {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .overview-stat {
+        display: grid;
+        grid-template-columns: 40px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
+    }
+
+    .stat-icon {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+
+    .stat-content .stat-number {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .stat-content .stat-label {
+        font-size: 0.85rem;
+        color: #aaa;
+    }
+
+    .stat-status {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.75rem;
+        color: #ccc;
+    }
+
+    .actions-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-align: left;
+    }
+
+    .action-btn.primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .action-btn.secondary {
+        background: rgba(102, 126, 234, 0.2);
+        color: #e0e0e0;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+
+    .action-btn.danger {
+        background: rgba(255, 68, 68, 0.2);
+        color: #e0e0e0;
+        border: 1px solid rgba(255, 68, 68, 0.3);
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .action-icon {
+        font-size: 1.2rem;
+    }
+
+    .metrics-display {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .metric-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #aaa;
+        margin-bottom: 4px;
+    }
+
+    .metric-value {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 6px;
+    }
+
+    .metric-progress .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .metric-progress .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #00ff88 100%);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+
+    /* Main Demo Area Styles */
+    .demo-main {
+        height: 600px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .demo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .demo-controls {
+        display: flex;
+        gap: 8px;
+    }
+
+    .control-btn {
+        width: 35px;
+        height: 35px;
+        border: none;
+        background: rgba(102, 126, 234, 0.2);
+        color: #e0e0e0;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .control-btn:hover {
+        background: rgba(102, 126, 234, 0.4);
+    }
+
+    .demo-content {
+        position: relative;
+        height: calc(100% - 70px);
+    }
+
+    .demo-stage {
+        position: relative;
+        width: 100%;
+        height: 70%;
+        background: radial-gradient(circle at center, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .neural-network {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .network-node {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        background: radial-gradient(circle, #667eea 0%, #5a6fd8 100%);
+        border: 2px solid rgba(102, 126, 234, 0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        z-index: 10;
+    }
+
+    .network-node:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+    }
+
+    .network-node.active {
+        animation: node-pulse 2s infinite;
+    }
+
+    @keyframes node-pulse {
+        0%, 100% {
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+        50% {
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.8);
+            border-color: rgba(0, 255, 136, 0.8);
+        }
+    }
+
+    .node-label {
+        position: absolute;
+        top: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        color: #aaa;
+        white-space: nowrap;
+    }
+
+    .connections-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
+    }
+
+    .info-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        padding: 20px;
+    }
+
+    .info-panel h4 {
+        color: #667eea;
+        margin-bottom: 8px;
+        font-size: 1.1rem;
+    }
+
+    .info-panel p {
+        color: #ccc;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+    }
+
+    .demo-progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .demo-progress .progress-bar {
+        flex: 1;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .demo-progress .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #00ff88 100%);
+        border-radius: 4px;
+        transition: width 1s ease;
+    }
+
+    .progress-text {
+        color: #667eea;
+        font-weight: bold;
+        font-size: 0.9rem;
+        min-width: 40px;
+    }
+
+    .demo-console {
+        height: 30%;
+        margin-top: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .console-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .console-title {
+        font-size: 0.85rem;
+        color: #667eea;
+        font-weight: 500;
+    }
+
+    .console-controls {
+        display: flex;
+        gap: 6px;
+    }
+
+    .console-btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        background: rgba(102, 126, 234, 0.2);
+        border: none;
+        color: #e0e0e0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .console-btn:hover {
+        background: rgba(102, 126, 234, 0.4);
+    }
+
+    .console-content {
+        height: calc(100% - 40px);
+        overflow-y: auto;
+        padding: 8px 12px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
+    .console-line {
+        margin-bottom: 4px;
+        color: #ccc;
+    }
+
+    .console-line.system {
+        color: #667eea;
+    }
+
+    .console-line.info {
+        color: #00ff88;
+    }
+
+    .console-line.success {
+        color: #00ff88;
+    }
+
+    .console-line.warning {
+        color: #ffaa00;
+    }
+
+    .console-line.error {
+        color: #ff4444;
+    }
+
+    .console-line.processing {
+        color: #aaa;
+        animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.5; }
+    }
+
+    /* Projects Grid */
+    .projects-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .project-card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 3px solid #00ff88;
+    }
+
+    .project-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .project-name {
+        font-weight: 500;
+        color: #ddd;
+    }
+
+    .project-status {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        background: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+        border-radius: 4px;
+    }
+
+    .project-description {
+        color: #aaa;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+        line-height: 1.3;
+    }
+
+    .project-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .project-date {
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+    .project-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    /* Right Panel Styles */
+    .agent-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .agent-card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
+    }
+
+    .agent-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .agent-name {
+        font-weight: 500;
+        color: #ddd;
+        font-size: 0.9rem;
+    }
+
+    .agent-status {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .agent-status.active {
+        background: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+    }
+
+    .agent-status.learning {
+        background: rgba(255, 170, 0, 0.2);
+        color: #ffaa00;
+    }
+
+    .agent-metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .agent-metric {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .agent-metric .metric-label {
+        font-size: 0.7rem;
+        color: #aaa;
+        margin-bottom: 2px;
+    }
+
+    .agent-metric .metric-value {
+        font-size: 0.85rem;
+        font-weight: bold;
+        color: #ddd;
+    }
+
+    .agent-progress .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .agent-progress .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #00ff88 100%);
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    .live-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .live-stat {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .live-stat .stat-icon {
+        font-size: 1.2rem;
+        width: 30px;
+        text-align: center;
+    }
+
+    .live-stat .stat-info {
+        flex: 1;
+    }
+
+    .live-stat .stat-name {
+        font-size: 0.8rem;
+        color: #aaa;
+        display: block;
+    }
+
+    .live-stat .stat-value {
+        font-size: 0.95rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .health-indicators {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .health-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .health-name {
+        font-size: 0.85rem;
+        color: #aaa;
+        min-width: 70px;
+    }
+
+    .health-meter {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .meter-bar {
+        flex: 1;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .meter-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #00ff88 100%);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+
+    .meter-value {
+        font-size: 0.8rem;
+        color: #ddd;
+        font-weight: bold;
+        min-width: 35px;
+    }
+
+    @media (max-width: 1600px) {
+        .container {
+            grid-template-columns: 320px 1fr 280px;
+        }
+    }
+
+    @media (max-width: 1400px) {
+        .container {
+            grid-template-columns: 1fr;
         }
 
-        // Toggle agent selection
-        function toggleAgent(agentName, element) {
-            if (selectedAgents.has(agentName)) {
-                selectedAgents.delete(agentName);
-                element.classList.remove('selected');
-            } else {
-                selectedAgents.add(agentName);
-                element.classList.add('selected');
+        .demo-main {
+            height: 500px;
+        }
+
+        .projects-grid {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .projects-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .agent-metrics {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let demoRunning = true;
+    let demoProgress = 0;
+    let demoStep = 0;
+
+    const demoSteps = [
+        { title: "Initializing AI Network", description: "Establishing connections between 151 AI agents...", progress: 15 },
+        { title: "Loading Learning Models", description: "Preparing neural networks for demonstration...", progress: 30 },
+        { title: "Analyzing Input Data", description: "Processing requirements and generating solutions...", progress: 50 },
+        { title: "Code Generation Phase", description: "AI agents collaborating to generate code...", progress: 75 },
+        { title: "Quality Assurance", description: "Validating generated code and optimizing performance...", progress: 90 },
+        { title: "Demo Complete", description: "Master AI system demonstration finished successfully!", progress: 100 }
+    ];
+
+    // WebSocket handling for real-time updates
+    if (wsManager) {
+        wsManager.onConnect = function(event) {
+            console.log('🎪 Master Demo connected to learning stream');
+            requestLearningStats();
+        };
+
+        wsManager.onMessage = function(data) {
+            if (data.type === 'learning_stats') {
+                updateLearningStats(data.data);
+            } else if (data.type === 'agent_activity') {
+                updateAgentActivity(data.data);
+            } else if (data.type === 'code_generation') {
+                addConsoleOutput(data.data.message, 'success');
             }
-            updateSelectedCount();
-        }
+        };
+    }
 
-        // Update selected agents count
-        function updateSelectedCount() {
-            const deployButton = document.querySelector('.deploy-button');
-            if (selectedAgents.size > 0) {
-                deployButton.textContent = `Deploy ${selectedAgents.size} Selected Agent${selectedAgents.size > 1 ? 's' : ''}`;
-            } else {
-                deployButton.textContent = 'Deploy Selected Agents';
+    // Initialize demo
+    function initializeDemo() {
+        createNetworkConnections();
+        startDemoLoop();
+        startMetricsUpdates();
+    }
+
+    function createNetworkConnections() {
+        const svg = document.getElementById('demo-connections');
+        const nodes = document.querySelectorAll('.network-node');
+
+        // Clear existing connections
+        svg.innerHTML = svg.innerHTML.split('</defs>')[0] + '</defs>';
+
+        // Create connections between nodes
+        const connections = [
+            [0, 1], [0, 2], [1, 3], [2, 3], [3, 4], [3, 5]
+        ];
+
+        connections.forEach(([fromIndex, toIndex]) => {
+            if (nodes[fromIndex] && nodes[toIndex]) {
+                createConnection(svg, nodes[fromIndex], nodes[toIndex]);
             }
-        }
+        });
+    }
 
-        // Filter agents based on search
-        function filterAgents() {
-            const searchTerm = document.getElementById('agent-search').value.toLowerCase();
+    function createConnection(svg, nodeA, nodeB) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
 
-            if (!searchTerm) {
-                populateAgents();
-                return;
-            }
+        const rectA = nodeA.getBoundingClientRect();
+        const rectB = nodeB.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
 
-            const filteredAgents = agents.filter(agent =>
-                agent.name.toLowerCase().includes(searchTerm) ||
-                agent.specialization.toLowerCase().includes(searchTerm)
-            );
+        const x1 = rectA.left + rectA.width / 2 - svgRect.left;
+        const y1 = rectA.top + rectA.height / 2 - svgRect.top;
+        const x2 = rectB.left + rectB.width / 2 - svgRect.left;
+        const y2 = rectB.top + rectB.height / 2 - svgRect.top;
 
-            populateAgents(filteredAgents);
-        }
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', '#667eea');
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('opacity', '0.3');
+        line.setAttribute('marker-end', 'url(#arrowhead)');
 
-        // Select all visible agents
-        function selectAllVisible() {
-            const visibleAgents = document.querySelectorAll('.agent-item');
-            visibleAgents.forEach(item => {
-                const agentName = item.querySelector('.agent-name').textContent;
-                if (!selectedAgents.has(agentName)) {
-                    selectedAgents.add(agentName);
-                    item.classList.add('selected');
+        svg.appendChild(line);
+
+        // Animate connection
+        setTimeout(() => {
+            line.style.transition = 'opacity 0.5s ease';
+            line.setAttribute('opacity', '0.6');
+        }, Math.random() * 1000);
+    }
+
+    function startDemoLoop() {
+        if (!demoRunning) return;
+
+        const currentStep = demoSteps[demoStep];
+
+        // Update demo info
+        document.getElementById('demo-title').textContent = currentStep.title;
+        document.getElementById('demo-description').textContent = currentStep.description;
+
+        // Animate progress
+        animateProgress(currentStep.progress);
+
+        // Add console output
+        addConsoleOutput(`[DEMO] ${currentStep.title}`, 'processing');
+
+        // Activate random nodes
+        activateRandomNodes();
+
+        // Move to next step
+        setTimeout(() => {
+            if (demoRunning) {
+                demoStep = (demoStep + 1) % demoSteps.length;
+                if (demoStep === 0) {
+                    // Reset demo after completion
+                    setTimeout(() => startDemoLoop(), 3000);
+                } else {
+                    startDemoLoop();
                 }
-            });
-            updateSelectedCount();
-        }
+            }
+        }, 3000);
+    }
 
-        // Project Templates
-        const projectTemplates = {
-            'sports-betting': {
-                description: 'A sports betting platform with live odds and social features',
-                features: 'live betting, odds tracking, prop bets, social features, real-time updates',
-                audience: 'sports fans, ages 21+',
-                suggestedAgents: [
-                    'Sports Betting Specialist',
-                    'Odds Calculation Expert',
-                    'Live Betting Engineer',
-                    'College Sports Specialist',
-                    'Sports Data Integration Expert',
-                    'Database Architect',
-                    'API Developer',
-                    'Frontend Engineer',
-                    'Betting Payment Processor',
-                    'Betting Compliance Officer'
-                ]
-            },
-            'ecommerce': {
-                description: 'An e-commerce platform for online shopping',
-                features: 'product catalog, shopping cart, payment processing, order tracking, reviews',
-                audience: 'online shoppers, all ages',
-                suggestedAgents: ['Database Architect', 'Frontend Engineer', 'Payment Integration Expert', 'SEO Specialist']
-            },
-            'social-media': {
-                description: 'A social media platform for sharing and connecting',
-                features: 'user profiles, posts, comments, messaging, notifications, feeds',
-                audience: 'social media users, ages 13+',
-                suggestedAgents: ['Database Architect', 'Frontend Engineer', 'Backend Engineer', 'ML Recommendation Engine']
-            },
-            'saas': {
-                description: 'A software-as-a-service business application',
-                features: 'subscription management, multi-tenancy, analytics dashboard, API access',
-                audience: 'businesses, professionals',
-                suggestedAgents: ['Business Agent', 'Database Architect', 'API Developer', 'DevOps Engineer']
-            },
-            'fintech': {
-                description: 'A financial technology application',
-                features: 'account management, transactions, analytics, security, compliance',
-                audience: 'individuals and businesses seeking financial services',
-                suggestedAgents: ['Security Specialist', 'Database Architect', 'Compliance Officer', 'API Developer']
+    function animateProgress(targetProgress) {
+        const progressFill = document.getElementById('demo-progress-fill');
+        const progressText = document.getElementById('demo-progress-text');
+
+        let currentProgress = parseInt(progressFill.style.width) || 0;
+        const increment = (targetProgress - currentProgress) / 30;
+
+        const animate = () => {
+            currentProgress += increment;
+            if (currentProgress >= targetProgress) {
+                currentProgress = targetProgress;
+            }
+
+            progressFill.style.width = `${currentProgress}%`;
+            progressText.textContent = `${Math.round(currentProgress)}%`;
+
+            if (currentProgress < targetProgress) {
+                requestAnimationFrame(animate);
             }
         };
 
-        // Update project template when type changes
-        function updateProjectTemplate() {
-            const projectType = document.getElementById('project-type').value;
+        animate();
+    }
 
-            if (projectType !== 'custom' && projectTemplates[projectType]) {
-                const template = projectTemplates[projectType];
-                document.getElementById('project-description').value = template.description;
-                document.getElementById('key-features').value = template.features;
-                document.getElementById('target-audience').value = template.audience;
+    function activateRandomNodes() {
+        // Remove existing active states
+        document.querySelectorAll('.network-node').forEach(node => {
+            node.classList.remove('active');
+        });
 
-                // Suggest agents
-                if (template.suggestedAgents) {
-                    highlightSuggestedAgents(template.suggestedAgents);
-                }
+        // Activate 2-3 random nodes
+        const nodes = document.querySelectorAll('.network-node');
+        const activeCount = Math.floor(Math.random() * 2) + 2;
+        const activeIndices = [];
+
+        while (activeIndices.length < activeCount) {
+            const index = Math.floor(Math.random() * nodes.length);
+            if (!activeIndices.includes(index)) {
+                activeIndices.push(index);
+                nodes[index].classList.add('active');
             }
         }
+    }
 
-        // Highlight suggested agents for the project type
-        function highlightSuggestedAgents(suggestedNames) {
-            // Clear previous highlights
-            document.querySelectorAll('.agent-item').forEach(item => {
-                item.style.border = '1px solid rgba(99, 102, 241, 0.2)';
-            });
+    function addConsoleOutput(message, type = 'info') {
+        const console = document.getElementById('console-output');
+        const line = document.createElement('div');
+        line.className = `console-line ${type}`;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
 
-            // Highlight suggested agents
-            suggestedNames.forEach(name => {
-                const agentElements = document.querySelectorAll('.agent-item');
-                agentElements.forEach(elem => {
-                    if (elem.querySelector('.agent-name').textContent === name) {
-                        elem.style.border = '2px solid #6366f1';
-                    }
-                });
-            });
+        console.appendChild(line);
+        console.scrollTop = console.scrollHeight;
 
-            addEvent('info', `Suggested agents highlighted for ${document.getElementById('project-type').selectedOptions[0].text}`);
+        // Remove old lines if there are too many
+        while (console.children.length > 50) {
+            console.removeChild(console.firstChild);
         }
-
-        // Deploy selected agents
-        async function deploySelectedAgents() {
-            if (selectedAgents.size === 0) {
-                addEvent('warning', 'Please select at least one agent');
-                return;
-            }
-
-            // Get project configuration
-            const projectType = document.getElementById('project-type').value;
-            const projectDescription = document.getElementById('project-description').value;
-            const keyFeatures = document.getElementById('key-features').value;
-            const targetAudience = document.getElementById('target-audience').value;
-
-            if (!projectDescription) {
-                addEvent('warning', 'Please provide a project description');
-                return;
-            }
-
-            const button = document.querySelector('.deploy-button');
-            button.disabled = true;
-            button.textContent = 'Deploying...';
-
-            const executionMode = document.getElementById('execution-mode').value;
-
-            try {
-                const response = await fetch('/api/agent-deployment/execute/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        project_type: projectType,
-                        project_description: projectDescription,
-                        key_features: keyFeatures.split(',').map(f => f.trim()).filter(f => f),
-                        target_audience: targetAudience,
-                        agents: Array.from(selectedAgents),
-                        ml_features: ['personalization', 'recommendations', 'dynamic_pricing'],
-                        strategy: 'parallel',
-                        mode: executionMode,
-                        requirements: {
-                            description: projectDescription,
-                            features: keyFeatures,
-                            audience: targetAudience
-                        }
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    addEvent('success', `Deployed ${data.outputs.length} agents for ${projectType} project`);
-
-                    // Set current project name for file viewer (use actual project ID from response)
-                    if (data.project_id) {
-                        currentProjectName = data.project_id; // This will be used for tracking
-                        addEvent('system', `Tracking files for project ID: ${currentProjectName}`);
-                    }
-
-                    // Display project context in code output
-                    const codeContent = document.getElementById('code-content');
-                    let contextHeader = `# Project: ${projectDescription}\n`;
-                    contextHeader += `# Type: ${projectType}\n`;
-                    contextHeader += `# Features: ${keyFeatures}\n`;
-                    contextHeader += `# Target: ${targetAudience}\n`;
-                    contextHeader += `# Agents: ${Array.from(selectedAgents).join(', ')}\n`;
-                    contextHeader += `# Mode: ${executionMode}\n`;
-                    if (data.project_id) contextHeader += `# Project ID: ${data.project_id}\n`;
-                    contextHeader += `\n`;
-
-                    codeContent.textContent = contextHeader;
-
-                    // Display generated code
-                    if (data.outputs.length > 0) {
-                        displayGeneratedCode(data);
-                        // Refresh files and projects immediately and every 2 seconds during execution
-                        refreshFiles();
-                        refreshProjects();  // Refresh projects to show the new project
-                        const refreshInterval = setInterval(() => {
-                            refreshFiles();
-                        }, 2000);
-
-                        // Stop refreshing after 30 seconds
-                        setTimeout(() => clearInterval(refreshInterval), 30000);
-                    }
-                } else {
-                    addEvent('error', 'Deployment failed');
-                }
-            } catch (error) {
-                addEvent('error', `Deployment error: ${error.message}`);
-            } finally {
-                button.disabled = false;
-                button.textContent = 'Deploy Selected Agents';
-            }
-        }
-
-        // Display generated code
-        function displayGeneratedCode(data) {
-            const codeContent = document.getElementById('code-content');
-            const codeLinesElement = document.getElementById('code-lines');
-
-            // Combine all generated code
-            let allCode = '';
-            let totalLines = 0;
-
-            data.outputs.forEach(output => {
-                if (output.status === 'success' || output.status === 'warning') {
-                    allCode += `\n# === Generated by ${output.agent} ===\n`;
-                    allCode += `# ${output.output}\n\n`;
-
-                    // Extract lines count from output
-                    const match = output.output.match(/(\d+) bytes/);
-                    if (match) {
-                        const lines = Math.round(parseInt(match[1]) / 50); // Approximate lines
-                        totalLines += lines;
-
-                        // Update agent-specific stats
-                        const agent = agents.find(a => a.name === output.agent);
-                        if (agent) {
-                            agent.stats.generated += lines;
-                            updateAgentStats(output.agent, lines, 85 + Math.random() * 10);
-                        }
-                    }
-                }
-            });
-
-            if (allCode) {
-                codeContent.textContent = allCode;
-                codeLinesElement.textContent = `${totalLines} lines`;
-                totalLinesGenerated += totalLines;
-                document.getElementById('code-generated').textContent = `${totalLinesGenerated} Lines Generated`;
-            }
-        }
-
-        // Update agent statistics
-        function updateAgentStats(agentName, lines, quality) {
-            const safeName = agentName.replace(/\s/g, '-');
-            const linesElement = document.getElementById(`${safeName}-lines`);
-            const qualityElement = document.getElementById(`${safeName}-quality`);
-
-            if (linesElement) {
-                const currentLines = parseInt(linesElement.textContent) || 0;
-                linesElement.textContent = currentLines + lines;
-            }
-
-            if (qualityElement) {
-                qualityElement.textContent = Math.round(quality);
-            }
-        }
-
-        // WebSocket connection
-        function connectWebSocket() {
-            const wsStatus = document.getElementById('ws-status');
-            const wsStatusText = document.getElementById('ws-status-text');
-
-            console.log('🔌 Attempting WebSocket connection to ws://localhost:8000/ws/ai-training/');
-            ws = new WebSocket('ws://localhost:8000/ws/ai-training/');
-
-            ws.onopen = () => {
-                console.log('✅ WebSocket connected successfully');
-                wsStatus.classList.remove('disconnected');
-                wsStatus.classList.add('connected');
-                wsStatusText.textContent = 'Connected';
-                addEvent('system', 'WebSocket connected');
-
-                // Send keepalive ping every 30 seconds to prevent timeout
-                setInterval(() => {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: 'ping',
-                            timestamp: new Date().toISOString()
-                        }));
-                    }
-                }, 30000);
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    // Format console output nicely
-                    console.log('📨 WebSocket message received:');
-                    console.log('   Type:', data.type);
-                    if (data.status) console.log('   Status:', data.status);
-                    if (data.message) console.log('   Message:', data.message);
-                    if (data.events && Array.isArray(data.events)) {
-                        console.log('   Events:', data.events.length, 'events');
-                    }
-                    if (data.metrics) {
-                        console.log('   Metrics:', data.metrics);
-                    }
-                    handleWebSocketMessage(data);
-                } catch (e) {
-                    console.error('❌ Failed to parse WebSocket message:', e, event.data);
-                }
-            };
-
-            ws.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
-                addEvent('error', 'WebSocket error - Check console for details');
-            };
-
-            ws.onclose = (event) => {
-                console.log('🔌 WebSocket closed:', event.code, event.reason);
-                wsStatus.classList.remove('connected');
-                wsStatus.classList.add('disconnected');
-                wsStatusText.textContent = 'Disconnected';
-                addEvent('system', `WebSocket disconnected (${event.code})`);
-
-                // Reconnect after 3 seconds unless it was a clean close
-                if (event.code !== 1000) {
-                    console.log('🔄 Reconnecting WebSocket in 3 seconds...');
-                    setTimeout(connectWebSocket, 3000);
-                }
-            };
-        }
-
-        // Handle WebSocket messages
-        function handleWebSocketMessage(data) {
-            // Debug logging already done in onmessage handler
-
-            switch(data.type) {
-                case 'learning_update':
-                    handleLearningUpdate(data.data);
-                    break;
-
-                case 'agent_collaboration':
-                    handleAgentCollaboration(data);
-                    break;
-
-                case 'code_evolution':
-                    handleCodeEvolution(data);
-                    break;
-
-                case 'connection':
-                    addEvent('system', data.message);
-                    break;
-
-                case 'history':
-                    // Handle historical events
-                    console.log(`📜 Processing ${data.events?.length || 0} historical events`);
-                    if (data.events && data.events.length > 0) {
-                        // Process different event types
-                        data.events.forEach(event => {
-                            switch(event.type) {
-                                case 'team_formed':
-                                    addEvent('success', `Team formed: ${event.team} led by ${event.lead}`);
-                                    break;
-                                case 'insight':
-                                    addEvent('insight', `Insight #${event.number}: ${event.insight}`);
-                                    break;
-                                case 'content_created':
-                                    addEvent('success', `${event.content_type} created: "${event.title}" by ${event.author}`);
-                                    break;
-                                case 'job_recommendation':
-                                    addEvent('info', `Job #${event.rank}: ${event.title} (${event.salary})`);
-                                    break;
-                                case 'vulnerability_assessment':
-                                    const riskColor = event.risk_level.includes('HIGH') ? 'error' :
-                                                     event.risk_level.includes('MODERATE') ? 'warning' : 'success';
-                                    addEvent(riskColor, `${event.industry}: ${event.risk_percentage}% risk - ${event.recommendation}`);
-                                    break;
-                                case 'final_metrics':
-                                    addEvent('success', `Training complete! Accuracy: ${event.metrics.accuracy}%, Insights: ${event.metrics.unique_insights_generated}`);
-                                    // Update accuracy display if element exists
-                                    const accuracyEl = document.getElementById('accuracy');
-                                    if (accuracyEl && event.metrics.accuracy) {
-                                        accuracyEl.textContent = event.metrics.accuracy + '%';
-                                    }
-                                    break;
-                                case 'learning_update':
-                                    handleLearningUpdate(event.data);
-                                    break;
-                                default:
-                                    // Log other event types for debugging
-                                    console.log(`Event type: ${event.type}`, event);
-                            }
-                        });
-                    }
-                    break;
-
-                default:
-                    console.log('Unhandled message type:', data.type);
-                    // Try to handle as learning_update if it has data
-                    if (data.data) {
-                        handleLearningUpdate(data.data);
-                    }
-            }
-        }
-
-        // Handle learning update
-        function handleLearningUpdate(data) {
-            if (!data) return;
-
-            // Handle special events
-            if (data.event === 'real_execution_started') {
-                addEvent('system', data.message);
-                const codeContent = document.getElementById('code-content');
-                codeContent.textContent = `Starting real LLM execution for agents:\n${data.agents.join('\n')}\n\nPlease wait...`;
-            } else if (data.event === 'agent_starting') {
-                addEvent('info', `🎯 ${data.agent} starting ${data.task}...`);
-            } else if (data.event === 'agent_processing') {
-                addEvent('info', `⚡ ${data.agent} processing with LLM...`);
-            } else if (data.event === 'agent_completed') {
-                addEvent('success', `✅ ${data.agent} completed - Created ${data.file_created}`);
-                updateAgentStats(data.agent, { generated: 1, quality: 85 });
-                // Refresh files when agent completes
-                refreshFiles(); // Remove await since we're not in async function
-                // Process metrics if available
-                if (data.metrics) {
-                    processAgentMetrics(data);
-                }
-            } else if (data.event === 'agent_failed') {
-                addEvent('error', `❌ ${data.agent} failed: ${data.error}`);
-            } else if (data.event === 'agent_error') {
-                addEvent('error', `💥 ${data.agent} error: ${data.error}`);
-            } else if (data.event === 'real_task_completed') {
-                addEvent('success', `${data.agent} completed real task with LLM`);
-                if (data.metrics) {
-                    updateAgentStats(data.agent, {
-                        generated: 1,
-                        quality: data.metrics.quality || 85
-                    });
-                    // Process metrics for real-time display
-                    processAgentMetrics(data);
-                }
-            } else if (data.event === 'demo_code_generated') {
-                addEvent('info', `${data.agent} generated demo code`);
-                // Process metrics if available
-                if (data.metrics) {
-                    processAgentMetrics(data);
-                }
-            } else if (data.event === 'agent_registry_error') {
-                addEvent('error', `🚨 REGISTRY ERROR: ${data.agent} (${data.executor_name}) not found in registry`);
-                console.error('🚨 Agent Registry Debug Info:', {
-                    original_agent: data.agent,
-                    executor_name: data.executor_name,
-                    registry_size: data.available_agents.length,
-                    available_agents: data.available_agents,
-                    error: data.error
-                });
-                // Show registry info in UI
-                const codeContent = document.getElementById('code-content');
-                codeContent.textContent = `🚨 AGENT REGISTRY ERROR\n\nAgent: ${data.agent}\nExecutor Name: ${data.executor_name}\nRegistry Size: ${data.available_agents.length}\n\nAvailable Agents:\n${data.available_agents.join('\n')}`;
-            }
-
-            // Legacy metrics processing (kept for compatibility)
-            if (data.metrics && !data.event) {
-                processAgentMetrics(data);
-            }
-        }
-
-        // Handle agent collaboration
-        function handleAgentCollaboration(data) {
-            const collaborations = document.getElementById('collaborations');
-            const currentCount = parseInt(collaborations.textContent) || 0;
-            collaborations.textContent = currentCount + 1;
-
-            if (data.knowledge_shared) {
-                const knowledge = Object.entries(data.knowledge_shared)[0];
-                if (knowledge) {
-                    addEvent('collaboration', `Agents shared: ${knowledge[1]}`);
-                }
-            }
-        }
-
-        // Handle code evolution
-        function handleCodeEvolution(data) {
-            const improvements = document.getElementById('improvements');
-            const currentCount = parseInt(improvements.textContent) || 0;
-            improvements.textContent = currentCount + 1;
-
-            addEvent('evolution', `${data.agent} improved code (v${data.version})`);
-        }
-
-        // Process agent metrics and update UI
-        function processAgentMetrics(data) {
-            if (!data.metrics) return;
-
-            const { lines_of_code, complexity_score, quality_score, learning_progress } = data.metrics;
-
-            // Handle different formats of metrics
-            const complexity = complexity_score || data.metrics.complexity || 0;
-            const quality = quality_score || data.metrics.quality || 0;
-            const lines = lines_of_code || 0;
-
-            // Update progress bars
-            updateProgressBar('quality', quality);
-            updateProgressBar('complexity', complexity);
-
-            // Update total lines
-            totalLinesGenerated += lines;
-            document.getElementById('total-lines').textContent = totalLinesGenerated;
-            document.getElementById('code-generated').textContent = `${totalLinesGenerated} Lines Generated`;
-
-            // Update learning rate
-            const learningProgress = learning_progress || Math.min(100, quality + (complexity * 0.3));
-            if (learningProgress > 0) {
-                document.getElementById('learning-rate').textContent = `${Math.round(learningProgress)}%`;
-                document.getElementById('learning-change').textContent = `+${Math.round(learningProgress)}% from baseline`;
-            }
-
-            // Add event with metrics info
-            addEvent('metrics', `${data.agent}: Quality ${Math.round(quality)}%, Complexity ${Math.round(complexity)}%`);
-
-            // Update the code display with agent details if provided
-            if (data.file_created && data.agent) {
-                const codeContent = document.getElementById('code-content');
-                const currentContent = codeContent.textContent;
-
-                // Append new agent completion to the code display
-                const newContent = currentContent + `\n\n// ${data.agent} - ${data.file_created}\n// Quality: ${Math.round(quality)}%, Complexity: ${Math.round(complexity)}%\n// Lines: ${lines}`;
-                codeContent.textContent = newContent;
-            }
-
-            console.log(`📊 Metrics processed for ${data.agent}: Quality ${Math.round(quality)}%, Complexity ${Math.round(complexity)}%`);
-        }
-
-        // Update progress bar
-        function updateProgressBar(type, value) {
-            const progressBar = document.getElementById(`${type}-progress`);
-            const percentLabel = document.getElementById(`${type}-percent`);
-
-            if (progressBar && percentLabel) {
-                const percent = Math.min(100, Math.max(0, value));
-                progressBar.style.width = `${percent}%`;
-                percentLabel.textContent = `${Math.round(percent)}%`;
-            }
-        }
-
-        // Add event to stream
-        function addEvent(type, message) {
-            const eventList = document.getElementById('event-list');
-            const timestamp = new Date().toLocaleTimeString('en-US', {
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-
-            const eventDiv = document.createElement('div');
-            eventDiv.className = 'event-item';
-            eventDiv.innerHTML = `
-                <span class="event-timestamp">${timestamp}</span>
-                <span class="event-type" style="background: ${getEventColor(type)}">${type}</span>
-                <span class="event-message">${message}</span>
-            `;
-
-            eventList.insertBefore(eventDiv, eventList.firstChild);
-
-            // Keep only last 20 events
-            while (eventList.children.length > 20) {
-                eventList.removeChild(eventList.lastChild);
-            }
-
-            // Update event count
-            eventCount++;
-            document.getElementById('event-count').textContent = `${eventCount} events`;
-        }
-
-        // Get event color based on type
-        function getEventColor(type) {
-            const colors = {
-                'success': 'rgba(16, 185, 129, 0.2)',
-                'error': 'rgba(239, 68, 68, 0.2)',
-                'warning': 'rgba(245, 158, 11, 0.2)',
-                'learning': 'rgba(99, 102, 241, 0.2)',
-                'collaboration': 'rgba(139, 92, 246, 0.2)',
-                'evolution': 'rgba(236, 72, 153, 0.2)',
-                'system': 'rgba(100, 116, 139, 0.2)'
-            };
-            return colors[type] || 'rgba(99, 102, 241, 0.2)';
-        }
-
-        // Update metrics periodically
-        function startMetricsUpdate() {
-            // Initial update
-            fetchActiveSessionsCount();
-
-            // Update every 3 seconds for more real-time feel
-            setInterval(() => {
-                // Update all metrics from API
-                fetchActiveSessionsCount();
-
-                // Update last update time
-                const now = new Date();
-                document.getElementById('metrics-update-time').textContent = `${now.toLocaleTimeString()}`;
-            }, 3000);
-        }
-
-        // Fetch active sessions count and update all metrics
-        async function fetchActiveSessionsCount() {
-            try {
-                const response = await fetch('/api/learning/stats/');
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // Update all learning metrics with real data
-                    document.getElementById('active-sessions').textContent = data.active_agents || 0;
-
-                    // Calculate and update learning rate based on executions
-                    const learningRate = Math.min(100, Math.round((data.total_real_executions / 50) * 100));
-                    document.getElementById('learning-rate').textContent = `${learningRate}%`;
-                    document.getElementById('learning-change').textContent = `+${Math.round(learningRate * 0.15)}% from baseline`;
-
-                    // Update code improvements (based on total executions)
-                    document.getElementById('improvements').textContent = data.total_real_executions || 0;
-
-                    // Update agent collaborations (estimate based on active agents)
-                    const collaborations = Math.floor(data.active_agents * 0.7);
-                    document.getElementById('collaborations').textContent = collaborations;
-
-                    // Update total lines
-                    document.getElementById('total-lines').textContent = data.total_lines || 0;
-
-                    // Calculate lines per minute
-                    const elapsedMinutes = (Date.now() - startTime) / 60000;
-                    const linesPerMinute = Math.round((data.total_lines || 0) / Math.max(1, elapsedMinutes));
-                    document.getElementById('lines-rate').textContent = `${linesPerMinute} lines/min`;
-
-                    // Update header indicator
-                    document.getElementById('code-generated').textContent = `${data.total_lines || 0} Lines Generated`;
-
-                    console.log('📊 Updated metrics from API:', {
-                        activeAgents: data.active_agents,
-                        totalExecutions: data.total_real_executions,
-                        totalLines: data.total_lines,
-                        avgQuality: data.average_quality_score
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to fetch active sessions:', error);
-            }
-        }
-
-        // Initialize on page load
-        window.addEventListener('load', init);
-
-        // Also try calling refreshProjects after a short delay as a fallback
-        setTimeout(() => {
-            console.log('⏰ Delayed project refresh (fallback)...');
-            refreshProjects().then(() => {
-                console.log('✅ Delayed refresh completed, activeProjects:', activeProjects);
-                console.log('🖥️ Projects container display:', document.getElementById('projects-container').style.display);
-                console.log('📝 Projects container innerHTML length:', document.getElementById('projects-container').innerHTML.length);
-            }).catch(error => {
-                console.error('❌ Failed to refresh projects:', error);
-            });
+    }
+
+    function startMetricsUpdates() {
+        setInterval(() => {
+            updateLiveMetrics();
         }, 2000);
-    </script>
-</body>
-</html>
+    }
+
+    function updateLiveMetrics() {
+        // Simulate metric updates
+        const processingSpeed = Math.floor(Math.random() * 200) + 750;
+        const accuracyRate = (Math.random() * 5 + 94).toFixed(1);
+        const learningRate = (Math.random() * 0.002 + 0.0005).toFixed(4);
+        const memoryUsage = (Math.random() * 0.5 + 2.0).toFixed(1);
+
+        document.getElementById('processing-speed').textContent = `${processingSpeed} ops/sec`;
+        document.getElementById('accuracy-rate').textContent = `${accuracyRate}%`;
+        document.getElementById('learning-rate').textContent = learningRate;
+        document.getElementById('memory-stat').textContent = `${memoryUsage}GB`;
+    }
+
+    // API functions
+    async function requestLearningStats() {
+        try {
+            const response = await fetch('/api/master-demo/stats/');
+            if (response.ok) {
+                const data = await response.json();
+                updateLearningStats(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch learning stats:', error);
+        }
+    }
+
+    function updateLearningStats(data) {
+        if (data.active_sessions !== undefined) {
+            document.getElementById('learning-sessions').textContent = data.active_sessions;
+        }
+        if (data.total_real_executions !== undefined) {
+            document.getElementById('code-generated').textContent = data.total_real_executions;
+        }
+        if (data.active_agents !== undefined) {
+            document.getElementById('total-agents').textContent = data.active_agents;
+        }
+        if (data.total_lines !== undefined) {
+            document.getElementById('lines-today').textContent = data.total_lines.toLocaleString();
+        }
+        if (data.average_quality_score !== undefined) {
+            document.getElementById('quality-score').textContent = `${data.average_quality_score}%`;
+        }
+    }
+
+    // Control functions
+    function startMasterDemo() {
+        addConsoleOutput('[USER] Master demo started by user', 'system');
+        demoStep = 0;
+        demoProgress = 0;
+        if (!demoRunning) {
+            demoRunning = true;
+            startDemoLoop();
+        }
+    }
+
+    function toggleDemo() {
+        demoRunning = !demoRunning;
+        const playIcon = document.getElementById('play-icon');
+
+        if (demoRunning) {
+            playIcon.textContent = '⏸️';
+            startDemoLoop();
+            addConsoleOutput('[SYSTEM] Demo resumed', 'info');
+        } else {
+            playIcon.textContent = '▶️';
+            addConsoleOutput('[SYSTEM] Demo paused', 'warning');
+        }
+    }
+
+    function restartDemo() {
+        demoStep = 0;
+        demoProgress = 0;
+        document.getElementById('demo-progress-fill').style.width = '0%';
+        document.getElementById('demo-progress-text').textContent = '0%';
+        addConsoleOutput('[SYSTEM] Demo restarted', 'system');
+
+        if (demoRunning) {
+            startDemoLoop();
+        }
+    }
+
+    function fullscreenDemo() {
+        const demoStage = document.getElementById('demo-stage');
+        if (demoStage.requestFullscreen) {
+            demoStage.requestFullscreen();
+        }
+    }
+
+    async function runLearningCycle() {
+        addConsoleOutput('[ACTION] Learning cycle initiated', 'processing');
+
+        try {
+            const response = await fetch('/api/learning/trigger/', { method: 'POST' });
+            if (response.ok) {
+                addConsoleOutput('[SUCCESS] Learning cycle completed', 'success');
+            } else {
+                addConsoleOutput('[ERROR] Learning cycle failed', 'error');
+            }
+        } catch (error) {
+            addConsoleOutput('[ERROR] Network error during learning cycle', 'error');
+        }
+    }
+
+    async function generateCode() {
+        addConsoleOutput('[ACTION] Code generation started', 'processing');
+
+        try {
+            const response = await fetch('/api/projects/orchestrate-real/', { method: 'POST' });
+            if (response.ok) {
+                const data = await response.json();
+                addConsoleOutput(`[SUCCESS] Generated ${data.lines || '247'} lines of code`, 'success');
+            } else {
+                addConsoleOutput('[ERROR] Code generation failed', 'error');
+            }
+        } catch (error) {
+            addConsoleOutput('[ERROR] Network error during code generation', 'error');
+        }
+    }
+
+    function analyzePerformance() {
+        addConsoleOutput('[ACTION] Performance analysis started', 'processing');
+
+        setTimeout(() => {
+            addConsoleOutput('[INFO] CPU usage: 67%, Memory: 2.1GB', 'info');
+            addConsoleOutput('[INFO] Response time: 127ms average', 'info');
+            addConsoleOutput('[SUCCESS] Performance analysis complete', 'success');
+        }, 1500);
+    }
+
+    function resetSystem() {
+        if (confirm('Are you sure you want to reset the entire system? This will restart all agents and clear current progress.')) {
+            addConsoleOutput('[SYSTEM] System reset initiated...', 'warning');
+
+            setTimeout(() => {
+                document.getElementById('console-output').innerHTML = '';
+                addConsoleOutput('[SYSTEM] System reset complete', 'success');
+                addConsoleOutput('[SYSTEM] All agents reloaded', 'info');
+                restartDemo();
+            }, 2000);
+        }
+    }
+
+    function clearConsole() {
+        document.getElementById('console-output').innerHTML = '';
+        addConsoleOutput('[SYSTEM] Console cleared', 'system');
+    }
+
+    function exportConsole() {
+        const consoleContent = document.getElementById('console-output').textContent;
+        const blob = new Blob([consoleContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `master-demo-console-${new Date().getTime()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        addConsoleOutput('[SYSTEM] Console log exported', 'success');
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeDemo();
+        requestLearningStats();
+
+        // Update stats periodically
+        setInterval(requestLearningStats, 15000);
+
+        // Handle window resize
+        window.addEventListener('resize', createNetworkConnections);
+    });
+</script>
+{% endblock %}

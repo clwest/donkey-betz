@@ -63,6 +63,28 @@ class BlueskyHandler:
         """Clean up session"""
         if self.http_session:
             await self.http_session.close()
+            self.http_session = None
+
+    def __del__(self):
+        """Cleanup when instance is garbage collected"""
+        if self.http_session and not self.http_session.closed:
+            # Schedule cleanup for event loop
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(self.http_session.close())
+            except:
+                pass  # Best effort cleanup
+
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        await self.close()
 
     async def authenticate(self) -> bool:
         """
@@ -172,6 +194,11 @@ class BlueskyHandler:
         """
         if not await self.ensure_authenticated():
             return None
+
+        # Validate query parameter
+        if not query or not query.strip():
+            logger.warning(f"Empty query provided to search_posts, skipping search")
+            return []
 
         url = f"{self.session.service_endpoint}/xrpc/app.bsky.feed.searchPosts"
 
@@ -345,8 +372,13 @@ class BlueskyHandler:
                     return processed_posts
                 else:
                     error = await response.text()
-                    logger.error(f"Failed to get author feed: {error}")
-                    return None
+                    # Handle common error cases more gracefully
+                    if response.status == 400 and "Profile not found" in str(error):
+                        logger.warning(f"Profile @{actor} not found on Bluesky, skipping")
+                        return []
+                    else:
+                        logger.error(f"Failed to get author feed for @{actor}: {error}")
+                        return None
 
         except Exception as e:
             logger.error(f"Error getting author feed: {e}")

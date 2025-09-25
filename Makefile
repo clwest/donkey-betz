@@ -71,7 +71,8 @@ NC := \033[0m # No Color
         nginx-setup ssl-setup \
         monitoring-up monitoring-down \
         backup-all restore-all \
-        cache-clear ws-test clean-all
+        cache-clear ws-test clean-all \
+        start stop restart
 
 # =============================================================================
 # HELP AND DOCUMENTATION
@@ -84,10 +85,11 @@ help: ## Show this help message with enhanced categories
 	@echo "$(BLUE)=====================================================================$(NC)"
 	@echo ""
 	@echo "$(CYAN)🚀 QUICK START COMMANDS:$(NC)"
+	@echo "  $(YELLOW)make start$(NC)            - Start everything (Backend + WebSockets + Redis)"
+	@echo "  $(YELLOW)make stop$(NC)             - Stop all services"
 	@echo "  $(YELLOW)make dev$(NC)              - Start complete development environment"
-	@echo "  $(YELLOW)make build$(NC)            - Build all Docker images"
-	@echo "  $(YELLOW)make deploy$(NC)           - Deploy to production"
-	@echo "  $(YELLOW)make monitor$(NC)          - Check system health and status"
+	@echo "  $(YELLOW)make status$(NC)           - Check what's running"
+	@echo "  $(YELLOW)make monitor$(NC)          - Check system health"
 	@echo ""
 	@echo "$(GREEN)📦 Setup & Installation:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E "(install|setup)" | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-20s$(NC) %s\n", $$1, $$2}'
@@ -134,6 +136,53 @@ check-postgres: ## Verify PostgreSQL connection
 check-redis: ## Verify Redis connection
 	@echo "$(CYAN)Checking Redis connection...$(NC)"
 	@redis-cli -h localhost -p $(REDIS_PORT) ping >/dev/null 2>&1 && echo "$(GREEN)✅ Redis is responding$(NC)" || (echo "$(RED)❌ Redis not accessible$(NC)" && exit 1)
+
+# =============================================================================
+# SIMPLE START/STOP COMMANDS - NEW!
+# =============================================================================
+
+start: ## Start backend with WebSockets, Redis, and monitoring
+	@echo "$(BLUE)=====================================================================$(NC)"
+	@echo "$(BLUE)🚀 Starting Unified Platform (Simple Mode)$(NC)"
+	@echo "$(BLUE)=====================================================================$(NC)"
+	@echo ""
+	@make stop > /dev/null 2>&1
+	@echo "$(CYAN)Starting Redis...$(NC)"
+	@redis-server --daemonize yes > /dev/null 2>&1 || echo "$(YELLOW)Redis may already be running$(NC)"
+	@echo "$(GREEN)✅ Redis started$(NC)"
+	@echo ""
+	@echo "$(CYAN)Starting Django with WebSocket support (Daphne)...$(NC)"
+	@$(ACTIVATE) && python manage.py migrate --run-syncdb > /dev/null 2>&1 || true
+	@$(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application &
+	@echo "$(GREEN)✅ Backend started with WebSocket support$(NC)"
+	@echo ""
+	@sleep 3
+	@echo "$(GREEN)=====================================================================$(NC)"
+	@echo "$(GREEN)✅ Platform is running!$(NC)"
+	@echo "$(GREEN)=====================================================================$(NC)"
+	@echo ""
+	@echo "$(BLUE)🌐 ACCESS YOUR PLATFORM:$(NC)"
+	@echo "  $(YELLOW)AI Production Hub:$(NC)     http://localhost:$(BACKEND_PORT)/ai-production-hub/"
+	@echo "  $(YELLOW)AI Nexus:$(NC)              http://localhost:$(BACKEND_PORT)/ai-nexus/"
+	@echo "  $(YELLOW)Intelligence:$(NC)          http://localhost:$(BACKEND_PORT)/intelligence/"
+	@echo "  $(YELLOW)Admin Panel:$(NC)           http://localhost:$(BACKEND_PORT)/admin/"
+	@echo ""
+	@echo "$(CYAN)💡 Commands:$(NC)"
+	@echo "  • Use '$(YELLOW)make stop$(NC)' to stop everything"
+	@echo "  • Use '$(YELLOW)make status$(NC)' to check what's running"
+	@echo "  • Use '$(YELLOW)make restart$(NC)' to restart everything"
+	@echo ""
+
+stop: ## Stop all services
+	@echo "$(YELLOW)🛑 Stopping all services...$(NC)"
+	@pkill -f "daphne.*backend.asgi" 2>/dev/null || true
+	@pkill -f "python manage.py" 2>/dev/null || true
+	@pkill -f "runserver" 2>/dev/null || true
+	@lsof -ti:$(BACKEND_PORT) | xargs kill -9 2>/dev/null || true
+	@echo "$(GREEN)✅ All services stopped$(NC)"
+
+restart: stop start ## Restart all services
+	@echo "$(GREEN)✅ Services restarted$(NC)"
 
 # =============================================================================
 # UNIFIED ENVIRONMENT COMMANDS
@@ -248,7 +297,8 @@ _start-backend: ## Internal: Start Django backend with WebSocket support
 	@echo "$(CYAN)Starting Django backend with WebSocket support...$(NC)"
 	@cd $(PWD) && $(ACTIVATE) && python manage.py migrate --run-syncdb > /dev/null 2>&1 || true
 	@cd $(PWD) && $(ACTIVATE) && python manage.py collectstatic --noinput > /dev/null 2>&1 || true
-	@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) core.asgi:application 2>/dev/null || \
+	@echo "$(GREEN)Starting Daphne ASGI server for WebSocket support...$(NC)"
+	@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application 2>/dev/null || \
 		$(ACTIVATE) && python manage.py runserver 0.0.0.0:$(BACKEND_PORT)
 
 _start-frontend: ## Internal: Start React frontend

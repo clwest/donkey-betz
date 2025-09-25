@@ -19,6 +19,7 @@ class AgentCategory(models.Model):
     description = models.TextField(blank=True)
 
     class Meta:
+        app_label = 'core'
         verbose_name_plural = "Agent Categories"
 
     def __str__(self):
@@ -69,6 +70,7 @@ class Agent(models.Model):
         return f"{self.name} ({self.agent_type})"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-effectiveness_score', 'name']
 
 
@@ -104,6 +106,7 @@ class Advisor(models.Model):
         return f"{self.name} - {self.title}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-influence_score', 'name']
 
 
@@ -121,6 +124,7 @@ class AgentAssignment(models.Model):
     priority = models.IntegerField(default=5)  # 1-10
 
     class Meta:
+        app_label = 'core'
         unique_together = ['user', 'agent']
 
 
@@ -153,6 +157,9 @@ class AgentExecution(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        app_label = 'core'
+
     def __str__(self):
         return f"{self.agent.name} - {self.task[:50]}"
 
@@ -184,6 +191,9 @@ class Collaboration(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
 
     def __str__(self):
         return f"Collaboration: {self.objective[:50]}"
@@ -225,6 +235,7 @@ class Revenue(models.Model):
         return f"${self.amount} - {self.source_type}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']
 
 
@@ -271,6 +282,7 @@ class Opportunity(models.Model):
         return f"{self.title} - ${self.potential_revenue}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-match_score', '-created_at']
 
 
@@ -298,6 +310,9 @@ class Application(models.Model):
     # AI assistance
     assisted_by = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
     ai_confidence = models.IntegerField(default=0)  # 0-100
+
+    class Meta:
+        app_label = 'core'
 
 
 class AgentSolution(models.Model):
@@ -330,6 +345,7 @@ class AgentSolution(models.Model):
         return f"{self.agent.name}: {self.title}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']
 
 
@@ -365,6 +381,7 @@ class AgentLearning(models.Model):
         return f"{self.teacher_agent.name} → {self.student_agent.name}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']
 
 
@@ -398,6 +415,7 @@ class SpiderData(models.Model):
         return f"Spider Data: {self.spider_name} - {self.data_type}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']
 
 
@@ -429,4 +447,5 @@ class AdvisorInsight(models.Model):
         return f"Insight from {self.advisor.name}: {self.content[:50]}"
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']

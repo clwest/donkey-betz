@@ -18,6 +18,8 @@ from .agent_monitor_consumer_simple import AgentMonitorConsumer
 from .deliverables_consumer import DeliverablesConsumer
 from .freelance_consumer import FreelanceConsumer
 from .consumers_ai_training import AITrainingConsumer
+from .consumers_consciousness import ConsciousnessConsumer
+from .command_center_ai import CommandCenterAIConsumer
 
 # Import SpiderWebSocketConsumer properly
 try:
@@ -47,6 +49,9 @@ websocket_urlpatterns = [
     # AI Training WebSocket for learning updates
     re_path(r'^ws/ai-training/$', AITrainingConsumer.as_asgi()),
 
+    # Consciousness Stream WebSocket for real-time self-awareness updates
+    re_path(r'^ws/consciousness/$', ConsciousnessConsumer.as_asgi()),
+
     # Spider Dashboard WebSocket for real-time updates
     re_path(r'^ws/spider-updates/$', SpiderWebSocketConsumer.as_asgi() if SpiderWebSocketConsumer else consumers.AgentProgressConsumer.as_asgi()),
 
@@ -74,8 +79,9 @@ websocket_urlpatterns = [
     re_path(r'^ws/enhanced-neural-orchestra/$', consumers.NeuralOrchestraConsumer.as_asgi()),
     re_path(r'^ws/control/$', orchestra_consumers.ControlConsumer.as_asgi()),
 
-    # Command Center & Intelligence WebSockets
-    re_path(r'^ws/command-center/$', consumers.CommandCenterConsumer.as_asgi()),
+    # Command Center & Intelligence WebSockets - Enhanced with AI
+    re_path(r'^ws/command-center/$', CommandCenterAIConsumer.as_asgi()),
+    re_path(r'^ws/command-center-ai/$', CommandCenterAIConsumer.as_asgi()),  # AI-enhanced route
     re_path(r'^ws/opportunity-scanner/$', consumers.OpportunityScannerConsumer.as_asgi()),
     re_path(r'^ws/intelligence/$', consumers.CommandCenterConsumer.as_asgi()),
     re_path(r'^ws/decisions/$', consumers.CommandCenterConsumer.as_asgi()),

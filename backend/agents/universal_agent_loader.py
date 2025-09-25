@@ -4,11 +4,15 @@ Universal Agent Loader - Connects all 151 agents to the executor
 
 This module bridges the gap between database-stored agent templates
 and the concrete executor, enabling all 151 agents to be executed.
+
+Enhanced with Bluesky social intelligence learning capabilities for
+dynamic agent knowledge updates and real-time market intelligence.
 """
 
 import logging
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import datetime
 from agents.models import UnifiedAgentTemplate
 from agents.registry import agent_registry
 from asgiref.sync import sync_to_async
@@ -338,3 +342,603 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
 # Required imports for dynamic execution
 import json
 from datetime import datetime
+
+
+# ================================================================
+# BLUESKY LEARNING ENHANCEMENT FOR AGENTS
+# ================================================================
+
+class SocialIntelligenceEnhancer:
+    """
+    Enhances agents with Bluesky and Reddit social intelligence learning capabilities.
+    Provides real-time community insights, expert opinions, and market intelligence.
+    """
+
+    def __init__(self):
+        self.bluesky_enabled = False
+        self.reddit_enabled = False
+        self.bluesky_handler = None
+        self.bluesky_collector = None
+        self.bluesky_learning_bridge = None
+        self.reddit_handler = None
+        self.reddit_learning_bridge = None
+
+        # Initialize social media integrations
+        self._initialize_bluesky_integration()
+        self._initialize_reddit_integration()
+
+    def _initialize_bluesky_integration(self):
+        """Initialize Bluesky integration for agent learning"""
+        try:
+            from ..spiders.bluesky_handler import bluesky_handler, bluesky_collector
+            from ..intelligence.bluesky_learning_bridge import bluesky_learning_bridge
+
+            self.bluesky_handler = bluesky_handler
+            self.bluesky_collector = bluesky_collector
+            self.bluesky_learning_bridge = bluesky_learning_bridge
+            self.bluesky_enabled = True
+
+            logger.info("🦋 Bluesky agent enhancement enabled")
+
+        except ImportError as e:
+            logger.warning(f"Bluesky integration not available for agents: {e}")
+            self.bluesky_enabled = False
+
+    def _initialize_reddit_integration(self):
+        """Initialize Reddit integration for agent learning"""
+        try:
+            from ..spiders.reddit_handler import RedditHandler
+            from ..intelligence.reddit_learning_bridge import get_reddit_learning_bridge
+
+            self.reddit_handler = RedditHandler()
+            self.reddit_learning_bridge = get_reddit_learning_bridge()
+            self.reddit_enabled = True
+
+            logger.info("🔴 Reddit agent enhancement enabled")
+
+        except ImportError as e:
+            logger.warning(f"Reddit integration not available for agents: {e}")
+            self.reddit_enabled = False
+
+    async def enhance_agent_with_social_intelligence(self, agent_instance, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Enhance an agent with combined Bluesky and Reddit intelligence
+
+        Args:
+            agent_instance: The agent to enhance
+            context: Optional context with task details
+
+        Returns:
+            Combined enhancement data from both platforms
+        """
+        combined_data = {
+            'agent': getattr(agent_instance, 'agent_name', 'unknown'),
+            'specialization': getattr(agent_instance, 'specialization', 'general'),
+            'timestamp': datetime.now().isoformat(),
+            'bluesky_intelligence': {},
+            'reddit_intelligence': {},
+            'combined_insights': [],
+            'consensus_recommendations': [],
+            'multi_platform_trends': []
+        }
+
+        # Get Bluesky intelligence
+        if self.bluesky_enabled:
+            bluesky_data = await self.enhance_agent_with_bluesky_intelligence(agent_instance, context)
+            combined_data['bluesky_intelligence'] = bluesky_data
+
+        # Get Reddit intelligence
+        if self.reddit_enabled:
+            reddit_data = await self.enhance_agent_with_reddit_intelligence(agent_instance, context)
+            combined_data['reddit_intelligence'] = reddit_data
+
+        # Combine insights from both platforms
+        all_insights = []
+
+        if 'insights' in combined_data['bluesky_intelligence']:
+            for insight in combined_data['bluesky_intelligence']['insights']:
+                insight['source'] = 'bluesky'
+                all_insights.append(insight)
+
+        if 'insights' in combined_data['reddit_intelligence']:
+            for insight in combined_data['reddit_intelligence']['insights']:
+                insight['source'] = 'reddit'
+                all_insights.append(insight)
+
+        # Sort by confidence/relevance
+        all_insights.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+        combined_data['combined_insights'] = all_insights[:20]
+
+        # Merge recommendations
+        recommendations = []
+
+        if 'recommendations' in combined_data['bluesky_intelligence']:
+            for rec in combined_data['bluesky_intelligence']['recommendations']:
+                recommendations.append({'source': 'bluesky', 'recommendation': rec})
+
+        if 'recommendations' in combined_data['reddit_intelligence']:
+            for rec in combined_data['reddit_intelligence']['recommendations']:
+                recommendations.append({'source': 'reddit', 'recommendation': rec})
+
+        combined_data['consensus_recommendations'] = recommendations[:15]
+
+        # Identify cross-platform trends
+        bluesky_topics = combined_data['bluesky_intelligence'].get('trending_keywords', [])
+        reddit_topics = [t.get('keywords', []) for t in combined_data['reddit_intelligence'].get('trending_topics', [])]
+        reddit_topics = sum(reddit_topics, [])  # Flatten list
+
+        # Find common trends
+        common_trends = list(set(bluesky_topics) & set(reddit_topics))
+        combined_data['multi_platform_trends'] = {
+            'bluesky_only': list(set(bluesky_topics) - set(reddit_topics))[:5],
+            'reddit_only': list(set(reddit_topics) - set(bluesky_topics))[:5],
+            'consensus_trends': common_trends[:5]
+        }
+
+        # Update agent's learning context
+        if hasattr(agent_instance, 'learning_context'):
+            agent_instance.learning_context.update({
+                'last_social_update': datetime.now().isoformat(),
+                'platforms_used': ['bluesky', 'reddit'],
+                'key_insights': combined_data['combined_insights'][:10],
+                'active_trends': combined_data['multi_platform_trends']['consensus_trends']
+            })
+
+        return combined_data
+
+    async def enhance_agent_with_reddit_intelligence(self, agent_instance, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Enhance an agent with real-time Reddit intelligence
+
+        Args:
+            agent_instance: The agent to enhance
+            context: Optional context with task details
+
+        Returns:
+            Enhanced intelligence data from Reddit
+        """
+        if not self.reddit_enabled:
+            return {"error": "Reddit integration not available"}
+
+        try:
+            # Get agent specialization
+            specialization = getattr(agent_instance, 'specialization', 'general')
+            agent_name = getattr(agent_instance, 'agent_name', 'unknown')
+
+            # Get Reddit insights for this agent
+            reddit_insights = await self.reddit_learning_bridge.get_insights_for_agent(
+                agent_name,
+                specialization
+            )
+
+            # Get trending topics relevant to agent
+            trending_topics = await self.reddit_learning_bridge.get_trending_topics()
+
+            # Build community consensus on agent's domain
+            consensus = None
+            if context and 'query' in context:
+                consensus = await self.reddit_learning_bridge.get_community_consensus(
+                    context['query']
+                )
+
+            # Structure the enhancement data
+            enhancement_data = {
+                'source': 'reddit',
+                'agent': agent_name,
+                'specialization': specialization,
+                'insights': [insight.to_dict() for insight in reddit_insights[:10]],
+                'trending_topics': [topic.to_dict() for topic in trending_topics[:5]],
+                'community_consensus': consensus.to_dict() if consensus else None,
+                'subreddits_monitored': self._get_relevant_subreddits(specialization),
+                'enhancement_timestamp': datetime.now().isoformat()
+            }
+
+            # Extract actionable recommendations
+            recommendations = []
+            for insight in reddit_insights[:5]:
+                if insight.actionable_advice:
+                    recommendations.extend(insight.actionable_advice[:2])
+
+            enhancement_data['recommendations'] = recommendations[:10]
+
+            return enhancement_data
+
+        except Exception as e:
+            logger.error(f"Error enhancing agent with Reddit: {e}")
+            return {"error": str(e)}
+
+    def _get_relevant_subreddits(self, specialization: str) -> List[str]:
+        """Get relevant subreddits for agent specialization"""
+        subreddit_mapping = {
+            'programming': ['programming', 'learnprogramming', 'webdev'],
+            'ai': ['MachineLearning', 'artificial', 'LocalLLaMA'],
+            'investing': ['investing', 'stocks', 'ValueInvesting'],
+            'business': ['Entrepreneur', 'startups', 'smallbusiness'],
+            'crypto': ['CryptoCurrency', 'Bitcoin', 'ethereum'],
+            'career': ['cscareerquestions', 'careerguidance', 'jobs'],
+            'data': ['datascience', 'bigdata', 'dataengineering']
+        }
+
+        # Find matching subreddits
+        for key, subreddits in subreddit_mapping.items():
+            if key in specialization.lower():
+                return subreddits
+
+        # Default subreddits
+        return ['technology', 'Futurology', 'tech']
+
+    async def enhance_agent_with_bluesky_intelligence(self, agent_instance, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Enhance an agent with real-time Bluesky intelligence
+
+        Args:
+            agent_instance: The agent instance to enhance
+            context: Additional context for intelligence gathering
+
+        Returns:
+            Enhancement data with insights and learning updates
+        """
+        if not self.bluesky_enabled:
+            return {'error': 'Bluesky integration not available'}
+
+        try:
+            # Determine agent specialization and keywords
+            specialization = getattr(agent_instance, 'specialization', 'general')
+            capabilities = getattr(agent_instance, 'capabilities', [])
+
+            # Generate relevant keywords based on agent type
+            keywords = self._generate_agent_keywords(specialization, capabilities, context)
+
+            # Collect Bluesky intelligence
+            intelligence = await self.bluesky_collector.collect_intelligence(
+                keywords=keywords,
+                max_posts_per_keyword=8
+            )
+
+            # Extract agent-specific insights
+            agent_insights = await self._extract_agent_specific_insights(
+                agent_instance, intelligence, context
+            )
+
+            # Get market sentiment for agent's domain
+            market_sentiment = self._analyze_agent_market_sentiment(
+                intelligence, specialization
+            )
+
+            # Get expert insights relevant to agent
+            expert_insights = await self._get_relevant_expert_insights(
+                specialization, keywords
+            )
+
+            # Update agent's learning context
+            if hasattr(agent_instance, 'learning_context'):
+                agent_instance.learning_context.update({
+                    'last_bluesky_update': datetime.now().isoformat(),
+                    'market_sentiment': market_sentiment,
+                    'key_insights': agent_insights[:5],
+                    'expert_opinions': expert_insights[:3]
+                })
+
+            enhancement_data = {
+                'agent_name': getattr(agent_instance, 'agent_name', 'unknown'),
+                'specialization': specialization,
+                'timestamp': datetime.now().isoformat(),
+                'intelligence_summary': {
+                    'total_posts_analyzed': len(intelligence.get('posts', [])),
+                    'high_quality_insights': len(agent_insights),
+                    'market_sentiment_score': market_sentiment.get('overall_sentiment', 0),
+                    'expert_insights_count': len(expert_insights)
+                },
+                'actionable_insights': agent_insights,
+                'market_context': market_sentiment,
+                'expert_guidance': expert_insights,
+                'learning_updates': self._generate_agent_learning_updates(
+                    agent_instance, intelligence, agent_insights
+                )
+            }
+
+            logger.info(f"🦋 Enhanced {getattr(agent_instance, 'agent_name', 'agent')} with {len(agent_insights)} Bluesky insights")
+
+            return enhancement_data
+
+        except Exception as e:
+            logger.error(f"Error enhancing agent with Bluesky: {e}")
+            return {'error': str(e)}
+
+    def _generate_agent_keywords(self, specialization: str, capabilities: List[str], context: Dict = None) -> List[str]:
+        """Generate relevant keywords for an agent's Bluesky intelligence gathering"""
+        base_keywords = []
+
+        # Keywords based on specialization
+        specialization_keywords = {
+            'content_creator': ['content creation', 'writing', 'social media', 'marketing'],
+            'job_matcher': ['jobs', 'hiring', 'career', 'employment', 'remote work'],
+            'financial_advisor': ['finance', 'investment', 'market', 'trading', 'economy'],
+            'tech_consultant': ['technology', 'software', 'programming', 'AI', 'development'],
+            'business_analyst': ['business', 'strategy', 'analysis', 'startup', 'growth'],
+            'market_researcher': ['market research', 'trends', 'consumer behavior', 'data'],
+            'general': ['business', 'technology', 'innovation', 'trends']
+        }
+
+        base_keywords.extend(specialization_keywords.get(specialization, ['business', 'technology']))
+
+        # Add capability-based keywords
+        for capability in capabilities:
+            if 'content' in capability.lower():
+                base_keywords.append('content marketing')
+            elif 'analysis' in capability.lower():
+                base_keywords.append('data analysis')
+            elif 'automation' in capability.lower():
+                base_keywords.append('automation')
+
+        # Add context-based keywords
+        if context:
+            if 'industry' in context:
+                base_keywords.append(context['industry'])
+            if 'topic' in context:
+                base_keywords.append(context['topic'])
+
+        return list(set(base_keywords[:6]))  # Remove duplicates, limit to 6
+
+    async def _extract_agent_specific_insights(self, agent_instance, intelligence: Dict, context: Dict) -> List[Dict]:
+        """Extract insights specifically relevant to the agent"""
+        agent_insights = []
+        posts = intelligence.get('posts', [])
+
+        specialization = getattr(agent_instance, 'specialization', 'general')
+
+        for post in posts:
+            # Calculate relevance to agent
+            relevance_score = self._calculate_agent_post_relevance(post, specialization, context)
+
+            if relevance_score > 0.6:  # High relevance threshold
+                insight = {
+                    'content': post['text'],
+                    'relevance_score': relevance_score,
+                    'engagement': post['metrics']['engagement'],
+                    'author': post['author']['handle'],
+                    'timestamp': post['created_at'],
+                    'actionable_elements': self._extract_actionable_elements(post['text']),
+                    'key_topics': self._extract_key_topics(post['text'], specialization)
+                }
+                agent_insights.append(insight)
+
+        # Sort by relevance and engagement
+        agent_insights.sort(
+            key=lambda x: (x['relevance_score'] * 0.7 + (x['engagement'] / 100) * 0.3),
+            reverse=True
+        )
+
+        return agent_insights[:10]  # Return top 10 insights
+
+    def _calculate_agent_post_relevance(self, post: Dict, specialization: str, context: Dict) -> float:
+        """Calculate how relevant a post is to a specific agent"""
+        text_lower = post['text'].lower()
+        relevance_score = 0.0
+
+        # Specialization-specific relevance keywords
+        relevance_keywords = {
+            'content_creator': ['content', 'writing', 'creator', 'audience', 'engagement', 'viral'],
+            'job_matcher': ['jobs', 'hiring', 'career', 'salary', 'skills', 'interview'],
+            'financial_advisor': ['investment', 'portfolio', 'market', 'returns', 'risk', 'finance'],
+            'tech_consultant': ['technology', 'software', 'AI', 'programming', 'development', 'tech stack'],
+            'business_analyst': ['business', 'strategy', 'revenue', 'growth', 'analysis', 'metrics'],
+            'general': ['business', 'opportunity', 'growth', 'strategy', 'market']
+        }
+
+        keywords = relevance_keywords.get(specialization, relevance_keywords['general'])
+
+        # Calculate keyword matches
+        keyword_matches = sum(1 for keyword in keywords if keyword in text_lower)
+        relevance_score += keyword_matches * 0.15
+
+        # Engagement boost
+        engagement = post['metrics']['engagement']
+        relevance_score += min(0.3, engagement / 100)
+
+        # Content quality (length and structure)
+        if len(post['text']) > 100:
+            relevance_score += 0.1
+        if len(post['text']) > 200:
+            relevance_score += 0.1
+
+        # Context relevance
+        if context:
+            for key, value in context.items():
+                if str(value).lower() in text_lower:
+                    relevance_score += 0.2
+
+        return min(1.0, relevance_score)
+
+    def _analyze_agent_market_sentiment(self, intelligence: Dict, specialization: str) -> Dict:
+        """Analyze market sentiment specific to the agent's domain"""
+        sentiment_data = {
+            'overall_sentiment': 0.0,
+            'confidence': 0.0,
+            'trend_direction': 'neutral',
+            'key_concerns': [],
+            'opportunities': []
+        }
+
+        try:
+            from textblob import TextBlob
+
+            posts = intelligence.get('posts', [])
+            if not posts:
+                return sentiment_data
+
+            total_sentiment = 0
+            sentiment_count = 0
+
+            for post in posts:
+                # Analyze sentiment
+                blob = TextBlob(post['text'])
+                sentiment = blob.sentiment.polarity
+
+                # Weight by engagement and relevance
+                weight = 1 + (post['metrics']['engagement'] / 50)
+                weighted_sentiment = sentiment * weight
+
+                total_sentiment += weighted_sentiment
+                sentiment_count += weight
+
+                # Extract concerns and opportunities
+                text_lower = post['text'].lower()
+                if sentiment < -0.2 and post['metrics']['engagement'] > 10:
+                    sentiment_data['key_concerns'].append(post['text'][:80] + '...')
+                elif sentiment > 0.2 and post['metrics']['engagement'] > 10:
+                    sentiment_data['opportunities'].append(post['text'][:80] + '...')
+
+            if sentiment_count > 0:
+                avg_sentiment = total_sentiment / sentiment_count
+                sentiment_data['overall_sentiment'] = avg_sentiment
+                sentiment_data['confidence'] = min(1.0, sentiment_count / 30)
+
+                # Determine trend direction
+                if avg_sentiment > 0.2:
+                    sentiment_data['trend_direction'] = 'positive'
+                elif avg_sentiment < -0.2:
+                    sentiment_data['trend_direction'] = 'negative'
+
+        except ImportError:
+            logger.warning("TextBlob not available for sentiment analysis")
+
+        return sentiment_data
+
+    async def _get_relevant_expert_insights(self, specialization: str, keywords: List[str]) -> List[Dict]:
+        """Get expert insights relevant to the agent's specialization"""
+        expert_insights = []
+
+        # Map specializations to relevant experts
+        expert_mapping = {
+            'content_creator': ['dhh.bsky.social', 'pmarca.bsky.social'],
+            'job_matcher': ['sama.bsky.social', 'pmarca.bsky.social'],
+            'financial_advisor': ['naval.bsky.social', 'pmarca.bsky.social'],
+            'tech_consultant': ['karpathy.ai', 'dhh.bsky.social'],
+            'business_analyst': ['pmarca.bsky.social', 'sama.bsky.social']
+        }
+
+        relevant_experts = expert_mapping.get(specialization, ['pmarca.bsky.social', 'sama.bsky.social'])
+
+        try:
+            for expert in relevant_experts:
+                posts = await self.bluesky_handler.get_author_feed(expert, limit=5)
+
+                for post in posts:
+                    # Check if post is relevant to keywords
+                    text_lower = post['text'].lower()
+                    keyword_matches = sum(1 for keyword in keywords if keyword.lower() in text_lower)
+
+                    if keyword_matches > 0 and post['metrics']['engagement'] > 5:
+                        expert_insights.append({
+                            'expert': expert,
+                            'content': post['text'],
+                            'engagement': post['metrics']['engagement'],
+                            'timestamp': post['created_at'],
+                            'relevance_keywords': [k for k in keywords if k.lower() in text_lower]
+                        })
+
+        except Exception as e:
+            logger.warning(f"Error getting expert insights: {e}")
+
+        return expert_insights[:5]  # Top 5 expert insights
+
+    def _generate_agent_learning_updates(self, agent_instance, intelligence: Dict, insights: List[Dict]) -> List[str]:
+        """Generate learning updates for the agent"""
+        learning_updates = []
+
+        try:
+            # Extract key learning points from high-quality insights
+            for insight in insights[:3]:  # Top 3 insights
+                if insight['engagement'] > 15:
+                    key_topics = insight.get('key_topics', [])
+                    for topic in key_topics:
+                        learning_updates.append(f"New trend identified: {topic}")
+
+                # Extract actionable learnings
+                actionable = insight.get('actionable_elements', [])
+                for action in actionable:
+                    learning_updates.append(f"Actionable insight: {action}")
+
+            # Market trend learnings
+            market_sentiment = self._analyze_agent_market_sentiment(intelligence,
+                getattr(agent_instance, 'specialization', 'general'))
+
+            if market_sentiment['trend_direction'] != 'neutral':
+                learning_updates.append(
+                    f"Market trend: {market_sentiment['trend_direction']} sentiment detected"
+                )
+
+        except Exception as e:
+            logger.warning(f"Error generating learning updates: {e}")
+
+        return learning_updates[:7]  # Limit to 7 learning updates
+
+    def _extract_actionable_elements(self, text: str) -> List[str]:
+        """Extract actionable elements from text"""
+        import re
+
+        actionable_patterns = [
+            r'you should (.+?)(?:\.|!|$)',
+            r'try (.+?)(?:\.|!|$)',
+            r'consider (.+?)(?:\.|!|$)',
+            r'recommend (.+?)(?:\.|!|$)'
+        ]
+
+        actionables = []
+        for pattern in actionable_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            actionables.extend([match.strip() for match in matches if len(match.strip()) > 8])
+
+        return actionables[:3]
+
+    def _extract_key_topics(self, text: str, specialization: str) -> List[str]:
+        """Extract key topics from text relevant to specialization"""
+        # Simplified topic extraction
+        words = text.lower().split()
+
+        # Specialization-specific important words
+        important_words_by_spec = {
+            'content_creator': ['content', 'audience', 'engagement', 'brand', 'storytelling'],
+            'job_matcher': ['skills', 'career', 'interview', 'salary', 'remote'],
+            'financial_advisor': ['investment', 'portfolio', 'risk', 'returns', 'market'],
+            'tech_consultant': ['technology', 'software', 'development', 'architecture', 'scalability']
+        }
+
+        spec_words = important_words_by_spec.get(specialization, [])
+
+        # Find relevant words in text
+        topics = []
+        for word in spec_words:
+            if word in text.lower():
+                topics.append(word)
+
+        return topics[:3]
+
+
+# Global enhancer instance (supports both Bluesky and Reddit)
+social_intelligence_enhancer = SocialIntelligenceEnhancer()
+
+# Legacy alias for backward compatibility
+bluesky_agent_enhancer = social_intelligence_enhancer
+
+
+async def enhance_agent_with_bluesky(agent_instance, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Public interface to enhance an agent with Bluesky intelligence
+
+    Args:
+        agent_instance: The agent to enhance
+        context: Optional context for intelligence gathering
+
+    Returns:
+        Enhancement data with insights and learning updates
+    """
+    return await bluesky_agent_enhancer.enhance_agent_with_bluesky_intelligence(
+        agent_instance, context
+    )
+
+
+def is_bluesky_learning_enabled() -> bool:
+    """Check if Bluesky learning is enabled for agents"""
+    return bluesky_agent_enhancer.bluesky_enabled

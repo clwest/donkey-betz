@@ -1,0 +1,13 @@
+```
+Django>=3.2,<4.2
+djangorestframework>=3.12,<4.0
+psycopg2>=2.9,<3.0  # PostgreSQL database adapter
+django-cors-headers>=3.10,<4.0  # For handling CORS
+django-filter>=2.4,<3.0  # For filtering querysets in DRF
+Pillow>=8.0,<10.0  # For image handling in posts
+djangorestframework-simplejwt>=4.0,<5.0  # For JWT authentication
+django-ckeditor>=6.0,<7.0  # For rich text editing in posts
+djangorestframework-docs>=0.2,<1.0  # Documentation for DRF APIs
+pytest>=6.0,<7.0  # For testing
+pytest-django>=4.0,<5.0  # Django-specific testing tools
+```
