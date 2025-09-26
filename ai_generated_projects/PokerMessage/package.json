@@ -1,0 +1,54 @@
+```json
+{
+  "name": "poker-message",
+  "version": "1.0.0",
+  "description": "A poker game tracking app for poker players.",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "dev": "react-scripts start"
+  },
+  "keywords": [
+    "poker",
+    "game",
+    "tracking",
+    "app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.0.0",
+    "redux": "^4.0.0",
+    "react-redux": "^8.0.0",
+    "axios": "^0.24.0",
+    "styled-components": "^5.3.0"
+  },
+  "devDependencies": {
+    "react-scripts": "^5.0.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.30.0",
+    "jest": "^27.0.0",
+    "webpack": "^5.0.0"
+  },
+  "homepage": "https://github.com/yourusername/poker-message",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/poker-message.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/poker-message/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://your-funding-url.com"
+  }
+}
+```
