@@ -855,6 +855,9 @@
                     <button class="btn" onclick="startNewProject()">
                         + New Project
                     </button>
+                    <button class="btn" onclick="window.location.href='/content-studio/'" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                        📝 Content Studio
+                    </button>
                     <button class="btn btn-secondary" onclick="refreshProjects()">
                         🔄 Refresh
                     </button>
@@ -898,6 +901,56 @@
             <!-- Projects Grid -->
             <div class="projects-grid" id="projectsGrid">
                 <!-- Projects will be dynamically added here -->
+            </div>
+
+            <!-- Content Creation Section (Inline) -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                <h3 style="color: #4ecdc4; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.5rem;">✨</span>
+                    Quick Content Creation
+                </h3>
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div class="agent-card" style="background: rgba(102, 126, 234, 0.1); border-color: #667eea;"
+                         onclick="quickCreateContent('article')">
+                        <div class="agent-icon">📝</div>
+                        <div class="agent-name">Article</div>
+                        <div class="agent-role">Blog & News</div>
+                    </div>
+
+                    <div class="agent-card" style="background: rgba(74, 222, 128, 0.1); border-color: #4ade80;"
+                         onclick="quickCreateContent('social')">
+                        <div class="agent-icon">📱</div>
+                        <div class="agent-name">Social Media</div>
+                        <div class="agent-role">Posts & Threads</div>
+                    </div>
+
+                    <div class="agent-card" style="background: rgba(236, 72, 153, 0.1); border-color: #ec4899;"
+                         onclick="quickCreateContent('video')">
+                        <div class="agent-icon">🎥</div>
+                        <div class="agent-name">Video Script</div>
+                        <div class="agent-role">YouTube & TikTok</div>
+                    </div>
+
+                    <div class="agent-card" style="background: rgba(251, 191, 36, 0.1); border-color: #fbbf24;"
+                         onclick="quickCreateContent('email')">
+                        <div class="agent-icon">✉️</div>
+                        <div class="agent-name">Email</div>
+                        <div class="agent-role">Marketing & Sales</div>
+                    </div>
+                </div>
+
+                <div id="contentCreationForm" style="display: none; margin-top: 20px; padding: 20px; background: rgba(0, 0, 0, 0.3); border-radius: 12px;">
+                    <h4 style="color: #667eea; margin-bottom: 15px;">Create New Content</h4>
+                    <input type="text" id="contentTitle" placeholder="Content Title..."
+                           style="width: 100%; padding: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; margin-bottom: 10px;">
+                    <textarea id="contentDescription" placeholder="Describe what you want to create..."
+                              style="width: 100%; padding: 10px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; height: 100px; margin-bottom: 10px; resize: vertical;"></textarea>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" onclick="generateContent()">🚀 Generate Content</button>
+                        <button class="btn btn-secondary" onclick="cancelContentCreation()">Cancel</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -983,6 +1036,29 @@
     <script>
         // WebSocket connection
         let ws = null;
+// WebSocket Heartbeat
+let heartbeatInterval = null;
+
+function startHeartbeat() {
+    stopHeartbeat(); // Clear any existing interval
+    heartbeatInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+        }
+    }, 30000); // Ping every 30 seconds
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+}
+
+let isConnecting = false;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let lastDataUpdate = null;
         let selectedAgent = null;
         let selectedProject = null;
         let projects = [];
@@ -995,6 +1071,7 @@
             ws = new WebSocket(`${protocol}//${window.location.host}/ws/build-activity/`);
 
             ws.onopen = () => {
+            startHeartbeat();
                 console.log('WebSocket connected');
                 updateConnectionStatus(true);
                 fetchInitialData();
@@ -1012,10 +1089,16 @@
             };
 
             ws.onclose = () => {
+            stopHeartbeat();
                 console.log('WebSocket disconnected');
                 updateConnectionStatus(false);
                 addBuildLine('⚠️ Disconnected - Reconnecting...', 'warning');
-                setTimeout(connectWebSocket, 3000);
+                (() => {
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
+                console.log(`Reconnecting in ${delay/1000}s (attempt ${reconnectAttempts})`);
+                reconnectTimer = setTimeout(connectWebSocket, delay);
+            })();
             };
         }
 
@@ -1045,28 +1128,45 @@
 
         // Fetch initial data
         function fetchInitialData() {
-            // Fetch from learning stats API
+            // Fetch from learning stats API - Updated 9/26/25 11:52 AM MST
             fetch('/api/learning/stats/')
                 .then(response => response.json())
                 .then(data => {
+                    // Use real data, show 0 if no activity yet
                     updateStats({
-                        active_agents: data.active_agents || 12,
-                        projects_built: data.projects_completed || 47,
-                        files_created: data.total_files || 1234,
-                        learning_rate: data.learning_rate || 92,
-                        success_rate: data.success_rate || 98
+                        active_agents: data.active_agents || 0,
+                        projects_built: data.projects_completed || 0,
+                        files_created: data.files_created || 0,
+                        learning_rate: data.learning_rate || 0,
+                        success_rate: data.success_rate || 0
                     });
+
+                    // Show message if no data yet
+                    if (data.active_agents === 0 && data.total_agents > 0) {
+                        addBuildLine(`💡 ${data.total_agents} agents available - Start a project to activate them!`, 'info');
+                    } else if (data.active_agents > 0) {
+                        addBuildLine(`🚀 ${data.active_agents} agents currently active`, 'success');
+                    }
+
+                    // Update agent count in navbar if available
+                    if (data.total_agents) {
+                        const navAgentCount = document.getElementById('navAgentCount');
+                        if (navAgentCount) {
+                            navAgentCount.textContent = data.total_agents;
+                        }
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching stats:', error);
-                    // Use default values
+                    // Show real zeros instead of fake data
                     updateStats({
-                        active_agents: 8,
-                        projects_built: 34,
-                        files_created: 892,
-                        learning_rate: 87,
-                        success_rate: 95
+                        active_agents: 0,
+                        projects_built: 0,
+                        files_created: 0,
+                        learning_rate: 0,
+                        success_rate: 0
                     });
+                    addBuildLine('⚠️ Waiting for stats service...', 'warning');
                 });
 
             // Load real projects from database
@@ -2290,6 +2390,99 @@ Total Evidence Items: ${verification.implementation_report.evidence_summary?.tot
                 verificationTab.appendChild(badge);
             }
         }
+
+        // Quick Content Creation Functions
+        function quickCreateContent(type) {
+            selectedContentType = type;
+            document.getElementById('contentCreationForm').style.display = 'block';
+
+            // Update placeholder based on type
+            const titleInput = document.getElementById('contentTitle');
+            const descriptionInput = document.getElementById('contentDescription');
+
+            switch(type) {
+                case 'article':
+                    titleInput.placeholder = 'Article Title...';
+                    descriptionInput.placeholder = 'What should the article be about? Include key points...';
+                    break;
+                case 'social':
+                    titleInput.placeholder = 'Campaign Name...';
+                    descriptionInput.placeholder = 'What message do you want to share? Platform preferences...';
+                    break;
+                case 'video':
+                    titleInput.placeholder = 'Video Title...';
+                    descriptionInput.placeholder = 'Video topic, style, duration, key talking points...';
+                    break;
+                case 'email':
+                    titleInput.placeholder = 'Email Subject...';
+                    descriptionInput.placeholder = 'Email purpose, target audience, call-to-action...';
+                    break;
+            }
+
+            addBuildLine(`📝 Selected content type: ${type}`, 'info');
+        }
+
+        function cancelContentCreation() {
+            document.getElementById('contentCreationForm').style.display = 'none';
+            document.getElementById('contentTitle').value = '';
+            document.getElementById('contentDescription').value = '';
+            selectedContentType = null;
+        }
+
+        async function generateContent() {
+            const title = document.getElementById('contentTitle').value;
+            const description = document.getElementById('contentDescription').value;
+
+            if (!title || !description) {
+                alert('Please fill in both title and description');
+                return;
+            }
+
+            addBuildLine(`🚀 Generating ${selectedContentType}: ${title}`, 'info');
+            addBuildLine(`📋 Description: ${description}`, 'info');
+
+            // Create a new project for content generation
+            const newProject = {
+                id: `content-${Date.now()}`,
+                name: `${title} (${selectedContentType})`,
+                status: 'building',
+                progress: 0,
+                agent: 'content-creator',
+                files: 0,
+                duration: '0 mins',
+                type: selectedContentType,
+                description: description
+            };
+
+            projects.push(newProject);
+            renderProject(newProject);
+
+            // Send to backend
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'create_content',
+                    content_type: selectedContentType,
+                    title: title,
+                    description: description,
+                    project: newProject
+                }));
+            }
+
+            // Clear form and hide
+            cancelContentCreation();
+
+            // Simulate content generation progress
+            simulateBuildProgress(newProject);
+
+            addBuildLine(`✅ Content generation started for: ${title}`, 'success');
+            addActivity({
+                icon: '✨',
+                message: `Started generating ${selectedContentType}: ${title}`,
+                time: 'just now'
+            });
+        }
+
+        let selectedContentType = null;
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {

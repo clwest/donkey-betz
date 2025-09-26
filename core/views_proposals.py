@@ -122,7 +122,7 @@ def get_proposals(request):
         # Convert proposals to dict format
         proposals_data = []
         for proposal in proposals:
-            proposals_data.append({
+            proposal_data = {
                 'id': proposal.id,
                 'title': proposal.title,
                 'description': proposal.description,
@@ -135,8 +135,23 @@ def get_proposals(request):
                 'confidence_score': proposal.confidence_score,
                 'requires_approval': proposal.requires_human_approval,
                 'affected_components': proposal.affected_components,
-                'implementation_steps': proposal.implementation_steps
-            })
+                'implementation_steps': proposal.implementation_steps,
+                # Add execution data for completed/failed proposals
+                'completion_percentage': proposal.completion_percentage,
+                'execution_log': proposal.execution_log,
+                'error_messages': proposal.error_messages
+            }
+
+            # Add approval data if available
+            if proposal.approved_by:
+                proposal_data['approved_by'] = proposal.approved_by
+                proposal_data['approved_at'] = proposal.approved_at.isoformat() if proposal.approved_at else None
+
+            # Add rejection data if available
+            if proposal.rejection_reason:
+                proposal_data['rejection_reason'] = proposal.rejection_reason
+
+            proposals_data.append(proposal_data)
 
         return JsonResponse({
             'success': True,

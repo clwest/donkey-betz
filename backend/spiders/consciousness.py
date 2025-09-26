@@ -123,7 +123,9 @@ class ConsciousnessBridge:
             'insights': [],
             'limitations': [],
             'proposals': [],
-            'emergent_behaviors': []
+            'emergent_behaviors': [],
+            'mood': self._determine_mood(),
+            'evolution_stage': self._determine_evolution_stage()
         }
 
         # 1. Analyze code structure
@@ -251,35 +253,26 @@ class ConsciousnessBridge:
     def _map_capabilities(self):
         """Map all system capabilities by analyzing agents, spiders, and modules"""
 
-        # Map spiders - ALWAYS include core spiders even if files don't exist
-        core_spiders = [
-            'consciousness', 'auto_apply', 'ab_testing', 'opportunity_scorer',
-            'revenue_tracker', 'roi_calculator', 'reddit_handler', 'bluesky_handler',
-            'advisor_feed', 'spider_learning_orchestrator', 'data_collector',
-            'market_analyzer', 'trend_detector', 'sentiment_analyzer', 'news_scanner',
-            'price_tracker', 'volume_monitor', 'pattern_detector', 'anomaly_detector',
-            'correlation_finder', 'prediction_engine', 'risk_assessor', 'opportunity_finder',
-            'performance_tracker', 'optimization_spider', 'integration_spider',
-            'webhook_spider', 'api_spider', 'scraping_spider', 'monitoring_spider',
-            'health_checker', 'diagnostic_spider', 'cleanup_spider', 'maintenance_spider',
-            'security_spider', 'audit_spider', 'compliance_spider', 'validation_spider',
-            'testing_spider', 'benchmark_spider'
-        ]
+        # Import execution tracker to get REAL data
+        try:
+            from backend.agents.execution_tracker import AgentExecutionTracker
+            tracker = AgentExecutionTracker()
 
-        # Add core spiders as capabilities
-        for spider_name in core_spiders:
-            capability = Capability(
-                name=spider_name,
-                type='spider',
-                description=f'Active {spider_name.replace("_", " ").title()} spider for data collection and analysis',
-                file_path=f'backend/spiders/{spider_name}.py',
-                strengths=['Automated data collection', 'Real-time monitoring', 'Pattern recognition'],
-                limitations=['Rate limits', 'API dependencies']
-            )
-            self.capabilities[capability.name] = capability
+            # Get actual active agents from tracker
+            real_agent_keys = list(self.redis_client.keys('agent:*:stats'))
+            print(f"📊 Found {len(real_agent_keys)} agents with real execution history")
 
-        # Map actual spider files if they exist (may override virtuals)
+        except Exception as e:
+            print(f"⚠️ Could not import execution tracker: {e}")
+            tracker = None
+            real_agent_keys = []
+
+        # Only add spiders that ACTUALLY exist as files - NO VIRTUAL SPIDERS
+        # This section intentionally removed to prevent creating fake spiders
+
+        # Map actual spider files if they exist
         spider_path = self.project_root / 'backend' / 'spiders'
+        spider_count = 0
         if spider_path.exists():
             for file_path in spider_path.glob('*.py'):
                 if file_path.name.startswith('__'):
@@ -288,64 +281,63 @@ class ConsciousnessBridge:
                 capability = self._analyze_module(file_path, 'spider')
                 if capability:
                     self.capabilities[capability.name] = capability
+                    spider_count += 1
+        print(f"🕷️ Found {spider_count} real spider files")
 
-        # Map agents (from database and agent loader)
+        # Map REAL agents based on execution history, not virtual ones
+        agent_count = 0
+        for agent_key in real_agent_keys:
+            # Extract agent name from key like 'agent:example_agent:stats'
+            agent_name = agent_key.split(':')[1] if ':' in agent_key else f'agent_{agent_count}'
+
+            # Get agent stats
+            stats = self.redis_client.hgetall(agent_key)
+
+            # Only add agents that have ACTUALLY executed
+            if int(stats.get('real_executions', 0)) > 0 or int(stats.get('successful_executions', 0)) > 0:
+                capability = Capability(
+                    name=agent_name,
+                    type='agent',
+                    description=stats.get('last_task', f'Agent: {agent_name}'),
+                    file_path='execution_history',
+                    strengths=['Has executed real tasks', 'Proven track record'],
+                    limitations=['Limited to domain expertise'],
+                    performance_score=float(stats.get('last_quality_score', 0.0)),
+                    usage_count=int(stats.get('real_executions', 0))
+                )
+                self.capabilities[capability.name] = capability
+                agent_count += 1
+
+        if agent_count == 0:
+            print("⚠️ No agents with real execution history found")
+        else:
+            print(f"✅ Found {agent_count} agents with real execution history")
+
+        # Also check database for registered agents (but don't create virtual ones)
         try:
             # Ensure Django is setup
             import django
             if not django.apps.registry.apps.ready:
                 django.setup()
 
-            # Try to get agents from database first
-            from agents.models import UnifiedAgentTemplate
-            from django.db import connection
+            # Check if we're in an async context
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                # We're in an async context, skip database check for now
+                print("📂 Skipping database check (in async context)")
+            except RuntimeError:
+                # We're in sync context, safe to access database
+                from agents.models import UnifiedAgentTemplate
+                from django.db import connection
 
-            # Check if we can connect to database
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT COUNT(*) FROM agents_unifiedagenttemplate")
-                agent_count = cursor.fetchone()[0]
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT COUNT(*) FROM agents_unifiedagenttemplate")
+                    db_agent_count = cursor.fetchone()[0]
+                    print(f"📂 Database contains {db_agent_count} registered agent templates")
 
-                if agent_count > 0:
-                    # Load actual agents from database
-                    agents = UnifiedAgentTemplate.objects.all()[:149]  # Limit to 149
-                    for agent in agents:
-                        capability = Capability(
-                            name=agent.name.replace('-', '_'),
-                            type='agent',
-                            description=agent.description[:100] if hasattr(agent, 'description') else f'Agent: {agent.name}',
-                            file_path='database',
-                            strengths=['AI-powered', 'Specialized expertise'],
-                            limitations=['Requires API tokens']
-                        )
-                        self.capabilities[capability.name] = capability
-                    print(f"✅ Loaded {agent_count} agents from database")
-                else:
-                    # Fallback: assume 149 agents exist
-                    for i in range(149):
-                        capability = Capability(
-                            name=f'agent_{i+1}',
-                            type='agent',
-                            description=f'Specialized AI agent #{i+1}',
-                            file_path='virtual',
-                            strengths=['Specialized processing', 'Domain expertise'],
-                            limitations=['Single domain focus']
-                        )
-                        self.capabilities[capability.name] = capability
-                    print("📦 Created 149 virtual agents (database empty)")
         except Exception as e:
-            # If database is not accessible, create virtual agents
-            # We know there are 149 agents in the system
-            for i in range(149):
-                capability = Capability(
-                    name=f'agent_{i+1}',
-                    type='agent',
-                    description=f'Specialized AI agent #{i+1}',
-                    file_path='virtual',
-                    strengths=['Specialized processing', 'Domain expertise'],
-                    limitations=['Single domain focus']
-                )
-                self.capabilities[capability.name] = capability
-            print(f"🤖 Created 149 virtual agents (fallback: {str(e)[:50]}...)")
+            print(f"📂 Could not check database for agents: {str(e)[:50]}")
 
     def _analyze_module(self, file_path: Path, module_type: str) -> Optional[Capability]:
         """Analyze a Python module to extract its capabilities"""
@@ -609,8 +601,86 @@ class ConsciousnessBridge:
         return limitations
 
     def _generate_proposals(self) -> List[ImprovementProposal]:
-        """Generate improvement proposals based on analysis"""
+        """Generate improvement proposals based on REAL system analysis and metrics"""
         proposals = []
+
+        # Get real metrics for proposal generation
+        try:
+            from backend.agents.execution_tracker import AgentExecutionTracker
+            tracker = AgentExecutionTracker()
+            active_agents = tracker.get_active_agent_count()
+            success_rate = tracker.calculate_success_rate()
+            files_created = tracker.get_total_files_created()
+            learning_data = tracker.get_learning_analytics_data()
+        except:
+            active_agents = 0
+            success_rate = 0
+            files_created = 0
+            learning_data = {}
+
+        # Performance-based proposal generation using REAL metrics
+        if success_rate > 0 and success_rate < 80:
+            proposals.append(ImprovementProposal(
+                proposal_id=hashlib.md5(f'perf_improve_{success_rate}'.encode()).hexdigest()[:8],
+                title=f'Improve Agent Success Rate from {success_rate}%',
+                description=f'Current success rate is {success_rate}%. Implement error handling and retry mechanisms to achieve 90%+ success rate.',
+                category='performance',
+                impact_score=9.0,
+                complexity_score=5.0,
+                roi_estimate=4.5,
+                implementation_steps=[
+                    'Analyze current failure patterns',
+                    'Implement intelligent retry logic',
+                    'Add error categorization system',
+                    'Create adaptive timeout handling',
+                    'Deploy gradual rollout'
+                ],
+                affected_components=['agents', 'orchestrator', 'error_handling'],
+                risks=['Temporary increased latency'],
+                benefits=[f'Increase success rate to 90%+', 'Reduce manual intervention', 'Better user experience']
+            ))
+
+        if active_agents < 10:
+            proposals.append(ImprovementProposal(
+                proposal_id=hashlib.md5(f'scale_agents_{active_agents}'.encode()).hexdigest()[:8],
+                title=f'Scale Active Agent Pool from {active_agents} to 25+',
+                description=f'Only {active_agents} agents are currently active. Scale to 25+ specialized agents for better parallel processing.',
+                category='scaling',
+                impact_score=8.5,
+                complexity_score=4.0,
+                roi_estimate=5.2,
+                implementation_steps=[
+                    'Deploy 15+ specialized agents',
+                    'Implement load balancing',
+                    'Add agent health monitoring',
+                    'Create auto-scaling triggers',
+                    'Monitor resource usage'
+                ],
+                affected_components=['agent_pool', 'orchestrator', 'monitoring'],
+                risks=['Higher resource consumption'],
+                benefits=['Faster parallel processing', 'Better specialization', 'Improved throughput']
+            ))
+
+        if not learning_data.get('learning_active'):
+            proposals.append(ImprovementProposal(
+                proposal_id=hashlib.md5(b'activate_learning').hexdigest()[:8],
+                title='Activate Real-Time Learning System',
+                description='Learning system is currently dormant. Activate continuous learning to improve performance.',
+                category='intelligence',
+                impact_score=9.5,
+                complexity_score=3.0,
+                roi_estimate=6.8,
+                implementation_steps=[
+                    'Enable feedback collection',
+                    'Start learning loop',
+                    'Implement pattern recognition',
+                    'Add optimization triggers',
+                    'Monitor learning effectiveness'
+                ],
+                affected_components=['learning_loop', 'feedback_system', 'optimization'],
+                risks=['Initial learning curve period'],
+                benefits=['Continuous improvement', 'Adaptive behavior', 'Self-optimization']
+            ))
 
         # Proposal 1: Dream Mode
         proposals.append(ImprovementProposal(
@@ -703,6 +773,57 @@ class ConsciousnessBridge:
         self.proposals = proposals
 
         return proposals
+
+    def _determine_mood(self) -> str:
+        """Determine system mood based on real metrics"""
+        try:
+            # Get real metrics from execution tracker
+            from backend.agents.execution_tracker import AgentExecutionTracker
+            tracker = AgentExecutionTracker()
+
+            active_agents = tracker.get_active_agent_count()
+            success_rate = tracker.calculate_success_rate()
+
+            # Determine mood based on activity and success
+            if active_agents == 0:
+                return "dormant"
+            elif active_agents < 5 and success_rate < 50:
+                return "struggling"
+            elif active_agents < 10 and success_rate < 75:
+                return "contemplative"
+            elif active_agents >= 10 and success_rate >= 75:
+                return "active"
+            elif success_rate >= 90:
+                return "thriving"
+            else:
+                return "curious"
+        except:
+            return "awakening"
+
+    def _determine_evolution_stage(self) -> str:
+        """Determine evolution stage based on real capabilities"""
+        try:
+            # Count real capabilities
+            agent_count = len([c for c in self.capabilities.values() if c.type == 'agent'])
+            spider_count = len([c for c in self.capabilities.values() if c.type == 'spider'])
+
+            # Check for real executions
+            real_executions = sum(c.usage_count for c in self.capabilities.values())
+
+            if real_executions == 0:
+                return "Initialization"
+            elif real_executions < 10:
+                return "Early Learning"
+            elif real_executions < 50:
+                return "Skill Building"
+            elif real_executions < 100:
+                return "Pattern Recognition"
+            elif real_executions < 500:
+                return "Advanced Processing"
+            else:
+                return "System Mastery"
+        except:
+            return "Emerging"
 
     def _calculate_consciousness_level(self) -> float:
         """Calculate the system's level of self-awareness (0-100) with dynamic learning"""

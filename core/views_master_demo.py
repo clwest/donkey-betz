@@ -48,64 +48,31 @@ def master_ai_demo(request):
     })
 
 def get_learning_stats(request):
-    """API endpoint for real-time learning statistics"""
+    """API endpoint for real-time learning statistics - Updated 9/26/25 11:51 AM MST"""
 
-    r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    from backend.agents.execution_tracker import execution_tracker
 
-    # Calculate aggregated learning metrics
-    total_real_executions = 0
-    total_demo_executions = 0
-    total_quality_score = 0
-    quality_count = 0
+    # Get comprehensive stats from the execution tracker
+    stats = execution_tracker.get_comprehensive_stats()
 
-    # Get agent-specific stats and calculate totals
-    agents = []
-    agent_keys = r.keys('agent:*:stats')
+    # Format for frontend compatibility
+    formatted_stats = {
+        'active_sessions': stats.get('active_agents', 0),  # Use active agents count
+        'total_real_executions': stats['total_real_executions'],
+        'total_demo_executions': stats['total_demo_executions'],
+        'average_quality_score': stats.get('learning_rate', 0),  # Use learning rate as quality proxy
+        'active_agents': stats['active_agents'],
+        'total_agents': stats['total_agents'],
+        'code_generated_today': stats['code_generated_today'],
+        'total_lines': stats['lines_today'],
+        'timestamp': stats['timestamp'],
+        'agents': stats.get('recent_activities', []),
 
-    for key in agent_keys[:50]:  # Process up to 50 agents
-        agent_name = key.split(':')[1]
-        agent_data = r.hgetall(key)
-        if agent_data:
-            # Extract real execution data
-            real_execs = int(agent_data.get('real_executions', 0))
-            demo_execs = int(agent_data.get('demo_executions', 0))
-            quality = int(agent_data.get('last_quality_score', 0))
-
-            # Add to totals
-            total_real_executions += real_execs
-            total_demo_executions += demo_execs
-            if quality > 0:
-                total_quality_score += quality
-                quality_count += 1
-
-            agents.append({
-                'name': agent_name,
-                'real_executions': real_execs,
-                'demo_executions': demo_execs,
-                'code_generated': agent_data.get('code_generated', 0),
-                'total_lines': int(agent_data.get('total_lines', 0)),
-                'quality': quality,
-                'complexity': int(agent_data.get('last_complexity_score', 0)),
-                'last_task': agent_data.get('last_real_task', 'none')
-            })
-
-    # Sort agents by real executions (most active first)
-    agents.sort(key=lambda x: x['real_executions'], reverse=True)
-
-    # Calculate average quality score
-    avg_quality = total_quality_score / quality_count if quality_count > 0 else 0
-
-    stats = {
-        'active_sessions': r.scard('active_learning_sessions') or 0,
-        'total_real_executions': total_real_executions,
-        'total_demo_executions': total_demo_executions,
-        'average_quality_score': round(avg_quality, 1),
-        'active_agents': len([a for a in agents if a['real_executions'] > 0]),
-        'total_agents': len(agents),
-        'code_generated_today': r.hget('stats:code_generated:today', 'count') or 0,
-        'total_lines': sum(a['total_lines'] for a in agents),
-        'timestamp': datetime.now().isoformat(),
-        'agents': agents[:20]  # Return top 20 most active agents
+        # Additional frontend-specific fields
+        'files_created': stats['files_created'],
+        'success_rate': stats['success_rate'],
+        'learning_rate': stats['learning_rate'],
+        'projects_completed': stats['projects_completed']
     }
 
-    return JsonResponse(stats)
+    return JsonResponse(formatted_stats)

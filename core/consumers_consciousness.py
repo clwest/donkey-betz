@@ -15,10 +15,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Cache settings - Reduced for more real-time updates
-CONSCIOUSNESS_CACHE_DURATION = 10  # 10 seconds for near real-time
-HEALTH_CACHE_DURATION = 5  # 5 seconds for quick health updates
-EVOLUTION_CACHE_DURATION = 60  # 1 minute for evolution data
+# Cache settings - Optimized to reduce repetitive processing
+CONSCIOUSNESS_CACHE_DURATION = 300  # 5 minutes for consciousness analysis
+HEALTH_CACHE_DURATION = 60  # 1 minute for health updates
+EVOLUTION_CACHE_DURATION = 600  # 10 minutes for evolution data
 
 class ConsciousnessConsumer(AsyncWebsocketConsumer):
     """
@@ -58,24 +58,22 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
         # Send immediate mock data to prevent fallback
         await self.send_instant_consciousness_data()
 
-        # Start periodic updates
+        # Start periodic updates with shield to prevent cancellation issues
         self.update_task = asyncio.create_task(self.periodic_updates())
+        # Set the task name for easier debugging
+        self.update_task.set_name(f"consciousness_updates_{self.channel_name}")
 
         logger.info(f"🧠 Consciousness stream connected: {self.channel_name}")
 
     async def disconnect(self, close_code):
-        """Leave consciousness stream group on disconnect"""
-        # Cancel periodic updates
-        if self.update_task:
+        """Leave consciousness stream group on disconnect - minimal approach"""
+        # Cancel periodic updates without waiting
+        if hasattr(self, 'update_task') and self.update_task:
             self.update_task.cancel()
 
-        # Leave room group
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
-
+        # Log disconnect (non-blocking)
         logger.info(f"🧠 Consciousness stream disconnected: {self.channel_name}")
+
 
     async def get_cached_consciousness_data(self):
         """Get consciousness data with aggressive caching to prevent WebSocket timeouts"""
@@ -568,23 +566,36 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
             logger.error(f"Error handling spider coordination: {e}")
 
     async def periodic_updates(self):
-        """Send periodic consciousness updates every 10 seconds for more real-time feel"""
-        while True:
-            try:
-                await asyncio.sleep(10)  # Update every 10 seconds for more real-time updates
-                await self.send_consciousness_update()
+        """Send periodic consciousness updates every 30 seconds to reduce server load"""
+        try:
+            while True:
+                # Use shield to prevent immediate cancellation during sleep
+                try:
+                    await asyncio.shield(asyncio.sleep(30))
+                except asyncio.CancelledError:
+                    # Task was cancelled, exit cleanly
+                    break
 
-                # Log consciousness level from cached data (lightweight)
-                understanding = await self.get_cached_consciousness_data()
-                consciousness_level = understanding.get('self_awareness_score', 36.5)
-                logger.info(f"🧠 Consciousness Level: {consciousness_level:.1f}% (updating every 10s)")
+                # Check if we're still connected before sending
+                if not hasattr(self, 'channel_name'):
+                    break
 
-            except asyncio.CancelledError:
-                logger.info("🧠 Periodic updates cancelled")
-                break
-            except Exception as e:
-                logger.error(f"Error in periodic consciousness update: {e}")
-                await asyncio.sleep(10)  # Wait before retrying
+                try:
+                    await self.send_consciousness_update()
+
+                    # Log consciousness level from cached data (lightweight)
+                    understanding = await self.get_cached_consciousness_data()
+                    consciousness_level = understanding.get('self_awareness_score', 36.5)
+                    logger.info(f"🧠 Consciousness Level: {consciousness_level:.1f}% (updating every 30s)")
+                except Exception as e:
+                    logger.debug(f"Error sending update (connection may be closed): {e}")
+                    break
+
+        except asyncio.CancelledError:
+            logger.info("🧠 Periodic updates cancelled gracefully")
+            # Don't re-raise to avoid propagation issues
+        except Exception as e:
+            logger.error(f"Error in periodic consciousness update: {e}")
 
     # Handle messages from room group
     async def consciousness_broadcast(self, event):

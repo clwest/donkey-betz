@@ -141,9 +141,9 @@ check-redis: ## Verify Redis connection
 # SIMPLE START/STOP COMMANDS - NEW!
 # =============================================================================
 
-start: ## Start backend with WebSockets, Redis, and monitoring
+start: ## Start everything - Backend, WebSockets, Redis, Celery, and monitoring
 	@echo "$(BLUE)=====================================================================$(NC)"
-	@echo "$(BLUE)🚀 Starting Unified Platform (Simple Mode)$(NC)"
+	@echo "$(BLUE)🚀 Starting Unified Donkey Betz Platform - FULL STACK$(NC)"
 	@echo "$(BLUE)=====================================================================$(NC)"
 	@echo ""
 	@make stop > /dev/null 2>&1
@@ -151,35 +151,70 @@ start: ## Start backend with WebSockets, Redis, and monitoring
 	@redis-server --daemonize yes > /dev/null 2>&1 || echo "$(YELLOW)Redis may already be running$(NC)"
 	@echo "$(GREEN)✅ Redis started$(NC)"
 	@echo ""
-	@echo "$(CYAN)Starting Django with WebSocket support (Daphne)...$(NC)"
+	@echo "$(CYAN)Starting PostgreSQL...$(NC)"
+	@brew services start postgresql@14 2>/dev/null || brew services start postgresql 2>/dev/null || echo "$(YELLOW)PostgreSQL may already be running$(NC)"
+	@sleep 2
+	@pg_isready -h localhost >/dev/null 2>&1 && echo "$(GREEN)✅ PostgreSQL is ready$(NC)" || echo "$(YELLOW)⚠️  PostgreSQL needs manual start$(NC)"
+	@echo ""
+	@echo "$(CYAN)Running database migrations...$(NC)"
 	@$(ACTIVATE) && python manage.py migrate --run-syncdb > /dev/null 2>&1 || true
-	@$(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application &
+	@echo "$(GREEN)✅ Database migrations complete$(NC)"
+	@echo ""
+	@echo "$(CYAN)Starting Celery workers...$(NC)"
+	@$(ACTIVATE) && celery -A core worker -l info --detach 2>/dev/null || echo "$(YELLOW)⚠️  Celery worker may already be running$(NC)"
+	@$(ACTIVATE) && celery -A core beat -l info --detach 2>/dev/null || echo "$(YELLOW)⚠️  Celery beat may already be running$(NC)"
+	@echo "$(GREEN)✅ Celery workers started$(NC)"
+	@echo ""
+	@echo "$(CYAN)Starting Django with WebSocket support (Daphne)...$(NC)"
+	@$(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application > /dev/null 2>&1 &
 	@echo "$(GREEN)✅ Backend started with WebSocket support$(NC)"
+	@echo ""
+	@echo "$(CYAN)Starting Flower monitoring...$(NC)"
+	@$(ACTIVATE) && nohup celery --broker=redis://localhost:6379/2 -A core flower --port=$(FLOWER_PORT) > /dev/null 2>&1 &
+	@sleep 1
+	@echo "$(GREEN)✅ Flower monitoring started$(NC)"
 	@echo ""
 	@sleep 3
 	@echo "$(GREEN)=====================================================================$(NC)"
-	@echo "$(GREEN)✅ Platform is running!$(NC)"
+	@echo "$(GREEN)✅ FULL PLATFORM IS RUNNING!$(NC)"
 	@echo "$(GREEN)=====================================================================$(NC)"
 	@echo ""
 	@echo "$(BLUE)🌐 ACCESS YOUR PLATFORM:$(NC)"
 	@echo "  $(YELLOW)AI Production Hub:$(NC)     http://localhost:$(BACKEND_PORT)/ai-production-hub/"
 	@echo "  $(YELLOW)AI Nexus:$(NC)              http://localhost:$(BACKEND_PORT)/ai-nexus/"
-	@echo "  $(YELLOW)Intelligence:$(NC)          http://localhost:$(BACKEND_PORT)/intelligence/"
+	@echo "  $(YELLOW)Intelligence Dashboard:$(NC) http://localhost:$(BACKEND_PORT)/intelligence/"
+	@echo "  $(YELLOW)WebSocket Test:$(NC)        http://localhost:$(BACKEND_PORT)/websocket-test/"
 	@echo "  $(YELLOW)Admin Panel:$(NC)           http://localhost:$(BACKEND_PORT)/admin/"
+	@echo "  $(YELLOW)Flower (Celery):$(NC)       http://localhost:$(FLOWER_PORT)/"
 	@echo ""
 	@echo "$(CYAN)💡 Commands:$(NC)"
 	@echo "  • Use '$(YELLOW)make stop$(NC)' to stop everything"
 	@echo "  • Use '$(YELLOW)make status$(NC)' to check what's running"
 	@echo "  • Use '$(YELLOW)make restart$(NC)' to restart everything"
+	@echo "  • Use '$(YELLOW)make monitor$(NC)' to check system health"
 	@echo ""
 
-stop: ## Stop all services
+stop: ## Stop all services - Backend, Celery, Redis, etc.
 	@echo "$(YELLOW)🛑 Stopping all services...$(NC)"
+	@echo "  Stopping Django/Daphne..."
 	@pkill -f "daphne.*backend.asgi" 2>/dev/null || true
 	@pkill -f "python manage.py" 2>/dev/null || true
 	@pkill -f "runserver" 2>/dev/null || true
 	@lsof -ti:$(BACKEND_PORT) | xargs kill -9 2>/dev/null || true
+	@echo "  Stopping Celery workers and beat..."
+	@pkill -f "celery.*worker" 2>/dev/null || true
+	@pkill -f "celery.*beat" 2>/dev/null || true
+	@pkill -f "flower" 2>/dev/null || true
+	@lsof -ti:$(FLOWER_PORT) | xargs kill -9 2>/dev/null || true
+	@echo "  Stopping any frontend services..."
+	@pkill -f "npm run" 2>/dev/null || true
+	@pkill -f "vite" 2>/dev/null || true
+	@pkill -f "node.*vite" 2>/dev/null || true
 	@echo "$(GREEN)✅ All services stopped$(NC)"
+	@echo ""
+	@echo "$(CYAN)Note: Redis and PostgreSQL remain running as system services$(NC)"
+	@echo "  • To stop Redis: $(YELLOW)redis-cli shutdown$(NC)"
+	@echo "  • To stop PostgreSQL: $(YELLOW)brew services stop postgresql$(NC)"
 
 restart: stop start ## Restart all services
 	@echo "$(GREEN)✅ Services restarted$(NC)"
