@@ -25,7 +25,8 @@ def test_imports():
         from backend.agents.project_builder_base import ProjectBuilderAgent, FullStackBuilderAgent
         print("✅ ProjectBuilderAgent imports work")
 
-        from backend.agents.concrete_executor import concrete_executor
+        from backend.agents.concrete_executor import get_concrete_executor
+        concrete_executor = get_concrete_executor()
         print("✅ ConcreteAgentExecutor imports work")
 
         from core.project_builder_orchestrator import get_project_orchestrator

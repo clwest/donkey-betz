@@ -134,8 +134,8 @@ class UnifiedConsciousnessMind:
 
         # Social Intelligence
         try:
-            from backend.intelligence.bluesky_learning_bridge import bluesky_learning_bridge
-            self.intelligence_sources['bluesky'] = bluesky_learning_bridge
+            from backend.intelligence.bluesky_learning_bridge import get_bluesky_learning_bridge
+            self.intelligence_sources['bluesky'] = get_bluesky_learning_bridge()
             print("🌐 Bluesky intelligence connected")
         except:
             print("⚠️ Bluesky intelligence connection unavailable")

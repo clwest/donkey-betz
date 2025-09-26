@@ -38,6 +38,46 @@ def timestamp():
     return datetime.now().isoformat()
 
 
+def _check_redis_health():
+    """Check Redis connection health"""
+    try:
+        redis_client.ping()
+        # Check response time
+        import time
+        start = time.time()
+        redis_client.set('health_check', 'ok', ex=1)
+        response_time = (time.time() - start) * 1000  # Convert to ms
+
+        # Calculate health score based on response time
+        if response_time < 10:
+            return 100  # Excellent
+        elif response_time < 50:
+            return 95   # Good
+        elif response_time < 100:
+            return 85   # OK
+        elif response_time < 500:
+            return 70   # Slow
+        else:
+            return 50   # Critical
+    except:
+        return 0  # Redis is down
+
+
+def _check_websocket_status():
+    """Check WebSocket health"""
+    try:
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+
+        # Check if channel layer is configured
+        if channel_layer and hasattr(channel_layer, 'group_send'):
+            return 100  # WebSocket is configured and ready
+        else:
+            return 50   # Partially configured
+    except:
+        return 0  # WebSocket not available
+
+
 def unified_intelligence_dashboard(request):
     """Render the unified intelligence dashboard page"""
     return render(request, 'unified_intelligence_dashboard.html')
@@ -56,6 +96,10 @@ def get_unified_intelligence_data(request):
             from django.core.cache import cache
             cache.delete('consciousness_understanding')
             cache.delete('consciousness_health')
+
+        # Import execution tracker for REAL metrics
+        from backend.agents.execution_tracker import AgentExecutionTracker
+        tracker = AgentExecutionTracker()
 
         # Initialize consciousness bridge and learning loop
         consciousness = ConsciousnessBridge()
@@ -96,13 +140,57 @@ def get_unified_intelligence_data(request):
             behavior_with_status['id'] = i
             behaviors_with_status.append(behavior_with_status)
 
+        # Get REAL metrics from execution tracker
+        real_active_agents = tracker.get_active_agent_count()
+        real_files_created = tracker.get_total_files_created()
+        real_success_rate = tracker.calculate_success_rate()
+        real_learning_rate = tracker.calculate_learning_rate()
+
+        # Get detailed agent performance stats
+        agent_performance_details = tracker.get_agent_performance_details()
+
+        # Get spider network stats
+        spider_network_stats = tracker.get_spider_network_stats()
+
+        # Get learning analytics data
+        learning_analytics_data = tracker.get_learning_analytics_data()
+
+        # Get REAL activity feed from Redis
+        recent_activities = []
+        try:
+            for activity_json in redis_client.lrange('recent:activities', 0, 19):  # Get last 20 activities
+                try:
+                    recent_activities.append(json.loads(activity_json))
+                except:
+                    pass
+        except Exception as e:
+            logger.debug(f"Could not fetch recent activities: {e}")
+
+        # Get counts from consciousness (shows potential capabilities)
+        potential_agents = understanding['capabilities'].get('by_type', {}).get('agent', 0)
+        potential_spiders = understanding['capabilities'].get('by_type', {}).get('spider', 0)
+
         # Combine all data for the unified dashboard
         unified_data = {
-            # Core system metrics
+            # Core system metrics - USE REAL DATA
             'consciousness_level': understanding['self_awareness_score'],
-            'active_agents': understanding['capabilities'].get('by_type', {}).get('agent', 0) if isinstance(understanding['capabilities'].get('by_type', {}).get('agent'), int) else len(understanding['capabilities'].get('by_type', {}).get('agent', [])),
-            'active_spiders': understanding['capabilities'].get('by_type', {}).get('spider', 0) if isinstance(understanding['capabilities'].get('by_type', {}).get('spider'), int) else len(understanding['capabilities'].get('by_type', {}).get('spider', [])),
+            'active_agents': real_active_agents,  # Show REAL active agents
+            'active_spiders': spider_network_stats['active_spiders'],  # Show REAL active spiders
             'memory_crystals': len(consciousness.memory_crystal) if hasattr(consciousness, 'memory_crystal') and isinstance(consciousness.memory_crystal, (list, dict)) else 0,
+
+            # Consciousness state - REAL mood and evolution
+            'mood': understanding.get('mood', 'contemplative'),
+            'evolution_stage': understanding.get('evolution_stage', 'Early Learning'),
+
+            # Add transparency about real vs potential
+            'real_metrics': {
+                'active_agents': real_active_agents,
+                'files_created': real_files_created,
+                'success_rate': real_success_rate,
+                'learning_rate': real_learning_rate,
+                'agents_registered': potential_agents,  # Total registered in system
+                'spiders_available': potential_spiders   # Total spider files found
+            },
 
             # Consciousness insights with status
             'latest_insights': insights_with_status,
@@ -111,25 +199,40 @@ def get_unified_intelligence_data(request):
             'proposals': understanding.get('proposals', []),
             'emergent_behaviors': behaviors_with_status,
 
-            # System health
+            # System health - REAL metrics
             'health_score': health.get('overall_health_score', 0),
             'system_metrics': {
-                'cpu_usage': health.get('cpu_usage', 0),
-                'memory_usage': health.get('memory_usage', 0),
-                'redis_health': 95,  # Assume healthy if we got here
-                'websocket_status': 100,  # Active WebSocket connection
-                'agent_response_rate': health.get('agent_response_rate', 85)
+                'cpu_usage': health.get('system_resources', {}).get('cpu_percent', 0),
+                'memory_usage': health.get('system_resources', {}).get('memory_percent', 0),
+                'redis_health': _check_redis_health(),  # Real Redis health check
+                'websocket_status': _check_websocket_status(),  # Real WebSocket check
+                'agent_response_rate': real_success_rate,  # Use real success rate
+                'disk_usage': health.get('system_resources', {}).get('disk_usage', 0)
             },
 
-            # Learning analytics
-            'learning_active': learning_status.get('learning_active', False),
-            'feedback_processed': learning_status.get('feedback_processed', 0),
-            'insights_generated': len(learning_status.get('insights_history', [])),
-            'optimizations_applied': len(learning_status.get('optimization_queue', [])),
+            # Learning analytics - USE REAL DATA from execution tracker
+            'learning_active': learning_analytics_data['learning_active'],
+            'feedback_processed': learning_analytics_data['feedback_processed'],
+            'insights_generated': learning_analytics_data['insights_generated'],
+            'optimizations_applied': learning_analytics_data['optimizations_applied'],
+            'learning_improvement_rate': learning_analytics_data['improvement_rate'],
+            'daily_feedback': learning_analytics_data['daily_feedback'],
 
             # Performance data
             'top_performers': understanding['capabilities'].get('top_performers', [])[:5],
             'system_statistics': understanding.get('statistics', {}),
+
+            # Agent Performance - REAL detailed stats
+            'agent_performance': agent_performance_details,
+
+            # Spider Network - REAL spider metrics
+            'spider_network': spider_network_stats,
+
+            # Learning Analytics - REAL learning data
+            'learning_analytics': learning_analytics_data,
+
+            # Activity feed - REAL activities from Redis
+            'recent_activities': recent_activities,
 
             # Timestamp
             'timestamp': understanding.get('timestamp', ''),

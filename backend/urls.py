@@ -16,9 +16,13 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.forms import UserCreationForm
+from django.views.generic.base import RedirectView
+from django.urls import path, include, reverse_lazy
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.generic import CreateView
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -45,6 +49,28 @@ from core import views_neural_orchestra
 from core.views_consciousness_test import consciousness_websocket_test
 from core import views_proposals
 from core.models import GeneratedProject
+from django.contrib.auth import get_user_model
+
+# Custom registration view with UnifiedUser model
+from django import forms
+from core.models import UnifiedUser
+
+class UnifiedUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+
+    class Meta:
+        model = UnifiedUser
+        fields = ('username', 'email', 'password1', 'password2')
+
+class RegisterView(CreateView):
+    form_class = UnifiedUserCreationForm
+    template_name = 'registration/login.html'
+    success_url = reverse_lazy('login')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['register_active'] = True
+        return context
 from core.views_project_builder import (
     NewProjectView,
     ProjectDetailView,
@@ -772,11 +798,22 @@ def api_root(request):
     })
 
 urlpatterns = [
+    # Favicon redirect to static file
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
+
     # Admin interface
     path('admin/', admin.site.urls),
 
+    # Authentication URLs - Django built-in views
+    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('register/', RegisterView.as_view(), name='register'),
+    path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='accounts-login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='accounts-logout'),
+
     # PRIMARY PAGES - These are the only HTML pages we're keeping
     path('ai-production-hub/', lambda request: render(request, 'ai_production_hub.html'), name='ai-production-hub'),
+    path('content-studio/', lambda request: render(request, 'content_studio.html'), name='content-studio'),
     path('ai-nexus/', lambda request: render(request, 'ai_nexus.html'), name='ai-nexus'),
     path('intelligence/', unified_intelligence_dashboard, name='unified-intelligence-dashboard'),
 
@@ -785,8 +822,6 @@ urlpatterns = [
     path('api/intelligence/', get_unified_intelligence_data, name='unified-intelligence-data'),
     path('api/consciousness/implement-insight/', implement_insight, name='implement-insight'),
     path('api/consciousness/investigate-behavior/', investigate_behavior, name='investigate-behavior'),
-    path('api/proposal/approve/', approve_proposal, name='approve-proposal'),
-    path('api/proposal/reject/', reject_proposal, name='reject-proposal'),
     path('api/consciousness/', get_consciousness_data, name='consciousness-data'),  # Keep API for backward compatibility
     path('api/ai-nexus/', process_command, name='ai-nexus-api'),
     path('api/projects/', get_real_projects, name='real-projects'),
@@ -801,11 +836,11 @@ urlpatterns = [
     path('api/implementation/evidence/<int:session_id>/', get_implementation_evidence, name='implementation-evidence'),
 
     # AI Proposal Management APIs
-    path('api/proposal/approve/', views_proposals.approve_proposal, name='approve_proposal'),
-    path('api/proposal/reject/', views_proposals.reject_proposal, name='reject_proposal'),
-    path('api/proposal/execute/', views_proposals.execute_proposal, name='execute_proposal'),
-    path('api/proposals/', views_proposals.get_proposals, name='get_proposals'),
-    path('api/proposal/stats/', views_proposals.get_proposal_stats, name='get_proposal_stats'),
+    path('api/proposals/approve/', views_proposals.approve_proposal, name='proposals_approve'),
+    path('api/proposals/reject/', views_proposals.reject_proposal, name='proposals_reject'),
+    path('api/proposals/execute/', views_proposals.execute_proposal, name='proposals_execute'),
+    path('api/proposals/', views_proposals.get_proposals, name='proposals_get'),
+    path('api/proposals/stats/', views_proposals.get_proposal_stats, name='proposals_stats'),
 
     # REDIRECTS - All deprecated pages redirect to new locations
     path('master-demo/', lambda request: redirect('/ai-production-hub/'), name='master-demo-redirect'),
@@ -814,6 +849,8 @@ urlpatterns = [
     path('activity-monitor/', lambda request: redirect('/ai-production-hub/'), name='activity-monitor-redirect'),
     path('command-center/', lambda request: redirect('/ai-nexus/'), name='command-center-redirect'),
     path('consciousness/', lambda request: redirect('/intelligence/'), name='consciousness-redirect'),
+    path('content-creation/', lambda request: redirect('/content-studio/'), name='content-creation-redirect'),
+    path('content/', lambda request: redirect('/content-studio/'), name='content-redirect'),
 
     # Development test page
     path('consciousness-test/', consciousness_websocket_test, name='consciousness-test'),

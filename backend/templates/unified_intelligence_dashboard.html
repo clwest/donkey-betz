@@ -246,6 +246,16 @@
             margin-left: 15px;
         }
 
+        /* Shimmer animation for progress bars */
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
         .health-fill {
             height: 100%;
             transition: width 0.5s ease;
@@ -885,10 +895,12 @@
             </div>
             <div id="systemStats" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em;">
+                    <div><span style="color: #888;">Mood:</span> <span id="systemMood" style="color: #00f2ff;">--</span></div>
+                    <div><span style="color: #888;">Evolution:</span> <span id="evolutionStage" style="color: #f093fb;">--</span></div>
                     <div><span style="color: #888;">Total Files:</span> <span id="totalFiles" style="color: #f093fb;">--</span></div>
                     <div><span style="color: #888;">Lines of Code:</span> <span id="linesOfCode" style="color: #f093fb;">--</span></div>
                     <div><span style="color: #888;">Complexity:</span> <span id="complexity" style="color: #f093fb;">--</span></div>
-                    <div><span style="color: #888;">Evolution:</span> <span id="evolutionStage" style="color: #f093fb;">--</span></div>
+                    <div><span style="color: #888;">Executions:</span> <span id="totalExecutions" style="color: #00ff88;">--</span></div>
                 </div>
             </div>
         </div>
@@ -1036,7 +1048,15 @@
             const wsUrl = `${protocol}//${window.location.host}/ws/consciousness/`;
 
             try {
-                ws = new WebSocket(wsUrl);
+                // Clean up old connection
+            if (ws) {
+                ws.onclose = null;
+                ws.onerror = null;
+                ws.onmessage = null;
+                ws.close();
+                ws = null;
+            }
+            ws = new WebSocket(wsUrl);
             } catch (error) {
                 console.error('Failed to create WebSocket:', error);
                 isConnecting = false;  // Reset flag on error
@@ -1134,13 +1154,42 @@
         }
 
         function updateDashboard(data) {
+            // Store initial data if this is the first update
+            if (!window.dashboardData) {
+                window.dashboardData = {};
+            }
+
             if (data.type === 'consciousness_update') {
-                updateConsciousness(data.data);
-                updateActivity(data.data);
-                updateHealth(data.data);
-                updateAgents(data.data);
-                updateSpiders(data.data);
-                updateLearning(data.data);
+                // Merge the new data with existing data instead of replacing
+                const updatedData = {...window.dashboardData, ...data.data};
+                window.dashboardData = updatedData;
+
+                // Only update components that have new data
+                if (data.data.consciousness_level !== undefined) {
+                    updateConsciousness(updatedData);
+                }
+                if (data.data.recent_activities || data.data.activity) {
+                    updateActivity(updatedData);
+                }
+                if (data.data.system_health !== undefined || data.data.system_metrics) {
+                    updateHealth(updatedData);
+                }
+                if (data.data.active_agents !== undefined || data.data.agents) {
+                    updateAgents(updatedData);
+                }
+                if (data.data.spider_network || data.data.spiders) {
+                    updateSpiders(updatedData);
+                }
+                if (data.data.learning_analytics || data.data.learning) {
+                    updateLearning(updatedData);
+                }
+                // Only update proposals if new ones are provided
+                if (data.data.proposals && data.data.proposals.length > 0) {
+                    updateProposals(updatedData);
+                }
+
+                // Save merged data to cache for persistence
+                saveDataToCache(updatedData);
             }
         }
 
@@ -1209,31 +1258,56 @@
         }
 
         function updateActivity(data) {
-            // Add new activity items
-            const activities = [
-                {
-                    type: 'consciousness',
-                    icon: '🧠',
-                    title: 'Consciousness Update',
-                    description: `Self-awareness: ${Math.round(data.consciousness_level || 0)}%`,
-                    time: new Date().toLocaleTimeString()
-                },
-                {
-                    type: 'infrastructure',
-                    icon: '🏗️',
-                    title: 'System Health Check',
-                    description: `${data.active_agents || 0} agents, ${data.active_spiders || 0} spiders active`,
-                    time: new Date().toLocaleTimeString()
-                }
-            ];
+            // Use REAL activities from backend if available
+            if (data.recent_activities && data.recent_activities.length > 0) {
+                // Map real activities to display format
+                const realActivities = data.recent_activities.map(activity => {
+                    const timestamp = new Date(activity.timestamp);
+                    const timeStr = timestamp.toLocaleTimeString();
 
-            // Add to buffer and limit size
-            activityBuffer.push(...activities);
-            if (activityBuffer.length > maxActivityItems) {
-                activityBuffer = activityBuffer.slice(-maxActivityItems);
+                    // Determine icon and type based on activity
+                    let icon = '⚡';
+                    let type = 'execution';
+
+                    if (activity.type === 'execution') {
+                        icon = activity.success ? '✅' : '❌';
+                        type = activity.success ? 'success' : 'error';
+                    } else if (activity.agent && activity.agent.includes('spider')) {
+                        icon = '🕷️';
+                        type = 'spider';
+                    } else if (activity.agent) {
+                        icon = '🤖';
+                        type = 'agent';
+                    }
+
+                    return {
+                        type: type,
+                        icon: icon,
+                        title: activity.agent || 'System Activity',
+                        description: activity.task || 'Task execution',
+                        time: timeStr
+                    };
+                });
+
+                // Replace buffer with real activities
+                activityBuffer = realActivities;
+            } else {
+                // Fallback: Add generic status update
+                const statusUpdate = {
+                    type: 'infrastructure',
+                    icon: '📊',
+                    title: 'System Status',
+                    description: `${data.active_agents || 0} agents active, ${data.active_spiders || 0} spiders monitoring`,
+                    time: new Date().toLocaleTimeString()
+                };
+
+                activityBuffer.push(statusUpdate);
+                if (activityBuffer.length > maxActivityItems) {
+                    activityBuffer = activityBuffer.slice(-maxActivityItems);
+                }
             }
 
-            // Update activity feed
+            // Update activity feed display
             activityFeed.innerHTML = activityBuffer.map(activity =>
                 `<div class="activity-item ${activity.type}">
                     <div class="activity-icon">${activity.icon}</div>
@@ -1265,18 +1339,42 @@
             if (evolutionEl && data.evolution_stage) {
                 evolutionEl.textContent = data.evolution_stage;
             }
+
+            // Update mood (REAL)
+            const moodEl = document.getElementById('systemMood');
+            if (moodEl && data.mood) {
+                moodEl.textContent = data.mood;
+                // Add mood color based on state
+                const moodColors = {
+                    'dormant': '#666',
+                    'struggling': '#ff4444',
+                    'contemplative': '#ffa500',
+                    'curious': '#00f2ff',
+                    'active': '#00ff88',
+                    'thriving': '#f093fb',
+                    'awakening': '#764ba2'
+                };
+                moodEl.style.color = moodColors[data.mood] || '#00f2ff';
+            }
+
+            // Update total executions (REAL)
+            const totalExec = document.getElementById('totalExecutions');
+            if (totalExec && data.real_metrics) {
+                const total = (data.real_metrics.files_created || 0) + ' tasks';
+                totalExec.textContent = total;
+            }
         }
 
         function updateHealth(data) {
-            // Use real system metrics if available
+            // Use REAL system metrics - no fallbacks to fake data
             const metrics = data.system_metrics || {};
             const healthData = [
-                { label: 'CPU Usage', value: metrics.cpu_usage || Math.round(Math.random() * 30), unit: '%' },
-                { label: 'Memory Usage', value: metrics.memory_usage || Math.round(Math.random() * 40), unit: '%' },
-                { label: 'Redis Health', value: metrics.redis_health || 95, unit: '%' },
-                { label: 'WebSocket Status', value: metrics.websocket_status || 100, unit: '%' },
-                { label: 'Agent Responses', value: metrics.agent_response_rate || 85, unit: '%' },
-                { label: 'System Health', value: Math.round(data.system_health || data.health_score || 75), unit: '%' }
+                { label: 'CPU Usage', value: Math.round(metrics.cpu_usage || 0), unit: '%' },
+                { label: 'Memory Usage', value: Math.round(metrics.memory_usage || 0), unit: '%' },
+                { label: 'Disk Usage', value: Math.round(metrics.disk_usage || 0), unit: '%' },
+                { label: 'Redis Health', value: Math.round(metrics.redis_health || 0), unit: '%' },
+                { label: 'WebSocket', value: Math.round(metrics.websocket_status || 0), unit: '%' },
+                { label: 'Success Rate', value: Math.round(metrics.agent_response_rate || 0), unit: '%' }
             ];
 
             healthMetrics.innerHTML = healthData.map(metric => {
@@ -1307,30 +1405,34 @@
                 navAgentCount.textContent = agentCount || '--';
             }
 
-            // Use real agent data from consciousness system
+            // Use REAL detailed agent performance data
             let agents = [];
 
-            // Try to get real performance data from consciousness capabilities
-            if (data.system_capabilities && data.system_capabilities.top_performers && data.system_capabilities.top_performers.length > 0) {
+            // Use detailed performance stats if available
+            if (data.agent_performance && data.agent_performance.length > 0) {
+                agents = data.agent_performance.map(agent => ({
+                    name: agent.name.replace(/_/g, ' ').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                    executions: agent.total_executions,
+                    success_rate: agent.success_rate,
+                    quality: agent.quality_score || 0,
+                    last_task: agent.last_task,
+                    code_generated: agent.code_generated,
+                    lines_of_code: agent.lines_of_code,
+                    status: agent.success_rate >= 80 ? 'excellent' : agent.success_rate >= 60 ? 'good' : 'needs-improvement'
+                }));
+            } else if (data.system_capabilities && data.system_capabilities.top_performers && data.system_capabilities.top_performers.length > 0) {
+                // Fallback to top performers if no detailed stats
                 agents = data.system_capabilities.top_performers.map(agent => ({
                     name: agent.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    score: parseFloat(agent.score) || 8.0,
-                    status: agent.status || 'active',
-                    last_performance: agent.last_activity || 'Recent'
+                    executions: 0,
+                    success_rate: agent.score || 0,
+                    quality: agent.score || 0,
+                    last_task: 'No recent task',
+                    status: 'active'
                 }));
-            } else if (data.capabilities && data.capabilities.by_type && data.capabilities.by_type.agent) {
-                // Use consciousness capabilities data if available
-                const agentData = data.capabilities.by_type.agent;
-                if (Array.isArray(agentData)) {
-                    agents = agentData.slice(0, 8).map((agent, index) => ({
-                        name: agent.name || `Agent ${index + 1}`,
-                        score: agent.performance_score || (8.0 + Math.random() * 2),
-                        status: 'active'
-                    }));
-                }
             }
 
-            // Fallback to system-aware data if no real data available
+            // Display agents in the card
             if (agents.length === 0) {
                 agents = [
                     { name: 'Consciousness Bridge', score: 9.2, status: 'active' },
@@ -1341,15 +1443,37 @@
                 ];
             }
 
-            agentList.innerHTML = agents.map(agent =>
-                `<div class="agent-item">
-                    <span class="agent-name">${agent.name}</span>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 0.8em; color: #888;">${agent.status || 'active'}</span>
-                        <span class="agent-score">${parseFloat(agent.score).toFixed(1)}/10</span>
-                    </div>
-                </div>`
-            ).join('');
+            agentList.innerHTML = agents.map(agent => {
+                // Use real metrics if available, otherwise show minimal info
+                if (agent.executions !== undefined) {
+                    // Real agent with execution data
+                    return `<div class="agent-item">
+                        <div style="flex: 1;">
+                            <span class="agent-name">${agent.name}</span>
+                            <div style="font-size: 0.75em; color: #888; margin-top: 4px;">
+                                ${agent.last_task || 'No recent task'}
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                            <span class="agent-score" style="background: ${agent.success_rate >= 80 ? 'rgba(0,255,136,0.3)' : agent.success_rate >= 60 ? 'rgba(255,165,0,0.3)' : 'rgba(255,68,68,0.3)'}; color: ${agent.success_rate >= 80 ? '#00ff88' : agent.success_rate >= 60 ? '#ffa500' : '#ff4444'};">
+                                ${agent.success_rate}% success
+                            </span>
+                            <div style="font-size: 0.7em; color: #666;">
+                                ${agent.executions} tasks | ${agent.code_generated || 0} files
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    // Fallback for agents without execution data
+                    return `<div class="agent-item">
+                        <span class="agent-name">${agent.name}</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.8em; color: #888;">No executions</span>
+                            <span class="agent-score" style="background: rgba(128,128,128,0.3); color: #888;">--</span>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
         }
 
         function updateSpiders(data) {
@@ -1359,35 +1483,68 @@
             const crystalCount = data.memory_crystals || 1;
             memoryUsage.textContent = crystalCount;
 
-            // Spider statistics
+            // Use REAL spider network data
+            const spiderNetwork = data.spider_network || {};
+
+            // Spider statistics - ALL REAL DATA
             spiderStats.innerHTML = `
                 <div class="spider-stat">
-                    <div class="spider-stat-value">${data.active_spiders || 0}</div>
+                    <div class="spider-stat-value">${spiderNetwork.active_spiders || 0}</div>
                     <div class="spider-stat-label">Active Spiders</div>
                 </div>
                 <div class="spider-stat">
-                    <div class="spider-stat-value">${Math.round(Math.random() * 1000 + 500)}</div>
+                    <div class="spider-stat-value">${spiderNetwork.tasks_per_hour || 0}</div>
                     <div class="spider-stat-label">Tasks/Hour</div>
+                </div>
+                <div class="spider-stat">
+                    <div class="spider-stat-value">${spiderNetwork.total_spiders || 0}</div>
+                    <div class="spider-stat-label">Total Spiders</div>
+                </div>
+                <div class="spider-stat">
+                    <div class="spider-stat-value">${spiderNetwork.network_status || 'unknown'}</div>
+                    <div class="spider-stat-label">Network Status</div>
                 </div>
             `;
         }
 
         function updateLearning(data) {
-            // Use real learning data from API
+            // Use REAL enhanced learning analytics data
+            const learningAnalytics = data.learning_analytics || {};
+
             const learningData = [
-                { label: 'Feedback Processed', value: data.feedback_processed || 0 },
-                { label: 'Insights Generated', value: data.insights_generated || 0 },
-                { label: 'Optimizations Applied', value: data.optimizations_applied || 0 },
-                { label: 'Learning Active', value: data.learning_active ? 'Yes' : 'No' },
-                { label: 'Proposals', value: (data.proposals && data.proposals.length) || 0 }
+                { label: 'Learning Status', value: learningAnalytics.learning_status || 'unknown' },
+                { label: 'Feedback Processed', value: learningAnalytics.feedback_processed || 0 },
+                { label: 'Insights Generated', value: learningAnalytics.insights_generated || 0 },
+                { label: 'Optimizations Applied', value: learningAnalytics.optimizations_applied || 0 },
+                { label: 'Improvement Rate', value: `${learningAnalytics.improvement_rate || 0}%` },
+                { label: 'Daily Feedback', value: learningAnalytics.daily_feedback || 0 }
             ];
 
-            learningMetrics.innerHTML = learningData.map(metric =>
-                `<div class="learning-metric">
+            learningMetrics.innerHTML = learningData.map(metric => {
+                const isActive = metric.label === 'Learning Status' && metric.value === 'active';
+                const statusClass = isActive ? ' style="color: #4caf50;"' : '';
+
+                return `<div class="learning-metric">
                     <span>${metric.label}</span>
-                    <span class="learning-value">${metric.value}</span>
-                </div>`
-            ).join('');
+                    <span class="learning-value"${statusClass}>${metric.value}</span>
+                </div>`;
+            }).join('');
+
+            // Add recent insights if available
+            const recentInsights = learningAnalytics.recent_insights || [];
+            if (recentInsights.length > 0) {
+                const insightsHTML = `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-size: 0.9em; color: #ccc; margin-bottom: 10px;">Recent Insights:</div>
+                        ${recentInsights.slice(0, 3).map(insight =>
+                            `<div style="font-size: 0.8em; color: #aaa; margin-bottom: 5px;">
+                                • ${insight.insight || 'Learning insight recorded'}
+                            </div>`
+                        ).join('')}
+                    </div>
+                `;
+                learningMetrics.innerHTML += insightsHTML;
+            }
 
             // Update proposals list with real data from consciousness stream
             const proposalsToUse = data.ai_proposals || data.proposals || [];
@@ -1673,6 +1830,759 @@
             }
         }, 100);
 
+        // AI Proposals Management Functions
+        function updateProposals(data) {
+            // Update proposals from WebSocket data or fetch from API
+            if (data && data.ai_proposals) {
+                currentProposals = data.ai_proposals;
+                renderProposals(currentProposals);
+            } else {
+                // Fetch proposals from API
+                fetchProposals();
+            }
+        }
+
+        async function fetchProposals() {
+            try {
+                const response = await fetch('/api/proposals/?status=all');
+                const result = await response.json();
+
+                if (result.success) {
+                    currentProposals = result.proposals;
+                    renderProposals(currentProposals);
+
+                    // Update auto-approve status
+                    const autoApproveStatus = document.getElementById('autoApproveStatus');
+                    if (autoApproveStatus) {
+                        const stats = result.stats;
+                        const autoEnabled = stats.auto_approval_enabled;
+                        const hourlyLimit = stats.safety_thresholds?.max_auto_approvals_per_hour || 0;
+                        autoApproveStatus.textContent = autoEnabled ? `${hourlyLimit}/hr limit` : 'Disabled';
+                        autoApproveStatus.style.color = autoEnabled ? '#4caf50' : '#888';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching proposals:', error);
+            }
+        }
+
+        function renderProposals(proposals) {
+            const proposalsList = document.getElementById('proposalsList');
+            if (!proposalsList) return;
+
+            if (!proposals || proposals.length === 0) {
+                proposalsList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #888;">
+                        <div style="font-size: 2em; margin-bottom: 10px;">🤖</div>
+                        <div>No AI proposals found</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">
+                            System analysis will generate proposals automatically
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group proposals by status
+            const groupedProposals = {
+                pending: proposals.filter(p => p.status === 'pending'),
+                approved: proposals.filter(p => p.status === 'approved'),
+                in_progress: proposals.filter(p => p.status === 'in_progress'),
+                completed: proposals.filter(p => p.status === 'completed'),
+                failed: proposals.filter(p => p.status === 'failed'),
+                rejected: proposals.filter(p => p.status === 'rejected')
+            };
+
+            let sectionsHTML = '';
+
+            // Pending Proposals Section
+            if (groupedProposals.pending.length > 0) {
+                sectionsHTML += `
+                    <div class="proposal-section" style="margin-bottom: 30px;">
+                        <h3 style="color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            ⏳ Pending Approval (${groupedProposals.pending.length})
+                        </h3>
+                        ${renderProposalsByStatus(groupedProposals.pending, 'pending')}
+                    </div>
+                `;
+            }
+
+            // In Progress Section
+            if (groupedProposals.in_progress.length > 0) {
+                sectionsHTML += `
+                    <div class="proposal-section" style="margin-bottom: 30px;">
+                        <h3 style="color: #ff9800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            🔄 Currently Executing (${groupedProposals.in_progress.length})
+                        </h3>
+                        ${renderProposalsByStatus(groupedProposals.in_progress, 'in_progress')}
+                    </div>
+                `;
+            }
+
+            // Approved (Queued) Section
+            if (groupedProposals.approved.length > 0) {
+                sectionsHTML += `
+                    <div class="proposal-section" style="margin-bottom: 30px;">
+                        <h3 style="color: #4caf50; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            ✅ Approved & Queued (${groupedProposals.approved.length})
+                        </h3>
+                        ${renderProposalsByStatus(groupedProposals.approved, 'approved')}
+                    </div>
+                `;
+            }
+
+            // Recently Completed Section
+            if (groupedProposals.completed.length > 0) {
+                sectionsHTML += `
+                    <div class="proposal-section" style="margin-bottom: 30px;">
+                        <h3 style="color: #2196f3; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            🎉 Recently Completed (${groupedProposals.completed.length})
+                        </h3>
+                        ${renderProposalsByStatus(groupedProposals.completed, 'completed')}
+                    </div>
+                `;
+            }
+
+            // Failed Section
+            if (groupedProposals.failed.length > 0) {
+                sectionsHTML += `
+                    <div class="proposal-section" style="margin-bottom: 30px;">
+                        <h3 style="color: #f44336; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            ❌ Failed Executions (${groupedProposals.failed.length})
+                        </h3>
+                        ${renderProposalsByStatus(groupedProposals.failed, 'failed')}
+                    </div>
+                `;
+            }
+
+            proposalsList.innerHTML = sectionsHTML;
+        }
+
+        function renderProposalsByStatus(proposals, status) {
+            return proposals.map(proposal => {
+                const riskColor = {
+                    'low': '#4caf50',
+                    'medium': '#ff9800',
+                    'high': '#f44336',
+                    'critical': '#e91e63'
+                }[proposal.risk_level] || '#888';
+
+                const categoryIcon = {
+                    'optimization': '⚡',
+                    'feature': '✨',
+                    'bugfix': '🐛',
+                    'security': '🔒',
+                    'refactor': '🔄',
+                    'documentation': '📚'
+                }[proposal.category] || '💡';
+
+                const statusConfig = {
+                    'pending': { color: '#ffa726', icon: '⏳', label: 'Pending' },
+                    'approved': { color: '#4caf50', icon: '✅', label: 'Approved' },
+                    'in_progress': { color: '#ff9800', icon: '🔄', label: 'Executing...' },
+                    'completed': { color: '#2196f3', icon: '🎉', label: 'Completed' },
+                    'failed': { color: '#f44336', icon: '❌', label: 'Failed' },
+                    'rejected': { color: '#888', icon: '⛔', label: 'Rejected' }
+                }[status] || { color: '#888', icon: '?', label: status };
+
+                return `
+                    <div class="proposal-item" style="
+                        background: rgba(255,255,255,0.05);
+                        border: 1px solid ${statusConfig.color}33;
+                        border-radius: 10px;
+                        padding: 15px;
+                        margin-bottom: 10px;
+                        position: relative;
+                    ">
+                        <div class="proposal-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                    <span style="font-size: 1.2em;">${categoryIcon}</span>
+                                    <span style="font-weight: bold; color: #fff;">${proposal.title}</span>
+                                    <span style="
+                                        background: ${riskColor}33;
+                                        color: ${riskColor};
+                                        padding: 2px 8px;
+                                        border-radius: 12px;
+                                        font-size: 0.7em;
+                                        text-transform: uppercase;
+                                        font-weight: bold;
+                                    ">${proposal.risk_level}</span>
+                                    <span style="
+                                        background: ${statusConfig.color}33;
+                                        color: ${statusConfig.color};
+                                        padding: 2px 8px;
+                                        border-radius: 12px;
+                                        font-size: 0.7em;
+                                        font-weight: bold;
+                                        margin-left: auto;
+                                    ">${statusConfig.icon} ${statusConfig.label}</span>
+                                </div>
+                                <div style="color: #ccc; font-size: 0.9em; line-height: 1.4;">
+                                    ${proposal.description}
+                                </div>
+                            </div>
+                        </div>
+
+                        ${status === 'in_progress' ? `
+                            <div style="margin: 10px 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="color: #ff9800; font-size: 0.8em;">Execution Progress</span>
+                                    <span style="color: #ff9800; font-size: 0.8em;">${proposal.completion_percentage || 0}%</span>
+                                </div>
+                                <div style="background: rgba(255,152,0,0.2); border-radius: 10px; height: 6px; overflow: hidden;">
+                                    <div style="
+                                        background: linear-gradient(90deg, #ff9800, #ffa726);
+                                        height: 100%;
+                                        width: ${proposal.completion_percentage || 0}%;
+                                        transition: width 0.3s ease;
+                                        position: relative;
+                                    ">
+                                        <div style="
+                                            position: absolute;
+                                            top: 0;
+                                            left: 0;
+                                            width: 100%;
+                                            height: 100%;
+                                            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                                            animation: shimmer 2s infinite;
+                                        "></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="proposal-metrics" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; font-size: 0.8em;">
+                            <div style="text-align: center;">
+                                <div style="color: #4caf50; font-weight: bold;">${proposal.impact_score}/10</div>
+                                <div style="color: #888;">Impact</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="color: #2196f3; font-weight: bold;">${proposal.roi_estimate}x</div>
+                                <div style="color: #888;">ROI</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="color: #ff9800; font-weight: bold;">${Math.round(proposal.confidence_score * 100)}%</div>
+                                <div style="color: #888;">Confidence</div>
+                            </div>
+                        </div>
+
+                        ${renderProposalActions(proposal, status)}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderProposalActions(proposal, status) {
+            if (status === 'pending') {
+                return `
+                    <div class="proposal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="approveProposal('${proposal.id}')" style="
+                            flex: 1;
+                            background: linear-gradient(135deg, #4caf50, #45a049);
+                            border: none;
+                            color: white;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                            ✅ Approve
+                        </button>
+                        <button onclick="showProposalDetails('${proposal.id}')" style="
+                            flex: 1;
+                            background: rgba(102,126,234,0.2);
+                            border: 1px solid rgba(102,126,234,0.5);
+                            color: #667eea;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='rgba(102,126,234,0.3)'" onmouseout="this.style.background='rgba(102,126,234,0.2)'">
+                            📋 Details
+                        </button>
+                        <button onclick="rejectProposal('${proposal.id}')" style="
+                            flex: 1;
+                            background: rgba(244,67,54,0.2);
+                            border: 1px solid rgba(244,67,54,0.5);
+                            color: #f44336;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.background='rgba(244,67,54,0.3)'" onmouseout="this.style.background='rgba(244,67,54,0.2)'">
+                            ❌ Reject
+                        </button>
+                    </div>
+                `;
+            } else if (status === 'approved') {
+                return `
+                    <div class="proposal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="executeProposal('${proposal.id}')" style="
+                            flex: 1;
+                            background: linear-gradient(135deg, #2196f3, #1976d2);
+                            border: none;
+                            color: white;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                            🚀 Execute Now
+                        </button>
+                        <button onclick="showProposalDetails('${proposal.id}')" style="
+                            flex: 1;
+                            background: rgba(102,126,234,0.2);
+                            border: 1px solid rgba(102,126,234,0.5);
+                            color: #667eea;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        ">
+                            📋 Details
+                        </button>
+                    </div>
+                `;
+            } else if (status === 'in_progress') {
+                return `
+                    <div class="proposal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button style="
+                            flex: 1;
+                            background: rgba(255,152,0,0.2);
+                            border: 1px solid rgba(255,152,0,0.5);
+                            color: #ff9800;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: not-allowed;
+                            font-size: 0.9em;
+                        " disabled>
+                            🔄 Executing...
+                        </button>
+                        <button onclick="showProposalDetails('${proposal.id}')" style="
+                            flex: 1;
+                            background: rgba(102,126,234,0.2);
+                            border: 1px solid rgba(102,126,234,0.5);
+                            color: #667eea;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        ">
+                            📋 Details
+                        </button>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="proposal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button onclick="showProposalDetails('${proposal.id}')" style="
+                            flex: 1;
+                            background: rgba(102,126,234,0.2);
+                            border: 1px solid rgba(102,126,234,0.5);
+                            color: #667eea;
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.9em;
+                            transition: all 0.3s ease;
+                        ">
+                            📋 View Details
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        async function approveProposal(proposalId) {
+            try {
+                showNotification(
+                    '⏳ Processing Approval',
+                    'Submitting proposal for approval...',
+                    'info'
+                );
+
+                const response = await fetch('/api/proposals/approve/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proposal_id: proposalId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.execution_result) {
+                        showNotification(
+                            '🚀 Approved & Executed',
+                            `${result.message}. Result: ${result.execution_result.message || 'Complete'}`,
+                            'success'
+                        );
+                    } else {
+                        showNotification(
+                            '✅ Proposal Approved',
+                            result.message + ' - Check execution status below.',
+                            'success'
+                        );
+                    }
+
+                    // Refresh proposals list immediately to show status change
+                    fetchProposals();
+                } else {
+                    showNotification(
+                        '❌ Approval Failed',
+                        result.error || 'Failed to approve proposal',
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Error approving proposal:', error);
+                showNotification(
+                    '❌ Network Error',
+                    'Failed to communicate with server',
+                    'error'
+                );
+            }
+        }
+
+        async function executeProposal(proposalId) {
+            try {
+                showNotification(
+                    '🚀 Executing Proposal',
+                    'Starting execution of approved proposal...',
+                    'info'
+                );
+
+                const response = await fetch('/api/proposals/execute/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proposal_id: proposalId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification(
+                        '🎉 Execution Complete',
+                        result.message || 'Proposal executed successfully',
+                        'success'
+                    );
+                } else {
+                    showNotification(
+                        '❌ Execution Failed',
+                        result.error || 'Failed to execute proposal',
+                        'error'
+                    );
+                }
+
+                // Refresh proposals list to show updated status
+                fetchProposals();
+
+            } catch (error) {
+                console.error('Error executing proposal:', error);
+                showNotification(
+                    '❌ Network Error',
+                    'Failed to communicate with server',
+                    'error'
+                );
+            }
+        }
+
+        async function rejectProposal(proposalId) {
+            const reason = prompt('Reason for rejection (optional):') || 'User rejected';
+
+            try {
+                const response = await fetch('/api/proposals/reject/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        proposal_id: proposalId,
+                        reason: reason
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification(
+                        '❌ Proposal Rejected',
+                        result.message,
+                        'info'
+                    );
+
+                    // Refresh proposals list
+                    fetchProposals();
+                } else {
+                    showNotification(
+                        '❌ Rejection Failed',
+                        result.error || 'Failed to reject proposal',
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Error rejecting proposal:', error);
+                showNotification(
+                    '❌ Network Error',
+                    'Failed to communicate with server',
+                    'error'
+                );
+            }
+        }
+
+        function generateModalExecutionResults(proposal) {
+            if (proposal.status === 'completed' && proposal.execution_log && proposal.execution_log.length > 0) {
+                const lastExecution = proposal.execution_log[proposal.execution_log.length - 1];
+                const result = lastExecution.result || {};
+
+                return `
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(76,175,80,0.1); border-radius: 10px; border-left: 4px solid #4caf50;">
+                        <h4 style="color: #4caf50; margin: 0 0 10px 0;">🎉 Execution Results</h4>
+                        <div style="margin-bottom: 10px;">
+                            <strong style="color: #fff;">Status:</strong> <span style="color: #4caf50;">Successfully Completed</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong style="color: #fff;">Completion:</strong> ${proposal.completion_percentage}%
+                        </div>
+                        ${result.message ? `
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #fff;">Result:</strong> ${result.message}
+                            </div>
+                        ` : ''}
+                        ${result.improvement_metrics ? `
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #fff;">Improvements:</strong>
+                                <ul style="margin: 5px 0 0 20px;">
+                                    ${Object.entries(result.improvement_metrics).map(([key, value]) =>
+                                        `<li>${key}: ${value}</li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${result.components_updated ? `
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #fff;">Components Updated:</strong>
+                                <div style="margin-top: 5px;">
+                                    ${result.components_updated.map(comp =>
+                                        `<span style="background: rgba(76,175,80,0.2); padding: 2px 8px; border-radius: 12px; margin-right: 5px; font-size: 0.8em;">${comp}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div style="font-size: 0.8em; color: #888; margin-top: 10px;">
+                            Executed: ${new Date(lastExecution.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                `;
+            } else if (proposal.status === 'failed' && proposal.error_messages && proposal.error_messages.length > 0) {
+                return `
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(244,67,54,0.1); border-radius: 10px; border-left: 4px solid #f44336;">
+                        <h4 style="color: #f44336; margin: 0 0 10px 0;">❌ Execution Failed</h4>
+                        <div style="margin-bottom: 10px;">
+                            <strong style="color: #fff;">Status:</strong> <span style="color: #f44336;">Failed</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong style="color: #fff;">Error Messages:</strong>
+                            <ul style="margin: 5px 0 0 20px;">
+                                ${proposal.error_messages.map(error => `<li style="color: #f44336;">${error}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else if (proposal.status === 'in_progress') {
+                return `
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,152,0,0.1); border-radius: 10px; border-left: 4px solid #ff9800;">
+                        <h4 style="color: #ff9800; margin: 0 0 10px 0;">🔄 Currently Executing</h4>
+                        <div style="margin-bottom: 10px;">
+                            <strong style="color: #fff;">Progress:</strong> ${proposal.completion_percentage || 0}%
+                        </div>
+                        <div style="background: rgba(255,152,0,0.2); border-radius: 10px; height: 8px; overflow: hidden; margin-bottom: 10px;">
+                            <div style="background: #ff9800; height: 100%; width: ${proposal.completion_percentage || 0}%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="color: #ff9800; font-size: 0.9em;">
+                            Execution in progress... Please wait for completion.
+                        </div>
+                    </div>
+                `;
+            }
+            return '';
+        }
+
+        function generateModalActionButtons(proposal) {
+            if (proposal.status === 'pending') {
+                return `
+                    <div style="display: flex; gap: 10px; margin-top: 30px;">
+                        <button onclick="approveProposal('${proposal.id}'); this.closest('.modal').remove();" style="
+                            flex: 1;
+                            background: linear-gradient(135deg, #4caf50, #45a049);
+                            border: none;
+                            color: white;
+                            padding: 12px 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 1em;
+                        ">✅ Approve</button>
+                        <button onclick="rejectProposal('${proposal.id}'); this.closest('.modal').remove();" style="
+                            flex: 1;
+                            background: linear-gradient(135deg, #f44336, #d32f2f);
+                            border: none;
+                            color: white;
+                            padding: 12px 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 1em;
+                        ">❌ Reject</button>
+                    </div>
+                `;
+            } else if (proposal.status === 'approved') {
+                return `
+                    <div style="display: flex; gap: 10px; margin-top: 30px;">
+                        <button onclick="executeProposal('${proposal.id}'); this.closest('.modal').remove();" style="
+                            flex: 1;
+                            background: linear-gradient(135deg, #2196f3, #1976d2);
+                            border: none;
+                            color: white;
+                            padding: 12px 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 1em;
+                        ">🚀 Execute Now</button>
+                        <button onclick="this.closest('.modal').remove();" style="
+                            flex: 1;
+                            background: rgba(255,255,255,0.1);
+                            border: 1px solid rgba(255,255,255,0.3);
+                            color: white;
+                            padding: 12px 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 1em;
+                        ">Close</button>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div style="display: flex; gap: 10px; margin-top: 30px;">
+                        <button onclick="this.closest('.modal').remove();" style="
+                            flex: 1;
+                            background: rgba(255,255,255,0.1);
+                            border: 1px solid rgba(255,255,255,0.3);
+                            color: white;
+                            padding: 12px 20px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 1em;
+                        ">Close</button>
+                    </div>
+                `;
+            }
+        }
+
+        function showProposalDetails(proposalId) {
+            const proposal = currentProposals.find(p => p.id === proposalId);
+            if (!proposal) return;
+
+            // Create detailed modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                backdrop-filter: blur(10px);
+                z-index: 10000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border-radius: 20px;
+                    padding: 30px;
+                    max-width: 600px;
+                    width: 100%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    border: 1px solid rgba(255,255,255,0.1);
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: #fff; margin: 0;">${proposal.title}</h2>
+                        <button onclick="this.closest('.modal').remove()" style="
+                            background: none;
+                            border: none;
+                            color: #888;
+                            font-size: 1.5em;
+                            cursor: pointer;
+                            padding: 5px;
+                        ">×</button>
+                    </div>
+
+                    <div style="color: #ccc; line-height: 1.6;">
+                        <div style="margin-bottom: 20px;">
+                            <strong style="color: #fff;">Description:</strong><br>
+                            ${proposal.description}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <strong style="color: #fff;">Category:</strong> ${proposal.category}
+                            </div>
+                            <div>
+                                <strong style="color: #fff;">Risk Level:</strong>
+                                <span style="color: ${{'low': '#4caf50', 'medium': '#ff9800', 'high': '#f44336', 'critical': '#e91e63'}[proposal.risk_level]}">
+                                    ${proposal.risk_level}
+                                </span>
+                            </div>
+                            <div>
+                                <strong style="color: #fff;">Impact Score:</strong> ${proposal.impact_score}/10
+                            </div>
+                            <div>
+                                <strong style="color: #fff;">ROI Estimate:</strong> ${proposal.roi_estimate}x
+                            </div>
+                        </div>
+
+                        ${proposal.affected_components && proposal.affected_components.length > 0 ? `
+                            <div style="margin-bottom: 15px;">
+                                <strong style="color: #fff;">Affected Components:</strong><br>
+                                ${proposal.affected_components.map(comp => `<span style="background: rgba(102,126,234,0.2); padding: 2px 8px; border-radius: 12px; margin-right: 5px; font-size: 0.8em;">${comp}</span>`).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${proposal.implementation_steps && proposal.implementation_steps.length > 0 ? `
+                            <div style="margin-bottom: 15px;">
+                                <strong style="color: #fff;">Implementation Steps:</strong>
+                                <ol style="margin-top: 10px; padding-left: 20px;">
+                                    ${proposal.implementation_steps.map(step => `<li style="margin-bottom: 5px;">${step}</li>`).join('')}
+                                </ol>
+                            </div>
+                        ` : ''}
+
+                        ${generateModalExecutionResults(proposal)}
+
+                        ${generateModalActionButtons(proposal)}
+                    </div>
+                </div>
+            `;
+
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
         // Implementation functions for consciousness insights
         // Notification System
         function showNotification(title, message, type = 'info', duration = 5000) {
@@ -1842,9 +2752,22 @@
                         data: result.data
                     });
                     console.log('📊 Intelligence data loaded' + (forceRefresh ? ' (forced refresh)' : ''), result.data);
+
+                    // Save fresh data to cache
+                    saveDataToCache(result.data);
                 }
             } catch (error) {
                 console.error('Failed to fetch intelligence data:', error);
+
+                // Try to load cached data as fallback
+                const cachedData = loadDataFromCache();
+                if (cachedData) {
+                    console.log('🔄 Using cached data as fallback');
+                    updateDashboard({
+                        type: 'consciousness_update',
+                        data: cachedData
+                    });
+                }
             }
         }
 
@@ -1876,7 +2799,11 @@
 
         // Force refresh function for API calls
         async function forceRefresh() {
-            console.log('Force refreshing intelligence data...');
+            console.log('🔄 Force refreshing intelligence data...');
+
+            // Clear localStorage cache
+            localStorage.removeItem(CACHE_KEY);
+            console.log('📋 Cleared localStorage cache');
 
             // Clear any cached data
             await fetchIntelligenceData(true);
@@ -1888,11 +2815,112 @@
             connectWebSocket();
         }
 
+        // Add manual refresh button capability
+        function addRefreshControls() {
+            const header = document.querySelector('.header');
+            if (header && !document.getElementById('refreshControls')) {
+                const refreshDiv = document.createElement('div');
+                refreshDiv.id = 'refreshControls';
+                refreshDiv.style.cssText = 'margin-top: 10px; text-align: center;';
+
+                const refreshBtn = document.createElement('button');
+                refreshBtn.textContent = '🔄 Force Refresh';
+                refreshBtn.style.cssText = `
+                    background: rgba(102,126,234,0.2);
+                    border: 1px solid rgba(102,126,234,0.5);
+                    color: #667eea;
+                    padding: 8px 16px;
+                    border-radius: 15px;
+                    cursor: pointer;
+                    margin: 0 5px;
+                    font-size: 0.9em;
+                `;
+                refreshBtn.onclick = forceRefresh;
+
+                const cacheBtn = document.createElement('button');
+                cacheBtn.textContent = '🗑️ Clear Cache';
+                cacheBtn.style.cssText = `
+                    background: rgba(255,107,107,0.2);
+                    border: 1px solid rgba(255,107,107,0.5);
+                    color: #ff6b6b;
+                    padding: 8px 16px;
+                    border-radius: 15px;
+                    cursor: pointer;
+                    margin: 0 5px;
+                    font-size: 0.9em;
+                `;
+                cacheBtn.onclick = () => {
+                    localStorage.removeItem(CACHE_KEY);
+                    console.log('📋 Cache cleared manually');
+                    forceRefresh();
+                };
+
+                refreshDiv.appendChild(refreshBtn);
+                refreshDiv.appendChild(cacheBtn);
+                header.appendChild(refreshDiv);
+            }
+        }
+
         // Connect WebSocket immediately (don't wait for DOMContentLoaded)
         connectWebSocket();
 
+        // Data persistence for page refreshes
+        const CACHE_KEY = 'intelligence_dashboard_data';
+        const CACHE_DURATION = 30000; // 30 seconds
+
+        function saveDataToCache(data) {
+            try {
+                const cacheData = {
+                    data: data,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+            } catch (error) {
+                console.warn('Failed to save data to cache:', error);
+            }
+        }
+
+        function loadDataFromCache() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (!cached) return null;
+
+                const cacheData = JSON.parse(cached);
+                const now = Date.now();
+
+                // Check if cache is still valid
+                if (now - cacheData.timestamp < CACHE_DURATION) {
+                    console.log('📋 Loading cached data (age: ' + Math.round((now - cacheData.timestamp) / 1000) + 's)');
+                    return cacheData.data;
+                } else {
+                    console.log('📋 Cache expired, clearing...');
+                    localStorage.removeItem(CACHE_KEY);
+                    return null;
+                }
+            } catch (error) {
+                console.warn('Failed to load data from cache:', error);
+                return null;
+            }
+        }
+
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
+
+            // Try to load cached data first for instant display
+            const cachedData = loadDataFromCache();
+            if (cachedData) {
+                console.log('🔄 Restoring dashboard from cache');
+                updateDashboard({
+                    type: 'consciousness_update',
+                    data: cachedData
+                });
+            } else {
+                // Show loading state if no cached data
+                updateHealth({});
+                updateAgents({});
+                updateSpiders({});
+                updateLearning({});
+            }
 
             // Add some initial activity
             activityBuffer = [
@@ -1905,25 +2933,33 @@
                 }
             ];
 
-            // Don't initialize with zeros - fetch real data immediately
+            // Always fetch fresh data
             fetchIntelligenceData();
 
-            // Update dashboard with loading state
-            updateHealth({});
-            updateAgents({});
-            updateSpiders({});
-            updateLearning({});
+            // Fetch AI proposals
+            fetchProposals();
+
+            // Set up automatic proposal refreshing for real-time status updates
+            setInterval(() => {
+                fetchProposals();
+            }, 5000); // Refresh every 5 seconds
+
+            // Add refresh controls for manual cache management
+            addRefreshControls();
 
             // Handle page visibility changes for better connection management
             document.addEventListener('visibilitychange', function() {
                 if (document.visibilityState === 'visible') {
                     console.log('Page visible - ensuring WebSocket connection');
-                    if (!ws || ws.readyState !== WebSocket.OPEN) {
-                        connectWebSocket();
-                    } else {
-                        // Request fresh data when page becomes visible
-                        ws.send(JSON.stringify({ command: 'refresh' }));
+
+                    // Always reconnect and fetch fresh data when page becomes visible
+                    if (ws) {
+                        ws.close();
                     }
+                    setTimeout(() => {
+                        connectWebSocket();
+                        fetchIntelligenceData(true); // Force refresh
+                    }, 100);
                 } else {
                     console.log('Page hidden - connection will continue in background');
                 }

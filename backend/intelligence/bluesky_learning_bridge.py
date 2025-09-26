@@ -881,7 +881,18 @@ class BlueskyLearningBridge:
 
 
 # Global instance for easy access
-bluesky_learning_bridge = BlueskyLearningBridge()
+# Global instance - created lazily to avoid circular imports
+_bluesky_learning_bridge_instance = None
+
+def get_bluesky_learning_bridge():
+    """Get or create the singleton BlueskyLearningBridge instance"""
+    global _bluesky_learning_bridge_instance
+    if _bluesky_learning_bridge_instance is None:
+        _bluesky_learning_bridge_instance = BlueskyLearningBridge()
+    return _bluesky_learning_bridge_instance
+
+# For backward compatibility
+bluesky_learning_bridge = None
 
 
 async def start_bluesky_learning():

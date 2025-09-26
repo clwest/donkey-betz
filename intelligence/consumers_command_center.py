@@ -80,11 +80,21 @@ class CommandCenterConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
         try:
-            if self.room_group_name:
-                await self.channel_layer.group_discard(
-                    self.room_group_name,
-                    self.channel_name
-                )
+            # Clean up resources first
+            self.memory_manager = None
+            self.agent_orchestrator = None
+            self.income_builder = None
+            self.ai_provider = None
+
+            # Then leave the group
+            if self.room_group_name and self.channel_layer:
+                try:
+                    await self.channel_layer.group_discard(
+                        self.room_group_name,
+                        self.channel_name
+                    )
+                except Exception as e:
+                    logger.debug(f"Error leaving group: {e}")
 
             logger.info(f"Command Center WebSocket disconnected for user {self.user_id}")
 
