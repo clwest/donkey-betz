@@ -1,0 +1,46 @@
+```json
+{
+  "name": "test-project-fixed",
+  "version": "1.0.0",
+  "description": "Build a general project with the following requirements: Testing the file path fix",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "dev": "react-scripts start"
+  },
+  "keywords": [
+    "dashboard",
+    "analytics"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-scripts": "5.0.1",
+    "axios": "^0.21.1",
+    "react-router-dom": "^6.0.0",
+    "chart.js": "^3.5.1",
+    "recharts": "^2.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-plugin-react": "^7.28.0",
+    "prettier": "^2.5.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
+```

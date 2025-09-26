@@ -1,0 +1,36 @@
+```json
+{
+  "name": "test_todo_app",
+  "version": "1.0.0",
+  "description": "Build a simple todo list app",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "dev": "react-scripts start"
+  },
+  "keywords": [
+    "todo",
+    "react",
+    "app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-scripts": "^5.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.0.0",
+    "jest": "^27.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/test_todo_app.git"
+  },
+  "homepage": "https://yourusername.github.io/test_todo_app"
+}
+```
