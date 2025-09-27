@@ -116,6 +116,10 @@ from core.views import (
     assistant_context, research_books, research_documents, prompting_test,
     personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
 )
+from core.views_unified_intelligence import (
+    unified_intelligence_dashboard, get_unified_intelligence_data,
+    implement_insight, investigate_behavior, approve_proposal, reject_proposal
+)
 from core.views_dashboard_stats import (
     dashboard_stats, live_agent_activity, advisor_insights
 )
@@ -485,6 +489,15 @@ urlpatterns = [
 
     # AI Job Market Intelligence Training Dashboard
     path('ai-job-market-dashboard/', ai_job_market_dashboard, name='ai-job-market-dashboard'),
+
+    # Unified Intelligence Dashboard (AI Nexus Intelligence View)
+    path('nexus/', unified_intelligence_dashboard, name='unified-intelligence-dashboard'),
+    path('intelligence/', unified_intelligence_dashboard, name='intelligence-dashboard'),
+    path('api/nexus/intelligence-data/', get_unified_intelligence_data, name='nexus-intelligence-data'),
+    path('api/nexus/implement-insight/', implement_insight, name='nexus-implement-insight'),
+    path('api/nexus/investigate-behavior/', investigate_behavior, name='nexus-investigate-behavior'),
+    path('api/nexus/approve-proposal/', approve_proposal, name='nexus-approve-proposal'),
+    path('api/nexus/reject-proposal/', reject_proposal, name='nexus-reject-proposal'),
 
     path('api/v1/orchestrations/', orchestrations_list, name='orchestrations-list'),
     
