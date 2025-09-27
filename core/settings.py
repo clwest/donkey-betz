@@ -106,7 +106,7 @@ MIDDLEWARE = [
     'core.middleware.DisableCSRFForAuthEndpoints',  # Custom CSRF exemption
     # 'django.middleware.csrf.CsrfViewMiddleware',  # Temporarily disabled for testing
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth - temporarily disabled for testing
+    'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth with dev bypass
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.rate_limiter.RateLimitMiddleware',  # Global rate limiting

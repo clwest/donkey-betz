@@ -142,10 +142,10 @@ class ConsciousnessBridge:
             'top_performers': self._get_top_performers()
         }
 
-        # Store spider count in Redis for persistence
-        spider_count = len([c for c in self.capabilities.values() if c.type == 'spider'])
+        # Get REAL spider count from Redis
+        spider_count = self.redis_client.scard('active_spiders')  # Get REAL count from Redis!
         self.redis_client.set('consciousness:active_spiders', spider_count, ex=3600)
-        print(f"📊 Stored {spider_count} spiders in Redis")
+        print(f"📊 Found {spider_count} REAL spiders in Redis (not mock data!)")
 
         # 3. Identify patterns and inefficiencies
         print("🔮 Discovering patterns...")

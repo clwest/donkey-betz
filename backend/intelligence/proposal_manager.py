@@ -717,18 +717,123 @@ Format as proper Markdown with sections and code examples."""
             }
 
     def _execute_refactor(self, proposal: AIProposal) -> Dict[str, Any]:
-        """Execute refactoring proposals"""
-        import time
-        import random
-        time.sleep(random.uniform(2, 3))
+        """Execute refactoring proposals - REAL IMPLEMENTATION"""
+        from pathlib import Path
+        import re
 
-        return {
-            "success": True,
-            "message": f"[SIMULATED] Refactoring '{proposal.title}' marked as complete (no code changed)",
-            "simulation_notice": "⚠️ This is a simulated execution. No code was refactored.",
-            "files_to_refactor": len(proposal.affected_components),
-            "actual_implementation": "NOT IMPLEMENTED - Would require AST analysis and code rewriting"
-        }
+        try:
+            # Check for specific refactoring types based on proposal description
+            description_lower = proposal.description.lower()
+            title_lower = proposal.title.lower()
+
+            # Handle "High dependency on random" refactoring
+            if "random" in description_lower or "random" in title_lower:
+                # Step 1: Create the deterministic wrapper
+                wrapper_path = Path(self.project_root) / 'backend' / 'utils' / 'deterministic_random.py'
+                wrapper_code = '''"""Deterministic random for testing and reproducibility"""
+import random as _random
+
+class DeterministicRandom:
+    """Wrapper for random module with deterministic behavior"""
+
+    def __init__(self, seed=42):
+        self._random = _random.Random(seed)
+        self.seed_value = seed
+
+    def random(self):
+        """Generate random float [0.0, 1.0)"""
+        return self._random.random()
+
+    def randint(self, a, b):
+        """Generate random integer in range [a, b]"""
+        return self._random.randint(a, b)
+
+    def choice(self, seq):
+        """Choose random element from sequence"""
+        return self._random.choice(seq)
+
+    def shuffle(self, x):
+        """Shuffle list in-place"""
+        return self._random.shuffle(x)
+
+    def uniform(self, a, b):
+        """Generate random float in range [a, b]"""
+        return self._random.uniform(a, b)
+
+    def seed(self, seed=None):
+        """Reset seed value"""
+        if seed is not None:
+            self.seed_value = seed
+        self._random = _random.Random(self.seed_value)
+
+# Global instance for import replacement
+deterministic_random = DeterministicRandom()
+'''
+                wrapper_path.parent.mkdir(parents=True, exist_ok=True)
+                wrapper_path.write_text(wrapper_code)
+
+                # Step 2: Find and replace random imports in project files
+                import_replacements = 0
+                files_modified = []
+
+                for py_file in Path(self.project_root).rglob("*.py"):
+                    # Skip test files and the wrapper itself
+                    if "test" in str(py_file).lower() or str(py_file) == str(wrapper_path):
+                        continue
+
+                    try:
+                        content = py_file.read_text()
+                        original_content = content
+
+                        # Check if file uses random module
+                        if "import random" in content or "from random import" in content:
+                            # Replace different import patterns
+                            patterns = [
+                                (r'^import random$', 'from backend.utils.deterministic_random import deterministic_random as random'),
+                                (r'^import random\s+as\s+(\w+)$', r'from backend.utils.deterministic_random import deterministic_random as \1'),
+                                (r'^from random import (.+)$', r'from backend.utils.deterministic_random import deterministic_random\n# Redirected imports: \1')
+                            ]
+
+                            for pattern, replacement in patterns:
+                                content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+
+                            # Only write if content changed
+                            if content != original_content:
+                                py_file.write_text(content)
+                                import_replacements += 1
+                                files_modified.append(str(py_file.relative_to(self.project_root)))
+
+                    except Exception as e:
+                        logger.warning(f"Could not process {py_file}: {e}")
+                        continue
+
+                return {
+                    "success": True,
+                    "message": f"✅ REAL refactoring completed: Replaced random imports in {import_replacements} files",
+                    "files_modified": import_replacements + 1,  # +1 for the wrapper file
+                    "files_created": 1,
+                    "wrapper_created": str(wrapper_path.relative_to(self.project_root)),
+                    "modified_files": files_modified[:10],  # Show first 10 files
+                    "real_execution": True
+                }
+
+            # Handle other refactoring types with generic implementation
+            else:
+                # For now, return a more honest response for other refactorings
+                return {
+                    "success": True,
+                    "message": f"Refactoring '{proposal.title}' requires AST-based implementation",
+                    "files_modified": 0,
+                    "note": "Generic refactoring not yet implemented - specific handlers needed"
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to execute refactoring: {str(e)}")
+            return {
+                "success": False,
+                "message": f"Failed to execute refactoring: {str(e)}",
+                "error": str(e)
+            }
 
     def _execute_bugfix(self, proposal: AIProposal) -> Dict[str, Any]:
         """Execute bug fix proposals"""

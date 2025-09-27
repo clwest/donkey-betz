@@ -432,6 +432,13 @@ urlpatterns = [
     path('api/opportunities/', get_opportunities, name='get-opportunities'),
     path('api/opportunities/actionable/', get_actionable, name='get-actionable'),
 
+    # Proposals API endpoints
+    path('api/proposals/', lambda r: __import__('core.views_proposals', fromlist=['get_proposals']).get_proposals(r), name='get-proposals'),
+    path('api/proposals/stats/', lambda r: __import__('core.views_proposals', fromlist=['get_proposal_stats']).get_proposal_stats(r), name='get-proposal-stats'),
+    path('api/proposals/<str:proposal_id>/approve/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['approve_proposal']).approve_proposal(r), name='approve-proposal'),
+    path('api/proposals/<str:proposal_id>/reject/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['reject_proposal']).reject_proposal(r), name='reject-proposal'),
+    path('api/proposals/<str:proposal_id>/execute/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['execute_proposal']).execute_proposal(r), name='execute-proposal'),
+
     # Spider Dashboard API endpoints
     path('api/spider/stats/', lambda r: __import__('backend.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
     path('api/spider/data/', lambda r: __import__('backend.api.spider_api', fromlist=['SpiderDataAPI']).SpiderDataAPI.as_view()(r), name='spider_data'),

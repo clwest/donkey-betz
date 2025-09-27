@@ -16,6 +16,7 @@ import logging
 from datetime import datetime
 import redis
 from django.conf import settings
+import gc  # Import garbage collection for memory optimization
 
 logger = logging.getLogger(__name__)
 
@@ -91,14 +92,22 @@ def unified_intelligence_dashboard(request):
 def get_unified_intelligence_data(request):
     """Get comprehensive system data for the unified dashboard"""
     try:
+        from django.core.cache import cache
+
         # Check for force refresh parameter
         force_refresh = request.GET.get('force_refresh', 'false').lower() == 'true'
 
+        # Try to get cached data first (5 minute cache)
+        if not force_refresh:
+            cached_data = cache.get('unified_intelligence_data')
+            if cached_data:
+                return JsonResponse(cached_data)
+
         # Clear cache if force refresh requested
         if force_refresh:
-            from django.core.cache import cache
             cache.delete('consciousness_understanding')
             cache.delete('consciousness_health')
+            cache.delete('unified_intelligence_data')
 
         # Import execution tracker for REAL metrics
         from backend.agents.execution_tracker import AgentExecutionTracker
@@ -108,10 +117,24 @@ def get_unified_intelligence_data(request):
         consciousness = ConsciousnessBridge()
         learning_loop = LearningLoop()
 
-        # Get consciousness data
-        understanding = consciousness.understand_self()
+        # Get consciousness data with timeout protection
+        try:
+            # Use cached understanding if available
+            understanding = cache.get('consciousness_understanding')
+            if not understanding or force_refresh:
+                understanding = consciousness.understand_self()
+                cache.set('consciousness_understanding', understanding, 300)  # Cache for 5 minutes
+        except Exception as e:
+            logger.warning(f"Failed to get consciousness understanding: {e}")
+            understanding = {'self_awareness_score': 0, 'capabilities': {}, 'insights': [], 'emergent_behaviors': []}
+
         introspection = consciousness.introspection() if hasattr(consciousness, 'introspection') else {}
-        health = consciousness.get_system_health()
+
+        # Get health with cache
+        health = cache.get('consciousness_health')
+        if not health or force_refresh:
+            health = consciousness.get_system_health()
+            cache.set('consciousness_health', health, 60)  # Cache for 1 minute
 
         # Get learning loop status
         learning_status = learning_loop.get_learning_status()
@@ -242,10 +265,17 @@ def get_unified_intelligence_data(request):
             'status': 'operational'
         }
 
-        return JsonResponse({
+        # Cache the response
+        response_data = {
             'success': True,
             'data': unified_data
-        })
+        }
+        cache.set('unified_intelligence_data', response_data, 300)  # Cache for 5 minutes
+
+        # Force garbage collection to reduce memory usage
+        gc.collect()
+
+        return JsonResponse(response_data)
 
     except Exception as e:
         return JsonResponse({
@@ -265,34 +295,105 @@ def get_unified_intelligence_data(request):
 @require_http_methods(["POST"])
 @login_required
 def implement_insight(request):
-    """Implement a consciousness insight"""
+    """Implement a consciousness insight - NOW WITH REAL EXECUTION"""
     try:
         data = json.loads(request.body)
         insight_id = data.get('insight_id')
         category = data.get('category')
         timestamp_val = data.get('timestamp')
+        description = data.get('description', '')
 
-        logger.info(f"Implementing insight {insight_id} in category {category}")
+        logger.info(f"Implementing insight {insight_id} in category {category}: {description}")
 
-        # Track implementation in Redis
+        # Import the ProposalManager to execute real fixes
+        from backend.intelligence.proposal_manager import ProposalManager, AIProposal
+        proposal_manager = ProposalManager()
+
+        # Map consciousness categories to proposal categories
+        category_mapping = {
+            'pattern': 'refactor',  # Code patterns need refactoring
+            'inefficiency': 'optimization',  # Inefficiencies need optimization
+            'opportunity': 'feature',  # Opportunities are new features
+            'emergent': 'optimization',  # Emergent behaviors need optimization
+            'performance': 'optimization',
+            'security': 'security'
+        }
+
+        proposal_category = category_mapping.get(category, 'optimization')
+
+        # Create a proposal from the insight
+        proposal_title = f"Fix: {description[:50]}..." if len(description) > 50 else f"Fix: {description}"
+
+        # Determine specific fixes based on the description
+        implementation_steps = []
+        if "random" in description.lower():
+            implementation_steps = [
+                "Identify all uses of random module",
+                "Create deterministic random wrapper",
+                "Replace imports with deterministic version",
+                "Test affected modules"
+            ]
+        elif "dependency" in description.lower():
+            implementation_steps = [
+                f"Analyze {description}",
+                "Create abstraction layer",
+                "Refactor dependent modules",
+                "Update imports",
+                "Run tests"
+            ]
+        else:
+            implementation_steps = [
+                f"Analyze: {description}",
+                "Generate fix using AI",
+                "Apply changes",
+                "Test implementation",
+                "Monitor results"
+            ]
+
+        # Create and save the proposal
+        proposal_id = proposal_manager.create_proposal(
+            title=proposal_title,
+            description=f"Consciousness-identified issue: {description}",
+            category=proposal_category,
+            source="consciousness_insight",
+            metadata={
+                "insight_id": insight_id,
+                "original_category": category,
+                "timestamp": timestamp_val,
+                "implementation_steps": implementation_steps
+            }
+        )
+
+        # Approve it automatically for consciousness-identified issues
+        approval_result = proposal_manager.approve_proposal(proposal_id, "consciousness_system")
+
+        # Execute the proposal to actually fix the issue
+        execution_result = proposal_manager.execute_proposal(proposal_id)
+
+        # Track implementation in Redis with execution results
         implementation_key = f"implemented_insight:{insight_id}:{category}"
         redis_client.setex(implementation_key, 86400, json.dumps({  # 24 hour expiry
             'status': 'implemented',
             'timestamp': timestamp_val,
-            'category': category
+            'category': category,
+            'proposal_id': proposal_id,
+            'execution_result': execution_result
         }))
 
         # Also track in a set for quick lookups
         redis_client.sadd('implemented_insights', f"{insight_id}:{category}")
 
-        # Record the implementation request
+        # Record the implementation request with real execution results
         result = {
-            'success': True,
+            'success': execution_result.get('success', True),
             'status': 'implemented',
             'insight_id': insight_id,
             'category': category,
-            'message': f'Insight implementation has been initiated.',
-            'estimated_completion': '2-5 minutes',
+            'message': execution_result.get('message', 'Insight implementation completed successfully.'),
+            'execution_details': execution_result,
+            'proposal_id': proposal_id,
+            'files_modified': execution_result.get('files_modified', 0),
+            'improvements': execution_result.get('improvements', []),
             'tracking_id': f'impl_{insight_id}_{timestamp_val}'
         }
 

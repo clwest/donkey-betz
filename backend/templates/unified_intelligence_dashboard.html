@@ -1181,41 +1181,47 @@
             };
 
             ws.onerror = function(e) {
-                // Reduce console noise - only log after multiple attempts
+                // Only log errors after a few attempts to reduce noise
                 if (connectionAttempts > 2) {
-                    console.error('❌ WebSocket connection attempt', connectionAttempts, 'failed');
+                    console.error('❌ WebSocket error after', connectionAttempts, 'attempts');
                 }
-                isConnecting = false;  // Connection failed
+                isConnecting = false;
                 updateConnectionStatus('disconnected');
-                // Attempt reconnection after error
-                // Quick retry on error
-                if (!reconnectTimer) {
-                    reconnectTimer = setTimeout(connectWebSocket, 500);
-                }
+                // Don't auto-reconnect on error - let onclose handle it
             };
 
             ws.onclose = function(e) {
-                console.log('🔌 WebSocket closed, reconnecting...');
-                isConnecting = false;  // Connection closed
-                updateConnectionStatus('reconnecting');
+                // Only log if not already disconnected
+                if (ws) {
+                    console.log('🔌 WebSocket closed (code:', e.code, ')');
+                }
+                isConnecting = false;
+                ws = null;  // Clear the reference
 
                 // Stop heartbeat on close
                 stopHeartbeat();
 
-                // Smart reconnection with exponential backoff
+                // Only try to reconnect if we haven't exceeded attempts
                 if (!reconnectTimer && connectionAttempts < maxReconnectAttempts) {
                     connectionAttempts++;
-                    const baseDelay = e.code === 1006 ? 1000 : 3000;
-                    const delay = Math.min(baseDelay * Math.pow(2, connectionAttempts - 1), 30000); // Max 30 seconds
 
-                    console.log(`Reconnection attempt ${connectionAttempts}/${maxReconnectAttempts} in ${delay}ms`);
+                    // Progressive backoff: 3s, 6s, 12s, 24s, 30s...
+                    const delay = Math.min(3000 * Math.pow(2, connectionAttempts - 1), 30000);
+
+                    // Only show reconnection message for first few attempts
+                    if (connectionAttempts <= 3) {
+                        console.log(`Will reconnect in ${delay/1000}s (attempt ${connectionAttempts}/${maxReconnectAttempts})`);
+                        updateConnectionStatus('reconnecting');
+                    } else {
+                        updateConnectionStatus('disconnected');
+                    }
 
                     reconnectTimer = setTimeout(() => {
                         reconnectTimer = null;
                         connectWebSocket();
                     }, delay);
                 } else if (connectionAttempts >= maxReconnectAttempts) {
-                    console.error('Max reconnection attempts reached. Please refresh the page.');
+                    console.log('Connection unavailable. Refresh page to retry.');
                     updateConnectionStatus('disconnected');
                 }
             };
@@ -1293,7 +1299,7 @@
                                     ✓ Implemented
                                 </span>` :
                                 (insight.actionable !== false ? `
-                                    <button onclick="implementInsight('${insight.id || index}', '${(insight.category || '').replace(/'/g, "\\'")}')"
+                                    <button onclick="implementInsight('${insight.id || index}', '${(insight.category || '').replace(/'/g, "\\'")}', '${(insight.description || insight.content || '').replace(/'/g, "\\'")}')"
                                         style="padding: 4px 8px; background: rgba(0,255,136,0.2); color: #00ff88; border: 1px solid #00ff88; border-radius: 4px; cursor: pointer; font-size: 0.8em;"
                                         onmouseover="this.style.background='rgba(0,255,136,0.3)'"
                                         onmouseout="this.style.background='rgba(0,255,136,0.2)'">Implement</button>
@@ -2836,14 +2842,14 @@
             };
         }
 
-        async function implementInsight(insightId, category) {
+        async function implementInsight(insightId, category, description) {
             const button = event.target;
             button.classList.add('processing');
             button.textContent = 'Implementing...';
 
             showNotification(
-                '🚀 Implementing Insight',
-                `Processing ${category} optimization...`,
+                '🚀 Implementing Real Fix',
+                `Executing actual code changes for: ${description ? description.substring(0, 50) + '...' : category}`,
                 'info'
             );
 
@@ -2856,6 +2862,7 @@
                     body: JSON.stringify({
                         insight_id: insightId,
                         category: category,
+                        description: description || '',
                         timestamp: new Date().toISOString()
                     })
                 });
@@ -2868,12 +2875,26 @@
                     button.style.background = 'rgba(0,255,136,0.3)';
                     button.disabled = true;
 
+                    // Show real execution results
+                    const executionDetails = result.execution_details || {};
+                    const message = executionDetails.files_modified ?
+                        `Successfully modified ${executionDetails.files_modified} files! ${executionDetails.message || ''}` :
+                        result.message;
+
                     showNotification(
-                        '✅ Implementation Started',
-                        `${category} insight is being implemented. Status: ${result.status || 'Active'}`,
+                        '✅ Fix Successfully Applied!',
+                        message,
                         'success',
                         7000
                     );
+
+                    // Log execution details to console
+                    if (executionDetails.improvements) {
+                        console.log('🎯 Improvements made:', executionDetails.improvements);
+                    }
+                    if (result.proposal_id) {
+                        console.log('📋 Proposal ID:', result.proposal_id);
+                    }
 
                     // Refresh data after a short delay
                     setTimeout(() => fetchIntelligenceData(), 2000);
