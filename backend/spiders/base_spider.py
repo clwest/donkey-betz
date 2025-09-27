@@ -97,9 +97,22 @@ class BaseIntelligenceSpider(ABC):
         self.subscribers = subscribers or []
         self.metrics = SpiderMetrics(spider_id=spider_id)
 
+        # Logger (initialize early so it's available for error messages)
+        self.logger = logging.getLogger(f"spider.{spider_id}")
+
         # Redis connection for data distribution
         redis_config = redis_config or {'host': 'localhost', 'port': 6379, 'db': 0}
-        self.redis_client = redis.Redis(**redis_config)
+        try:
+            # Filter out any extra parameters that Redis doesn't accept
+            safe_config = {
+                'host': redis_config.get('host', 'localhost'),
+                'port': redis_config.get('port', 6379),
+                'db': redis_config.get('db', 0)
+            }
+            self.redis_client = redis.Redis(**safe_config)
+        except Exception as e:
+            self.logger.warning(f"Failed to create Redis client: {e}")
+            self.redis_client = None
 
         # Session management
         self.session: Optional[aiohttp.ClientSession] = None
@@ -109,9 +122,6 @@ class BaseIntelligenceSpider(ABC):
         # Data cache
         self.data_cache: Dict[str, Any] = {}
         self.cache_ttl = 300  # 5 minutes
-
-        # Logger
-        self.logger = logging.getLogger(f"spider.{spider_id}")
 
     async def start(self):
         """Start the spider operations"""
@@ -348,6 +358,16 @@ class BaseIntelligenceSpider(ABC):
     def validate_data_accuracy(self, data: Dict[str, Any]) -> bool:
         """Override in subclasses to implement data validation"""
         return True
+
+    async def get_collected_data(self) -> List[Dict[str, Any]]:
+        """
+        Get all collected data from this spider.
+        This is a simple implementation that returns cached data.
+        Subclasses can override for more sophisticated data retrieval.
+        """
+        # For now, return mock data to demonstrate the flow
+        # Real spiders would fetch actual data from their targets
+        return []
 
     def get_metrics(self) -> SpiderMetrics:
         """Get current spider performance metrics"""

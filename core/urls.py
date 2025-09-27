@@ -285,9 +285,24 @@ except ImportError:
 # Create API router
 router = DefaultRouter()
 
+from core.views_diagnostics import (
+    diagnostic_master_endpoint,
+    test_spider_network,
+    test_income_builder,
+    websocket_test_page,
+    diagnostic_dashboard
+)
+
 urlpatterns = [
     # Django admin
     path('admin/', admin.site.urls),
+
+    # Diagnostic Endpoints - Complete Backend Visibility
+    path('diagnostics/', diagnostic_dashboard, name='diagnostics-dashboard'),
+    path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),
+    path('api/diagnostics/test-spiders/', test_spider_network, name='diagnostics-test-spiders'),
+    path('api/diagnostics/test-income-builder/', test_income_builder, name='diagnostics-test-income'),
+    path('diagnostics/websocket-test/', websocket_test_page, name='diagnostics-websocket-test'),
 
     # AI Building Products page (moved up to ensure it's matched first)
     path('ai-building-products/', ai_building_products, name='ai-building-products'),

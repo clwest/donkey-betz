@@ -13,7 +13,8 @@ from django.views.decorators.http import require_http_methods
 import sys
 import os
 sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
-from api_unified_learning_dashboard import dashboard_api
+# from api_unified_learning_dashboard import dashboard_api  # Removed in cleanup
+dashboard_api = lambda: {"error": "Module removed during cleanup"}
 
 @csrf_exempt
 @require_http_methods(["GET"])

@@ -15,7 +15,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.api_settings import get_openai_client, OPENAI_CONFIG
-from agent_spider_learning_system import SpiderAgent, LearningAgent
+from core.module_stubs import SpiderAgent, LearningAgent
 
 @csrf_exempt
 @require_http_methods(["POST"])
