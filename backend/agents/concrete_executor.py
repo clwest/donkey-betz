@@ -202,6 +202,38 @@ class ConcreteAgentExecutor:
             except Exception as track_error:
                 logger.debug(f"Could not track execution: {track_error}")
 
+            # Broadcast to WebSocket for frontend display
+            try:
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+
+                channel_layer = get_channel_layer()
+
+                # Prepare result data for frontend
+                frontend_data = {
+                    'type': 'agent_result',
+                    'agent_name': agent_instance.agent_name if 'agent_instance' in locals() else agent_name,
+                    'task': task.get('task_description', 'Agent task'),
+                    'result': validated_result.get('result', result) if 'validated_result' in locals() else result,
+                    'success': True,
+                    'execution_time': execution_time,
+                    'ai_stats': ai_stats,
+                    'timestamp': timezone.now().isoformat()
+                }
+
+                # Send to consciousness stream (which the dashboard listens to)
+                await channel_layer.group_send(
+                    'consciousness_stream',
+                    {
+                        'type': 'consciousness_update',
+                        'data': frontend_data
+                    }
+                )
+
+                logger.info(f"📡 Broadcast agent result to WebSocket: {agent_name}")
+            except Exception as ws_error:
+                logger.error(f"Failed to broadcast to WebSocket: {ws_error}")
+
             return execution_result
 
         except Exception as e:
@@ -324,6 +356,38 @@ class ConcreteAgentExecutor:
                 )
             except Exception as track_error:
                 logger.debug(f"Could not track execution: {track_error}")
+
+            # Broadcast to WebSocket for frontend display
+            try:
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+
+                channel_layer = get_channel_layer()
+
+                # Prepare result data for frontend
+                frontend_data = {
+                    'type': 'agent_result',
+                    'agent_name': agent_instance.agent_name if 'agent_instance' in locals() else agent_name,
+                    'task': task.get('task_description', 'Agent task'),
+                    'result': validated_result.get('result', result) if 'validated_result' in locals() else result,
+                    'success': True,
+                    'execution_time': execution_time,
+                    'ai_stats': ai_stats,
+                    'timestamp': timezone.now().isoformat()
+                }
+
+                # Send to consciousness stream (which the dashboard listens to)
+                await channel_layer.group_send(
+                    'consciousness_stream',
+                    {
+                        'type': 'consciousness_update',
+                        'data': frontend_data
+                    }
+                )
+
+                logger.info(f"📡 Broadcast agent result to WebSocket: {agent_name}")
+            except Exception as ws_error:
+                logger.error(f"Failed to broadcast to WebSocket: {ws_error}")
 
             return execution_result
 
