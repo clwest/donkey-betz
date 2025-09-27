@@ -1106,8 +1106,15 @@
                 console.error('Failed to create WebSocket:', error);
                 isConnecting = false;  // Reset flag on error
                 updateConnectionStatus('disconnected');
-                // Retry connection after 1 second on initial failure
-                const retryDelay = connectionAttempts === 0 ? 100 : Math.min(1000 * connectionAttempts, 5000);
+                // Aggressive retry: first 3 attempts very fast, then backoff
+                let retryDelay;
+                if (connectionAttempts < 3) {
+                    retryDelay = 100; // Try every 100ms for first 3 attempts
+                } else if (connectionAttempts < 10) {
+                    retryDelay = 500; // Then every 500ms
+                } else {
+                    retryDelay = Math.min(1000 * (connectionAttempts - 9), 5000); // Then backoff
+                }
                 reconnectTimer = setTimeout(connectWebSocket, retryDelay);
                 return;
             }
@@ -3353,59 +3360,99 @@
         }
 
         // Helper functions to create containers
+        function getOrCreateContainer() {
+            // Try multiple possible parent containers
+            let parentContainer = document.querySelector('.dashboard');
+            if (!parentContainer) {
+                parentContainer = document.querySelector('.main-content');
+            }
+            if (!parentContainer) {
+                parentContainer = document.querySelector('main');
+            }
+            if (!parentContainer) {
+                // Create a container if none exists
+                parentContainer = document.createElement('div');
+                parentContainer.className = 'enhanced-dashboard-container';
+                parentContainer.style.cssText = 'padding: 20px;';
+
+                // Find the best place to insert it
+                const afterElement = document.querySelector('.status-bar') ||
+                                   document.querySelector('.header') ||
+                                   document.querySelector('body > *');
+                if (afterElement && afterElement.parentNode) {
+                    afterElement.parentNode.insertBefore(parentContainer, afterElement.nextSibling);
+                } else {
+                    document.body.appendChild(parentContainer);
+                }
+            }
+            return parentContainer;
+        }
+
         function createAgentPerfContainer() {
-            const container = document.createElement('div');
+            // Check if already exists
+            let container = document.getElementById('agentPerformanceDetails');
+            if (container) {
+                return container;
+            }
+
+            container = document.createElement('div');
             container.id = 'agentPerformanceDetails';
             container.className = 'dashboard-section';
             container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
-            const dashboard = document.querySelector('.dashboard');
-            if (dashboard) {
-                dashboard.appendChild(container);
-            } else {
-                document.body.appendChild(container);
-            }
+
+            const parent = getOrCreateContainer();
+            parent.appendChild(container);
             return container;
         }
 
         function createEmergentBehaviorsContainer() {
-            const container = document.createElement('div');
+            // Check if already exists
+            let container = document.getElementById('emergentBehaviorsDetails');
+            if (container) {
+                return container;
+            }
+
+            container = document.createElement('div');
             container.id = 'emergentBehaviorsDetails';
             container.className = 'dashboard-section';
             container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
-            const dashboard = document.querySelector('.dashboard');
-            if (dashboard) {
-                dashboard.appendChild(container);
-            } else {
-                document.body.appendChild(container);
-            }
+
+            const parent = getOrCreateContainer();
+            parent.appendChild(container);
             return container;
         }
 
         function createSystemStatisticsContainer() {
-            const container = document.createElement('div');
+            // Check if already exists
+            let container = document.getElementById('systemStatisticsDetails');
+            if (container) {
+                return container;
+            }
+
+            container = document.createElement('div');
             container.id = 'systemStatisticsDetails';
             container.className = 'dashboard-section';
             container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
-            const dashboard = document.querySelector('.dashboard');
-            if (dashboard) {
-                dashboard.appendChild(container);
-            } else {
-                document.body.appendChild(container);
-            }
+
+            const parent = getOrCreateContainer();
+            parent.appendChild(container);
             return container;
         }
 
         function createSystemMetricsContainer() {
-            const container = document.createElement('div');
+            // Check if already exists
+            let container = document.getElementById('systemMetricsDetails');
+            if (container) {
+                return container;
+            }
+
+            container = document.createElement('div');
             container.id = 'systemMetricsDetails';
             container.className = 'dashboard-section';
             container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
-            const dashboard = document.querySelector('.dashboard');
-            if (dashboard) {
-                dashboard.appendChild(container);
-            } else {
-                document.body.appendChild(container);
-            }
+
+            const parent = getOrCreateContainer();
+            parent.appendChild(container);
             return container;
         }
 
