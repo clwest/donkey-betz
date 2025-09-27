@@ -746,14 +746,38 @@
                 <div class="card-title">
                     <span>🧠</span>
                     <span>Current Thinking</span>
+                    <a href="/nexus/" target="_blank" style="float: right; font-size: 0.8em; color: #00ff88; text-decoration: none; opacity: 0.7; hover: opacity: 1;">
+                        View All →
+                    </a>
                 </div>
                 <div class="thinking-animation"></div>
                 <div class="current-thought" id="currentThought">
                     Analyzing market patterns and optimizing spider deployments...
                 </div>
                 <div class="learning-insights" id="learningInsights">
-                    <div class="insight-item">Learning: Options flow unusual on SPY</div>
-                    <div class="insight-item">Discovery: New arbitrage opportunity detected</div>
+                    <div class="insight-item">
+                        <span>Learning: Options flow unusual on SPY</span>
+                        <button class="insight-action-btn" onclick="window.open('/nexus/', '_blank')" style="display: none;">Act</button>
+                    </div>
+                    <div class="insight-item">
+                        <span>Discovery: New arbitrage opportunity detected</span>
+                        <button class="insight-action-btn" onclick="window.open('/nexus/', '_blank')" style="display: none;">Act</button>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button onclick="window.open('/nexus/', '_blank')" style="
+                        padding: 6px 12px;
+                        background: rgba(0,255,136,0.2);
+                        color: #00ff88;
+                        border: 1px solid #00ff88;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 0.85em;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.background='rgba(0,255,136,0.3)'"
+                       onmouseout="this.style.background='rgba(0,255,136,0.2)'">
+                        🚀 View & Implement in Intelligence Dashboard
+                    </button>
                 </div>
             </div>
 
@@ -1270,19 +1294,29 @@
             // Update learning insights with real emergent behaviors and insights
             let realInsights = [];
 
-            // Add emergent behaviors as insights
+            // Add emergent behaviors as insights with action capability
             if (emergentBehaviors.length > 0) {
                 const topBehavior = emergentBehaviors.find(b => b.significance === 'critical') || emergentBehaviors[0];
                 if (topBehavior) {
-                    realInsights.push(`Emergence: ${topBehavior.description}`);
+                    realInsights.push({
+                        type: 'Emergence',
+                        description: topBehavior.description,
+                        actionable: topBehavior.actionable !== false,
+                        id: topBehavior.id || 'emergence_1'
+                    });
                 }
             }
 
-            // Add real system insights
+            // Add real system insights with action capability
             if (insights.length > 0) {
                 const meaningfulInsight = insights.find(i => i.importance > 0.7) || insights[0];
                 if (meaningfulInsight) {
-                    realInsights.push(`Discovery: ${meaningfulInsight.description}`);
+                    realInsights.push({
+                        type: 'Discovery',
+                        description: meaningfulInsight.description,
+                        actionable: meaningfulInsight.actionable !== false,
+                        id: meaningfulInsight.id || 'discovery_1'
+                    });
                 }
             }
 
@@ -1294,11 +1328,18 @@
                 }
             }
 
-            // Update the insights display
+            // Update the insights display with actionable items
             if (realInsights.length > 0) {
                 learningInsights.innerHTML = realInsights
                     .slice(0, 2) // Show max 2 insights
-                    .map(insight => `<div class="insight-item">${insight}</div>`)
+                    .map(insight => {
+                        if (typeof insight === 'object') {
+                            return `<div class="insight-item">
+                                <span>${insight.type}: ${insight.description}</span>
+                            </div>`;
+                        }
+                        return `<div class="insight-item">${insight}</div>`;
+                    })
                     .join('');
             }
 
