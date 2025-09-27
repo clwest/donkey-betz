@@ -924,11 +924,11 @@
     </div>
 
     <div class="dashboard">
-        <!-- Consciousness Card -->
+        <!-- System Consciousness & Behaviors -->
         <div class="card consciousness-card">
             <div class="card-header">
                 <span class="card-icon">🧠</span>
-                System Consciousness
+                System Consciousness & Behaviors
             </div>
             <div class="consciousness-meter">
                 <div class="consciousness-fill" id="consciousnessFill" style="width: 0%;">
@@ -948,27 +948,33 @@
                     <div><span style="color: #888;">Executions:</span> <span id="totalExecutions" style="color: #00ff88;">--</span></div>
                 </div>
             </div>
+            <div id="emergentBehaviors" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <!-- Emergent behaviors will be populated here -->
+            </div>
         </div>
 
-        <!-- Real-time Activity Feed -->
+        <!-- Live Activity & Statistics -->
         <div class="card activity-card">
             <div class="card-header">
                 <span class="card-icon">⚡</span>
-                Live Activity Feed
+                Live Activity & Statistics
             </div>
             <div class="activity-feed" id="activityFeed">
                 <!-- Activity items will be populated here -->
             </div>
+            <div id="systemStatistics" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <!-- System statistics will be populated here -->
+            </div>
         </div>
 
-        <!-- System Health -->
+        <!-- System Health & Performance -->
         <div class="card health-card">
             <div class="card-header">
-                <span class="card-icon">💚</span>
-                System Health
+                <span class="card-icon">⚡</span>
+                System Health & Performance
             </div>
-            <div id="healthMetrics">
-                <!-- Health metrics will be populated here -->
+            <div id="unifiedHealthMetrics">
+                <!-- Unified health and performance metrics will be populated here -->
             </div>
         </div>
 
@@ -1049,7 +1055,7 @@
         const agentsStatus = document.getElementById('agentsStatus');
         const spidersStatus = document.getElementById('spidersStatus');
         const activityFeed = document.getElementById('activityFeed');
-        const healthMetrics = document.getElementById('healthMetrics');
+        const unifiedHealthMetrics = document.getElementById('unifiedHealthMetrics');
         const agentList = document.getElementById('agentList');
         const spiderStats = document.getElementById('spiderStats');
         const learningMetrics = document.getElementById('learningMetrics');
@@ -1245,16 +1251,11 @@
                 if (data.data.learning_analytics || data.data.learning) {
                     updateLearning(updatedData);
                 }
-                // Call enhanced display functions for new data types
-                if (data.data.emergent_behaviors) {
-                    updateEmergentBehaviors(updatedData);
-                }
+                // Emergent behaviors are now handled by consciousness updates
                 if (data.data.system_statistics) {
                     updateSystemStatistics(updatedData);
                 }
-                if (data.data.system_metrics) {
-                    updateSystemMetricsEnhanced(updatedData);
-                }
+                // System metrics are now handled by unified health metrics
                 // Only update proposals if new ones are provided
                 if (data.data.proposals && data.data.proposals.length > 0) {
                     updateProposals(updatedData);
@@ -1584,21 +1585,8 @@
                 { label: 'Success Rate', value: Math.round(metrics.agent_response_rate || 0), unit: '%' }
             ];
 
-            healthMetrics.innerHTML = healthData.map(metric => {
-                const healthClass = metric.value >= 90 ? 'excellent' :
-                                  metric.value >= 70 ? 'good' :
-                                  metric.value >= 50 ? 'warning' : 'critical';
-
-                return `<div class="health-metric">
-                    <span class="health-label">${metric.label}</span>
-                    <div style="display: flex; align-items: center;">
-                        <span class="health-value ${healthClass}">${metric.value}${metric.unit}</span>
-                        <div class="health-bar">
-                            <div class="health-fill ${healthClass}" style="width: ${metric.value}%;"></div>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
+            // Update unified health metrics with both health status and performance data
+            updateUnifiedHealthMetrics(metrics, healthData);
         }
 
         function updateAgents(data) {
@@ -3221,155 +3209,177 @@
         }
 
         // Display Emergent Behaviors
-        function updateEmergentBehaviors(data) {
-            if (data.emergent_behaviors && data.emergent_behaviors.length > 0) {
-                const behaviorsContainer = document.getElementById('emergentBehaviorsDetails') || createEmergentBehaviorsContainer();
+        // updateEmergentBehaviors function removed - now handled by merged consciousness updates
 
-                let behavHTML = '<h3>🧬 Emergent Behaviors Detected</h3>';
-
-                data.emergent_behaviors.forEach(behavior => {
-                    const significanceColor = behavior.significance === 'critical' ? '#ff00ff' :
-                                             behavior.significance === 'high' ? '#ff8800' : '#00ff88';
-
-                    behavHTML += `
-                        <div style="
-                            margin: 15px 0;
-                            padding: 15px;
-                            background: rgba(147, 51, 234, 0.1);
-                            border-left: 3px solid ${significanceColor};
-                            border-radius: 5px;
-                        ">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div>
-                                    <h4 style="color: ${significanceColor}; margin: 0;">
-                                        ${behavior.type.replace(/_/g, ' ').toUpperCase()}
-                                    </h4>
-                                    <p style="margin: 10px 0; color: #ccc;">
-                                        ${behavior.description}
-                                    </p>
-                                    <div style="font-size: 0.85em; color: #888;">
-                                        Evidence: ${behavior.evidence}
-                                    </div>
-                                </div>
-                                <span style="
-                                    padding: 4px 8px;
-                                    background: rgba(${behavior.status === 'detected' ? '0,255,136' : '255,170,0'},0.2);
-                                    color: ${behavior.status === 'detected' ? '#00ff88' : '#ffaa00'};
-                                    border: 1px solid currentColor;
-                                    border-radius: 4px;
-                                    font-size: 0.8em;
-                                ">
-                                    ${behavior.status}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                behaviorsContainer.innerHTML = behavHTML;
-            }
-        }
-
-        // Display System Statistics
+        // Display System Statistics in merged Activity & Statistics card
         function updateSystemStatistics(data) {
             if (data.system_statistics) {
                 const stats = data.system_statistics;
-                const statsContainer = document.getElementById('systemStatisticsDetails') || createSystemStatisticsContainer();
+                const statsContainer = document.getElementById('systemStatistics');
 
-                const statsHTML = `
-                    <h3>📊 System Statistics</h3>
-                    <div style="
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                        gap: 15px;
-                        margin-top: 15px;
-                    ">
-                        <div class="stat-card">
-                            <div style="color: #667eea; font-size: 2em; font-weight: bold;">
-                                ${(stats.total_files || 0).toLocaleString()}
+                if (statsContainer) {
+                    const statsHTML = `
+                        <h4 style="color: #00f2ff; margin-bottom: 15px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">
+                            📊 System Statistics
+                        </h4>
+                        <div style="
+                            display: grid;
+                            grid-template-columns: repeat(2, 1fr);
+                            gap: 15px;
+                            margin-top: 15px;
+                        ">
+                            <div class="stat-card" style="text-align: center; padding: 15px; background: rgba(102,126,234,0.1); border-radius: 8px;">
+                                <div style="color: #667eea; font-size: 1.8em; font-weight: bold;">
+                                    ${(stats.total_files || 0).toLocaleString()}
+                                </div>
+                                <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Total Files</div>
                             </div>
-                            <div style="color: #888; font-size: 0.9em;">Total Files</div>
-                        </div>
-                        <div class="stat-card">
-                            <div style="color: #00ff88; font-size: 2em; font-weight: bold;">
-                                ${((stats.total_lines || 0) / 1000000).toFixed(1)}M
+                            <div class="stat-card" style="text-align: center; padding: 15px; background: rgba(0,255,136,0.1); border-radius: 8px;">
+                                <div style="color: #00ff88; font-size: 1.8em; font-weight: bold;">
+                                    ${((stats.total_lines || 0) / 1000000).toFixed(1)}M
+                                </div>
+                                <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Lines of Code</div>
                             </div>
-                            <div style="color: #888; font-size: 0.9em;">Lines of Code</div>
-                        </div>
-                        <div class="stat-card">
-                            <div style="color: #ff00ff; font-size: 2em; font-weight: bold;">
-                                ${(stats.python_files || 0).toLocaleString()}
+                            <div class="stat-card" style="text-align: center; padding: 15px; background: rgba(255,0,255,0.1); border-radius: 8px;">
+                                <div style="color: #ff00ff; font-size: 1.8em; font-weight: bold;">
+                                    ${(stats.python_files || 0).toLocaleString()}
+                                </div>
+                                <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Python Files</div>
                             </div>
-                            <div style="color: #888; font-size: 0.9em;">Python Files</div>
-                        </div>
-                        <div class="stat-card">
-                            <div style="color: #00a2ff; font-size: 2em; font-weight: bold;">
-                                ${stats.test_files || 0}
+                            <div class="stat-card" style="text-align: center; padding: 15px; background: rgba(0,162,255,0.1); border-radius: 8px;">
+                                <div style="color: #00a2ff; font-size: 1.8em; font-weight: bold;">
+                                    ${stats.test_files || 0}
+                                </div>
+                                <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Test Files</div>
                             </div>
-                            <div style="color: #888; font-size: 0.9em;">Test Files</div>
                         </div>
-                    </div>
-                `;
+                    `;
 
-                statsContainer.innerHTML = statsHTML;
+                    statsContainer.innerHTML = statsHTML;
+                }
             }
         }
 
-        // Enhanced System Metrics Display
-        function updateSystemMetricsEnhanced(data) {
-            if (data.system_metrics) {
-                const metrics = data.system_metrics;
-                const metricsContainer = document.getElementById('systemMetricsDetails') || createSystemMetricsContainer();
+        // Unified Health & Performance Metrics Display
+        function updateUnifiedHealthMetrics(systemMetrics, healthData) {
+            if (!unifiedHealthMetrics) return;
 
-                const metricsHTML = `
-                    <h3>⚡ Live System Metrics</h3>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-                        <div class="metric-item">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>CPU Usage</span>
-                                <span style="color: ${metrics.cpu_usage > 80 ? '#ff4444' : '#00ff88'};">
-                                    ${metrics.cpu_usage}%
-                                </span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${metrics.cpu_usage}%; background: ${metrics.cpu_usage > 80 ? '#ff4444' : '#00ff88'};"></div>
-                            </div>
-                        </div>
-                        <div class="metric-item">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>Memory Usage</span>
-                                <span style="color: ${metrics.memory_usage > 80 ? '#ff4444' : '#00ff88'};">
-                                    ${metrics.memory_usage}%
-                                </span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${metrics.memory_usage}%; background: ${metrics.memory_usage > 80 ? '#ff4444' : '#ffaa00'};"></div>
-                            </div>
-                        </div>
-                        <div class="metric-item">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>Redis Health</span>
-                                <span style="color: #00ff88;">${metrics.redis_health}%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${metrics.redis_health}%; background: #00ff88;"></div>
-                            </div>
-                        </div>
-                        <div class="metric-item">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>WebSocket Status</span>
-                                <span style="color: #00ff88;">${metrics.websocket_status}%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${metrics.websocket_status}%; background: #00ff88;"></div>
-                            </div>
+            const performanceMetrics = [
+                {
+                    label: 'CPU Usage',
+                    value: Math.round(systemMetrics.cpu_usage || 0),
+                    unit: '%',
+                    category: 'performance'
+                },
+                {
+                    label: 'Memory Usage',
+                    value: Math.round(systemMetrics.memory_usage || 0),
+                    unit: '%',
+                    category: 'performance'
+                }
+            ];
+
+            const serviceMetrics = healthData.filter(metric =>
+                metric.label !== 'Success Rate'
+            );
+
+            const statusMetrics = healthData.filter(metric =>
+                metric.label === 'Success Rate'
+            );
+
+            const allMetrics = [...performanceMetrics, ...serviceMetrics, ...statusMetrics];
+
+            const unifiedHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #00f2ff; margin-bottom: 15px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">
+                        🖥️ System Performance
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                        ${performanceMetrics.map(metric => {
+                            const healthClass = metric.value >= 90 ? 'excellent' :
+                                              metric.value >= 70 ? 'good' :
+                                              metric.value >= 50 ? 'warning' : 'critical';
+                            const color = metric.value > 80 ? '#ff4444' :
+                                         metric.value > 60 ? '#ffaa00' : '#00ff88';
+
+                            return `
+                                <div class="metric-item">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="color: #ccc; font-size: 0.9em;">${metric.label}</span>
+                                        <span style="color: ${color}; font-weight: bold;">
+                                            ${metric.value}${metric.unit}
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar" style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                                        <div class="progress-fill" style="width: ${metric.value}%; background: ${color}; height: 100%; border-radius: 3px; transition: width 0.3s ease;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #00f2ff; margin-bottom: 15px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">
+                        🔗 Service Health
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                        ${serviceMetrics.map(metric => {
+                            const healthClass = metric.value >= 90 ? 'excellent' :
+                                              metric.value >= 70 ? 'good' :
+                                              metric.value >= 50 ? 'warning' : 'critical';
+                            const color = metric.value >= 90 ? '#00ff88' :
+                                         metric.value >= 70 ? '#ffaa00' : '#ff4444';
+
+                            return `
+                                <div class="health-metric">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="color: #ccc; font-size: 0.9em;">${metric.label}</span>
+                                        <span style="color: ${color}; font-weight: bold;">
+                                            ${metric.value}${metric.unit}
+                                        </span>
+                                    </div>
+                                    <div class="health-bar" style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                                        <div class="health-fill ${healthClass}" style="width: ${metric.value}%; background: ${color}; height: 100%; border-radius: 3px; transition: width 0.3s ease;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: #00f2ff; margin-bottom: 15px; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">
+                        📊 System Status
+                    </h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(0,255,136,0.1); border-radius: 10px; border: 1px solid rgba(0,255,136,0.3);">
+                        ${statusMetrics.map(metric => {
+                            const statusIcon = metric.value >= 90 ? '🟢' :
+                                             metric.value >= 70 ? '🟡' : '🔴';
+                            const statusText = metric.value >= 90 ? 'Excellent' :
+                                             metric.value >= 70 ? 'Good' : 'Needs Attention';
+
+                            return `
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.5em; margin-bottom: 5px;">${statusIcon}</div>
+                                    <div style="color: #00ff88; font-weight: bold; font-size: 1.1em;">${metric.value}${metric.unit}</div>
+                                    <div style="color: #aaa; font-size: 0.8em;">${statusText}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5em; margin-bottom: 5px;">⚡</div>
+                            <div style="color: #00f2ff; font-weight: bold; font-size: 1.1em;">Active</div>
+                            <div style="color: #aaa; font-size: 0.8em;">Live Monitoring</div>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
 
-                metricsContainer.innerHTML = metricsHTML;
-            }
+            unifiedHealthMetrics.innerHTML = unifiedHTML;
         }
+
+        // Note: updateSystemMetricsEnhanced function removed - functionality merged into updateUnifiedHealthMetrics
 
         // Helper functions to create containers
         function getOrCreateContainer() {
@@ -3417,56 +3427,11 @@
             return container;
         }
 
-        function createEmergentBehaviorsContainer() {
-            // Check if already exists
-            let container = document.getElementById('emergentBehaviorsDetails');
-            if (container) {
-                return container;
-            }
+        // createEmergentBehaviorsContainer function removed - no longer needed with merged components
 
-            container = document.createElement('div');
-            container.id = 'emergentBehaviorsDetails';
-            container.className = 'dashboard-section';
-            container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
+        // createSystemStatisticsContainer function removed - no longer needed with merged components
 
-            const parent = getOrCreateContainer();
-            parent.appendChild(container);
-            return container;
-        }
-
-        function createSystemStatisticsContainer() {
-            // Check if already exists
-            let container = document.getElementById('systemStatisticsDetails');
-            if (container) {
-                return container;
-            }
-
-            container = document.createElement('div');
-            container.id = 'systemStatisticsDetails';
-            container.className = 'dashboard-section';
-            container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
-
-            const parent = getOrCreateContainer();
-            parent.appendChild(container);
-            return container;
-        }
-
-        function createSystemMetricsContainer() {
-            // Check if already exists
-            let container = document.getElementById('systemMetricsDetails');
-            if (container) {
-                return container;
-            }
-
-            container = document.createElement('div');
-            container.id = 'systemMetricsDetails';
-            container.className = 'dashboard-section';
-            container.style.cssText = 'margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 15px;';
-
-            const parent = getOrCreateContainer();
-            parent.appendChild(container);
-            return container;
-        }
+        // Note: createSystemMetricsContainer function removed - no longer needed with unified metrics
 
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {

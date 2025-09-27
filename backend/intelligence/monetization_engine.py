@@ -799,5 +799,183 @@ class UnifiedMonetizationEngine:
         return status
 
 
+def record_earnings(user, amount, source):
+    """
+    Record real earnings from actual income generation
+    This function tracks when users actually earn money through the platform
+    """
+    try:
+        from django.utils import timezone
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+
+        # Import models
+        from intelligence.models import RevenueMetrics
+        from core.models import UnifiedUser
+
+        # Ensure user is a UnifiedUser instance
+        if isinstance(user, str):
+            user = UnifiedUser.objects.get(username=user)
+
+        # Create or update revenue metrics for today
+        today = timezone.now().date()
+        revenue_metric, created = RevenueMetrics.objects.get_or_create(
+            date=today,
+            defaults={
+                'revenue_generated': 0.0,
+                'opportunities_identified': 0,
+                'conversions': 0,
+                'conversion_rate': 0.0
+            }
+        )
+
+        # Add the earnings
+        revenue_metric.revenue_generated += float(amount)
+        revenue_metric.conversions += 1
+
+        # Update conversion rate (simple calculation)
+        if revenue_metric.opportunities_identified > 0:
+            revenue_metric.conversion_rate = revenue_metric.conversions / revenue_metric.opportunities_identified
+
+        revenue_metric.save()
+
+        logger.info(f"💰 REAL EARNINGS RECORDED: ${amount} from {source} for user {user.username}")
+
+        # Broadcast to Revenue Dashboard via WebSocket
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            try:
+                # Get total earnings for user
+                from django.db import models
+                total_earnings = RevenueMetrics.objects.filter(
+                    date__gte=timezone.now().date() - timedelta(days=30)
+                ).aggregate(
+                    total=models.Sum('revenue_generated')
+                )['total'] or 0
+
+                # Send to user-specific revenue channel
+                async_to_sync(channel_layer.group_send)(
+                    f'user_{user.id}_revenue',
+                    {
+                        'type': 'revenue_update',
+                        'data': {
+                            'amount': float(amount),
+                            'total': float(total_earnings),
+                            'source': source,
+                            'timestamp': timezone.now().isoformat(),
+                            'user': user.username,
+                            'real_earnings': True
+                        }
+                    }
+                )
+
+                # Also send to general revenue monitoring
+                async_to_sync(channel_layer.group_send)(
+                    'revenue_monitoring',
+                    {
+                        'type': 'earnings_notification',
+                        'data': {
+                            'amount': float(amount),
+                            'source': source,
+                            'user': user.username,
+                            'timestamp': timezone.now().isoformat()
+                        }
+                    }
+                )
+
+                logger.info(f"📡 Revenue update broadcasted to dashboard")
+
+            except Exception as ws_error:
+                logger.warning(f"Could not broadcast revenue update: {ws_error}")
+
+        return {
+            'success': True,
+            'earnings_recorded': float(amount),
+            'total_earnings': float(revenue_metric.revenue_generated),
+            'source': source,
+            'date': today.isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Error recording earnings: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+def record_potential_earnings(source, amount, application_id=None, opportunity_id=None):
+    """
+    Record potential earnings from job applications and opportunities
+    This tracks revenue opportunities even before they convert to actual earnings
+    """
+    try:
+        from django.utils import timezone
+        from intelligence.models import RevenueMetrics
+        from django import models
+
+        # Get or create today's revenue metrics
+        today = timezone.now().date()
+        revenue_metric, created = RevenueMetrics.objects.get_or_create(
+            date=today,
+            defaults={
+                'revenue_generated': 0.0,
+                'opportunities_identified': 0,
+                'conversions': 0,
+                'conversion_rate': 0.0
+            }
+        )
+
+        # Increment opportunities identified
+        revenue_metric.opportunities_identified += 1
+
+        # Update conversion rate
+        if revenue_metric.opportunities_identified > 0:
+            revenue_metric.conversion_rate = revenue_metric.conversions / revenue_metric.opportunities_identified
+
+        revenue_metric.save()
+
+        # Store the potential earnings details (could extend model to track this)
+        logger.info(f"📈 POTENTIAL EARNINGS TRACKED: ${amount} from {source}")
+
+        # Broadcast potential earnings to dashboard
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    'revenue_monitoring',
+                    {
+                        'type': 'potential_earnings_update',
+                        'data': {
+                            'potential_amount': float(amount),
+                            'source': source,
+                            'application_id': application_id,
+                            'opportunity_id': opportunity_id,
+                            'timestamp': timezone.now().isoformat(),
+                            'total_opportunities_today': revenue_metric.opportunities_identified
+                        }
+                    }
+                )
+        except Exception as ws_error:
+            logger.warning(f"Could not broadcast potential earnings: {ws_error}")
+
+        return {
+            'success': True,
+            'potential_earnings': float(amount),
+            'opportunities_tracked': revenue_metric.opportunities_identified,
+            'source': source
+        }
+
+    except Exception as e:
+        logger.error(f"Error recording potential earnings: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
 # Global monetization engine instance
 monetization_engine = UnifiedMonetizationEngine()

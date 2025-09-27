@@ -57,8 +57,9 @@ class IntelligentJobMatcher:
         self.ml_pipeline = EnhancedMLPipeline()
         self.memory = MemorySystem()
 
-        # Initialize embeddings
-        self._initialize_embeddings()
+        # Initialize embeddings lazily (only when needed)
+        self.embedder = None
+        self._embeddings_initialized = False
 
         # Application memory
         self.application_memory: Dict[str, JobApplicationMemory] = {}
@@ -71,14 +72,19 @@ class IntelligentJobMatcher:
         logger.info("🧠 Intelligent Job Matcher initialized with ML and Memory systems")
 
     def _initialize_embeddings(self):
-        """Initialize embedding models"""
+        """Initialize embedding models lazily"""
+        if self._embeddings_initialized:
+            return
+
         try:
             from sentence_transformers import SentenceTransformer
             self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+            self._embeddings_initialized = True
             logger.info("✅ Embedding model loaded successfully")
         except Exception as e:
             logger.warning(f"Could not load embedding model: {e}")
             self.embedder = None
+            self._embeddings_initialized = True  # Don't keep trying
 
     async def match_job_with_learning(self, job: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -164,6 +170,9 @@ class IntelligentJobMatcher:
 
     async def _get_job_embedding(self, job: Dict[str, Any]) -> np.ndarray:
         """Generate embedding for a job"""
+        # Initialize embeddings lazily
+        self._initialize_embeddings()
+
         if not self.embedder:
             # Fallback to simple feature vector
             return self._create_simple_feature_vector(job)

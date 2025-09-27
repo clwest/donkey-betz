@@ -702,6 +702,125 @@ class AIIncomeBuilder:
 
         return base_result
 
+    async def find_opportunities(self, user_profile):
+        """
+        Find real opportunities using spider network integration
+        This method connects to the spider orchestrator to get fresh job data
+        """
+        try:
+            # Import spider orchestrator
+            from backend.spiders.spider_orchestrator import activate_job_spiders
+
+            self.logger.info("🔍 Finding real opportunities using spider network...")
+
+            # Activate spiders to collect real job data
+            spider_result = await activate_job_spiders()
+
+            if spider_result.get('success'):
+                real_opportunities = spider_result.get('opportunities', [])
+                self.logger.info(f"Retrieved {len(real_opportunities)} real opportunities from spiders")
+
+                # Convert spider opportunities to our opportunity format
+                formatted_opportunities = []
+                for spider_opp in real_opportunities:
+                    formatted_opp = self._convert_spider_opportunity(spider_opp, user_profile)
+                    if formatted_opp:
+                        formatted_opportunities.append(formatted_opp)
+
+                # Score and rank the real opportunities
+                scored_opportunities = []
+                for opp in formatted_opportunities:
+                    score = await self._score_opportunity(opp, user_profile)
+                    scored_opportunities.append({
+                        "opportunity": opp,
+                        "score": score,
+                        "match_reasons": self._get_match_reasons(opp, user_profile),
+                        "source": "spider_network",
+                        "real_data": True
+                    })
+
+                # Sort by score and return top opportunities
+                scored_opportunities.sort(key=lambda x: x["score"], reverse=True)
+
+                self.logger.info(f"✅ Found {len(scored_opportunities)} viable opportunities")
+                return scored_opportunities[:10]  # Return top 10
+
+            else:
+                self.logger.warning("Spider activation failed, falling back to default opportunities")
+                return []
+
+        except Exception as e:
+            self.logger.error(f"Error finding opportunities with spider network: {e}")
+            return []
+
+    def _convert_spider_opportunity(self, spider_opp, user_profile):
+        """Convert spider opportunity format to internal opportunity format"""
+        try:
+            # Create an IncomeOpportunity-like object from spider data
+            from datetime import timedelta, datetime
+
+            # Map spider data to our format
+            stream_type_mapping = {
+                'toptal': IncomeStream.FREELANCE_SERVICES,
+                'guru': IncomeStream.FREELANCE_SERVICES,
+                'flexjobs': IncomeStream.CONSULTING,  # Use consulting for remote jobs
+                'remoteok': IncomeStream.CONSULTING,  # Use consulting for remote jobs
+                'peopleperhour': IncomeStream.FREELANCE_SERVICES
+            }
+
+            # Calculate monthly potential based on budget type
+            if spider_opp.get('budget_type') == 'hourly':
+                monthly_potential = spider_opp.get('budget_max', 50) * 40 * 4  # 40 hrs/week
+            elif spider_opp.get('budget_type') == 'annual':
+                monthly_potential = spider_opp.get('budget_max', 60000) / 12
+            else:  # fixed
+                monthly_potential = spider_opp.get('budget_max', 1000)
+
+            # Create opportunity object
+            opportunity = IncomeOpportunity(
+                id=spider_opp.get('id', f"spider_{spider_opp.get('platform')}_{int(datetime.now().timestamp())}"),
+                title=spider_opp.get('title', 'Remote Opportunity'),
+                description=spider_opp.get('description', 'Real opportunity from spider network'),
+                stream_type=stream_type_mapping.get(spider_opp.get('platform'), IncomeStream.FREELANCE_SERVICES),
+                initial_investment=0.0,  # All spider opportunities are $0 start
+                time_to_first_income="1 week",  # String format as expected
+                potential_monthly=f"${int(monthly_potential):,}",  # String format as expected
+                required_skills=spider_opp.get('skills', []),
+                difficulty=SkillLevel.BEGINNER if spider_opp.get('experience_level') == 'beginner' else SkillLevel.INTERMEDIATE,
+                tools_needed=[f"{spider_opp.get('platform', 'Platform')} account", "Professional portfolio"],
+                market_demand=0.8,  # Real opportunities have high demand
+                competition_level=0.6,  # Moderate competition
+                success_rate=0.75,  # Good success rate for real opportunities
+                scalability=0.7,  # Good scalability for freelance work
+                action_steps=[
+                    f"Review opportunity details on {spider_opp.get('platform')}",
+                    "Prepare relevant portfolio/samples",
+                    "Submit application with tailored proposal",
+                    "Follow up within 24-48 hours"
+                ],
+                resources=[
+                    {"name": f"{spider_opp.get('platform', 'Platform')} Profile", "url": f"https://{spider_opp.get('platform', 'platform')}.com"},
+                    {"name": "Proposal Templates", "url": "https://example.com/templates"}
+                ]
+            )
+
+            # Add spider-specific metadata
+            opportunity.spider_data = {
+                'platform': spider_opp.get('platform'),
+                'budget_range': f"${spider_opp.get('budget_min', 0)}-{spider_opp.get('budget_max', 0)}",
+                'client_rating': spider_opp.get('client_rating', 0),
+                'urgency': spider_opp.get('urgency', 'medium'),
+                'posted_at': spider_opp.get('posted_at'),
+                'revenue_potential': spider_opp.get('revenue_potential', monthly_potential),
+                'original_id': spider_opp.get('id')
+            }
+
+            return opportunity
+
+        except Exception as e:
+            self.logger.error(f"Error converting spider opportunity: {e}")
+            return None
+
     async def _get_enhanced_analysis(self, user_profile: UserProfile, top_opportunities: List[Dict]) -> Dict[str, Any]:
         """Get enhanced analysis using agent, advisor, and memory systems"""
         if not self.integrations_active:
