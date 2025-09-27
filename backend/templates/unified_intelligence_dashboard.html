@@ -1175,7 +1175,10 @@
             };
 
             ws.onerror = function(e) {
-                console.error('❌ WebSocket error:', e);
+                // Reduce console noise - only log after multiple attempts
+                if (connectionAttempts > 2) {
+                    console.error('❌ WebSocket connection attempt', connectionAttempts, 'failed');
+                }
                 isConnecting = false;  // Connection failed
                 updateConnectionStatus('disconnected');
                 // Attempt reconnection after error
@@ -3096,8 +3099,17 @@
             }
         }
 
-        // Connect WebSocket immediately (don't wait for DOMContentLoaded)
-        connectWebSocket();
+        // Give Daphne a moment to initialize WebSocket routes, then connect
+        // This prevents the initial connection failures after restart
+        if (window.location.href.includes('localhost')) {
+            // In development, wait a tiny bit for Daphne to be ready
+            setTimeout(() => {
+                connectWebSocket();
+            }, 250); // 250ms delay to let Daphne initialize
+        } else {
+            // In production, connect immediately
+            connectWebSocket();
+        }
 
         // Data persistence for page refreshes
         const CACHE_KEY = 'intelligence_dashboard_data';
