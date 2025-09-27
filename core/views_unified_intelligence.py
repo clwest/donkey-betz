@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 from backend.spiders.consciousness import ConsciousnessBridge
 from backend.intelligence.learning_loop import LearningLoop
 import json
@@ -78,6 +79,7 @@ def _check_websocket_status():
         return 0  # WebSocket not available
 
 
+@login_required
 def unified_intelligence_dashboard(request):
     """Render the unified intelligence dashboard page"""
     return render(request, 'unified_intelligence_dashboard.html')
@@ -85,6 +87,7 @@ def unified_intelligence_dashboard(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@login_required
 def get_unified_intelligence_data(request):
     """Get comprehensive system data for the unified dashboard"""
     try:
@@ -260,6 +263,7 @@ def get_unified_intelligence_data(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@login_required
 def implement_insight(request):
     """Implement a consciousness insight"""
     try:
@@ -304,6 +308,7 @@ def implement_insight(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@login_required
 def investigate_behavior(request):
     """Investigate an emergent behavior"""
     try:
@@ -349,6 +354,7 @@ def investigate_behavior(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@login_required
 def approve_proposal(request):
     """Approve an AI proposal"""
     try:
@@ -379,6 +385,7 @@ def approve_proposal(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@login_required
 def reject_proposal(request):
     """Reject an AI proposal"""
     try:
