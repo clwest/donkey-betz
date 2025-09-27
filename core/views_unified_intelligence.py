@@ -119,11 +119,11 @@ def get_unified_intelligence_data(request):
 
         # Get consciousness data with timeout protection
         try:
-            # Use cached understanding if available
+            # Use cached understanding if available (reduced cache time for more dynamic updates)
             understanding = cache.get('consciousness_understanding')
             if not understanding or force_refresh:
                 understanding = consciousness.understand_self()
-                cache.set('consciousness_understanding', understanding, 300)  # Cache for 5 minutes
+                cache.set('consciousness_understanding', understanding, 30)  # Cache for 30 seconds only
         except Exception as e:
             logger.warning(f"Failed to get consciousness understanding: {e}")
             understanding = {'self_awareness_score': 0, 'capabilities': {}, 'insights': [], 'emergent_behaviors': []}
