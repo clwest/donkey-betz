@@ -388,7 +388,7 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
         }))
 
     async def analyze_opportunities(self, profile_data):
-        """Analyze opportunities for user profile"""
+        """Analyze opportunities for user profile - NOW WITH REAL SPIDER DATA!"""
         if UserProfile and SkillLevel and income_builder:
             profile = UserProfile(
                 id=profile_data.get('id', 'user'),
@@ -398,16 +398,68 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
                 available_hours_per_week=profile_data.get('available_hours', 10)
             )
 
+            # First get real opportunities from spider network
+            logger.info("🕷️ Getting REAL opportunities from spider network...")
+            real_opportunities = await income_builder.find_opportunities(profile)
+
+            # Then get the standard analysis
             analysis = await income_builder.analyze_user_potential(profile)
+
+            # Enhance analysis with real spider opportunities
+            if real_opportunities:
+                # Convert real opportunities to the expected format
+                real_top_opportunities = []
+                for real_opp in real_opportunities[:5]:  # Top 5 real opportunities
+                    opportunity_obj = real_opp["opportunity"]
+                    real_top_opportunities.append({
+                        "title": opportunity_obj.title,
+                        "stream_type": opportunity_obj.stream_type.value,
+                        "score": real_opp["score"],
+                        "time_to_income": str(opportunity_obj.time_to_first_income),
+                        "potential_monthly": opportunity_obj.potential_monthly,
+                        "match_reasons": real_opp["match_reasons"],
+                        "action_steps": opportunity_obj.action_steps,
+                        "platform": getattr(opportunity_obj, 'spider_data', {}).get('platform', 'unknown'),
+                        "budget_range": getattr(opportunity_obj, 'spider_data', {}).get('budget_range', 'N/A'),
+                        "client_rating": getattr(opportunity_obj, 'spider_data', {}).get('client_rating', 0),
+                        "urgency": getattr(opportunity_obj, 'spider_data', {}).get('urgency', 'medium'),
+                        "revenue_potential": getattr(opportunity_obj, 'spider_data', {}).get('revenue_potential', 0),
+                        "source": "spider_network",
+                        "real_data": True
+                    })
+
+                # Merge real opportunities with analysis
+                analysis['real_opportunities'] = real_top_opportunities
+                analysis['spider_opportunities_found'] = len(real_opportunities)
+                analysis['data_source'] = 'live_spider_network'
+                logger.info(f"✅ Enhanced analysis with {len(real_opportunities)} real opportunities")
+            else:
+                analysis['real_opportunities'] = []
+                analysis['spider_opportunities_found'] = 0
+                analysis['data_source'] = 'fallback_data'
+                logger.warning("No real opportunities found, using fallback data")
+
         else:
-            analysis = {'top_opportunities': [], 'earnings_projection': {}, 'recommended_path': [], 'success_probability': 0}
+            analysis = {
+                'top_opportunities': [],
+                'earnings_projection': {},
+                'recommended_path': [],
+                'success_probability': 0,
+                'real_opportunities': [],
+                'spider_opportunities_found': 0,
+                'data_source': 'mock_data'
+            }
 
         await self.send(text_data=json.dumps({
             'type': 'opportunities_analysis',
             'top_opportunities': analysis.get('top_opportunities', []),
+            'real_opportunities': analysis.get('real_opportunities', []),
             'earnings_projection': analysis.get('earnings_projection', {}),
             'recommended_path': analysis.get('recommended_path', []),
-            'success_probability': analysis.get('success_probability', 0)
+            'success_probability': analysis.get('success_probability', 0),
+            'spider_opportunities_found': analysis.get('spider_opportunities_found', 0),
+            'data_source': analysis.get('data_source', 'unknown'),
+            'timestamp': timezone.now().isoformat()
         }))
 
     async def select_opportunity(self, opportunity_id):
