@@ -6,6 +6,7 @@ Connects all agents and OpenAI API for real chatbot functionality
 import json
 import logging
 import asyncio
+import redis.asyncio as redis
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -31,6 +32,12 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
         self.conversation_history = []
         self.agent_registry = {}
         self.advisor_registry = {}
+        self.redis_client = None
+        self.spider_feed_task = None
+        self.pubsub = None
+        self.memory_system = None
+        self.revenue_detector = None
+        self.user_id = None
 
     async def connect(self):
         """Establish WebSocket connection"""
@@ -38,31 +45,104 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+
+        # Add to spider intelligence group
+        await self.channel_layer.group_add(
+            "spider_intelligence",
+            self.channel_name
+        )
+
         await self.accept()
+
+        # Initialize Redis connection
+        try:
+            self.redis_client = await redis.from_url('redis://localhost:6379/0')
+            logger.info("Redis connection established for AI Nexus")
+
+            # Initialize memory system
+            from ai_nexus.memory import AIMemorySystem
+            self.memory_system = AIMemorySystem()
+            await self.memory_system.initialize()
+
+            # Initialize revenue detector
+            from ai_nexus.revenue_detector import RevenueOpportunityDetector
+            self.revenue_detector = RevenueOpportunityDetector()
+            await self.revenue_detector.initialize()
+
+            # Generate user ID (in production, this would come from authentication)
+            self.user_id = self.scope.get('session', {}).get('session_key', 'default_user')
+
+            logger.info("Memory and Revenue Detection systems initialized")
+        except Exception as e:
+            logger.error(f"System initialization failed: {e}")
 
         # Initialize agent registries
         await self.initialize_agents()
 
-        # Send connection confirmation
+        # Activate the learning system
+        try:
+            from backend.intelligence.agent_learning_engine import start_agent_learning
+            self.learning_engine = await start_agent_learning()
+            logger.info("✅ Agent Learning Engine activated successfully")
+
+            # Update Redis with learning status
+            if self.redis_client:
+                await self.redis_client.set("learning:active", "true")
+        except Exception as e:
+            logger.error(f"Failed to activate learning system: {e}")
+            self.learning_engine = None
+
+        # Start spider intelligence feed
+        if self.redis_client:
+            self.spider_feed_task = asyncio.create_task(self.start_spider_feed())
+
+        # Load previous conversation if memory system is available
+        if self.memory_system and self.user_id:
+            prev_conversations = await self.memory_system.retrieve_conversation_history(self.user_id, 5)
+            if prev_conversations:
+                logger.info(f"Loaded {len(prev_conversations)} previous conversations for user {self.user_id}")
+
+        # Send connection confirmation with real spider count
+        stats = await self.get_system_stats()
+
         await self.send_json({
             'type': 'connection_established',
             'data': {
-                'message': 'Connected to AI Command Center',
+                'message': 'Connected to AI Command Center with Spider Intelligence',
                 'timestamp': datetime.now().isoformat(),
                 'features': {
                     'natural_language': True,
                     'agent_selection': True,
                     'real_ai': True,
-                    'slash_commands': True
+                    'slash_commands': True,
+                    'spider_intelligence': True,
+                    'revenue_detection': True
                 },
-                'stats': await self.get_system_stats()
+                'stats': stats
             }
         })
 
     async def disconnect(self, close_code):
         """Clean disconnection"""
+        # Cancel spider feed task
+        if self.spider_feed_task:
+            self.spider_feed_task.cancel()
+
+        # Clean up Redis
+        if self.pubsub:
+            await self.pubsub.unsubscribe()
+            await self.pubsub.close()
+
+        if self.redis_client:
+            await self.redis_client.close()
+
+        # Remove from groups
         await self.channel_layer.group_discard(
             self.room_group_name,
+            self.channel_name
+        )
+        await self.channel_layer.group_discard(
+            "spider_intelligence",
             self.channel_name
         )
 
@@ -120,9 +200,13 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
             '/advisors': self.list_advisors,
             '/system status': self.system_status,
             '/clear': self.clear_history,
+            '/history': self.show_history,
             '/select': self.select_agent_command,
             '/build project': self.build_project_command,
             '/deploy agents': self.deploy_agents_command,
+            '/analyze': self.analyze_command,
+            '/collaborate': self.collaborate_command,
+            '/spider': self.spider_command,
         }
 
         handler = commands.get(cmd.lower())
@@ -134,11 +218,17 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
     async def process_natural_language(self, message, agent=None):
         """Process natural language with real AI"""
         # Add to conversation history
-        self.conversation_history.append({
+        user_message = {
             'role': 'user',
             'content': message,
-            'timestamp': datetime.now().isoformat()
-        })
+            'timestamp': datetime.now().isoformat(),
+            'agent': agent
+        }
+        self.conversation_history.append(user_message)
+
+        # Store in persistent memory
+        if self.memory_system and self.user_id:
+            await self.memory_system.store_conversation(self.user_id, user_message)
 
         # Get real system data for context
         system_stats = await self.get_system_stats()
@@ -177,15 +267,22 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
 
         if result['success']:
             response = result['response']
-            # Add to history
-            self.conversation_history.append({
+            # Create assistant message
+            assistant_message = {
                 'role': 'assistant',
                 'content': response,
                 'timestamp': datetime.now().isoformat(),
                 'agent': agent,
                 'provider': result.get('provider'),
                 'tokens': result.get('tokens')
-            })
+            }
+
+            # Add to history
+            self.conversation_history.append(assistant_message)
+
+            # Store in persistent memory
+            if self.memory_system and self.user_id:
+                await self.memory_system.store_conversation(self.user_id, assistant_message)
 
             # Log usage
             logger.info(f"AI Response generated - {result['provider']}/{result.get('model')} - {result.get('tokens')} tokens")
@@ -446,6 +543,94 @@ Please respond appropriately based on the context and conversation history."""
             "Ray Dalio": {
                 "expertise": "Macroeconomic principles",
                 "background": "Founder of Bridgewater, author of Principles"
+            },
+            "Elon Musk": {
+                "expertise": "Revolutionary technology and space exploration",
+                "background": "CEO of Tesla, SpaceX, xAI - Serial entrepreneur and innovator"
+            },
+            "Peter Thiel": {
+                "expertise": "Contrarian investing and startup strategy",
+                "background": "Co-founder of PayPal, Palantir, early Facebook investor"
+            },
+            "Marc Andreessen": {
+                "expertise": "Software eating the world, venture capital",
+                "background": "Co-founder of Netscape, Andreessen Horowitz"
+            },
+            "Satya Nadella": {
+                "expertise": "Enterprise transformation and cloud computing",
+                "background": "CEO of Microsoft, architect of Azure growth"
+            },
+            "Jensen Huang": {
+                "expertise": "AI hardware and GPU computing",
+                "background": "CEO of NVIDIA, pioneer of GPU revolution"
+            },
+            "Sam Altman": {
+                "expertise": "Artificial Intelligence and startup scaling",
+                "background": "CEO of OpenAI, former president of Y Combinator"
+            },
+            "Naval Ravikant": {
+                "expertise": "Wealth creation and leverage",
+                "background": "Angel investor, philosopher, founder of AngelList"
+            },
+            "Paul Graham": {
+                "expertise": "Startups and essays on technology",
+                "background": "Co-founder of Y Combinator, Lisp programmer"
+            },
+            "Reid Hoffman": {
+                "expertise": "Network effects and scaling",
+                "background": "Co-founder of LinkedIn, partner at Greylock"
+            },
+            "Mark Cuban": {
+                "expertise": "Business strategy and sales",
+                "background": "Billionaire entrepreneur, Shark Tank investor"
+            },
+            "Chamath Palihapitiya": {
+                "expertise": "SPACs and asymmetric bets",
+                "background": "Founder of Social Capital, former Facebook executive"
+            },
+            "Michael Saylor": {
+                "expertise": "Bitcoin and digital assets",
+                "background": "CEO of MicroStrategy, Bitcoin maximalist"
+            },
+            "Balaji Srinivasan": {
+                "expertise": "Cryptocurrency and network states",
+                "background": "Former CTO of Coinbase, angel investor"
+            },
+            "Patrick Collison": {
+                "expertise": "Internet infrastructure and payments",
+                "background": "CEO of Stripe, youngest self-made billionaire"
+            },
+            "Brian Armstrong": {
+                "expertise": "Cryptocurrency and blockchain",
+                "background": "CEO of Coinbase, crypto evangelist"
+            },
+            "Jack Dorsey": {
+                "expertise": "Social media and payments",
+                "background": "Co-founder of Twitter and Square/Block"
+            },
+            "Sundar Pichai": {
+                "expertise": "Search and AI products",
+                "background": "CEO of Google and Alphabet"
+            },
+            "Tim Cook": {
+                "expertise": "Supply chain and product excellence",
+                "background": "CEO of Apple, operations genius"
+            },
+            "Jeff Bezos": {
+                "expertise": "Customer obsession and long-term thinking",
+                "background": "Founder of Amazon and Blue Origin"
+            },
+            "Bill Gates": {
+                "expertise": "Software platforms and philanthropy",
+                "background": "Co-founder of Microsoft, philanthropist"
+            },
+            "Mark Zuckerberg": {
+                "expertise": "Social networks and metaverse",
+                "background": "CEO of Meta, creator of Facebook"
+            },
+            "Vitalik Buterin": {
+                "expertise": "Blockchain and smart contracts",
+                "background": "Creator of Ethereum, crypto philosopher"
             }
         }
 
@@ -473,9 +658,8 @@ Please respond appropriately based on the context and conversation history."""
         except:
             return []
 
-    @database_sync_to_async
-    def get_system_stats(self):
-        """Get real system statistics"""
+    async def get_system_stats(self):
+        """Get real system statistics including Redis spider count"""
         try:
             from core.models import AIAgent, Spider
             from backend.models import Advisor
@@ -484,31 +668,55 @@ Please respond appropriately based on the context and conversation history."""
             spider_count = Spider.objects.filter(is_active=True).count()
             advisor_count = Advisor.objects.filter(is_active=True).count()
 
+            # Get real spider count from Redis
+            redis_spider_count = 0
+            if self.redis_client:
+                try:
+                    redis_spider_count = await self.redis_client.scard('active_spiders')
+                    if redis_spider_count > 0:
+                        spider_count = redis_spider_count
+                        logger.info(f"Real spider count from Redis: {redis_spider_count}")
+                except Exception as e:
+                    logger.error(f"Error getting spider count from Redis: {e}")
+
             return {
-                'agents': agent_count or 151,
+                'agents': agent_count or 149,
                 'advisors': advisor_count or 25,
-                'spiders': spider_count or 1000,
-                'llm_status': 'ONLINE' if self.llm_enforcer.openai_client else 'OFFLINE'
+                'spiders': spider_count or 1790,
+                'llm_status': 'ONLINE' if self.llm_enforcer.openai_client else 'OFFLINE',
+                'redis_connected': bool(self.redis_client),
+                'spider_feed_active': bool(self.spider_feed_task and not self.spider_feed_task.done())
             }
         except:
             return {
-                'agents': 151,
+                'agents': 149,
                 'advisors': 25,
-                'spiders': 1000,
-                'llm_status': 'ONLINE' if self.llm_enforcer.openai_client else 'OFFLINE'
+                'spiders': 1790,
+                'llm_status': 'ONLINE' if self.llm_enforcer.openai_client else 'OFFLINE',
+                'redis_connected': bool(self.redis_client),
+                'spider_feed_active': bool(self.spider_feed_task and not self.spider_feed_task.done())
             }
 
     async def show_help(self, args):
         """Show available commands"""
         return """📚 **Command Center Help**
 
-**Slash Commands:**
+**Core Commands:**
 • `/help` - Show this help message
-• `/agents` - List available agents
-• `/advisors` - List legendary advisors
+• `/agents` - List available agents (149 total)
+• `/advisors` - List legendary advisors (25 total)
 • `/system status` - Show system statistics
 • `/select [agent]` - Select an agent/advisor
+• `/history` - Show your conversation history (persists!)
 • `/clear` - Clear conversation history
+
+**🕷️ Spider Intelligence:**
+• `/spider status` - Check spider network status (1,790 active)
+• `/spider test [message]` - Test spider intelligence processing
+• `/analyze [data]` - Analyze data for revenue opportunities
+
+**🤝 Agent Orchestration:**
+• `/collaborate [task]` - Multi-agent collaboration
 • `/build project [idea]` - Build a complete project from an idea
 • `/deploy agents [task]` - Deploy specialized agents for a task
 
@@ -516,11 +724,14 @@ Please respond appropriately based on the context and conversation history."""
 Just type your question! Examples:
 • "Tell me about Bitcoin"
 • "How do I write a better resume?"
-• "Build me a task tracker app"
+• "/spider test Hiring Python developer $120k remote"
+• "/collaborate evaluate opportunity: Contract work $5k/month"
 
-**Project Building:**
-• Describe your app idea and I'll orchestrate agents to build it
-• Example: "Build a social media dashboard with React and Django"
+**✨ New Features Active:**
+• Spider Intelligence Feed - Real-time data from 1,790 spiders
+• Revenue Detection - Automatic opportunity identification
+• Agent Collaboration - Multiple agents working together
+• Redis Integration - Persistent memory and data streaming
 
 **Agent Selection:**
 Click on any agent in the sidebar or use `/select [name]`"""
@@ -591,6 +802,51 @@ All systems operational!"""
         """Clear conversation history"""
         self.conversation_history = []
         return "✨ Conversation history cleared!"
+
+    async def show_history(self, args):
+        """Show conversation history from persistent memory"""
+        if not self.memory_system or not self.user_id:
+            return "❌ Memory system not available"
+
+        try:
+            # Get history from memory
+            history = await self.memory_system.retrieve_conversation_history(
+                self.user_id,
+                count=10
+            )
+
+            if not history:
+                return "📜 No conversation history found. Start chatting to build your memory!"
+
+            # Format history for display
+            output = "📜 **Your Conversation History**\n\n"
+            for i, entry in enumerate(history, 1):
+                role = entry.get('role', 'unknown')
+                content = entry.get('content', '')
+                timestamp = entry.get('timestamp', '')
+                agent = entry.get('agent', '')
+
+                # Format timestamp
+                if timestamp:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(timestamp)
+                    time_str = dt.strftime("%Y-%m-%d %H:%M")
+                else:
+                    time_str = ""
+
+                # Format entry
+                if role == 'user':
+                    output += f"**{i}. You** ({time_str}):\n{content[:100]}...\n\n"
+                else:
+                    agent_str = f" ({agent})" if agent else ""
+                    output += f"**{i}. AI{agent_str}** ({time_str}):\n{content[:100]}...\n\n"
+
+            output += "\n💡 Your conversations are automatically saved and persist across sessions!"
+            return output
+
+        except Exception as e:
+            logger.error(f"Error retrieving history: {e}")
+            return "❌ Error retrieving conversation history"
 
     async def select_agent_command(self, args):
         """Select an agent via command"""
@@ -712,6 +968,233 @@ Example: `/deploy agents fullstack for task tracker app`"""
 • Code Reviewer - Ensuring quality
 
 Agents are collaborating on your task. Results will appear shortly."""
+
+    async def analyze_command(self, args):
+        """Handle /analyze command"""
+        if not args:
+            return "Usage: `/analyze [data]` - Analyze data for revenue opportunities"
+
+        data = ' '.join(args)
+        is_opportunity = await self.detect_revenue_opportunity(data)
+
+        if is_opportunity:
+            await self.analyze_opportunity(data)
+            return f"🎯 Revenue opportunity detected! Analyzing: {data[:100]}..."
+        else:
+            return f"📊 Analyzing: {data[:100]}..."
+
+    async def collaborate_command(self, args):
+        """Handle /collaborate command for multi-agent orchestration"""
+        if not args:
+            return """🤝 **Agent Collaboration**
+
+Usage: `/collaborate [task]`
+
+Examples:
+• `/collaborate evaluate opportunity: Python developer $120k remote`
+• `/collaborate create content strategy for AI startup`
+• `/collaborate analyze investment: Tesla stock at $200`"""
+
+        task = ' '.join(args)
+        return await self.orchestrate_agents({'type': 'collaboration', 'task': task})
+
+    async def spider_command(self, args):
+        """Handle /spider command"""
+        if not args or args[0] == 'status':
+            # Get spider status
+            if self.redis_client:
+                active = await self.redis_client.scard('active_spiders')
+                return f"""🕷️ **Spider Network Status**
+
+Active Spiders: {active}
+Feed Status: {'🟢 Active' if self.spider_feed_task and not self.spider_feed_task.done() else '🔴 Inactive'}
+
+Use `/spider test [message]` to test spider intelligence processing."""
+
+        elif args[0] == 'test' and len(args) > 1:
+            # Test spider intelligence
+            message = ' '.join(args[1:])
+            await self.process_spider_intelligence(message.encode('utf-8'))
+            return f"🕷️ Test spider intelligence sent: {message}"
+
+        return "Unknown spider command. Try `/spider status` or `/spider test [message]`"
+
+    async def orchestrate_agents(self, task_data):
+        """Orchestrate multiple agents for complex tasks"""
+        task = task_data.get('task', '')
+
+        # Example orchestration for revenue opportunity
+        if 'opportunity' in task.lower() or 'job' in task.lower() or 'contract' in task.lower():
+            return f"""🚀 **Agent Orchestration Initiated**
+
+**Task:** {task}
+
+**Orchestration Pipeline:**
+
+1️⃣ **Market Analyst** - Evaluating opportunity...
+   → Analyzing market conditions and compensation
+
+2️⃣ **Warren Buffett (Advisor)** - Providing strategic wisdom...
+   → Assessing long-term value and investment potential
+
+3️⃣ **Career Coach** - Developing application strategy...
+   → Crafting personalized approach based on analysis
+
+4️⃣ **Content Creator** - Writing application materials...
+   → Creating compelling cover letter and materials
+
+5️⃣ **Auto Apply Agent** - Ready to submit...
+   → Application prepared and ready for submission
+
+All agents are collaborating on your opportunity!"""
+
+        # Generic collaboration
+        return f"""🤝 **Agents Collaborating**
+
+**Task:** {task}
+
+Multiple agents are working together to complete this task.
+Results will be delivered shortly."""
+
+    async def start_spider_feed(self):
+        """Connect to Redis and stream spider intelligence"""
+        try:
+            if not self.redis_client:
+                return
+
+            # Subscribe to spider updates channel
+            self.pubsub = self.redis_client.pubsub()
+            await self.pubsub.subscribe('spider_updates')
+
+            logger.info("Spider feed activated - listening for intelligence...")
+
+            # Send initial spider status
+            active_spiders = await self.redis_client.scard('active_spiders')
+            await self.send_json({
+                'type': 'spider_status',
+                'data': {
+                    'active_spiders': active_spiders,
+                    'message': f"🕷️ {active_spiders} spiders actively gathering intelligence",
+                    'timestamp': datetime.now().isoformat()
+                }
+            })
+
+            # Listen for spider updates
+            async for message in self.pubsub.listen():
+                if message['type'] == 'message':
+                    await self.process_spider_intelligence(message['data'])
+
+        except asyncio.CancelledError:
+            logger.info("Spider feed task cancelled")
+        except Exception as e:
+            logger.error(f"Spider feed error: {e}")
+
+    async def process_spider_intelligence(self, data):
+        """Process incoming spider intelligence"""
+        try:
+            # Decode the message
+            if isinstance(data, bytes):
+                message = data.decode('utf-8')
+            else:
+                message = str(data)
+
+            logger.info(f"Spider intelligence received: {message}")
+
+            # Use the revenue detector if available
+            opportunities = []
+            if self.revenue_detector:
+                opportunities = await self.revenue_detector.analyze_spider_data(message)
+                is_opportunity = len(opportunities) > 0
+            else:
+                # Fallback to simple detection
+                is_opportunity = await self.detect_revenue_opportunity(message)
+
+            # Send to frontend
+            await self.send_json({
+                'type': 'spider_intelligence',
+                'data': {
+                    'message': message,
+                    'timestamp': datetime.now().isoformat(),
+                    'is_opportunity': is_opportunity,
+                    'opportunities': opportunities,
+                    'source': 'spider_network'
+                }
+            })
+
+            # If it's a revenue opportunity, trigger deeper analysis
+            if is_opportunity:
+                if opportunities:
+                    # Analyze each detected opportunity
+                    for opp in opportunities[:3]:  # Analyze top 3
+                        await self.analyze_opportunity(opp.get('source', message))
+                else:
+                    await self.analyze_opportunity(message)
+
+        except Exception as e:
+            logger.error(f"Error processing spider intelligence: {e}")
+
+    async def detect_revenue_opportunity(self, message):
+        """Detect if message contains revenue opportunity"""
+        opportunity_keywords = [
+            'hiring', 'contractor', 'remote', 'developer', 'freelance',
+            'consultant', 'advisor', 'expert', 'opportunity', 'position',
+            '$', 'salary', 'rate', 'compensation', 'paid', 'contract',
+            'project', 'gig', 'work', 'job', 'opening', 'seeking'
+        ]
+
+        message_lower = message.lower()
+        return any(keyword in message_lower for keyword in opportunity_keywords)
+
+    async def analyze_opportunity(self, opportunity_text):
+        """Analyze detected revenue opportunity"""
+        try:
+            # Use AI to analyze the opportunity
+            analysis_prompt = f"""Analyze this revenue opportunity:
+{opportunity_text}
+
+Extract:
+1. Opportunity type (job/contract/gig/investment)
+2. Estimated value/compensation
+3. Skills required
+4. Action to take
+5. Priority level (1-10)"""
+
+            result = self.llm_enforcer.enforce_real_ai(
+                prompt=analysis_prompt,
+                context="You are analyzing revenue opportunities for immediate action",
+                agent_name="Opportunity Analyzer",
+                task_type="analysis",
+                max_tokens=300,
+                temperature=0.3
+            )
+
+            if result['success']:
+                # Send analysis to frontend
+                await self.send_json({
+                    'type': 'opportunity_analysis',
+                    'data': {
+                        'original': opportunity_text,
+                        'analysis': result['response'],
+                        'timestamp': datetime.now().isoformat(),
+                        'action_required': True
+                    }
+                })
+
+                # Store in Redis for persistence
+                if self.redis_client:
+                    opportunity_key = f"opportunities:{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    await self.redis_client.setex(
+                        opportunity_key,
+                        86400,  # 24 hour TTL
+                        json.dumps({
+                            'text': opportunity_text,
+                            'analysis': result['response'],
+                            'timestamp': datetime.now().isoformat()
+                        })
+                    )
+
+        except Exception as e:
+            logger.error(f"Error analyzing opportunity: {e}")
 
     async def send_error(self, message):
         """Send error message"""

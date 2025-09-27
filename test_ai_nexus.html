@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Nexus Test - Direct Access</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .status-card {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .chat-container {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user-message {
+            background: rgba(102, 126, 234, 0.2);
+            text-align: right;
+        }
+        .ai-message {
+            background: rgba(52, 211, 153, 0.2);
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .agent-selector {
+            margin-bottom: 15px;
+        }
+        select {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            color: #e0e0e0;
+            width: 100%;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-connected {
+            background: #34d399;
+            animation: pulse 2s infinite;
+        }
+        .status-disconnected {
+            background: #ef4444;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 AI Nexus Test Interface</h1>
+
+        <div class="status-card">
+            <h3>Connection Status</h3>
+            <div id="status">
+                <span class="status-indicator status-disconnected"></span>
+                <span>Disconnected</span>
+            </div>
+            <div id="stats" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="chat-container">
+            <div class="agent-selector">
+                <select id="agentSelect">
+                    <option value="">General AI</option>
+                    <option value="Code Assistant">Code Assistant</option>
+                    <option value="Crypto Advisor">Crypto Advisor</option>
+                    <option value="Content Creator">Content Creator</option>
+                    <option value="Market Analyst">Market Analyst</option>
+                    <option value="Career Coach">Career Coach</option>
+                    <option disabled>-- Legendary Advisors --</option>
+                    <option value="Warren Buffett">Warren Buffett</option>
+                    <option value="Elon Musk">Elon Musk</option>
+                    <option value="Cathie Wood">Cathie Wood</option>
+                </select>
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+            <div class="input-area">
+                <input
+                    type="text"
+                    id="messageInput"
+                    placeholder="Type a message or command (try /help)..."
+                    onkeypress="if(event.key === 'Enter') sendMessage()"
+                >
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let commandWS = null;
+        let currentAgent = null;
+
+        function connectWebSocket() {
+            const wsUrl = 'ws://localhost:8000/ws/command-center-ai/';
+
+            commandWS = new WebSocket(wsUrl);
+
+            commandWS.onopen = function() {
+                console.log('Connected to AI Command Center');
+                updateStatus(true);
+            };
+
+            commandWS.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                handleMessage(data);
+            };
+
+            commandWS.onerror = function(e) {
+                console.error('WebSocket error:', e);
+                updateStatus(false);
+            };
+
+            commandWS.onclose = function() {
+                console.log('WebSocket closed');
+                updateStatus(false);
+                // Reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            if (connected) {
+                statusEl.innerHTML = '<span class="status-indicator status-connected"></span><span>Connected to AI Nexus</span>';
+            } else {
+                statusEl.innerHTML = '<span class="status-indicator status-disconnected"></span><span>Disconnected - Reconnecting...</span>';
+            }
+        }
+
+        function handleMessage(data) {
+            console.log('Received:', data);
+
+            if (data.type === 'connection_established') {
+                const stats = data.data.stats || {};
+                document.getElementById('stats').innerHTML = `
+                    <small>
+                        Agents: ${stats.total_agents || 0} |
+                        Spiders: ${stats.active_spiders || 0} |
+                        Advisors: ${stats.total_advisors || 0}
+                    </small>
+                `;
+                addMessage('Connected to AI Nexus! Type /help for commands.', 'ai');
+            } else if (data.type === 'command_response') {
+                addMessage(data.data.response, 'ai');
+            } else if (data.type === 'error') {
+                addMessage('Error: ' + data.message, 'ai');
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            addMessage(message, 'user');
+
+            if (commandWS && commandWS.readyState === WebSocket.OPEN) {
+                const agent = document.getElementById('agentSelect').value;
+
+                commandWS.send(JSON.stringify({
+                    type: 'command',
+                    content: message,
+                    agent: agent || null
+                }));
+            } else {
+                addMessage('Not connected. Please wait...', 'ai');
+            }
+
+            input.value = '';
+        }
+
+        function addMessage(text, type) {
+            const messagesEl = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}-message`;
+            messageEl.textContent = text;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // Connect on load
+        connectWebSocket();
+
+        // Handle agent selection
+        document.getElementById('agentSelect').addEventListener('change', function() {
+            const agent = this.value;
+            if (agent) {
+                addMessage(`Switched to ${agent}`, 'ai');
+                if (commandWS && commandWS.readyState === WebSocket.OPEN) {
+                    commandWS.send(JSON.stringify({
+                        type: 'select_agent',
+                        agent: agent
+                    }));
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -94,7 +94,7 @@ class ConcreteAgentExecutor:
 
     async def execute_agent(self, agent_name: str, task: Dict[str, Any], user=None) -> Dict[str, Any]:
         """
-        Execute a specific agent with given task parameters.
+        Execute a specific agent with given task parameters with retry logic.
 
         Args:
             agent_name: Name of the agent to execute
@@ -104,7 +104,14 @@ class ConcreteAgentExecutor:
         Returns:
             Execution result dictionary
         """
+        import time
+        import os
         start_time = timezone.now()
+
+        # Check for API keys early
+        api_keys_available = bool(os.environ.get('OPENAI_API_KEY') or os.environ.get('ANTHROPIC_API_KEY'))
+        if not api_keys_available:
+            logger.warning(f"⚠️ No API keys found for {agent_name}. Agent may fail without AI capabilities.")
 
         try:
             # Check for project building agents first
@@ -136,14 +143,45 @@ class ConcreteAgentExecutor:
             if 'task_description' in task:
                 task_input['task'] = task['task_description']
 
-            # Execute the agent
-            if hasattr(agent_instance, 'execute'):
-                result = await agent_instance.execute(**task_input)
-            elif hasattr(agent_instance, 'run'):
-                result = await agent_instance.run(**task_input)
-            else:
-                # Fallback for agents without execute method
-                result = await self._execute_generic_agent(agent_instance, task_input)
+            # Execute with retry logic
+            result = None
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # Execute the agent
+                    if hasattr(agent_instance, 'execute'):
+                        result = await agent_instance.execute(**task_input)
+                    elif hasattr(agent_instance, 'run'):
+                        result = await agent_instance.run(**task_input)
+                    else:
+                        # Fallback for agents without execute method
+                        result = await self._execute_generic_agent(agent_instance, task_input)
+
+                    # If we got a result, check if it's successful
+                    if result and (result.get('success', False) or 'error' not in result):
+                        break  # Success, exit retry loop
+
+                    # If it failed but we have retries left, log and retry
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt  # Exponential backoff: 1, 2, 4 seconds
+                        logger.warning(f"⚠️ Agent {agent_name} failed on attempt {attempt + 1}/{max_retries}. Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.warning(f"⚠️ Agent {agent_name} exception on attempt {attempt + 1}/{max_retries}: {e}. Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                    else:
+                        raise  # Re-raise on last attempt
+
+            # If no result after all retries, create a failure result
+            if not result:
+                result = {
+                    'success': False,
+                    'error': f'Agent {agent_name} failed after {max_retries} attempts',
+                    'retries_attempted': max_retries
+                }
 
             # Calculate execution time
             execution_time = (timezone.now() - start_time).total_seconds()

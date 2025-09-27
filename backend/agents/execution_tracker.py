@@ -382,9 +382,16 @@ class AgentExecutionTracker:
 
     def get_active_spider_count(self) -> int:
         """
-        Get count of spiders that have been active in the last hour
+        Get REAL count of active spiders from Redis
         """
         try:
+            # First, check the active_spiders set for REAL deployed spiders
+            active_spiders = self.redis_client.scard('active_spiders')
+            if active_spiders > 0:
+                logger.info(f"Found {active_spiders} REAL spiders in Redis!")
+                return active_spiders
+
+            # Fallback to checking recent activity (for compatibility)
             active_count = 0
             one_hour_ago = datetime.now(self.mst) - timedelta(hours=1)
 

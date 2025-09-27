@@ -30,12 +30,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
     
     # Paths that don't require authentication
     PUBLIC_PATHS = [
-        '/api/v1/health/',
-        '/api/v1/status/',
-        '/api/v1/auth/login/',
-        '/api/v1/auth/register/',
-        '/api/v1/auth/forgot-password/',
-        '/api/v1/auth/reset-password/',
+        '/api/v1/health/',  # Health check endpoint
+        '/api/v1/auth/login/',  # Login endpoint
+        '/api/v1/auth/register/',  # Registration endpoint
+        '/api/v1/auth/forgot-password/',  # Password reset
+        '/api/v1/auth/reset-password/',  # Password reset confirmation
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
@@ -52,37 +51,37 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Skip non-API requests
         if not request.path.startswith('/api/'):
             return None
-        
+
         # Skip public paths
         if any(request.path.startswith(path) for path in self.PUBLIC_PATHS):
             return None
-        
+
         # Extract token from request
         token = self.extract_token(request)
-        
+
         if not token:
             logger.warning(f"No authentication token provided for {request.path}")
             return api_unauthorized("Authentication token required")
-        
+
         # Validate token and get user
         user = self.validate_token(token)
-        
+
         if not user:
             logger.warning(f"Invalid authentication token for {request.path}")
             return api_unauthorized("Invalid authentication token")
-        
+
         # Check if staff access required
         if any(request.path.startswith(path) for path in self.STAFF_REQUIRED_PATHS):
             if not user.is_staff:
                 logger.warning(f"Staff access required for {request.path}, user: {user.username}")
                 return api_forbidden("Staff access required")
-        
+
         # Attach user to request
         request.user = user
-        
+
         # Log successful authentication
         logger.debug(f"Authenticated user {user.username} for {request.path}")
-        
+
         return None
     
     def extract_token(self, request) -> Optional[str]:
@@ -149,7 +148,7 @@ class WebSocketAuthenticationMiddleware(BaseMiddleware):
         
         # Check if WebSocket authentication is required
         ws_auth_required = getattr(settings, 'REQUIRE_WEBSOCKET_AUTH', True)
-        
+
         if ws_auth_required and isinstance(scope['user'], AnonymousUser):
             # Close connection with authentication error
             logger.warning("WebSocket connection rejected: authentication required")
@@ -197,18 +196,19 @@ class WebSocketAuthenticationMiddleware(BaseMiddleware):
         """Validate WebSocket authentication token"""
         try:
             token = Token.objects.select_related('user').get(key=token_value)
-            
+
             # Check if user is active
             if not token.user.is_active:
                 return None
-            
+
             return token.user
-            
+
         except Token.DoesNotExist:
             return None
         except Exception as e:
             logger.error(f"Error validating WebSocket token: {str(e)}")
             return None
+
 
 
 class SecurityHeadersMiddleware(MiddlewareMixin):
