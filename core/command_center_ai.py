@@ -233,8 +233,59 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
         # Get real system data for context
         system_stats = await self.get_system_stats()
 
+        # Check if user wants to connect with a specific agent
+        message_lower = message.lower()
+        if any(phrase in message_lower for phrase in ['connect me with', 'connect with', 'talk to', 'speak to', 'use agent']):
+            # Extract agent name from message
+            agent_name = None
+            for phrase in ['connect me with', 'connect with', 'talk to', 'speak to', 'use agent']:
+                if phrase in message_lower:
+                    potential_agent = message_lower.split(phrase)[-1].strip()
+                    # Clean up the agent name
+                    agent_name = potential_agent.replace(' ', '_').lower()
+                    break
+
+            if agent_name:
+                # Try to execute the specific agent
+                try:
+                    from backend.agents.concrete_executor import ConcreteAgentExecutor
+                    executor = ConcreteAgentExecutor()
+
+                    task = {
+                        'task_description': f'User requested connection with {agent_name}',
+                        'input': {'task': 'Initialize and introduce yourself'}
+                    }
+
+                    logger.info(f"🔌 Connecting user to agent: {agent_name}")
+                    result = await executor.execute_agent(agent_name, task)
+
+                    if result.get('success'):
+                        self.current_agent = agent_name
+                        return f"""✅ **Connected to {agent_name.replace('_', ' ').title()}**
+
+{result.get('message', 'Agent is ready to assist you.')}
+
+**Agent Status:** Active
+**Capabilities:** {result.get('capabilities', 'Ready to help')}
+
+You can now interact directly with this agent. What would you like to know or do?"""
+                    else:
+                        # Agent not found, list available agents
+                        db_agents = await self.get_agents_from_db()
+                        agent_names = [a['name'] for a in db_agents[:10]]
+                        return f"""❌ Could not connect to '{agent_name}'.
+
+**Available agents include:**
+{chr(10).join('• ' + name for name in agent_names)}
+
+Try: "Connect me with revenue_optimizer" or "Connect me with market_analyzer" """
+
+                except Exception as e:
+                    logger.error(f"Failed to connect to agent {agent_name}: {e}")
+                    return f"❌ Failed to connect to {agent_name}: {str(e)}"
+
         # Check if asking about agents/performance
-        if any(keyword in message.lower() for keyword in ['top agent', 'best agent', 'performing agent', 'which agent', 'list agent']):
+        elif any(keyword in message_lower for keyword in ['top agent', 'best agent', 'performing agent', 'which agent', 'list agent']):
             # Get detailed agent data
             db_agents = await self.get_agents_from_db()
             if db_agents:
@@ -940,34 +991,120 @@ Use `/deploy agents status` to check progress."""
             return f"❌ Failed to initiate project build: {str(e)}"
 
     async def deploy_agents_command(self, args):
-        """Handle /deploy agents command"""
+        """Handle /deploy agents command - REAL EXECUTION"""
         if not args:
             return """🤖 **Agent Deployment**
 
 Deploy specialized agents for specific tasks:
 
 **Available Agent Teams:**
-• `backend` - Django/FastAPI developers
-• `frontend` - React/Vue developers
+• `revenue` - Revenue optimization agents
+• `market` - Market analysis agents
+• `content` - Content generation agents
+• `spider` - Data collection agents
 • `fullstack` - Complete app development
-• `data` - Data engineers and analysts
-• `devops` - Infrastructure and deployment
 
-Example: `/deploy agents fullstack for task tracker app`"""
+Example: `/deploy agents revenue`"""
 
-        task = ' '.join(args)
+        agent_type = args[0].lower() if args else 'revenue'
 
-        return f"""⚡ **Agents Deployed!**
+        # Import the concrete executor for REAL agent execution
+        try:
+            from backend.agents.concrete_executor import ConcreteAgentExecutor
+            executor = ConcreteAgentExecutor()
 
-**Task:** {task}
+            # Define agent teams
+            agent_teams = {
+                'revenue': ['revenue_optimizer', 'opportunity_scanner', 'market_analyzer'],
+                'market': ['market_analyzer', 'trend_predictor', 'sentiment_analyzer'],
+                'content': ['content_creator', 'seo_optimizer', 'blog_writer'],
+                'spider': ['job_spider', 'market_spider', 'news_spider'],
+                'fullstack': ['backend_developer', 'frontend_developer', 'database_engineer']
+            }
+
+            # Get the agents to deploy
+            agents_to_deploy = agent_teams.get(agent_type, ['revenue_optimizer'])
+
+            # Actually execute the agents
+            results = []
+            deployed_agents = []
+
+            for agent_name in agents_to_deploy:
+                try:
+                    # Create a basic task for the agent
+                    task = {
+                        'task_description': f'Initialize and analyze for {agent_type} operations',
+                        'input': {
+                            'task': f'Analyze {agent_type} opportunities',
+                            'mode': 'real_execution'
+                        }
+                    }
+
+                    # Execute the agent
+                    logger.info(f"🚀 Actually deploying agent: {agent_name}")
+                    result = await executor.execute_agent(agent_name, task)
+
+                    if result.get('success'):
+                        deployed_agents.append(agent_name)
+                        results.append({
+                            'agent': agent_name,
+                            'status': 'deployed',
+                            'message': result.get('message', 'Agent active')
+                        })
+                    else:
+                        results.append({
+                            'agent': agent_name,
+                            'status': 'failed',
+                            'error': result.get('error', 'Unknown error')
+                        })
+
+                except Exception as e:
+                    logger.error(f"Failed to deploy {agent_name}: {e}")
+                    results.append({
+                        'agent': agent_name,
+                        'status': 'error',
+                        'error': str(e)
+                    })
+
+            # Format the response
+            if deployed_agents:
+                response = f"""✅ **Successfully Deployed {len(deployed_agents)} Agents!**
+
+**Agent Type:** {agent_type}
 
 **Active Agents:**
-• Backend Developer - Setting up server
-• Frontend Developer - Building UI
-• Database Engineer - Designing schema
-• Code Reviewer - Ensuring quality
+"""
+                for result in results:
+                    if result['status'] == 'deployed':
+                        response += f"• 🟢 {result['agent']} - {result['message']}\n"
+                    else:
+                        response += f"• 🔴 {result['agent']} - {result['error']}\n"
 
-Agents are collaborating on your task. Results will appear shortly."""
+                response += f"""
+
+**Real Execution Results:**
+Total Deployed: {len(deployed_agents)}/{len(agents_to_deploy)}
+Status: {'Fully Operational' if len(deployed_agents) == len(agents_to_deploy) else 'Partial Deployment'}
+
+Agents are now actively working on {agent_type} tasks."""
+            else:
+                response = f"""❌ **Agent Deployment Failed**
+
+No agents could be deployed for '{agent_type}'.
+
+**Errors:**
+"""
+                for result in results:
+                    response += f"• {result['agent']}: {result.get('error', 'Unknown error')}\n"
+
+            return response
+
+        except ImportError as e:
+            logger.error(f"Could not import ConcreteAgentExecutor: {e}")
+            return "❌ Agent execution system not available. Please check system configuration."
+        except Exception as e:
+            logger.error(f"Agent deployment failed: {e}")
+            return f"❌ Failed to deploy agents: {str(e)}"
 
     async def analyze_command(self, args):
         """Handle /analyze command"""
