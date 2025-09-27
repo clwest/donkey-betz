@@ -4,7 +4,7 @@ This provides the skynet status endpoint for the frontend
 """
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from datetime import datetime
 import asyncio
@@ -23,7 +23,7 @@ view_generated_file = ViewGeneratedFileView.as_view()
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def skynet_status(request):
     """Provide Skynet Intelligence Engine status"""
     return Response({
@@ -51,7 +51,7 @@ def skynet_status(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def live_opportunities(request):
     """Get live opportunities"""
     return Response({
@@ -69,7 +69,7 @@ def live_opportunities(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def live_predictions(request):
     """Get live predictions"""
     return Response({
@@ -86,7 +86,7 @@ def live_predictions(request):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def income_builder_analysis(request):
     """💰 AI Income Builder - Start from $0"""
 
@@ -151,7 +151,7 @@ def income_builder_analysis(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def income_action_plan(request):
     """📋 Create personalized action plan for income generation"""
     try:
@@ -185,7 +185,7 @@ def income_action_plan(request):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def monetization_opportunities(request):
     """💰 Unified Monetization - All Revenue Streams"""
 
@@ -245,7 +245,7 @@ def monetization_opportunities(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_monetization_plan(request):
     """📋 Create Complete Monetization Plan"""
     try:
@@ -278,7 +278,7 @@ def create_monetization_plan(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def content_automation_plan(request):
     """🤖 Get Content Automation & Monetization Plan"""
     try:
@@ -304,7 +304,7 @@ def content_automation_plan(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def track_revenue(request):
     """📊 Track Revenue from Any Stream"""
     try:

@@ -18,6 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
 from django.views.generic.base import RedirectView
 from django.urls import path, include, reverse_lazy
 from django.http import JsonResponse
@@ -812,10 +813,10 @@ urlpatterns = [
     path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='accounts-logout'),
 
     # PRIMARY PAGES - These are the only HTML pages we're keeping
-    path('ai-production-hub/', lambda request: render(request, 'ai_production_hub.html'), name='ai-production-hub'),
-    path('content-studio/', lambda request: render(request, 'content_studio.html'), name='content-studio'),
-    path('ai-nexus/', lambda request: render(request, 'ai_nexus.html'), name='ai-nexus'),
-    path('intelligence/', unified_intelligence_dashboard, name='unified-intelligence-dashboard'),
+    path('ai-production-hub/', login_required(lambda request: render(request, 'ai_production_hub.html')), name='ai-production-hub'),
+    path('content-studio/', login_required(lambda request: render(request, 'content_studio.html')), name='content-studio'),
+    path('ai-nexus/', login_required(lambda request: render(request, 'ai_nexus.html')), name='ai-nexus'),
+    path('intelligence/', unified_intelligence_dashboard, name='unified-intelligence-dashboard'),  # Already has @login_required
 
     # API ENDPOINTS - All APIs remain active
     path('api/learning/stats/', get_learning_stats, name='learning-stats'),
