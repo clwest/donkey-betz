@@ -62,6 +62,14 @@ app.conf.beat_schedule = {
     },
 }
 
+# Spider-specific task routing configuration
+app.conf.task_routes = {
+    'backend.spiders.tasks.*': {'queue': 'spider_queue'},
+}
+app.conf.task_default_queue = 'default'
+app.conf.task_default_exchange = 'default'
+app.conf.task_default_routing_key = 'default'
+
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 

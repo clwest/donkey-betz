@@ -12,8 +12,7 @@ from django.views.decorators.http import require_http_methods
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from agent_error_handler import AgentErrorHandler
-from enhanced_agent_orchestrator import EnhancedAgentOrchestrator
+from core.module_stubs import AgentErrorHandler, EnhancedAgentOrchestrator
 
 # Project configuration
 PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")

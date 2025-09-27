@@ -1178,9 +1178,25 @@ class SpiderArmyOrchestrator:
             logger.error(f"Failed to send metrics to Django API: {e}")
 
 
-async def activate_job_spiders():
+def activate_job_spiders(user_profile=None):
     """
-    Activate job-specific spiders for real opportunity collection
+    Synchronous wrapper for activating job spiders
+    This allows the function to be called from non-async contexts
+    """
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    return loop.run_until_complete(_activate_job_spiders_async(user_profile))
+
+
+async def _activate_job_spiders_async(user_profile=None):
+    """
+    Activate job-specific spiders for real opportunity collection (async version)
     This function connects spiders to collect real jobs and opportunities
     """
     try:
@@ -1224,23 +1240,50 @@ async def activate_job_spiders():
                     redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
                 )
 
-                # Mock data collection for now (real implementation would use spider.start_requests())
-                # This simulates what the spider would find
-                mock_opportunities = await generate_mock_job_opportunities(spider_name)
-                opportunities_collected.extend(mock_opportunities)
+                # Try to use real spider data collection, fall back to mock if needed
+                try:
+                    # Attempt to start the spider and collect data
+                    if hasattr(spider, 'start'):
+                        await spider.start()
+                        # Give spider time to collect initial data
+                        await asyncio.sleep(2)
+
+                    # Check if spider collected any real data
+                    if hasattr(spider, 'get_collected_data'):
+                        real_opportunities = await spider.get_collected_data()
+                        if real_opportunities:
+                            opportunities_collected.extend(real_opportunities)
+                            logger.info(f"Collected {len(real_opportunities)} REAL opportunities from {spider_name}")
+                        else:
+                            # Fall back to mock data if no real data
+                            mock_opportunities = await generate_mock_job_opportunities(spider_name)
+                            opportunities_collected.extend(mock_opportunities)
+                            logger.info(f"Using mock data for {spider_name} (no real data available)")
+                    else:
+                        # Fall back to mock data if spider doesn't have data collection method
+                        mock_opportunities = await generate_mock_job_opportunities(spider_name)
+                        opportunities_collected.extend(mock_opportunities)
+                        logger.info(f"Using mock data for {spider_name} (spider lacks get_collected_data method)")
+
+                except Exception as spider_error:
+                    logger.warning(f"Spider {spider_name} real data collection failed: {spider_error}")
+                    # Fall back to mock data on any error
+                    mock_opportunities = await generate_mock_job_opportunities(spider_name)
+                    opportunities_collected.extend(mock_opportunities)
 
                 # Send opportunities through WebSocket to Decision Command
-                if channel_layer and mock_opportunities:
+                current_opportunities = [opp for opp in opportunities_collected if opp.get('platform') == spider_name]
+                if channel_layer and current_opportunities:
                     await channel_layer.group_send(
                         'decision_command',
                         {
                             'type': 'spider_data',
                             'spider': spider_name,
-                            'opportunities': mock_opportunities,
+                            'opportunities': current_opportunities,
                             'timestamp': datetime.now().isoformat()
                         }
                     )
-                    logger.info(f"Sent {len(mock_opportunities)} opportunities from {spider_name}")
+                    logger.info(f"Sent {len(current_opportunities)} opportunities from {spider_name}")
 
             except Exception as e:
                 logger.error(f"Error activating {spider_name} spider: {e}")

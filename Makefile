@@ -65,6 +65,7 @@ NC := \033[0m # No Color
         backup restore deploy \
         agents-sync sports-sync content-sync \
         self-awareness-scan \
+        spider-deploy spider-status spider-clean spider-full \
         dev unified-dev prod \
         build scale monitor logs \
         health-check check-ports check-postgres check-redis \
@@ -165,6 +166,10 @@ start: ## Start everything - Backend, WebSockets, Redis, Celery, and monitoring
 	@$(ACTIVATE) && celery -A core beat -l info --detach 2>/dev/null || echo "$(YELLOW)⚠️  Celery beat may already be running$(NC)"
 	@echo "$(GREEN)✅ Celery workers started$(NC)"
 	@echo ""
+	@echo "$(CYAN)Starting Spider workers...$(NC)"
+	@$(ACTIVATE) && celery -A core worker -l info -Q spider_queue -n spider_worker@%h --concurrency=4 --detach 2>/dev/null || echo "$(YELLOW)⚠️  Spider worker may already be running$(NC)"
+	@echo "$(GREEN)✅ Spider workers started$(NC)"
+	@echo ""
 	@echo "$(CYAN)Starting Django with WebSocket support (Daphne)...$(NC)"
 	@$(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application > /dev/null 2>&1 &
 	@echo "$(GREEN)✅ Backend started with WebSocket support$(NC)"
@@ -204,6 +209,7 @@ stop: ## Stop all services - Backend, Celery, Redis, etc.
 	@echo "  Stopping Celery workers and beat..."
 	@pkill -f "celery.*worker" 2>/dev/null || true
 	@pkill -f "celery.*beat" 2>/dev/null || true
+	@pkill -f "spider_worker" 2>/dev/null || true
 	@pkill -f "flower" 2>/dev/null || true
 	@lsof -ti:$(FLOWER_PORT) | xargs kill -9 2>/dev/null || true
 	@echo "  Stopping any frontend services..."
@@ -474,6 +480,42 @@ content-sync: ## Sync content generation templates and workflows
 self-awareness-scan: ## Run system self-awareness scan
 	@echo "$(GREEN)Running self-awareness system scan...$(NC)"
 	$(ACTIVATE) && $(MANAGE) self_awareness_scan
+
+# Spider Operations
+spider-deploy: ## Deploy spider army (use SPIDERS=100 for custom count)
+	@echo "$(BLUE)🕷️ Deploying Spider Army$(NC)"
+	@if [ -z "$(SPIDERS)" ]; then \
+		echo "$(CYAN)Deploying test batch (10 spiders)...$(NC)"; \
+		$(ACTIVATE) && $(MANAGE) deploy_spiders --test; \
+	else \
+		echo "$(CYAN)Deploying $(SPIDERS) spiders...$(NC)"; \
+		$(ACTIVATE) && $(MANAGE) deploy_spiders --quick $(SPIDERS); \
+	fi
+	@echo "$(GREEN)✅ Spiders deployed!$(NC)"
+
+spider-status: ## Check spider network status
+	@echo "$(BLUE)🕷️ Spider Network Status$(NC)"
+	@echo "======================================"
+	@redis-cli SCARD active_spiders | xargs -I {} echo "$(GREEN)Active Spiders: {}$(NC)"
+	@redis-cli GET consciousness:active_spiders | xargs -I {} echo "$(GREEN)Consciousness Count: {}$(NC)"
+	@echo ""
+	@echo "$(CYAN)Sample Active Spiders:$(NC)"
+	@redis-cli SMEMBERS active_spiders | head -5
+
+spider-clean: ## Clean inactive spiders
+	@echo "$(YELLOW)🧹 Cleaning inactive spiders...$(NC)"
+	$(ACTIVATE) && $(MANAGE) deploy_spiders --clean
+	@echo "$(GREEN)✅ Spider cleanup complete$(NC)"
+
+spider-full: ## Deploy full 1,770 spider army
+	@echo "$(RED)🕷️ DEPLOYING FULL SPIDER ARMY (1,770 spiders)$(NC)"
+	@echo "$(YELLOW)This will take several minutes...$(NC)"
+	$(ACTIVATE) && $(MANAGE) deploy_spiders --wave income
+	$(ACTIVATE) && $(MANAGE) deploy_spiders --wave financial
+	$(ACTIVATE) && $(MANAGE) deploy_spiders --wave tech
+	$(ACTIVATE) && $(MANAGE) deploy_spiders --wave content
+	@echo "$(GREEN)✅ Full spider army deployed!$(NC)"
+	@make spider-status
 
 # System Status
 status: ## Show platform status

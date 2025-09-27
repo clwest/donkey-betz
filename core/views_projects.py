@@ -20,10 +20,13 @@ logger = logging.getLogger(__name__)
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from agent_error_handler import AgentErrorHandler
-from enhanced_agent_orchestrator import EnhancedAgentOrchestrator
-from agent_project_advisor import AgentProjectAdvisor
-from real_agent_orchestra import RealAgentOrchestra
+# Using stub modules after cleanup - need to refactor
+from core.module_stubs import (
+    AgentErrorHandler,
+    EnhancedAgentOrchestrator,
+    AgentProjectAdvisor,
+    RealAgentOrchestra
+)
 import asyncio
 
 # Project configuration

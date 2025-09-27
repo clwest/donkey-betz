@@ -893,6 +893,7 @@ urlpatterns = [
     # All API v1 endpoints are handled by core.urls
     # This file just provides the root platform info and delegates to core
     
+
     # API Documentation (OpenAPI/Swagger)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
