@@ -53,11 +53,11 @@ class OrchestrationRealityConnector:
                     'total_consultations': profile.total_consultations
                 })
 
-            self.logger.info(f"✅ Loaded {len(advisors)} legendary advisors from registry")
+            logger.info(f"✅ Loaded {len(advisors)} legendary advisors from registry")
             return advisors
 
         except Exception as e:
-            self.logger.error(f"Error loading advisors: {e}")
+            logger.error(f"Error loading advisors: {e}")
             # Fallback to at least 2 advisors if registry fails
             return [
                 {

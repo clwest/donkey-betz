@@ -8,6 +8,7 @@ These endpoints replace mock data with actual consciousness, spider, and learnin
 """
 
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import cache_page
@@ -22,6 +23,17 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def neural_orchestra_view(request):
+    """
+    Render the Neural Orchestra template with WebSocket connection
+    """
+    # Use hardcoded localhost for development
+    context = {
+        'websocket_url': "ws://localhost:8000/ws/neural-orchestra/",
+    }
+    return render(request, 'neural_orchestra.html', context)
 
 
 @csrf_exempt

@@ -76,7 +76,7 @@ websocket_urlpatterns = [
 
     # Orchestra and Control Panel WebSockets
     re_path(r'^ws/orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
-    re_path(r'^ws/neural-orchestra/$', consumers.NeuralOrchestraConsumer.as_asgi()),
+    re_path(r'^ws/neural-orchestra/$', orchestra_consumers.NeuralOrchestraConsumer.as_asgi()),
     re_path(r'^ws/enhanced-neural-orchestra/$', consumers.NeuralOrchestraConsumer.as_asgi()),
     re_path(r'^ws/control/$', orchestra_consumers.ControlConsumer.as_asgi()),
 
