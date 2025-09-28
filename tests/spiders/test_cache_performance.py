@@ -14,7 +14,7 @@ sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.agents.freelance_job_analyzer import FreelanceJobAnalyzer
+from ai_core.agents.freelance_job_analyzer import FreelanceJobAnalyzer
 import redis
 
 

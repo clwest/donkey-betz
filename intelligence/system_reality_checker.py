@@ -184,7 +184,7 @@ class SystemRealityChecker:
         # Check if module exists
         income_builder_paths = [
             f"{self.base_path}/intelligence/income_builder.py",
-            f"{self.base_path}/backend/intelligence/income_builder.py"
+            f"{self.base_path}/ai_core/intelligence/income_builder.py"
         ]
 
         module_exists = False
@@ -364,7 +364,7 @@ class SystemRealityChecker:
 
         # Check for spider files
         spider_paths = [
-            f"{self.base_path}/backend/spiders",
+            f"{self.base_path}/ai_core/spiders",
             f"{self.base_path}/spiders"
         ]
 

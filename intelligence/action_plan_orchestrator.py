@@ -177,7 +177,7 @@ class ActionPlanOrchestrator:
             self.execution_status[plan_id]["agents_active"] = all_agents[:5]  # Start with first 5
 
             # Connect to spider network for data gathering
-            from backend.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
+            from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
             spider_orchestrator = SpiderArmyOrchestrator()
 
             # Activate relevant spiders based on plan requirements

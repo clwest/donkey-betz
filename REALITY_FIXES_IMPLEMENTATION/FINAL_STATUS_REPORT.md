@@ -71,11 +71,11 @@ You can now see:
    - Complete diagnostic system implementation
    - Handles all backend visibility
 
-2. **`/backend/templates/diagnostic_dashboard.html`** (500+ lines)
+2. **`/ai_core/templates/diagnostic_dashboard.html`** (500+ lines)
    - Visual monitoring dashboard
    - Real-time system status display
 
-3. **`/backend/spiders/spider_mock_data.py`** (100+ lines)
+3. **`/ai_core/spiders/spider_mock_data.py`** (100+ lines)
    - Fallback data system
    - Ensures system always works
 
@@ -85,15 +85,15 @@ You can now see:
    - `FINAL_STATUS_REPORT.md` - This report
 
 ### Files Modified:
-1. **`backend/intelligence/income_builder.py`**
+1. **`ai_core/intelligence/income_builder.py`**
    - Added synchronous wrappers
    - Connected to spider network
 
-2. **`backend/spiders/spider_orchestrator.py`**
+2. **`ai_core/spiders/spider_orchestrator.py`**
    - Added synchronous wrapper function
    - Fixed parameter handling
 
-3. **`backend/urls.py` & `core/urls.py`**
+3. **`ai_core/urls.py` & `core/urls.py`**
    - Added diagnostic routes
    - Integrated new views
 

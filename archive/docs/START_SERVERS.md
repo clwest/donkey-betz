@@ -43,7 +43,7 @@ If you need WebSocket support for real-time updates, you need to use Daphne inst
 lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
 
 # Start Daphne (with WebSocket support)
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 
 # Note: Daphne also takes 30-60 seconds to start due to model loading
 ```
@@ -59,7 +59,7 @@ python manage.py runserver 0.0.0.0:8000
 #### Option 2: Daphne Server (With WebSocket)
 ```bash
 # For real-time features
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 ```
 
 #### Option 3: Use Make Command

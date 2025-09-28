@@ -18,7 +18,7 @@
 # Backend
 cd /Users/donkeyking/development/unified-donkey-betz
 source .venv/bin/activate
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application &
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application &
 
 # Frontend (in another terminal)
 cd frontend
@@ -30,14 +30,14 @@ npm run dev -- --port 3000
 ## 💰 WHAT WE BUILT TODAY
 
 ### 1. **AI Income Builder** ✅
-- **Location:** `backend/intelligence/income_builder.py`
+- **Location:** `ai_core/intelligence/income_builder.py`
 - **API:** `/api/v1/intelligence/income-builder/`
 - **Frontend Component:** `frontend/src/components/IncomeBuilder.tsx` (CREATED BUT NOT LINKED)
 - **Status:** Backend working, Frontend component exists but NOT in navigation
 - **Purpose:** 8 zero-investment opportunities to start earning from $0
 
 ### 2. **Unified Monetization Engine** ✅
-- **Location:** `backend/intelligence/monetization_engine.py`
+- **Location:** `ai_core/intelligence/monetization_engine.py`
 - **APIs:**
   - `/api/v1/monetization/opportunities/` - Revenue dashboard
   - `/api/v1/monetization/plan/` - Create monetization plans
@@ -96,8 +96,8 @@ curl -X POST http://localhost:8000/api/v1/content/blog/generate/ \
 ## 📁 KEY FILE LOCATIONS
 
 ### Backend:
-- **Income Builder:** `backend/intelligence/income_builder.py`
-- **Monetization Engine:** `backend/intelligence/monetization_engine.py`
+- **Income Builder:** `ai_core/intelligence/income_builder.py`
+- **Monetization Engine:** `ai_core/intelligence/monetization_engine.py`
 - **API Views:** `core/intelligence_api.py`
 - **URL Config:** `core/urls.py` (lines 134-141 for new endpoints)
 - **Content Views:** `core/views_content.py` (NEEDS FIXING)

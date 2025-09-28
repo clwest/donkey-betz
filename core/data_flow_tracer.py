@@ -569,7 +569,7 @@ class DataFlowTracer:
                 # Check if income builder works
                 if component == "income_builder":
                     try:
-                        import backend.intelligence.income_builder
+                        import ai_core.intelligence.income_builder
                         updated_data['ranking_score'] = 0.8
                         updated_data['ranked_at'] = timezone.now().isoformat()
                     except ImportError:

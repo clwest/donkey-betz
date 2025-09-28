@@ -13,7 +13,7 @@ from datetime import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend', 'spiders'))
 
-from backend.spiders.bluesky_handler import bluesky_handler, bluesky_collector
+from ai_core.spiders.bluesky_handler import bluesky_handler, bluesky_collector
 
 
 async def test_bluesky():

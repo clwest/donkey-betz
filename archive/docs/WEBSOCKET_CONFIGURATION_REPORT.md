@@ -101,7 +101,7 @@ The Unified Donkey Betz Platform has been successfully configured with comprehen
 
 ### Configuration Files
 - `/Users/donkeyking/development/unified-donkey-betz/core/asgi.py` - ASGI routing configuration
-- `/Users/donkeyking/development/unified-donkey-betz/backend/settings.py` - Channel layers configuration
+- `/Users/donkeyking/development/unified-donkey-betz/ai_core/settings.py` - Channel layers configuration
 
 ### WebSocket Consumers
 - `/Users/donkeyking/development/unified-donkey-betz/agents/consumers.py` - Agent system WebSocket consumers

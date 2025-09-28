@@ -13,7 +13,7 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 
 from core.llm_enforcer import get_llm_enforcer
-from backend.spiders.ai_monetization_spider import research_ai_monetization_sync
+from ai_core.spiders.ai_monetization_spider import research_ai_monetization_sync
 
 logger = logging.getLogger(__name__)
 

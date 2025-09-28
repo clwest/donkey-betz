@@ -14,7 +14,7 @@ from datetime import datetime
 
 # Setup Django environment
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from core.system_integration_orchestrator import get_system_orchestrator, integrate_system

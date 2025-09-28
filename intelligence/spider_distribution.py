@@ -15,7 +15,7 @@ import os
 
 # Add Django setup
 sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
 import django
 django.setup()

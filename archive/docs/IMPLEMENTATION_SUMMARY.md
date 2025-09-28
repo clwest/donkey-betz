@@ -151,7 +151,7 @@ This document summarizes the successful implementation of Priority 3 (ML Pipelin
    - Unified HTTP/WebSocket on port 8000
    - Fixed display messages for clarity
 
-4. **Intelligence API Routing** (`/backend/urls.py`, `/core/urls.py`)
+4. **Intelligence API Routing** (`/ai_core/urls.py`, `/core/urls.py`)
    - Added proper URL namespace for intelligence endpoints
    - Created temporary bridge for frontend compatibility
 

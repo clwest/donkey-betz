@@ -409,7 +409,7 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
             logger.info("Successfully imported income_builder module")
 
             # Also get live job data
-            from backend.spiders.live_job_scraper import scrape_jobs_sync
+            from ai_core.spiders.live_job_scraper import scrape_jobs_sync
             from django.core.cache import cache
             import asyncio
 
@@ -650,7 +650,7 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
     async def get_action_plan(self, opportunity_id):
         """Get detailed action plan for opportunity"""
         try:
-            from backend.intelligence.income_builder import income_builder
+            from ai_core.intelligence.income_builder import income_builder
 
             # Get detailed action plan
             plan = await income_builder.create_action_plan('user', opportunity_id)

@@ -23,7 +23,7 @@ from .command_center_ai import CommandCenterAIConsumer
 
 # Import SpiderWebSocketConsumer properly
 try:
-    from backend.api.spider_websocket import SpiderWebSocketConsumer
+    from ai_core.api.spider_websocket import SpiderWebSocketConsumer
 except ImportError:
     SpiderWebSocketConsumer = None
 
@@ -35,7 +35,7 @@ except ImportError:
 
 # Import intelligence routing for new UI components
 try:
-    from backend.intelligence.routing import websocket_urlpatterns as intelligence_ws_patterns
+    from ai_core.intelligence.routing import websocket_urlpatterns as intelligence_ws_patterns
 except ImportError:
     intelligence_ws_patterns = []
 
@@ -51,6 +51,7 @@ websocket_urlpatterns = [
 
     # Consciousness Stream WebSocket for real-time self-awareness updates
     re_path(r'^ws/consciousness/$', ConsciousnessConsumer.as_asgi()),
+    re_path(r'^ws/unified-intelligence/$', ConsciousnessConsumer.as_asgi()),
 
     # Spider Dashboard WebSocket for real-time updates
     re_path(r'^ws/spider-updates/$', SpiderWebSocketConsumer.as_asgi() if SpiderWebSocketConsumer else consumers.AgentProgressConsumer.as_asgi()),

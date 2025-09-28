@@ -18,14 +18,14 @@ import asyncio
 from datetime import datetime
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.core.cache import cache
-from backend.tasks import collect_real_opportunities
+from ai_core.tasks import collect_real_opportunities
 from intelligence.shared_memory import SharedMemorySystem, AgentMemoryInterface, AdvisorMemoryInterface
-from backend.spiders.spider_validator import spider_orchestrator
-from backend.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.spiders.spider_validator import spider_orchestrator
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 
 
 def test_spider_collection():
@@ -180,9 +180,9 @@ def test_celery_tasks():
         # Check registered tasks
         tasks = list(app.tasks.keys())
         required_tasks = [
-            'backend.tasks.collect_real_opportunities',
-            'backend.tasks.refresh_ai_content_opportunities',
-            'backend.tasks.sync_revenue_metrics',
+            'ai_core.tasks.collect_real_opportunities',
+            'ai_core.tasks.refresh_ai_content_opportunities',
+            'ai_core.tasks.sync_revenue_metrics',
             'intelligence.shared_memory.sync_all_entity_memories'
         ]
 

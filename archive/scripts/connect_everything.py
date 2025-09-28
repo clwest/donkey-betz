@@ -353,8 +353,8 @@ CONNECTION SCRIPT COMPLETE!
    }}).then(r => r.json()).then(console.log)
 
 {YELLOW}If endpoints are still missing:{RESET}
-1. Check backend/intelligence/urls.py for URL patterns
-2. Check backend/intelligence/views.py for view classes
+1. Check ai_core/intelligence/urls.py for URL patterns
+2. Check ai_core/intelligence/views.py for view classes
 3. Run: python manage.py show_urls | grep intelligence
 
 {GREEN}Your 149 agents are ready to work!{RESET}

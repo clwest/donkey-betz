@@ -26,7 +26,7 @@
 
 ### **1. Redis WebSocket Configuration**
 - **Problem:** `connection_kwargs` parameter not supported
-- **Solution:** Simplified configuration in `backend/settings.py`
+- **Solution:** Simplified configuration in `ai_core/settings.py`
 - **Result:** Stable WebSocket connections
 
 ### **2. Missing channels-redis Package**
@@ -58,7 +58,7 @@
 
 ### **Core System Files:**
 ```
-backend/settings.py          - Django configuration (Redis, DB, APIs)
+ai_core/settings.py          - Django configuration (Redis, DB, APIs)
 intelligence/tasks.py         - Income Builder task execution
 content/ai_providers.py      - AI model integration (OpenAI, etc.)
 intelligence/real_agents.py   - Agent implementations
@@ -150,7 +150,7 @@ python manage.py shell
 ## ⚠️ IMPORTANT NOTES
 
 ### **DO NOT CHANGE:**
-1. `backend/settings.py` - Redis configuration is correct
+1. `ai_core/settings.py` - Redis configuration is correct
 2. Model references - Use GPT-4o-mini, not GPT-5
 3. Agent registry - All 149 agents should be available
 
@@ -174,7 +174,7 @@ python manage.py shell
 
 import os
 import django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from agents.registry import agent_registry

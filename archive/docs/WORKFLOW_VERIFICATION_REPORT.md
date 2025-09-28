@@ -8,7 +8,7 @@ All 5 major components are connected and receiving data through WebSocket connec
 
 ## Component Architecture Overview
 
-### 1. Income Builder (`backend/intelligence/income_builder.py`)
+### 1. Income Builder (`ai_core/intelligence/income_builder.py`)
 **Purpose:** AI-powered income generation system for users starting from $0
 
 **Key Features:**

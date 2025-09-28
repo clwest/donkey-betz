@@ -338,7 +338,7 @@ AGENT_CACHE_TIMEOUT=300
 
         try:
             # Check if Django settings are configured
-            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
             import django
             django.setup()

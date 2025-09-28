@@ -276,7 +276,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
         if not formatted_opps:
             logger.warning("No opportunities found - triggering emergency spider collection")
             # Trigger spider collection asynchronously
-            from backend.tasks import collect_real_opportunities
+            from ai_core.tasks import collect_real_opportunities
             try:
                 # Queue immediate spider run
                 collect_real_opportunities.delay()
@@ -997,7 +997,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
                     all_opportunities = []
 
                     # 1. RemoteOK Spider (REAL API)
-                    from backend.spiders.real_job_spider import RealJobSpider
+                    from ai_core.spiders.real_job_spider import RealJobSpider
                     remoteok_spider = RealJobSpider()
                     try:
                         remoteok_jobs = await remoteok_spider.search_real_jobs(['python', 'ai', 'content'])
@@ -1012,7 +1012,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
                         await remoteok_spider.close()
 
                     # 2. ZERO CAPITAL INCOME OPPORTUNITIES (The real magic!)
-                    from backend.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
+                    from ai_core.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
                     zero_gen = ZeroCapitalIncomeGenerator()
                     try:
                         zero_capital_opps = await zero_gen.generate_zero_capital_opportunities()
@@ -1109,7 +1109,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
 
                 elif stage['action'] == 'create_content':
                     # Actually create real content
-                    from backend.agents.real_content_creator import RealContentCreatorAgent
+                    from ai_core.agents.real_content_creator import RealContentCreatorAgent
                     content_agent = RealContentCreatorAgent()
                     try:
                         # Create sample content based on plan
@@ -1219,7 +1219,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
             logger.info(f"✅ Execution completed for plan {plan_id}")
 
             # Import opportunity aggregator to send data to Revenue Dashboard
-            from backend.api.opportunity_aggregator import OpportunityAggregator
+            from ai_core.api.opportunity_aggregator import OpportunityAggregator
 
             # Get all aggregated opportunities
             all_opportunities = OpportunityAggregator.get_all_opportunities()

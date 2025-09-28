@@ -47,7 +47,7 @@
 
 ### **Framework Architecture**
 ```
-backend/spiders/
+ai_core/spiders/
 ├── specialized/           # 13 spider implementations
 │   ├── toptal_spider.py          ✅ 17KB (Elite freelance)
 │   ├── guru_spider.py            ✅ 18KB (Marketplace)
@@ -169,7 +169,7 @@ python deploy_expanded_spider_army.py
 
 ### **Registry Status**
 ```python
-from backend.spiders.spider_registry import spider_registry
+from ai_core.spiders.spider_registry import spider_registry
 print(spider_registry.get_spider_count())
 ```
 

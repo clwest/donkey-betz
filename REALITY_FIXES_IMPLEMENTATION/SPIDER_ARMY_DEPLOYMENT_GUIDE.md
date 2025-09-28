@@ -118,7 +118,7 @@ volumes:
 ### 2. Spider Category Breakdown (1,770 Total)
 
 ```python
-# backend/spiders/spider_deployment_config.py
+# ai_core/spiders/spider_deployment_config.py
 
 SPIDER_DEPLOYMENT_MAP = {
     # FREELANCE & GIG PLATFORMS (450 spiders)
@@ -265,7 +265,7 @@ playwright install  # Install browser drivers
 
 #### 1.2 Create Celery Tasks for Spider Management
 ```python
-# backend/spiders/tasks.py
+# ai_core/spiders/tasks.py
 
 from celery import shared_task, group
 from celery.result import AsyncResult
@@ -348,7 +348,7 @@ def collect_spider_metrics():
     metrics = orchestrator.collect_all_metrics()
 
     # Store metrics in database
-    from backend.models import SpiderMetrics
+    from ai_core.models import SpiderMetrics
     SpiderMetrics.objects.create(
         total_active=metrics['total_active'],
         data_collected=metrics['data_points'],
@@ -361,7 +361,7 @@ def collect_spider_metrics():
 
 #### 1.3 Create Spider Orchestrator
 ```python
-# backend/spiders/spider_orchestrator_v2.py
+# ai_core/spiders/spider_orchestrator_v2.py
 
 import asyncio
 import aioredis
@@ -572,7 +572,7 @@ class SpiderOrchestrator:
 
 #### 2.1 Create Base Spider Classes
 ```python
-# backend/spiders/base/web_spider.py
+# ai_core/spiders/base/web_spider.py
 
 import aiohttp
 import asyncio
@@ -613,7 +613,7 @@ class WebSpider:
 
 #### 2.2 Implement Platform-Specific Spiders
 ```python
-# backend/spiders/platforms/upwork_spider.py
+# ai_core/spiders/platforms/upwork_spider.py
 
 from bs4 import BeautifulSoup
 import re
@@ -678,14 +678,14 @@ class UpworkSpider(WebSpider):
 
 #### 3.1 Create Celery Beat Schedule
 ```python
-# backend/spiders/celery_schedules.py
+# ai_core/spiders/celery_schedules.py
 
 from celery.schedules import crontab
 
 SPIDER_SCHEDULES = {
     # Deploy new spider waves every hour
     'deploy-spider-wave': {
-        'task': 'backend.spiders.tasks.activate_spider_wave',
+        'task': 'ai_core.spiders.tasks.activate_spider_wave',
         'schedule': crontab(minute=0),  # Every hour
         'args': ({
             'toptal': 5,
@@ -696,25 +696,25 @@ SPIDER_SCHEDULES = {
 
     # Monitor spider health every 5 minutes
     'monitor-spider-health': {
-        'task': 'backend.spiders.tasks.monitor_spider_health',
+        'task': 'ai_core.spiders.tasks.monitor_spider_health',
         'schedule': crontab(minute='*/5'),
     },
 
     # Collect metrics every 15 minutes
     'collect-spider-metrics': {
-        'task': 'backend.spiders.tasks.collect_spider_metrics',
+        'task': 'ai_core.spiders.tasks.collect_spider_metrics',
         'schedule': crontab(minute='*/15'),
     },
 
     # Clean up dead spiders every hour
     'cleanup-dead-spiders': {
-        'task': 'backend.spiders.tasks.cleanup_dead_spiders',
+        'task': 'ai_core.spiders.tasks.cleanup_dead_spiders',
         'schedule': crontab(minute=30),
     },
 
     # Rotate spider IPs every 2 hours (if using proxies)
     'rotate-spider-proxies': {
-        'task': 'backend.spiders.tasks.rotate_proxies',
+        'task': 'ai_core.spiders.tasks.rotate_proxies',
         'schedule': crontab(hour='*/2'),
     }
 }
@@ -727,11 +727,11 @@ app.conf.beat_schedule.update(SPIDER_SCHEDULES)
 
 #### 3.2 Create Management Command
 ```python
-# backend/spiders/management/commands/deploy_full_spider_army.py
+# ai_core/spiders/management/commands/deploy_full_spider_army.py
 
 from django.core.management.base import BaseCommand
 import asyncio
-from backend.spiders.spider_orchestrator_v2 import SpiderOrchestrator
+from ai_core.spiders.spider_orchestrator_v2 import SpiderOrchestrator
 
 class Command(BaseCommand):
     help = 'Deploy the full 1,770 spider army'
@@ -786,7 +786,7 @@ class Command(BaseCommand):
 
 #### 4.1 Create Spider Dashboard
 ```python
-# backend/spiders/views_spider_dashboard.py
+# ai_core/spiders/views_spider_dashboard.py
 
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -882,7 +882,7 @@ docker-compose -f docker-compose.spider-army.yml logs -f celery-spider-worker-1
 
 # 3. Check spider health
 python manage.py shell -c "
-from backend.spiders.spider_orchestrator_v2 import SpiderOrchestrator
+from ai_core.spiders.spider_orchestrator_v2 import SpiderOrchestrator
 import asyncio
 o = SpiderOrchestrator()
 asyncio.run(o.initialize())
@@ -938,7 +938,7 @@ crontab -e
 
 import redis
 import asyncio
-from backend.spiders.spider_orchestrator_v2 import SpiderOrchestrator
+from ai_core.spiders.spider_orchestrator_v2 import SpiderOrchestrator
 
 async def verify_deployment():
     r = redis.Redis(host='localhost', port=6379, db=0)

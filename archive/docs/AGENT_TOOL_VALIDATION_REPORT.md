@@ -74,7 +74,7 @@ time.sleep(5)                        # ❌ ARTIFICIAL DELAY
 
 ### Income Builder Agent Analysis
 
-**File:** `backend/intelligence/income_builder.py` and `intelligence/income_builder.py`
+**File:** `ai_core/intelligence/income_builder.py` and `intelligence/income_builder.py`
 
 #### ✅ Positive Findings:
 - Uses real URLs in opportunity resources (upwork.com, fiverr.com, etc.)
@@ -108,7 +108,7 @@ time.sleep(5)                        # ❌ ARTIFICIAL DELAY
 
 ### Monetization Engine Analysis
 
-**File:** `backend/intelligence/monetization_engine.py`
+**File:** `ai_core/intelligence/monetization_engine.py`
 
 #### ✅ Positive Findings:
 - Good opportunity structure and scoring

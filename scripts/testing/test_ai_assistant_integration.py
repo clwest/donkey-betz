@@ -24,7 +24,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
 from core.unified_memory_manager import UnifiedMemoryManager
-from backend.agents.ai_enforced_base import AIEnforcedAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 import logging
 
 # Configure logging

@@ -102,7 +102,7 @@ async def start_spider_feed(self):
 **Location**: `core/views_unified_intelligence.py` (Lines 293-397)
 
 **What Was Done:**
-- Found existing `ProposalManager` in `backend/intelligence/proposal_manager.py`
+- Found existing `ProposalManager` in `ai_core/intelligence/proposal_manager.py`
 - Connected it to consciousness insights
 - "Implement" button now creates real proposals
 - Executes through ProposalManager system
@@ -148,7 +148,7 @@ async def start_spider_feed(self):
    - Maps insight categories to proposal types
    - Executes through ProposalManager
 
-3. **`backend/templates/unified_intelligence_dashboard.html`**
+3. **`ai_core/templates/unified_intelligence_dashboard.html`**
    - Passes insight descriptions
    - Shows execution results
    - Real-time updates

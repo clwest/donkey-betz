@@ -8,12 +8,12 @@ import sys
 import django
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from self_awareness.embeddings import CodebaseEmbeddingManager
 from self_awareness.models import CodeEmbedding
-from backend.intelligence.income_builder import AIIncomeBuilder
+from ai_core.intelligence.income_builder import AIIncomeBuilder
 
 def main():
     print("🧠 Testing Memory System")
@@ -30,7 +30,7 @@ def main():
 
     # Just process a couple of specific files
     test_files = [
-        'backend/intelligence/income_builder.py',
+        'ai_core/intelligence/income_builder.py',
         'agents/registry.py',
         'advisors/registry.py'
     ]

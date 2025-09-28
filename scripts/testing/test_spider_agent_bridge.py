@@ -33,12 +33,12 @@ import django
 django.setup()
 
 # Now we can import our modules
-from backend.spiders.spider_connector_orchestrator import (
+from ai_core.spiders.spider_connector_orchestrator import (
     get_spider_connector_orchestrator,
     SpiderConnectorOrchestrator
 )
-from backend.agents.content_marketplace_agent import ContentMarketplaceAgent
-from backend.agents.spider_data_mixin import enable_spider_data_for_agent
+from ai_core.agents.content_marketplace_agent import ContentMarketplaceAgent
+from ai_core.agents.spider_data_mixin import enable_spider_data_for_agent
 
 # Setup logging
 logging.basicConfig(

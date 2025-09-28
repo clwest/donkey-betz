@@ -146,8 +146,8 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
     async def get_real_orchestra_data(self):
         """Get real orchestration data from active agents"""
         try:
-            from backend.agents.real_job_simulator import real_job_simulator
-            from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
+            from ai_core.agents.real_job_simulator import real_job_simulator
+            from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 
             # Get active sessions to show real agent activity
             active_sessions = real_job_simulator.generate_active_sessions(10)
@@ -799,7 +799,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
     def get_system_status(self):
         """Get real system status with actual metrics"""
         try:
-            from backend.agents.real_job_simulator import real_job_simulator
+            from ai_core.agents.real_job_simulator import real_job_simulator
             from django.core.cache import cache
             import psutil
 

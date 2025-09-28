@@ -15,7 +15,7 @@ from rich.live import Live
 from django.utils import timezone
 
 # Django setup
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.db import connection

@@ -38,7 +38,7 @@ def start_with_daphne():
     check_requirements()
     
     # Set Django settings
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
     
     print("\n📋 Configuration:")
     print("  • Server: Daphne ASGI")
@@ -63,7 +63,7 @@ def start_with_daphne():
             'daphne',
             '-b', '0.0.0.0',
             '-p', '8000',
-            'backend.asgi:application'
+            'ai_core.asgi:application'
         ])
     except KeyboardInterrupt:
         print("\n\n✅ Server stopped by user")

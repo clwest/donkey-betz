@@ -3,7 +3,7 @@ Boost spider data collection and activate idle spiders
 """
 from django.core.management.base import BaseCommand
 from core.models_unified_system import SpiderData
-from backend.spiders.spider_registry import SpiderRegistry
+from ai_core.spiders.spider_registry import SpiderRegistry
 import json
 import random
 from datetime import datetime, timedelta

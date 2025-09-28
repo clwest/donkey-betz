@@ -124,7 +124,7 @@ The script now **verifies**:
 
 ### Need logs?
 ```bash
-tail -f backend.log    # Backend logs
+tail -f ai_core.log    # Backend logs
 tail -f frontend.log   # Frontend logs
 ```
 

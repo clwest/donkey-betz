@@ -42,7 +42,7 @@ The Neural Orchestra has been successfully transformed from a beautiful mock vis
 
 ### Core File Updates
 
-**`/backend/intelligence/consumers.py`** - Completely overhauled
+**`/ai_core/intelligence/consumers.py`** - Completely overhauled
 - Added comprehensive `get_orchestra_state()` method
 - Implemented 6 specialized data retrieval methods
 - Real-time WebSocket updates every 5 seconds

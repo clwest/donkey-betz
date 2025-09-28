@@ -141,7 +141,7 @@ Open DevTools (F12) and check for:
 tail -f frontend.log | grep -i error
 
 # Monitor WebSocket connections
-tail -f backend.log | grep -i websocket
+tail -f ai_core.log | grep -i websocket
 
 # Test API connectivity
 curl -H "Authorization: Token 0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97" \

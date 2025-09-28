@@ -150,7 +150,7 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
         try:
             profile = data.get('profile', {})
 
-            from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
+            from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 
             matcher = IntelligentJobMatcher()
             matched_jobs = matcher.match_jobs_to_profile({
@@ -232,7 +232,7 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
             decision = data.get('decision')
 
             # Simulate execution with real backend
-            from backend.agents.real_job_simulator import real_job_simulator
+            from ai_core.agents.real_job_simulator import real_job_simulator
 
             execution_result = {
                 'decision_id': decision.get('id'),

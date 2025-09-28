@@ -227,7 +227,7 @@ The system continuously monitors:
 
 ```python
 # Get intelligence feed for an agent
-from backend.spiders.integration import get_spider_integration
+from ai_core.spiders.integration import get_spider_integration
 
 integration = get_spider_integration()
 intelligence_feed = integration.get_agent_intelligence_feed('financial_analysis_agent')

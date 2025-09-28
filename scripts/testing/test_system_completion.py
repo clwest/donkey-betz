@@ -27,8 +27,8 @@ from django.contrib.auth.middleware import AuthenticationMiddleware
 # Import our new models and systems
 from core.models import ExtendedUserProfile, JobApplication, ResumeVersion, UserEmbedding
 from core.agent_context_middleware import get_user_context_for_agent, calculate_opportunity_fit_score
-from backend.agents.ai_enforced_base import AIEnforcedApplicationAgent
-from backend.agents.job_application_agent import JobApplicationAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedApplicationAgent
+from ai_core.agents.job_application_agent import JobApplicationAgent
 from core.views_profile_management import ExtendedProfileView, ProfileCompletionView
 from core.views_job_application_system import JobOpportunityView, QuickApplyView
 
@@ -306,7 +306,7 @@ class SystemCompletionValidator:
             assert hasattr(job_agent, 'ai_calls_made'), "Should track AI calls"
 
             # Test that agent inherits from enforced base
-            from backend.agents.ai_enforced_base import AIEnforcedAgent
+            from ai_core.agents.ai_enforced_base import AIEnforcedAgent
             assert isinstance(job_agent, AIEnforcedAgent), "Should inherit from AIEnforcedAgent"
 
             # Test execute method exists

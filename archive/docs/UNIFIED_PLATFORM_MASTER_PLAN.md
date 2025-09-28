@@ -12,7 +12,7 @@
 #### 1. **Unified Backend Architecture**
 ```
 unified-donkey-betz/
-├── backend/
+├── ai_core/
 │   ├── core/                    # Unified Django core
 │   ├── gateway/                 # API Gateway & Router
 │   ├── memory/                  # Unified Memory System

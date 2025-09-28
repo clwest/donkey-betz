@@ -14,7 +14,7 @@
 
 ### Embedded Code Structure:
 ```
-File: /Users/donkeyking/development/move_that_ass/backend/ai_partner/models.py
+File: /Users/donkeyking/development/move_that_ass/ai_core/ai_partner/models.py
 ├── 52 Python Classes:
 │   ├── UserLifeProfile
 │   ├── ConversationSession  

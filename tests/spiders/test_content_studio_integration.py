@@ -20,8 +20,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 # Import after Django setup
-from backend.agents.concrete_executor import concrete_executor
-from backend.agents.content_studio_integration import (
+from ai_core.agents.concrete_executor import concrete_executor
+from ai_core.agents.content_studio_integration import (
     content_studio_integration,
     get_content_agents,
     get_integration_stats

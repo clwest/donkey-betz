@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import cache_page
-from backend.consciousness.neural_orchestra_reality_bridge import (
+from ai_core.consciousness.neural_orchestra_reality_bridge import (
     get_neural_orchestra_bridge,
     get_real_ecosystem_live_feed,
     get_real_agents_stats,

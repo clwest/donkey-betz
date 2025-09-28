@@ -314,7 +314,7 @@ class ComponentDataPipeline:
         try:
             if action == 'analyze_opportunity':
                 # Use real Income Builder analysis
-                from backend.intelligence.income_builder import income_builder
+                from ai_core.intelligence.income_builder import income_builder
 
                 opportunity = input_data.get('opportunity', {})
                 analysis = await income_builder.analyze_user_potential(opportunity)

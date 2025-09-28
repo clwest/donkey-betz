@@ -22,7 +22,7 @@ import json
 # Add path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.agents.ai_enforced_base import AIEnforcedAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 from agents.registry import agent_registry
 from core.llm_enforcer import get_llm_enforcer
 
@@ -380,7 +380,7 @@ def execute_agent_with_llm(agent_id,  # Can be str or UUID
 if __name__ == "__main__":
     # Test the universal executor
     import django
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     django.setup()
 
     print("\n🧪 Testing Universal LLM Executor\n")

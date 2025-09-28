@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model

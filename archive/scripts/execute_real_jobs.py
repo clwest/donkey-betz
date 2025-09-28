@@ -29,7 +29,7 @@ class RealJobExecutor:
         print("="*60)
 
         # Import our spider system
-        from backend.spiders.live_job_scraper import LiveJobScraper
+        from ai_core.spiders.live_job_scraper import LiveJobScraper
 
         scraper = LiveJobScraper()
 

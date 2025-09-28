@@ -24,7 +24,7 @@ from datetime import datetime
 sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from sports.data_providers import sports_data_manager, ESPNProvider, TheSportsDBProvider, OddsAPIProvider

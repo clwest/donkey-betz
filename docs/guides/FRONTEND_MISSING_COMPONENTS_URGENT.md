@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-After conducting a comprehensive review of all frontend components, I've identified critical gaps between the sophisticated UI components and their backend integrations. Many components are either using mock data, have incomplete WebSocket connections, or are missing entirely from the backend.
+After conducting a comprehensive review of all frontend components, I've identified critical gaps between the sophisticated UI components and their backend integrations. Many components are either using mock data, have incomplete WebSocket connections, or are missing entirely from the ai_core.
 
 ## Component Analysis Results
 

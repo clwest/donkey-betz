@@ -207,8 +207,8 @@ class AgentValidationSuite:
         violations = []
         agent_files = [
             '/Users/donkeyking/development/unified-donkey-betz/intelligence/income_builder.py',
-            '/Users/donkeyking/development/unified-donkey-betz/backend/intelligence/income_builder.py',
-            '/Users/donkeyking/development/unified-donkey-betz/backend/intelligence/monetization_engine.py'
+            '/Users/donkeyking/development/unified-donkey-betz/ai_core/intelligence/income_builder.py',
+            '/Users/donkeyking/development/unified-donkey-betz/ai_core/intelligence/monetization_engine.py'
         ]
 
         for file_path in agent_files:

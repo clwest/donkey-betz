@@ -27,7 +27,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 # Setup Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
 import django
 django.setup()

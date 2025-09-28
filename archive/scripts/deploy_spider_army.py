@@ -32,10 +32,10 @@ import django
 django.setup()
 
 # Import spider components
-from backend.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
-from backend.spiders.data_pipeline import RealTimeDataPipeline, get_data_pipeline
-from backend.spiders.command_center import SpiderCommandCenter, get_command_center
-from backend.spiders.integration import SpiderPlatformIntegration, get_spider_integration
+from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
+from ai_core.spiders.data_pipeline import RealTimeDataPipeline, get_data_pipeline
+from ai_core.spiders.command_center import SpiderCommandCenter, get_command_center
+from ai_core.spiders.integration import SpiderPlatformIntegration, get_spider_integration
 
 
 class SpiderArmyDeployer:

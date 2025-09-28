@@ -82,7 +82,7 @@ def setup_environment():
     print("\n🔧 Setting up Environment...")
 
     # Set Django settings
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
     # Install/update requirements if needed
     try:

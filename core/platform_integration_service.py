@@ -875,7 +875,7 @@ AI-Powered Freelancer
             # Count existing spider files
             spider_paths = [
                 "/Users/donkeyking/development/unified-donkey-betz/spiders",
-                "/Users/donkeyking/development/unified-donkey-betz/backend/spiders"
+                "/Users/donkeyking/development/unified-donkey-betz/ai_core/spiders"
             ]
 
             spider_count = 0

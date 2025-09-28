@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.spiders.freelance_opportunity_spider import FreelanceOpportunitySpider
+from ai_core.spiders.freelance_opportunity_spider import FreelanceOpportunitySpider
 
 def test_html_cleaning():
     """Test the HTML cleaning with problematic text"""

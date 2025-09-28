@@ -15,7 +15,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.agents.hybrid_executor import hybrid_executor, smart_execute_agent
+from ai_core.agents.hybrid_executor import hybrid_executor, smart_execute_agent
 
 logger = logging.getLogger(__name__)
 

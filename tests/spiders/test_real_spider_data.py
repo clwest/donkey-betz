@@ -15,8 +15,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend', 'spiders'))
 
 # Import our real spiders
-from backend.spiders.web_request_layer import web_request_layer
-from backend.spiders.real_job_spider import RealJobSpider
+from ai_core.spiders.web_request_layer import web_request_layer
+from ai_core.spiders.real_job_spider import RealJobSpider
 
 
 async def test_web_request_layer():

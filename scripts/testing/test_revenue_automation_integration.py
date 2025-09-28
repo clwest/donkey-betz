@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent / "backend"))
 
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator
-from backend.intelligence.automation_integration import RevenueAutomationIntegration
+from ai_core.intelligence.automation_integration import RevenueAutomationIntegration
 
 def test_revenue_automation():
     print("=" * 80)

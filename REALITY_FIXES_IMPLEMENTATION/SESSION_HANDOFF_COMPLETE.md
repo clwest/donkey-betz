@@ -26,7 +26,7 @@
 ## 📁 FILES MODIFIED (CRITICAL CHANGES)
 
 ### 1. Spider Count Fix
-**File**: `backend/spiders/consciousness.py`
+**File**: `ai_core/spiders/consciousness.py`
 **Line**: 146
 **Change**:
 ```python
@@ -38,7 +38,7 @@ spider_count = self.redis_client.scard('active_spiders')  # Gets REAL count!
 ```
 
 ### 2. Agent Execution Tracker
-**File**: `backend/agents/execution_tracker.py`
+**File**: `ai_core/agents/execution_tracker.py`
 **Function**: `get_active_spider_count()`
 ```python
 def get_active_spider_count(self) -> int:
@@ -50,7 +50,7 @@ def get_active_spider_count(self) -> int:
 ```
 
 ### 3. WebSocket Reconnection Fix
-**File**: `backend/templates/unified_intelligence_dashboard.html`
+**File**: `ai_core/templates/unified_intelligence_dashboard.html`
 **Lines**: ~450-470
 ```javascript
 // Progressive backoff algorithm
@@ -66,9 +66,9 @@ path('api/proposals/', lambda r: __import__('core.views_proposals', fromlist=['g
 ```
 
 ### 5. ASGI Configuration Fix
-**File**: `backend/asgi.py`
+**File**: `ai_core/asgi.py`
 ```python
-# FIXED: Changed from backend.settings to core.settings
+# FIXED: Changed from ai_core.settings to core.settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 ```
 
@@ -204,7 +204,7 @@ curl -H "Authorization: Token b404479920c3590696ea5889047f3ed9949a8a40" \
 **Key Files to Modify**:
 - `core/command_center_ai.py` - Add spider data integration
 - `core/llm_enforcer.py` - Enhance AI decision making
-- `backend/templates/ai_nexus.html` - Update UI
+- `ai_core/templates/ai_nexus.html` - Update UI
 
 ### 2. Activate Spider Network (CRITICAL)
 **Current State**: 1,790 spiders deployed but DORMANT
@@ -216,8 +216,8 @@ curl -H "Authorization: Token b404479920c3590696ea5889047f3ed9949a8a40" \
 - [ ] Connect to revenue opportunities
 
 **Key Files**:
-- `backend/spiders/spider_orchestrator.py`
-- `backend/spiders/spider_army.py`
+- `ai_core/spiders/spider_orchestrator.py`
+- `ai_core/spiders/spider_army.py`
 
 ### 3. Revenue Generation System (ULTIMATE GOAL)
 **Current State**: Framework exists but not connected

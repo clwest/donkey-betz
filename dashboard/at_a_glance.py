@@ -78,7 +78,7 @@ class AtAGlanceSystem:
         self.fix_database = {
             'database_missing': {
                 'unified_donkey_betz': 'createdb unified_donkey_betz',
-                'ai_unified_platform': 'sed -i "" "s/ai_unified_platform/unified_donkey_betz/g" backend/settings.py',
+                'ai_unified_platform': 'sed -i "" "s/ai_unified_platform/unified_donkey_betz/g" ai_core/settings.py',
                 'default': 'createdb {db_name}'
             },
             'table_missing': {
@@ -246,7 +246,7 @@ class AtAGlanceSystem:
             if 'does not exist' in match.string:
                 if db_name == 'ai_unified_platform':
                     fixes['quick'] = 'Update database name in settings'
-                    fixes['command'] = 'sed -i "" "s/ai_unified_platform/unified_donkey_betz/g" backend/settings.py && createdb unified_donkey_betz'
+                    fixes['command'] = 'sed -i "" "s/ai_unified_platform/unified_donkey_betz/g" ai_core/settings.py && createdb unified_donkey_betz'
                     fixes['explanation'] = 'Database name mismatch - using old name'
                     fixes['confidence'] = 0.95
                 else:
@@ -397,7 +397,7 @@ def main():
     2024-01-09 10:23:45 ERROR: database "ai_unified_platform" does not exist
     2024-01-09 10:23:46 ERROR: database "ai_unified_platform" does not exist
     2024-01-09 10:23:47 ERROR: database "ai_unified_platform" does not exist
-    File "backend/settings.py", line 136
+    File "ai_core/settings.py", line 136
     2024-01-09 10:24:01 ERROR: Connection refused on port 6379
     2024-01-09 10:24:02 ERROR: ModuleNotFoundError: No module named 'redis'
     '''

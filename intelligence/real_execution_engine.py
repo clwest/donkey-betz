@@ -153,7 +153,7 @@ class ExecutionPipeline:
         logger.info(f"💰 Executing income stream creation for {execution_id}")
 
         # Generate zero-capital opportunities
-        from backend.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
+        from ai_core.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
         generator = ZeroCapitalIncomeGenerator()
         opportunities = await generator.generate_zero_capital_opportunities()
 

@@ -81,7 +81,7 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
 
         # Activate the learning system
         try:
-            from backend.intelligence.agent_learning_engine import start_agent_learning
+            from ai_core.intelligence.agent_learning_engine import start_agent_learning
             self.learning_engine = await start_agent_learning()
             logger.info("✅ Agent Learning Engine activated successfully")
 
@@ -242,13 +242,35 @@ class CommandCenterAIConsumer(AsyncWebsocketConsumer):
                 if phrase in message_lower:
                     potential_agent = message_lower.split(phrase)[-1].strip()
                     # Clean up the agent name
-                    agent_name = potential_agent.replace(' ', '_').lower()
+                    agent_name = potential_agent.replace(' ', '-').lower()
                     break
 
             if agent_name:
+                # Map common names to actual agent names
+                agent_name_map = {
+                    'market_analyzer': 'market-research-specialist',
+                    'market-analyzer': 'market-research-specialist',
+                    'market': 'market-research-specialist',
+                    'revenue': 'revenue-activation-orchestrator',
+                    'revenue_optimizer': 'revenue-activation-orchestrator',
+                    'revenue-optimizer': 'revenue-activation-orchestrator',
+                    'content': 'content-creator',
+                    'business': 'business-agent',
+                    'seo': 'seo-specialist-agent',
+                    'image': 'image-video-pipeline',
+                    'video': 'image-video-pipeline',
+                    'marketing': 'marketing-growth-agent'
+                }
+
+                # Convert underscores to hyphens for consistency
+                agent_name = agent_name.replace('_', '-')
+
+                # Use mapping if available
+                if agent_name in agent_name_map:
+                    agent_name = agent_name_map[agent_name]
                 # Try to execute the specific agent
                 try:
-                    from backend.agents.concrete_executor import ConcreteAgentExecutor
+                    from ai_core.agents.concrete_executor import ConcreteAgentExecutor
                     executor = ConcreteAgentExecutor()
 
                     task = {
@@ -278,7 +300,7 @@ You can now interact directly with this agent. What would you like to know or do
 **Available agents include:**
 {chr(10).join('• ' + name for name in agent_names)}
 
-Try: "Connect me with revenue_optimizer" or "Connect me with market_analyzer" """
+Try: "Connect me with business-agent" or "Connect me with content-creator" """
 
                 except Exception as e:
                     logger.error(f"Failed to connect to agent {agent_name}: {e}")
@@ -698,22 +720,29 @@ Please respond appropriately based on the context and conversation history."""
     def get_agents_from_db(self):
         """Get agents from database"""
         try:
-            from core.models import AIAgent
-            agents = AIAgent.objects.filter(is_active=True)[:20]
+            from agents.models import UnifiedAgentTemplate
+
+            agents = UnifiedAgentTemplate.objects.filter(is_active=True)[:20]
             return [{
                 'name': agent.name,
-                'specialization': agent.specialization,
-                'skills': agent.skills.split(',') if agent.skills else [],
-                'role': agent.role
+                'specialization': agent.agent_type,
+                'skills': agent.capabilities.split(',') if agent.capabilities else [],
+                'role': agent.agent_type
             } for agent in agents]
-        except:
-            return []
+        except Exception as e:
+            logger.error(f"Error fetching agents from DB: {e}")
+            # Return some default agents if DB fails
+            return [
+                {'name': 'business-agent', 'specialization': 'business', 'skills': ['analysis'], 'role': 'business'},
+                {'name': 'content-creator', 'specialization': 'content', 'skills': ['writing'], 'role': 'content'},
+                {'name': 'market-research-specialist', 'specialization': 'market', 'skills': ['research'], 'role': 'analyst'}
+            ]
 
     async def get_system_stats(self):
         """Get real system statistics including Redis spider count"""
         try:
             from core.models import AIAgent, Spider
-            from backend.models import Advisor
+            from ai_core.models import Advisor
 
             agent_count = AIAgent.objects.filter(is_active=True).count()
             spider_count = Spider.objects.filter(is_active=True).count()
@@ -1010,20 +1039,20 @@ Example: `/deploy agents revenue`"""
 
         # Import the concrete executor for REAL agent execution
         try:
-            from backend.agents.concrete_executor import ConcreteAgentExecutor
+            from ai_core.agents.concrete_executor import ConcreteAgentExecutor
             executor = ConcreteAgentExecutor()
 
-            # Define agent teams
+            # Define agent teams (using actual agent names)
             agent_teams = {
-                'revenue': ['revenue_optimizer', 'opportunity_scanner', 'market_analyzer'],
-                'market': ['market_analyzer', 'trend_predictor', 'sentiment_analyzer'],
-                'content': ['content_creator', 'seo_optimizer', 'blog_writer'],
-                'spider': ['job_spider', 'market_spider', 'news_spider'],
-                'fullstack': ['backend_developer', 'frontend_developer', 'database_engineer']
+                'revenue': ['revenue-activation-orchestrator', 'business-agent', 'market-research-specialist'],
+                'market': ['market-research-specialist', 'marketing-growth-agent', 'business-agent'],
+                'content': ['content-creator', 'seo-specialist-agent', 'consistency-specialist-creative-agent'],
+                'spider': ['image-video-pipeline', 'content-creator', 'business-agent'],
+                'fullstack': ['technical-signal-agent', 'business-agent', 'content-creator']
             }
 
             # Get the agents to deploy
-            agents_to_deploy = agent_teams.get(agent_type, ['revenue_optimizer'])
+            agents_to_deploy = agent_teams.get(agent_type, ['business-agent'])
 
             # Actually execute the agents
             results = []

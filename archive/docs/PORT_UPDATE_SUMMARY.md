@@ -40,7 +40,7 @@ WEBSOCKET_PORT := 8000  # Daphne handles both HTTP and WebSocket on same port
 make unified-dev
 
 # Or manually with Daphne:
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 ```
 
 ## Test WebSocket Connection:

@@ -14,8 +14,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
-from backend.spiders.specialized.market_spider import MarketDataSpider
-from backend.spiders.base_spider import SpiderTarget, IntelligenceData
+from ai_core.spiders.specialized.market_spider import MarketDataSpider
+from ai_core.spiders.base_spider import SpiderTarget, IntelligenceData
 import redis
 
 async def test_single_spider():

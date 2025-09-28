@@ -376,7 +376,7 @@ def run_agent_tests(request):
         test_specific = data.get('agents', [])  # Test specific agents only
 
         # Debug: Check ConcreteAgentExecutor directly
-        from backend.agents.concrete_executor import ConcreteAgentExecutor
+        from ai_core.agents.concrete_executor import ConcreteAgentExecutor
         debug_executor = ConcreteAgentExecutor()
         logger.info(f"DEBUG: Direct ConcreteAgentExecutor has {len(debug_executor.agent_classes)} agents")
         logger.info(f"DEBUG: Agent classes keys: {list(debug_executor.agent_classes.keys())[:10]}")
@@ -483,7 +483,7 @@ if __name__ == "__main__":
 
     # Setup Django
     sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     django.setup()
 
     async def main():

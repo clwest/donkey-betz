@@ -13,7 +13,7 @@
 ### Issue #1: File Modification ✅ FIXED
 **Problem**: Proposals created but no files were actually modified
 **Solution**: Replaced mock implementation with real file operations
-**Location**: `backend/intelligence/proposal_manager.py:719-836`
+**Location**: `ai_core/intelligence/proposal_manager.py:719-836`
 
 #### What Was Changed:
 ```python
@@ -38,7 +38,7 @@ def _execute_refactor(self, proposal):
 ### Issue #2: Agent Success Rate ✅ FIXED
 **Problem**: Agents failing 66% of the time (33.3% success rate)
 **Solution**: Added retry logic with exponential backoff
-**Location**: `backend/agents/concrete_executor.py:95-187`
+**Location**: `ai_core/agents/concrete_executor.py:95-187`
 
 #### What Was Changed:
 ```python
@@ -66,7 +66,7 @@ for attempt in range(max_retries):
 #### What Was Changed:
 ```python
 # Added to connect() method
-from backend.intelligence.agent_learning_engine import start_agent_learning
+from ai_core.intelligence.agent_learning_engine import start_agent_learning
 self.learning_engine = await start_agent_learning()
 await self.redis_client.set("learning:active", "true")
 ```
@@ -106,7 +106,7 @@ await self.redis_client.ltrim(key, 0, 19)  # Was 99
    grep -r "import random" . | wc -l
    # Click "Implement" on "High dependency on random" in dashboard
    # Count again - should be less
-   # Check for new file: backend/utils/deterministic_random.py
+   # Check for new file: ai_core/utils/deterministic_random.py
    ```
 
 2. **Agent Success Rate Test**:
@@ -186,8 +186,8 @@ This is not theoretical. This is not a demo. This is **working code that modifie
 ## 📝 Technical Details
 
 ### Files Modified in This Implementation:
-1. `backend/intelligence/proposal_manager.py` - Real file operations
-2. `backend/agents/concrete_executor.py` - Retry logic
+1. `ai_core/intelligence/proposal_manager.py` - Real file operations
+2. `ai_core/agents/concrete_executor.py` - Retry logic
 3. `core/command_center_ai.py` - Learning activation
 4. `core/views_unified_intelligence.py` - Garbage collection
 5. `ai_nexus/memory.py` - History limits

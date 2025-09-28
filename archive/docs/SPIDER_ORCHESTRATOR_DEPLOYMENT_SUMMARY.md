@@ -8,7 +8,7 @@ The Spider-Agent-Connector-Orchestrator has been successfully deployed, establis
 
 ### 1. Core Infrastructure ✅
 
-#### SpiderDataRouter (`backend/spiders/spider_data_router.py`)
+#### SpiderDataRouter (`ai_core/spiders/spider_data_router.py`)
 - **Purpose**: Central nervous system connecting all components
 - **Features**:
   - Intelligent routing tables mapping spiders to consumers
@@ -25,7 +25,7 @@ The Spider-Agent-Connector-Orchestrator has been successfully deployed, establis
 
 ### 2. Agent Integration ✅
 
-#### AgentSpiderDataReceiver (`backend/spiders/agent_data_receiver.py`)
+#### AgentSpiderDataReceiver (`ai_core/spiders/agent_data_receiver.py`)
 - **Purpose**: Enable agents to receive spider intelligence streams
 - **Features**:
   - Real-time data stream subscription
@@ -40,7 +40,7 @@ The Spider-Agent-Connector-Orchestrator has been successfully deployed, establis
 
 ### 3. Advisor Integration ✅
 
-#### AdvisorSpiderDataProcessor (`backend/spiders/advisor_data_processor.py`)
+#### AdvisorSpiderDataProcessor (`ai_core/spiders/advisor_data_processor.py`)
 - **Purpose**: Personality-specific processing for legendary advisors
 - **Features**:
   - Investment philosophy-based filtering
@@ -56,7 +56,7 @@ The Spider-Agent-Connector-Orchestrator has been successfully deployed, establis
 
 ### 4. Income Builder Integration ✅
 
-#### IncomeBuilderSpiderConnector (`backend/spiders/income_builder_connector.py`)
+#### IncomeBuilderSpiderConnector (`ai_core/spiders/income_builder_connector.py`)
 - **Purpose**: Personalized spider data streams for Income Builder agent
 - **Features**:
   - Income opportunity detection
@@ -72,7 +72,7 @@ The Spider-Agent-Connector-Orchestrator has been successfully deployed, establis
 
 ### 5. Monitoring & Visualization ✅
 
-#### MonitoringDashboard (`backend/spiders/monitoring_dashboard.py`)
+#### MonitoringDashboard (`ai_core/spiders/monitoring_dashboard.py`)
 - **Purpose**: Real-time visualization of entire intelligence network
 - **Features**:
   - Live data flow monitoring

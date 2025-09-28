@@ -16,12 +16,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 # Now import after Django setup
-from backend.spiders.lightweight_spider_system import (
+from ai_core.spiders.lightweight_spider_system import (
     LightweightSpiderOrchestrator,
     SportsOddsSpider
 )
-from backend.agents.concrete_executor import concrete_executor
-from backend.agents.agent_llm_integration import agent_llm_integration
+from ai_core.agents.concrete_executor import concrete_executor
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 import redis
 
 redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)

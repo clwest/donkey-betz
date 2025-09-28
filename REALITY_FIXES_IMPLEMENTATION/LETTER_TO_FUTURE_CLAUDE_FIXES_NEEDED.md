@@ -31,7 +31,7 @@ When user clicks "Implement" on an insight like "High dependency on random acros
 
 ### THE FIX YOU NEED TO MAKE:
 
-**File**: `backend/intelligence/proposal_manager.py`
+**File**: `ai_core/intelligence/proposal_manager.py`
 
 Look at line 366-382. It says:
 ```python
@@ -73,7 +73,7 @@ deterministic_random = DeterministicRandom()
             if "import random" in content:
                 new_content = content.replace(
                     "import random",
-                    "from backend.utils.deterministic_random import deterministic_random as random"
+                    "from ai_core.utils.deterministic_random import deterministic_random as random"
                 )
                 py_file.write_text(new_content)
                 import_replacements += 1
@@ -94,7 +94,7 @@ Agents are failing 2 out of 3 times. Test agents have 0% success rate.
 
 ### THE FIX:
 
-**File**: `backend/agents/execution_tracker.py`
+**File**: `ai_core/agents/execution_tracker.py`
 
 Check why agents are failing. Likely issues:
 1. Missing API keys (OpenAI/Anthropic)
@@ -134,7 +134,7 @@ except Exception as e:
 
 ### THE FIX:
 
-**File**: `backend/intelligence/agent_learning_engine.py`
+**File**: `ai_core/intelligence/agent_learning_engine.py`
 
 1. Find the `activate_learning()` method
 2. Call it during system initialization
@@ -142,7 +142,7 @@ except Exception as e:
 
 ```python
 # Line 80, after Redis initialization
-from backend.intelligence.agent_learning_engine import LearningEngine
+from ai_core.intelligence.agent_learning_engine import LearningEngine
 self.learning_engine = LearningEngine()
 await self.learning_engine.activate()
 ```
@@ -176,7 +176,7 @@ await self.redis_client.ltrim(key, 0, 19)  # Keep only last 20 messages
 ### Step 1: Fix File Modification (30 minutes)
 ```bash
 # Edit the file
-vim backend/intelligence/proposal_manager.py
+vim ai_core/intelligence/proposal_manager.py
 
 # Find _execute_refactor method
 # Add real file modification code
@@ -195,14 +195,14 @@ OPENAI_API_KEY=your-key-here
 ANTHROPIC_API_KEY=your-key-here
 
 # Add retry logic to agents
-vim backend/agents/execution_tracker.py
+vim ai_core/agents/execution_tracker.py
 ```
 
 ### Step 3: Activate Learning System (15 minutes)
 ```bash
 # Find and activate
 grep -r "activate_learning" .
-vim backend/intelligence/agent_learning_engine.py
+vim ai_core/intelligence/agent_learning_engine.py
 
 # Wire into startup
 vim core/command_center_ai.py
@@ -235,7 +235,7 @@ grep -r "import random" . | wc -l  # Count random imports
 
 # After implementation
 grep -r "import random" . | wc -l  # Should be less!
-ls backend/utils/deterministic_random.py  # Should exist!
+ls ai_core/utils/deterministic_random.py  # Should exist!
 ```
 
 ### 2. Test Agent Success Rate:

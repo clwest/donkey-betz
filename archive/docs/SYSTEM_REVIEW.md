@@ -47,8 +47,8 @@ The Unified Donkey Betz Platform represents an ambitious consolidation of multip
 │   ├── Self-Awareness Module (/self_awareness/)
 │   └── Memory & Embeddings System
 ├── 💰 Monetization Engine
-│   ├── Income Builder (/backend/intelligence/income_builder.py)
-│   ├── Monetization Engine (/backend/intelligence/monetization_engine.py)
+│   ├── Income Builder (/ai_core/intelligence/income_builder.py)
+│   ├── Monetization Engine (/ai_core/intelligence/monetization_engine.py)
 │   └── Revenue Tracking System
 ├── 🤖 Agent Orchestra
 │   ├── Agent Registry (/agents/models.py)
@@ -60,7 +60,7 @@ The Unified Donkey Betz Platform represents an ambitious consolidation of multip
 │   └── Gallery System
 └── ⚡ ML Pipeline
     ├── ML Engine (/ml/core/ml_engine.py)
-    ├── Learning Loop (/backend/intelligence/learning_loop.py)
+    ├── Learning Loop (/ai_core/intelligence/learning_loop.py)
     └── Apple MLX Integration
 ```
 
@@ -104,7 +104,7 @@ The platform exposes **320+ API endpoints** across multiple domains:
 ### 1. **Agent Registry Disconnection**
 **Impact:** HIGH
 ```python
-# FOUND IN: /backend/intelligence/income_builder.py:17-18
+# FOUND IN: /ai_core/intelligence/income_builder.py:17-18
 # from agents.registry import agent_registry  # COMMENTED OUT
 # from advisors.registry import advisor_registry  # COMMENTED OUT
 ```
@@ -114,7 +114,7 @@ The platform exposes **320+ API endpoints** across multiple domains:
 ### 2. **ML Pipeline Mock Implementation**
 **Impact:** HIGH
 ```python
-# FOUND IN: /backend/intelligence/income_builder.py:34-36
+# FOUND IN: /ai_core/intelligence/income_builder.py:34-36
 class MLPipeline:
     async def predict_opportunity_fit(self, user_dict, opp_dict):
         return {"fit_score": 0.75}  # HARDCODED RESPONSE

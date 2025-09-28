@@ -223,7 +223,7 @@ class BackendFrontendBridge:
                 fix = {
                     "issue": f"Endpoint {endpoint} not found",
                     "fix": """
-1. Check if URL pattern is registered in backend/core/urls.py:
+1. Check if URL pattern is registered in ai_core/core/urls.py:
    - Should have: path('api/v1/intelligence/', include('intelligence.urls'))
 
 2. Check if view exists in the app's urls.py and views.py

@@ -38,7 +38,7 @@ def start_daphne():
     
     # Start Daphne in background
     daphne_process = subprocess.Popen(
-        ['daphne', '-b', '0.0.0.0', '-p', '8000', 'backend.asgi:application'],
+        ['daphne', '-b', '0.0.0.0', '-p', '8000', 'ai_core.asgi:application'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )

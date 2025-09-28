@@ -19,8 +19,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 # Import our systems
-from backend.intelligence.income_builder import AIIncomeBuilder, UserProfile, SkillLevel
-from backend.intelligence.monetization_engine import UnifiedMonetizationEngine
+from ai_core.intelligence.income_builder import AIIncomeBuilder, UserProfile, SkillLevel
+from ai_core.intelligence.monetization_engine import UnifiedMonetizationEngine
 
 
 async def test_revenue_activation():
@@ -145,7 +145,7 @@ async def test_revenue_activation():
     # Test 5: Check Spider Data Connection
     print("🕷️ Testing Spider Data Connection...")
     try:
-        from backend.spiders.income_builder_connector import IncomeBuilderSpiderConnector
+        from ai_core.spiders.income_builder_connector import IncomeBuilderSpiderConnector
 
         spider_connector = IncomeBuilderSpiderConnector()
         spider_status = await spider_connector.get_income_status()

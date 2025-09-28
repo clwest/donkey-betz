@@ -21,34 +21,34 @@ from colorama import init, Fore, Style
 
 # Setup Django
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
 import django
 django.setup()
 
 from django.core.cache import cache
-from backend.spiders.pool_manager import (
+from ai_core.spiders.pool_manager import (
     spider_pool,
     get_spider_for_task,
     release_spider,
     get_pool_statistics,
     scale_pool
 )
-from backend.spiders.cache_layer import (
+from ai_core.spiders.cache_layer import (
     smart_cache,
     cache_get,
     cache_set,
     get_cache_stats,
     optimize_cache
 )
-from backend.spiders.metrics import (
+from ai_core.spiders.metrics import (
     metrics_tracker,
     record_spider_request,
     get_performance_metrics,
     get_spider_leaderboard,
     export_all_metrics
 )
-from backend.spiders.phase4_orchestrator import (
+from ai_core.spiders.phase4_orchestrator import (
     phase4_orchestrator,
     start_phase4_orchestration,
     get_phase4_status,

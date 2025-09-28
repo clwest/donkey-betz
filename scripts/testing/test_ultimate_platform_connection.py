@@ -16,7 +16,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from django.core.cache import cache
-from backend.agents.agent_work_platform import activate_agent_work_platform, get_agent_work_platform_status
+from ai_core.agents.agent_work_platform import activate_agent_work_platform, get_agent_work_platform_status
 
 
 async def test_ultimate_connection():
@@ -42,11 +42,11 @@ async def test_ultimate_connection():
     # 2. Test WebSocket Data Flow
     print("\n🔄 Testing WebSocket Infrastructure...")
     try:
-        from backend.intelligence.consumers import AgentWorkPlatformConsumer
+        from ai_core.intelligence.consumers import AgentWorkPlatformConsumer
         print("✅ AgentWorkPlatformConsumer available")
 
         # Check routing
-        from backend.intelligence.routing import websocket_urlpatterns
+        from ai_core.intelligence.routing import websocket_urlpatterns
         agent_routes = [route for route in websocket_urlpatterns if 'agent-platform' in str(route.pattern)]
         if agent_routes:
             print("✅ WebSocket routing configured")

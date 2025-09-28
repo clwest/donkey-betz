@@ -55,8 +55,8 @@ class AgentPlatformConsumer(AsyncWebsocketConsumer):
             logger.info("🚀 ACTIVATING UNIFIED PLATFORM - CONNECTING EVERYTHING!")
 
             # Import the platform integration hub that connects everything
-            from backend.agents.platform_integration_hub import platform_hub
-            from backend.agents.real_job_simulator import real_job_simulator
+            from ai_core.agents.platform_integration_hub import platform_hub
+            from ai_core.agents.real_job_simulator import real_job_simulator
 
             # Generate real job sessions with actual agent names and work
             active_sessions = real_job_simulator.generate_active_sessions(5)  # Start with 5 agents
@@ -141,7 +141,7 @@ class AgentPlatformConsumer(AsyncWebsocketConsumer):
 
     async def deploy_agents_gradually(self):
         """Gradually deploy agents with real job data"""
-        from backend.agents.real_job_simulator import real_job_simulator
+        from ai_core.agents.real_job_simulator import real_job_simulator
 
         agents_working = 5
         total_revenue = 0.0
@@ -231,7 +231,7 @@ class AgentPlatformConsumer(AsyncWebsocketConsumer):
 
             try:
                 # Get real status from the money machine
-                from backend.agents.ultimate_money_machine import get_ultimate_money_machine_status
+                from ai_core.agents.ultimate_money_machine import get_ultimate_money_machine_status
                 status = get_ultimate_money_machine_status()
 
                 # Send update
@@ -257,7 +257,7 @@ class AgentPlatformConsumer(AsyncWebsocketConsumer):
 
             if not status:
                 # Generate sample agent breakdown
-                from backend.agents.real_job_simulator import real_job_simulator
+                from ai_core.agents.real_job_simulator import real_job_simulator
                 agent_breakdown = []
 
                 # Create a few sample agents with diverse skills

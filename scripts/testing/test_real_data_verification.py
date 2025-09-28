@@ -14,8 +14,8 @@ sys.path.insert(0, str(project_root))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.spiders.live_job_scraper import scrape_jobs_sync
-from backend.opportunities_api import generate_real_opportunities, generate_enhanced_opportunities
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.opportunities_api import generate_real_opportunities, generate_enhanced_opportunities
 import json
 
 

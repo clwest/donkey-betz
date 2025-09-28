@@ -28,7 +28,7 @@ The platform is now **deployment-ready** with all necessary infrastructure in pl
 ### 📁 KEY FILES STRUCTURE
 ```
 unified-donkey-betz/
-├── backend/               # Django backend
+├── ai_core/               # Django backend
 ├── frontend/             # React frontend (Vite)
 ├── core/                 # Main Django app
 │   ├── settings.py       # Django settings

@@ -25,7 +25,7 @@ django.setup()
 from django.contrib.auth import get_user_model
 from core.models import EnhancedUserProfile, UserMemoryContext
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-from backend.agents.ai_enforced_base import AIEnforcedAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 
 User = get_user_model()
 

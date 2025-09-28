@@ -13,7 +13,7 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from backend.agents.concrete_executor import ConcreteAgentExecutor
+from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 from core.models import GeneratedProject, GeneratedCode
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ProperAgentExecutor:
 
     def __init__(self):
         # Import ConcreteAgentExecutor from the actual location
-        from backend.agents.concrete_executor import ConcreteAgentExecutor
+        from ai_core.agents.concrete_executor import ConcreteAgentExecutor
         self.executor = ConcreteAgentExecutor()
         self.channel_layer = get_channel_layer()
 

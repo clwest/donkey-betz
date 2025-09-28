@@ -5,6 +5,9 @@ Main URL routing for the unified mega-platform.
 """
 
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -78,11 +81,11 @@ from core.views_learning_path import (
 )
 
 # Import opportunity aggregator
-from backend.api.opportunity_aggregator import get_opportunities, get_actionable
+from ai_core.api.opportunity_aggregator import get_opportunities, get_actionable
 # Import real opportunities API
-from backend.api.opportunities_api import opportunities_api_view
+from ai_core.api.opportunities_api import opportunities_api_view
 # Import freelance API
-from backend.api.freelance_api import (
+from ai_core.api.freelance_api import (
     get_freelance_opportunities,
     analyze_opportunity,
     get_pending_approvals,
@@ -95,14 +98,14 @@ from backend.api.freelance_api import (
     deliverable_content
 )
 # Import AI opportunity pipeline
-from backend.ai_opportunity_api import (
+from ai_core.ai_opportunity_api import (
     execute_ai_opportunity_pipeline,
     get_ai_strategies,
     build_ai_project,
     get_generated_projects
 )
 # Import Autonomous Revenue System APIs
-from backend.api.autonomous_system_api import (
+from ai_core.api.autonomous_system_api import (
     AutonomousSystemStartView,
     AutonomousSystemStatusView,
     AutonomousSystemPauseView,
@@ -110,7 +113,7 @@ from backend.api.autonomous_system_api import (
 )
 from core.views import (
     platform_status, platform_info, record_metric, health_check,
-    blog_list, campaigns_list, styles_list, prompting_settings, execute_agent,
+    blog_list, styles_list, prompting_settings, execute_agent,
     agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
     feedback_analytics, feedback_history, feedback_submit, prompting_stats,
     assistant_context, research_books, research_documents, prompting_test,
@@ -298,8 +301,22 @@ from core.views_diagnostics import (
 )
 
 urlpatterns = [
+    # Homepage
+    path('', lambda request: render(request, 'home.html'), name='home'),
+
     # Django admin
     path('admin/', admin.site.urls),
+
+    # Main dashboard pages
+    path('ai-nexus/', login_required(lambda request: render(request, 'ai_nexus.html')), name='ai-nexus'),
+    path('content-studio/', login_required(lambda request: render(request, 'content_studio.html')), name='content-studio'),
+    path('ai-production-hub/', login_required(lambda request: render(request, 'ai_production_hub.html')), name='ai-production-hub'),
+    path('command/', login_required(lambda request: render(request, 'command_center.html')), name='command-center'),
+    path('diagnostics/', login_required(lambda request: render(request, 'diagnostic_dashboard.html')), name='diagnostics'),
+
+    # Authentication URLs
+    path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 
     # Diagnostic Endpoints - Complete Backend Visibility
     path('diagnostics/', diagnostic_dashboard, name='diagnostics-dashboard'),
@@ -439,32 +456,33 @@ urlpatterns = [
     # Proposals API endpoints
     path('api/proposals/', lambda r: __import__('core.views_proposals', fromlist=['get_proposals']).get_proposals(r), name='get-proposals'),
     path('api/proposals/stats/', lambda r: __import__('core.views_proposals', fromlist=['get_proposal_stats']).get_proposal_stats(r), name='get-proposal-stats'),
+    path('api/proposals/save-consciousness/', lambda r: __import__('core.views_proposals', fromlist=['save_consciousness_proposals']).save_consciousness_proposals(r), name='save-consciousness-proposals'),
     path('api/proposals/<str:proposal_id>/approve/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['approve_proposal']).approve_proposal(r), name='approve-proposal'),
     path('api/proposals/<str:proposal_id>/reject/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['reject_proposal']).reject_proposal(r), name='reject-proposal'),
     path('api/proposals/<str:proposal_id>/execute/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['execute_proposal']).execute_proposal(r), name='execute-proposal'),
 
     # Spider Dashboard API endpoints
-    path('api/spider/stats/', lambda r: __import__('backend.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
-    path('api/spider/data/', lambda r: __import__('backend.api.spider_api', fromlist=['SpiderDataAPI']).SpiderDataAPI.as_view()(r), name='spider_data'),
-    path('api/opportunities/live/', lambda r: __import__('backend.api.spider_api', fromlist=['OpportunitiesAPI']).OpportunitiesAPI.as_view()(r), name='opportunities_api'),
-    path('api/revenue/', lambda r: __import__('backend.api.spider_api', fromlist=['RevenueAPI']).RevenueAPI.as_view()(r), name='revenue_api'),
-    path('api/agents/status/', lambda r: __import__('backend.api.spider_api', fromlist=['AgentStatusAPI']).AgentStatusAPI.as_view()(r), name='agent_status_api'),
-    path('api/trending/', lambda r: __import__('backend.api.spider_api', fromlist=['TrendingContentAPI']).TrendingContentAPI.as_view()(r), name='trending_api'),
+    path('api/spider/stats/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
+    path('api/spider/data/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderDataAPI']).SpiderDataAPI.as_view()(r), name='spider_data'),
+    path('api/opportunities/live/', lambda r: __import__('ai_core.api.spider_api', fromlist=['OpportunitiesAPI']).OpportunitiesAPI.as_view()(r), name='opportunities_api'),
+    path('api/revenue/', lambda r: __import__('ai_core.api.spider_api', fromlist=['RevenueAPI']).RevenueAPI.as_view()(r), name='revenue_api'),
+    path('api/agents/status/', lambda r: __import__('ai_core.api.spider_api', fromlist=['AgentStatusAPI']).AgentStatusAPI.as_view()(r), name='agent_status_api'),
+    path('api/trending/', lambda r: __import__('ai_core.api.spider_api', fromlist=['TrendingContentAPI']).TrendingContentAPI.as_view()(r), name='trending_api'),
 
     # Agent Dashboard API endpoints
-    path('api/agents/stats/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentStatsAPI']).AgentStatsAPI.as_view()(r), name='agent_stats'),
-    path('api/agents/activity/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentActivityAPI']).AgentActivityAPI.as_view()(r), name='agent_activity'),
-    path('api/agents/execute/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentExecuteAPI']).AgentExecuteAPI.as_view()(r), name='agent_execute'),
+    path('api/agents/stats/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentStatsAPI']).AgentStatsAPI.as_view()(r), name='agent_stats'),
+    path('api/agents/activity/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentActivityAPI']).AgentActivityAPI.as_view()(r), name='agent_activity'),
+    path('api/agents/execute/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentExecuteAPI']).AgentExecuteAPI.as_view()(r), name='agent_execute'),
     path('api/agents/debug-registry/', lambda r: __import__('agents.views_deployment_execute_improved', fromlist=['debug_agent_registry']).debug_agent_registry(r), name='debug_agent_registry'),
     path('api/agents/run-tests/', lambda r: __import__('agents.agent_testing_system', fromlist=['run_agent_tests']).run_agent_tests(r), name='run_agent_tests'),
     path('api/agents/test-status/', lambda r: __import__('agents.agent_testing_system', fromlist=['get_agent_test_status']).get_agent_test_status(r), name='get_agent_test_status'),
     path('agent-testing/', lambda r: __import__('django.shortcuts', fromlist=['render']).render(r, 'agent_testing_dashboard.html'), name='agent_testing_dashboard'),
-    path('api/agents/connections/', lambda r: __import__('backend.api.agent_api', fromlist=['AgentSpiderConnectionAPI']).AgentSpiderConnectionAPI.as_view()(r), name='agent_spider_connections'),
+    path('api/agents/connections/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentSpiderConnectionAPI']).AgentSpiderConnectionAPI.as_view()(r), name='agent_spider_connections'),
 
     # Simple Agent API endpoints (without complex models)
-    path('api/agents/simple/list/', lambda r: __import__('backend.api.agent_simple_api', fromlist=['agent_list']).agent_list(r), name='agent_simple_list'),
-    path('api/agents/simple/categories/', lambda r: __import__('backend.api.agent_simple_api', fromlist=['agent_categories']).agent_categories(r), name='agent_simple_categories'),
-    path('api/agents/execute/<str:agent_name>/', lambda r, agent_name: __import__('backend.api.agent_simple_api', fromlist=['execute_agent']).execute_agent(r, agent_name), name='agent_execute'),
+    path('api/agents/simple/list/', lambda r: __import__('ai_core.api.agent_simple_api', fromlist=['agent_list']).agent_list(r), name='agent_simple_list'),
+    path('api/agents/simple/categories/', lambda r: __import__('ai_core.api.agent_simple_api', fromlist=['agent_categories']).agent_categories(r), name='agent_simple_categories'),
+    path('api/agents/execute/<str:agent_name>/', lambda r, agent_name: __import__('ai_core.api.agent_simple_api', fromlist=['execute_agent']).execute_agent(r, agent_name), name='agent_execute'),
 
     # Real-time opportunities for Income Builder
     path('api/v1/opportunities/live/', opportunities_api_view, name='live-opportunities-real'),
@@ -745,7 +763,7 @@ urlpatterns = [
     path('api/v1/sports/', include('sports.urls')),  # Sports/Betting module
     path('api/v1/content/', include('content.urls')),  # Content Generation module
     path('api/v1/self-awareness/', include('self_awareness.urls')),  # Self-Awareness module
-    path('api/v1/campaigns/', include('campaigns.urls')),  # Campaigns module
+    # path('api/v1/campaigns/', include('campaigns.urls')),  # Campaigns module (archived)
     path('api/v1/mythology/', include('mythology.urls')),  # Mythology/Hallucination Review module
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution

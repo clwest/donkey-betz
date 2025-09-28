@@ -17,7 +17,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.agents.concrete_executor import concrete_executor, execute_agent_directly
+from ai_core.agents.concrete_executor import concrete_executor, execute_agent_directly
 
 logger = logging.getLogger(__name__)
 

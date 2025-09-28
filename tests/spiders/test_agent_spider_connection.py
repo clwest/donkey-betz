@@ -16,19 +16,19 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 # Now import after Django setup
-from backend.spiders.lightweight_spider_system import (
+from ai_core.spiders.lightweight_spider_system import (
     LightweightSpiderOrchestrator,
     SportsOddsSpider
 )
-from backend.spiders.expanded_spider_types import (
+from ai_core.spiders.expanded_spider_types import (
     AIStartupSpider,
     ForexCryptoSpider,
     TrendingContentSpider
 )
-from backend.agents.spider_agent_connector import spider_agent_connector
-from backend.agents.agent_llm_integration import agent_llm_integration
-from backend.agents.agent_orchestration_layer import agent_orchestrator
-from backend.agents.concrete_executor import concrete_executor
+from ai_core.agents.spider_agent_connector import spider_agent_connector
+from ai_core.agents.agent_llm_integration import agent_llm_integration
+from ai_core.agents.agent_orchestration_layer import agent_orchestrator
+from ai_core.agents.concrete_executor import concrete_executor
 import redis
 
 redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)

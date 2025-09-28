@@ -9,7 +9,7 @@ import django
 import asyncio
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from intelligence.income_builder import income_builder, UserProfile, SkillLevel

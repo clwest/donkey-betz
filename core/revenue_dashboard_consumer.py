@@ -191,8 +191,8 @@ class RevenueDashboardConsumer(ProductionWebSocketMixin, AsyncWebsocketConsumer)
     async def get_real_revenue_metrics(self) -> Dict[str, Any]:
         """Get real revenue metrics from the platform"""
         try:
-            from backend.agents.real_job_simulator import real_job_simulator
-            from backend.agents.autonomous_revenue_system import AutonomousRevenueSystem
+            from ai_core.agents.real_job_simulator import real_job_simulator
+            from ai_core.agents.autonomous_revenue_system import AutonomousRevenueSystem
 
             # Get active sessions from job simulator
             active_sessions = real_job_simulator.generate_active_sessions(10)
@@ -239,7 +239,7 @@ class RevenueDashboardConsumer(ProductionWebSocketMixin, AsyncWebsocketConsumer)
     async def get_recent_earnings(self) -> List[Dict[str, Any]]:
         """Get recent earnings from the platform"""
         try:
-            from backend.agents.real_job_simulator import real_job_simulator
+            from ai_core.agents.real_job_simulator import real_job_simulator
 
             active_sessions = real_job_simulator.generate_active_sessions(5)
             return [
@@ -260,7 +260,7 @@ class RevenueDashboardConsumer(ProductionWebSocketMixin, AsyncWebsocketConsumer)
     async def get_active_opportunities(self) -> Dict[str, Any]:
         """Get active opportunities"""
         try:
-            from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
+            from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 
             matcher = IntelligentJobMatcher()
             available_jobs = matcher.get_available_jobs(limit=10)

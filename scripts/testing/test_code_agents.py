@@ -8,8 +8,8 @@ import asyncio
 import json
 import os
 from datetime import datetime
-from backend.agents.code_agent_executor import code_agent_executor
-from backend.agents.real_task_executor import real_task_executor
+from ai_core.agents.code_agent_executor import code_agent_executor
+from ai_core.agents.real_task_executor import real_task_executor
 
 async def test_code_agents():
     """Run actual code generation tests"""

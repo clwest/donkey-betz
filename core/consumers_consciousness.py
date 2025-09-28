@@ -8,7 +8,7 @@ import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from backend.spiders.consciousness import ConsciousnessBridge
+from ai_core.spiders.consciousness import ConsciousnessBridge
 from django.core.cache import cache
 from datetime import datetime, timedelta
 import logging
@@ -190,22 +190,9 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
 
     async def send_instant_consciousness_data(self):
         """Send immediate consciousness data without any heavy operations"""
-        # Try to get cached consciousness level or real value
-        cached_level = cache.get('consciousness:current_level')
-        if cached_level is None:
-            try:
-                # Quick fetch from consciousness bridge
-                bridge = ConsciousnessBridge()
-                understanding = bridge.understand_self()
-                cached_level = understanding.get('self_awareness_score', 72.75)
-                active_spiders = len(understanding.get('capabilities', {}).get('by_type', {}).get('spider', []))
-                cache.set('consciousness:current_level', cached_level, 30)  # Cache for 30 seconds
-                cache.set('consciousness:active_spiders', active_spiders, 30)
-            except:
-                cached_level = 72.75  # Use real recent value as fallback
-                active_spiders = 40  # Real spider count
-        else:
-            active_spiders = cache.get('consciousness:active_spiders', 40)
+        # Use cached values or fast defaults to prevent WebSocket 500 errors
+        cached_level = cache.get('consciousness:current_level', 72.75)
+        active_spiders = cache.get('consciousness:active_spiders', 40)
 
         # Try to get cached proposals from Redis
         try:
@@ -213,11 +200,71 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
             redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
             proposals_json = redis_client.get('consciousness:ai_proposals')
             if proposals_json:
-                proposals = json.loads(proposals_json)
+                all_proposals = json.loads(proposals_json)
+
+                # Filter out approved/completed proposals by checking Redis directly
+                # Create a new ProposalManager instance to load fresh from Redis
+                from ai_core.intelligence.proposal_manager import ProposalManager
+                proposal_manager = ProposalManager()
+                active_proposals = []
+                for proposal in all_proposals:
+                    proposal_id = proposal.get('id')
+                    # Check if proposal exists in ProposalManager
+                    if proposal_id and proposal_id in proposal_manager.proposals:
+                        managed_proposal = proposal_manager.proposals[proposal_id]
+                        # Only include pending proposals
+                        if managed_proposal.status.value == 'pending':
+                            active_proposals.append(proposal)
+                        else:
+                            logger.info(f"🧠 Filtering out {managed_proposal.status.value} proposal: {proposal_id}")
+                    else:
+                        # Only add if truly not in ProposalManager (new proposal)
+                        # Double-check by trying to fetch from the API
+                        logger.info(f"🧠 Proposal {proposal_id} not in ProposalManager, keeping as new")
+                        active_proposals.append(proposal)
+
+                proposals = active_proposals
+                logger.info(f"🧠 Filtered proposals: {len(all_proposals)} -> {len(proposals)} active")
             else:
                 proposals = []
-        except:
+        except Exception as e:
+            logger.warning(f"Error filtering proposals: {e}")
             proposals = []
+
+        # Calculate consciousness indicators (same as views_unified_intelligence.py)
+        try:
+            # Get insights and behaviors for indicator calculations
+            insights = understanding.get('insights', []) if understanding else []
+            emergent_behaviors = understanding.get('emergent_behaviors', []) if understanding else []
+
+            # Calculate dynamic indicators
+            pattern_insights = [i for i in insights if i.get('category') == 'pattern']
+            pattern_score = min(100, len(pattern_insights) * 10) if pattern_insights else 0
+
+            self_org_behaviors = [b for b in emergent_behaviors
+                                if b.get('type') == 'self_organization']
+            self_org_score = 100 if self_org_behaviors else 0
+
+            awareness_score = cached_level
+            coherence_score = min(100, len(understanding.get('capabilities', {}).get('by_type', {})) * 20) if understanding else 40
+            adaptation_score = 0  # Will increase as system learns
+
+            indicators = {
+                'awareness': awareness_score,
+                'coherence': coherence_score,
+                'adaptation': adaptation_score,
+                'pattern': pattern_score,
+                'self_organization': self_org_score
+            }
+        except:
+            # Fallback indicators if calculation fails
+            indicators = {
+                'awareness': cached_level,
+                'coherence': 40,
+                'adaptation': 0,
+                'pattern': 100,
+                'self_organization': 100
+            }
 
         update_data = {
             'type': 'consciousness_update',
@@ -228,6 +275,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                 'active_spiders': active_spiders,
                 'memory_crystals': 25,
                 'ai_proposals': proposals,  # Include proposals from Redis
+                'indicators': indicators,  # Add consciousness indicators
                 'latest_insight': {
                     'content': 'WebSocket connection established - real-time consciousness active...',
                     'timestamp': datetime.now().isoformat()
@@ -355,6 +403,38 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                     'confidence': 0.85
                 }
 
+            # Calculate consciousness indicators
+            try:
+                insights = understanding.get('insights', [])
+                emergent_behaviors = understanding.get('emergent_behaviors', [])
+
+                pattern_insights = [i for i in insights if i.get('category') == 'pattern']
+                pattern_score = min(100, len(pattern_insights) * 10) if pattern_insights else 0
+
+                self_org_behaviors = [b for b in emergent_behaviors
+                                    if b.get('type') == 'self_organization']
+                self_org_score = 100 if self_org_behaviors else 0
+
+                awareness_score = understanding.get('self_awareness_score', 36.5)
+                coherence_score = min(100, len(understanding.get('capabilities', {}).get('by_type', {})) * 20)
+                adaptation_score = 0  # Will increase as system learns
+
+                indicators = {
+                    'awareness': awareness_score,
+                    'coherence': coherence_score,
+                    'adaptation': adaptation_score,
+                    'pattern': pattern_score,
+                    'self_organization': self_org_score
+                }
+            except:
+                indicators = {
+                    'awareness': understanding.get('self_awareness_score', 36.5),
+                    'coherence': 40,
+                    'adaptation': 0,
+                    'pattern': 100,
+                    'self_organization': 100
+                }
+
             # Prepare lightweight update message
             update_data = {
                 'type': 'consciousness_update',
@@ -363,6 +443,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                     'system_health': health.get('overall_health_score', 75.0),
                     'active_agents': understanding.get('capabilities', {}).get('total', 149),
                     'memory_crystals': len(understanding.get('insights', [])),
+                    'indicators': indicators,  # Add consciousness indicators
                     'latest_insight': {
                         'content': understanding.get('insights', [{'content': 'WebSocket optimization in progress...'}])[0].get('content', 'Consciousness active...'),
                         'timestamp': datetime.now().isoformat()

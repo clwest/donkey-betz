@@ -653,7 +653,7 @@ async def test_integration():
 
 2. **Integration Points**:
    - Connect to WebSocket hub at `intelligence/consumers.py`
-   - Link with spider network at `backend/spiders/spider_army_orchestrator.py`
+   - Link with spider network at `ai_core/spiders/spider_army_orchestrator.py`
    - Integrate with revenue tracking at `core/models.py`
 
 3. **Production Deployment**:

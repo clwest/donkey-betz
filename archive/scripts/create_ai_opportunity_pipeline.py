@@ -18,7 +18,7 @@ sys.path.insert(0, str(project_root))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.spiders.ai_monetization_spider import research_ai_monetization_sync
+from ai_core.spiders.ai_monetization_spider import research_ai_monetization_sync
 from agents.ai_project_builder import AIProjectBuilder
 from typing import Dict, List
 import json

@@ -95,7 +95,7 @@ def main():
         'agents/content_executor.py',
         'agents/executors/content_creator_executor.py',
         'intelligence/real_agents.py',
-        'backend/agents/real_content_creator.py',
+        'ai_core/agents/real_content_creator.py',
         'core/personal_ai_assistant_enhanced.py'
     ]
 

@@ -17,14 +17,14 @@ import asyncio
 from datetime import datetime
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.contrib.auth.models import User
 from django.test.client import Client
 from core.models import EnhancedUserProfile
 from core.llm_enforcer import get_llm_enforcer, verify_llm_availability
-from backend.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 from django.core.cache import cache
 
 

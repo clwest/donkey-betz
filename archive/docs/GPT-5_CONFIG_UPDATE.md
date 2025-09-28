@@ -118,7 +118,7 @@ model = data.get('model', 'gpt-5-mini')  # Updated from 'gpt-4'
 ```
 
 ### 4. Backend Settings
-**File**: `backend/settings.py`
+**File**: `ai_core/settings.py`
 ```python
 AI_CONFIG = {
     'DEFAULT_LLM_MODEL': 'gpt-5-mini',  # Updated from 'gpt-4'

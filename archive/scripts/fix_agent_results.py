@@ -6,7 +6,7 @@ This script fixes the issue where agent executions complete but don't save resul
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from agents.models import AgentExecution

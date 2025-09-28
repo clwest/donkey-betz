@@ -45,7 +45,7 @@ except ImportError:
     RevenueIncomeIntegration = None
 
 try:
-    from backend.spiders.spider_network import SpiderNetwork
+    from ai_core.spiders.spider_network import SpiderNetwork
 except ImportError:
     # Create a simple mock if not available
     class SpiderNetwork:

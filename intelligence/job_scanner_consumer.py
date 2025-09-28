@@ -129,7 +129,7 @@ class JobScannerConsumer(AsyncWebsocketConsumer):
 
             # Import and use the spider job bridge
             from intelligence.unified_spider_job_bridge import UnifiedSpiderJobBridge
-            from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
+            from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 
             bridge = UnifiedSpiderJobBridge()
             matcher = None

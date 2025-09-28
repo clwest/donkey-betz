@@ -38,7 +38,7 @@ def main():
 📁 KEY LOCATIONS:
 - Generated Projects: /generated_projects/
 - Agent System: /agents/
-- Spider Army: /backend/spiders/
+- Spider Army: /ai_core/spiders/
 - Frontend: /frontend/src/components/
 - Config: /config/
     """)

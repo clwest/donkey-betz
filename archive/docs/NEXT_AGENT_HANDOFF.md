@@ -24,7 +24,7 @@ This platform is a sophisticated AI-powered job application and income generatio
 **Problem**: Many components return fake responses instead of using OpenAI
 **Critical Files**:
 - `/intelligence/ai_job_application_pipeline.py` (LINE 89-95: Returns mock data!)
-- `/backend/intelligence/income_builder.py` (LINE 245: Fake opportunity generation)
+- `/ai_core/intelligence/income_builder.py` (LINE 245: Fake opportunity generation)
 - `/agents/factory.py` (LINE 112: Mock agent creation)
 
 **Implementation Steps**:
@@ -54,7 +54,7 @@ return {"real": True, "data": response.choices[0].message.content}
 # Install required packages:
 pip install beautifulsoup4 requests scrapy selenium
 
-# Create real spider at /backend/spiders/real_job_spider.py:
+# Create real spider at /ai_core/spiders/real_job_spider.py:
 import requests
 from bs4 import BeautifulSoup
 
@@ -89,7 +89,7 @@ unified-donkey-betz/
 │   │   └── services/
 │   │       └── api.config.ts           # API configuration
 │   │
-├── backend/                       # Django Backend (Port 8000)
+├── ai_core/                       # Django Backend (Port 8000)
 │   ├── intelligence/
 │   │   ├── views_ai_jobs.py           # Job endpoints (MOCKED!)
 │   │   ├── ai_job_application_pipeline.py # Application generator (MOCKED!)
@@ -196,7 +196,7 @@ def generate_application(self, job_data, user_profile):
 ### Phase 3: Implement Real Data Collection (Days 5-6)
 
 #### A. Real Job Scraping
-Create `/backend/spiders/live_job_scraper.py`:
+Create `/ai_core/spiders/live_job_scraper.py`:
 ```python
 import asyncio
 import aiohttp
@@ -253,7 +253,7 @@ class LiveJobScraper:
 #### B. Update Spider View
 Edit `/intelligence/views_ai_jobs.py`:
 ```python
-from backend.spiders.live_job_scraper import LiveJobScraper
+from ai_core.spiders.live_job_scraper import LiveJobScraper
 
 class AIJobOpportunitiesView(View):
     def get(self, request):
@@ -295,7 +295,7 @@ class AIJobOpportunitiesView(View):
 # Install Stripe
 pip install stripe
 
-# /backend/payments/stripe_handler.py
+# /ai_core/payments/stripe_handler.py
 import stripe
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 

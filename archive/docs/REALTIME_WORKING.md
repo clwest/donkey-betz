@@ -28,7 +28,7 @@ The issue was that the Django server with WebSocket support (Daphne) wasn't runn
 1. **Make sure Daphne is running**:
    ```bash
    ps aux | grep daphne
-   # Should show: daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+   # Should show: daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
    ```
 
 2. **Open the betting page**:
@@ -50,7 +50,7 @@ If you need to restart everything:
 lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
 
 # Start Daphne (WebSocket server)
-nohup daphne -b 0.0.0.0 -p 8000 backend.asgi:application > daphne.log 2>&1 &
+nohup daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application > daphne.log 2>&1 &
 
 # Verify it's running
 ps aux | grep daphne

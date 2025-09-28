@@ -14,7 +14,7 @@ from collections import defaultdict
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
 import django
 django.setup()
@@ -320,7 +320,7 @@ if __name__ == "__main__":
         print("✅ Income Builder is properly connected to spider network")
     else:
         print("❌ CRITICAL: Income Builder needs to be connected to spider network!")
-        print("   Run: python backend/spiders/income_builder_connector.py")
+        print("   Run: python ai_core/spiders/income_builder_connector.py")
 
     if results["orphaned_agents"] > 0:
         print(f"⚠️ {results['orphaned_agents']} agents are not receiving spider data")
@@ -333,6 +333,6 @@ if __name__ == "__main__":
         print("   Run: python test_revenue_activation.py")
 
     print("\n🚀 Next Steps:")
-    print("1. Run: python backend/spiders/management/commands/test_spider_connections.py")
-    print("2. Monitor: python backend/spiders/management/commands/monitor_spider_army.py")
-    print("3. Activate: python backend/spiders/management/commands/activate_spider_orchestrator.py")
+    print("1. Run: python ai_core/spiders/management/commands/test_spider_connections.py")
+    print("2. Monitor: python ai_core/spiders/management/commands/monitor_spider_army.py")
+    print("3. Activate: python ai_core/spiders/management/commands/activate_spider_orchestrator.py")

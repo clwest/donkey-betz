@@ -54,7 +54,7 @@ The Unified Donkey Betz platform has been thoroughly verified and the following 
 
 #### Implementation Added (Line-by-line verification):
 
-**File: backend/agents/concrete_executor.py**
+**File: ai_core/agents/concrete_executor.py**
 
 ```python
 # Lines 206-239: Real WebSocket broadcast implementation
@@ -87,7 +87,7 @@ try:
 
 #### Console Log Evidence:
 ```
-INFO:backend.agents.concrete_executor:📡 Broadcast agent result to WebSocket: content_creator
+INFO:ai_core.agents.concrete_executor:📡 Broadcast agent result to WebSocket: content_creator
 ```
 
 ---
@@ -96,7 +96,7 @@ INFO:backend.agents.concrete_executor:📡 Broadcast agent result to WebSocket: 
 
 #### Implementation Added:
 
-**File: backend/templates/unified_intelligence_dashboard.html**
+**File: ai_core/templates/unified_intelligence_dashboard.html**
 
 ```javascript
 // Lines 1106-1109: Agent result detection
@@ -294,16 +294,16 @@ advisor_count = cursor.fetchone()[0]  # Returns: 25
 ## 🛠️ FILES MODIFIED IN THIS SESSION
 
 ### Critical Files Changed:
-1. **backend/agents/concrete_executor.py**
+1. **ai_core/agents/concrete_executor.py**
    - Added WebSocket broadcasting (Lines 206-239, 360-391)
    - Fixed agent result transmission
 
-2. **backend/templates/unified_intelligence_dashboard.html**
+2. **ai_core/templates/unified_intelligence_dashboard.html**
    - Added displayAgentResult function (Lines 1268-1400)
    - Added console logging for debugging (Lines 2396-2447)
    - Enhanced WebSocket message handling (Lines 1106-1109)
 
-3. **backend/intelligence/proposal_manager.py**
+3. **ai_core/intelligence/proposal_manager.py**
    - Replaced simulated execution with real (Lines 401-605)
    - Added _optimize_websocket_connections()
    - Added _optimize_cache_performance()

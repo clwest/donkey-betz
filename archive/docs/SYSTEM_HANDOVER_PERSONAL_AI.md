@@ -410,7 +410,7 @@ class UserMemoryManager:
 5. `/intelligence/consumers.py` - Add AI WebSocket handlers
 
 ### Configuration:
-1. `/backend/settings.py` - Add AI assistant settings
+1. `/ai_core/settings.py` - Add AI assistant settings
 2. `/frontend/.env` - Add AI configuration variables
 3. `/docker-compose.yml` - Ensure services are connected
 

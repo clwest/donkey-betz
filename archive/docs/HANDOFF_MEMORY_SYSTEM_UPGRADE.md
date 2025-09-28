@@ -14,7 +14,7 @@
 - `/core/models.py` - UserMemoryContext (line 1332) and UserEmbedding (line 788)
 - `/core/personal_ai_assistant.py` - Base assistant with template responses
 - `/core/personal_ai_assistant_enhanced.py` - Enhanced with memory storage
-- `/backend/agents/ai_enforced_base.py` - Base class for agents with LLM access
+- `/ai_core/agents/ai_enforced_base.py` - Base class for agents with LLM access
 
 #### LLM Integration
 - `/core/llm_enforcer.py` - The LLMEnforcer class that makes real OpenAI calls

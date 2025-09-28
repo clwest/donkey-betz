@@ -13,7 +13,7 @@ import time
 import random
 
 # Setup Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 
 django.setup()

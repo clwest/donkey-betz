@@ -80,11 +80,11 @@ response = client.chat.completions.create(
 - ✅ `agents/executors/base_executor.py` - Base executor default model
 - ✅ `agents/executors/content_creator_executor.py` - Blog/content creation
 - ✅ `agents/executors/income_builder_executor.py` - Income analysis
-- ✅ `backend/agents/real_content_creator.py` - Real content generation
-- ✅ `backend/agents/job_application_orchestrator.py` - Job applications
+- ✅ `ai_core/agents/real_content_creator.py` - Real content generation
+- ✅ `ai_core/agents/job_application_orchestrator.py` - Job applications
 
 ### Configuration
-- ✅ `backend/settings.py` - Default model configuration
+- ✅ `ai_core/settings.py` - Default model configuration
 - ✅ `core/settings.py` - Platform-wide settings
 - ✅ `content/ai_providers.py` - AI provider abstraction
 

@@ -56,12 +56,26 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         if any(request.path.startswith(path) for path in self.PUBLIC_PATHS):
             return None
 
+        # Check if user is already authenticated via session
+        if hasattr(request, 'user') and request.user.is_authenticated:
+            # Session authentication is valid for API requests
+            logger.debug(f"Session authenticated user {request.user.username} for {request.path}")
+
+            # Check if staff access required
+            if any(request.path.startswith(path) for path in self.STAFF_REQUIRED_PATHS):
+                if not request.user.is_staff:
+                    logger.warning(f"Staff access required for {request.path}, user: {request.user.username}")
+                    return api_forbidden("Staff access required")
+
+            return None
+
         # Extract token from request
         token = self.extract_token(request)
 
         if not token:
-            logger.warning(f"No authentication token provided for {request.path}")
-            return api_unauthorized("Authentication token required")
+            # No token and no session authentication
+            logger.warning(f"No authentication provided for {request.path}")
+            return api_unauthorized("Authentication required")
 
         # Validate token and get user
         user = self.validate_token(token)

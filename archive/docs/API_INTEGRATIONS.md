@@ -58,7 +58,7 @@ DATABASE_URL=postgresql://postgres@localhost:5432/unified_donkey_betz
 ```
 
 ### Django Settings Configuration:
-The `backend/settings.py` file automatically loads these from environment:
+The `ai_core/settings.py` file automatically loads these from environment:
 ```python
 AI_PROVIDERS = {
     'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY'),

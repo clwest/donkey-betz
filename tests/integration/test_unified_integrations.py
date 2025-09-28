@@ -135,7 +135,7 @@ class TestMLPipelineIntegration:
         """Test ML pipeline can be imported and initialized"""
         try:
             # Import the updated ML pipeline from income builder
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from income_builder import MLPipeline
 
             ml_pipeline = MLPipeline()
@@ -149,7 +149,7 @@ class TestMLPipelineIntegration:
     async def test_ml_pipeline_prediction(self):
         """Test ML pipeline prediction functionality"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from income_builder import MLPipeline
 
             ml_pipeline = MLPipeline()
@@ -194,7 +194,7 @@ class TestIncomeBuilderIntegration:
     def test_income_builder_import(self):
         """Test Income Builder can be imported with registries"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from income_builder import AIIncomeBuilder
 
             builder = AIIncomeBuilder()
@@ -211,7 +211,7 @@ class TestIncomeBuilderIntegration:
     async def test_income_builder_enhanced_analysis(self):
         """Test Income Builder enhanced analysis with integrations"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from income_builder import AIIncomeBuilder, UserProfile, SkillLevel
 
             builder = AIIncomeBuilder()
@@ -256,7 +256,7 @@ class TestMonetizationEngineIntegration:
     def test_monetization_engine_import(self):
         """Test Monetization Engine can be imported with integrations"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from monetization_engine import UnifiedMonetizationEngine
 
             engine = UnifiedMonetizationEngine()
@@ -272,7 +272,7 @@ class TestMonetizationEngineIntegration:
     async def test_monetization_opportunity_analysis(self):
         """Test monetization opportunity analysis with agents"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from monetization_engine import UnifiedMonetizationEngine
 
             engine = UnifiedMonetizationEngine()
@@ -300,7 +300,7 @@ class TestMonetizationEngineIntegration:
     def test_monetization_system_status(self):
         """Test monetization system integration status"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from monetization_engine import UnifiedMonetizationEngine
 
             engine = UnifiedMonetizationEngine()
@@ -324,7 +324,7 @@ class TestCriticalPathIntegration:
     async def test_end_to_end_income_analysis(self):
         """Test complete income analysis workflow"""
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+            sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
             from income_builder import AIIncomeBuilder, UserProfile, SkillLevel
 
             # Initialize system
@@ -410,7 +410,7 @@ def run_integration_health_check():
 
     # Test ML Pipeline
     try:
-        sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/intelligence/'))
+        sys.path.append(os.path.join(os.path.dirname(__file__), '../../ai_core/intelligence/'))
         from income_builder import MLPipeline
         ml_pipeline = MLPipeline()
         health_results['ml_pipeline'] = ml_pipeline is not None

@@ -10,7 +10,7 @@ import django
 import asyncio
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from intelligence.real_agents import ContentCreatorAgent, ImageGeneratorAgent

@@ -10,12 +10,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
-from backend.intelligence.real_data_orchestrator import (
+from ai_core.intelligence.real_data_orchestrator import (
     real_data_orchestrator,
     activate_ecosystem_sync,
     process_opportunity_sync
 )
-from backend.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 import json
 import logging
 

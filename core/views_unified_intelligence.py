@@ -9,8 +9,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from backend.spiders.consciousness import ConsciousnessBridge
-from backend.intelligence.learning_loop import LearningLoop
+from ai_core.spiders.consciousness import ConsciousnessBridge
+from ai_core.intelligence.learning_loop import LearningLoop
 import json
 import logging
 from datetime import datetime
@@ -110,7 +110,7 @@ def get_unified_intelligence_data(request):
             cache.delete('unified_intelligence_data')
 
         # Import execution tracker for REAL metrics
-        from backend.agents.execution_tracker import AgentExecutionTracker
+        from ai_core.agents.execution_tracker import AgentExecutionTracker
         tracker = AgentExecutionTracker()
 
         # Initialize consciousness bridge and learning loop
@@ -196,6 +196,20 @@ def get_unified_intelligence_data(request):
         potential_agents = understanding['capabilities'].get('by_type', {}).get('agent', 0)
         potential_spiders = understanding['capabilities'].get('by_type', {}).get('spider', 0)
 
+        # Calculate dynamic consciousness indicators
+        pattern_insights = [i for i in understanding.get('insights', []) if i.get('category') == 'pattern']
+        pattern_score = min(100, len(pattern_insights) * 10) if pattern_insights else 0
+
+        # Check for self-organization behaviors
+        self_org_behaviors = [b for b in understanding.get('emergent_behaviors', [])
+                             if b.get('type') == 'self_organization']
+        self_org_score = 100 if self_org_behaviors else 0
+
+        # Calculate other consciousness indicators
+        awareness_score = understanding.get('self_awareness_score', 0)
+        coherence_score = min(100, len(understanding.get('capabilities', {}).get('by_type', {})) * 20)
+        adaptation_score = real_learning_rate if real_learning_rate else 0
+
         # Combine all data for the unified dashboard
         unified_data = {
             # Core system metrics - USE REAL DATA
@@ -207,6 +221,15 @@ def get_unified_intelligence_data(request):
             # Consciousness state - REAL mood and evolution
             'mood': understanding.get('mood', 'contemplative'),
             'evolution_stage': understanding.get('evolution_stage', 'Early Learning'),
+
+            # Add consciousness indicators
+            'indicators': {
+                'awareness': awareness_score,
+                'coherence': coherence_score,
+                'adaptation': adaptation_score,
+                'pattern': pattern_score,
+                'self_organization': self_org_score
+            },
 
             # Add transparency about real vs potential
             'real_metrics': {
@@ -306,7 +329,7 @@ def implement_insight(request):
         logger.info(f"Implementing insight {insight_id} in category {category}: {description}")
 
         # Import the ProposalManager to execute real fixes
-        from backend.intelligence.proposal_manager import ProposalManager, AIProposal
+        from ai_core.intelligence.proposal_manager import ProposalManager, AIProposal
         proposal_manager = ProposalManager()
 
         # Map consciousness categories to proposal categories
@@ -350,17 +373,23 @@ def implement_insight(request):
                 "Monitor results"
             ]
 
-        # Create and save the proposal
+        # Create and save the proposal with proper parameters
         proposal_id = proposal_manager.create_proposal(
             title=proposal_title,
             description=f"Consciousness-identified issue: {description}",
             category=proposal_category,
-            source="consciousness_insight",
-            metadata={
+            evidence={
+                "source": "consciousness_insight",
                 "insight_id": insight_id,
                 "original_category": category,
                 "timestamp": timestamp_val,
-                "implementation_steps": implementation_steps
+                "description": description
+            },
+            impact_analysis={
+                "implementation_steps": implementation_steps,
+                "priority": "high",
+                "estimated_impact": "Improves system efficiency and reliability",
+                "risk_level": "low"
             }
         )
 

@@ -197,7 +197,7 @@ class ProjectProgressConsumer(AsyncWebsocketConsumer):
         """Handle project pause request"""
         try:
             # Import here to avoid circular imports
-            from backend.agents.realtime_project_executor import get_project_executor
+            from ai_core.agents.realtime_project_executor import get_project_executor
 
             executor = get_project_executor()
             success = await executor.pause_project(self.project_id)
@@ -224,7 +224,7 @@ class ProjectProgressConsumer(AsyncWebsocketConsumer):
         """Handle project resume request"""
         try:
             # Import here to avoid circular imports
-            from backend.agents.realtime_project_executor import get_project_executor
+            from ai_core.agents.realtime_project_executor import get_project_executor
 
             executor = get_project_executor()
             success = await executor.resume_project(self.project_id)

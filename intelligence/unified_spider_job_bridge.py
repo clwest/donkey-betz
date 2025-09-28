@@ -113,7 +113,7 @@ class UnifiedSpiderJobBridge:
     async def _run_live_job_scraper(self, criteria: Dict) -> List[Dict]:
         """Run the live job scraper"""
         try:
-            from backend.spiders.live_job_scraper import LiveJobScraper
+            from ai_core.spiders.live_job_scraper import LiveJobScraper
 
             scraper = LiveJobScraper()
             jobs = await scraper.scrape_all()
@@ -129,7 +129,7 @@ class UnifiedSpiderJobBridge:
         """Run zero-capital income stream spider"""
         try:
             # Import zero capital income generator
-            from backend.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
+            from ai_core.agents.zero_capital_income_generator import ZeroCapitalIncomeGenerator
 
             generator = ZeroCapitalIncomeGenerator()
             opportunities = await generator.generate_zero_capital_opportunities()

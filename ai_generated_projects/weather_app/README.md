@@ -27,7 +27,7 @@ To get started with the Weather App, follow the steps below to set up the projec
    ```
 
 2. **Set up the backend:**
-   - Navigate to the backend directory:
+   - Navigate to the ai_core directory:
      ```bash
      cd backend
      ```
@@ -35,7 +35,7 @@ To get started with the Weather App, follow the steps below to set up the projec
      ```bash
      npm install
      ```
-   - Create a `.env` file in the backend directory and configure your PostgreSQL connection settings:
+   - Create a `.env` file in the ai_core directory and configure your PostgreSQL connection settings:
      ```plaintext
      DATABASE_URL=postgres://user:password@localhost:5432/weather_db
      ```

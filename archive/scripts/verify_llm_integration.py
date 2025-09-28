@@ -17,14 +17,14 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.contrib.auth.models import User
 from agents.registry import agent_registry
 from advisors.registry import advisor_registry
 from core.llm_enforcer import get_llm_enforcer, verify_llm_availability
-from backend.agents.ai_enforced_base import AIEnforcedAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 # Skip JobApplicationAgent import due to aioredis dependency issue
 
 
@@ -250,7 +250,7 @@ def check_orchestration():
     print_section("ORCHESTRATION SYSTEM CHECK")
 
     try:
-        from backend.intelligence.orchestration import WorkflowOrchestrator
+        from ai_core.intelligence.orchestration import WorkflowOrchestrator
 
         orchestrator = WorkflowOrchestrator()
 

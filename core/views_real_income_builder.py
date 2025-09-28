@@ -8,8 +8,8 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from backend.agents.real_job_simulator import real_job_simulator
-from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
+from ai_core.agents.real_job_simulator import real_job_simulator
+from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 
 logger = logging.getLogger(__name__)
 

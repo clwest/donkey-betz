@@ -15,7 +15,7 @@ from django.contrib.auth.decorators import login_required
 from asgiref.sync import sync_to_async
 
 from .project_builder_orchestrator import get_project_orchestrator
-from backend.agents.concrete_executor import concrete_executor
+from ai_core.agents.concrete_executor import concrete_executor
 
 logger = logging.getLogger(__name__)
 

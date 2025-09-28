@@ -15,14 +15,14 @@ from pathlib import Path
 import json
 
 # Django setup
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.db import connection
 from django.utils import timezone
 from agents.models import UnifiedAgentTemplate, AgentExecution
 from agents.registry import AgentRegistry
-from backend.spiders.spider_registry import SpiderRegistry
+from ai_core.spiders.spider_registry import SpiderRegistry
 from core.llm_enforcer import get_llm_enforcer
 
 # Configure logging

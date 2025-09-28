@@ -9,7 +9,7 @@ You now have a **COMPLETE UNIFIED PLATFORM** where the frontend shows REAL agent
 ## 🏗️ What We Built
 
 ### 1. **Unified WebSocket Hub** (Backend)
-- **File**: `backend/intelligence/consumers.py`
+- **File**: `ai_core/intelligence/consumers.py`
 - **New Consumer**: `AgentWorkPlatformConsumer`
 - **Features**:
   - Real-time platform updates every 3 seconds
@@ -34,7 +34,7 @@ You now have a **COMPLETE UNIFIED PLATFORM** where the frontend shows REAL agent
 - **Badge**: "💰 LIVE" to show it's real-time money tracking
 
 ### 4. **WebSocket Routing**
-- **Added to**: `backend/intelligence/routing.py`
+- **Added to**: `ai_core/intelligence/routing.py`
 - **Endpoint**: `ws/agent-platform/`
 
 ## 🔥 Live Features

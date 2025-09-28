@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from django.views import View
-from backend.agents.agent_work_platform import activate_agent_work_platform, get_agent_work_platform_status
+from ai_core.agents.agent_work_platform import activate_agent_work_platform, get_agent_work_platform_status
 import asyncio
 
 logger = logging.getLogger(__name__)

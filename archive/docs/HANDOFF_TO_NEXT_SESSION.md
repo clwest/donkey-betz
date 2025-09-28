@@ -30,7 +30,7 @@ Located in: `intelligence/action_plan_orchestrator.py`
 ### 3. Spider Network (1,770 Spiders!)
 Status per `SPIDER_ARMY_EXPANSION_COMPLETE.md`:
 - 40 specialized spider classes deployed
-- Spider registry at `backend/spiders/spider_registry.py`
+- Spider registry at `ai_core/spiders/spider_registry.py`
 - Ready but **NOT CONNECTED** to agents yet
 - Needs: Data pipeline establishment
 
@@ -89,7 +89,7 @@ The spiders are deployed but dormant! They need:
 3. Activation trigger
 
 Key files to modify:
-- `backend/spiders/spider_army_orchestrator.py`
+- `ai_core/spiders/spider_army_orchestrator.py`
 - `intelligence/spider_agent_bridge.py` (already exists!)
 
 ### Task 4: Revenue Pipeline Activation
@@ -105,7 +105,7 @@ Connect these components:
 ### Backend Core Files
 1. `intelligence/system_integration_bridge.py` - The nervous system
 2. `intelligence/action_plan_orchestrator.py` - Orchestration logic
-3. `backend/spiders/spider_army_orchestrator.py` - Spider control
+3. `ai_core/spiders/spider_army_orchestrator.py` - Spider control
 4. `core/unified_hub.py` - WebSocket hub (working!)
 
 ### Frontend Files
