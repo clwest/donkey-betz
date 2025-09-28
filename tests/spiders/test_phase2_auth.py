@@ -14,9 +14,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend', 'spiders'))
 
 # Import our Phase 2 components
-from backend.spiders.api_manager import api_vault, api_manager
-from backend.spiders.oauth_handler import oauth_handler, social_collector
-from backend.spiders.news_spider import NewsIntelligenceSpider
+from ai_core.spiders.api_manager import api_vault, api_manager
+from ai_core.spiders.oauth_handler import oauth_handler, social_collector
+from ai_core.spiders.news_spider import NewsIntelligenceSpider
 
 
 async def test_api_key_management():

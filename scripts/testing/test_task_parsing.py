@@ -5,7 +5,7 @@ import os
 import sys
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator

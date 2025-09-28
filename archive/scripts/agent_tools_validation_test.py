@@ -63,7 +63,7 @@ class AgentToolsValidator:
         logger.info("🕷️ Testing Spider Real Data Usage")
 
         try:
-            from backend.spiders.live_job_scraper import scrape_jobs_sync, LiveJobScraper
+            from ai_core.spiders.live_job_scraper import scrape_jobs_sync, LiveJobScraper
 
             # Test live job scraper
             jobs = scrape_jobs_sync()

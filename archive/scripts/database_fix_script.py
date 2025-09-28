@@ -260,7 +260,7 @@ class RealIncomeBuilderView(APIView):
         f.write(view_code)
 
     print("\n✅ View code saved to: real_income_builder_view.py")
-    print("📝 Add this to: backend/intelligence/views.py")
+    print("📝 Add this to: ai_core/intelligence/views.py")
 
 def create_url_patterns():
     """Create the URL patterns needed"""
@@ -396,10 +396,10 @@ def main():
     print("NEXT STEPS")
     print("="*60)
     print("""
-1. Add the view code to: backend/intelligence/views.py
+1. Add the view code to: ai_core/intelligence/views.py
    (code saved in: real_income_builder_view.py)
 
-2. Add URL patterns to: backend/intelligence/urls.py
+2. Add URL patterns to: ai_core/intelligence/urls.py
 
 3. Run migrations:
    python manage.py makemigrations

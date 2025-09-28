@@ -46,7 +46,7 @@ The Revenue Activation Orchestrator has been successfully deployed and tested. T
 
 ## 🏗️ SYSTEM ARCHITECTURE
 
-### 1. Income Builder Pipeline (/Users/donkeyking/development/unified-donkey-betz/backend/intelligence/income_builder.py)
+### 1. Income Builder Pipeline (/Users/donkeyking/development/unified-donkey-betz/ai_core/intelligence/income_builder.py)
 - **Status:** ✅ Active
 - **Features:**
   - Real ML-powered opportunity scoring
@@ -55,7 +55,7 @@ The Revenue Activation Orchestrator has been successfully deployed and tested. T
   - 8 zero-investment income streams
   - Action plan generation with market research
 
-### 2. Monetization Engine (/Users/donkeyking/development/unified-donkey-betz/backend/intelligence/monetization_engine.py)
+### 2. Monetization Engine (/Users/donkeyking/development/unified-donkey-betz/ai_core/intelligence/monetization_engine.py)
 - **Status:** ✅ Active
 - **Features:**
   - 5 platform monetization strategies
@@ -63,7 +63,7 @@ The Revenue Activation Orchestrator has been successfully deployed and tested. T
   - Agent orchestration for opportunity analysis
   - Automated content monetization workflows
 
-### 3. Spider Data Collection System (/Users/donkeyking/development/unified-donkey-betz/backend/spiders/)
+### 3. Spider Data Collection System (/Users/donkeyking/development/unified-donkey-betz/ai_core/spiders/)
 - **Status:** ✅ Configured
 - **Features:**
   - 5 platform-specific spider configurations
@@ -206,10 +206,10 @@ The Revenue Activation Orchestrator has been successfully deployed and tested. T
 ### File Structure
 ```
 /Users/donkeyking/development/unified-donkey-betz/
-├── backend/intelligence/
+├── ai_core/intelligence/
 │   ├── income_builder.py (✅ Active)
 │   └── monetization_engine.py (✅ Active)
-├── backend/spiders/ (✅ Configured)
+├── ai_core/spiders/ (✅ Configured)
 ├── proposals_output/ (14 proposals ready)
 ├── revenue_data/ (tracking system active)
 ├── spider_configs/ (8 optimization files)

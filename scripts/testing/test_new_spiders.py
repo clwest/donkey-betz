@@ -21,7 +21,7 @@ def test_spider_imports():
 
     # Test new freelance spiders
     try:
-        from backend.spiders.specialized.toptal_spider import ToptalIntelligenceSpider
+        from ai_core.spiders.specialized.toptal_spider import ToptalIntelligenceSpider
         spider_tests.append(("TopTal Spider", True))
         print("✅ TopTal Spider imported successfully")
     except Exception as e:
@@ -29,7 +29,7 @@ def test_spider_imports():
         print(f"❌ TopTal Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.guru_spider import GuruIntelligenceSpider
+        from ai_core.spiders.specialized.guru_spider import GuruIntelligenceSpider
         spider_tests.append(("Guru Spider", True))
         print("✅ Guru Spider imported successfully")
     except Exception as e:
@@ -37,7 +37,7 @@ def test_spider_imports():
         print(f"❌ Guru Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.peopleperhour_spider import PeoplePerHourIntelligenceSpider
+        from ai_core.spiders.specialized.peopleperhour_spider import PeoplePerHourIntelligenceSpider
         spider_tests.append(("PeoplePerHour Spider", True))
         print("✅ PeoplePerHour Spider imported successfully")
     except Exception as e:
@@ -45,7 +45,7 @@ def test_spider_imports():
         print(f"❌ PeoplePerHour Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.ninetyninedesigns_spider import NinetyNineDesignsIntelligenceSpider
+        from ai_core.spiders.specialized.ninetyninedesigns_spider import NinetyNineDesignsIntelligenceSpider
         spider_tests.append(("99designs Spider", True))
         print("✅ 99designs Spider imported successfully")
     except Exception as e:
@@ -53,7 +53,7 @@ def test_spider_imports():
         print(f"❌ 99designs Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.flexjobs_spider import FlexJobsIntelligenceSpider
+        from ai_core.spiders.specialized.flexjobs_spider import FlexJobsIntelligenceSpider
         spider_tests.append(("FlexJobs Spider", True))
         print("✅ FlexJobs Spider imported successfully")
     except Exception as e:
@@ -61,7 +61,7 @@ def test_spider_imports():
         print(f"❌ FlexJobs Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.remoteok_spider import RemoteOKIntelligenceSpider
+        from ai_core.spiders.specialized.remoteok_spider import RemoteOKIntelligenceSpider
         spider_tests.append(("RemoteOK Spider", True))
         print("✅ RemoteOK Spider imported successfully")
     except Exception as e:
@@ -69,7 +69,7 @@ def test_spider_imports():
         print(f"❌ RemoteOK Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.medium_spider import MediumIntelligenceSpider
+        from ai_core.spiders.specialized.medium_spider import MediumIntelligenceSpider
         spider_tests.append(("Medium Spider", True))
         print("✅ Medium Spider imported successfully")
     except Exception as e:
@@ -77,7 +77,7 @@ def test_spider_imports():
         print(f"❌ Medium Spider failed: {e}")
 
     try:
-        from backend.spiders.specialized.gumroad_spider import GumroadIntelligenceSpider
+        from ai_core.spiders.specialized.gumroad_spider import GumroadIntelligenceSpider
         spider_tests.append(("Gumroad Spider", True))
         print("✅ Gumroad Spider imported successfully")
     except Exception as e:
@@ -104,15 +104,15 @@ def test_spider_files():
     print("\n📁 Testing Spider Files...")
 
     expected_files = [
-        'backend/spiders/specialized/toptal_spider.py',
-        'backend/spiders/specialized/guru_spider.py',
-        'backend/spiders/specialized/peopleperhour_spider.py',
-        'backend/spiders/specialized/ninetyninedesigns_spider.py',
-        'backend/spiders/specialized/flexjobs_spider.py',
-        'backend/spiders/specialized/remoteok_spider.py',
-        'backend/spiders/specialized/medium_spider.py',
-        'backend/spiders/specialized/gumroad_spider.py',
-        'backend/spiders/spider_registry.py'
+        'ai_core/spiders/specialized/toptal_spider.py',
+        'ai_core/spiders/specialized/guru_spider.py',
+        'ai_core/spiders/specialized/peopleperhour_spider.py',
+        'ai_core/spiders/specialized/ninetyninedesigns_spider.py',
+        'ai_core/spiders/specialized/flexjobs_spider.py',
+        'ai_core/spiders/specialized/remoteok_spider.py',
+        'ai_core/spiders/specialized/medium_spider.py',
+        'ai_core/spiders/specialized/gumroad_spider.py',
+        'ai_core/spiders/spider_registry.py'
     ]
 
     file_tests = []

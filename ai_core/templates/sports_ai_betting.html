@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports AI Betting Intelligence Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+
+        .ai-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .neural-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .neural-bg::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: drift 20s linear infinite;
+        }
+
+        @keyframes drift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-50%, -50%); }
+        }
+
+        .confidence-bar {
+            background: linear-gradient(90deg, #ef4444 0%, #eab308 50%, #22c55e 100%);
+        }
+
+        .bet-card {
+            backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .sport-tab {
+            transition: all 0.3s ease;
+        }
+
+        .sport-tab:hover {
+            transform: translateY(-2px);
+        }
+
+        .odds-change-up {
+            animation: flash-green 1s ease;
+        }
+
+        .odds-change-down {
+            animation: flash-red 1s ease;
+        }
+
+        @keyframes flash-green {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(34, 197, 94, 0.3); }
+        }
+
+        @keyframes flash-red {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(239, 68, 68, 0.3); }
+        }
+
+        .ai-thinking {
+            animation: thinking 1.5s ease-in-out infinite;
+        }
+
+        @keyframes thinking {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="neural-bg text-white min-h-screen">
+    <!-- AI Command Header -->
+    <header class="bg-slate-900/90 backdrop-blur-lg border-b border-blue-500/30 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="ai-glow rounded-lg p-2 bg-blue-600">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold">Sports AI Command Center</h1>
+                        <p class="text-sm text-gray-400">Betting with Intelligence, Not Luck</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">AI Confidence</p>
+                        <p class="text-xl font-bold text-green-400">87.3%</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Active Agents</p>
+                        <p class="text-xl font-bold text-blue-400">12/12</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Bankroll</p>
+                        <p class="text-xl font-bold text-yellow-400">$10,000</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sports Navigation -->
+    <nav class="bg-slate-800/50 backdrop-blur border-b border-gray-700">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-1 overflow-x-auto py-2">
+                <button class="sport-tab px-4 py-2 rounded-lg bg-blue-600 text-white font-medium whitespace-nowrap">
+                    🏈 NFL
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    🏀 NBA
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    ⚾ MLB
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    🏒 NHL
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    ⚽ Soccer
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    🎾 Tennis
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    🥊 MMA/Boxing
+                </button>
+                <button class="sport-tab px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-gray-300 font-medium whitespace-nowrap">
+                    🎮 Esports
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-12 gap-6">
+            <!-- Main Content Area -->
+            <div class="col-span-8">
+                <!-- AI Agent Status Panel -->
+                <div class="bet-card rounded-lg p-4 mb-6 border border-blue-500/30">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <span class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        AI Agents Active
+                    </h2>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="bg-slate-800/50 rounded p-3">
+                            <p class="text-xs text-gray-400">Odds Scraper</p>
+                            <p class="text-sm font-bold text-green-400">ACTIVE</p>
+                            <p class="text-xs mt-1">247 updates/min</p>
+                        </div>
+                        <div class="bg-slate-800/50 rounded p-3">
+                            <p class="text-xs text-gray-400">Value Finder</p>
+                            <p class="text-sm font-bold text-green-400">ANALYZING</p>
+                            <p class="text-xs mt-1">3 opportunities</p>
+                        </div>
+                        <div class="bg-slate-800/50 rounded p-3">
+                            <p class="text-xs text-gray-400">Line Predictor</p>
+                            <p class="text-sm font-bold text-yellow-400">CALCULATING</p>
+                            <p class="text-xs mt-1">87% accuracy</p>
+                        </div>
+                        <div class="bg-slate-800/50 rounded p-3">
+                            <p class="text-xs text-gray-400">Arbitrage Hunter</p>
+                            <p class="text-sm font-bold text-blue-400">SCANNING</p>
+                            <p class="text-xs mt-1">0 arbs found</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Odds Grid -->
+                <div class="bet-card rounded-lg p-4 border border-gray-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Live Odds Matrix</h2>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 bg-blue-600 rounded text-sm">Spreads</button>
+                            <button class="px-3 py-1 bg-slate-700 rounded text-sm">Totals</button>
+                            <button class="px-3 py-1 bg-slate-700 rounded text-sm">Props</button>
+                        </div>
+                    </div>
+
+                    <!-- Games List -->
+                    <div class="space-y-3" id="oddsGrid">
+                        <!-- Game 1 -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-gray-600 hover:border-blue-500 transition-colors">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-xs bg-red-600 px-2 py-1 rounded">LIVE</span>
+                                    <span class="text-sm text-gray-400">Q3 7:23</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs text-gray-400">AI Confidence:</span>
+                                    <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                        <div class="h-full confidence-bar" style="width: 78%"></div>
+                                    </div>
+                                    <span class="text-xs font-bold text-green-400">78%</span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <p class="font-medium">Kansas City Chiefs</p>
+                                    <p class="text-2xl font-bold">24</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-xs text-gray-400 mb-1">Spread</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button class="bg-slate-700 hover:bg-blue-600 px-3 py-2 rounded transition-colors">
+                                            <p class="text-xs">KC -3.5</p>
+                                            <p class="font-bold">-110</p>
+                                        </button>
+                                        <button class="bg-slate-700 hover:bg-blue-600 px-3 py-2 rounded transition-colors">
+                                            <p class="text-xs">BUF +3.5</p>
+                                            <p class="font-bold">-110</p>
+                                        </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <p class="text-xs text-gray-400">O/U 48.5</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-medium">Buffalo Bills</p>
+                                    <p class="text-2xl font-bold">21</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-3 border-t border-gray-700 flex justify-between items-center">
+                                <div class="flex space-x-3 text-xs">
+                                    <span class="text-gray-400">DK: -3.5</span>
+                                    <span class="text-gray-400">FD: -3.0</span>
+                                    <span class="text-gray-400">MGM: -3.5</span>
+                                    <span class="text-green-400 font-bold">Best: -3.0</span>
+                                </div>
+                                <button class="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm font-medium transition-colors">
+                                    AI Recommends
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Game 2 -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-gray-600 hover:border-blue-500 transition-colors">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-xs bg-yellow-600 px-2 py-1 rounded">8:20 PM</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs text-gray-400">AI Confidence:</span>
+                                    <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                        <div class="h-full confidence-bar" style="width: 92%"></div>
+                                    </div>
+                                    <span class="text-xs font-bold text-green-400">92%</span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <p class="font-medium">Los Angeles Lakers</p>
+                                    <p class="text-sm text-gray-400">45-20</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-xs text-gray-400 mb-1">Spread</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button class="bg-slate-700 hover:bg-blue-600 px-3 py-2 rounded transition-colors">
+                                            <p class="text-xs">LAL -7.5</p>
+                                            <p class="font-bold">-105</p>
+                                        </button>
+                                        <button class="bg-slate-700 hover:bg-blue-600 px-3 py-2 rounded transition-colors">
+                                            <p class="text-xs">PHX +7.5</p>
+                                            <p class="font-bold">-115</p>
+                                        </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <p class="text-xs text-gray-400">O/U 232.5</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-medium">Phoenix Suns</p>
+                                    <p class="text-sm text-gray-400">38-27</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-3 border-t border-gray-700 flex justify-between items-center">
+                                <div class="flex space-x-2 text-xs">
+                                    <span class="bg-blue-600/20 text-blue-400 px-2 py-1 rounded">VALUE BET</span>
+                                    <span class="bg-green-600/20 text-green-400 px-2 py-1 rounded">AI PICK</span>
+                                </div>
+                                <button class="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm font-medium transition-colors">
+                                    Quick Bet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="col-span-4 space-y-6">
+                <!-- AI Insights Panel -->
+                <div class="bet-card rounded-lg p-4 border border-purple-500/30">
+                    <h3 class="text-lg font-bold mb-3 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        AI Insights
+                    </h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="p-3 bg-slate-800/50 rounded border-l-4 border-green-500">
+                            <p class="font-medium text-green-400">High Value Alert</p>
+                            <p class="text-gray-300 text-xs mt-1">Lakers -7.5 showing +3.2% expected value based on injury reports</p>
+                        </div>
+                        <div class="p-3 bg-slate-800/50 rounded border-l-4 border-yellow-500">
+                            <p class="font-medium text-yellow-400">Line Movement Detected</p>
+                            <p class="text-gray-300 text-xs mt-1">Chiefs line moving from -3.5 to -3.0, sharp money on Bills</p>
+                        </div>
+                        <div class="p-3 bg-slate-800/50 rounded border-l-4 border-blue-500">
+                            <p class="font-medium text-blue-400">Weather Impact</p>
+                            <p class="text-gray-300 text-xs mt-1">Wind 15mph+ expected for TNF, consider under 48.5</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Betting Slip -->
+                <div class="bet-card rounded-lg p-4 border border-green-500/30">
+                    <h3 class="text-lg font-bold mb-3">Betting Slip</h3>
+                    <div class="space-y-3" id="bettingSlip">
+                        <div class="p-3 bg-slate-800/50 rounded">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-medium text-sm">Lakers -7.5</p>
+                                    <p class="text-xs text-gray-400">vs Phoenix Suns</p>
+                                </div>
+                                <button class="text-red-400 hover:text-red-300">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" placeholder="Stake" class="bg-slate-700 px-2 py-1 rounded text-sm w-24" value="100">
+                                <span class="text-sm text-gray-400">@</span>
+                                <span class="text-sm font-bold">-105</span>
+                                <span class="text-sm text-gray-400">=</span>
+                                <span class="text-sm font-bold text-green-400">$195.24</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-700">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-sm text-gray-400">Total Stake:</span>
+                            <span class="font-bold">$100.00</span>
+                        </div>
+                        <div class="flex justify-between mb-3">
+                            <span class="text-sm text-gray-400">Potential Return:</span>
+                            <span class="font-bold text-green-400">$195.24</span>
+                        </div>
+                        <button class="w-full py-3 bg-green-600 hover:bg-green-500 rounded font-bold transition-colors">
+                            Place Bet
+                        </button>
+                        <button class="w-full py-2 mt-2 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors">
+                            AI Optimize Slip
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Performance -->
+                <div class="bet-card rounded-lg p-4 border border-gray-700">
+                    <h3 class="text-lg font-bold mb-3">AI Performance Today</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Win Rate:</span>
+                            <span class="font-bold text-green-400">67.3%</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">ROI:</span>
+                            <span class="font-bold text-green-400">+12.4%</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Units Won:</span>
+                            <span class="font-bold text-green-400">+8.7</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Best Pick:</span>
+                            <span class="font-bold">LAL -4.5 ✅</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Agent Activity Feed -->
+        <div class="mt-6 bet-card rounded-lg p-4 border border-blue-500/30">
+            <h3 class="text-lg font-bold mb-3">Live AI Agent Activity</h3>
+            <div class="grid grid-cols-4 gap-4" id="agentFeed">
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-green-600/20 rounded-full flex items-center justify-center ai-thinking">
+                        <span class="text-2xl">🔍</span>
+                    </div>
+                    <p class="text-xs font-medium">Odds Scraper</p>
+                    <p class="text-xs text-green-400">247 updates/min</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-blue-600/20 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">💰</span>
+                    </div>
+                    <p class="text-xs font-medium">Value Finder</p>
+                    <p class="text-xs text-blue-400">3 opportunities</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-purple-600/20 rounded-full flex items-center justify-center ai-thinking">
+                        <span class="text-2xl">📊</span>
+                    </div>
+                    <p class="text-xs font-medium">Pattern Analyzer</p>
+                    <p class="text-xs text-purple-400">Processing...</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-yellow-600/20 rounded-full flex items-center justify-center">
+                        <span class="text-2xl">🎯</span>
+                    </div>
+                    <p class="text-xs font-medium">Sharp Tracker</p>
+                    <p class="text-xs text-yellow-400">2 sharp bets</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WebSocket Integration -->
+    <script>
+        // WebSocket connection for real-time updates
+        let socket = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function connectWebSocket() {
+            const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsUrl = `${wsScheme}://${window.location.host}/ws/sports-betting/`;
+
+            console.log('Connecting to WebSocket:', wsUrl);
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(e) {
+                console.log('WebSocket connected');
+                reconnectAttempts = 0;
+
+                // Request initial data
+                socket.send(JSON.stringify({
+                    'type': 'subscribe',
+                    'sports': ['nfl', 'nba', 'mlb'],
+                    'updates': ['odds', 'agents', 'insights']
+                }));
+
+                updateConnectionStatus('connected');
+            };
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                handleWebSocketMessage(data);
+            };
+
+            socket.onclose = function(e) {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus('disconnected');
+
+                // Attempt to reconnect
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    setTimeout(() => {
+                        console.log(`Reconnection attempt ${reconnectAttempts}`);
+                        connectWebSocket();
+                    }, 3000 * reconnectAttempts);
+                }
+            };
+
+            socket.onerror = function(e) {
+                console.error('WebSocket error:', e);
+                updateConnectionStatus('error');
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            console.log('Received WebSocket message:', data);
+
+            switch(data.type) {
+                case 'odds_update':
+                    updateOdds(data.payload);
+                    break;
+                case 'agent_update':
+                    updateAgentStatus(data.payload);
+                    break;
+                case 'insight':
+                    addInsight(data.payload);
+                    break;
+                case 'value_bet':
+                    highlightValueBet(data.payload);
+                    break;
+                case 'line_movement':
+                    showLineMovement(data.payload);
+                    break;
+                default:
+                    console.log('Unknown message type:', data.type);
+            }
+        }
+
+        function updateOdds(oddsData) {
+            // Update odds display with animation
+            const oddsElement = document.getElementById(`odds-${oddsData.gameId}`);
+            if (oddsElement) {
+                oddsElement.classList.add('odds-change-up');
+                setTimeout(() => {
+                    oddsElement.classList.remove('odds-change-up');
+                }, 1000);
+            }
+        }
+
+        function updateAgentStatus(agentData) {
+            // Update agent status indicators
+            console.log('Updating agent status:', agentData);
+        }
+
+        function addInsight(insight) {
+            // Add new insight to the insights panel
+            console.log('New insight:', insight);
+        }
+
+        function highlightValueBet(valueBet) {
+            // Highlight value betting opportunity
+            console.log('Value bet found:', valueBet);
+        }
+
+        function showLineMovement(movement) {
+            // Display line movement alert
+            console.log('Line movement:', movement);
+        }
+
+        function updateConnectionStatus(status) {
+            // Update UI to show connection status
+            const statusColors = {
+                'connected': 'bg-green-500',
+                'disconnected': 'bg-red-500',
+                'error': 'bg-yellow-500'
+            };
+
+            console.log('Connection status:', status);
+        }
+
+        // Mock data updates for demonstration
+        function simulateDataUpdates() {
+            // Simulate odds changes
+            setInterval(() => {
+                const odds = document.querySelectorAll('.font-bold');
+                const randomOdd = odds[Math.floor(Math.random() * odds.length)];
+                if (randomOdd && randomOdd.textContent.includes('-')) {
+                    const currentValue = parseInt(randomOdd.textContent);
+                    const newValue = currentValue + (Math.random() > 0.5 ? 5 : -5);
+                    randomOdd.textContent = newValue > 0 ? `+${newValue}` : `${newValue}`;
+                    randomOdd.parentElement.classList.add('odds-change-up');
+                    setTimeout(() => {
+                        randomOdd.parentElement.classList.remove('odds-change-up');
+                    }, 1000);
+                }
+            }, 5000);
+
+            // Simulate AI confidence updates
+            setInterval(() => {
+                const confidenceBars = document.querySelectorAll('.confidence-bar').forEach(bar => {
+                    const parent = bar.parentElement.parentElement;
+                    const newConfidence = Math.floor(Math.random() * 40 + 60);
+                    bar.style.width = `${newConfidence}%`;
+                    const label = parent.querySelector('.text-green-400');
+                    if (label) label.textContent = `${newConfidence}%`;
+                });
+            }, 8000);
+
+            // Simulate agent activity
+            setInterval(() => {
+                const agents = document.querySelectorAll('.ai-thinking');
+                agents.forEach((agent, index) => {
+                    setTimeout(() => {
+                        agent.style.animationDuration = `${Math.random() * 2 + 1}s`;
+                    }, index * 200);
+                });
+            }, 3000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Try to connect WebSocket
+            connectWebSocket();
+
+            // Start mock updates for demonstration
+            simulateDataUpdates();
+
+            // Sport tab switching
+            document.querySelectorAll('.sport-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.sport-tab').forEach(t => {
+                        t.classList.remove('bg-blue-600', 'text-white');
+                        t.classList.add('bg-slate-700', 'text-gray-300');
+                    });
+                    this.classList.remove('bg-slate-700', 'text-gray-300');
+                    this.classList.add('bg-blue-600', 'text-white');
+
+                    // Request new sport data via WebSocket
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                            'type': 'change_sport',
+                            'sport': this.textContent.trim().toLowerCase()
+                        }));
+                    }
+                });
+            });
+
+            // Quick bet buttons
+            document.querySelectorAll('button').forEach(button => {
+                if (button.textContent.includes('Quick Bet') || button.textContent.includes('AI Recommends')) {
+                    button.addEventListener('click', function() {
+                        // Add to betting slip
+                        console.log('Adding to betting slip');
+                        this.textContent = 'Added!';
+                        this.classList.remove('bg-green-600');
+                        this.classList.add('bg-gray-600');
+                        setTimeout(() => {
+                            this.textContent = this.textContent.includes('Quick') ? 'Quick Bet' : 'AI Recommends';
+                            this.classList.remove('bg-gray-600');
+                            this.classList.add('bg-green-600');
+                        }, 1500);
+                    });
+                }
+            });
+        });
+
+        // Voice command handler
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const command = event.results[0][0].transcript.toLowerCase();
+                console.log('Voice command:', command);
+
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        'type': 'voice_command',
+                        'command': command
+                    }));
+                }
+            };
+        }
+    </script>
+</body>
+</html>

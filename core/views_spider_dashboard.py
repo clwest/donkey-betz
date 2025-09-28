@@ -18,7 +18,7 @@ def spider_network_data(request):
 
     # Import spider registry if available
     try:
-        from backend.spiders.spider_registry import SpiderRegistry
+        from ai_core.spiders.spider_registry import SpiderRegistry
         registry = SpiderRegistry()
         all_spiders = registry.list_spiders()
         spider_count = len(all_spiders)

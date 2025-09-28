@@ -11,8 +11,8 @@ import asyncio
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from backend.intelligence.income_builder import income_builder, UserProfile, SkillLevel
-from backend.intelligence.monetization_engine import monetization_engine
+from ai_core.intelligence.income_builder import income_builder, UserProfile, SkillLevel
+from ai_core.intelligence.monetization_engine import monetization_engine
 
 # Import the views we need to expose
 from intelligence.views import ExecuteActionPlanView, ViewGeneratedFileView

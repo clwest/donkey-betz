@@ -16,8 +16,8 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from backend.spiders.spider_army_orchestrator import SpiderArmyOrchestrator, SpiderTarget
-from backend.spiders.spider_registry import spider_registry
+from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator, SpiderTarget
+from ai_core.spiders.spider_registry import spider_registry
 
 # Configure logging
 logging.basicConfig(

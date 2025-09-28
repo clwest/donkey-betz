@@ -22,7 +22,7 @@ import json
 # Add path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.agents.ai_enforced_base import AIEnforcedAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 from advisors.registry import advisor_registry
 from core.llm_enforcer import get_llm_enforcer
 
@@ -507,7 +507,7 @@ def get_advisor_advice(advisor_name: str,
 if __name__ == "__main__":
     # Test the LLM advisor system
     import django
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
     django.setup()
 
     print("\n🧪 Testing LLM Advisor System\n")

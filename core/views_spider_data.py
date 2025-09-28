@@ -8,7 +8,7 @@ from django.core.paginator import Paginator
 import json
 
 from core.models_unified_system import SpiderData
-from backend.spiders.spider_registry import SpiderRegistry
+from ai_core.spiders.spider_registry import SpiderRegistry
 
 
 @require_http_methods(["GET"])

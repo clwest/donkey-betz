@@ -16,8 +16,8 @@ from .tools import ToolRegistry
 
 # Import project builder agents
 try:
-    from backend.agents.concrete_executor import concrete_executor
-    from backend.agents.project_builder_base import ProjectBuilderAgent, FullStackBuilderAgent
+    from ai_core.agents.concrete_executor import concrete_executor
+    from ai_core.agents.project_builder_base import ProjectBuilderAgent, FullStackBuilderAgent
 except ImportError as e:
     logger = logging.getLogger(__name__)
     logger.warning(f"Could not import project builder agents: {e}")
@@ -209,7 +209,7 @@ class ProjectBuilderOrchestrator:
             agent_type="backend_developer",
             task_description=f"Setup {project_spec.tech_stack['backend']} project structure",
             dependencies=["database"],
-            output_expected="backend/settings.py, requirements.txt",
+            output_expected="ai_core/settings.py, requirements.txt",
             phase=ProjectPhase.BACKEND_SETUP
         ))
 

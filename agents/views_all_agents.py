@@ -15,7 +15,7 @@ def list_all_concrete_agents(request):
     List all 152 agents from ConcreteAgentExecutor
     """
     try:
-        from backend.agents.concrete_executor import ConcreteAgentExecutor
+        from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 
         # Initialize the executor
         executor = ConcreteAgentExecutor()

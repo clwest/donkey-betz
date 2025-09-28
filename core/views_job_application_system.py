@@ -29,7 +29,7 @@ from .agent_context_middleware import (
     get_user_context_for_agent,
     calculate_opportunity_fit_score
 )
-from backend.agents.ai_enforced_base import AIEnforcedApplicationAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedApplicationAgent
 
 logger = logging.getLogger(__name__)
 

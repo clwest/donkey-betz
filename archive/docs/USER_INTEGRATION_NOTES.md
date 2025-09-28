@@ -109,7 +109,7 @@ class OpportunitiesConsumer(WebsocketConsumer):
 
 ### Current Implementation:
 ```python
-# /backend/intelligence/income_builder.py
+# /ai_core/intelligence/income_builder.py
 class AIIncomeBuilder:
     # Has ML pipeline and agent connections
     # But no user context!

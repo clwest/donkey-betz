@@ -8,7 +8,7 @@ import django
 from django.db import connection
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from agents.views_deployment_execute_improved import execute_agents_improved

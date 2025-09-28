@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Setup Django
-os.environ['DJANGO_SETTINGS_MODULE'] = 'backend.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'ai_core.settings'
 sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
 django.setup()
 
@@ -30,7 +30,7 @@ def check_spider_implementations():
 
     # Check spider registry
     try:
-        from backend.spiders.spider_registry import spider_registry
+        from ai_core.spiders.spider_registry import spider_registry
         registered = spider_registry.list_spiders()
 
         for name, info in registered.items():

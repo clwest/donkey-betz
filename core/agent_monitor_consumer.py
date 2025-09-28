@@ -52,7 +52,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
 
         # Try to get agent registry
         try:
-            from backend.agents.agent_registry import agent_registry
+            from ai_core.agents.agent_registry import agent_registry
             # Add all registered agents
             for agent_name, agent_config in agent_registry.agents.items():
                 # Check if agent has active tasks in Redis

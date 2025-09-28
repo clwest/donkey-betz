@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from backend.intelligence.proposal_manager import ProposalManager, ProposalStatus
+from ai_core.intelligence.proposal_manager import ProposalManager, ProposalStatus
 import json
 import logging
 
@@ -36,6 +36,38 @@ def approve_proposal(request):
         success = proposal_manager.approve_proposal(proposal_id, approver="user")
 
         if success:
+            # Trigger consciousness system to generate new proposals
+            try:
+                import redis
+                redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+                # Clear the consciousness cache to force regeneration of proposals
+                redis_client.delete('consciousness:ai_proposals')
+                redis_client.delete('consciousness:current_level')
+                logger.info(f"Triggered consciousness refresh after proposal {proposal_id} approval")
+
+                # Trigger immediate WebSocket update to all connected clients
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+
+                channel_layer = get_channel_layer()
+                if channel_layer:
+                    # Send update to consciousness stream
+                    async_to_sync(channel_layer.group_send)(
+                        'consciousness_stream',
+                        {
+                            'type': 'consciousness_update',
+                            'message': {
+                                'type': 'proposal_approved',
+                                'approved_proposal_id': proposal_id,
+                                'force_refresh': True
+                            }
+                        }
+                    )
+                    logger.info(f"Sent WebSocket update for proposal {proposal_id} approval")
+
+            except Exception as e:
+                logger.warning(f"Could not trigger consciousness refresh: {e}")
+
             # Optionally execute immediately for low-risk proposals
             proposal = proposal_manager.proposals.get(proposal_id)
             if proposal and proposal.risk_level.value == "low":
@@ -107,6 +139,10 @@ def get_proposals(request):
     """Get all pending proposals"""
     try:
         status_filter = request.GET.get('status', 'pending')
+
+        # Reload from Redis to get fresh data
+        proposal_manager.reload_from_redis()
+        logger.info(f"🔵 GET_PROPOSALS: Reloaded from Redis, have {len(proposal_manager.proposals)} proposals")
 
         if status_filter == 'pending':
             proposals = proposal_manager.get_pending_proposals()
@@ -211,6 +247,99 @@ def get_proposal_stats(request):
 
     except Exception as e:
         logger.error(f"Error getting proposal stats: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def save_consciousness_proposals(request):
+    """Save consciousness proposals to ProposalManager for persistence"""
+    try:
+        data = json.loads(request.body)
+        proposals = data.get('proposals', [])
+
+        if not proposals:
+            return JsonResponse({
+                'success': False,
+                'error': 'No proposals provided'
+            }, status=400)
+
+        # Reload from Redis to get current state
+        proposal_manager.reload_from_redis()
+
+        count = 0
+        for proposal_data in proposals:
+            # Convert consciousness proposal format to AIProposal format
+            from ai_core.intelligence.proposal_manager import AIProposal, ProposalStatus, ProposalRisk
+            from datetime import datetime
+            import hashlib
+
+            # Generate or use existing proposal ID
+            proposal_id = proposal_data.get('id') or hashlib.md5(
+                f"{proposal_data.get('title', '')}_{datetime.now().isoformat()}".encode()
+            ).hexdigest()[:8]
+
+            # Skip if proposal already exists in Redis (don't overwrite)
+            if proposal_id in proposal_manager.proposals:
+                logger.info(f"Proposal {proposal_id} already exists, skipping to preserve status")
+                continue
+
+            # Map complexity to estimated time
+            complexity = proposal_data.get('complexity', 5)
+            time_estimates = {
+                3: "15 minutes",
+                4: "30 minutes",
+                5: "1 hour",
+                6: "2 hours"
+            }
+            estimated_time = time_estimates.get(complexity, "1 hour")
+
+            # Create AIProposal instance
+            proposal = AIProposal(
+                id=proposal_id,
+                title=proposal_data.get('title', 'Consciousness Proposal'),
+                description=proposal_data.get('description', ''),
+                category=proposal_data.get('category', 'optimization'),
+                risk_level=ProposalRisk.MEDIUM,  # Default to medium
+                status=ProposalStatus.PENDING,
+                created_at=datetime.now(),
+                impact_score=proposal_data.get('impact', 5.0),
+                roi_estimate=proposal_data.get('roi', 3.0),
+                affected_components=proposal_data.get('affected_components', []),
+                dependencies=proposal_data.get('dependencies', []),
+                implementation_steps=proposal_data.get('implementation_steps', [
+                    'Analyze current state',
+                    'Implement improvements',
+                    'Test changes',
+                    'Monitor results'
+                ]),
+                estimated_time=estimated_time,
+                rollback_plan='Revert to previous configuration if issues arise',
+                evidence={
+                    'source': 'consciousness',
+                    'complexity': complexity
+                },
+                confidence_score=proposal_data.get('confidence', 0.85),
+                ai_reasoning='Generated by consciousness analysis system'
+            )
+
+            # Add to proposal manager and persist to Redis
+            proposal_manager.proposals[proposal_id] = proposal
+            proposal_manager._save_proposal(proposal)  # Persist to Redis
+            count += 1
+            logger.info(f"Saved consciousness proposal: {proposal_id} - {proposal.title}")
+
+        return JsonResponse({
+            'success': True,
+            'count': count,
+            'message': f'Saved {count} consciousness proposals'
+        })
+
+    except Exception as e:
+        logger.error(f"Error saving consciousness proposals: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)

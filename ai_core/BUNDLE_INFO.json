@@ -1,0 +1,18 @@
+{
+  "title": "Developer Productivity Bundle",
+  "price": "$49.99",
+  "value": "$150+",
+  "contents": [
+    "10 Premium Developer Prompts ($9.99 value)",
+    "Django REST API Starter Template ($19.99 value)",
+    "10 Python Automation Scripts ($29.99 value)",
+    "BONUS: Income Generation Guide ($19.99 value)"
+  ],
+  "created": "2025-09-27T23:14:20.090942",
+  "platforms": {
+    "Gumroad": "Best for quick setup",
+    "GitHub Sponsors": "For developer audience",
+    "Etsy": "For templates/digital products",
+    "Your own site": "Using Stripe (100% profit)"
+  }
+}

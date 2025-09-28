@@ -56,7 +56,7 @@ except Exception as e:
 
 # Import autonomous system consumer
 try:
-    from backend.consumers.autonomous_system_consumer import AutonomousSystemConsumer
+    from ai_core.consumers.autonomous_system_consumer import AutonomousSystemConsumer
 except ImportError:
     AutonomousSystemConsumer = None
 

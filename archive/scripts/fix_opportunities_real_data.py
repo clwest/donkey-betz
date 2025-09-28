@@ -23,17 +23,17 @@ from datetime import datetime
 
 def fix_opportunities_api():
     """Update opportunities API to use real spider data"""
-    api_file = project_root / 'backend/opportunities_api.py'
+    api_file = project_root / 'ai_core/opportunities_api.py'
 
     with open(api_file, 'r') as f:
         content = f.read()
 
     # Add import for live job scraper at the top with other imports
-    if 'from backend.spiders.live_job_scraper import scrape_jobs_sync' not in content:
+    if 'from ai_core.spiders.live_job_scraper import scrape_jobs_sync' not in content:
         # Find the imports section
         import_section_end = content.find('\nlogger = ')
         if import_section_end > 0:
-            new_import = "from backend.spiders.live_job_scraper import scrape_jobs_sync\n"
+            new_import = "from ai_core.spiders.live_job_scraper import scrape_jobs_sync\n"
             content = content[:import_section_end] + new_import + content[import_section_end:]
             print("✅ Added import for scrape_jobs_sync")
 
@@ -97,7 +97,7 @@ def generate_real_opportunities(count=20):
 
 def reduce_mock_fallbacks():
     """Reduce aggressive mock data fallbacks in spider"""
-    spider_file = project_root / 'backend/spiders/live_job_scraper.py'
+    spider_file = project_root / 'ai_core/spiders/live_job_scraper.py'
 
     with open(spider_file, 'r') as f:
         content = f.read()
@@ -141,8 +141,8 @@ sys.path.insert(0, str(project_root))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.spiders.live_job_scraper import scrape_jobs_sync
-from backend.opportunities_api import generate_real_opportunities, generate_enhanced_opportunities
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.opportunities_api import generate_real_opportunities, generate_enhanced_opportunities
 import json
 
 

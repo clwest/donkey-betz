@@ -33,7 +33,7 @@ The complete Spider-Agent Bridge System has been successfully implemented, creat
 ## 🏗️ Architecture Components
 
 ### 1. Spider Connector Orchestrator
-**File**: `/backend/spiders/spider_connector_orchestrator.py`
+**File**: `/ai_core/spiders/spider_connector_orchestrator.py`
 
 **Features**:
 - Coordinated spider activation in priority waves
@@ -56,7 +56,7 @@ status = orchestrator.get_orchestration_status()
 ```
 
 ### 2. Spider Data Router
-**File**: `/backend/spiders/spider_data_router.py`
+**File**: `/ai_core/spiders/spider_data_router.py`
 
 **Features**:
 - Intelligent routing tables mapping spiders → agents
@@ -78,7 +78,7 @@ status = orchestrator.get_orchestration_status()
 ```
 
 ### 3. Agent Data Receiver System
-**File**: `/backend/agents/spider_data_mixin.py`
+**File**: `/ai_core/agents/spider_data_mixin.py`
 
 **Features**:
 - Easy mixin integration for any agent
@@ -99,7 +99,7 @@ class YourAgent(SpiderDataMixin):
 ```
 
 ### 4. Management Commands
-**File**: `/backend/spiders/management/commands/activate_spider_agent_bridge.py`
+**File**: `/ai_core/spiders/management/commands/activate_spider_agent_bridge.py`
 
 **Commands**:
 ```bash
@@ -191,7 +191,7 @@ python test_spider_agent_bridge.py --agent content_marketplace_agent
 
 ### 3. Add Spider Intelligence to Existing Agents
 ```python
-from backend.agents.spider_data_mixin import enable_spider_data_for_agent
+from ai_core.agents.spider_data_mixin import enable_spider_data_for_agent
 
 # Enable for any existing agent
 enable_spider_data_for_agent(
@@ -288,7 +288,7 @@ subscription = AgentDataSubscription(
 ## 📁 File Structure
 
 ```
-backend/spiders/
+ai_core/spiders/
 ├── spider_connector_orchestrator.py     # Main orchestration system
 ├── spider_data_router.py               # Intelligent routing
 ├── agent_data_receiver.py              # Base receiver classes
@@ -300,7 +300,7 @@ backend/spiders/
     ├── guru_spider.py
     └── ... (all 13 spiders)
 
-backend/agents/
+ai_core/agents/
 ├── spider_data_mixin.py               # Easy integration mixin
 ├── content_marketplace_agent.py       # Enhanced with spider data
 ├── job_application_agent.py           # Enhanced with spider data

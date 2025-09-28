@@ -18,11 +18,11 @@ The Neural Orchestra feature at http://localhost:3000/neural-orchestra was desig
 2. **Routing Configuration**
    - Frontend route configured in `App.tsx` at `/neural-orchestra`
    - Sidebar navigation link active with "LIVE" badge
-   - WebSocket route defined in `backend/intelligence/routing.py`
+   - WebSocket route defined in `ai_core/intelligence/routing.py`
    - Consumer registered as `NeuralOrchestraConsumer`
 
 3. **WebSocket Infrastructure**
-   - `NeuralOrchestraConsumer` in `backend/intelligence/consumers.py`
+   - `NeuralOrchestraConsumer` in `ai_core/intelligence/consumers.py`
    - Periodic update loop sending orchestra state every 5 seconds
    - Message handlers for network state, workflow status, and agent details
    - WebSocket properly configured in ASGI application

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Unified Platform - Home{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 40px 20px; font-family: system-ui, -apple-system, sans-serif;">
+    <h1 style="color: #1a1a1a; margin-bottom: 10px;">🚀 Unified AI Platform</h1>
+    <p style="color: #666; margin-bottom: 40px;">Your intelligent automation ecosystem</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+
+        <!-- Main Dashboards -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white;">
+            <h2 style="margin-bottom: 10px;">🧠 Intelligence Dashboard</h2>
+            <p style="opacity: 0.9; margin-bottom: 20px;">Real-time system consciousness and agent orchestration</p>
+            <a href="/intelligence/" style="background: white; color: #667eea; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Dashboard</a>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; border-radius: 12px; color: white;">
+            <h2 style="margin-bottom: 10px;">🤖 AI Nexus</h2>
+            <p style="opacity: 0.9; margin-bottom: 20px;">Advanced AI control center with self-modification</p>
+            <a href="/ai-nexus/" style="background: white; color: #f5576c; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Nexus</a>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 12px; color: white;">
+            <h2 style="margin-bottom: 10px;">🎬 Content Studio</h2>
+            <p style="opacity: 0.9; margin-bottom: 20px;">AI-powered content generation and management</p>
+            <a href="/content-studio/" style="background: white; color: #4facfe; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Studio</a>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); padding: 20px; border-radius: 12px; color: white;">
+            <h2 style="margin-bottom: 10px;">🎯 Command Center</h2>
+            <p style="opacity: 0.9; margin-bottom: 20px;">Central command for all operations</p>
+            <a href="/command/" style="background: white; color: #43e97b; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Command</a>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 20px; border-radius: 12px; color: white;">
+            <h2 style="margin-bottom: 10px;">🏭 AI Production Hub</h2>
+            <p style="opacity: 0.9; margin-bottom: 20px;">Automated content and asset production</p>
+            <a href="/ai-production-hub/" style="background: white; color: #fa709a; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Hub</a>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 20px; border-radius: 12px; color: #333;">
+            <h2 style="margin-bottom: 10px;">⚽ Sports AI</h2>
+            <p style="opacity: 0.8; margin-bottom: 20px;">Sports betting analysis and predictions</p>
+            <a href="/sports/" style="background: #333; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Sports AI</a>
+        </div>
+
+        <!-- Admin & Tools -->
+        <div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 20px; border-radius: 12px; color: #333;">
+            <h2 style="margin-bottom: 10px;">⚙️ Admin Panel</h2>
+            <p style="opacity: 0.8; margin-bottom: 20px;">Django administration interface</p>
+            <a href="/admin/" style="background: #333; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Admin</a>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%); padding: 20px; border-radius: 12px; color: #333;">
+            <h2 style="margin-bottom: 10px;">🔧 Diagnostics</h2>
+            <p style="opacity: 0.8; margin-bottom: 20px;">System health and diagnostics</p>
+            <a href="/diagnostics/" style="background: #333; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">Open Diagnostics</a>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+        <h3 style="color: #333; margin-bottom: 15px;">📊 System Status</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <span style="color: #666;">Agents:</span>
+                <strong style="color: #333;">153 Active</strong>
+            </div>
+            <div>
+                <span style="color: #666;">Advisors:</span>
+                <strong style="color: #333;">25 Online</strong>
+            </div>
+            <div>
+                <span style="color: #666;">Spiders:</span>
+                <strong style="color: #333;">40 Registered</strong>
+            </div>
+            <div>
+                <span style="color: #666;">WebSocket:</span>
+                <strong style="color: #28a745;">Connected</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

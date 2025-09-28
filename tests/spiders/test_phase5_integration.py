@@ -24,22 +24,22 @@ from decimal import Decimal
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # Phase 5 imports
-from backend.spiders.opportunity_scorer import (
+from ai_core.spiders.opportunity_scorer import (
     OpportunityScorer, opportunity_scorer
 )
-from backend.spiders.auto_apply import (
+from ai_core.spiders.auto_apply import (
     AutoApplicationSystem, register_user_profile, process_user_opportunities,
     submit_user_applications, get_auto_application_stats, ProposalTemplate
 )
-from backend.spiders.revenue_tracker import (
+from ai_core.spiders.revenue_tracker import (
     RevenueTracker, create_project_revenue, record_payment,
     update_project_phase, get_revenue_insights, ProjectPhase
 )
-from backend.spiders.ab_testing import (
+from ai_core.spiders.ab_testing import (
     ABTestingFramework, create_ab_test, start_ab_test,
     assign_user_to_test, track_ab_conversion, get_ab_test_results
 )
-from backend.spiders.roi_calculator import (
+from ai_core.spiders.roi_calculator import (
     ROICalculator, calculate_overall_roi, add_system_cost,
     generate_comprehensive_roi_report, CostCategory
 )

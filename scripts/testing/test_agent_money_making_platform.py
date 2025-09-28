@@ -20,7 +20,7 @@ django.setup()
 
 from django.core.cache import cache
 from intelligence.unified_spider_job_bridge import UnifiedSpiderJobBridge
-from backend.agents.agent_work_platform import activate_agent_work_platform, get_agent_work_platform_status
+from ai_core.agents.agent_work_platform import activate_agent_work_platform, get_agent_work_platform_status
 
 class AgentMoneyMakingTest:
     """Test the complete money-making pipeline"""

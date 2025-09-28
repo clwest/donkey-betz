@@ -48,7 +48,7 @@ Frontend → Bridge → Spiders → Agents → WebSocket → Frontend
 ### Modified Integration Files
 - `core/unified_hub.py` - Now calls bridge.activate_full_pipeline()
 - `intelligence/agent_execution_pipeline.py` - Subscribes to bridge data
-- `backend/spiders/spider_army_orchestrator.py` - Publishes to bridge
+- `ai_core/spiders/spider_army_orchestrator.py` - Publishes to bridge
 
 ### Management & Testing
 - `core/management/commands/start_bridge.py` - Django command to start bridge

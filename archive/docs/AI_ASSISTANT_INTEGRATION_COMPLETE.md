@@ -64,7 +64,7 @@ Successfully implemented comprehensive AI Assistant integration with Enhanced Us
 
 ### Core System Files
 - `/core/personal_ai_assistant_enhanced.py` - Enhanced assistant with full profile integration
-- `/backend/agents/ai_enforced_base.py` - Base agent class with profile awareness
+- `/ai_core/agents/ai_enforced_base.py` - Base agent class with profile awareness
 - `/core/models.py` - EnhancedUserProfile and UserMemoryContext models
 
 ### Key Methods Added

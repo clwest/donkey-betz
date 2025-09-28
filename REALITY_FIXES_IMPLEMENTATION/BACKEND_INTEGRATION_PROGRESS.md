@@ -14,13 +14,13 @@
 - Added async `_find_opportunities_async()` for WebSockets
 - Added `spider_orchestrator` attribute for diagnostics
 - Spider data now flows through to WebSocket consumer
-- **Location**: `backend/intelligence/income_builder.py:705-755`
+- **Location**: `ai_core/intelligence/income_builder.py:705-755`
 
 #### 2. ✅ WebSocket Consumer Enhanced - WORKING
 - DecisionCommandConsumer now calls real spider data
 - `analyze_opportunities()` method enhanced to fetch real jobs
 - Real opportunities now marked with `spider_network` source
-- **Location**: `backend/intelligence/consumers.py:390-463`
+- **Location**: `ai_core/intelligence/consumers.py:390-463`
 
 #### 3. ✅ Spider Orchestrator Fixed - OPERATIONAL
 - Added synchronous wrapper `activate_job_spiders()`
@@ -32,13 +32,13 @@
   - Flexjobs (remote positions)
   - RemoteOK (remote opportunities)
   - PeoplePerHour (freelance gigs)
-- **Location**: `backend/spiders/spider_orchestrator.py:1181-1384`
+- **Location**: `ai_core/spiders/spider_orchestrator.py:1181-1384`
 
 #### 4. ✅ Spider Registry Issue - RESOLVED
-- Created `backend/spiders/spider_mock_data.py` as fallback
+- Created `ai_core/spiders/spider_mock_data.py` as fallback
 - Mock data provides realistic opportunities when spiders unavailable
 - System gracefully falls back to mock data
-- **Location**: `backend/spiders/spider_mock_data.py`
+- **Location**: `ai_core/spiders/spider_mock_data.py`
 
 #### 5. ✅ JSON Serialization - FIXED
 - Fixed IncomeOpportunity objects not being JSON serializable

@@ -16,8 +16,8 @@ django.setup()
 
 import asyncio
 import logging
-from backend.spiders.spider_registry import spider_registry
-from backend.spiders.base_spider import SpiderTarget
+from ai_core.spiders.spider_registry import spider_registry
+from ai_core.spiders.base_spider import SpiderTarget
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ async def test_spider_connectivity():
     print(f"\n🧪 Testing Financial Intelligence Spider...")
 
     try:
-        from backend.spiders.specialized.financial_spider import FinancialIntelligenceSpider
+        from ai_core.spiders.specialized.financial_spider import FinancialIntelligenceSpider
 
         targets = [SpiderTarget(url='https://finance.yahoo.com')]
         test_spider = FinancialIntelligenceSpider('test_financial', targets, [], {})

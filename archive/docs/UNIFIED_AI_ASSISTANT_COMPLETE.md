@@ -32,7 +32,7 @@ Added comprehensive memory types to `core/models.py`:
 - Plus many more!
 
 ### 4. Agent Integration ✅
-Updated `backend/agents/ai_enforced_base.py` with:
+Updated `ai_core/agents/ai_enforced_base.py` with:
 - `store_agent_memory()` - Agents store their actions/learnings
 - `get_assistant_context()` - Agents can see what Assistant knows
 - `get_other_agent_activities()` - Agents coordinate with each other
@@ -110,7 +110,7 @@ class UnifiedMemoryManager:
 - Includes agent activities in context when generating responses
 - Personalizes based on user profile and history
 
-### AI Enforced Agent Base (`backend/agents/ai_enforced_base.py`)
+### AI Enforced Agent Base (`ai_core/agents/ai_enforced_base.py`)
 - All agents inherit from this base class
 - Automatic memory management integration
 - Access to assistant context and other agent activities
@@ -147,7 +147,7 @@ response = assistant.process_message("What can you help me with?")
 
 ### For Agents
 ```python
-from backend.agents.ai_enforced_base import AIEnforcedAgent
+from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 
 class MyAgent(AIEnforcedAgent):
     async def execute(self, task):

@@ -50,7 +50,7 @@ Successfully activated dormant systems to bring platform from 30% to near 100% c
 
 1. **Start Django with WebSocket support**
    ```bash
-   daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+   daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
    ```
 
 2. **Monitor Agent Activity**

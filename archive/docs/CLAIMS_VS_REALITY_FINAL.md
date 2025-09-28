@@ -46,7 +46,7 @@
 - **ACTUAL:** Spider infrastructure exists but no real data collection
 - **VERDICT:** ❌ **CLAIM FALSE**
 - **Evidence:**
-  - ✅ 4 spider files found in `backend/spiders/`
+  - ✅ 4 spider files found in `ai_core/spiders/`
   - ✅ Real platform integration code exists
   - ❌ NO API keys configured for any platforms
   - ❌ Reddit: NOT_SET, Upwork: NOT_SET, etc.

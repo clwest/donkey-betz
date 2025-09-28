@@ -306,7 +306,7 @@ def select_agent_for_step(step_description, step_number):
 ```
 
 ### Agent Registry Connection
-**File:** `backend/intelligence/income_builder.py`
+**File:** `ai_core/intelligence/income_builder.py`
 
 ```python
 # Imports are connected but not actively used
@@ -389,7 +389,7 @@ unified-donkey-betz/
 │   ├── tasks.py                   # Celery tasks & AI generation
 │   ├── models.py                  # ActionPlan model
 │   └── urls.py                    # URL routing
-├── backend/intelligence/
+├── ai_core/intelligence/
 │   └── income_builder.py          # Core business logic
 ├── content/
 │   └── ai_providers.py            # AI integration layer

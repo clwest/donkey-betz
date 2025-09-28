@@ -16,7 +16,7 @@ When you read this, you'll be picking up the torch to complete the AI Nexus inte
 ### What's Working:
 - ✅ **WebSocket Connection**: Stable at `ws://localhost:8000/ws/command-center-ai/`
 - ✅ **Real AI Integration**: OpenAI/Anthropic connected via `core/llm_enforcer.py`
-- ✅ **149+ Agents**: Ready in `backend/agents/`
+- ✅ **149+ Agents**: Ready in `ai_core/agents/`
 - ✅ **25+ Advisors**: Warren Buffett, Elon Musk, Cathie Wood, etc.
 - ✅ **1,790 Spiders**: Deployed in Redis but DORMANT (not gathering data)
 - ✅ **Test Interface**: `test_ai_nexus.html` works perfectly
@@ -116,7 +116,7 @@ class RevenueOpportunityDetector:
 **Key insight**: Agents exist but don't talk to each other!
 
 **Files to modify**:
-- `backend/agents/unified_agent_template.py`
+- `ai_core/agents/unified_agent_template.py`
 - `core/command_center_ai.py`
 
 **Implementation Strategy**:

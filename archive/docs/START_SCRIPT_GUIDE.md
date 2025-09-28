@@ -19,7 +19,7 @@ Your `start_ws_quick.sh` script has been **completely enhanced** with all the fi
 - ✅ Correct API token configured: `0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97`
 - ✅ Verifies backend is responding
 - ✅ Counts and displays available agents (should show 150!)
-- ✅ Logs output to `backend.log`
+- ✅ Logs output to `ai_core.log`
 
 ### 3. **Starts Frontend** ⚛️
 - ✅ Installs dependencies if needed
@@ -112,7 +112,7 @@ chmod +x start_ws_quick.sh
 ## 🔧 **Troubleshooting:**
 
 ### If agents don't show up:
-1. Check `backend.log` for errors
+1. Check `ai_core.log` for errors
 2. Verify token in script matches backend
 3. Run `python quick-api-test.py` to verify
 
@@ -124,7 +124,7 @@ chmod +x start_ws_quick.sh
 ### To view logs:
 ```bash
 # Backend logs
-tail -f backend.log
+tail -f ai_core.log
 
 # Frontend logs  
 tail -f frontend.log

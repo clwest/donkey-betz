@@ -60,7 +60,7 @@ def diagnostic_master_endpoint(request):
     try:
         # Try to import real spider orchestrator first
         try:
-            from backend.spiders.spider_orchestrator import activate_job_spiders
+            from ai_core.spiders.spider_orchestrator import activate_job_spiders
             import asyncio
 
             # Try to call it in various ways
@@ -77,7 +77,7 @@ def diagnostic_master_endpoint(request):
                 spider_data = activate_job_spiders()
         except Exception as e:
             # Fall back to mock data
-            from backend.spiders.spider_mock_data import activate_job_spiders_mock
+            from ai_core.spiders.spider_mock_data import activate_job_spiders_mock
             spider_data = activate_job_spiders_mock({
                 'skills': ['Python', 'Django', 'React'],
                 'skill_level': 'intermediate',
@@ -100,7 +100,7 @@ def diagnostic_master_endpoint(request):
 
     # 2. Income Builder Diagnostics
     try:
-        from backend.intelligence.income_builder import AIIncomeBuilder
+        from ai_core.intelligence.income_builder import AIIncomeBuilder
         income_builder = AIIncomeBuilder()
 
         # Try to find real opportunities - handle different method signatures
@@ -133,7 +133,7 @@ def diagnostic_master_endpoint(request):
 
         # Last resort - use mock data
         if not opportunities:
-            from backend.spiders.spider_mock_data import get_mock_opportunities
+            from ai_core.spiders.spider_mock_data import get_mock_opportunities
             opportunities = get_mock_opportunities()
 
         # Convert opportunities to serializable format
@@ -171,7 +171,7 @@ def diagnostic_master_endpoint(request):
 
     # 3. Monetization Engine Diagnostics
     try:
-        from backend.intelligence.monetization_engine import UnifiedMonetizationEngine
+        from ai_core.intelligence.monetization_engine import UnifiedMonetizationEngine
         monetization = UnifiedMonetizationEngine()
 
         # Get current metrics
@@ -195,7 +195,7 @@ def diagnostic_master_endpoint(request):
 
     # 4. WebSocket Consumer Status
     try:
-        from backend.intelligence.consumers import DecisionCommandConsumer
+        from ai_core.intelligence.consumers import DecisionCommandConsumer
 
         diagnostics['websocket_consumers']['decision_command'] = {
             'class_loaded': True,
@@ -275,7 +275,7 @@ def diagnostic_master_endpoint(request):
 
         # Try to import from different possible locations
         try:
-            from backend.intelligence.agent_registry import get_all_agents
+            from ai_core.intelligence.agent_registry import get_all_agents
             agents = get_all_agents()
             agent_data['agents'] = agents[:5] if agents else []
             agent_data['total_agents'] = len(agents) if agents else 0
@@ -283,7 +283,7 @@ def diagnostic_master_endpoint(request):
             pass
 
         try:
-            from backend.intelligence.advisor_registry import get_all_advisors
+            from ai_core.intelligence.advisor_registry import get_all_advisors
             advisors = get_all_advisors()
             agent_data['advisors'] = advisors[:5] if advisors else []
             agent_data['total_advisors'] = len(advisors) if advisors else 0
@@ -437,7 +437,7 @@ def test_spider_network(request):
             'available_hours': 20
         })
 
-        from backend.spiders.spider_orchestrator import activate_job_spiders
+        from ai_core.spiders.spider_orchestrator import activate_job_spiders
         result = activate_job_spiders(user_profile=profile)
 
         return JsonResponse({
@@ -460,7 +460,7 @@ def test_income_builder(request):
     try:
         data = json.loads(request.body) if request.body else {}
 
-        from backend.intelligence.income_builder import AIIncomeBuilder
+        from ai_core.intelligence.income_builder import AIIncomeBuilder
         builder = AIIncomeBuilder()
 
         opportunities = builder.find_opportunities(

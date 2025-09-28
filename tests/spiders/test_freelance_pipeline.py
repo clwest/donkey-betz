@@ -17,9 +17,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 # Now import after Django setup
-from backend.spiders.freelance_opportunity_spider import FreelanceOpportunitySpider
-from backend.agents.freelance_job_analyzer import FreelanceJobAnalyzer
-from backend.agents.freelance_pipeline import FreelancePipeline
+from ai_core.spiders.freelance_opportunity_spider import FreelanceOpportunitySpider
+from ai_core.agents.freelance_job_analyzer import FreelanceJobAnalyzer
+from ai_core.agents.freelance_pipeline import FreelancePipeline
 
 
 async def test_complete_freelance_flow(real_mode: bool = False, dry_run: bool = True):

@@ -50,7 +50,7 @@ def master_ai_demo(request):
 def get_learning_stats(request):
     """API endpoint for real-time learning statistics - Updated 9/26/25 11:51 AM MST"""
 
-    from backend.agents.execution_tracker import execution_tracker
+    from ai_core.agents.execution_tracker import execution_tracker
 
     # Get comprehensive stats from the execution tracker
     stats = execution_tracker.get_comprehensive_stats()

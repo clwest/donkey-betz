@@ -54,7 +54,7 @@
    - Linked to AgentOrchestration/AgentExecution models
    - Integrated with revenue metrics and ML pipeline
 3. **Implementation Details**:
-   - Rewrote `NeuralOrchestraConsumer` in `/backend/intelligence/consumers.py`
+   - Rewrote `NeuralOrchestraConsumer` in `/ai_core/intelligence/consumers.py`
    - Added 6 new methods for real data retrieval
    - Implemented 5-second real-time update cycle
    - Created comprehensive test suite
@@ -200,7 +200,7 @@ tail -f logs/revenue.log
 ### Configuration:
 - `.env.sample` - Environment variables template
 - `/config/executor_config.json` - Agent executor configuration
-- `/backend/settings.py` - Django settings
+- `/ai_core/settings.py` - Django settings
 
 ### Frontend:
 - `/frontend/src/components/IncomeBuilder.tsx` - Main UI

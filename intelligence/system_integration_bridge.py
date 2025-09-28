@@ -22,7 +22,7 @@ from enum import Enum
 from channels.layers import get_channel_layer
 from django.conf import settings
 
-from backend.spiders.spider_army_orchestrator import SpiderArmyOrchestrator, SpiderTarget
+from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator, SpiderTarget
 from intelligence.agent_execution_pipeline import AgentExecutionPipeline
 # Avoid circular import - UnifiedWebSocketHub will import this module
 

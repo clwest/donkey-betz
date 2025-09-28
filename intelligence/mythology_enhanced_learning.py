@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
 
 # Import mythology systems
-from backend.agents.mythology_validator import MythologyValidator, MythologyEnforcer
+from ai_core.agents.mythology_validator import MythologyValidator, MythologyEnforcer
 from mythology.services import MythologyDetectionService, MythologyPreventionService
 
 # Import learning systems

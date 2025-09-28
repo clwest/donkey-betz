@@ -50,7 +50,7 @@
      - Projects → Updates EnhancedUserProfile.current_projects
 
 ### Agents → Memory
-1. **AIEnforcedAgent** (`backend/agents/ai_enforced_base.py`)
+1. **AIEnforcedAgent** (`ai_core/agents/ai_enforced_base.py`)
    - Line 205: Stores `agent_usage` memory when using Enhanced Profile
    - Automatically loads EnhancedUserProfile for personalization
    - Can read UserMemoryContext but rarely does

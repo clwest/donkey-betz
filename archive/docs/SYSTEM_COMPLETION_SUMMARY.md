@@ -27,7 +27,7 @@ The System Completion Orchestrator has successfully transformed the unified-donk
   - Success pattern recognition
 
 ### ✅ AI-Enforced Agent Base Classes
-- **Location**: `/backend/agents/ai_enforced_base.py`
+- **Location**: `/ai_core/agents/ai_enforced_base.py`
 - **Features**:
   - Enhanced `AIEnforcedAgent` with user context support
   - Specialized `AIEnforcedApplicationAgent` for job applications
@@ -94,7 +94,7 @@ The System Completion Orchestrator has successfully transformed the unified-donk
 ## 🔄 Agent Integration
 
 ### Updated Agents
-- **Job Application Agent** (`/backend/agents/job_application_agent.py`)
+- **Job Application Agent** (`/ai_core/agents/job_application_agent.py`)
   - Now inherits from `AIEnforcedApplicationAgent`
   - Uses user context for personalized applications
   - Generates context-aware cover letters

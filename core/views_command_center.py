@@ -35,7 +35,7 @@ try:
 except ImportError:
     UnifiedMemoryManager = None
 try:
-    from backend.agents.orchestrator import AgentOrchestrator
+    from ai_core.agents.orchestrator import AgentOrchestrator
 except ImportError:
     AgentOrchestrator = None
 try:

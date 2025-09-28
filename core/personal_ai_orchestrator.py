@@ -16,7 +16,7 @@ from channels.db import database_sync_to_async
 from core.models import UserProfile, UserPreferences, ConversationMemory
 from agents.registry import agent_registry
 from intelligence.income_builder import enhanced_income_builder
-from backend.intelligence.monetization_engine import monetization_engine
+from ai_core.intelligence.monetization_engine import monetization_engine
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

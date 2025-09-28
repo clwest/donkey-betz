@@ -19,7 +19,7 @@ After conducting a comprehensive audit of the Unified Donkey Betz Platform, I fo
 
 ### 1. Spider Network Assessment
 
-#### Live Job Scraper (`backend/spiders/live_job_scraper.py`)
+#### Live Job Scraper (`ai_core/spiders/live_job_scraper.py`)
 
 **Status:** 🟡 **PARTIALLY REAL** - Has real API integration with mock fallbacks
 
@@ -51,7 +51,7 @@ def scrape_remoteok(self) -> List[Dict]:
 - Line 177: `return self._generate_mock_jobs('github', 2)`
 - Line 337: `def _generate_mock_jobs(self, source: str, count: int)`
 
-#### Spider Army Orchestrator (`backend/spiders/spider_orchestrator.py`)
+#### Spider Army Orchestrator (`ai_core/spiders/spider_orchestrator.py`)
 
 **Status:** 🟢 **REAL INFRASTRUCTURE** - Properly designed for real data coordination
 
@@ -64,7 +64,7 @@ def scrape_remoteok(self) -> List[Dict]:
 
 **No Mock Data Detected:** This orchestrator is designed to route real data from spiders to agents.
 
-#### Specialized Spiders (`backend/spiders/specialized/`)
+#### Specialized Spiders (`ai_core/spiders/specialized/`)
 
 **Status:** 🟢 **REAL DATA FOCUSED** - Designed for real platform integration
 
@@ -150,7 +150,7 @@ async def _generate_blog_content(self, topic, outline, word_count):
 
 ### 3. Opportunities API Assessment
 
-#### Main API (`backend/opportunities_api.py`)
+#### Main API (`ai_core/opportunities_api.py`)
 
 **Status:** 🔴 **MOCK DATA PRIMARY** - Uses fake data generation as main source
 
@@ -209,20 +209,20 @@ The `opportunities_api.py` should import and use `scrape_jobs_sync()` but instea
 
 ### 1. Mock Data as Primary Source
 
-**Component:** `backend/opportunities_api.py`
+**Component:** `ai_core/opportunities_api.py`
 **Issue:** Uses `generate_enhanced_opportunities()` instead of real spider data
 **Impact:** Frontend receives fake job opportunities
 **Evidence:** Line 248 in `get_opportunities()` function
 
 ### 2. Undefined Real Data Function
 
-**Component:** `backend/opportunities_api.py`
+**Component:** `ai_core/opportunities_api.py`
 **Issue:** References `generate_real_opportunities()` which doesn't exist
 **Evidence:** Lines 284, 302, 382 call undefined function
 
 ### 3. Mock Data Fallbacks Too Aggressive
 
-**Component:** `backend/spiders/live_job_scraper.py`
+**Component:** `ai_core/spiders/live_job_scraper.py`
 **Issue:** Returns mock data on any API failure instead of retrying
 **Impact:** Spiders serve fake data when real APIs have temporary issues
 
@@ -254,7 +254,7 @@ The `opportunities_api.py` should import and use `scrape_jobs_sync()` but instea
 
 ### 1. Fix Opportunities API
 
-**File:** `backend/opportunities_api.py`
+**File:** `ai_core/opportunities_api.py`
 
 **Current (Line 248):**
 ```python
@@ -263,7 +263,7 @@ opportunities = generate_enhanced_opportunities(30, user_profile)
 
 **Fix:**
 ```python
-from backend.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 
 # In get_opportunities() function:
 try:
@@ -284,13 +284,13 @@ except Exception as e:
 
 ### 2. Implement Missing Function
 
-**File:** `backend/opportunities_api.py`
+**File:** `ai_core/opportunities_api.py`
 
 **Add:**
 ```python
 def generate_real_opportunities(count=20):
     """Get real opportunities from live spiders"""
-    from backend.spiders.live_job_scraper import scrape_jobs_sync
+    from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 
     try:
         real_jobs = scrape_jobs_sync()
@@ -302,7 +302,7 @@ def generate_real_opportunities(count=20):
 
 ### 3. Reduce Mock Data Fallbacks
 
-**File:** `backend/spiders/live_job_scraper.py`
+**File:** `ai_core/spiders/live_job_scraper.py`
 
 **Current Aggressive Fallback:**
 ```python
@@ -329,7 +329,7 @@ except Exception as e:
 ```bash
 cd /Users/donkeyking/development/unified-donkey-betz
 python -c "
-from backend.spiders.live_job_scraper import scrape_jobs_sync
+from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 jobs = scrape_jobs_sync()
 print(f'Found {len(jobs)} jobs')
 for job in jobs[:3]:

@@ -45,7 +45,7 @@ To get started with Poker Message, follow these installation instructions:
    ```
 
 2. **Setup the backend:**
-   - Navigate to the backend directory:
+   - Navigate to the ai_core directory:
      ```bash
      cd backend
      ```

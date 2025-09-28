@@ -28,7 +28,7 @@ Successfully restored critical integration gaps in the Unified Donkey Betz Platf
 **Issue:** Commented-out imports breaking Income Builder
 **Files Created/Modified:**
 - ✅ **NEW**: `/agents/registry.py` - Complete agent registry system
-- ✅ **FIXED**: `/backend/intelligence/income_builder.py` - Restored imports
+- ✅ **FIXED**: `/ai_core/intelligence/income_builder.py` - Restored imports
 
 **Solution Implemented:**
 ```python
@@ -76,7 +76,7 @@ from agents.registry import agent_registry  # INTEGRATION RESTORED
 
 **Issue:** Mock ML predictions (hardcoded 0.75)
 **Files Modified:**
-- ✅ **ENHANCED**: `/backend/intelligence/income_builder.py` - Real ML integration
+- ✅ **ENHANCED**: `/ai_core/intelligence/income_builder.py` - Real ML integration
 
 **Transformation:**
 ```python
@@ -112,7 +112,7 @@ class MLPipeline:
 
 **Issue:** Monetization engine operating in isolation
 **Files Modified:**
-- ✅ **ENHANCED**: `/backend/intelligence/monetization_engine.py`
+- ✅ **ENHANCED**: `/ai_core/intelligence/monetization_engine.py`
 
 **Integration Features Added:**
 - Agent-powered opportunity analysis
@@ -143,7 +143,7 @@ async def create_monetization_workflow(self, opportunity_id: str):
 
 **Issue:** New components not connected to memory system
 **Files Modified:**
-- ✅ **ENHANCED**: `/backend/intelligence/income_builder.py` - Memory context integration
+- ✅ **ENHANCED**: `/ai_core/intelligence/income_builder.py` - Memory context integration
 
 **Memory Integration Features:**
 - Semantic search for relevant context
@@ -222,14 +222,14 @@ async def _get_memory_context(self, user_profile, opportunities):
 ### Emergency Rollback Commands:
 ```bash
 # 1. Revert Income Builder to mock state
-git checkout HEAD~1 -- backend/intelligence/income_builder.py
+git checkout HEAD~1 -- ai_core/intelligence/income_builder.py
 
 # 2. Remove new registry files
 rm -f agents/registry.py
 rm -rf advisors/
 
 # 3. Revert Monetization Engine
-git checkout HEAD~1 -- backend/intelligence/monetization_engine.py
+git checkout HEAD~1 -- ai_core/intelligence/monetization_engine.py
 
 # 4. Remove test suite
 rm -f tests/integration/test_unified_integrations.py
@@ -239,7 +239,7 @@ rm -f tests/integration/test_unified_integrations.py
 ```bash
 # Verify system returns to pre-integration state
 python -c "
-from backend.intelligence.income_builder import AIIncomeBuilder
+from ai_core.intelligence.income_builder import AIIncomeBuilder
 builder = AIIncomeBuilder()
 print('Rollback successful' if not builder.integrations_active else 'Rollback failed')
 "

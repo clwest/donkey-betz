@@ -15,7 +15,7 @@ sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.spiders.lightweight_spider_system import (
+from ai_core.spiders.lightweight_spider_system import (
     create_lightweight_orchestrator,
     SportsOddsSpider,
     JobOpportunitySpider,

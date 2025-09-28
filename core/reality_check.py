@@ -348,7 +348,7 @@ class SystemRealityChecker:
             # Check if income builder module exists
             checks_performed.append("module_check")
             try:
-                import backend.intelligence.income_builder as ib_module
+                import ai_core.intelligence.income_builder as ib_module
                 details['module_found'] = True
 
                 # Check for real AI integration
@@ -1079,7 +1079,7 @@ class SystemRealityChecker:
             checks_performed.append("spider_modules_check")
             spider_paths = [
                 "/Users/donkeyking/development/unified-donkey-betz/spiders",
-                "/Users/donkeyking/development/unified-donkey-betz/backend/spiders"
+                "/Users/donkeyking/development/unified-donkey-betz/ai_core/spiders"
             ]
 
             has_spiders = False

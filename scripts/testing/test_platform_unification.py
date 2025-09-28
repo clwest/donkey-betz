@@ -22,7 +22,7 @@ import os
 
 # Add Django project to path
 sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
 import django
 django.setup()

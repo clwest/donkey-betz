@@ -1094,7 +1094,7 @@ def monitor_and_process_opportunities(self):
     """
     try:
         from .revenue_integration import RevenueIncomeIntegration
-        from backend.spiders.spider_network import SpiderNetwork
+        from ai_core.spiders.spider_network import SpiderNetwork
 
         logger.info("🔍 Monitoring for new revenue opportunities...")
 

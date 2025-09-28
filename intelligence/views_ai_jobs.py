@@ -91,7 +91,7 @@ class AIJobOpportunitiesView(View):
         if not jobs:
             # Try to scrape real jobs
             try:
-                from backend.spiders.live_job_scraper import scrape_jobs_sync
+                from ai_core.spiders.live_job_scraper import scrape_jobs_sync
                 jobs = scrape_jobs_sync()
 
                 # Cache for 30 minutes
@@ -143,7 +143,7 @@ class AIJobSpiderControlView(View):
 
         # Trigger real job scraping
         try:
-            from backend.spiders.live_job_scraper import scrape_jobs_sync
+            from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 
             # Clear cache to force fresh scrape
             cache.delete('live_jobs')

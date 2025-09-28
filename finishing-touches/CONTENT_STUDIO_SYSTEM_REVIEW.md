@@ -127,7 +127,7 @@ class ContentGenerationConsumer(AsyncWebsocketConsumer):
 
 ### Phase 4: Spider-to-Content Pipeline
 ```python
-# In backend/spiders/content_pipeline.py
+# In ai_core/spiders/content_pipeline.py
 class SpiderContentPipeline:
     def process_spider_data(self, spider_data):
         # Convert spider findings to content

@@ -24,7 +24,7 @@ from channels.testing import WebsocketCommunicator
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from django.urls import re_path
-from backend.intelligence.consumers import NeuralOrchestraConsumer
+from ai_core.intelligence.consumers import NeuralOrchestraConsumer
 
 # Test the real learning data integration
 async def test_neural_orchestra_reality():

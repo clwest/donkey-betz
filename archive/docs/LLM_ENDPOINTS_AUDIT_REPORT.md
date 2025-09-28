@@ -42,7 +42,7 @@ After comprehensive analysis of the unified-donkey-betz codebase, I've identifie
 
 ## ⚠️ Components Needing Verification
 
-### 1. **Opportunities API** (`backend/opportunities_api.py`)
+### 1. **Opportunities API** (`ai_core/opportunities_api.py`)
 - **Status**: ⚠️ MIXED
 - **Line 84-100**: Uses OpportunityAIAnalyzer when user_profile available
 - **Line 102-116**: Falls back to simulated data when no user profile
@@ -83,7 +83,7 @@ def _generate_conversational_question(self, state: InterviewState, context: Dict
 ### Priority 2: Ensure All Endpoints Use Real AI
 ```python
 # 2. Fix Opportunities API fallback
-# In backend/opportunities_api.py line 84
+# In ai_core/opportunities_api.py line 84
 # Always use analyzer with default profile:
 if not user_profile:
     user_profile = {

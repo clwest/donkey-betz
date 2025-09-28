@@ -14,7 +14,7 @@ from datetime import datetime
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from backend.agents.real_payment_processor import (
+from ai_core.agents.real_payment_processor import (
     real_payment_processor,
     create_client_payment_request,
     process_client_payment

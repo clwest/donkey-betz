@@ -16,7 +16,7 @@ Stop the current server and run Daphne manually:
 make unified-stop
 
 # Start Daphne with correct module
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 ```
 
 ### Solution 2: Fixed Make Command
@@ -29,7 +29,7 @@ unified-dev-ws: ## Start development with WebSocket support
 	@make unified-stop
 	@make _start-infrastructure
 	@echo "Starting Daphne..."
-	@daphne -b 0.0.0.0 -p 8000 backend.asgi:application &
+	@daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application &
 	@echo "Starting frontend..."
 	@cd frontend && npm run dev &
 	@wait
@@ -42,7 +42,7 @@ Edit your Makefile and change line 221 from:
 @cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) core.asgi:application 2>/dev/null || \
 
 # CORRECT:
-@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) backend.asgi:application 2>/dev/null || \
+@cd $(PWD) && $(ACTIVATE) && daphne -b 0.0.0.0 -p $(BACKEND_PORT) ai_core.asgi:application 2>/dev/null || \
 ```
 
 ## Testing WebSocket After Fix
@@ -69,12 +69,12 @@ This ensures proper startup sequence and health checks.
 ## Summary
 
 The issue is that `make unified-dev` is using Django's `runserver` instead of Daphne because:
-1. The Makefile has the wrong ASGI module path (`core.asgi` instead of `backend.asgi`)
+1. The Makefile has the wrong ASGI module path (`core.asgi` instead of `ai_core.asgi`)
 2. When Daphne fails, it silently falls back to runserver
 
 **Immediate fix:** Just run Daphne directly:
 ```bash
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 ```
 
 Your WebSockets will work immediately! 🚀

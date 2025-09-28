@@ -9,7 +9,7 @@ import django
 import openai
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.conf import settings

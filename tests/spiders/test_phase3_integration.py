@@ -20,22 +20,22 @@ from colorama import init, Fore, Style
 
 # Setup Django
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 
 import django
 django.setup()
 
 from django.core.cache import cache
-from backend.spiders.agent_router import AgentRouter, route_spider_data
-from backend.spiders.advisor_feed import AdvisorFeed, feed_advisors
-from backend.spiders.realtime_publisher import (
+from ai_core.spiders.agent_router import AgentRouter, route_spider_data
+from ai_core.spiders.advisor_feed import AdvisorFeed, feed_advisors
+from ai_core.spiders.realtime_publisher import (
     RealtimePublisher,
     broadcast_spider_discovery,
     broadcast_advisor_insight,
     get_broadcast_stats
 )
-from backend.spiders.real_job_spider import RealJobSpider
-from backend.spiders.specialized.financial_spider import FinancialIntelligenceSpider
+from ai_core.spiders.real_job_spider import RealJobSpider
+from ai_core.spiders.specialized.financial_spider import FinancialIntelligenceSpider
 
 # Initialize colorama
 init(autoreset=True)

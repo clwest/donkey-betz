@@ -25,7 +25,7 @@ Successfully extracted and migrated **39 TOTAL AGENTS** from all three source pr
 #### 1. donkey-betz-agent-orchestra
 **Location:** `/Users/donkeyking/development/donkey-betz-agent-orchestra`  
 **Agents Extracted:** 25 agents  
-**Source File:** `backend/agents/templates.py` (2,231 lines)
+**Source File:** `ai_core/agents/templates.py` (2,231 lines)
 
 **Key Agents Discovered:**
 - **Core Business Agents:** Research, Business, Content, Technical, Creative, Marketing, Financial, Communication, Legal, Career (10 agents)
@@ -39,7 +39,7 @@ Successfully extracted and migrated **39 TOTAL AGENTS** from all three source pr
 #### 2. donkey_betz (Core Project)
 **Location:** `/Users/donkeyking/development/donkey_betz`  
 **Agents Extracted:** 2 agents  
-**Source Files:** `backend/universal_builder/builder_agents.py`, `backend/agent_orchestra/models.py`
+**Source Files:** `ai_core/universal_builder/builder_agents.py`, `ai_core/agent_orchestra/models.py`
 
 **Key Agents Discovered:**
 - **Universal Builder Agent:** Complete application generation specialist
@@ -48,7 +48,7 @@ Successfully extracted and migrated **39 TOTAL AGENTS** from all three source pr
 #### 3. ai-content-studio
 **Location:** `/Users/donkeyking/development/ai-content-studio`  
 **Agents Extracted:** 5 agents  
-**Source Files:** `backend/agents/research_agent.py`, various service modules
+**Source Files:** `ai_core/agents/research_agent.py`, various service modules
 
 **Key Agents Discovered:**
 - **Research Agent:** Advanced research with real-time data access
@@ -151,7 +151,7 @@ Successfully extracted and migrated **39 TOTAL AGENTS** from all three source pr
 ### Comprehensive Source Code Analysis Performed:
 
 1. **donkey-betz-agent-orchestra:** ✅ Complete extraction from `templates.py`
-2. **donkey_betz:** ✅ Searched all backend modules, extracted builder agents  
+2. **donkey_betz:** ✅ Searched all AI Core modules, extracted builder agents  
 3. **ai-content-studio:** ✅ Extracted all research and content agents
 4. **Additional Projects:** ✅ Searched donkey_betz_world, donkey_betz_empire - no additional agents found
 

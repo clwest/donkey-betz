@@ -67,7 +67,7 @@ async def test_llm_enforcer():
 
 async def test_job_application_agent():
     """Test that job application agent uses real AI"""
-    from backend.agents.job_application_agent import JobApplicationAgent
+    from ai_core.agents.job_application_agent import JobApplicationAgent
 
     print("\n" + "="*60)
     print("🔍 TESTING JOB APPLICATION AGENT")
@@ -110,7 +110,7 @@ async def test_job_application_agent():
 
 async def test_content_marketplace_agent():
     """Test that content marketplace agent uses real AI"""
-    from backend.agents.content_marketplace_agent import ContentMarketplaceAgent
+    from ai_core.agents.content_marketplace_agent import ContentMarketplaceAgent
 
     print("\n" + "="*60)
     print("🔍 TESTING CONTENT MARKETPLACE AGENT")
@@ -147,7 +147,7 @@ async def test_content_marketplace_agent():
 
 async def test_real_content_creator():
     """Test that real content creator uses OpenAI"""
-    from backend.agents.real_content_creator import RealContentCreatorAgent
+    from ai_core.agents.real_content_creator import RealContentCreatorAgent
 
     print("\n" + "="*60)
     print("🔍 TESTING REAL CONTENT CREATOR")
@@ -180,7 +180,7 @@ async def test_real_content_creator():
 
 async def test_job_orchestrator():
     """Test job application orchestrator"""
-    from backend.agents.job_application_orchestrator import JobApplicationOrchestrator
+    from ai_core.agents.job_application_orchestrator import JobApplicationOrchestrator
 
     print("\n" + "="*60)
     print("🔍 TESTING JOB APPLICATION ORCHESTRATOR")
@@ -225,7 +225,7 @@ async def test_job_orchestrator():
 
 async def test_ai_enforced_base():
     """Test the AI enforced base class"""
-    from backend.agents.ai_enforced_base import ExampleConvertedAgent
+    from ai_core.agents.ai_enforced_base import ExampleConvertedAgent
 
     print("\n" + "="*60)
     print("🔍 TESTING AI ENFORCED BASE CLASS")

@@ -20,8 +20,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
 # Import spider components
-from backend.spiders.spider_registry import spider_registry
-from backend.spiders.base_spider import SpiderTarget
+from ai_core.spiders.spider_registry import spider_registry
+from ai_core.spiders.base_spider import SpiderTarget
 
 logging.basicConfig(
     level=logging.INFO,

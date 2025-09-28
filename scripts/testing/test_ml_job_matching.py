@@ -11,11 +11,11 @@ import asyncio
 from datetime import datetime
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
-from backend.agents.intelligent_job_matcher import IntelligentJobMatcher
+from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 from ml_pipeline.enhanced_ml_pipeline import EnhancedMLPipeline
 
 

@@ -32,7 +32,7 @@ The platform maintains approximately **85% real functionality** with **15% intel
 ## 🧠 CORE INFRASTRUCTURE (100% Real)
 
 ### PostgreSQL with pgvector
-- **File**: `/backend/settings.py` (lines 131-152)
+- **File**: `/ai_core/settings.py` (lines 131-152)
 - **Status**: ✅ Fully configured with connection pooling
 - **Features**: Vector similarity search, embeddings storage, full-text search
 - **Models**: 30+ core models with UUID primary keys and audit trails
@@ -40,12 +40,12 @@ The platform maintains approximately **85% real functionality** with **15% intel
 ### Redis Caching System
 - **Configuration**: 4 separate Redis databases for different purposes
 - **Files**:
-  - Settings: `/backend/settings.py` (lines 422-453)
+  - Settings: `/ai_core/settings.py` (lines 422-453)
   - Key patterns: `REDIS_KEY_PATTERNS` for organized namespace
 - **Status**: ✅ Production ready with failover support
 
 ### WebSocket Infrastructure
-- **ASGI Application**: `/backend/asgi.py`
+- **ASGI Application**: `/ai_core/asgi.py`
 - **Routing**: `/core/routing.py` - 50+ WebSocket endpoints
 - **Consumers**: 10+ specialized consumers across modules
 - **Status**: ✅ Fully functional with token authentication
@@ -153,12 +153,12 @@ The platform maintains approximately **85% real functionality** with **15% intel
 ## 🕷️ SPIDER NETWORK (40 Spiders: 6 Real, 34 Intelligent Mocks)
 
 ### Spider Orchestrator
-- **File**: `/backend/spiders/spider_army_orchestrator.py`
+- **File**: `/ai_core/spiders/spider_army_orchestrator.py`
 - **Status**: ✅ Fully functional orchestration system
 - **Features**: Load balancing, error recovery, rate limiting
 
 ### Spider Registry
-- **File**: `/backend/spiders/spider_registry.py`
+- **File**: `/ai_core/spiders/spider_registry.py`
 - **Total Spiders**: 40 registered spiders across categories
 - **Real Spiders**: 6 fully implemented
 - **Categories**: Financial, Innovation, Social, Market, News, Freelance, Content
@@ -440,7 +440,7 @@ GET  /api/v1/video/gallery/                 # Video gallery
 
 ```
 unified-donkey-betz/
-├── backend/                    # Django backend configuration
+├── ai_core/                    # Django backend configuration
 │   ├── settings.py            # Main Django settings
 │   ├── urls.py                # Root URL configuration
 │   ├── asgi.py                # ASGI application for WebSockets
@@ -508,7 +508,7 @@ python manage.py createsuperuser
 python manage.py runserver 8000
 
 # Start WebSocket server (if needed separately)
-daphne backend.asgi:application -p 8001
+daphne ai_core.asgi:application -p 8001
 ```
 
 ### Starting the Frontend

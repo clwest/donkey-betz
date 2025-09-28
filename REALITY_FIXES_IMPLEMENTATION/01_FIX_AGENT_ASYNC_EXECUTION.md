@@ -21,7 +21,7 @@ AttributeError: 'ConcreteAgentExecutor' object has no attribute 'execute'
 
 ### Step 1: Understand the Correct Method Signatures
 
-**Location:** `/backend/agents/concrete_executor.py`
+**Location:** `/ai_core/agents/concrete_executor.py`
 
 **Available Methods:**
 ```python
@@ -33,7 +33,7 @@ async def execute_income_agent(agent_name: str, income_request: Dict[str, Any], 
 
 ### Step 2: Create Synchronous Wrapper Functions
 
-**File to Create:** `/backend/agents/sync_executor.py`
+**File to Create:** `/ai_core/agents/sync_executor.py`
 
 ```python
 """
@@ -44,7 +44,7 @@ This allows synchronous code to call async agents
 
 import asyncio
 from typing import Dict, Any, Optional
-from backend.agents.concrete_executor import ConcreteAgentExecutor
+from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 
 class SyncAgentExecutor:
     """Synchronous wrapper for async agent execution"""
@@ -124,7 +124,7 @@ pip install nest_asyncio
 
 ### Step 4: Update Direct Execution Helper
 
-**File to Update:** `/backend/agents/concrete_executor.py`
+**File to Update:** `/ai_core/agents/concrete_executor.py`
 
 Add this at the bottom:
 
@@ -134,7 +134,7 @@ def execute_agent_sync(agent_name: str, task_description: str, context: Dict = N
     Synchronous wrapper for agent execution
     Use this when calling from non-async code
     """
-    from backend.agents.sync_executor import SyncAgentExecutor
+    from ai_core.agents.sync_executor import SyncAgentExecutor
     sync_executor = SyncAgentExecutor()
     return sync_executor.execute(agent_name, task_description, context)
 ```
@@ -151,10 +151,10 @@ import os
 import sys
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
-from backend.agents.sync_executor import SyncAgentExecutor
+from ai_core.agents.sync_executor import SyncAgentExecutor
 
 def test_execution():
     print("\n" + "="*60)

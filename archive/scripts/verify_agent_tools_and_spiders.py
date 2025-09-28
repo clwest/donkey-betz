@@ -148,7 +148,7 @@ class AgentCapabilityVerifier:
         # Check for job spiders
         spider_paths = [
             'intelligence/spiders/spider_army/spiders/real_estate_spider.py',
-            'backend/agents/real_client_acquisition.py'
+            'ai_core/agents/real_client_acquisition.py'
         ]
 
         for path in spider_paths:

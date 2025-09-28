@@ -14,7 +14,7 @@ project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.append(project_path)
 
 # Django setup
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 import django
 django.setup()
 

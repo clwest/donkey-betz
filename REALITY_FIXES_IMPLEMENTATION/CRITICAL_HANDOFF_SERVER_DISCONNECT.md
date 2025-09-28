@@ -88,10 +88,10 @@ When the user asks you to:
 ```
 Project Structure:
 /Users/donkeyking/development/unified-donkey-betz/
-├── backend/          # Django backend with all the APIs
+├── ai_core/          # Django backend with all the APIs
 ├── core/            # Core views and URLs
 ├── scripts/         # Shell scripts (moved here during cleanup)
-├── manage.py        # Django management (in root, not backend/)
+├── manage.py        # Django management (in root, not ai_core/)
 └── Makefile         # Has the actual commands that work
 ```
 

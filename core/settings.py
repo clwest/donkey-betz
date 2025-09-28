@@ -76,16 +76,16 @@ INSTALLED_APPS = [
     # 'memory',                  # Unified Memory System
     'agents',                  # Agent Registry & Orchestration
     # 'ai_services',            # Multi-Provider AI Interface
-    'backend.spiders',         # Spider Army System
-    'backend',                 # Backend app for implementation tracking
-    'backend.intelligence',   # Intelligence & Learning System
+    'ai_core.spiders',         # Spider Army System
+    'ai_core',                 # AI Core app for agents, spiders, intelligence
+    'ai_core.intelligence',   # Intelligence & Learning System
     'sports',                 # Sports Analytics Engine
     'content',                # Content Generation System
     'persistence',            # Data Persistence Infrastructure (NEW)
     'self_awareness',         # Code Introspection & Self-Modification
     'style_memory',           # Style Memory System
     'dashboard',              # Dashboard API endpoints
-    'campaigns',              # Campaign management
+    # 'campaigns',              # Campaign management (archived)
     'workflows',              # Workflow management
     'mythology',              # Mythology detection and prevention system
     'ai_opportunities',       # AI Project Generation & Storage
@@ -140,32 +140,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 ASGI_APPLICATION = 'core.asgi.application'
 
-# Production-Grade Channels Configuration
+# Production-Grade Channels Configuration - SIMPLIFIED
 try:
     import channels_redis
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                'hosts': [{
-                    'address': os.environ.get('REDIS_CHANNELS_URL', 'redis://localhost:6379/3'),
-                    'options': {
-                        'connection_pool_kwargs': {
-                            'max_connections': 50,
-                            'socket_connect_timeout': 5,
-                            'socket_timeout': 5,
-                            'socket_keepalive': True,
-                            'socket_keepalive_options': {},
-                            'retry_on_timeout': True,
-                            'health_check_interval': 30,
-                        },
-                        'decode_responses': True,
-                    }
-                }],
-                'capacity': 500,  # Increased for production
-                'expiry': 300,     # 5 minutes for production stability
-                'group_expiry': 86400,  # 24 hours
-                'symmetric_encryption_keys': [SECRET_KEY],
+                'hosts': [('localhost', 6379)],  # Simple configuration
             },
         },
     }
@@ -464,6 +446,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom User Model
 AUTH_USER_MODEL = 'core.UnifiedUser'
 
+# Authentication URLs
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/intelligence/'
+LOGOUT_REDIRECT_URL = '/'
+
 # Development Tools
 if DEBUG:
     ENABLE_DEBUG_TOOLBAR = os.environ.get('ENABLE_DEBUG_TOOLBAR', 'True') == 'True'
@@ -757,3 +744,65 @@ if env_bool('VALIDATE_ENVIRONMENT', not DEBUG):
             raise ImproperlyConfigured(
                 "Security validation failed. Please fix the errors above."
             )
+
+# =============================================================================
+# ADDITIONAL SETTINGS FROM BACKEND/SETTINGS.PY
+# =============================================================================
+
+# Environment indicator
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development' if DEBUG else 'production')
+
+# Agent System Configuration
+AGENT_SYSTEM = {
+    'ENABLED': os.environ.get('AGENT_SYSTEM_ENABLED', 'True') == 'True',
+    'MAX_AGENTS': int(os.environ.get('MAX_AGENTS', '100')),
+    'AGENT_TIMEOUT': int(os.environ.get('AGENT_TIMEOUT', '30')),
+}
+
+# Sports API Keys
+SPORTRADAR_API_KEY = os.environ.get('SPORTRADAR_API_KEY', '')
+SPORTSDB_API_KEY = os.environ.get('SPORTSDB_API_KEY', '')
+THE_ODDS_API_KEY = os.environ.get('THE_ODDS_API_KEY', '')
+ODDS_API_KEY = os.environ.get('ODDS_API_KEY', '')
+WEATHER_API_KEY = os.environ.get('WEATHER_API_KEY', '')
+
+# API Rate Limits
+API_RATE_LIMITS = {
+    'DEFAULT': '100/hour',
+    'AUTHENTICATED': '1000/hour',
+    'PREMIUM': '10000/hour',
+}
+
+# Additional Redis Configuration
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+
+# Redis key patterns for caching
+REDIS_KEY_PATTERNS = {
+    'agents': 'agents:*',
+    'sports': 'sports:*',
+    'content': 'content:*',
+    'ml': 'ml:*',
+}
+
+# Celery Task Routing
+CELERY_TASK_ROUTES = {
+    'agents.*': {'queue': 'agents'},
+    'sports.*': {'queue': 'sports'},
+    'content.*': {'queue': 'content'},
+    'ml.*': {'queue': 'ml'},
+}
+
+# Celery Worker Settings
+CELERY_WORKER_CONCURRENCY = int(os.environ.get('CELERY_WORKER_CONCURRENCY', '4'))
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# DRF Spectacular Settings for API Documentation
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Unified Donkey Betz API',
+    'DESCRIPTION': 'Unified Platform API for Sports Analytics, AI Agents, and Content Generation',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}

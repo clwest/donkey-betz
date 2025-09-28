@@ -27,7 +27,7 @@
 ### Step 2: Start with Daphne for WebSocket Support
 ```bash
 # Option A: Direct Daphne command
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 
 # Option B: Use helper script
 python start_with_websocket.py
@@ -77,7 +77,7 @@ cd /Users/donkeyking/development/unified-donkey-betz
 pkill -f "python manage.py runserver"
 
 # 3. Start with Daphne (REQUIRED for WebSocket)
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 
 # 4. In new terminal, run fixed activation
 python activate_full_system_fixed.py
@@ -112,7 +112,7 @@ python generate_personalized_project.py
 **You MUST use Daphne, not runserver, for WebSockets to work!**
 
 The command `python manage.py runserver` does NOT properly support WebSockets.
-Use: `daphne -b 0.0.0.0 -p 8000 backend.asgi:application`
+Use: `daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application`
 
 ---
 

@@ -302,7 +302,7 @@ The diagnostic system verifies these integration points:
 ## 🛠️ ADVANCED DEBUGGING
 
 ### Enable Verbose Logging
-Add to `backend/settings.py`:
+Add to `ai_core/settings.py`:
 ```python
 LOGGING = {
     'version': 1,
@@ -335,7 +335,7 @@ tail -f debug.log  # If file logging is enabled
 # Django shell testing:
 python manage.py shell
 
-from backend.intelligence.income_builder import AIIncomeBuilder
+from ai_core.intelligence.income_builder import AIIncomeBuilder
 builder = AIIncomeBuilder()
 opportunities = builder.find_opportunities(
     skills=['Python'],

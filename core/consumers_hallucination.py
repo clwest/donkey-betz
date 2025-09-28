@@ -6,7 +6,7 @@ import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from datetime import datetime
 import redis.asyncio as redis
-from backend.agents.mythology_validator import mythology_enforcer
+from ai_core.agents.mythology_validator import mythology_enforcer
 from mythology.services import MythologyDetectionService
 
 

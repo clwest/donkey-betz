@@ -7,7 +7,7 @@
 1. **13 Live Spiders** collecting real-time data
    - Market data, job opportunities, news, etc.
    - Publishing to Redis channels: `intelligence:*`
-   - Located in: `/backend/spiders/specialized/`
+   - Located in: `/ai_core/spiders/specialized/`
 
 2. **AI Job Matcher** (`/intelligence/ai_job_matcher.py`)
    - Identifies AI-completable jobs
@@ -128,7 +128,7 @@ def integrate_ai_job_pipeline(self):
 
 #### Step 3: Wire Up Job Application Agent
 ```python
-# Modify: /backend/agents/job_application_agent.py
+# Modify: /ai_core/agents/job_application_agent.py
 
 from intelligence.ai_job_matcher import AIJobMatcher
 from intelligence.ai_resume_generator import AIResumeGenerator

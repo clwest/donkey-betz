@@ -29,7 +29,7 @@
 **IMMEDIATE:** The system shows `No route found for path 'ws/command-center/'`
 
 **Action Required:**
-1. Add WebSocket route in `backend/core/routing.py`:
+1. Add WebSocket route in `ai_core/core/routing.py`:
 ```python
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.urls import path

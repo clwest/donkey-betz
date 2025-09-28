@@ -2,7 +2,7 @@
 
 ## Project Description
 
-test_todo_app is a simple todo list application that allows users to create, complete, and delete tasks. It is built using a modern tech stack consisting of React for the frontend and Node.js for the backend. This app aims to provide a straightforward interface for managing daily tasks, enhancing productivity and organization.
+test_todo_app is a simple todo list application that allows users to create, complete, and delete tasks. It is built using a modern tech stack consisting of React for the frontend and Node.js for the ai_core. This app aims to provide a straightforward interface for managing daily tasks, enhancing productivity and organization.
 
 ## Tech Stack
 
@@ -37,7 +37,7 @@ Ensure you have the following installed:
 
 2. **Install backend dependencies**:
 
-   Navigate to the backend directory and install the necessary packages.
+   Navigate to the ai_core directory and install the necessary packages.
 
    ```bash
    cd backend

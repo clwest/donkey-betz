@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Django setup
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 import django
 django.setup()
 

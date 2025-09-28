@@ -22,7 +22,7 @@ Both components are already coded and waiting to be activated!
   - Viral content detection
   - Caching for performance
 
-#### 2. SocialSentimentSpider (`/backend/spiders/specialized/social_spider.py`)
+#### 2. SocialSentimentSpider (`/ai_core/spiders/specialized/social_spider.py`)
 - **Status**: Fully implemented spider for social intelligence
 - **Target Subreddits**:
   - wallstreetbets
@@ -168,7 +168,7 @@ print(results)
 ### 3. Deploy Reddit Spider
 ```python
 # Spider will auto-deploy when credentials are set
-from backend.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
+from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
 orchestrator = SpiderArmyOrchestrator()
 orchestrator.deploy_spider('reddit_sentiment')
 ```

@@ -111,7 +111,7 @@ BLUESKY_PASSWORD=your_bluesky_password
 
 ### Step 3: Update Configuration Files
 
-**File:** `/backend/settings.py`
+**File:** `/ai_core/settings.py`
 
 Add to settings:
 
@@ -128,7 +128,7 @@ COINGECKO_API_KEY = os.getenv('COINGECKO_API_KEY', '')
 
 ### Step 4: Update Spider Configurations
 
-**File:** `/backend/spiders/market_data_spider.py`
+**File:** `/ai_core/spiders/market_data_spider.py`
 
 ```python
 class MarketDataSpider:

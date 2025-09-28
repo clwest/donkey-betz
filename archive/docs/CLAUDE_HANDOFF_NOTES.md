@@ -64,7 +64,7 @@ Check these files for potential issues:
 tail -f frontend.log
 
 # Check backend logs
-tail -f backend.log
+tail -f ai_core.log
 
 # Quick API test
 python quick-api-test.py

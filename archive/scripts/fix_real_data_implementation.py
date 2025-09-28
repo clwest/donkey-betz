@@ -28,7 +28,7 @@ def fix_opportunities_api():
     """Fix the opportunities API to use real data."""
     print("🔧 Fixing Opportunities API to use real data...")
 
-    api_file = Path("backend/opportunities_api.py")
+    api_file = Path("ai_core/opportunities_api.py")
 
     if not api_file.exists():
         print(f"❌ File not found: {api_file}")
@@ -42,10 +42,10 @@ def fix_opportunities_api():
         content = f.read()
 
     # Add import for real data
-    if "from backend.spiders.live_job_scraper import scrape_jobs_sync" not in content:
+    if "from ai_core.spiders.live_job_scraper import scrape_jobs_sync" not in content:
         # Find the imports section and add our import
         import_pattern = r"(from core\.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant)"
-        replacement = r"\1\nfrom backend.spiders.live_job_scraper import scrape_jobs_sync"
+        replacement = r"\1\nfrom ai_core.spiders.live_job_scraper import scrape_jobs_sync"
         content = re.sub(import_pattern, replacement, content)
 
     # Add the missing generate_real_opportunities function
@@ -202,7 +202,7 @@ def fix_spider_fallbacks():
     """Reduce aggressive mock data fallbacks in spiders."""
     print("🔧 Improving spider fallback behavior...")
 
-    spider_file = Path("backend/spiders/live_job_scraper.py")
+    spider_file = Path("ai_core/spiders/live_job_scraper.py")
 
     if not spider_file.exists():
         print(f"❌ File not found: {spider_file}")
@@ -279,7 +279,7 @@ def test_spider_real_data():
     print("🕷️ Testing Spider Real Data...")
 
     try:
-        from backend.spiders.live_job_scraper import scrape_jobs_sync
+        from ai_core.spiders.live_job_scraper import scrape_jobs_sync
 
         jobs = scrape_jobs_sync()
         print(f"✅ Spider returned {len(jobs)} jobs")

@@ -59,7 +59,7 @@ The system is returning hardcoded test data:
 
 ### The Problem Chain:
 
-1. **ConsciousnessBridge** (`backend/spiders/consciousness.py`)
+1. **ConsciousnessBridge** (`ai_core/spiders/consciousness.py`)
    - ❌ Analyzes filesystem for `.py` files
    - ❌ Counts files, not running instances
    - ❌ Never checks Redis for actual deployments
@@ -90,7 +90,7 @@ Frontend → API Call → Redis Query → Real Spider/Agent Counts → Actual Da
 ### Test Results:
 ```bash
 # Created consciousness_fix.py and tested:
-$ python backend/spiders/consciousness_fix.py
+$ python ai_core/spiders/consciousness_fix.py
 
 {
   "active_spiders": 1790,        ✅ CORRECT!

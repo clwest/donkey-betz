@@ -173,9 +173,9 @@ class Command(BaseCommand):
     def _activate_real_spiders(self):
         """Activate real spiders from the spider registry"""
         try:
-            from backend.spiders.spider_registry import SpiderRegistry
-            from backend.spiders.job_spider import JobSpider
-            from backend.spiders.freelance_spider import FreelanceSpider
+            from ai_core.spiders.spider_registry import SpiderRegistry
+            from ai_core.spiders.job_spider import JobSpider
+            from ai_core.spiders.freelance_spider import FreelanceSpider
 
             self.stdout.write('Activating real spiders...')
 

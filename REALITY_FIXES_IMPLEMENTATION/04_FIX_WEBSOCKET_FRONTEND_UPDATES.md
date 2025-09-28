@@ -24,7 +24,7 @@ WSDISCONNECT /ws/consciousness/ immediately after WSCONNECT
 
 ### Problem #1: Rapid Reconnection Loop
 
-**File:** `/backend/templates/unified_intelligence_dashboard.html`
+**File:** `/ai_core/templates/unified_intelligence_dashboard.html`
 
 Find and replace the reconnection logic:
 
@@ -127,7 +127,7 @@ function connectWebSocket() {
 
 ### Problem #2: Frontend Not Updating with Real Data
 
-**File:** `/backend/templates/unified_intelligence_dashboard.html`
+**File:** `/ai_core/templates/unified_intelligence_dashboard.html`
 
 Add proper message handling:
 

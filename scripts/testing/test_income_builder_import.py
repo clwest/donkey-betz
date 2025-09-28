@@ -6,7 +6,7 @@ import sys
 import django
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 try:
@@ -37,7 +37,7 @@ except ImportError as e:
 
     # Try alternative import
     try:
-        from backend.intelligence.income_builder import income_builder
+        from ai_core.intelligence.income_builder import income_builder
         print("✅ Alternative import worked: backend.intelligence.income_builder")
     except ImportError as e2:
         print(f"❌ Alternative import also failed: {e2}")

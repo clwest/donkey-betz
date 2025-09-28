@@ -45,7 +45,7 @@ make unified-dev
 # Terminal 1 - Backend with WebSocket support
 python manage.py runserver 8000
 # OR for full WebSocket support:
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application
+daphne -b 0.0.0.0 -p 8000 ai_core.asgi:application
 
 # Terminal 2 - Frontend
 cd frontend && npm run dev

@@ -8,7 +8,7 @@ import django
 from pathlib import Path
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from core.llm_enforcer import LLMEnforcer
