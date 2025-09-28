@@ -152,6 +152,8 @@ from core.views_user_profile import (
 from core.views_real_income_builder import (
     real_income_opportunities, analyze_real_opportunities
 )
+from core.views_income_builder import income_builder_view
+from core.views_neural_orchestra import neural_orchestra_view
 from core import views_portfolio
 from core.views_profile import (
     ExtendedProfileView, ProfileSkillsView, ProfileForApplicationView
@@ -313,6 +315,8 @@ urlpatterns = [
     path('ai-production-hub/', login_required(lambda request: render(request, 'ai_production_hub.html')), name='ai-production-hub'),
     path('command/', login_required(lambda request: render(request, 'command_center.html')), name='command-center'),
     path('diagnostics/', login_required(lambda request: render(request, 'diagnostic_dashboard.html')), name='diagnostics'),
+    path('income-builder/', income_builder_view, name='income-builder'),
+    path('neural-orchestra/', neural_orchestra_view, name='neural-orchestra'),
 
     # Authentication URLs
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

@@ -145,6 +145,11 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
 
     async def get_real_orchestra_data(self):
         """Get real orchestration data from active agents"""
+        # Call the database sync version
+        return await self.get_real_orchestra_data_from_db()
+
+    async def get_real_orchestra_data_old(self):
+        """Old implementation - kept for reference"""
         try:
             from ai_core.agents.real_job_simulator import real_job_simulator
             from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
@@ -386,7 +391,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
         }))
 
     @database_sync_to_async
-    def get_real_orchestra_data(self):
+    def get_real_orchestra_data_from_db(self):
         """Get real Neural Orchestra data with dynamic connections and workflows"""
         try:
             from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
