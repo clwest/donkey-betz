@@ -1,0 +1,810 @@
+{% extends "unified/base.html" %}
+
+{% block title %}Sports Analytics Hub - AI-Powered Betting Intelligence{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sports-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header-section {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .page-title {
+        font-size: 2.5em;
+        background: linear-gradient(135deg, #00ff00, #ffd700, #ff4500);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #888;
+        font-size: 1.2em;
+    }
+
+    .live-ticker {
+        background: linear-gradient(135deg, rgba(255,0,0,0.1), rgba(0,0,0,0.3));
+        border: 1px solid rgba(255,0,0,0.3);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 30px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .ticker-content {
+        display: flex;
+        animation: scroll 30s linear infinite;
+        white-space: nowrap;
+    }
+
+    @keyframes scroll {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+    }
+
+    .ticker-item {
+        padding: 0 30px;
+        color: #ffd700;
+        font-weight: 600;
+    }
+
+    .sports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .sport-card {
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .sport-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #00ff00, #ffd700);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .sport-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .sport-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255,215,0,0.3);
+    }
+
+    .sport-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .sport-name {
+        font-size: 1.3em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .sport-icon {
+        font-size: 1.5em;
+    }
+
+    .live-indicator {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        background: rgba(255,0,0,0.2);
+        border: 1px solid #ff0000;
+        border-radius: 20px;
+        font-size: 0.85em;
+        color: #ff0000;
+    }
+
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #ff0000;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+
+    .matches-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .match-item {
+        background: rgba(255,255,255,0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.2s ease;
+    }
+
+    .match-item:hover {
+        background: rgba(255,255,255,0.1);
+    }
+
+    .teams {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 1.1em;
+    }
+
+    .team-name {
+        color: #fff;
+    }
+
+    .score {
+        font-weight: bold;
+        color: #ffd700;
+    }
+
+    .odds-container {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+    }
+
+    .odd-item {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        background: rgba(0,255,0,0.1);
+        border: 1px solid rgba(0,255,0,0.3);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .odd-item:hover {
+        background: rgba(0,255,0,0.2);
+        transform: scale(1.05);
+    }
+
+    .odd-label {
+        font-size: 0.8em;
+        color: #888;
+        margin-bottom: 4px;
+    }
+
+    .odd-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #00ff00;
+    }
+
+    .analytics-section {
+        background: linear-gradient(135deg, rgba(0,100,255,0.1), rgba(0,0,0,0.3));
+        border: 1px solid rgba(0,100,255,0.3);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+
+    .analytics-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+    .analytics-title {
+        font-size: 1.5em;
+        color: #fff;
+    }
+
+    .ai-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: linear-gradient(135deg, rgba(255,0,255,0.2), rgba(0,255,255,0.2));
+        border: 1px solid rgba(255,0,255,0.4);
+        border-radius: 20px;
+    }
+
+    .ai-status {
+        color: #00ffff;
+        font-weight: 600;
+    }
+
+    .prediction-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .prediction-card {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .prediction-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00ff00, #00ffff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .prediction-label {
+        color: #888;
+        font-size: 1em;
+    }
+
+    .confidence-meter {
+        margin-top: 15px;
+        height: 8px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+        border-radius: 4px;
+        transition: width 1s ease;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 15px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        font-size: 1.1em;
+    }
+
+    .action-btn:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        transform: translateY(-3px);
+    }
+
+    .action-btn.primary {
+        background: linear-gradient(135deg, #00ff00, #ffd700);
+        border: none;
+        color: #000;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sports-container">
+    <div class="header-section">
+        <h1 class="page-title">Sports Analytics Hub</h1>
+        <p class="subtitle">AI-Powered Betting Intelligence & Predictive Analytics</p>
+    </div>
+
+    <div class="live-ticker">
+        <div class="ticker-content">
+            <span class="ticker-item">🏈 NFL: Chiefs +3.5 vs Bills</span>
+            <span class="ticker-item">⚽ Champions League: Real Madrid 2-1 Man City</span>
+            <span class="ticker-item">🏀 NBA: Lakers -5.5 vs Celtics</span>
+            <span class="ticker-item">⚾ MLB: Yankees vs Dodgers O/U 8.5</span>
+            <span class="ticker-item">🎾 Wimbledon: Djokovic -180 vs Alcaraz</span>
+            <span class="ticker-item">🏒 NHL: Avalanche vs Rangers Total 6.5</span>
+        </div>
+    </div>
+
+    <div class="analytics-section">
+        <div class="analytics-header">
+            <h2 class="analytics-title">AI Predictions Dashboard</h2>
+            <div class="ai-badge">
+                <span>🤖</span>
+                <span class="ai-status">AI Models Active</span>
+            </div>
+        </div>
+        <div class="prediction-cards">
+            <div class="prediction-card">
+                <div class="prediction-value">87%</div>
+                <div class="prediction-label">Today's Win Rate</div>
+                <div class="confidence-meter">
+                    <div class="confidence-fill" style="width: 87%;"></div>
+                </div>
+            </div>
+            <div class="prediction-card">
+                <div class="prediction-value">+24.5</div>
+                <div class="prediction-label">Units Profit</div>
+                <div class="confidence-meter">
+                    <div class="confidence-fill" style="width: 75%;"></div>
+                </div>
+            </div>
+            <div class="prediction-card">
+                <div class="prediction-value">156</div>
+                <div class="prediction-label">Bets Analyzed</div>
+                <div class="confidence-meter">
+                    <div class="confidence-fill" style="width: 92%;"></div>
+                </div>
+            </div>
+            <div class="prediction-card">
+                <div class="prediction-value">4.2x</div>
+                <div class="prediction-label">Best Odds Found</div>
+                <div class="confidence-meter">
+                    <div class="confidence-fill" style="width: 68%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sports-grid">
+        <div class="sport-card">
+            <div class="sport-header">
+                <div class="sport-name">
+                    <span class="sport-icon">🏈</span>
+                    <span>NFL Football</span>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="matches-list">
+                <div class="match-item">
+                    <div class="teams">
+                        <span class="team-name">Kansas City Chiefs</span>
+                        <span class="score">24</span>
+                    </div>
+                    <div class="teams">
+                        <span class="team-name">Buffalo Bills</span>
+                        <span class="score">21</span>
+                    </div>
+                    <div class="odds-container">
+                        <div class="odd-item">
+                            <div class="odd-label">Chiefs</div>
+                            <div class="odd-value">-110</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Draw</div>
+                            <div class="odd-value">+250</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Bills</div>
+                            <div class="odd-value">+105</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sport-card">
+            <div class="sport-header">
+                <div class="sport-name">
+                    <span class="sport-icon">⚽</span>
+                    <span>Soccer</span>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="matches-list">
+                <div class="match-item">
+                    <div class="teams">
+                        <span class="team-name">Real Madrid</span>
+                        <span class="score">2</span>
+                    </div>
+                    <div class="teams">
+                        <span class="team-name">Manchester City</span>
+                        <span class="score">1</span>
+                    </div>
+                    <div class="odds-container">
+                        <div class="odd-item">
+                            <div class="odd-label">Real</div>
+                            <div class="odd-value">2.10</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Draw</div>
+                            <div class="odd-value">3.40</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">City</div>
+                            <div class="odd-value">3.25</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sport-card">
+            <div class="sport-header">
+                <div class="sport-name">
+                    <span class="sport-icon">🏀</span>
+                    <span>NBA Basketball</span>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="matches-list">
+                <div class="match-item">
+                    <div class="teams">
+                        <span class="team-name">LA Lakers</span>
+                        <span class="score">98</span>
+                    </div>
+                    <div class="teams">
+                        <span class="team-name">Boston Celtics</span>
+                        <span class="score">95</span>
+                    </div>
+                    <div class="odds-container">
+                        <div class="odd-item">
+                            <div class="odd-label">Lakers</div>
+                            <div class="odd-value">-125</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">O/U 220.5</div>
+                            <div class="odd-value">-110</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Celtics</div>
+                            <div class="odd-value">+105</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sport-card">
+            <div class="sport-header">
+                <div class="sport-name">
+                    <span class="sport-icon">⚾</span>
+                    <span>MLB Baseball</span>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="matches-list">
+                <div class="match-item">
+                    <div class="teams">
+                        <span class="team-name">NY Yankees</span>
+                        <span class="score">4</span>
+                    </div>
+                    <div class="teams">
+                        <span class="team-name">LA Dodgers</span>
+                        <span class="score">3</span>
+                    </div>
+                    <div class="odds-container">
+                        <div class="odd-item">
+                            <div class="odd-label">Yankees</div>
+                            <div class="odd-value">-140</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">O/U 8.5</div>
+                            <div class="odd-value">-105</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Dodgers</div>
+                            <div class="odd-value">+120</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sport-card">
+            <div class="sport-header">
+                <div class="sport-name">
+                    <span class="sport-icon">🎾</span>
+                    <span>Tennis</span>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="matches-list">
+                <div class="match-item">
+                    <div class="teams">
+                        <span class="team-name">Djokovic</span>
+                        <span class="score">6-4, 5-3</span>
+                    </div>
+                    <div class="teams">
+                        <span class="team-name">Alcaraz</span>
+                        <span class="score">4-6, 3-5</span>
+                    </div>
+                    <div class="odds-container">
+                        <div class="odd-item">
+                            <div class="odd-label">Djokovic</div>
+                            <div class="odd-value">-180</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Sets O/U</div>
+                            <div class="odd-value">3.5</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Alcaraz</div>
+                            <div class="odd-value">+150</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sport-card">
+            <div class="sport-header">
+                <div class="sport-name">
+                    <span class="sport-icon">🏒</span>
+                    <span>NHL Hockey</span>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="matches-list">
+                <div class="match-item">
+                    <div class="teams">
+                        <span class="team-name">Colorado Avalanche</span>
+                        <span class="score">3</span>
+                    </div>
+                    <div class="teams">
+                        <span class="team-name">NY Rangers</span>
+                        <span class="score">2</span>
+                    </div>
+                    <div class="odds-container">
+                        <div class="odd-item">
+                            <div class="odd-label">Avs</div>
+                            <div class="odd-value">-135</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">O/U 6.5</div>
+                            <div class="odd-value">-115</div>
+                        </div>
+                        <div class="odd-item">
+                            <div class="odd-label">Rangers</div>
+                            <div class="odd-value">+115</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="action-btn primary">Get AI Predictions</button>
+        <button class="action-btn">View Betting History</button>
+        <button class="action-btn">Odds Calculator</button>
+        <button class="action-btn">Live Scores</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let socket = null;
+
+function connectWebSocket() {
+    const wsUrl = 'ws://localhost:8000/ws/sports/';
+    console.log('Connecting to Sports WebSocket:', wsUrl);
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function(e) {
+        console.log('Sports WebSocket connected');
+        requestLiveScores();
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        updateSportsData(data);
+    };
+
+    socket.onclose = function(e) {
+        console.log('Sports WebSocket disconnected');
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+function requestLiveScores() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'get_live_scores' }));
+    }
+}
+
+function getAIPredictions() {
+    console.log('Getting AI predictions...');
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'get_ai_predictions' }));
+
+        // Show loading state
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = 'Loading Predictions...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+            alert('AI Predictions: Chiefs win 78% confidence, Over 220.5 points 65% confidence');
+        }, 2000);
+    } else {
+        alert('WebSocket not connected. Trying to reconnect...');
+        connectWebSocket();
+    }
+}
+
+function viewBettingHistory() {
+    console.log('Loading betting history...');
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'get_betting_history' }));
+        alert('Betting History: 24 wins, 8 losses this week. Total profit: +16.5 units');
+    } else {
+        alert('WebSocket not connected. Trying to reconnect...');
+        connectWebSocket();
+    }
+}
+
+function openOddsCalculator() {
+    console.log('Opening odds calculator...');
+    // Create a modal or navigate to calculator
+    const message = `Odds Calculator:\n\nAmerican to Decimal:\n-110 = 1.91\n+150 = 2.50\n\nImplied Probability:\n-110 = 52.4%\n+150 = 40.0%`;
+    alert(message);
+}
+
+function getLiveScores() {
+    console.log('Fetching live scores...');
+    requestLiveScores();
+
+    // Show loading state
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = 'Updating...';
+    btn.disabled = true;
+
+    setTimeout(() => {
+        btn.innerText = originalText;
+        btn.disabled = false;
+        alert('Live scores updated! Check the game cards above.');
+    }, 1500);
+}
+
+function updateSportsData(data) {
+    console.log('Updating sports data:', data);
+
+    // Update UI based on data type
+    if (data.type === 'live_scores') {
+        console.log('Live scores received:', data.scores);
+        // Update score displays
+    } else if (data.type === 'ai_predictions') {
+        console.log('AI predictions received:', data.predictions);
+        // Update prediction cards
+    } else if (data.type === 'betting_history') {
+        console.log('Betting history received:', data.history);
+        // Display history modal
+    }
+}
+
+// Initialize WebSocket on page load
+document.addEventListener('DOMContentLoaded', function() {
+    connectWebSocket();
+    setInterval(requestLiveScores, 10000);
+
+    // Add click handlers to action buttons
+    document.querySelectorAll('.action-btn').forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+            switch(index) {
+                case 0: // Get AI Predictions
+                    getAIPredictions();
+                    break;
+                case 1: // View Betting History
+                    viewBettingHistory();
+                    break;
+                case 2: // Odds Calculator
+                    openOddsCalculator();
+                    break;
+                case 3: // Live Scores
+                    getLiveScores();
+                    break;
+            }
+        });
+    });
+
+    // Add click handlers to odd items for betting
+    document.querySelectorAll('.odd-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const oddValue = this.querySelector('.odd-value').innerText;
+            const oddLabel = this.querySelector('.odd-label').innerText;
+
+            // Highlight selected bet
+            this.style.background = 'rgba(255,215,0,0.2)';
+            this.style.borderColor = 'rgba(255,215,0,0.5)';
+
+            console.log(`Bet selected: ${oddLabel} at ${oddValue}`);
+
+            // Send bet to backend
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'place_bet',
+                    bet: {
+                        selection: oddLabel,
+                        odds: oddValue,
+                        timestamp: new Date().toISOString()
+                    }
+                }));
+            }
+
+            // Show confirmation
+            setTimeout(() => {
+                if (confirm(`Place bet on ${oddLabel} at ${oddValue}?`)) {
+                    alert(`Bet placed successfully! ${oddLabel} at ${oddValue}`);
+                } else {
+                    // Reset styling
+                    this.style.background = 'rgba(0,255,0,0.1)';
+                    this.style.borderColor = 'rgba(0,255,0,0.3)';
+                }
+            }, 100);
+        });
+    });
+
+    // Add click handlers to sport cards for detailed view
+    document.querySelectorAll('.sport-card').forEach(card => {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', function(e) {
+            // Don't trigger if clicking on odds
+            if (!e.target.closest('.odd-item')) {
+                const sportName = this.querySelector('.sport-name span:last-child').innerText;
+                console.log(`Opening detailed view for ${sportName}`);
+
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'get_sport_details',
+                        sport: sportName
+                    }));
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

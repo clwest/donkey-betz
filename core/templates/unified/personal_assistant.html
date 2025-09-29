@@ -1,0 +1,554 @@
+{% extends "unified/base.html" %}
+
+{% block title %}Personal AI Assistant - Your Intelligent Career Partner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .assistant-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        height: calc(100vh - 100px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .header-section {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .page-title {
+        font-size: 2.5em;
+        background: linear-gradient(135deg, #ff00ff, #00ffff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #888;
+        font-size: 1.2em;
+    }
+
+    .chat-container {
+        flex: 1;
+        display: flex;
+        gap: 20px;
+        min-height: 0;
+    }
+
+    .profile-sidebar {
+        width: 300px;
+        background: linear-gradient(135deg, rgba(255,0,255,0.1), rgba(0,255,255,0.1));
+        border: 1px solid rgba(255,0,255,0.3);
+        border-radius: 15px;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .profile-section {
+        margin-bottom: 20px;
+    }
+
+    .profile-section h3 {
+        color: #00ffff;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+    }
+
+    .profile-item {
+        padding: 8px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-size: 0.9em;
+    }
+
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(0,0,0,0.3));
+        border: 1px solid rgba(255,0,255,0.3);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .message {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+        align-self: flex-end;
+        background: linear-gradient(135deg, #00ff88, #00d4ff);
+        color: #000;
+    }
+
+    .message.assistant {
+        align-self: flex-start;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .message.system {
+        align-self: center;
+        background: rgba(255,165,0,0.2);
+        border: 1px solid rgba(255,165,0,0.4);
+        font-size: 0.9em;
+        max-width: 90%;
+        text-align: center;
+    }
+
+    .input-container {
+        padding: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.5);
+    }
+
+    .input-form {
+        display: flex;
+        gap: 10px;
+    }
+
+    .message-input {
+        flex: 1;
+        background: rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 1em;
+    }
+
+    .message-input:focus {
+        outline: none;
+        border-color: #00ffff;
+        box-shadow: 0 0 10px rgba(0,255,255,0.3);
+    }
+
+    .send-button {
+        background: linear-gradient(135deg, #ff00ff, #00ffff);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: transform 0.2s ease;
+    }
+
+    .send-button:hover {
+        transform: scale(1.05);
+    }
+
+    .send-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .connection-status {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .connection-status.connected {
+        background: rgba(0,255,0,0.2);
+        border: 1px solid rgba(0,255,0,0.4);
+        color: #00ff00;
+    }
+
+    .connection-status.disconnected {
+        background: rgba(255,0,0,0.2);
+        border: 1px solid rgba(255,0,0,0.4);
+        color: #ff4444;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .quick-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .quick-action-btn {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.2s ease;
+    }
+
+    .quick-action-btn:hover {
+        background: rgba(255,255,255,0.2);
+        transform: translateY(-2px);
+    }
+
+    .typing-indicator {
+        display: none;
+        align-self: flex-start;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 12px;
+        margin-bottom: 10px;
+    }
+
+    .typing-indicator.show {
+        display: block;
+    }
+
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+    }
+
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        background: #00ffff;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-10px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="assistant-container">
+    <div class="header-section">
+        <h1 class="page-title">Personal AI Assistant</h1>
+        <p class="subtitle">Your intelligent partner for career growth and opportunity discovery</p>
+    </div>
+
+    <div class="connection-status disconnected" id="connectionStatus">
+        <span class="status-dot" style="background: #ff4444;"></span>
+        <span id="statusText">Connecting...</span>
+    </div>
+
+    <div class="chat-container">
+        <div class="profile-sidebar">
+            <div class="profile-section">
+                <h3>Your Profile</h3>
+                <div class="profile-item">
+                    <strong>Name:</strong> <span id="userName">{{ user.get_full_name|default:user.username }}</span>
+                </div>
+                <div class="profile-item">
+                    <strong>Email:</strong> <span id="userEmail">{{ user.email }}</span>
+                </div>
+                <div class="profile-item">
+                    <strong>Member Since:</strong> <span id="memberSince">{{ user.date_joined|date:"M Y" }}</span>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Skills & Expertise</h3>
+                <div id="skillsList">
+                    <div class="profile-item">No skills added yet</div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Goals</h3>
+                <div id="goalsList">
+                    <div class="profile-item">No goals set yet</div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Activity</h3>
+                <div class="profile-item">
+                    <strong>Applications:</strong> <span id="applicationCount">0</span>
+                </div>
+                <div class="profile-item">
+                    <strong>Opportunities:</strong> <span id="opportunityCount">0</span>
+                </div>
+                <div class="profile-item">
+                    <strong>Revenue:</strong> <span id="revenueTotal">$0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-main">
+            <div class="messages-container" id="messagesContainer">
+                <div class="message system">
+                    Welcome to your Personal AI Assistant! I'm here to help you discover opportunities, build your profile, and achieve your career goals. How can I help you today?
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dots">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <form class="input-form" id="messageForm">
+                    <input
+                        type="text"
+                        class="message-input"
+                        id="messageInput"
+                        placeholder="Ask me anything about opportunities, skills, or career advice..."
+                        autocomplete="off"
+                    />
+                    <button type="submit" class="send-button" id="sendButton">Send</button>
+                </form>
+
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="sendQuickMessage('Help me find opportunities')">
+                        Find Opportunities
+                    </button>
+                    <button class="quick-action-btn" onclick="sendQuickMessage('Update my skills')">
+                        Update Skills
+                    </button>
+                    <button class="quick-action-btn" onclick="sendQuickMessage('Set my career goals')">
+                        Set Goals
+                    </button>
+                    <button class="quick-action-btn" onclick="sendQuickMessage('Show my progress')">
+                        View Progress
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+let socket = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+let isTyping = false;
+
+function connectWebSocket() {
+    const wsUrl = 'ws://localhost:8000/ws/personal-assistant/';
+    console.log('Connecting to Personal Assistant WebSocket:', wsUrl);
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function(e) {
+        console.log('Personal Assistant WebSocket connected');
+        updateConnectionStatus(true);
+        reconnectAttempts = 0;
+
+        // Request initial data
+        sendMessage({
+            type: 'get_profile',
+            user_id: '{{ user.id }}'
+        });
+    };
+
+    socket.onmessage = function(e) {
+        console.log('Received message:', e.data);
+        const data = JSON.parse(e.data);
+        handleMessage(data);
+    };
+
+    socket.onclose = function(e) {
+        console.log('Personal Assistant WebSocket disconnected');
+        updateConnectionStatus(false);
+
+        if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            console.log(`Reconnecting... (Attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+            setTimeout(connectWebSocket, 3000);
+        }
+    };
+
+    socket.onerror = function(e) {
+        console.error('Personal Assistant WebSocket error:', e);
+    };
+}
+
+function updateConnectionStatus(connected) {
+    const statusEl = document.getElementById('connectionStatus');
+    const statusText = document.getElementById('statusText');
+    const statusDot = statusEl.querySelector('.status-dot');
+
+    if (connected) {
+        statusEl.classList.remove('disconnected');
+        statusEl.classList.add('connected');
+        statusText.textContent = 'Connected';
+        statusDot.style.background = '#00ff00';
+    } else {
+        statusEl.classList.remove('connected');
+        statusEl.classList.add('disconnected');
+        statusText.textContent = 'Disconnected';
+        statusDot.style.background = '#ff4444';
+    }
+}
+
+function sendMessage(data) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(data));
+    }
+}
+
+function handleMessage(data) {
+    console.log('Handling message:', data);
+
+    hideTypingIndicator();
+
+    if (data.type === 'chat_response') {
+        addMessage(data.message, 'assistant');
+    } else if (data.type === 'profile_data') {
+        updateProfile(data.profile);
+    } else if (data.type === 'skills_updated') {
+        updateSkills(data.skills);
+    } else if (data.type === 'goals_updated') {
+        updateGoals(data.goals);
+    } else if (data.type === 'activity_stats') {
+        updateActivityStats(data.stats);
+    } else if (data.type === 'error') {
+        addMessage(`Error: ${data.message}`, 'system');
+    }
+}
+
+function addMessage(text, type = 'user') {
+    const container = document.getElementById('messagesContainer');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.textContent = text;
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function showTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    indicator.classList.add('show');
+    isTyping = true;
+}
+
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    indicator.classList.remove('show');
+    isTyping = false;
+}
+
+function updateProfile(profile) {
+    if (profile.name) {
+        document.getElementById('userName').textContent = profile.name;
+    }
+    if (profile.email) {
+        document.getElementById('userEmail').textContent = profile.email;
+    }
+}
+
+function updateSkills(skills) {
+    const skillsList = document.getElementById('skillsList');
+    if (skills && skills.length > 0) {
+        skillsList.innerHTML = skills.map(skill =>
+            `<div class="profile-item">${skill}</div>`
+        ).join('');
+    }
+}
+
+function updateGoals(goals) {
+    const goalsList = document.getElementById('goalsList');
+    if (goals && goals.length > 0) {
+        goalsList.innerHTML = goals.map(goal =>
+            `<div class="profile-item">${goal}</div>`
+        ).join('');
+    }
+}
+
+function updateActivityStats(stats) {
+    if (stats.applications !== undefined) {
+        document.getElementById('applicationCount').textContent = stats.applications;
+    }
+    if (stats.opportunities !== undefined) {
+        document.getElementById('opportunityCount').textContent = stats.opportunities;
+    }
+    if (stats.revenue !== undefined) {
+        document.getElementById('revenueTotal').textContent = `$${stats.revenue.toLocaleString()}`;
+    }
+}
+
+function sendQuickMessage(text) {
+    document.getElementById('messageInput').value = text;
+    document.getElementById('messageForm').dispatchEvent(new Event('submit'));
+}
+
+// Form submission handler
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+
+    if (message) {
+        // Add user message to chat
+        addMessage(message, 'user');
+
+        // Show typing indicator
+        showTypingIndicator();
+
+        // Send to WebSocket
+        sendMessage({
+            type: 'chat_message',
+            message: message,
+            user_id: '{{ user.id }}'
+        });
+
+        // Clear input
+        input.value = '';
+    }
+});
+
+// Initialize WebSocket connection
+connectWebSocket();
+
+// Auto-reconnect on focus
+window.addEventListener('focus', function() {
+    if (socket && socket.readyState !== WebSocket.OPEN) {
+        connectWebSocket();
+    }
+});
+{% endblock %}

@@ -1,0 +1,657 @@
+{% extends "unified/base.html" %}
+{% load static %}
+
+{% block title %}Revenue Dashboard - Track Your Earnings{% endblock %}
+
+{% block websocket_url %}ws://localhost:8000/ws/revenue-dashboard/{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+        color: #e0e0e0;
+        min-height: 100vh;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(255,193,7,0.1));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 40px;
+        margin-bottom: 30px;
+        backdrop-filter: blur(10px);
+        text-align: center;
+    }
+
+    .page-title {
+        font-size: 3em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4caf50, #ffc107);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .page-subtitle {
+        font-size: 1.3em;
+        color: #888;
+        margin-bottom: 20px;
+    }
+
+    .revenue-badge {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 8px 20px;
+        border-radius: 25px;
+        margin: 0 10px;
+        display: inline-block;
+    }
+
+    .revenue-badge.positive {
+        border-color: #4caf50;
+        color: #4caf50;
+    }
+
+    .revenue-badge.info {
+        border-color: #2196f3;
+        color: #2196f3;
+    }
+
+    .revenue-badge.warning {
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .revenue-card {
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .revenue-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255,255,255,0.3);
+    }
+
+    .revenue-card.success {
+        border-color: rgba(76,175,80,0.5);
+        background: linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.1));
+    }
+
+    .revenue-card.warning {
+        border-color: rgba(255,193,7,0.5);
+        background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(255,193,7,0.1));
+    }
+
+    .revenue-card.info {
+        border-color: rgba(33,150,243,0.5);
+        background: linear-gradient(135deg, rgba(33,150,243,0.2), rgba(33,150,243,0.1));
+    }
+
+    .revenue-card.primary {
+        border-color: rgba(103,58,183,0.5);
+        background: linear-gradient(135deg, rgba(103,58,183,0.2), rgba(103,58,183,0.1));
+    }
+
+    .card-subtitle {
+        color: #888 !important;
+        text-transform: uppercase;
+        font-size: 0.85em;
+        letter-spacing: 1px;
+    }
+
+    .card-title {
+        font-size: 2.5em;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+
+    .icon-container {
+        opacity: 0.3;
+    }
+
+    .chart-container {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .table {
+        background: rgba(0,0,0,0.4);
+        color: #e0e0e0;
+    }
+
+    .table thead {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .table-hover tbody tr:hover {
+        background: rgba(255,255,255,0.08);
+    }
+
+    .badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-dollar-sign"></i> Revenue Dashboard
+        </h1>
+        <p class="page-subtitle">Track your real earnings and revenue growth</p>
+        <div class="mt-4">
+            <span class="revenue-badge positive">
+                <i class="fas fa-arrow-up"></i> +15.3% This Month
+            </span>
+            <span class="revenue-badge info">
+                <i class="fas fa-coins"></i> $2,600 Total Revenue
+            </span>
+            <span class="revenue-badge warning">
+                <i class="fas fa-clock"></i> $450 Pending
+            </span>
+        </div>
+    </div>
+
+    <!-- Revenue Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="revenue-card success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Total Revenue</h6>
+                        <h2 class="card-title mb-0" style="color: #4caf50;" id="totalRevenue">$2,600</h2>
+                        <small style="color: #aaa;">+$450 this week</small>
+                    </div>
+                    <div class="icon-container">
+                        <i class="fas fa-chart-line fa-2x" style="color: #4caf50;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="revenue-card warning">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Pending Revenue</h6>
+                        <h2 class="card-title mb-0" style="color: #ffc107;" id="pendingRevenue">$450</h2>
+                        <small style="color: #aaa;">3 transactions</small>
+                    </div>
+                    <div class="icon-container">
+                        <i class="fas fa-hourglass-half fa-2x" style="color: #ffc107;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="revenue-card info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">This Month</h6>
+                        <h2 class="card-title mb-0" style="color: #2196f3;" id="monthlyRevenue">$780</h2>
+                        <small style="color: #aaa;">12 completed</small>
+                    </div>
+                    <div class="icon-container">
+                        <i class="fas fa-calendar-alt fa-2x" style="color: #2196f3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="revenue-card primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2">Success Rate</h6>
+                        <h2 class="card-title mb-0" style="color: #673ab7;" id="successRate">78%</h2>
+                        <small style="color: #aaa;">39 of 50</small>
+                    </div>
+                    <div class="icon-container">
+                        <i class="fas fa-trophy fa-2x" style="color: #673ab7;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area"></i> Revenue Trend
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-pie-chart"></i> Revenue Sources
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="sourcesChart" height="200"></canvas>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-circle text-primary"></i> Freelance</span>
+                            <strong>45%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-circle text-success"></i> Contracts</span>
+                            <strong>30%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="fas fa-circle text-warning"></i> Consulting</span>
+                            <strong>15%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="fas fa-circle text-info"></i> Other</span>
+                            <strong>10%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> Recent Transactions
+                        </h5>
+                        <button class="btn btn-sm btn-light" onclick="exportTransactions()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Source</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTable">
+                                <tr>
+                                    <td>2025-09-28</td>
+                                    <td>Web Development Project</td>
+                                    <td><span class="badge bg-primary">Freelance</span></td>
+                                    <td><span class="badge bg-success">Completed</span></td>
+                                    <td class="text-end"><strong>$450</strong></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails(1)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>2025-09-27</td>
+                                    <td>Data Analysis Contract</td>
+                                    <td><span class="badge bg-success">Contract</span></td>
+                                    <td><span class="badge bg-warning">Pending</span></td>
+                                    <td class="text-end"><strong>$280</strong></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails(2)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>2025-09-26</td>
+                                    <td>Technical Consultation</td>
+                                    <td><span class="badge bg-warning">Consulting</span></td>
+                                    <td><span class="badge bg-success">Completed</span></td>
+                                    <td class="text-end"><strong>$150</strong></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails(3)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="requestPayout()">
+                            <i class="fas fa-hand-holding-usd"></i> Request Payout
+                        </button>
+                        <button class="btn btn-info" onclick="generateInvoice()">
+                            <i class="fas fa-file-invoice"></i> Generate Invoice
+                        </button>
+                        <button class="btn btn-warning" onclick="viewPendingPayments()">
+                            <i class="fas fa-clock"></i> View Pending Payments
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> Performance Metrics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Monthly Goal</span>
+                            <span>$780 / $1,000</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: 78%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Applications Submitted</span>
+                            <span>45 / 50</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-info" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Conversion Rate</span>
+                            <span>18 / 45</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-warning" style="width: 40%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-revenue {
+        background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+    }
+
+    .revenue-card {
+        border: none;
+        border-radius: 10px;
+        transition: transform 0.3s;
+    }
+
+    .revenue-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+    .icon-container {
+        opacity: 0.7;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,0.02);
+    }
+
+    .progress {
+        height: 20px;
+        border-radius: 10px;
+    }
+
+    .progress-bar {
+        border-radius: 10px;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let ws = null;
+    let revenueChart = null;
+    let sourcesChart = null;
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+        const wsUrl = 'ws://localhost:8000/ws/revenue-dashboard/';
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            console.log('Revenue Dashboard WebSocket connected');
+            requestLatestData();
+        };
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            console.log('WebSocket disconnected');
+            // Reconnect after 3 seconds
+            setTimeout(initWebSocket, 3000);
+        };
+    }
+
+    // Handle incoming WebSocket messages
+    function handleWebSocketMessage(data) {
+        if (data.type === 'revenue_update') {
+            updateRevenueStats(data.stats);
+        } else if (data.type === 'transaction_added') {
+            addTransaction(data.transaction);
+        } else if (data.type === 'chart_update') {
+            updateCharts(data.chartData);
+        }
+    }
+
+    // Request latest data
+    function requestLatestData() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'request_data',
+                timestamp: Date.now()
+            }));
+        }
+    }
+
+    // Update revenue statistics
+    function updateRevenueStats(stats) {
+        if (stats.total) document.getElementById('totalRevenue').textContent = '$' + stats.total;
+        if (stats.pending) document.getElementById('pendingRevenue').textContent = '$' + stats.pending;
+        if (stats.monthly) document.getElementById('monthlyRevenue').textContent = '$' + stats.monthly;
+        if (stats.successRate) document.getElementById('successRate').textContent = stats.successRate + '%';
+    }
+
+    // Add new transaction to table
+    function addTransaction(transaction) {
+        const tbody = document.getElementById('transactionsTable');
+        const row = tbody.insertRow(0);
+        row.innerHTML = `
+            <td>${transaction.date}</td>
+            <td>${transaction.description}</td>
+            <td><span class="badge bg-${transaction.sourceColor}">${transaction.source}</span></td>
+            <td><span class="badge bg-${transaction.statusColor}">${transaction.status}</span></td>
+            <td class="text-end"><strong>$${transaction.amount}</strong></td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-info" onclick="viewDetails(${transaction.id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+    }
+
+    // Initialize charts
+    function initCharts() {
+        // Revenue trend chart
+        const ctx1 = document.getElementById('revenueChart').getContext('2d');
+        revenueChart = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [1200, 1400, 1800, 2150, 2600],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Revenue sources chart
+        const ctx2 = document.getElementById('sourcesChart').getContext('2d');
+        sourcesChart = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Freelance', 'Contracts', 'Consulting', 'Other'],
+                datasets: [{
+                    data: [45, 30, 15, 10],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.8)',
+                        'rgba(25, 135, 84, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(13, 202, 240, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    // Update charts with new data
+    function updateCharts(chartData) {
+        if (revenueChart && chartData.revenue) {
+            revenueChart.data.datasets[0].data = chartData.revenue;
+            revenueChart.update();
+        }
+        if (sourcesChart && chartData.sources) {
+            sourcesChart.data.datasets[0].data = chartData.sources;
+            sourcesChart.update();
+        }
+    }
+
+    // View transaction details
+    function viewDetails(transactionId) {
+        console.log('Viewing details for transaction:', transactionId);
+        // TODO: Open modal or navigate to details page
+    }
+
+    // Request payout
+    function requestPayout() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'request_payout',
+                amount: document.getElementById('totalRevenue').textContent.replace('$', '')
+            }));
+        }
+        alert('Payout request submitted! You will receive your funds within 3-5 business days.');
+    }
+
+    // Generate invoice
+    function generateInvoice() {
+        console.log('Generating invoice...');
+        // TODO: Generate and download invoice
+    }
+
+    // View pending payments
+    function viewPendingPayments() {
+        console.log('Viewing pending payments...');
+        // TODO: Filter table to show only pending
+    }
+
+    // Export transactions
+    function exportTransactions() {
+        console.log('Exporting transactions...');
+        // TODO: Export to CSV
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initWebSocket();
+        initCharts();
+
+        // Simulate real-time updates every 5 seconds
+        setInterval(() => {
+            const randomIncrease = Math.floor(Math.random() * 50);
+            const currentTotal = parseInt(document.getElementById('totalRevenue').textContent.replace('$', ''));
+            updateRevenueStats({
+                total: currentTotal + randomIncrease,
+                pending: 450 + randomIncrease,
+                monthly: 780 + randomIncrease,
+                successRate: Math.floor(Math.random() * 20 + 70)
+            });
+        }, 5000);
+    });
+</script>
+{% endblock %}

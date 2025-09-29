@@ -21,35 +21,52 @@ class JobIncomeBridge:
         Returns a merged dataset with jobs converted to income opportunities
         """
 
-        # Get cached live jobs
-        jobs = cache.get('live_jobs', [])
+        # Get cached opportunities from real spider
+        jobs = cache.get('latest_opportunities', [])
+
+        # If no jobs from spider cache, also check live_jobs for fallback
+        if not jobs:
+            jobs = cache.get('live_jobs', [])
+
+        # Ensure jobs is a list
+        if not isinstance(jobs, list):
+            jobs = []
 
         # Convert jobs to income opportunities format
         job_opportunities = []
 
-        for job in jobs[:20]:  # Take top 20 jobs
-            # Calculate potential monthly from salary string
-            salary = job.get('salary', '$3,000/month')
-            if isinstance(salary, str):
-                # Extract numbers from salary string
-                import re
-                numbers = re.findall(r'\d+(?:,\d+)*', salary.replace(',', ''))
-                monthly = int(numbers[0]) if numbers else 3000
+        for job in jobs[:50]:  # Take top 50 jobs (we have 76 real opportunities)
+            # Calculate potential monthly from spider data structure
+            if job.get('salary_min') and job.get('salary_max'):
+                # Use average of salary range
+                monthly = (job.get('salary_min', 0) + job.get('salary_max', 0)) // 2
+            elif job.get('salary'):
+                # Legacy salary string format
+                salary = job.get('salary', '$3,000/month')
+                if isinstance(salary, str):
+                    import re
+                    numbers = re.findall(r'\d+(?:,\d+)*', salary.replace(',', ''))
+                    monthly = int(numbers[0]) if numbers else 3000
+                else:
+                    monthly = 3000
             else:
                 monthly = 3000
 
+            # Create unique ID from title and company (lowercase to match revenue consumer)
+            job_id = job.get('id') or f"{job.get('source', 'spider').lower()}_{hash(job.get('title', '') + job.get('company', '')) % 10000}"
+
             opportunity = {
-                'id': f"job_{job.get('id', '')}",
+                'id': job_id,  # Remove "job_" prefix to match revenue opportunities consumer
                 'title': job.get('title', 'Remote Opportunity'),
-                'stream_type': 'Freelance/Contract',
+                'stream_type': f"{job.get('source', 'Remote').title()} Job",
                 'description': job.get('description', '')[:300],
                 'potential_monthly': f"${monthly:,}",
                 'time_to_income': '1-2 weeks',
                 'difficulty': 'intermediate',
                 'initial_investment': 0,
-                'success_rate': min(1.0, job.get('aiScore', 0.75) if job.get('aiScore', 0.75) <= 1 else job.get('aiScore', 75) / 100),
+                'success_rate': min(1.0, job.get('match_score', 75) / 100 if job.get('match_score', 75) > 1 else job.get('match_score', 0.75)),
                 'market_demand': 0.85,
-                'required_skills': job.get('tags', [])[:5] if job.get('tags') else ['communication', 'problem-solving'],
+                'required_skills': job.get('tags', [])[:5] if job.get('tags') else ['remote work', 'communication'],
                 'action_steps': [
                     'Review job requirements',
                     'Customize application with AI',
@@ -61,9 +78,9 @@ class JobIncomeBridge:
                     {'name': f"{job.get('source', 'Job Board').title()} Platform", 'url': '#'}
                 ],
                 'match_reasons': [
-                    f"AI Match Score: {(job.get('aiScore', 0.75) * 100 if job.get('aiScore', 0.75) <= 1 else job.get('aiScore', 75)):.0f}%",
-                    f"Company: {job.get('company', 'Remote')}",
-                    f"Source: {job.get('source', 'Job Board')}"
+                    f"Match Score: {job.get('match_score', 75):.0f}%",
+                    f"Company: {job.get('company', 'Remote Company')}",
+                    f"Source: {job.get('source', 'Spider Network')}"
                 ],
                 'company': job.get('company', 'Unknown'),
                 'url': job.get('url', '#'),
@@ -74,75 +91,16 @@ class JobIncomeBridge:
             }
             job_opportunities.append(opportunity)
 
-        # Add Income Builder native opportunities (non-job based)
-        income_opportunities = [
-            {
-                'id': 'income_ai_1',
-                'title': 'AI Prompt Engineering Services',
-                'stream_type': 'AI Services',
-                'description': 'Offer prompt optimization for businesses using ChatGPT/Claude',
-                'potential_monthly': '$2,000-$5,000',
-                'time_to_income': '3-5 days',
-                'difficulty': 'intermediate',
-                'success_rate': 0.85,
-                'market_demand': 0.95,
-                'required_skills': ['AI knowledge', 'writing', 'testing'],
-                'action_steps': [
-                    'Create prompt templates',
-                    'List on Promptbase',
-                    'Offer on Fiverr',
-                    'Network in AI communities'
-                ],
-                'match_reasons': [
-                    'High demand skill',
-                    'Low competition',
-                    'Recurring revenue potential'
-                ],
-                'resources': [
-                    {'name': 'Promptbase Marketplace', 'url': 'promptbase.com'},
-                    {'name': 'Learn Prompting', 'url': 'learnprompting.org'}
-                ],
-                'is_real_job': False
-            },
-            {
-                'id': 'income_auto_1',
-                'title': 'Automation Consulting',
-                'stream_type': 'Automation',
-                'description': 'Help businesses automate with Zapier/Make.com',
-                'potential_monthly': '$1,500-$4,000',
-                'time_to_income': '1 week',
-                'difficulty': 'beginner',
-                'success_rate': 0.75,
-                'market_demand': 0.85,
-                'required_skills': ['logic', 'process mapping', 'communication'],
-                'action_steps': [
-                    'Learn Zapier basics',
-                    'Create case studies',
-                    'Target small businesses',
-                    'Offer free consultation'
-                ],
-                'match_reasons': [
-                    'Easy to learn',
-                    'Businesses need it',
-                    'Can charge premium'
-                ],
-                'resources': [
-                    {'name': 'Zapier Academy', 'url': 'zapier.com/learn'},
-                    {'name': 'Make Academy', 'url': 'academy.make.com'}
-                ],
-                'is_real_job': False
-            }
-        ]
+        # Use only real job opportunities - no more hardcoded mock data
+        all_opportunities = job_opportunities
 
-        # Merge all opportunities
-        all_opportunities = job_opportunities + income_opportunities
+        # Sort by match score and salary potential
+        all_opportunities.sort(key=lambda x: (x.get('success_rate', 0),
+                                            (x.get('salary_min', 0) + x.get('salary_max', 0)) / 2 if x.get('salary_min') else 0),
+                             reverse=True)
 
-        # Sort by success rate and potential
-        all_opportunities.sort(key=lambda x: (x.get('success_rate', 0), x.get('market_demand', 0)), reverse=True)
-
-        # Calculate aggregate stats
+        # Calculate aggregate stats from real data
         total_jobs = len(job_opportunities)
-        total_income_streams = len(income_opportunities)
         avg_monthly_potential = sum([
             int(str(opp.get('potential_monthly', '$0')).replace('$', '').replace(',', '').split('-')[0])
             for opp in all_opportunities[:10]
@@ -153,12 +111,12 @@ class JobIncomeBridge:
             'stats': {
                 'total_opportunities': len(all_opportunities),
                 'real_jobs': total_jobs,
-                'income_streams': total_income_streams,
+                'income_streams': 0,  # No more hardcoded income streams
                 'avg_monthly_potential': avg_monthly_potential,
-                'top_category': 'AI Services' if all_opportunities else 'None',
+                'top_category': 'Remote Jobs' if all_opportunities else 'None',
                 'avg_success_rate': sum(opp.get('success_rate', 0) for opp in all_opportunities[:5]) / 5 if all_opportunities else 0
             },
-            'source': 'unified_bridge',
+            'source': 'unified_bridge_real_jobs_only',
             'timestamp': datetime.now().isoformat()
         }
 

@@ -1,0 +1,209 @@
+{% extends "unified/base.html" %}
+{% load static %}
+
+{% block title %}Control Center - System Monitoring & Control{% endblock %}
+
+{% block websocket_url %}ws://localhost:8000/ws/control-center/{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-control">
+                <div class="card-body text-center py-5">
+                    <h1 class="display-4 mb-3 text-white">
+                        <i class="fas fa-satellite"></i> Control Center
+                    </h1>
+                    <p class="lead text-light">System monitoring and control dashboard</p>
+                    <div class="mt-4">
+                        <span class="badge bg-success mx-2">
+                            <i class="fas fa-circle pulse"></i> System Operational
+                        </span>
+                        <span class="badge bg-info mx-2">
+                            <i class="fas fa-robot"></i> 149 Agents Active
+                        </span>
+                        <span class="badge bg-warning mx-2">
+                            <i class="fas fa-spider"></i> 40 Spiders Ready
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">CPU Usage</h6>
+                    <h3 id="cpuUsage">45%</h3>
+                    <div class="progress">
+                        <div class="progress-bar bg-info" style="width: 45%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Memory</h6>
+                    <h3 id="memoryUsage">62%</h3>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: 62%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Active Tasks</h6>
+                    <h3 id="activeTasks">24</h3>
+                    <small class="text-success">+5 in queue</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Uptime</h6>
+                    <h3 id="uptime">99.9%</h3>
+                    <small class="text-muted">Last 30 days</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Panels -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-cogs"></i> System Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="startAllAgents()">
+                            <i class="fas fa-play"></i> Start All Agents
+                        </button>
+                        <button class="btn btn-warning" onclick="pauseOperations()">
+                            <i class="fas fa-pause"></i> Pause Operations
+                        </button>
+                        <button class="btn btn-info" onclick="runDiagnostics()">
+                            <i class="fas fa-stethoscope"></i> Run Diagnostics
+                        </button>
+                        <button class="btn btn-danger" onclick="emergencyStop()">
+                            <i class="fas fa-stop"></i> Emergency Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-stream"></i> Activity Log</h5>
+                </div>
+                <div class="card-body" style="height: 250px; overflow-y: auto;">
+                    <div id="activityLog">
+                        <div class="log-entry">
+                            <small class="text-muted">12:45:23</small>
+                            <span>System initialized successfully</span>
+                        </div>
+                        <div class="log-entry">
+                            <small class="text-muted">12:45:20</small>
+                            <span>WebSocket connections established</span>
+                        </div>
+                        <div class="log-entry">
+                            <small class="text-muted">12:45:15</small>
+                            <span>All agents loaded and ready</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-control {
+        background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+    }
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .log-entry {
+        padding: 5px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+</style>
+
+<script>
+    let ws = null;
+
+    function initWebSocket() {
+        const wsUrl = 'ws://localhost:8000/ws/control-center/';
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            console.log('Control Center WebSocket connected');
+        };
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateMetrics(data);
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            setTimeout(initWebSocket, 3000);
+        };
+    }
+
+    function updateMetrics(data) {
+        if (data.cpu) document.getElementById('cpuUsage').textContent = data.cpu + '%';
+        if (data.memory) document.getElementById('memoryUsage').textContent = data.memory + '%';
+        if (data.tasks) document.getElementById('activeTasks').textContent = data.tasks;
+        if (data.uptime) document.getElementById('uptime').textContent = data.uptime + '%';
+    }
+
+    function startAllAgents() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'start_agents' }));
+        }
+    }
+
+    function pauseOperations() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'pause' }));
+        }
+    }
+
+    function runDiagnostics() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'diagnostics' }));
+        }
+    }
+
+    function emergencyStop() {
+        if (confirm('Are you sure you want to perform an emergency stop?')) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'emergency_stop' }));
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initWebSocket();
+    });
+</script>
+{% endblock %}

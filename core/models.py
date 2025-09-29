@@ -1777,3 +1777,151 @@ class GeneratedCode(UnifiedBaseModel):
                 filename=self.filename
             ).exclude(id=self.id).update(is_latest=False)
         super().save(*args, **kwargs)
+
+
+class Revenue(UnifiedBaseModel):
+    """
+    Model to track all revenue and earnings from the platform
+    """
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='revenues'
+    )
+
+    # Revenue details
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Revenue amount in USD"
+    )
+
+    source = models.CharField(
+        max_length=100,
+        choices=[
+            ('quick_apply', 'Quick Apply Job'),
+            ('freelance', 'Freelance Project'),
+            ('consulting', 'Consulting'),
+            ('ai_project', 'AI Project'),
+            ('content', 'Content Creation'),
+            ('trading', 'Trading/Investment'),
+            ('sports_betting', 'Sports Betting'),
+            ('affiliate', 'Affiliate Commission'),
+            ('other', 'Other')
+        ],
+        default='quick_apply'
+    )
+
+    status = models.CharField(
+        max_length=50,
+        choices=[
+            ('potential', 'Potential'),
+            ('pending', 'Pending'),
+            ('confirmed', 'Confirmed'),
+            ('received', 'Received'),
+            ('withdrawn', 'Withdrawn'),
+            ('cancelled', 'Cancelled')
+        ],
+        default='potential'
+    )
+
+    # Related opportunity/job
+    opportunity_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="ID of the job or opportunity"
+    )
+    opportunity_title = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Title of the job or opportunity"
+    )
+    company = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Company or client name"
+    )
+
+    # Application details
+    application_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the application was submitted"
+    )
+    confirmation_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the revenue was confirmed"
+    )
+    payment_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When payment was received"
+    )
+
+    # Additional info
+    description = models.TextField(
+        blank=True,
+        help_text="Additional details about this revenue"
+    )
+
+    # Tracking
+    spider_source = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Which spider found this opportunity"
+    )
+    agent_involved = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Which agent helped secure this revenue"
+    )
+
+    # Metrics
+    match_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="How well this opportunity matched user profile"
+    )
+
+    class Meta:
+        db_table = 'core_revenue'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['status', 'amount']),
+        ]
+
+    def __str__(self):
+        return f"${self.amount} - {self.opportunity_title} ({self.status})"
+
+    @property
+    def is_realized(self):
+        """Check if revenue has been realized (not just potential)"""
+        return self.status in ['confirmed', 'received', 'withdrawn']
+
+    @classmethod
+    def get_user_total(cls, user, status=None):
+        """Get total revenue for a user, optionally filtered by status"""
+        queryset = cls.objects.filter(user=user)
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset.aggregate(
+            total=models.Sum('amount')
+        )['total'] or 0
+
+    @classmethod
+    def get_user_stats(cls, user):
+        """Get comprehensive revenue statistics for a user"""
+        return {
+            'total_potential': cls.get_user_total(user, 'potential'),
+            'total_pending': cls.get_user_total(user, 'pending'),
+            'total_confirmed': cls.get_user_total(user, 'confirmed'),
+            'total_received': cls.get_user_total(user, 'received'),
+            'total_all': cls.get_user_total(user),
+            'count_opportunities': cls.objects.filter(user=user).count(),
+            'avg_amount': cls.objects.filter(user=user).aggregate(
+                avg=models.Avg('amount')
+            )['avg'] or 0
+        }

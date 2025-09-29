@@ -157,7 +157,22 @@ websocket_urlpatterns = [
     # Real Agent Orchestra WebSocket for live project building activity
     re_path(r'^ws/real-agent-orchestra/$', consumers.RealAgentOrchestraConsumer.as_asgi()),
     re_path(r'^ws/build-activity/$', consumers.RealAgentOrchestraConsumer.as_asgi()),
+
 ]
+
+# Import new WebSocket consumers
+from core.revenue_opportunities_consumer import RevenueOpportunitiesConsumer
+from core.monetization_hub_consumer import MonetizationHubConsumer
+from core.control_center_consumer import ControlCenterConsumer
+
+# Add new template WebSocket patterns
+new_template_patterns = [
+    re_path(r'^ws/revenue-opportunities/$', RevenueOpportunitiesConsumer.as_asgi()),
+    re_path(r'^ws/monetization-hub/$', MonetizationHubConsumer.as_asgi()),
+    re_path(r'^ws/control-center/$', ControlCenterConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(new_template_patterns)
 
 # Add sports WebSocket patterns if available
 websocket_urlpatterns.extend(sports_ws_patterns)
@@ -261,12 +276,14 @@ unified_endpoints = [
     re_path(r'^ws/revenue-production/$', ProductionRevenueConsumer.as_asgi()),
 
     # Other component endpoints (will upgrade to production one by one)
-    re_path(r'^ws/income-builder/$', UnifiedWebSocketHub.as_asgi()),
-    re_path(r'^ws/decision-command/$', UnifiedWebSocketHub.as_asgi()),
+    # Income Builder now redirects to Revenue Opportunities, but keep WebSocket for compatibility
+    re_path(r'^ws/income-builder/$', RevenueOpportunitiesConsumer.as_asgi()),
+    # re_path(r'^ws/decision-command/$', UnifiedWebSocketHub.as_asgi()),  # Already defined above
     # Neural Orchestra uses dedicated consumer - see line 28
-    re_path(r'^ws/control-center/$', UnifiedWebSocketHub.as_asgi()),
-    re_path(r'^ws/revenue-opportunities/$', UnifiedWebSocketHub.as_asgi()),
-    re_path(r'^ws/monetization-hub/$', UnifiedWebSocketHub.as_asgi()),
+    # re_path(r'^ws/control-center/$', UnifiedWebSocketHub.as_asgi()),  # Already defined above
+    # re_path(r'^ws/revenue-opportunities/$', UnifiedWebSocketHub.as_asgi()),  # Already defined above
+    # re_path(r'^ws/monetization-hub/$', UnifiedWebSocketHub.as_asgi()),  # Already defined above
+    re_path(r'^ws/diagnostic/$', UnifiedWebSocketHub.as_asgi()),  # Added for diagnostic dashboard
 
     # Alternative paths for component access
     re_path(r'^ws/decision/$', UnifiedWebSocketHub.as_asgi()),
@@ -319,3 +336,30 @@ websocket_urlpatterns.extend(unified_endpoints)
 
 # Add platform unification endpoints
 websocket_urlpatterns.extend(unification_endpoints)
+
+# Import new page consumers
+from .sports_consumer import SportsConsumer
+from .personal_assistant_consumer import PersonalAssistantConsumer
+from .new_pages_consumer import NewPagesConsumer
+
+# Add new page WebSocket patterns
+new_page_patterns = [
+    # Sports WebSocket endpoints
+    re_path(r'^ws/sports/$', SportsConsumer.as_asgi()),
+    re_path(r'^ws/sports-hub/$', SportsConsumer.as_asgi()),
+
+    # Personal Assistant WebSocket endpoint (override generic one)
+    re_path(r'^ws/personal-assistant/$', PersonalAssistantConsumer.as_asgi()),
+
+    # AI Nexus WebSocket endpoint
+    re_path(r'^ws/ai-nexus/$', NewPagesConsumer.as_asgi()),
+
+    # DBAO Dashboard WebSocket endpoint
+    re_path(r'^ws/dbao/$', NewPagesConsumer.as_asgi()),
+    re_path(r'^ws/dbao-dashboard/$', NewPagesConsumer.as_asgi()),
+
+    # Profile WebSocket endpoint
+    re_path(r'^ws/profile/$', NewPagesConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(new_page_patterns)
