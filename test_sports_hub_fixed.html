@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Hub WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #0a4f0a; }
+        .error { background: #5f0a0a; }
+        .info { background: #0a3f5f; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #45a049; }
+        .game-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .game-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #333;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sports Hub WebSocket Test</h1>
+
+    <div class="test-section">
+        <h2>WebSocket Connection</h2>
+        <button onclick="connectWS()">Connect</button>
+        <button onclick="disconnectWS()">Disconnect</button>
+        <div id="connection-status" class="status info">Not connected</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Actions</h2>
+        <button onclick="getLiveGames()">Get Live Games</button>
+        <button onclick="getLiveScores()">Get Live Scores</button>
+        <button onclick="getAIPredictions()">Get AI Predictions</button>
+        <button onclick="getBettingHistory()">Get Betting History</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Messages Received</h2>
+        <div id="messages" class="game-list"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Games Display</h2>
+        <div id="games-display" class="game-list"></div>
+    </div>
+
+    <script>
+        let socket = null;
+
+        function log(message, type = 'info') {
+            const messagesDiv = document.getElementById('messages');
+            const entry = document.createElement('div');
+            entry.className = `status ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            messagesDiv.insertBefore(entry, messagesDiv.firstChild);
+        }
+
+        function updateConnectionStatus(status, type = 'info') {
+            const statusDiv = document.getElementById('connection-status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = status;
+        }
+
+        function connectWS() {
+            const wsUrl = 'ws://localhost:8000/ws/sports/';
+            log(`Connecting to ${wsUrl}...`);
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(e) {
+                updateConnectionStatus('Connected', 'success');
+                log('WebSocket connected successfully', 'success');
+                // Automatically request games when connected
+                setTimeout(() => {
+                    log('Requesting live games...');
+                    getLiveGames();
+                }, 500);
+            };
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                log(`Message received: ${data.type}`, 'success');
+                console.log('Full data:', data);
+
+                // Handle different message types
+                if (data.type === 'games_list') {
+                    displayGames(data.games || []);
+                    log(`Received ${(data.games || []).length} games`, 'success');
+                } else if (data.type === 'connection_established') {
+                    log('Connection established message received', 'success');
+                } else if (data.type === 'live_scores') {
+                    log('Live scores received', 'success');
+                    console.log('Scores data:', data.data);
+                } else if (data.type === 'ai_predictions') {
+                    log('AI predictions received', 'success');
+                    console.log('Predictions:', data.predictions);
+                } else if (data.type === 'betting_history') {
+                    log(`Betting history received: ${data.history ? data.history.length : 0} entries`, 'success');
+                    console.log('History:', data.history);
+                }
+            };
+
+            socket.onerror = function(error) {
+                updateConnectionStatus('Connection Error', 'error');
+                log(`WebSocket error: ${error}`, 'error');
+            };
+
+            socket.onclose = function(e) {
+                updateConnectionStatus('Disconnected', 'error');
+                log('WebSocket disconnected', 'info');
+            };
+        }
+
+        function disconnectWS() {
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+        }
+
+        function getLiveGames() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = { type: 'get_live_games' };
+                socket.send(JSON.stringify(message));
+                log('Sent: get_live_games');
+            } else {
+                log('WebSocket not connected', 'error');
+            }
+        }
+
+        function getLiveScores() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = { type: 'get_live_scores' };
+                socket.send(JSON.stringify(message));
+                log('Sent: get_live_scores');
+            } else {
+                log('WebSocket not connected', 'error');
+            }
+        }
+
+        function getAIPredictions() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = { type: 'get_ai_predictions' };
+                socket.send(JSON.stringify(message));
+                log('Sent: get_ai_predictions');
+            } else {
+                log('WebSocket not connected', 'error');
+            }
+        }
+
+        function getBettingHistory() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = { type: 'get_betting_history' };
+                socket.send(JSON.stringify(message));
+                log('Sent: get_betting_history');
+            } else {
+                log('WebSocket not connected', 'error');
+            }
+        }
+
+        function displayGames(games) {
+            const display = document.getElementById('games-display');
+            display.innerHTML = '';
+
+            if (games.length === 0) {
+                display.innerHTML = '<div class="status info">No games available</div>';
+                return;
+            }
+
+            // Group games by sport
+            const gamesBySport = {};
+            games.forEach(game => {
+                const sport = game.sport || 'OTHER';
+                if (!gamesBySport[sport]) {
+                    gamesBySport[sport] = [];
+                }
+                gamesBySport[sport].push(game);
+            });
+
+            Object.entries(gamesBySport).forEach(([sport, sportGames]) => {
+                const sportDiv = document.createElement('div');
+                sportDiv.innerHTML = `<h3 style="color: #4CAF50;">${sport} (${sportGames.length} games)</h3>`;
+
+                sportGames.forEach(game => {
+                    const gameDiv = document.createElement('div');
+                    gameDiv.className = 'game-item';
+                    gameDiv.innerHTML = `
+                        <strong>${game.home_team} vs ${game.away_team}</strong><br>
+                        League: ${game.league}<br>
+                        Status: ${game.status}<br>
+                        ${game.scheduled_start ? `Start: ${new Date(game.scheduled_start).toLocaleString()}` : ''}
+                    `;
+                    sportDiv.appendChild(gameDiv);
+                });
+
+                display.appendChild(sportDiv);
+            });
+        }
+
+        // Auto-connect on page load
+        window.addEventListener('load', () => {
+            setTimeout(connectWS, 500);
+        });
+    </script>
+</body>
+</html>

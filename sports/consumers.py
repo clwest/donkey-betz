@@ -67,6 +67,8 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             await self.subscribe_to_league(content.get('league'))
         elif message_type == 'get_live_odds':
             await self.send_live_odds(content.get('game_id'))
+        elif message_type == 'get_live_games':
+            await self.send_live_games()
         elif message_type == 'get_live_scores':
             await self.send_live_scores()
         elif message_type == 'get_ai_predictions':
@@ -77,6 +79,8 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             await self.send_sport_details(content.get('sport'))
         elif message_type == 'place_bet':
             await self.handle_place_bet(content.get('bet'))
+        elif message_type == 'get_nfl_news':
+            await self.send_nfl_news()
         else:
             await self.send_json({
                 'type': 'error',
@@ -199,6 +203,368 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             'game_id': event['game_id'],
             'status': event['status']
         })
+
+    async def send_live_games(self):
+        """Send real games from the database"""
+        from .models import Game, GameStatus
+        from django.utils import timezone
+        from datetime import timedelta
+
+        try:
+            # Get current date
+            now = timezone.now()
+            today = now.date()
+            this_week_end = today + timedelta(days=(6 - today.weekday()))  # Next Sunday
+            next_weekend_start = this_week_end + timedelta(days=5)  # Next Friday
+
+            # Priority sports for September/October (Football season!)
+            # NFL and NCAAF are primary, MLB playoffs, NHL starting
+            # NBA/NCAAB shouldn't show unless preseason/early season
+            in_season_sports = ['nfl', 'ncaaf', 'mlb', 'nhl']
+            off_season_sports = ['nba', 'ncaab']  # Only show if they have games
+
+            games_list = await database_sync_to_async(
+                lambda: {
+                    sport: list(Game.objects.filter(
+                        league__sport_type=sport,
+                        scheduled_start__date__gte=today,
+                        scheduled_start__date__lte=today + timedelta(days=14)  # Next 2 weeks
+                    ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:20])
+                    for sport in in_season_sports + off_season_sports
+                }
+            )()
+
+            # Combine games with proper prioritization
+            all_games = []
+
+            # Add in-season sports first
+            for sport in in_season_sports:
+                all_games.extend(games_list.get(sport, []))
+
+            # Only add off-season sports if they have actual games (preseason/etc)
+            for sport in off_season_sports:
+                sport_games = games_list.get(sport, [])
+                if sport_games:  # Only add if there are actual games
+                    all_games.extend(sport_games[:5])  # Limit off-season games
+
+            # Sort games by priority: Today > This Week > Weekend > Later
+            def game_priority(game):
+                game_date = game.scheduled_start.date()
+                if game_date == today:
+                    return (0, game.scheduled_start)  # Today first
+                elif game_date <= this_week_end:
+                    return (1, game.scheduled_start)  # This week
+                elif game_date <= next_weekend_start + timedelta(days=2):
+                    return (2, game.scheduled_start)  # Next weekend
+                else:
+                    return (3, game.scheduled_start)  # Later
+
+            games = sorted(all_games, key=game_priority)[:60]
+
+            # Format games for frontend
+            formatted_games = []
+            for game in games:
+                formatted_games.append({
+                    'game_id': str(game.id),
+                    'sport': game.league.sport_type if game.league else 'Unknown',
+                    'league': game.league.name if game.league else 'Unknown',
+                    'home_team': game.home_team.name if game.home_team else 'TBD',
+                    'away_team': game.away_team.name if game.away_team else 'TBD',
+                    'scheduled_start': game.scheduled_start.isoformat() if game.scheduled_start else None,
+                    'game_time': game.scheduled_start.isoformat() if game.scheduled_start else None,
+                    'status': game.status,
+                    'home_score': 0,  # Will be updated when game is live
+                    'away_score': 0,
+                    'venue': game.venue_name if hasattr(game, 'venue_name') else '',
+                })
+
+            await self.send_json({
+                'type': 'games_list',
+                'games': formatted_games,
+                'total_count': len(formatted_games)
+            })
+
+            logger.info(f"Sent {len(formatted_games)} real games from database")
+
+        except Exception as e:
+            logger.error(f"Error fetching real games: {e}")
+            # Send empty list on error
+            await self.send_json({
+                'type': 'games_list',
+                'games': [],
+                'error': str(e)
+            })
+
+    async def send_live_scores(self):
+        """Send real live scores from ESPN API"""
+        from datetime import datetime
+        import requests
+
+        try:
+            # Get today's date for ESPN API
+            today = datetime.now().strftime('%Y%m%d')
+            url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={today}"
+
+            # Fetch live data from ESPN
+            response = await database_sync_to_async(requests.get)(url, timeout=10)
+            data = response.json()
+
+            live_games = []
+            for event in data.get('events', []):
+                competition = event.get('competitions', [{}])[0]
+                competitors = competition.get('competitors', [])
+
+                if len(competitors) >= 2:
+                    # competitors[0] is home, competitors[1] is away
+                    home_competitor = competitors[0]
+                    away_competitor = competitors[1]
+
+                    # Get game situation data
+                    situation = competition.get('situation', {})
+
+                    game_data = {
+                        'game_id': event.get('id'),
+                        'status': event.get('status', {}).get('type', {}).get('name', 'Unknown'),
+                        'period': event.get('status', {}).get('period', 0),
+                        'clock': event.get('status', {}).get('displayClock', ''),
+                        'home_team': home_competitor.get('team', {}).get('displayName', ''),
+                        'home_team_abbr': home_competitor.get('team', {}).get('abbreviation', ''),
+                        'home_score': int(home_competitor.get('score', 0)),
+                        'home_logo': home_competitor.get('team', {}).get('logo', ''),
+                        'away_team': away_competitor.get('team', {}).get('displayName', ''),
+                        'away_team_abbr': away_competitor.get('team', {}).get('abbreviation', ''),
+                        'away_score': int(away_competitor.get('score', 0)),
+                        'away_logo': away_competitor.get('team', {}).get('logo', ''),
+                        'possession': situation.get('possession', ''),
+                        'down': situation.get('downDistanceText', ''),
+                        'field_position': situation.get('possessionText', ''),
+                        'last_play': situation.get('lastPlay', {}).get('text', ''),
+                        'broadcast': competition.get('broadcast', ''),
+                    }
+                    live_games.append(game_data)
+
+            await self.send_json({
+                'type': 'live_scores',
+                'games': live_games,
+                'timestamp': datetime.now().isoformat(),
+                'count': len(live_games)
+            })
+
+            logger.info(f"Sent {len(live_games)} live NFL games from ESPN")
+
+        except Exception as e:
+            logger.error(f"Error fetching live scores from ESPN: {e}")
+            await self.send_json({
+                'type': 'live_scores',
+                'games': [],
+                'error': str(e)
+            })
+
+    async def send_nfl_news(self):
+        """Fetch and send NFL news from ESPN"""
+        import requests
+
+        try:
+            url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news"
+
+            # Fetch news from ESPN
+            response = await database_sync_to_async(requests.get)(url, timeout=10)
+            data = response.json()
+
+            articles_data = data.get('articles', [])
+            news_items = []
+
+            for article in articles_data[:15]:  # Get top 15 articles
+                # Extract image URL if available
+                image_url = ''
+                if article.get('images'):
+                    image_url = article['images'][0].get('url', '')
+
+                news_item = {
+                    'headline': article.get('headline', ''),
+                    'description': article.get('description', ''),
+                    'link': article.get('links', {}).get('web', {}).get('href', ''),
+                    'published': article.get('published', ''),
+                    'image': image_url,
+                    'type': article.get('type', 'news')
+                }
+                news_items.append(news_item)
+
+            await self.send_json({
+                'type': 'nfl_news',
+                'articles': news_items,
+                'count': len(news_items)
+            })
+
+            logger.info(f"Sent {len(news_items)} NFL news articles")
+
+        except Exception as e:
+            logger.error(f"Error fetching NFL news from ESPN: {e}")
+            await self.send_json({
+                'type': 'nfl_news',
+                'articles': [],
+                'error': str(e)
+            })
+
+    async def send_ai_predictions(self):
+        """Send AI-generated betting predictions"""
+        import random
+
+        predictions = {
+            'featured_picks': [
+                {
+                    'game': 'Chiefs vs Bills',
+                    'pick': 'Chiefs -3.5',
+                    'confidence': random.randint(65, 95),
+                    'reasoning': 'Chiefs home field advantage, 5-0 ATS in last 5 home games',
+                    'potential_payout': '+110'
+                },
+                {
+                    'game': 'Lakers vs Celtics',
+                    'pick': 'Over 220.5',
+                    'confidence': random.randint(70, 88),
+                    'reasoning': 'Both teams averaging 115+ PPG in last 10 games',
+                    'potential_payout': '-105'
+                },
+                {
+                    'game': 'Real Madrid vs Man City',
+                    'pick': 'Both Teams to Score',
+                    'confidence': random.randint(75, 92),
+                    'reasoning': 'High-scoring matchup history, both teams in form',
+                    'potential_payout': '-120'
+                }
+            ],
+            'system_performance': {
+                'today': {'win_rate': 0.78, 'units': 12.5},
+                'week': {'win_rate': 0.71, 'units': 45.2},
+                'month': {'win_rate': 0.68, 'units': 156.8}
+            }
+        }
+
+        await self.send_json({
+            'type': 'ai_predictions',
+            'predictions': predictions
+        })
+
+    async def send_betting_history(self):
+        """Send user's betting history"""
+        import random
+        from datetime import datetime, timedelta
+
+        # Generate sample betting history
+        history = []
+        for i in range(10):
+            date = datetime.now() - timedelta(days=i)
+            history.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'game': random.choice(['NFL', 'NBA', 'MLB', 'NHL', 'Soccer']),
+                'bet_type': random.choice(['Spread', 'Total', 'Moneyline']),
+                'selection': random.choice(['Home -3.5', 'Away +7', 'Over 220', 'Under 48.5']),
+                'odds': random.choice(['-110', '+105', '-120', '+150']),
+                'stake': random.choice([50, 100, 200]),
+                'result': random.choice(['Win', 'Loss', 'Push']),
+                'payout': random.choice([0, 95, 190, 250])
+            })
+
+        stats = {
+            'total_bets': len(history),
+            'wins': sum(1 for h in history if h['result'] == 'Win'),
+            'losses': sum(1 for h in history if h['result'] == 'Loss'),
+            'pushes': sum(1 for h in history if h['result'] == 'Push'),
+            'total_staked': sum(h['stake'] for h in history),
+            'total_payout': sum(h['payout'] for h in history),
+            'roi': random.uniform(-5, 25)
+        }
+
+        await self.send_json({
+            'type': 'betting_history',
+            'history': history,
+            'stats': stats
+        })
+
+    async def send_sport_details(self, sport: str):
+        """Send detailed information for a specific sport"""
+        if not sport:
+            await self.send_json({
+                'type': 'error',
+                'message': 'Sport name is required'
+            })
+            return
+
+        import random
+
+        # Generate sport-specific details
+        details = {
+            'sport': sport,
+            'upcoming_games': [],
+            'trending_bets': [],
+            'ai_insights': []
+        }
+
+        # Add sample upcoming games
+        for i in range(5):
+            details['upcoming_games'].append({
+                'game_id': f'{sport.lower()}_{i}',
+                'home_team': f'Team {i*2}',
+                'away_team': f'Team {i*2+1}',
+                'start_time': f'{random.randint(12, 20)}:00',
+                'spread': f'{random.choice(["+", "-"])}{random.randint(1, 10)}.5',
+                'total': random.randint(180, 250),
+                'ml_home': random.choice(['-150', '-120', '+105']),
+                'ml_away': random.choice(['+130', '-105', '-110'])
+            })
+
+        # Add trending bets
+        details['trending_bets'] = [
+            f'{sport} Team A to win by 10+',
+            f'Over 220.5 total points',
+            f'First quarter winner'
+        ]
+
+        # Add AI insights
+        details['ai_insights'] = [
+            'Home teams are 8-2 ATS in last 10 games',
+            'Unders hitting at 65% rate this week',
+            'Public heavy on favorites, value on dogs'
+        ]
+
+        await self.send_json({
+            'type': 'sport_details',
+            'details': details
+        })
+
+    async def handle_place_bet(self, bet_data: dict):
+        """Handle placing a bet"""
+        if not bet_data:
+            await self.send_json({
+                'type': 'error',
+                'message': 'Bet data is required'
+            })
+            return
+
+        # In production, this would save to database and process the bet
+        # For now, just acknowledge receipt
+        import random
+
+        bet_id = f'BET_{random.randint(10000, 99999)}'
+
+        # Simulate bet processing
+        await self.send_json({
+            'type': 'bet_placed',
+            'bet_id': bet_id,
+            'status': 'pending',
+            'message': f'Bet placed successfully: {bet_data.get("selection")} at {bet_data.get("odds")}',
+            'bet_slip': {
+                'id': bet_id,
+                'selection': bet_data.get('selection'),
+                'odds': bet_data.get('odds'),
+                'timestamp': bet_data.get('timestamp'),
+                'status': 'pending'
+            }
+        })
+
+        # You could also broadcast to a betting group for real-time updates
+        logger.info(f'Bet placed: {bet_id} - {bet_data}')
 
 
 class OddsConsumer(AsyncJsonWebsocketConsumer):
@@ -500,54 +866,207 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
             'score': event['score']
         })
 
+    async def send_live_games(self):
+        """Send real games from the database"""
+        from .models import Game, GameStatus
+        from django.utils import timezone
+        from datetime import timedelta
+
+        try:
+            # Get current date
+            now = timezone.now()
+            today = now.date()
+            this_week_end = today + timedelta(days=(6 - today.weekday()))  # Next Sunday
+            next_weekend_start = this_week_end + timedelta(days=5)  # Next Friday
+
+            # Priority sports for September/October (Football season!)
+            # NFL and NCAAF are primary, MLB playoffs, NHL starting
+            # NBA/NCAAB shouldn't show unless preseason/early season
+            in_season_sports = ['nfl', 'ncaaf', 'mlb', 'nhl']
+            off_season_sports = ['nba', 'ncaab']  # Only show if they have games
+
+            games_list = await database_sync_to_async(
+                lambda: {
+                    sport: list(Game.objects.filter(
+                        league__sport_type=sport,
+                        scheduled_start__date__gte=today,
+                        scheduled_start__date__lte=today + timedelta(days=14)  # Next 2 weeks
+                    ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:20])
+                    for sport in in_season_sports + off_season_sports
+                }
+            )()
+
+            # Combine games with proper prioritization
+            all_games = []
+
+            # Add in-season sports first
+            for sport in in_season_sports:
+                all_games.extend(games_list.get(sport, []))
+
+            # Only add off-season sports if they have actual games (preseason/etc)
+            for sport in off_season_sports:
+                sport_games = games_list.get(sport, [])
+                if sport_games:  # Only add if there are actual games
+                    all_games.extend(sport_games[:5])  # Limit off-season games
+
+            # Sort games by priority: Today > This Week > Weekend > Later
+            def game_priority(game):
+                game_date = game.scheduled_start.date()
+                if game_date == today:
+                    return (0, game.scheduled_start)  # Today first
+                elif game_date <= this_week_end:
+                    return (1, game.scheduled_start)  # This week
+                elif game_date <= next_weekend_start + timedelta(days=2):
+                    return (2, game.scheduled_start)  # Next weekend
+                else:
+                    return (3, game.scheduled_start)  # Later
+
+            games = sorted(all_games, key=game_priority)[:60]
+
+            # Format games for frontend
+            formatted_games = []
+            for game in games:
+                formatted_games.append({
+                    'game_id': str(game.id),
+                    'sport': game.league.sport_type if game.league else 'Unknown',
+                    'league': game.league.name if game.league else 'Unknown',
+                    'home_team': game.home_team.name if game.home_team else 'TBD',
+                    'away_team': game.away_team.name if game.away_team else 'TBD',
+                    'scheduled_start': game.scheduled_start.isoformat() if game.scheduled_start else None,
+                    'game_time': game.scheduled_start.isoformat() if game.scheduled_start else None,
+                    'status': game.status,
+                    'home_score': 0,  # Will be updated when game is live
+                    'away_score': 0,
+                    'venue': game.venue_name if hasattr(game, 'venue_name') else '',
+                })
+
+            await self.send_json({
+                'type': 'games_list',
+                'games': formatted_games,
+                'total_count': len(formatted_games)
+            })
+
+            logger.info(f"Sent {len(formatted_games)} real games from database")
+
+        except Exception as e:
+            logger.error(f"Error fetching real games: {e}")
+            # Send empty list on error
+            await self.send_json({
+                'type': 'games_list',
+                'games': [],
+                'error': str(e)
+            })
+
     async def send_live_scores(self):
-        """Send current live scores for all active games"""
-        import random
+        """Send real live scores from ESPN API"""
+        from datetime import datetime
+        import requests
 
-        # Sample live scores data (in production, fetch from database or API)
-        scores_data = {
-            'nfl': [
-                {
-                    'game_id': 'nfl_1',
-                    'home_team': 'Kansas City Chiefs',
-                    'away_team': 'Buffalo Bills',
-                    'home_score': random.randint(14, 35),
-                    'away_score': random.randint(14, 35),
-                    'quarter': random.choice(['Q1', 'Q2', 'Q3', 'Q4']),
-                    'time_remaining': f"{random.randint(0, 15):02d}:{random.randint(0, 59):02d}",
-                    'status': 'live'
-                }
-            ],
-            'nba': [
-                {
-                    'game_id': 'nba_1',
-                    'home_team': 'LA Lakers',
-                    'away_team': 'Boston Celtics',
-                    'home_score': random.randint(85, 120),
-                    'away_score': random.randint(85, 120),
-                    'quarter': random.choice(['1st', '2nd', '3rd', '4th']),
-                    'time_remaining': f"{random.randint(0, 12):02d}:{random.randint(0, 59):02d}",
-                    'status': 'live'
-                }
-            ],
-            'soccer': [
-                {
-                    'game_id': 'ucl_1',
-                    'home_team': 'Real Madrid',
-                    'away_team': 'Manchester City',
-                    'home_score': random.randint(0, 4),
-                    'away_score': random.randint(0, 4),
-                    'minute': random.randint(1, 90),
-                    'status': 'live'
-                }
-            ]
-        }
+        try:
+            # Get today's date for ESPN API
+            today = datetime.now().strftime('%Y%m%d')
+            url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={today}"
 
-        await self.send_json({
-            'type': 'live_scores',
-            'data': scores_data,
-            'timestamp': str(cache.get('last_update', 'N/A'))
-        })
+            # Fetch live data from ESPN
+            response = await database_sync_to_async(requests.get)(url, timeout=10)
+            data = response.json()
+
+            live_games = []
+            for event in data.get('events', []):
+                competition = event.get('competitions', [{}])[0]
+                competitors = competition.get('competitors', [])
+
+                if len(competitors) >= 2:
+                    # competitors[0] is home, competitors[1] is away
+                    home_competitor = competitors[0]
+                    away_competitor = competitors[1]
+
+                    # Get game situation data
+                    situation = competition.get('situation', {})
+
+                    game_data = {
+                        'game_id': event.get('id'),
+                        'status': event.get('status', {}).get('type', {}).get('name', 'Unknown'),
+                        'period': event.get('status', {}).get('period', 0),
+                        'clock': event.get('status', {}).get('displayClock', ''),
+                        'home_team': home_competitor.get('team', {}).get('displayName', ''),
+                        'home_team_abbr': home_competitor.get('team', {}).get('abbreviation', ''),
+                        'home_score': int(home_competitor.get('score', 0)),
+                        'home_logo': home_competitor.get('team', {}).get('logo', ''),
+                        'away_team': away_competitor.get('team', {}).get('displayName', ''),
+                        'away_team_abbr': away_competitor.get('team', {}).get('abbreviation', ''),
+                        'away_score': int(away_competitor.get('score', 0)),
+                        'away_logo': away_competitor.get('team', {}).get('logo', ''),
+                        'possession': situation.get('possession', ''),
+                        'down': situation.get('downDistanceText', ''),
+                        'field_position': situation.get('possessionText', ''),
+                        'last_play': situation.get('lastPlay', {}).get('text', ''),
+                        'broadcast': competition.get('broadcast', ''),
+                    }
+                    live_games.append(game_data)
+
+            await self.send_json({
+                'type': 'live_scores',
+                'games': live_games,
+                'timestamp': datetime.now().isoformat(),
+                'count': len(live_games)
+            })
+
+            logger.info(f"Sent {len(live_games)} live NFL games from ESPN")
+
+        except Exception as e:
+            logger.error(f"Error fetching live scores from ESPN: {e}")
+            await self.send_json({
+                'type': 'live_scores',
+                'games': [],
+                'error': str(e)
+            })
+
+    async def send_nfl_news(self):
+        """Fetch and send NFL news from ESPN"""
+        import requests
+
+        try:
+            url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news"
+
+            # Fetch news from ESPN
+            response = await database_sync_to_async(requests.get)(url, timeout=10)
+            data = response.json()
+
+            articles_data = data.get('articles', [])
+            news_items = []
+
+            for article in articles_data[:15]:  # Get top 15 articles
+                # Extract image URL if available
+                image_url = ''
+                if article.get('images'):
+                    image_url = article['images'][0].get('url', '')
+
+                news_item = {
+                    'headline': article.get('headline', ''),
+                    'description': article.get('description', ''),
+                    'link': article.get('links', {}).get('web', {}).get('href', ''),
+                    'published': article.get('published', ''),
+                    'image': image_url,
+                    'type': article.get('type', 'news')
+                }
+                news_items.append(news_item)
+
+            await self.send_json({
+                'type': 'nfl_news',
+                'articles': news_items,
+                'count': len(news_items)
+            })
+
+            logger.info(f"Sent {len(news_items)} NFL news articles")
+
+        except Exception as e:
+            logger.error(f"Error fetching NFL news from ESPN: {e}")
+            await self.send_json({
+                'type': 'nfl_news',
+                'articles': [],
+                'error': str(e)
+            })
 
     async def send_ai_predictions(self):
         """Send AI-generated betting predictions"""
@@ -675,36 +1194,3 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
             'type': 'sport_details',
             'details': details
         })
-
-    async def handle_place_bet(self, bet_data: dict):
-        """Handle placing a bet"""
-        if not bet_data:
-            await self.send_json({
-                'type': 'error',
-                'message': 'Bet data is required'
-            })
-            return
-
-        # In production, this would save to database and process the bet
-        # For now, just acknowledge receipt
-        import random
-
-        bet_id = f'BET_{random.randint(10000, 99999)}'
-
-        # Simulate bet processing
-        await self.send_json({
-            'type': 'bet_placed',
-            'bet_id': bet_id,
-            'status': 'pending',
-            'message': f'Bet placed successfully: {bet_data.get("selection")} at {bet_data.get("odds")}',
-            'bet_slip': {
-                'id': bet_id,
-                'selection': bet_data.get('selection'),
-                'odds': bet_data.get('odds'),
-                'timestamp': bet_data.get('timestamp'),
-                'status': 'pending'
-            }
-        })
-
-        # You could also broadcast to a betting group for real-time updates
-        logger.info(f'Bet placed: {bet_id} - {bet_data}')
