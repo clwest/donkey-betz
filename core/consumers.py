@@ -410,13 +410,21 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         
         await self.accept()
         
+        # Check if user needs interview
+        should_interview = False
+        if self.is_authenticated:
+            from core.personal_assistant_profile_connector import profile_connector
+            should_interview = await profile_connector.should_start_interview(str(self.user.id))
+
         # Send authentication status
         await self.safe_send({
             'type': 'connection_established',
             'data': {
                 'authenticated': self.is_authenticated,
                 'user': self.user.username if self.is_authenticated else 'anonymous',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'should_start_interview': should_interview,
+                'interview_prompt': 'I notice you haven\'t completed your profile yet. Would you like to have a quick chat so I can personalize opportunities for you?' if should_interview else None
             }
         })
     
@@ -581,6 +589,17 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                             'is_interview': True  # Flag to identify interview messages
                         }
                     })
+
+                    # Save interview data to ExtendedUserProfile
+                    from core.personal_assistant_profile_connector import profile_connector
+                    update_result = await profile_connector.update_profile_from_interview(
+                        str(self.user.id),
+                        profile
+                    )
+
+                    if update_result.get('success'):
+                        # Connect to Income Builder for personalized opportunities
+                        await profile_connector.connect_interview_to_income_builder(str(self.user.id))
 
                     # Notify other systems about completed profile
                     await self.notify_profile_completion(profile)

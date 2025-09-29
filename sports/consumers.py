@@ -67,6 +67,16 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             await self.subscribe_to_league(content.get('league'))
         elif message_type == 'get_live_odds':
             await self.send_live_odds(content.get('game_id'))
+        elif message_type == 'get_live_scores':
+            await self.send_live_scores()
+        elif message_type == 'get_ai_predictions':
+            await self.send_ai_predictions()
+        elif message_type == 'get_betting_history':
+            await self.send_betting_history()
+        elif message_type == 'get_sport_details':
+            await self.send_sport_details(content.get('sport'))
+        elif message_type == 'place_bet':
+            await self.handle_place_bet(content.get('bet'))
         else:
             await self.send_json({
                 'type': 'error',
@@ -489,3 +499,212 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
             'quarter': event['quarter'],
             'score': event['score']
         })
+
+    async def send_live_scores(self):
+        """Send current live scores for all active games"""
+        import random
+
+        # Sample live scores data (in production, fetch from database or API)
+        scores_data = {
+            'nfl': [
+                {
+                    'game_id': 'nfl_1',
+                    'home_team': 'Kansas City Chiefs',
+                    'away_team': 'Buffalo Bills',
+                    'home_score': random.randint(14, 35),
+                    'away_score': random.randint(14, 35),
+                    'quarter': random.choice(['Q1', 'Q2', 'Q3', 'Q4']),
+                    'time_remaining': f"{random.randint(0, 15):02d}:{random.randint(0, 59):02d}",
+                    'status': 'live'
+                }
+            ],
+            'nba': [
+                {
+                    'game_id': 'nba_1',
+                    'home_team': 'LA Lakers',
+                    'away_team': 'Boston Celtics',
+                    'home_score': random.randint(85, 120),
+                    'away_score': random.randint(85, 120),
+                    'quarter': random.choice(['1st', '2nd', '3rd', '4th']),
+                    'time_remaining': f"{random.randint(0, 12):02d}:{random.randint(0, 59):02d}",
+                    'status': 'live'
+                }
+            ],
+            'soccer': [
+                {
+                    'game_id': 'ucl_1',
+                    'home_team': 'Real Madrid',
+                    'away_team': 'Manchester City',
+                    'home_score': random.randint(0, 4),
+                    'away_score': random.randint(0, 4),
+                    'minute': random.randint(1, 90),
+                    'status': 'live'
+                }
+            ]
+        }
+
+        await self.send_json({
+            'type': 'live_scores',
+            'data': scores_data,
+            'timestamp': str(cache.get('last_update', 'N/A'))
+        })
+
+    async def send_ai_predictions(self):
+        """Send AI-generated betting predictions"""
+        import random
+
+        predictions = {
+            'featured_picks': [
+                {
+                    'game': 'Chiefs vs Bills',
+                    'pick': 'Chiefs -3.5',
+                    'confidence': random.randint(65, 95),
+                    'reasoning': 'Chiefs home field advantage, 5-0 ATS in last 5 home games',
+                    'potential_payout': '+110'
+                },
+                {
+                    'game': 'Lakers vs Celtics',
+                    'pick': 'Over 220.5',
+                    'confidence': random.randint(70, 88),
+                    'reasoning': 'Both teams averaging 115+ PPG in last 10 games',
+                    'potential_payout': '-105'
+                },
+                {
+                    'game': 'Real Madrid vs Man City',
+                    'pick': 'Both Teams to Score',
+                    'confidence': random.randint(75, 92),
+                    'reasoning': 'High-scoring matchup history, both teams in form',
+                    'potential_payout': '-120'
+                }
+            ],
+            'system_performance': {
+                'today': {'win_rate': 0.78, 'units': 12.5},
+                'week': {'win_rate': 0.71, 'units': 45.2},
+                'month': {'win_rate': 0.68, 'units': 156.8}
+            }
+        }
+
+        await self.send_json({
+            'type': 'ai_predictions',
+            'predictions': predictions
+        })
+
+    async def send_betting_history(self):
+        """Send user's betting history"""
+        import random
+        from datetime import datetime, timedelta
+
+        # Generate sample betting history
+        history = []
+        for i in range(10):
+            date = datetime.now() - timedelta(days=i)
+            history.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'game': random.choice(['NFL', 'NBA', 'MLB', 'NHL', 'Soccer']),
+                'bet_type': random.choice(['Spread', 'Total', 'Moneyline']),
+                'selection': random.choice(['Home -3.5', 'Away +7', 'Over 220', 'Under 48.5']),
+                'odds': random.choice(['-110', '+105', '-120', '+150']),
+                'stake': random.choice([50, 100, 200]),
+                'result': random.choice(['Win', 'Loss', 'Push']),
+                'payout': random.choice([0, 95, 190, 250])
+            })
+
+        stats = {
+            'total_bets': len(history),
+            'wins': sum(1 for h in history if h['result'] == 'Win'),
+            'losses': sum(1 for h in history if h['result'] == 'Loss'),
+            'pushes': sum(1 for h in history if h['result'] == 'Push'),
+            'total_staked': sum(h['stake'] for h in history),
+            'total_payout': sum(h['payout'] for h in history),
+            'roi': random.uniform(-5, 25)
+        }
+
+        await self.send_json({
+            'type': 'betting_history',
+            'history': history,
+            'stats': stats
+        })
+
+    async def send_sport_details(self, sport: str):
+        """Send detailed information for a specific sport"""
+        if not sport:
+            await self.send_json({
+                'type': 'error',
+                'message': 'Sport name is required'
+            })
+            return
+
+        import random
+
+        # Generate sport-specific details
+        details = {
+            'sport': sport,
+            'upcoming_games': [],
+            'trending_bets': [],
+            'ai_insights': []
+        }
+
+        # Add sample upcoming games
+        for i in range(5):
+            details['upcoming_games'].append({
+                'game_id': f'{sport.lower()}_{i}',
+                'home_team': f'Team {i*2}',
+                'away_team': f'Team {i*2+1}',
+                'start_time': f'{random.randint(12, 20)}:00',
+                'spread': f'{random.choice(["+", "-"])}{random.randint(1, 10)}.5',
+                'total': random.randint(180, 250),
+                'ml_home': random.choice(['-150', '-120', '+105']),
+                'ml_away': random.choice(['+130', '-105', '-110'])
+            })
+
+        # Add trending bets
+        details['trending_bets'] = [
+            f'{sport} Team A to win by 10+',
+            f'Over 220.5 total points',
+            f'First quarter winner'
+        ]
+
+        # Add AI insights
+        details['ai_insights'] = [
+            'Home teams are 8-2 ATS in last 10 games',
+            'Unders hitting at 65% rate this week',
+            'Public heavy on favorites, value on dogs'
+        ]
+
+        await self.send_json({
+            'type': 'sport_details',
+            'details': details
+        })
+
+    async def handle_place_bet(self, bet_data: dict):
+        """Handle placing a bet"""
+        if not bet_data:
+            await self.send_json({
+                'type': 'error',
+                'message': 'Bet data is required'
+            })
+            return
+
+        # In production, this would save to database and process the bet
+        # For now, just acknowledge receipt
+        import random
+
+        bet_id = f'BET_{random.randint(10000, 99999)}'
+
+        # Simulate bet processing
+        await self.send_json({
+            'type': 'bet_placed',
+            'bet_id': bet_id,
+            'status': 'pending',
+            'message': f'Bet placed successfully: {bet_data.get("selection")} at {bet_data.get("odds")}',
+            'bet_slip': {
+                'id': bet_id,
+                'selection': bet_data.get('selection'),
+                'odds': bet_data.get('odds'),
+                'timestamp': bet_data.get('timestamp'),
+                'status': 'pending'
+            }
+        })
+
+        # You could also broadcast to a betting group for real-time updates
+        logger.info(f'Bet placed: {bet_id} - {bet_data}')

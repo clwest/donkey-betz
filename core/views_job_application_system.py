@@ -443,65 +443,95 @@ class QuickApplyView(View):
     def _submit_application_to_platform(self, job_data: Dict, profile: ExtendedUserProfile,
                                       cover_letter: str, resume_version: ResumeVersion) -> Dict[str, Any]:
         """
-        Submit application to the job platform.
+        Submit application to the job platform using REAL submission engine.
 
-        In a real implementation, this would integrate with:
-        - LinkedIn Easy Apply API
-        - Indeed Apply API
-        - Company ATS systems
-        - Email applications
+        THIS IS THE REAL DEAL - Actually submits applications!
         """
+        from .real_job_submitter import real_job_submitter
 
-        platform = job_data.get('platform', 'unknown')
+        logger.info(f"🚀 INITIATING REAL JOB APPLICATION SUBMISSION")
+        logger.info(f"Platform: {job_data.get('platform', 'unknown')}")
+        logger.info(f"User: {profile.user.username}")
 
-        # Simulate different platform submissions
-        if platform == 'linkedin':
-            return self._submit_to_linkedin(job_data, profile, cover_letter, resume_version)
-        elif platform == 'indeed':
-            return self._submit_to_indeed(job_data, profile, cover_letter, resume_version)
-        elif platform == 'company_website':
-            return self._submit_to_company_website(job_data, profile, cover_letter, resume_version)
+        # Prepare resume content
+        resume_content = ""
+        if resume_version and hasattr(resume_version, 'content'):
+            resume_content = resume_version.content
+        elif hasattr(profile, 'resume_text'):
+            resume_content = profile.resume_text
         else:
-            # Generic application simulation
-            return {
-                'success': True,
-                'method': 'email',
-                'message': f'Application sent via email to {job_data.get("company", "company")}',
-                'confirmation_id': f'APP_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
-            }
+            # Generate basic resume from profile
+            resume_content = self._generate_resume_from_profile(profile)
 
-    def _submit_to_linkedin(self, job_data: Dict, profile: ExtendedUserProfile,
-                           cover_letter: str, resume_version: ResumeVersion) -> Dict[str, Any]:
-        """Simulate LinkedIn Easy Apply submission"""
-        # In real implementation, use LinkedIn API
-        return {
-            'success': True,
-            'method': 'linkedin_easy_apply',
-            'message': 'Successfully submitted via LinkedIn Easy Apply',
-            'confirmation_id': f'LI_{job_data["id"]}'
-        }
+        # Use the real job submitter
+        result = real_job_submitter.submit_application(
+            job_data=job_data,
+            profile=profile,
+            cover_letter=cover_letter,
+            resume_content=resume_content
+        )
 
-    def _submit_to_indeed(self, job_data: Dict, profile: ExtendedUserProfile,
-                         cover_letter: str, resume_version: ResumeVersion) -> Dict[str, Any]:
-        """Simulate Indeed application submission"""
-        # In real implementation, use Indeed API
-        return {
-            'success': True,
-            'method': 'indeed_apply',
-            'message': 'Successfully submitted via Indeed',
-            'confirmation_id': f'IND_{job_data["id"]}'
-        }
+        if result.get('success'):
+            logger.info(f"✅ REAL APPLICATION SUBMITTED SUCCESSFULLY!")
+            logger.info(f"Confirmation ID: {result.get('confirmation_id')}")
+            logger.info(f"Method: {result.get('method')}")
+        else:
+            logger.error(f"❌ Real application failed: {result.get('error')}")
 
-    def _submit_to_company_website(self, job_data: Dict, profile: ExtendedUserProfile,
-                                  cover_letter: str, resume_version: ResumeVersion) -> Dict[str, Any]:
-        """Simulate company website application submission"""
-        # In real implementation, integrate with company ATS systems
-        return {
-            'success': True,
-            'method': 'company_ats',
-            'message': f'Successfully submitted to {job_data.get("company", "company")} careers page',
-            'confirmation_id': f'CMP_{job_data["id"]}'
-        }
+        return result
+
+    def _generate_resume_from_profile(self, profile: ExtendedUserProfile) -> str:
+        """Generate a basic resume from user profile data"""
+        resume_parts = []
+
+        # Header
+        resume_parts.append(f"# {profile.full_name if profile.full_name else 'Professional Resume'}")
+        if profile.email:
+            resume_parts.append(f"Email: {profile.email}")
+        if profile.phone:
+            resume_parts.append(f"Phone: {profile.phone}")
+        if profile.location:
+            resume_parts.append(f"Location: {profile.location}")
+        resume_parts.append("")
+
+        # Professional Summary
+        if profile.bio:
+            resume_parts.append("## Professional Summary")
+            resume_parts.append(profile.bio)
+            resume_parts.append("")
+
+        # Skills
+        if profile.skills:
+            resume_parts.append("## Skills")
+            skills_list = json.loads(profile.skills) if isinstance(profile.skills, str) else profile.skills
+            if isinstance(skills_list, list):
+                resume_parts.append(", ".join(skills_list))
+            resume_parts.append("")
+
+        # Experience
+        if profile.experience:
+            resume_parts.append("## Experience")
+            experience_data = json.loads(profile.experience) if isinstance(profile.experience, str) else profile.experience
+            if isinstance(experience_data, list):
+                for exp in experience_data:
+                    resume_parts.append(f"**{exp.get('title', 'Position')}** at {exp.get('company', 'Company')}")
+                    resume_parts.append(f"{exp.get('start_date', '')} - {exp.get('end_date', 'Present')}")
+                    if exp.get('description'):
+                        resume_parts.append(exp['description'])
+                    resume_parts.append("")
+
+        # Education
+        if profile.education:
+            resume_parts.append("## Education")
+            education_data = json.loads(profile.education) if isinstance(profile.education, str) else profile.education
+            if isinstance(education_data, list):
+                for edu in education_data:
+                    resume_parts.append(f"**{edu.get('degree', 'Degree')}** - {edu.get('school', 'Institution')}")
+                    if edu.get('graduation_date'):
+                        resume_parts.append(f"Graduated: {edu['graduation_date']}")
+                    resume_parts.append("")
+
+        return "\n".join(resume_parts)
 
     def _create_application_embedding(self, user: User, application: JobApplication,
                                     job_analysis: Dict[str, Any]):

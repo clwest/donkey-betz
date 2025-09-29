@@ -1,0 +1,249 @@
+{% extends "unified/base.html" %}
+{% load static %}
+
+{% block title %}Neural Orchestra - AI Agent Visualization{% endblock %}
+
+{% block websocket_url %}ws://localhost:8000/ws/neural-orchestra/{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-neural">
+                <div class="card-body text-center py-5">
+                    <h1 class="display-4 mb-3 text-white">
+                        <i class="fas fa-network-wired"></i> Neural Orchestra
+                    </h1>
+                    <p class="lead text-light">Real-time visualization of AI agent orchestration</p>
+                    <div class="mt-4">
+                        <span class="badge bg-success mx-2">
+                            <i class="fas fa-robot"></i> 149 Agents
+                        </span>
+                        <span class="badge bg-info mx-2">
+                            <i class="fas fa-user-tie"></i> 25 Advisors
+                        </span>
+                        <span class="badge bg-warning mx-2">
+                            <i class="fas fa-network-wired"></i> Active Orchestrations
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualization Area -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div id="orchestrationCanvas" style="height: 500px; position: relative; background: linear-gradient(135deg, #1e293b, #0f172a);">
+                        <!-- Canvas for agent visualization -->
+                        <canvas id="neuralCanvas" style="width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Statistics -->
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-robot"></i> Agent Categories</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Income Generation</span>
+                            <span class="badge bg-success">32</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Data Analysis</span>
+                            <span class="badge bg-info">28</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Content Creation</span>
+                            <span class="badge bg-warning">24</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Decision Support</span>
+                            <span class="badge bg-danger">18</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>Spider Coordination</span>
+                            <span class="badge bg-secondary">15</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>System Optimization</span>
+                            <span class="badge bg-dark">32</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-tie"></i> Top Advisors</h5>
+                </div>
+                <div class="card-body">
+                    <div class="advisor-list">
+                        <div class="mb-2">Warren Buffett <span class="float-end text-success">Active</span></div>
+                        <div class="mb-2">Cathie Wood <span class="float-end text-success">Active</span></div>
+                        <div class="mb-2">Ray Dalio <span class="float-end text-warning">Consulting</span></div>
+                        <div class="mb-2">Peter Lynch <span class="float-end text-success">Active</span></div>
+                        <div class="mb-2">Charlie Munger <span class="float-end text-info">Analyzing</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Performance Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Orchestrations/Hour</small>
+                        <h4 id="orchestrationRate">247</h4>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Success Rate</small>
+                        <h4 id="successRate">94.2%</h4>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Avg Response Time</small>
+                        <h4 id="responseTime">142ms</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-neural {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    }
+</style>
+
+<script>
+    let ws = null;
+    let canvas, ctx;
+    let agents = [];
+    let connections = [];
+
+    function initWebSocket() {
+        const wsUrl = 'ws://localhost:8000/ws/neural-orchestra/';
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            console.log('Neural Orchestra WebSocket connected');
+            ws.send(JSON.stringify({ type: 'get_orchestration_data' }));
+        };
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateVisualization(data);
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = function() {
+            setTimeout(initWebSocket, 3000);
+        };
+    }
+
+    function initCanvas() {
+        canvas = document.getElementById('neuralCanvas');
+        ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        // Create initial agent positions
+        for (let i = 0; i < 149; i++) {
+            agents.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: 3 + Math.random() * 2,
+                color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5
+            });
+        }
+
+        animate();
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw connections
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < agents.length; i++) {
+            for (let j = i + 1; j < agents.length; j++) {
+                const dist = Math.hypot(agents[i].x - agents[j].x, agents[i].y - agents[j].y);
+                if (dist < 100) {
+                    ctx.beginPath();
+                    ctx.moveTo(agents[i].x, agents[i].y);
+                    ctx.lineTo(agents[j].x, agents[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Draw and update agents
+        agents.forEach(agent => {
+            // Update position
+            agent.x += agent.vx;
+            agent.y += agent.vy;
+
+            // Bounce off walls
+            if (agent.x < 0 || agent.x > canvas.width) agent.vx *= -1;
+            if (agent.y < 0 || agent.y > canvas.height) agent.vy *= -1;
+
+            // Draw agent
+            ctx.fillStyle = agent.color;
+            ctx.beginPath();
+            ctx.arc(agent.x, agent.y, agent.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        requestAnimationFrame(animate);
+    }
+
+    function updateVisualization(data) {
+        if (data.orchestrationRate) {
+            document.getElementById('orchestrationRate').textContent = data.orchestrationRate;
+        }
+        if (data.successRate) {
+            document.getElementById('successRate').textContent = data.successRate + '%';
+        }
+        if (data.responseTime) {
+            document.getElementById('responseTime').textContent = data.responseTime + 'ms';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initWebSocket();
+        initCanvas();
+    });
+</script>
+{% endblock %}

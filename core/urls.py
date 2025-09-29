@@ -284,6 +284,12 @@ from core.views_ai_ecosystem import (
 from core import views_agent_execution
 from core import views_categorized_opportunities
 from core import views_agent_work_platform
+from core.views_revenue_tracking import (
+    revenue_stats_view,
+    track_revenue_view,
+    update_revenue_status_view,
+    revenue_history_view
+)
 
 # Import enhanced learning workflow API
 try:
@@ -303,8 +309,11 @@ from core.views_diagnostics import (
 )
 
 urlpatterns = [
-    # Homepage
-    path('', lambda request: render(request, 'home.html'), name='home'),
+    # UNIFIED FRONTEND - Primary routing (takes precedence)
+    path('', include('core.urls_unified')),  # Unified platform URLs
+
+    # Legacy homepage (will be overridden by unified dashboard)
+    # path('', lambda request: render(request, 'home.html'), name='home'),
 
     # Django admin
     path('admin/', admin.site.urls),
@@ -440,6 +449,12 @@ urlpatterns = [
     path('api/v1/monetization/plan/', create_monetization_plan, name='create-monetization-plan'),
     path('api/v1/monetization/content-automation/', content_automation_plan, name='content-automation'),
     path('api/v1/monetization/track-revenue/', track_revenue, name='track-revenue'),
+
+    # Revenue Tracking API
+    path('api/v1/revenue/stats/', revenue_stats_view, name='revenue-stats'),
+    path('api/v1/revenue/track/', track_revenue_view, name='revenue-track'),
+    path('api/v1/revenue/<uuid:revenue_id>/update-status/', update_revenue_status_view, name='revenue-update-status'),
+    path('api/v1/revenue/history/', revenue_history_view, name='revenue-history'),
 
     # AI Opportunity Pipeline - Spider Research to Agent Execution
     path('api/v1/ai-opportunities/execute/', execute_ai_opportunity_pipeline, name='ai-opportunities-execute'),

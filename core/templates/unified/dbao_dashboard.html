@@ -1,0 +1,572 @@
+{% extends "unified/base.html" %}
+
+{% block title %}DBAO Dashboard - Data Analytics & Optimization{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dbao-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header-section {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .page-title {
+        font-size: 2.5em;
+        background: linear-gradient(135deg, #4a90e2, #7b68ee, #ff6b6b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #888;
+        font-size: 1.2em;
+    }
+
+    .metrics-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, rgba(74,144,226,0.1), rgba(0,0,0,0.3));
+        border: 1px solid rgba(74,144,226,0.3);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(74,144,226,0.5);
+    }
+
+    .metric-icon {
+        font-size: 2em;
+        margin-bottom: 10px;
+    }
+
+    .metric-value {
+        font-size: 2.2em;
+        font-weight: bold;
+        background: linear-gradient(135deg, #4a90e2, #7b68ee);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 5px;
+    }
+
+    .metric-label {
+        color: #888;
+        font-size: 0.95em;
+    }
+
+    .metric-change {
+        margin-top: 8px;
+        font-size: 0.9em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .change-positive {
+        color: #00ff00;
+    }
+
+    .change-negative {
+        color: #ff4444;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .chart-section {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 25px;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .chart-title {
+        font-size: 1.3em;
+        color: #fff;
+    }
+
+    .chart-controls {
+        display: flex;
+        gap: 10px;
+    }
+
+    .control-btn {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85em;
+        transition: all 0.2s ease;
+    }
+
+    .control-btn:hover {
+        background: rgba(255,255,255,0.2);
+    }
+
+    .control-btn.active {
+        background: linear-gradient(135deg, #4a90e2, #7b68ee);
+        border-color: transparent;
+    }
+
+    .chart-container {
+        height: 300px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .chart-placeholder {
+        color: #666;
+        font-size: 1.1em;
+    }
+
+    .activity-feed {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 25px;
+        max-height: 650px;
+        overflow-y: auto;
+    }
+
+    .feed-header {
+        font-size: 1.3em;
+        color: #fff;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .feed-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85em;
+        color: #00ff00;
+    }
+
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        background: #00ff00;
+        border-radius: 50%;
+        animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    .activity-item {
+        background: rgba(255,255,255,0.05);
+        border-left: 3px solid #4a90e2;
+        padding: 15px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .activity-item:hover {
+        background: rgba(255,255,255,0.08);
+        transform: translateX(5px);
+    }
+
+    .activity-time {
+        color: #888;
+        font-size: 0.85em;
+        margin-bottom: 5px;
+    }
+
+    .activity-message {
+        color: #fff;
+        line-height: 1.5;
+    }
+
+    .data-tables {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .table-section {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 25px;
+    }
+
+    .table-header {
+        font-size: 1.3em;
+        color: #fff;
+        margin-bottom: 20px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th {
+        background: rgba(74,144,226,0.2);
+        color: #fff;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid rgba(74,144,226,0.4);
+    }
+
+    .data-table td {
+        padding: 12px;
+        color: #ddd;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .data-table tr:hover {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .badge-success {
+        background: rgba(0,255,0,0.2);
+        color: #00ff00;
+        border: 1px solid rgba(0,255,0,0.4);
+    }
+
+    .badge-warning {
+        background: rgba(255,255,0,0.2);
+        color: #ffff00;
+        border: 1px solid rgba(255,255,0,0.4);
+    }
+
+    .badge-error {
+        background: rgba(255,0,0,0.2);
+        color: #ff4444;
+        border: 1px solid rgba(255,0,0,0.4);
+    }
+
+    .action-bar {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .action-button {
+        flex: 1;
+        padding: 15px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        font-size: 1.05em;
+    }
+
+    .action-button:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08));
+        transform: translateY(-2px);
+    }
+
+    .action-button.primary {
+        background: linear-gradient(135deg, #4a90e2, #7b68ee);
+        border: none;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dbao-container">
+    <div class="header-section">
+        <h1 class="page-title">DBAO Dashboard</h1>
+        <p class="subtitle">Data Analytics, Business Intelligence & Optimization Platform</p>
+    </div>
+
+    <div class="metrics-overview">
+        <div class="metric-card">
+            <div class="metric-icon">📊</div>
+            <div class="metric-value">2.4M</div>
+            <div class="metric-label">Data Points</div>
+            <div class="metric-change change-positive">
+                <span>↑</span> +12.5%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-value">342</div>
+            <div class="metric-label">Active Queries</div>
+            <div class="metric-change change-positive">
+                <span>↑</span> +8.3%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">🔄</div>
+            <div class="metric-value">98.7%</div>
+            <div class="metric-label">System Uptime</div>
+            <div class="metric-change change-positive">
+                <span>↑</span> +0.2%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">💾</div>
+            <div class="metric-value">1.8TB</div>
+            <div class="metric-label">Data Processed</div>
+            <div class="metric-change change-positive">
+                <span>↑</span> +24.1%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">🚀</div>
+            <div class="metric-value">42ms</div>
+            <div class="metric-label">Avg Response</div>
+            <div class="metric-change change-positive">
+                <span>↓</span> -15.3%
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon">📈</div>
+            <div class="metric-value">87%</div>
+            <div class="metric-label">Accuracy Rate</div>
+            <div class="metric-change change-positive">
+                <span>↑</span> +3.2%
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3 class="chart-title">Performance Analytics</h3>
+                <div class="chart-controls">
+                    <button class="control-btn active">Day</button>
+                    <button class="control-btn">Week</button>
+                    <button class="control-btn">Month</button>
+                    <button class="control-btn">Year</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-placeholder">
+                    📈 Real-time performance chart will render here
+                </div>
+            </div>
+        </div>
+
+        <div class="activity-feed">
+            <div class="feed-header">
+                <span>Live Activity Feed</span>
+                <div class="feed-status">
+                    <span class="status-indicator"></span>
+                    <span>Streaming</span>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-time">2 minutes ago</div>
+                <div class="activity-message">Database optimization completed: 23% performance improvement</div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-time">5 minutes ago</div>
+                <div class="activity-message">New data pipeline activated: Processing 10K records/sec</div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-time">12 minutes ago</div>
+                <div class="activity-message">ML model retrained with 98.2% accuracy</div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-time">18 minutes ago</div>
+                <div class="activity-message">Backup completed successfully: 2.4TB secured</div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-time">25 minutes ago</div>
+                <div class="activity-message">Cache optimization: Response time reduced by 35%</div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-time">32 minutes ago</div>
+                <div class="activity-message">Security scan completed: No vulnerabilities detected</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="data-tables">
+        <div class="table-section">
+            <h3 class="table-header">Top Queries</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Query ID</th>
+                        <th>Type</th>
+                        <th>Execution Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#Q-7842</td>
+                        <td>Analytics</td>
+                        <td>124ms</td>
+                        <td><span class="status-badge badge-success">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>#Q-7841</td>
+                        <td>Aggregation</td>
+                        <td>342ms</td>
+                        <td><span class="status-badge badge-success">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>#Q-7840</td>
+                        <td>Machine Learning</td>
+                        <td>1,245ms</td>
+                        <td><span class="status-badge badge-warning">Processing</span></td>
+                    </tr>
+                    <tr>
+                        <td>#Q-7839</td>
+                        <td>Data Export</td>
+                        <td>892ms</td>
+                        <td><span class="status-badge badge-success">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>#Q-7838</td>
+                        <td>Real-time Stream</td>
+                        <td>42ms</td>
+                        <td><span class="status-badge badge-success">Active</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-section">
+            <h3 class="table-header">Data Sources</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Records</th>
+                        <th>Last Update</th>
+                        <th>Health</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL Main</td>
+                        <td>1.2M</td>
+                        <td>2 min ago</td>
+                        <td><span class="status-badge badge-success">Healthy</span></td>
+                    </tr>
+                    <tr>
+                        <td>Redis Cache</td>
+                        <td>342K</td>
+                        <td>Just now</td>
+                        <td><span class="status-badge badge-success">Healthy</span></td>
+                    </tr>
+                    <tr>
+                        <td>API Gateway</td>
+                        <td>89K</td>
+                        <td>5 min ago</td>
+                        <td><span class="status-badge badge-success">Healthy</span></td>
+                    </tr>
+                    <tr>
+                        <td>S3 Storage</td>
+                        <td>567K</td>
+                        <td>10 min ago</td>
+                        <td><span class="status-badge badge-warning">Slow</span></td>
+                    </tr>
+                    <tr>
+                        <td>Elasticsearch</td>
+                        <td>2.8M</td>
+                        <td>1 min ago</td>
+                        <td><span class="status-badge badge-success">Healthy</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button class="action-button primary">Run Analytics</button>
+        <button class="action-button">Export Data</button>
+        <button class="action-button">Configure Pipelines</button>
+        <button class="action-button">View Reports</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+let socket = null;
+
+function connectWebSocket() {
+    const wsUrl = 'ws://localhost:8000/ws/dbao/';
+    console.log('Connecting to DBAO WebSocket:', wsUrl);
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function(e) {
+        console.log('DBAO WebSocket connected');
+        requestMetrics();
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        updateDashboard(data);
+    };
+
+    socket.onclose = function(e) {
+        console.log('DBAO WebSocket disconnected');
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+function requestMetrics() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'get_metrics' }));
+    }
+}
+
+function updateDashboard(data) {
+    console.log('Updating DBAO dashboard:', data);
+}
+
+connectWebSocket();
+setInterval(requestMetrics, 15000);
+{% endblock %}

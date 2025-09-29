@@ -475,7 +475,9 @@
         function connectWebSocket() {
             if (ws) ws.close();
 
-            ws = new WebSocket('ws://localhost:8000/ws/decision-command/');
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/decision-command/`;
+            ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 updateWSStatus('Connected', '#0f0');

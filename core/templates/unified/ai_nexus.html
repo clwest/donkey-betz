@@ -1,0 +1,590 @@
+{% extends "unified/base.html" %}
+
+{% block title %}AI Nexus - Central Intelligence Hub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nexus-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header-section {
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .page-title {
+        font-size: 3em;
+        background: linear-gradient(135deg, #00ffff, #ff00ff, #00ff00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+        animation: glow 3s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+        0%, 100% { filter: brightness(1); }
+        50% { filter: brightness(1.5); }
+    }
+
+    .subtitle {
+        color: #888;
+        font-size: 1.3em;
+        margin-bottom: 20px;
+    }
+
+    .nexus-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+
+    .nexus-card {
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 2px solid transparent;
+        border-radius: 20px;
+        padding: 25px;
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .nexus-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(135deg, #00ffff, #ff00ff, #00ff00);
+        border-radius: 20px;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+        z-index: -1;
+    }
+
+    .nexus-card:hover::before {
+        opacity: 1;
+    }
+
+    .nexus-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        border-color: transparent;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .card-title {
+        font-size: 1.4em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .card-icon {
+        font-size: 1.5em;
+    }
+
+    .card-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: linear-gradient(135deg, rgba(0,255,0,0.3), rgba(0,255,0,0.2));
+        border: 1px solid #00ff00;
+        color: #00ff00;
+    }
+
+    .status-processing {
+        background: linear-gradient(135deg, rgba(255,255,0,0.3), rgba(255,255,0,0.2));
+        border: 1px solid #ffff00;
+        color: #ffff00;
+    }
+
+    .status-inactive {
+        background: linear-gradient(135deg, rgba(255,0,0,0.3), rgba(255,0,0,0.2));
+        border: 1px solid #ff4444;
+        color: #ff4444;
+    }
+
+    .card-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .metric-item {
+        background: rgba(255,255,255,0.05);
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .metric-label {
+        color: #888;
+        font-size: 0.85em;
+        margin-bottom: 5px;
+    }
+
+    .metric-value {
+        font-size: 1.8em;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00ffff, #ff00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .action-button {
+        flex: 1;
+        min-width: 120px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .action-button:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        transform: translateY(-2px);
+    }
+
+    .action-button.primary {
+        background: linear-gradient(135deg, #00ffff, #ff00ff);
+        border: none;
+        color: #000;
+        font-weight: 600;
+    }
+
+    .central-nexus {
+        background: linear-gradient(135deg, rgba(0,255,255,0.1), rgba(255,0,255,0.1));
+        border: 2px solid rgba(255,255,255,0.2);
+        border-radius: 25px;
+        padding: 40px;
+        margin-bottom: 40px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .central-nexus::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: pulse 4s ease-in-out infinite;
+        transform: translate(-50%, -50%);
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+        50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+    }
+
+    .nexus-brain {
+        font-size: 5em;
+        margin-bottom: 20px;
+        animation: rotate 10s linear infinite;
+    }
+
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .central-stats {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .central-stat {
+        text-align: center;
+    }
+
+    .central-stat-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00ff00, #00ffff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .central-stat-label {
+        color: #aaa;
+        font-size: 1em;
+        margin-top: 5px;
+    }
+
+    .activity-feed {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 20px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        animation: slideIn 0.5s ease;
+    }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .activity-icon {
+        font-size: 1.5em;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        color: #fff;
+        margin-bottom: 5px;
+    }
+
+    .activity-time {
+        color: #888;
+        font-size: 0.85em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nexus-container">
+    <div class="header-section">
+        <h1 class="page-title">AI Nexus</h1>
+        <p class="subtitle">Central Intelligence Hub - Orchestrating 149 Agents & 40 Spiders</p>
+    </div>
+
+    <div class="central-nexus">
+        <div class="nexus-brain">🧠</div>
+        <h2 style="color: #fff; margin-bottom: 10px;">Collective Intelligence Network</h2>
+        <p style="color: #aaa; margin-bottom: 30px;">Real-time orchestration of all AI systems</p>
+
+        <div class="central-stats">
+            <div class="central-stat">
+                <div class="central-stat-value">149</div>
+                <div class="central-stat-label">Active Agents</div>
+            </div>
+            <div class="central-stat">
+                <div class="central-stat-value">40</div>
+                <div class="central-stat-label">Spider Network</div>
+            </div>
+            <div class="central-stat">
+                <div class="central-stat-value">25</div>
+                <div class="central-stat-label">Advisors</div>
+            </div>
+            <div class="central-stat">
+                <div class="central-stat-value">∞</div>
+                <div class="central-stat-label">Opportunities/Hour</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nexus-grid">
+        <div class="nexus-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="card-icon">🤖</span>
+                    Agent Network
+                </div>
+                <span class="card-status status-active">ACTIVE</span>
+            </div>
+            <div class="card-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Total Agents</div>
+                    <div class="metric-value">149</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Active Now</div>
+                    <div class="metric-value">87</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Tasks/Hour</div>
+                    <div class="metric-value">1,247</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value">94%</div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-button primary">View Agents</button>
+                <button class="action-button">Orchestrate</button>
+            </div>
+        </div>
+
+        <div class="nexus-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="card-icon">🕷️</span>
+                    Spider Network
+                </div>
+                <span class="card-status status-inactive">INACTIVE</span>
+            </div>
+            <div class="card-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Total Spiders</div>
+                    <div class="metric-value">40</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Crawling</div>
+                    <div class="metric-value">0</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Data/Hour</div>
+                    <div class="metric-value">0GB</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Opportunities</div>
+                    <div class="metric-value">0</div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-button primary">Activate All</button>
+                <button class="action-button">Configure</button>
+            </div>
+        </div>
+
+        <div class="nexus-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="card-icon">🎯</span>
+                    Decision Engine
+                </div>
+                <span class="card-status status-processing">PROCESSING</span>
+            </div>
+            <div class="card-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Decisions/Day</div>
+                    <div class="metric-value">847</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-value">92%</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Avg Time</div>
+                    <div class="metric-value">1.2s</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">ROI</div>
+                    <div class="metric-value">+487%</div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-button">View Decisions</button>
+                <button class="action-button">Optimize</button>
+            </div>
+        </div>
+
+        <div class="nexus-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="card-icon">💰</span>
+                    Revenue Engine
+                </div>
+                <span class="card-status status-active">ACTIVE</span>
+            </div>
+            <div class="card-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Total Revenue</div>
+                    <div class="metric-value">$2.6K</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">This Month</div>
+                    <div class="metric-value">$850</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Opportunities</div>
+                    <div class="metric-value">127</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Conversion</div>
+                    <div class="metric-value">18%</div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-button primary">View Revenue</button>
+                <button class="action-button">Optimize</button>
+            </div>
+        </div>
+
+        <div class="nexus-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="card-icon">🧭</span>
+                    Advisor Council
+                </div>
+                <span class="card-status status-active">ACTIVE</span>
+            </div>
+            <div class="card-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Advisors</div>
+                    <div class="metric-value">25</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Consultations</div>
+                    <div class="metric-value">342</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Insights/Day</div>
+                    <div class="metric-value">89</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Value Add</div>
+                    <div class="metric-value">+67%</div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-button">Consult</button>
+                <button class="action-button">View Insights</button>
+            </div>
+        </div>
+
+        <div class="nexus-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="card-icon">⚡</span>
+                    System Health
+                </div>
+                <span class="card-status status-active">OPTIMAL</span>
+            </div>
+            <div class="card-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Uptime</div>
+                    <div class="metric-value">99.9%</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">API Calls</div>
+                    <div class="metric-value">12.4K</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value">42ms</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Memory</div>
+                    <div class="metric-value">4.2GB</div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="action-button">Diagnostics</button>
+                <button class="action-button">Optimize</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="activity-feed">
+        <h3 style="color: #fff; margin-bottom: 20px;">Live Activity Feed</h3>
+        <div class="activity-item">
+            <span class="activity-icon">🤖</span>
+            <div class="activity-content">
+                <div class="activity-title">Agent #42 completed web scraping task</div>
+                <div class="activity-time">2 minutes ago</div>
+            </div>
+        </div>
+        <div class="activity-item">
+            <span class="activity-icon">💰</span>
+            <div class="activity-content">
+                <div class="activity-title">New opportunity discovered: $5K Python project</div>
+                <div class="activity-time">5 minutes ago</div>
+            </div>
+        </div>
+        <div class="activity-item">
+            <span class="activity-icon">🕷️</span>
+            <div class="activity-content">
+                <div class="activity-title">Spider network awaiting activation</div>
+                <div class="activity-time">10 minutes ago</div>
+            </div>
+        </div>
+        <div class="activity-item">
+            <span class="activity-icon">🎯</span>
+            <div class="activity-content">
+                <div class="activity-title">Decision Engine optimized matching algorithm</div>
+                <div class="activity-time">15 minutes ago</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+let socket = null;
+
+function connectWebSocket() {
+    const wsUrl = 'ws://localhost:8000/ws/ai-nexus/';
+    console.log('Connecting to AI Nexus WebSocket:', wsUrl);
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function(e) {
+        console.log('AI Nexus WebSocket connected');
+        requestSystemStatus();
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        updateNexusData(data);
+    };
+
+    socket.onclose = function(e) {
+        console.log('AI Nexus WebSocket disconnected');
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+function requestSystemStatus() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'get_status' }));
+    }
+}
+
+function updateNexusData(data) {
+    console.log('Updating AI Nexus with:', data);
+}
+
+connectWebSocket();
+setInterval(requestSystemStatus, 30000);
+{% endblock %}
