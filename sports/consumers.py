@@ -81,6 +81,8 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             await self.handle_place_bet(content.get('bet'))
         elif message_type == 'get_nfl_news':
             await self.send_nfl_news()
+        elif message_type == 'get_game_prediction':
+            await self.send_game_prediction(content.get('game_id'))
         else:
             await self.send_json({
                 'type': 'error',
@@ -404,6 +406,34 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
                 'type': 'nfl_news',
                 'articles': [],
                 'error': str(e)
+            })
+
+    async def send_game_prediction(self, game_id: str):
+        """Send AI prediction for a specific game"""
+        from ml.core.ml_engine import MLEngine
+
+        try:
+            # Initialize ML engine
+            ml_engine = await database_sync_to_async(MLEngine)()
+
+            # Get prediction
+            prediction = await database_sync_to_async(
+                ml_engine.predict_nfl_game
+            )(game_id)
+
+            await self.send_json({
+                'type': 'game_prediction',
+                'game_id': game_id,
+                'prediction': prediction
+            })
+
+            logger.info(f"Sent prediction for game {game_id}")
+
+        except Exception as e:
+            logger.error(f"Prediction error for game {game_id}: {e}")
+            await self.send_json({
+                'type': 'error',
+                'message': f'Prediction failed: {str(e)}'
             })
 
     async def send_ai_predictions(self):
@@ -1066,6 +1096,34 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
                 'type': 'nfl_news',
                 'articles': [],
                 'error': str(e)
+            })
+
+    async def send_game_prediction(self, game_id: str):
+        """Send AI prediction for a specific game"""
+        from ml.core.ml_engine import MLEngine
+
+        try:
+            # Initialize ML engine
+            ml_engine = await database_sync_to_async(MLEngine)()
+
+            # Get prediction
+            prediction = await database_sync_to_async(
+                ml_engine.predict_nfl_game
+            )(game_id)
+
+            await self.send_json({
+                'type': 'game_prediction',
+                'game_id': game_id,
+                'prediction': prediction
+            })
+
+            logger.info(f"Sent prediction for game {game_id}")
+
+        except Exception as e:
+            logger.error(f"Prediction error for game {game_id}: {e}")
+            await self.send_json({
+                'type': 'error',
+                'message': f'Prediction failed: {str(e)}'
             })
 
     async def send_ai_predictions(self):

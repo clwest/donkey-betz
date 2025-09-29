@@ -97,10 +97,10 @@ class MLEngine:
     def _load_or_initialize_models(self):
         """Load existing models or initialize new ones"""
         model_files = {
-            'sports_crypto_lstm': 'sports_crypto_pattern.joblib',
-            'options_betting_nn': 'options_betting_edge.joblib',
-            'user_behavior_rf': 'user_behavior_model.joblib',
-            'cross_domain_gb': 'cross_domain_transfer.joblib'
+            'sports_crypto_lstm': 'sports_crypto_lstm.joblib',
+            'options_betting_nn': 'options_betting_nn.joblib',
+            'user_behavior_rf': 'user_behavior_rf.joblib',
+            'cross_domain_gb': 'cross_domain_gb.joblib'
         }
 
         for model_name, filename in model_files.items():
@@ -376,6 +376,243 @@ class MLEngine:
         """Extract numerical features from crypto data"""
         # Placeholder - implement based on your crypto data structure
         return np.array([0.4, 0.8])  # Mock features
+
+    # ========== NFL PREDICTIONS ==========
+    # Added in Session 14 - NFL game prediction system
+
+    def predict_nfl_game(self, game_id: str) -> Dict[str, Any]:
+        """
+        Predict NFL game using existing sports_crypto_lstm model
+
+        This leverages the existing trained model and adapts it for
+        NFL-specific predictions.
+        """
+        from sports.models import Game, Team
+        from sklearn.exceptions import NotFittedError
+
+        # Get game data
+        game = Game.objects.select_related('home_team', 'away_team').get(id=game_id)
+
+        # Extract features using new method
+        features = self._extract_nfl_game_features(game)
+
+        # Try to use existing sports model, fallback to baseline if not trained
+        if 'sports_crypto_lstm' in self.models:
+            try:
+                prediction_raw = self.models['sports_crypto_lstm'].predict([features])
+                # Convert to NFL prediction format
+                return self._format_nfl_prediction(prediction_raw, game)
+            except NotFittedError:
+                self.logger.info("Model not trained yet, using baseline prediction")
+                return self._generate_baseline_prediction(game)
+            except Exception as e:
+                self.logger.error(f"Model prediction failed: {e}, using baseline")
+                return self._generate_baseline_prediction(game)
+
+        return self._generate_baseline_prediction(game)
+
+    def _extract_nfl_game_features(self, game: 'Game') -> np.ndarray:
+        """
+        Extract features for NFL game prediction
+
+        Uses existing _extract_sports_features as foundation
+        """
+        # Get team stats
+        home_stats = self._get_team_recent_performance(game.home_team)
+        away_stats = self._get_team_recent_performance(game.away_team)
+
+        features = [
+            # Offensive metrics
+            home_stats['points_per_game'] - away_stats['points_per_game'],
+            home_stats['yards_per_game'] - away_stats['yards_per_game'],
+
+            # Defensive metrics
+            away_stats['points_allowed'] - home_stats['points_allowed'],
+
+            # Win rates
+            home_stats['win_rate'] - away_stats['win_rate'],
+            home_stats['ats_record'] - away_stats['ats_record'],
+
+            # Home field advantage
+            1.0,  # Home team indicator
+
+            # Rest differential
+            home_stats['days_rest'] - away_stats['days_rest'],
+
+            # Division game
+            1.0 if game.home_team.conference == game.away_team.conference else 0.0,
+        ]
+
+        return np.array(features)
+
+    def _get_team_recent_performance(self, team: 'Team', games: int = 10) -> Dict:
+        """Calculate team statistics from recent games"""
+        from sports.models import Game
+        from django.db.models import Q
+
+        recent_games = Game.objects.filter(
+            Q(home_team=team) | Q(away_team=team),
+            status='final'
+        ).order_by('-scheduled_start')[:games]
+
+        stats = {
+            'points_per_game': 0,
+            'points_allowed': 0,
+            'yards_per_game': 0,
+            'win_rate': 0,
+            'ats_record': 0,
+            'days_rest': 7,
+        }
+
+        if not recent_games.exists():
+            return stats
+
+        total_points = 0
+        total_points_allowed = 0
+        wins = 0
+
+        for game in recent_games:
+            is_home = game.home_team == team
+
+            if is_home:
+                total_points += game.home_score or 0
+                total_points_allowed += game.away_score or 0
+                if game.home_score > game.away_score:
+                    wins += 1
+            else:
+                total_points += game.away_score or 0
+                total_points_allowed += game.home_score or 0
+                if game.away_score > game.home_score:
+                    wins += 1
+
+        count = recent_games.count()
+        stats['points_per_game'] = total_points / count if count > 0 else 0
+        stats['points_allowed'] = total_points_allowed / count if count > 0 else 0
+        stats['win_rate'] = wins / count if count > 0 else 0
+
+        return stats
+
+    def _format_nfl_prediction(self, prediction_raw: np.ndarray, game: 'Game') -> Dict:
+        """Format raw prediction into NFL-friendly output"""
+
+        # Convert model output to probability
+        home_win_prob = 1 / (1 + np.exp(-prediction_raw[0]))
+
+        # Calculate derived metrics
+        predicted_spread = (home_win_prob - 0.5) * 14  # Rough spread estimation
+        confidence = abs(home_win_prob - 0.5) * 2  # 0.5 = no confidence, 1.0 = certain
+
+        winner = game.home_team if home_win_prob > 0.5 else game.away_team
+
+        return {
+            'winner': winner.name,
+            'winner_abbr': winner.abbreviation,
+            'home_win_probability': round(home_win_prob, 3),
+            'away_win_probability': round(1 - home_win_prob, 3),
+            'predicted_spread': round(predicted_spread, 1),
+            'confidence': round(confidence, 3),
+            'model_used': 'sports_crypto_lstm',
+            'key_factors': self._identify_key_factors(game),
+            'recommendation': self._generate_betting_recommendation(
+                home_win_prob,
+                predicted_spread,
+                confidence,
+                game
+            )
+        }
+
+    def _identify_key_factors(self, game: 'Game') -> List[str]:
+        """Identify key factors influencing prediction"""
+        factors = []
+
+        # Get team stats
+        home_stats = self._get_team_recent_performance(game.home_team)
+        away_stats = self._get_team_recent_performance(game.away_team)
+
+        # Offensive advantage
+        if home_stats['points_per_game'] > away_stats['points_per_game'] + 7:
+            factors.append(f"{game.home_team.name} strong offense (avg {home_stats['points_per_game']:.1f} PPG)")
+        elif away_stats['points_per_game'] > home_stats['points_per_game'] + 7:
+            factors.append(f"{game.away_team.name} strong offense (avg {away_stats['points_per_game']:.1f} PPG)")
+
+        # Defensive advantage
+        if home_stats['points_allowed'] < away_stats['points_allowed'] - 5:
+            factors.append(f"{game.home_team.name} superior defense")
+        elif away_stats['points_allowed'] < home_stats['points_allowed'] - 5:
+            factors.append(f"{game.away_team.name} superior defense")
+
+        # Recent form
+        if home_stats['win_rate'] > 0.7:
+            factors.append(f"{game.home_team.name} hot streak ({int(home_stats['win_rate']*10)}-{int((1-home_stats['win_rate'])*10)} L10)")
+        elif away_stats['win_rate'] > 0.7:
+            factors.append(f"{game.away_team.name} hot streak ({int(away_stats['win_rate']*10)}-{int((1-away_stats['win_rate'])*10)} L10)")
+
+        # Home field advantage
+        factors.append("Home field advantage")
+
+        if not factors:
+            factors.append("Evenly matched teams")
+
+        return factors
+
+    def _generate_betting_recommendation(self, home_win_prob: float,
+                                        predicted_spread: float,
+                                        confidence: float,
+                                        game: 'Game') -> Dict:
+        """Generate betting recommendations based on prediction"""
+
+        recommendations = []
+
+        # Moneyline recommendation
+        if confidence > 0.65:
+            winner = game.home_team.name if home_win_prob > 0.5 else game.away_team.name
+            recommendations.append({
+                'bet_type': 'moneyline',
+                'selection': winner,
+                'confidence': confidence,
+                'reasoning': f"Model projects {int(home_win_prob*100)}% win probability"
+            })
+
+        # Spread recommendation
+        if abs(predicted_spread) > 3 and confidence > 0.6:
+            if predicted_spread > 0:
+                recommendations.append({
+                    'bet_type': 'spread',
+                    'selection': f"{game.home_team.name} -{abs(predicted_spread):.1f}",
+                    'confidence': confidence,
+                    'reasoning': f"Model projects {abs(predicted_spread):.1f} point margin"
+                })
+            else:
+                recommendations.append({
+                    'bet_type': 'spread',
+                    'selection': f"{game.away_team.name} +{abs(predicted_spread):.1f}",
+                    'confidence': confidence,
+                    'reasoning': f"Model projects {abs(predicted_spread):.1f} point margin"
+                })
+
+        return {
+            'recommended_bets': recommendations,
+            'confidence_level': 'high' if confidence > 0.75 else 'moderate' if confidence > 0.6 else 'low'
+        }
+
+    def _generate_baseline_prediction(self, game: 'Game') -> Dict:
+        """Generate baseline prediction when model unavailable"""
+        return {
+            'winner': game.home_team.name,
+            'winner_abbr': game.home_team.abbreviation,
+            'home_win_probability': 0.55,
+            'away_win_probability': 0.45,
+            'predicted_spread': 3.0,
+            'confidence': 0.5,
+            'model_used': 'baseline',
+            'key_factors': ['Home field advantage (baseline prediction)'],
+            'recommendation': {
+                'recommended_bets': [],
+                'confidence_level': 'low'
+            }
+        }
+
+    # ========== END NFL PREDICTIONS ==========
 
     def _extract_decision_features(self, decision_data: Dict[str, Any]) -> np.ndarray:
         """Extract features from user decision data"""

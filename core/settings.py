@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'ai_core.spiders',         # Spider Army System
     'ai_core',                 # AI Core app for agents, spiders, intelligence
     'ai_core.intelligence',   # Intelligence & Learning System
+    'ml',                     # Machine Learning Engine
     'sports',                 # Sports Analytics Engine
     'content',                # Content Generation System
     'persistence',            # Data Persistence Infrastructure (NEW)
