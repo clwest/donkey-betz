@@ -69,7 +69,13 @@ class MLEngine:
 
     def __init__(self, config: MLConfig = None):
         self.config = config or MLConfig()
-        self.models = {}
+        self.models = {}  # Keep for backward compatibility with non-sport models
+        self.sport_models = {  # New: Sport-specific models
+            'nfl': {},
+            'nba': {},
+            'mlb': {},
+            'nhl': {}
+        }
         self.scalers = {}
         self.user_profile = None
 
@@ -96,8 +102,9 @@ class MLEngine:
 
     def _load_or_initialize_models(self):
         """Load existing models or initialize new ones"""
+        # Legacy non-sport models (backward compatibility)
         model_files = {
-            'sports_crypto_lstm': 'sports_crypto_lstm.joblib',
+            'sports_crypto_lstm': 'sports_crypto_lstm.joblib',  # Keep for NFL backward compat
             'options_betting_nn': 'options_betting_nn.joblib',
             'user_behavior_rf': 'user_behavior_rf.joblib',
             'cross_domain_gb': 'cross_domain_gb.joblib'
@@ -115,6 +122,9 @@ class MLEngine:
                     self._create_default_model(model_name)
             else:
                 self._create_default_model(model_name)
+
+        # Load sport-specific models
+        self._load_sport_models()
 
     def _create_default_model(self, model_name: str):
         """Create default model if none exists"""
@@ -156,6 +166,37 @@ class MLEngine:
             )
 
         self.logger.info(f"Created default model: {model_name}")
+
+    def _load_sport_models(self):
+        """Load sport-specific prediction models"""
+        from ml.core.sport_configs import SPORT_CONFIGS
+
+        for sport_type, config in SPORT_CONFIGS.items():
+            model_filename = f"{config.model_name}.joblib"
+            model_path = os.path.join(self.config.model_cache_dir, model_filename)
+
+            if os.path.exists(model_path):
+                try:
+                    self.sport_models[sport_type][config.model_name] = joblib.load(model_path)
+                    self.logger.info(f"Loaded {config.name} model: {config.model_name}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to load {config.name} model: {e}")
+            else:
+                self.logger.info(f"{config.name} model not found (will use baseline predictions)")
+
+    def save_sport_models(self):
+        """Save all sport-specific models to disk"""
+        from ml.core.sport_configs import SPORT_CONFIGS
+
+        for sport_type, config in SPORT_CONFIGS.items():
+            if config.model_name in self.sport_models[sport_type]:
+                model_filename = f"{config.model_name}.joblib"
+                model_path = os.path.join(self.config.model_cache_dir, model_filename)
+                try:
+                    joblib.dump(self.sport_models[sport_type][config.model_name], model_path)
+                    self.logger.info(f"Saved {config.name} model: {config.model_name}")
+                except Exception as e:
+                    self.logger.error(f"Failed to save {config.name} model: {e}")
 
     def _initialize_nlp_models(self):
         """Initialize NLP models for sentiment analysis"""
@@ -380,36 +421,114 @@ class MLEngine:
     # ========== NFL PREDICTIONS ==========
     # Added in Session 14 - NFL game prediction system
 
-    def predict_nfl_game(self, game_id: str) -> Dict[str, Any]:
+    def predict_game(self, game_id: str, sport_type: str) -> Dict[str, Any]:
         """
-        Predict NFL game using existing sports_crypto_lstm model
+        Universal game prediction for any sport
 
-        This leverages the existing trained model and adapts it for
-        NFL-specific predictions.
+        Args:
+            game_id: Game ID to predict
+            sport_type: Sport type ('nfl', 'nba', 'mlb', 'nhl')
+
+        Returns:
+            Dictionary with prediction results
         """
-        from sports.models import Game, Team
+        from sports.models import Game
+        from ml.core.sport_configs import get_sport_config
         from sklearn.exceptions import NotFittedError
 
-        # Get game data
+        config = get_sport_config(sport_type)
         game = Game.objects.select_related('home_team', 'away_team').get(id=game_id)
 
-        # Extract features using new method
-        features = self._extract_nfl_game_features(game)
+        # Extract sport-specific features
+        features = self._extract_sport_features(game, config)
 
-        # Try to use existing sports model, fallback to baseline if not trained
-        if 'sports_crypto_lstm' in self.models:
+        # Try to use sport-specific trained model
+        model_name = config.model_name
+        if model_name in self.sport_models[sport_type]:
             try:
-                prediction_raw = self.models['sports_crypto_lstm'].predict([features])
-                # Convert to NFL prediction format
-                return self._format_nfl_prediction(prediction_raw, game)
+                model = self.sport_models[sport_type][model_name]
+                prediction_raw = model.predict([features])
+                return self._format_prediction(prediction_raw, game, config)
             except NotFittedError:
-                self.logger.info("Model not trained yet, using baseline prediction")
-                return self._generate_baseline_prediction(game)
+                self.logger.info(f"{config.name} model not trained yet, using baseline")
+                return self._generate_baseline_prediction(game, config)
             except Exception as e:
-                self.logger.error(f"Model prediction failed: {e}, using baseline")
-                return self._generate_baseline_prediction(game)
+                self.logger.error(f"{config.name} prediction failed: {e}, using baseline")
+                return self._generate_baseline_prediction(game, config)
 
-        return self._generate_baseline_prediction(game)
+        # No trained model found, use baseline
+        return self._generate_baseline_prediction(game, config)
+
+    def predict_nfl_game(self, game_id: str) -> Dict[str, Any]:
+        """
+        Predict NFL game (backward compatibility wrapper)
+
+        This delegates to predict_game() for multi-sport support
+        """
+        return self.predict_game(game_id, 'nfl')
+
+    def _extract_sport_features(self, game: 'Game', config) -> np.ndarray:
+        """
+        Extract features for any sport based on configuration
+
+        Args:
+            game: Game object with home_team and away_team
+            config: SportConfig object with feature definitions
+
+        Returns:
+            numpy array of features
+        """
+        # Get team stats with sport-specific window
+        home_stats = self._get_team_recent_performance(
+            game.home_team,
+            games=config.recent_games_window,
+            sport_type=config.sport_type
+        )
+        away_stats = self._get_team_recent_performance(
+            game.away_team,
+            games=config.recent_games_window,
+            sport_type=config.sport_type
+        )
+
+        # Build feature vector based on config
+        features = []
+
+        for feature_name in config.features:
+            if feature_name == 'points_differential':
+                features.append(home_stats['points_per_game'] - away_stats['points_per_game'])
+            elif feature_name == 'yards_differential':
+                features.append(home_stats.get('yards_per_game', 0) - away_stats.get('yards_per_game', 0))
+            elif feature_name == 'defensive_strength':
+                features.append(away_stats['points_allowed'] - home_stats['points_allowed'])
+            elif feature_name == 'win_rate_differential':
+                features.append(home_stats['win_rate'] - away_stats['win_rate'])
+            elif feature_name == 'ats_differential':
+                features.append(home_stats.get('ats_record', 0) - away_stats.get('ats_record', 0))
+            elif feature_name == 'home_indicator':
+                features.append(1.0)
+            elif feature_name == 'rest_differential':
+                features.append(home_stats.get('days_rest', 7) - away_stats.get('days_rest', 7))
+            elif feature_name == 'division_game':
+                is_division = game.home_team.conference == game.away_team.conference if hasattr(game.home_team, 'conference') else False
+                features.append(1.0 if is_division else 0.0)
+            elif feature_name in ['rebounds_differential', 'assists_differential', 'pace_differential']:
+                # NBA-specific features (placeholder for now)
+                features.append(0.0)
+            elif feature_name == 'defensive_rating':
+                # NBA defensive rating
+                features.append(away_stats['points_allowed'] - home_stats['points_allowed'])
+            elif feature_name in ['back_to_back', 'pitcher_matchup_rating', 'weather_factor',
+                                   'runs_differential', 'era_differential', 'batting_avg_differential',
+                                   'bullpen_era_differential', 'goals_differential', 'shots_differential',
+                                   'save_percentage_differential', 'powerplay_differential',
+                                   'penalty_kill_differential', 'goalie_matchup_rating']:
+                # Sport-specific features (placeholder for now - will be enhanced with real data)
+                features.append(0.0)
+            else:
+                # Unknown feature - use zero
+                features.append(0.0)
+
+        return np.array(features)
 
     def _extract_nfl_game_features(self, game: 'Game') -> np.ndarray:
         """
@@ -445,15 +564,26 @@ class MLEngine:
 
         return np.array(features)
 
-    def _get_team_recent_performance(self, team: 'Team', games: int = 10) -> Dict:
-        """Calculate team statistics from recent games"""
+    def _get_team_recent_performance(self, team: 'Team', games: int = 10, sport_type: str = None) -> Dict:
+        """
+        Calculate team statistics from recent games (sport-agnostic)
+
+        Args:
+            team: Team object
+            games: Number of recent games to analyze
+            sport_type: Optional sport filter ('nfl', 'nba', 'mlb', 'nhl')
+        """
         from sports.models import Game
         from django.db.models import Q
 
-        recent_games = Game.objects.filter(
-            Q(home_team=team) | Q(away_team=team),
-            status='final'
-        ).order_by('-scheduled_start')[:games]
+        query = Q(home_team=team) | Q(away_team=team)
+        query &= Q(status='final')
+
+        # Filter by sport if specified
+        if sport_type:
+            query &= Q(league__sport_type=sport_type)
+
+        recent_games = Game.objects.filter(query).order_by('-scheduled_start')[:games]
 
         stats = {
             'points_per_game': 0,
@@ -491,6 +621,86 @@ class MLEngine:
         stats['win_rate'] = wins / count if count > 0 else 0
 
         return stats
+
+    def _format_prediction(self, prediction_raw: np.ndarray, game: 'Game', config) -> Dict:
+        """
+        Format raw prediction into sport-friendly output
+
+        Works for any sport using SportConfig
+        """
+        # Convert model output to probability
+        home_win_prob = 1 / (1 + np.exp(-prediction_raw[0]))
+
+        # Calculate derived metrics (sport-agnostic)
+        predicted_spread = (home_win_prob - 0.5) * (config.home_advantage * 2 + 8)
+        confidence = abs(home_win_prob - 0.5) * 2
+
+        winner = game.home_team if home_win_prob > 0.5 else game.away_team
+
+        return {
+            'winner': winner.name,
+            'winner_abbr': winner.abbreviation,
+            'home_win_probability': round(home_win_prob, 3),
+            'away_win_probability': round(1 - home_win_prob, 3),
+            'predicted_spread': round(predicted_spread, 1),
+            'confidence': round(confidence, 3),
+            'model_used': config.model_name,
+            'sport': config.sport_type,
+            'key_factors': self._identify_key_factors_generic(game, config),
+            'recommendation': self._generate_betting_recommendation(
+                home_win_prob,
+                predicted_spread,
+                confidence,
+                game
+            )
+        }
+
+    def _identify_key_factors_generic(self, game: 'Game', config) -> List[str]:
+        """Identify key factors for any sport"""
+        factors = []
+
+        # Get team stats
+        home_stats = self._get_team_recent_performance(
+            game.home_team,
+            games=config.recent_games_window,
+            sport_type=config.sport_type
+        )
+        away_stats = self._get_team_recent_performance(
+            game.away_team,
+            games=config.recent_games_window,
+            sport_type=config.sport_type
+        )
+
+        # Offensive advantage
+        if home_stats['points_per_game'] > away_stats['points_per_game'] + config.home_advantage:
+            factors.append(f"{game.home_team.name} strong offense (avg {home_stats['points_per_game']:.1f} PPG)")
+        elif away_stats['points_per_game'] > home_stats['points_per_game'] + config.home_advantage:
+            factors.append(f"{game.away_team.name} strong offense (avg {away_stats['points_per_game']:.1f} PPG)")
+
+        # Defensive advantage
+        diff_threshold = config.home_advantage * 1.5
+        if home_stats['points_allowed'] < away_stats['points_allowed'] - diff_threshold:
+            factors.append(f"{game.home_team.name} superior defense")
+        elif away_stats['points_allowed'] < home_stats['points_allowed'] - diff_threshold:
+            factors.append(f"{game.away_team.name} superior defense")
+
+        # Recent form
+        if home_stats['win_rate'] > 0.7:
+            games_won = int(home_stats['win_rate'] * config.recent_games_window)
+            games_lost = config.recent_games_window - games_won
+            factors.append(f"{game.home_team.name} hot streak ({games_won}-{games_lost} last {config.recent_games_window})")
+        elif away_stats['win_rate'] > 0.7:
+            games_won = int(away_stats['win_rate'] * config.recent_games_window)
+            games_lost = config.recent_games_window - games_won
+            factors.append(f"{game.away_team.name} hot streak ({games_won}-{games_lost} last {config.recent_games_window})")
+
+        # Home advantage
+        factors.append(f"Home advantage (~{config.home_advantage} points)")
+
+        if len(factors) == 1:  # Only home advantage
+            factors.append("Evenly matched teams")
+
+        return factors
 
     def _format_nfl_prediction(self, prediction_raw: np.ndarray, game: 'Game') -> Dict:
         """Format raw prediction into NFL-friendly output"""
@@ -595,17 +805,29 @@ class MLEngine:
             'confidence_level': 'high' if confidence > 0.75 else 'moderate' if confidence > 0.6 else 'low'
         }
 
-    def _generate_baseline_prediction(self, game: 'Game') -> Dict:
+    def _generate_baseline_prediction(self, game: 'Game', config=None) -> Dict:
         """Generate baseline prediction when model unavailable"""
+        # Use sport-specific home advantage if config provided
+        if config:
+            home_advantage = config.home_advantage
+            spread = home_advantage
+            home_prob = 0.50 + (home_advantage / 20)  # Rough estimate
+        else:
+            # NFL defaults (backward compatibility)
+            home_advantage = 3.0
+            spread = 3.0
+            home_prob = 0.55
+
         return {
             'winner': game.home_team.name,
             'winner_abbr': game.home_team.abbreviation,
-            'home_win_probability': 0.55,
-            'away_win_probability': 0.45,
-            'predicted_spread': 3.0,
+            'home_win_probability': round(home_prob, 3),
+            'away_win_probability': round(1 - home_prob, 3),
+            'predicted_spread': round(spread, 1),
             'confidence': 0.5,
             'model_used': 'baseline',
-            'key_factors': ['Home field advantage (baseline prediction)'],
+            'sport': config.sport_type if config else 'nfl',
+            'key_factors': [f'Home advantage (~{home_advantage} points) - baseline prediction'],
             'recommendation': {
                 'recommended_bets': [],
                 'confidence_level': 'low'

@@ -408,26 +408,42 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
                 'error': str(e)
             })
 
-    async def send_game_prediction(self, game_id: str):
-        """Send AI prediction for a specific game"""
+    async def send_game_prediction(self, game_id: str, sport_type: str = None):
+        """
+        Send AI prediction for a specific game (multi-sport support)
+
+        Args:
+            game_id: ID of game to predict
+            sport_type: Optional sport type ('nfl', 'nba', 'mlb', 'nhl')
+                       If not provided, auto-detects from game's league
+        """
         from ml.core.ml_engine import MLEngine
+        from sports.models import Game
 
         try:
             # Initialize ML engine
             ml_engine = await database_sync_to_async(MLEngine)()
 
-            # Get prediction
+            # Auto-detect sport if not provided
+            if not sport_type:
+                game = await database_sync_to_async(
+                    Game.objects.select_related('league').get
+                )(id=game_id)
+                sport_type = game.league.sport_type
+
+            # Get prediction using multi-sport method
             prediction = await database_sync_to_async(
-                ml_engine.predict_nfl_game
-            )(game_id)
+                ml_engine.predict_game
+            )(game_id, sport_type)
 
             await self.send_json({
                 'type': 'game_prediction',
                 'game_id': game_id,
+                'sport': sport_type,
                 'prediction': prediction
             })
 
-            logger.info(f"Sent prediction for game {game_id}")
+            logger.info(f"Sent {sport_type.upper()} prediction for game {game_id}")
 
         except Exception as e:
             logger.error(f"Prediction error for game {game_id}: {e}")
@@ -1098,26 +1114,42 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
                 'error': str(e)
             })
 
-    async def send_game_prediction(self, game_id: str):
-        """Send AI prediction for a specific game"""
+    async def send_game_prediction(self, game_id: str, sport_type: str = None):
+        """
+        Send AI prediction for a specific game (multi-sport support)
+
+        Args:
+            game_id: ID of game to predict
+            sport_type: Optional sport type ('nfl', 'nba', 'mlb', 'nhl')
+                       If not provided, auto-detects from game's league
+        """
         from ml.core.ml_engine import MLEngine
+        from sports.models import Game
 
         try:
             # Initialize ML engine
             ml_engine = await database_sync_to_async(MLEngine)()
 
-            # Get prediction
+            # Auto-detect sport if not provided
+            if not sport_type:
+                game = await database_sync_to_async(
+                    Game.objects.select_related('league').get
+                )(id=game_id)
+                sport_type = game.league.sport_type
+
+            # Get prediction using multi-sport method
             prediction = await database_sync_to_async(
-                ml_engine.predict_nfl_game
-            )(game_id)
+                ml_engine.predict_game
+            )(game_id, sport_type)
 
             await self.send_json({
                 'type': 'game_prediction',
                 'game_id': game_id,
+                'sport': sport_type,
                 'prediction': prediction
             })
 
-            logger.info(f"Sent prediction for game {game_id}")
+            logger.info(f"Sent {sport_type.upper()} prediction for game {game_id}")
 
         except Exception as e:
             logger.error(f"Prediction error for game {game_id}: {e}")
