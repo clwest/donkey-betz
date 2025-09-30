@@ -551,6 +551,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
 let socket = null;
 
 function connectWebSocket() {
@@ -587,4 +588,5 @@ function updateNexusData(data) {
 
 connectWebSocket();
 setInterval(requestSystemStatus, 30000);
+</script>
 {% endblock %}
