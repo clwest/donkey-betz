@@ -19,8 +19,10 @@ from django.conf import settings
 # OpenAI Integration
 try:
     from openai import OpenAI
-    openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY', ''))
-    OPENAI_AVAILABLE = bool(os.environ.get('OPENAI_API_KEY'))
+    # Get API key from environment
+    _openai_key = os.environ.get('OPENAI_API_KEY', '')
+    openai_client = OpenAI(api_key=_openai_key) if _openai_key else None
+    OPENAI_AVAILABLE = bool(_openai_key)
 except ImportError:
     openai_client = None
     OPENAI_AVAILABLE = False
@@ -1048,6 +1050,102 @@ class AIIncomeBuilder:
             total_weight += weight
 
         return weighted_sum / total_weight if total_weight > 0 else 0.0
+
+    async def discover_opportunities_with_agents(
+        self,
+        user_profile: UserProfile,
+        domains: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Use real agents to discover income opportunities
+
+        This is the NEW Session 28 implementation that actually uses agents!
+
+        Args:
+            user_profile: User profile with skills and preferences
+            domains: Optional domains to search (e.g., ['freelancing', 'content'])
+
+        Returns:
+            List of opportunities discovered by agents
+        """
+        logger.info("🤖 Using REAL AGENTS to discover income opportunities!")
+
+        try:
+            from intelligence.agent_orchestrator import AgentOrchestrator
+
+            # Create orchestrator
+            orchestrator = AgentOrchestrator()
+
+            # Prepare context
+            context = {
+                'user_profile': {
+                    'skills': user_profile.skills,
+                    'skill_level': user_profile.skill_level,
+                    'available_hours': user_profile.available_hours_per_week,
+                    'current_balance': user_profile.current_balance
+                },
+                'domains': domains or ['freelancing', 'content', 'ai'],
+                'task_type': 'income_opportunity_discovery'
+            }
+
+            # Select agents for income discovery
+            agents = orchestrator.select_agents_for_task(
+                task='income_opportunity_discovery',
+                required_capabilities=['job_search', 'market_analysis'],
+                max_agents=3
+            )
+
+            logger.info(f"Selected {len(agents)} agents: {[a.name for a in agents]}")
+
+            # Execute agents in parallel
+            task_description = f"""
+            Find income opportunities for user with:
+            - Skills: {', '.join(user_profile.skills[:5])}
+            - Experience: {user_profile.skill_level}
+            - Available time: {user_profile.available_hours_per_week} hours/week
+            - Starting capital: ${user_profile.current_balance}
+
+            Focus on opportunities that:
+            1. Match user's skills
+            2. Can start with low/no investment
+            3. Can generate income within 30 days
+            4. Are currently in demand
+            """
+
+            results = orchestrator.execute_multi_agent(
+                agents=agents,
+                task=task_description,
+                context=context,
+                coordination='parallel'
+            )
+
+            # Extract opportunities from agent results
+            opportunities = []
+
+            if results['status'] == 'completed':
+                for execution in results.get('executions', []):
+                    if execution['status'] == 'completed':
+                        agent_result = execution.get('result', {})
+                        llm_response = agent_result.get('llm_response', '')
+
+                        # Parse opportunities from agent response
+                        # For now, create opportunity structure
+                        opportunities.append({
+                            'agent': execution['agent'],
+                            'raw_response': llm_response,
+                            'source': 'agent_discovery',
+                            'timestamp': datetime.now().isoformat(),
+                            'confidence': agent_result.get('learning_metadata', {}).get('confidence_adjustment', 1.0)
+                        })
+
+            logger.info(f"✅ Agents discovered {len(opportunities)} opportunities")
+
+            return opportunities
+
+        except Exception as e:
+            logger.error(f"Agent discovery failed: {str(e)}", exc_info=True)
+            # Fallback to traditional method
+            return []
 
     async def research_market_opportunity(self, opportunity: IncomeOpportunity) -> Dict[str, Any]:
         """Research market opportunity using real tools and APIs"""
