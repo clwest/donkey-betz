@@ -8,6 +8,7 @@ import logging
 import random
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.db.models import Q
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 
@@ -54,7 +55,9 @@ class SportsConsumer(AsyncWebsocketConsumer):
 
             logger.info(f"Sports WebSocket received: {message_type}")
 
-            if message_type == 'get_live_scores':
+            if message_type == 'get_live_games':
+                await self.send_real_games()
+            elif message_type == 'get_live_scores':
                 await self.send_live_scores()
             elif message_type == 'get_odds':
                 await self.send_odds_update()
@@ -79,10 +82,71 @@ class SportsConsumer(AsyncWebsocketConsumer):
                 'message': 'Invalid JSON format'
             }))
         except Exception as e:
-            logger.error(f"Error processing message: {e}")
+            logger.error(f"Error processing message type '{message_type}': {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': str(e)
+            }))
+
+    async def send_real_games(self):
+        """Send real games from the database"""
+        try:
+            # Import the Game model
+            from sports.models import Game, GameStatus
+            from datetime import timedelta
+
+            # Get games from next 7 days
+            now = timezone.now()
+            week_from_now = now + timedelta(days=7)
+
+            games = await database_sync_to_async(
+                lambda: list(Game.objects.filter(
+                    status=GameStatus.SCHEDULED,
+                    scheduled_start__gte=now,
+                    scheduled_start__lte=week_from_now
+                ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:35])
+            )()
+
+            # Format games for frontend
+            formatted_games = []
+            for game in games:
+                try:
+                    formatted_games.append({
+                        'game_id': str(game.id),
+                        'sport': game.league.sport_type if game.league else 'Unknown',
+                        'league': game.league.name if game.league else 'Unknown',
+                        'home_team': game.home_team.name if game.home_team else 'TBD',
+                        'away_team': game.away_team.name if game.away_team else 'TBD',
+                        'scheduled_start': game.scheduled_start.isoformat() if game.scheduled_start else None,
+                        'status': game.status,
+                        'home_score': 0,
+                        'away_score': 0,
+                        'venue': '',
+                    })
+                except Exception as e:
+                    logger.error(f"Error formatting game {game.id}: {e}")
+                    continue
+
+            await self.send(text_data=json.dumps({
+                'type': 'games_list',
+                'games': formatted_games,
+                'total_count': len(formatted_games),
+                'timestamp': timezone.now().isoformat()
+            }))
+
+            logger.info(f"Sent {len(formatted_games)} real games from database")
+
+        except Exception as e:
+            logger.error(f"Error in send_real_games: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+
+            # Send a simple response instead of calling another method
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to fetch games: {str(e)}'
             }))
 
     async def send_live_scores(self):
@@ -176,34 +240,119 @@ class SportsConsumer(AsyncWebsocketConsumer):
         }))
 
     async def send_ai_predictions(self):
-        """Send AI-generated predictions"""
-        predictions = {
-            'top_picks': [
-                {
-                    'game': 'Chiefs vs Bills',
-                    'pick': 'Chiefs -3.5',
-                    'confidence': 87,
-                    'ai_reasoning': 'Home advantage, recent performance metrics favor Chiefs',
-                    'projected_score': 'Chiefs 27-24'
-                },
-                {
-                    'game': 'Lakers vs Celtics',
-                    'pick': 'Under 220.5',
-                    'confidence': 76,
-                    'ai_reasoning': 'Both teams playing second night of back-to-back',
-                    'projected_score': 'Lakers 105-103'
-                }
-            ],
-            'win_rate_today': 87.3,
-            'units_profit': 24.5,
-            'total_predictions': 156
-        }
+        """Send AI-generated predictions using real ML models"""
+        try:
+            from sports.models import Game, GameStatus
+            from ml.core.ml_engine import MLEngine
+            from django.db.models import Q
 
-        await self.send(text_data=json.dumps({
-            'type': 'ai_predictions',
-            'data': predictions,
-            'timestamp': timezone.now().isoformat()
-        }))
+            # Initialize ML engine
+            ml_engine = MLEngine()
+
+            # Only get games for sports we have trained models for
+            supported_sports = ['nfl', 'nba', 'mlb', 'nhl']
+
+            # Build query for supported sports
+            sport_query = Q()
+            for sport in supported_sports:
+                sport_query |= Q(league__sport_type__iexact=sport)
+
+            # Get upcoming games for supported sports (next 7 days)
+            from datetime import timedelta
+            now = timezone.now()
+            week_from_now = now + timedelta(days=7)
+
+            games = await database_sync_to_async(
+                lambda: list(Game.objects.filter(
+                    sport_query,
+                    status=GameStatus.SCHEDULED,
+                    scheduled_start__gte=now,
+                    scheduled_start__lte=week_from_now
+                ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:35])
+            )()
+
+            logger.info(f"Found {len(games)} games for prediction in supported sports")
+
+            # Generate predictions for each game
+            top_picks = []
+            for game in games:
+                try:
+                    # Determine sport type from league
+                    sport_type = game.league.sport_type.lower() if game.league else 'nfl'
+
+                    # Skip if not a supported sport
+                    if sport_type not in supported_sports:
+                        continue
+
+                    # Get prediction
+                    prediction = await database_sync_to_async(
+                        ml_engine.predict_game
+                    )(str(game.id), sport_type)
+
+                    # Format for frontend
+                    pick_data = {
+                        'game_id': str(game.id),
+                        'game': f"{game.away_team.name} @ {game.home_team.name}",
+                        'sport': sport_type.upper(),
+                        'pick': f"{prediction['predicted_winner']}",
+                        'confidence': round(prediction['confidence'] * 100, 1),
+                        'ai_reasoning': prediction.get('reasoning', 'Statistical analysis of team performance metrics'),
+                        'home_win_prob': round(prediction.get('home_win_probability', 0.5) * 100, 1),
+                        'away_win_prob': round(prediction.get('away_win_probability', 0.5) * 100, 1),
+                        'predicted_home_score': prediction.get('predicted_home_score', 0),
+                        'predicted_away_score': prediction.get('predicted_away_score', 0)
+                    }
+                    top_picks.append(pick_data)
+
+                    # Limit to 5 predictions
+                    if len(top_picks) >= 5:
+                        break
+
+                except Exception as e:
+                    logger.error(f"Error predicting game {game.id}: {e}")
+                    continue
+
+            logger.info(f"Generated {len(top_picks)} predictions")
+
+            # If no predictions, send a message
+            if len(top_picks) == 0:
+                await self.send(text_data=json.dumps({
+                    'type': 'ai_predictions',
+                    'data': {
+                        'top_picks': [],
+                        'win_rate_today': 0,
+                        'units_profit': 0,
+                        'total_predictions': 0,
+                        'message': 'No upcoming games available for supported sports (NFL, NBA, MLB, NHL)'
+                    },
+                    'timestamp': timezone.now().isoformat()
+                }))
+                return
+
+            # Calculate aggregate stats (mock for now - TODO: implement real tracking)
+            predictions_data = {
+                'top_picks': top_picks,
+                'win_rate_today': 87.3,  # TODO: Calculate from tracking
+                'units_profit': 24.5,    # TODO: Calculate from tracking
+                'total_predictions': len(top_picks)
+            }
+
+            await self.send(text_data=json.dumps({
+                'type': 'ai_predictions',
+                'data': predictions_data,
+                'timestamp': timezone.now().isoformat()
+            }))
+
+        except Exception as e:
+            logger.error(f"Error generating AI predictions: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+
+            # Send error response
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Failed to generate predictions: {str(e)}'
+            }))
 
     async def send_analytics(self):
         """Send betting analytics"""
@@ -274,20 +423,48 @@ class SportsConsumer(AsyncWebsocketConsumer):
         }))
 
     async def send_live_updates(self):
-        """Send periodic live updates"""
+        """Send periodic live updates using real data from spider"""
+        from ai_core.spiders.sports_data_spider import sports_spider
+
+        # Initialize spider once
+        await sports_spider.initialize()
+
         while True:
             try:
-                await asyncio.sleep(10)  # Update every 10 seconds
+                await asyncio.sleep(30)  # Update every 30 seconds
 
-                # Send live score updates
-                await self.send_live_scores()
+                # Fetch real games from spider
+                try:
+                    games = await sports_spider.fetch_live_games()
+                    if games:
+                        await self.send(text_data=json.dumps({
+                            'type': 'live_games_update',
+                            'games': games,
+                            'timestamp': timezone.now().isoformat()
+                        }))
+                except Exception as e:
+                    logger.error(f"Error fetching games from spider: {e}")
 
-                # Occasionally send odds updates
+                # Fetch real odds
+                if random.random() > 0.5:  # Every other update
+                    try:
+                        odds = await sports_spider.fetch_odds()
+                        if odds:
+                            await self.send(text_data=json.dumps({
+                                'type': 'odds_update',
+                                'data': {'featured_games': odds},
+                                'timestamp': timezone.now().isoformat()
+                            }))
+                    except Exception as e:
+                        logger.error(f"Error fetching odds from spider: {e}")
+
+                # Get AI predictions
                 if random.random() > 0.7:
-                    await self.send_odds_update()
+                    await self.send_ai_predictions()
 
             except asyncio.CancelledError:
+                await sports_spider.cleanup()
                 break
             except Exception as e:
                 logger.error(f"Error in live updates: {e}")
-                await asyncio.sleep(10)
+                await asyncio.sleep(30)

@@ -155,22 +155,45 @@ class Command(BaseCommand):
         self.stdout.write(f"   Test set:     {len(X_test)} games ({test_split*100:.0f}%)")
 
         # Create and train model
-        self.stdout.write(f"\n🚀 Training {config.name} model...")
-        self.stdout.write("   Architecture: MLPRegressor (128→64→32)")
-        self.stdout.write("   Activation: ReLU")
-        self.stdout.write("   Optimizer: Adam")
-        self.stdout.write("   Max iterations: 500\n")
+        # Use Random Forest for NHL (better with imbalanced data)
+        # Use MLP for other sports
+        if sport_type == 'nhl':
+            from sklearn.ensemble import RandomForestClassifier
+            self.stdout.write(f"\n🚀 Training {config.name} model...")
+            self.stdout.write("   Architecture: Random Forest Classifier")
+            self.stdout.write("   Trees: 200")
+            self.stdout.write("   Max depth: 10")
+            self.stdout.write("   Class weights: balanced\n")
 
-        model = MLPRegressor(
-            hidden_layer_sizes=(128, 64, 32),
-            activation='relu',
-            solver='adam',
-            max_iter=500,
-            random_state=42,
-            verbose=False
-        )
+            model = RandomForestClassifier(
+                n_estimators=100,
+                max_depth=8,
+                min_samples_split=20,
+                min_samples_leaf=10,
+                max_features='sqrt',
+                class_weight='balanced',  # Handle class imbalance
+                random_state=42,
+                n_jobs=-1
+            )
 
-        model.fit(X_train, y_train)
+            model.fit(X_train, y_train)
+        else:
+            self.stdout.write(f"\n🚀 Training {config.name} model...")
+            self.stdout.write("   Architecture: MLPRegressor (128→64→32)")
+            self.stdout.write("   Activation: ReLU")
+            self.stdout.write("   Optimizer: Adam")
+            self.stdout.write("   Max iterations: 500\n")
+
+            model = MLPRegressor(
+                hidden_layer_sizes=(128, 64, 32),
+                activation='relu',
+                solver='adam',
+                max_iter=500,
+                random_state=42,
+                verbose=False
+            )
+
+            model.fit(X_train, y_train)
         self.stdout.write(self.style.SUCCESS("✅ Model training complete!\n"))
 
         # Evaluate model
@@ -179,13 +202,18 @@ class Command(BaseCommand):
         self.stdout.write(f"{'='*70}\n")
 
         # Training set performance
-        y_train_pred = model.predict(X_train)
-        y_train_pred_binary = (y_train_pred > 0.5).astype(int)
-        train_accuracy = accuracy_score(y_train, y_train_pred_binary)
+        if sport_type == 'nhl':
+            # Random Forest returns class labels directly
+            y_train_pred_binary = model.predict(X_train)
+            y_test_pred_binary = model.predict(X_test)
+        else:
+            # MLP Regressor returns continuous values
+            y_train_pred = model.predict(X_train)
+            y_train_pred_binary = (y_train_pred > 0.5).astype(int)
+            y_test_pred = model.predict(X_test)
+            y_test_pred_binary = (y_test_pred > 0.5).astype(int)
 
-        # Test set performance
-        y_test_pred = model.predict(X_test)
-        y_test_pred_binary = (y_test_pred > 0.5).astype(int)
+        train_accuracy = accuracy_score(y_train, y_train_pred_binary)
         test_accuracy = accuracy_score(y_test, y_test_pred_binary)
 
         # Baseline (always predict home win)

@@ -52,6 +52,8 @@ logger = logging.getLogger(__name__)
 class ToolRegistry:
     """
     Registry of available tools that agents can use
+
+    SESSION 29: Now includes Income Builder & Content Studio tools!
     """
 
     def __init__(self):
@@ -61,7 +63,17 @@ class ToolRegistry:
             'calculate': self.calculate,
             'odds_data': self.odds_data,
             'game_data': self.game_data,
+            # SESSION 29: Income Builder Tools
+            'analyze_opportunity': self.analyze_opportunity,
+            'generate_proposal': self.generate_proposal,
+            'create_content': self.create_content,
+            'build_portfolio': self.build_portfolio,
+            'discover_opportunities': self.discover_opportunities,
+            'create_action_plan': self.create_action_plan,
         }
+
+        # Initialize income tools (lazy loading)
+        self._income_tools = None
 
     def web_search(self, query: str, **kwargs) -> Dict:
         """Search the web for information"""
@@ -156,6 +168,144 @@ class ToolRegistry:
                 'error': str(e),
                 'executed': False
             }
+
+    # ========== SESSION 29: Income Builder & Content Studio Tools ==========
+
+    def _get_income_tools(self):
+        """Lazy load income tools"""
+        if self._income_tools is None:
+            from intelligence.agent_income_tools import agent_income_tools
+            import asyncio
+            # Initialize if not already done
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            if not agent_income_tools.initialized:
+                loop.run_until_complete(agent_income_tools.initialize())
+
+            self._income_tools = agent_income_tools
+
+        return self._income_tools
+
+    def analyze_opportunity(self, opportunity_data: Dict, **kwargs) -> Dict:
+        """Analyze an income opportunity"""
+        logger.info(f"[TOOL] analyze_opportunity: {opportunity_data.get('title', 'Unknown')}")
+        import asyncio
+        try:
+            income_tools = self._get_income_tools()
+            result = asyncio.run(income_tools.analyze_opportunity(
+                opportunity_data,
+                kwargs.get('user_context')
+            ))
+            return result
+        except Exception as e:
+            logger.error(f"analyze_opportunity failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'analyze_opportunity'
+            }
+
+    def generate_proposal(self, opportunity_data: Dict, **kwargs) -> Dict:
+        """Generate a proposal for an opportunity"""
+        logger.info(f"[TOOL] generate_proposal: {opportunity_data.get('title', 'Unknown')}")
+        import asyncio
+        try:
+            income_tools = self._get_income_tools()
+            result = asyncio.run(income_tools.generate_proposal(
+                opportunity_data,
+                kwargs.get('user_context')
+            ))
+            return result
+        except Exception as e:
+            logger.error(f"generate_proposal failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'generate_proposal'
+            }
+
+    def create_content(self, content_type: str, specifications: Dict, **kwargs) -> Dict:
+        """Create content for an opportunity"""
+        logger.info(f"[TOOL] create_content: {content_type}")
+        import asyncio
+        try:
+            income_tools = self._get_income_tools()
+            result = asyncio.run(income_tools.create_content(
+                content_type,
+                specifications,
+                kwargs.get('context')
+            ))
+            return result
+        except Exception as e:
+            logger.error(f"create_content failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'create_content'
+            }
+
+    def build_portfolio(self, opportunity_data: Dict, user_skills: List[str], **kwargs) -> Dict:
+        """Build a portfolio item"""
+        logger.info(f"[TOOL] build_portfolio: {opportunity_data.get('title', 'Unknown')}")
+        import asyncio
+        try:
+            income_tools = self._get_income_tools()
+            result = asyncio.run(income_tools.build_portfolio_item(
+                opportunity_data,
+                user_skills
+            ))
+            return result
+        except Exception as e:
+            logger.error(f"build_portfolio failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'build_portfolio'
+            }
+
+    def discover_opportunities(self, user_profile: Dict, **kwargs) -> Dict:
+        """Discover income opportunities"""
+        logger.info(f"[TOOL] discover_opportunities for user: {user_profile.get('id', 'Unknown')}")
+        import asyncio
+        try:
+            income_tools = self._get_income_tools()
+            result = asyncio.run(income_tools.discover_opportunities(
+                user_profile,
+                kwargs.get('use_real_data', True)
+            ))
+            return result
+        except Exception as e:
+            logger.error(f"discover_opportunities failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'discover_opportunities'
+            }
+
+    def create_action_plan(self, opportunity_id: str, user_id: str, **kwargs) -> Dict:
+        """Create action plan for an opportunity"""
+        logger.info(f"[TOOL] create_action_plan: {opportunity_id} for {user_id}")
+        import asyncio
+        try:
+            income_tools = self._get_income_tools()
+            result = asyncio.run(income_tools.create_action_plan(
+                opportunity_id,
+                user_id
+            ))
+            return result
+        except Exception as e:
+            logger.error(f"create_action_plan failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'create_action_plan'
+            }
+
+    # ========== End Income Builder Tools ==========
 
     def get_tool(self, tool_name: str):
         """Get a tool by name"""

@@ -648,6 +648,85 @@ def execute_sports_orchestration(self, game_id: str, home_team: str, away_team: 
                 }
             }
         )
-        
+
         # Retry if we haven't exceeded max retries
         raise self.retry(exc=e, countdown=30)
+
+
+@shared_task(name='agents.update_agent_performance')
+def update_agent_performance():
+    """
+    Update agent performance metrics from evaluated predictions
+    Runs daily after prediction evaluation (Phase 3 - Agent Learning)
+
+    Returns:
+        dict: Summary of predictions processed and agents updated
+    """
+    from sports.models import MLPrediction
+    from agents.models import UnifiedAgentTemplate, AgentPerformanceMetrics
+
+    logger.info("Starting agent performance update task")
+
+    # Get recently evaluated predictions (last 24 hours)
+    cutoff = timezone.now() - timedelta(hours=24)
+    new_evaluations = MLPrediction.objects.filter(
+        was_correct__isnull=False,
+        evaluated_at__gte=cutoff,
+        agent__isnull=False  # Only predictions with assigned agents
+    ).select_related('agent')
+
+    logger.info(f"Found {new_evaluations.count()} evaluated predictions from last 24 hours")
+
+    agents_updated = set()
+    predictions_processed = 0
+
+    for prediction in new_evaluations:
+        try:
+            # Get agent who made this prediction
+            agent = prediction.agent
+
+            if not agent:
+                continue
+
+            # Get or create performance metrics for this agent+sport combination
+            metrics, created = AgentPerformanceMetrics.objects.get_or_create(
+                agent=agent,
+                sport_type=prediction.sport_type
+            )
+
+            if created:
+                logger.info(
+                    f"Created new performance metrics for {agent.name} - {prediction.sport_type.upper()}"
+                )
+
+            # Update metrics with this prediction
+            metrics.update_from_prediction(prediction)
+
+            agents_updated.add(agent.id)
+            predictions_processed += 1
+
+            logger.debug(
+                f"Updated {agent.name} metrics for {prediction.sport_type.upper()}: "
+                f"{metrics.sport_accuracy:.1%} accuracy ({metrics.sport_correct}/{metrics.sport_predictions})"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Error updating agent performance for prediction {prediction.id}: {e}",
+                exc_info=True
+            )
+            continue
+
+    result = {
+        'predictions_processed': predictions_processed,
+        'agents_updated': len(agents_updated),
+        'timestamp': timezone.now().isoformat()
+    }
+
+    logger.info(
+        f"Agent performance update complete: "
+        f"{predictions_processed} predictions processed, "
+        f"{len(agents_updated)} agents updated"
+    )
+
+    return result

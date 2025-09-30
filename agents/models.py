@@ -1422,6 +1422,182 @@ class AgentChannelMembership(UnifiedBaseModel):
             raise ValidationError("Cannot set both agent_template and user")
 
 
+class AgentPerformanceMetrics(UnifiedBaseModel):
+    """
+    Track individual agent prediction performance for agent learning system
+    Enables agents to learn from their own track record and adapt strategies
+    """
+
+    agent = models.ForeignKey(
+        UnifiedAgentTemplate,
+        on_delete=models.CASCADE,
+        related_name='performance_metrics',
+        help_text="Agent being tracked"
+    )
+
+    # Overall metrics
+    total_predictions = models.IntegerField(
+        default=0,
+        help_text="Total predictions made by this agent"
+    )
+    correct_predictions = models.IntegerField(
+        default=0,
+        help_text="Number of correct predictions"
+    )
+    accuracy = models.FloatField(
+        default=0.0,
+        help_text="Overall accuracy (0.0-1.0)"
+    )
+
+    # Sport-specific metrics
+    sport_type = models.CharField(
+        max_length=10,
+        choices=[
+            ('nfl', 'NFL'),
+            ('nba', 'NBA'),
+            ('mlb', 'MLB'),
+            ('nhl', 'NHL'),
+        ],
+        help_text="Sport type for these metrics"
+    )
+    sport_predictions = models.IntegerField(
+        default=0,
+        help_text="Predictions made for this sport"
+    )
+    sport_correct = models.IntegerField(
+        default=0,
+        help_text="Correct predictions for this sport"
+    )
+    sport_accuracy = models.FloatField(
+        default=0.0,
+        help_text="Accuracy for this sport (0.0-1.0)"
+    )
+
+    # Confidence calibration
+    avg_confidence_when_correct = models.FloatField(
+        default=0.0,
+        help_text="Average confidence when prediction was correct"
+    )
+    avg_confidence_when_wrong = models.FloatField(
+        default=0.0,
+        help_text="Average confidence when prediction was wrong"
+    )
+    confidence_calibration_score = models.FloatField(
+        default=0.0,
+        help_text="How well-calibrated confidence is (-1.0 to 1.0)"
+    )
+
+    # Learning metrics
+    last_10_predictions_accuracy = models.FloatField(
+        default=0.0,
+        help_text="Accuracy of last 10 predictions"
+    )
+    last_30_predictions_accuracy = models.FloatField(
+        default=0.0,
+        help_text="Accuracy of last 30 predictions"
+    )
+    trend = models.CharField(
+        max_length=20,
+        choices=[
+            ('improving', 'Improving'),
+            ('stable', 'Stable'),
+            ('declining', 'Declining'),
+        ],
+        default='stable',
+        help_text="Performance trend"
+    )
+
+    # Specializations
+    best_sport = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        help_text="Sport agent performs best in"
+    )
+    worst_sport = models.CharField(
+        max_length=10,
+        null=True,
+        blank=True,
+        help_text="Sport agent performs worst in"
+    )
+    confidence_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('overconfident', 'Overconfident'),
+            ('well_calibrated', 'Well Calibrated'),
+            ('underconfident', 'Underconfident'),
+        ],
+        default='well_calibrated',
+        help_text="Confidence calibration assessment"
+    )
+
+    class Meta:
+        verbose_name = "Agent Performance Metrics"
+        verbose_name_plural = "Agent Performance Metrics"
+        unique_together = [('agent', 'sport_type')]
+        indexes = [
+            models.Index(fields=['agent', 'sport_type']),
+            models.Index(fields=['accuracy']),
+            models.Index(fields=['sport_accuracy']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent.name} - {self.sport_type.upper()} ({self.sport_accuracy:.1%})"
+
+    def update_from_prediction(self, prediction):
+        """
+        Update metrics based on new prediction result
+
+        Args:
+            prediction: MLPrediction instance with was_correct populated
+        """
+        # Update total predictions
+        self.total_predictions += 1
+        if prediction.sport_type == self.sport_type:
+            self.sport_predictions += 1
+
+        # Update correct predictions
+        if prediction.was_correct:
+            self.correct_predictions += 1
+            if prediction.sport_type == self.sport_type:
+                self.sport_correct += 1
+
+        # Recalculate accuracy
+        if self.total_predictions > 0:
+            self.accuracy = self.correct_predictions / self.total_predictions
+        if self.sport_predictions > 0:
+            self.sport_accuracy = self.sport_correct / self.sport_predictions
+
+        # Update confidence calibration
+        if prediction.was_correct:
+            # Running average of confidence when correct
+            if self.correct_predictions > 1:
+                self.avg_confidence_when_correct = (
+                    (self.avg_confidence_when_correct * (self.correct_predictions - 1) + prediction.confidence) /
+                    self.correct_predictions
+                )
+            else:
+                self.avg_confidence_when_correct = prediction.confidence
+        else:
+            # Running average of confidence when wrong
+            wrong_count = self.total_predictions - self.correct_predictions
+            if wrong_count > 1:
+                self.avg_confidence_when_wrong = (
+                    (self.avg_confidence_when_wrong * (wrong_count - 1) + prediction.confidence) /
+                    wrong_count
+                )
+            else:
+                self.avg_confidence_when_wrong = prediction.confidence
+
+        # Calculate calibration score (positive = well calibrated)
+        if self.avg_confidence_when_correct > 0 and self.avg_confidence_when_wrong > 0:
+            self.confidence_calibration_score = (
+                self.avg_confidence_when_correct - self.avg_confidence_when_wrong
+            ) / 100.0  # Normalize to -1.0 to 1.0
+
+        self.save()
+
+
 # Channel management signals
 @receiver(post_save, sender=AgentChannelMessage)
 def update_channel_message_count(sender, instance, created, **kwargs):

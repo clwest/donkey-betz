@@ -1925,3 +1925,238 @@ class Revenue(UnifiedBaseModel):
                 avg=models.Avg('amount')
             )['avg'] or 0
         }
+
+
+class UserAgentLearning(UnifiedBaseModel):
+    """
+    Connects user profiles to agent learning - making agents learn FOR specific users
+
+    This model enables personalized agent learning where agents track what works
+    for each individual user, building user-specific knowledge over time.
+
+    Example:
+        For User A (software engineer):
+        - Job Matcher Agent learns A prefers remote Python roles at startups
+        - Content Creator Agent learns A likes technical blog style
+        - Income Builder learns A's best opportunities are on HackerNews
+
+        For User B (designer):
+        - Job Matcher Agent learns B prefers agency creative director roles
+        - Content Creator Agent learns B likes visual portfolio style
+        - Income Builder learns B's best opportunities are on Dribbble
+    """
+
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='agent_learnings',
+        help_text="User this learning applies to"
+    )
+
+    agent_name = models.CharField(
+        max_length=200,
+        help_text="Name of the agent (e.g., 'JobMatcherAgent', 'IncomeBuilder')"
+    )
+
+    learning_domain = models.CharField(
+        max_length=100,
+        choices=[
+            ('opportunity_matching', 'Job/Opportunity Matching'),
+            ('content_creation', 'Content Creation Style'),
+            ('communication', 'Communication Preferences'),
+            ('decision_making', 'Decision Making Patterns'),
+            ('skill_development', 'Skill Development Path'),
+            ('revenue_optimization', 'Revenue Optimization'),
+            ('platform_preferences', 'Platform Preferences'),
+            ('timing_patterns', 'Optimal Timing Patterns'),
+            ('success_factors', 'Success Factor Analysis'),
+            ('general', 'General Learning'),
+        ],
+        default='general',
+        help_text="What domain is this learning about"
+    )
+
+    # What the agent learned
+    learning_content = models.JSONField(
+        help_text="Structured learning data specific to this agent-user pair"
+    )
+
+    # How confident is the agent in this learning
+    confidence_score = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Agent's confidence in this learning (0-1)"
+    )
+
+    # How many times this learning was validated
+    validation_count = models.IntegerField(
+        default=0,
+        help_text="How many times this learning proved correct"
+    )
+
+    # How many times this learning failed
+    failure_count = models.IntegerField(
+        default=0,
+        help_text="How many times this learning proved incorrect"
+    )
+
+    # Success rate calculated from validation/failure
+    success_rate = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Success rate of this learning"
+    )
+
+    # Source of this learning
+    learning_source = models.CharField(
+        max_length=100,
+        choices=[
+            ('user_feedback', 'Direct User Feedback'),
+            ('success_pattern', 'Observed Success Pattern'),
+            ('failure_analysis', 'Failure Analysis'),
+            ('interaction_mining', 'Interaction Pattern Mining'),
+            ('explicit_instruction', 'Explicit User Instruction'),
+            ('performance_tracking', 'Performance Tracking'),
+        ],
+        default='success_pattern'
+    )
+
+    # Context when this was learned
+    context_metadata = models.JSONField(
+        default=dict,
+        help_text="Context when learning occurred (time, situation, etc.)"
+    )
+
+    # When this learning expires (if temporary)
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this learning becomes obsolete (null = never expires)"
+    )
+
+    # How many times this learning was used
+    usage_count = models.IntegerField(
+        default=0,
+        help_text="How many times this learning influenced agent behavior"
+    )
+
+    last_used = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this learning was last applied"
+    )
+
+    class Meta:
+        verbose_name = "User-Agent Learning"
+        verbose_name_plural = "User-Agent Learnings"
+        indexes = [
+            models.Index(fields=['user', 'agent_name', 'learning_domain']),
+            models.Index(fields=['user', '-confidence_score']),
+            models.Index(fields=['user', '-success_rate']),
+            models.Index(fields=['agent_name', '-confidence_score']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent_name} → {self.user.username}: {self.learning_domain} (confidence: {self.confidence_score:.1%})"
+
+    def record_success(self):
+        """Record that this learning proved correct"""
+        self.validation_count += 1
+        self.usage_count += 1
+        self.last_used = timezone.now()
+        self._update_metrics()
+        self.save()
+
+    def record_failure(self):
+        """Record that this learning proved incorrect"""
+        self.failure_count += 1
+        self.usage_count += 1
+        self.last_used = timezone.now()
+        self._update_metrics()
+        self.save()
+
+    def _update_metrics(self):
+        """Update confidence and success rate based on validation/failure counts"""
+        total_attempts = self.validation_count + self.failure_count
+
+        if total_attempts > 0:
+            # Calculate success rate
+            self.success_rate = self.validation_count / total_attempts
+
+            # Adjust confidence based on success rate and sample size
+            # More samples = more confidence in the success rate
+            sample_weight = min(total_attempts / 20.0, 1.0)  # Fully confident after 20 samples
+
+            # Confidence approaches success rate as sample size grows
+            self.confidence_score = (
+                self.confidence_score * (1 - sample_weight) +  # Old confidence
+                self.success_rate * sample_weight  # New evidence
+            )
+
+    @classmethod
+    def get_user_agent_knowledge(cls, user, agent_name, domain=None):
+        """
+        Get all learnings for a specific user-agent pair
+
+        Args:
+            user: User instance
+            agent_name: Name of the agent
+            domain: Optional domain filter
+
+        Returns:
+            QuerySet of learnings, ordered by confidence and recency
+        """
+        learnings = cls.objects.filter(
+            user=user,
+            agent_name=agent_name,
+            is_active=True
+        )
+
+        if domain:
+            learnings = learnings.filter(learning_domain=domain)
+
+        # Filter out expired learnings
+        from django.utils import timezone
+        learnings = learnings.filter(
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
+        )
+
+        return learnings.order_by('-confidence_score', '-updated_at')
+
+    @classmethod
+    def create_learning(cls, user, agent_name, domain, content, source='success_pattern', confidence=0.5):
+        """
+        Create a new learning or update existing one
+
+        Args:
+            user: User instance
+            agent_name: Name of the agent
+            domain: Learning domain
+            content: Learning content (JSON)
+            source: Learning source
+            confidence: Initial confidence score
+
+        Returns:
+            UserAgentLearning instance
+        """
+        learning, created = cls.objects.get_or_create(
+            user=user,
+            agent_name=agent_name,
+            learning_domain=domain,
+            defaults={
+                'learning_content': content,
+                'confidence_score': confidence,
+                'learning_source': source,
+                'context_metadata': {
+                    'created_at': timezone.now().isoformat()
+                }
+            }
+        )
+
+        if not created:
+            # Update existing learning
+            learning.learning_content = content
+            learning.confidence_score = confidence
+            learning.save()
+
+        return learning

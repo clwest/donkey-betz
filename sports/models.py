@@ -1751,3 +1751,400 @@ class SportsAnalytics(UnifiedBaseModel):
     
     def __str__(self):
         return f"{self.scope_type.title()} Analytics - {self.analysis_period}"
+
+
+class MLPrediction(UnifiedBaseModel):
+    """
+    ML-generated predictions for games
+    Tracks predictions from the multi-sport ML Engine for accuracy analysis
+    """
+
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name='ml_predictions',
+        help_text="Game being predicted"
+    )
+
+    # Agent who made this prediction (for agent learning)
+    agent = models.ForeignKey(
+        'agents.UnifiedAgentTemplate',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='predictions',
+        help_text="Agent who made this prediction"
+    )
+
+    predicted_winner = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name='predicted_wins',
+        help_text="Team predicted to win"
+    )
+
+    # Prediction confidence and probabilities
+    confidence = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Prediction confidence (0-100%)"
+    )
+
+    home_win_probability = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Home team win probability (0-100%)"
+    )
+
+    away_win_probability = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Away team win probability (0-100%)"
+    )
+
+    # Model information
+    model_used = models.CharField(
+        max_length=100,
+        help_text="ML model identifier (e.g., 'nfl_predictor', 'mlb_predictor')"
+    )
+
+    sport_type = models.CharField(
+        max_length=20,
+        choices=SportType.choices,
+        help_text="Sport type for this prediction"
+    )
+
+    # Spread and score predictions
+    predicted_spread = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Predicted point spread"
+    )
+
+    predicted_home_score = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Predicted home team score"
+    )
+
+    predicted_away_score = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Predicted away team score"
+    )
+
+    # AI reasoning and key factors
+    key_factors = models.JSONField(
+        default=list,
+        help_text="Key factors influencing the prediction"
+    )
+
+    ai_reasoning = models.TextField(
+        blank=True,
+        help_text="Human-readable AI reasoning"
+    )
+
+    # Evaluation and accuracy
+    was_correct = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Whether prediction was correct (set after game completes)"
+    )
+
+    evaluated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When prediction was evaluated"
+    )
+
+    # User interaction
+    shown_to_users = models.IntegerField(
+        default=0,
+        help_text="Number of times shown to users"
+    )
+
+    user_acted_on = models.IntegerField(
+        default=0,
+        help_text="Number of users who acted on this prediction"
+    )
+
+    class Meta:
+        verbose_name = "ML Prediction"
+        verbose_name_plural = "ML Predictions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['game', '-created_at']),
+            models.Index(fields=['sport_type', '-created_at']),
+            models.Index(fields=['model_used', '-created_at']),
+            models.Index(fields=['was_correct']),
+            models.Index(fields=['created_at']),
+        ]
+        unique_together = [('game', 'model_used', 'created_at')]
+
+    def __str__(self):
+        game_str = f"{self.game.away_team.abbreviation} @ {self.game.home_team.abbreviation}"
+        return f"{game_str}: {self.predicted_winner.abbreviation} ({self.confidence}%)"
+
+    def evaluate(self):
+        """
+        Evaluate prediction accuracy after game completes
+        Returns True if correct, False if incorrect, None if game not finished
+        """
+        if self.game.status != GameStatus.FINAL:
+            return None
+
+        if self.game.home_score is None or self.game.away_score is None:
+            return None
+
+        # Determine actual winner
+        if self.game.home_score > self.game.away_score:
+            actual_winner = self.game.home_team
+        elif self.game.away_score > self.game.home_score:
+            actual_winner = self.game.away_team
+        else:
+            # Tie - prediction is incorrect if we picked a winner
+            self.was_correct = False
+            self.evaluated_at = timezone.now()
+            self.save()
+            return False
+
+        # Check if prediction was correct
+        self.was_correct = (self.predicted_winner == actual_winner)
+        self.evaluated_at = timezone.now()
+        self.save()
+
+        return self.was_correct
+
+    @classmethod
+    def calculate_accuracy(cls, sport_type=None, model_used=None, days=1):
+        """
+        Calculate prediction accuracy for given filters
+
+        Args:
+            sport_type: Filter by sport type (e.g., 'nfl', 'mlb')
+            model_used: Filter by model (e.g., 'nfl_predictor')
+            days: Number of days to look back (default: today only)
+
+        Returns:
+            dict: Accuracy metrics
+        """
+        cutoff_date = timezone.now() - timedelta(days=days)
+
+        queryset = cls.objects.filter(
+            created_at__gte=cutoff_date,
+            was_correct__isnull=False  # Only evaluated predictions
+        )
+
+        if sport_type:
+            queryset = queryset.filter(sport_type=sport_type)
+
+        if model_used:
+            queryset = queryset.filter(model_used=model_used)
+
+        total = queryset.count()
+        if total == 0:
+            return {
+                'total_predictions': 0,
+                'correct_predictions': 0,
+                'accuracy_percentage': 0.0,
+                'confidence_avg': 0.0
+            }
+
+        correct = queryset.filter(was_correct=True).count()
+        confidence_avg = queryset.aggregate(Avg('confidence'))['confidence__avg'] or 0.0
+
+        return {
+            'total_predictions': total,
+            'correct_predictions': correct,
+            'accuracy_percentage': round((correct / total) * 100, 2),
+            'confidence_avg': round(confidence_avg, 2)
+        }
+
+
+class UserBet(UnifiedBaseModel):
+    """
+    User bets placed on predictions
+    Tracks which predictions users actually bet on for profit/loss calculation
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sports_bets',
+        help_text="User who placed the bet"
+    )
+
+    prediction = models.ForeignKey(
+        MLPrediction,
+        on_delete=models.CASCADE,
+        related_name='user_bets',
+        help_text="ML prediction this bet is based on"
+    )
+
+    game = models.ForeignKey(
+        Game,
+        on_delete=models.CASCADE,
+        related_name='user_bets',
+        help_text="Game being bet on"
+    )
+
+    # Bet details
+    bet_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Amount wagered (in units)"
+    )
+
+    bet_type = models.CharField(
+        max_length=20,
+        choices=BetType.choices,
+        default=BetType.MONEYLINE,
+        help_text="Type of bet placed"
+    )
+
+    selected_team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name='bets_on_team',
+        help_text="Team selected to win"
+    )
+
+    odds_at_placement = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Odds when bet was placed (e.g., -110, +150)"
+    )
+
+    # Bet outcome
+    status = models.CharField(
+        max_length=20,
+        choices=BetStatus.choices,
+        default=BetStatus.PENDING,
+        help_text="Bet status"
+    )
+
+    profit_loss = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Profit or loss from this bet (+ for win, - for loss)"
+    )
+
+    settled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When bet was settled"
+    )
+
+    # Tracking
+    is_simulated = models.BooleanField(
+        default=True,
+        help_text="Whether this is a simulated bet (paper trading) or real money"
+    )
+
+    class Meta:
+        verbose_name = "User Bet"
+        verbose_name_plural = "User Bets"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['game', 'user']),
+            models.Index(fields=['prediction']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.bet_amount} units on {self.selected_team.abbreviation}"
+
+    def settle(self):
+        """
+        Settle the bet after game completes
+        Calculates profit/loss based on odds and outcome
+        """
+        if self.status != BetStatus.PENDING:
+            return  # Already settled
+
+        if self.game.status != GameStatus.FINAL:
+            return  # Game not finished
+
+        if self.game.home_score is None or self.game.away_score is None:
+            return  # No scores available
+
+        # Determine winner
+        if self.game.home_score > self.game.away_score:
+            actual_winner = self.game.home_team
+        elif self.game.away_score > self.game.home_score:
+            actual_winner = self.game.away_team
+        else:
+            # Tie/Push
+            self.status = BetStatus.PUSH
+            self.profit_loss = Decimal('0.00')
+            self.settled_at = timezone.now()
+            self.save()
+            return
+
+        # Check if bet won
+        if self.selected_team == actual_winner:
+            # Calculate profit based on odds
+            if self.odds_at_placement < 0:
+                # Negative odds (e.g., -110 means bet $110 to win $100)
+                profit = self.bet_amount * (Decimal('100') / abs(self.odds_at_placement))
+            else:
+                # Positive odds (e.g., +150 means bet $100 to win $150)
+                profit = self.bet_amount * (self.odds_at_placement / Decimal('100'))
+
+            self.status = BetStatus.WON
+            self.profit_loss = profit
+        else:
+            # Lost bet
+            self.status = BetStatus.LOST
+            self.profit_loss = -self.bet_amount
+
+        self.settled_at = timezone.now()
+        self.save()
+
+    @classmethod
+    def calculate_user_stats(cls, user, days=1):
+        """
+        Calculate betting statistics for a user
+
+        Args:
+            user: User object
+            days: Number of days to look back (default: today only)
+
+        Returns:
+            dict: User betting statistics
+        """
+        cutoff_date = timezone.now() - timedelta(days=days)
+
+        bets = cls.objects.filter(
+            user=user,
+            created_at__gte=cutoff_date
+        )
+
+        settled_bets = bets.exclude(status=BetStatus.PENDING)
+        won_bets = bets.filter(status=BetStatus.WON)
+
+        total_bets = bets.count()
+        total_settled = settled_bets.count()
+        total_won = won_bets.count()
+
+        if total_settled == 0:
+            win_rate = 0.0
+        else:
+            win_rate = (total_won / total_settled) * 100
+
+        # Calculate profit/loss
+        profit_loss = settled_bets.aggregate(
+            total=Sum('profit_loss')
+        )['total'] or Decimal('0.00')
+
+        return {
+            'total_bets': total_bets,
+            'settled_bets': total_settled,
+            'won_bets': total_won,
+            'lost_bets': settled_bets.filter(status=BetStatus.LOST).count(),
+            'push_bets': settled_bets.filter(status=BetStatus.PUSH).count(),
+            'win_rate_percentage': round(float(win_rate), 2),
+            'profit_loss': float(profit_loss),
+            'roi_percentage': round(float(profit_loss / bets.aggregate(total=Sum('bet_amount'))['total'] or 1) * 100, 2) if bets.count() > 0 else 0.0
+        }

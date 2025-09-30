@@ -151,13 +151,13 @@
         <p class="page-subtitle">Track your real earnings and revenue growth</p>
         <div class="mt-4">
             <span class="revenue-badge positive">
-                <i class="fas fa-arrow-up"></i> +15.3% This Month
+                <i class="fas fa-arrow-up"></i> <span id="monthlyGrowth">Loading...</span>
             </span>
             <span class="revenue-badge info">
-                <i class="fas fa-coins"></i> $2,600 Total Revenue
+                <i class="fas fa-coins"></i> <span id="totalRevenueBadge">Loading...</span> Total Revenue
             </span>
             <span class="revenue-badge warning">
-                <i class="fas fa-clock"></i> $450 Pending
+                <i class="fas fa-clock"></i> <span id="pendingRevenueBadge">Loading...</span> Pending
             </span>
         </div>
     </div>
@@ -169,8 +169,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-subtitle mb-2">Total Revenue</h6>
-                        <h2 class="card-title mb-0" style="color: #4caf50;" id="totalRevenue">$2,600</h2>
-                        <small style="color: #aaa;">+$450 this week</small>
+                        <h2 class="card-title mb-0" style="color: #4caf50;" id="totalRevenue">$0.00</h2>
+                        <small style="color: #aaa;" id="weeklyChange">Loading...</small>
                     </div>
                     <div class="icon-container">
                         <i class="fas fa-chart-line fa-2x" style="color: #4caf50;"></i>
@@ -184,8 +184,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-subtitle mb-2">Pending Revenue</h6>
-                        <h2 class="card-title mb-0" style="color: #ffc107;" id="pendingRevenue">$450</h2>
-                        <small style="color: #aaa;">3 transactions</small>
+                        <h2 class="card-title mb-0" style="color: #ffc107;" id="pendingRevenue">$0.00</h2>
+                        <small style="color: #aaa;" id="pendingCount">Loading...</small>
                     </div>
                     <div class="icon-container">
                         <i class="fas fa-hourglass-half fa-2x" style="color: #ffc107;"></i>
@@ -199,8 +199,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-subtitle mb-2">This Month</h6>
-                        <h2 class="card-title mb-0" style="color: #2196f3;" id="monthlyRevenue">$780</h2>
-                        <small style="color: #aaa;">12 completed</small>
+                        <h2 class="card-title mb-0" style="color: #2196f3;" id="monthlyRevenue">$0.00</h2>
+                        <small style="color: #aaa;" id="monthlyCount">Loading...</small>
                     </div>
                     <div class="icon-container">
                         <i class="fas fa-calendar-alt fa-2x" style="color: #2196f3;"></i>
@@ -214,8 +214,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-subtitle mb-2">Success Rate</h6>
-                        <h2 class="card-title mb-0" style="color: #673ab7;" id="successRate">78%</h2>
-                        <small style="color: #aaa;">39 of 50</small>
+                        <h2 class="card-title mb-0" style="color: #673ab7;" id="successRate">0%</h2>
+                        <small style="color: #aaa;" id="successCount">Loading...</small>
                     </div>
                     <div class="icon-container">
                         <i class="fas fa-trophy fa-2x" style="color: #673ab7;"></i>
@@ -302,39 +302,8 @@
                             </thead>
                             <tbody id="transactionsTable">
                                 <tr>
-                                    <td>2025-09-28</td>
-                                    <td>Web Development Project</td>
-                                    <td><span class="badge bg-primary">Freelance</span></td>
-                                    <td><span class="badge bg-success">Completed</span></td>
-                                    <td class="text-end"><strong>$450</strong></td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails(1)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2025-09-27</td>
-                                    <td>Data Analysis Contract</td>
-                                    <td><span class="badge bg-success">Contract</span></td>
-                                    <td><span class="badge bg-warning">Pending</span></td>
-                                    <td class="text-end"><strong>$280</strong></td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails(2)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2025-09-26</td>
-                                    <td>Technical Consultation</td>
-                                    <td><span class="badge bg-warning">Consulting</span></td>
-                                    <td><span class="badge bg-success">Completed</span></td>
-                                    <td class="text-end"><strong>$150</strong></td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails(3)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                                    <td colspan="6" class="text-center" style="color: #888; padding: 40px;">
+                                        Loading transactions...
                                     </td>
                                 </tr>
                             </tbody>
@@ -534,7 +503,7 @@
                 labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
                 datasets: [{
                     label: 'Revenue',
-                    data: [1200, 1400, 1800, 2150, 2600],
+                    data: [0, 0, 0, 0, 0],
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     tension: 0.4
@@ -636,22 +605,99 @@
         // TODO: Export to CSV
     }
 
+    // Fetch real revenue data from API
+    async function fetchRevenueData() {
+        try {
+            const response = await fetch('/api/v1/revenue/stats/');
+            const data = await response.json();
+
+            // Update main stat cards
+            updateRevenueStats({
+                total: data.total_revenue.all.toFixed(2),
+                pending: data.total_revenue.pending.toFixed(2),
+                monthly: data.time_based.this_month.toFixed(2),
+                successRate: data.success_rate.toFixed(0)
+            });
+
+            // Update header badges
+            document.getElementById('totalRevenueBadge').textContent = `$${data.total_revenue.all.toFixed(2)}`;
+            document.getElementById('pendingRevenueBadge').textContent = `$${data.total_revenue.pending.toFixed(2)}`;
+
+            // Calculate weekly change percentage
+            const weeklyRevenue = data.time_based.this_week || 0;
+            const totalRevenue = data.total_revenue.all || 1;
+            const weeklyChange = ((weeklyRevenue / totalRevenue) * 100).toFixed(1);
+            document.getElementById('monthlyGrowth').textContent = `+${weeklyChange}% This Week`;
+
+            // Update small text under cards
+            document.getElementById('weeklyChange').textContent = `+$${weeklyRevenue.toFixed(2)} this week`;
+
+            // Count pending transactions
+            const pendingCount = data.recent_applications?.filter(a => a.status === 'pending').length || 0;
+            document.getElementById('pendingCount').textContent = `${pendingCount} transactions`;
+
+            // Count monthly transactions
+            const monthlyCount = data.recent_applications?.length || 0;
+            document.getElementById('monthlyCount').textContent = `${monthlyCount} completed`;
+
+            // Calculate success metrics
+            const totalApps = data.recent_applications?.length || 0;
+            const successfulApps = data.recent_applications?.filter(a => ['confirmed', 'received'].includes(a.status)).length || 0;
+            document.getElementById('successCount').textContent = `${successfulApps} of ${totalApps}`;
+
+            // Update transactions table with real data
+            if (data.recent_applications && data.recent_applications.length > 0) {
+                updateTransactionsTable(data.recent_applications);
+            }
+
+            // Update charts with real data
+            updateChartsWithRealData(data);
+
+        } catch (error) {
+            console.error('Error fetching revenue data:', error);
+        }
+    }
+
+    // Update transactions table with real data
+    function updateTransactionsTable(applications) {
+        const tbody = document.getElementById('transactionsTable');
+        tbody.innerHTML = applications.map(app => `
+            <tr>
+                <td>${new Date(app.created_at).toLocaleDateString()}</td>
+                <td>${app.opportunity_title || 'Opportunity'}</td>
+                <td><span class="badge bg-primary">${app.company || 'N/A'}</span></td>
+                <td><span class="badge bg-${app.status === 'confirmed' ? 'success' : app.status === 'pending' ? 'warning' : 'info'}">${app.status}</span></td>
+                <td class="text-end"><strong>$${parseFloat(app.amount).toFixed(2)}</strong></td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-info" onclick="viewDetails(${app.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Update charts with real data
+    function updateChartsWithRealData(data) {
+        // Update revenue sources chart
+        if (sourcesChart && data.by_source && data.by_source.length > 0) {
+            const sources = data.by_source;
+            sourcesChart.data.labels = sources.map(s => s.source);
+            sourcesChart.data.datasets[0].data = sources.map(s => s.total);
+            sourcesChart.update();
+        }
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         initWebSocket();
         initCharts();
 
-        // Simulate real-time updates every 5 seconds
-        setInterval(() => {
-            const randomIncrease = Math.floor(Math.random() * 50);
-            const currentTotal = parseInt(document.getElementById('totalRevenue').textContent.replace('$', ''));
-            updateRevenueStats({
-                total: currentTotal + randomIncrease,
-                pending: 450 + randomIncrease,
-                monthly: 780 + randomIncrease,
-                successRate: Math.floor(Math.random() * 20 + 70)
-            });
-        }, 5000);
+        // Fetch real data immediately
+        fetchRevenueData();
+
+        // Refresh real data every 30 seconds
+        setInterval(fetchRevenueData, 30000);
     });
 </script>
 {% endblock %}

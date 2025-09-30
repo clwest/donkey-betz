@@ -421,16 +421,17 @@ class MLEngine:
     # ========== NFL PREDICTIONS ==========
     # Added in Session 14 - NFL game prediction system
 
-    def predict_game(self, game_id: str, sport_type: str) -> Dict[str, Any]:
+    def predict_game(self, game_id: str, sport_type: str, agent=None) -> Dict[str, Any]:
         """
-        Universal game prediction for any sport
+        Universal game prediction for any sport with optional agent learning
 
         Args:
             game_id: Game ID to predict
             sport_type: Sport type ('nfl', 'nba', 'mlb', 'nhl')
+            agent: Optional UnifiedAgentTemplate instance for agent learning
 
         Returns:
-            Dictionary with prediction results
+            Dictionary with prediction results (includes agent adjustments if agent provided)
         """
         from sports.models import Game
         from ml.core.sport_configs import get_sport_config
@@ -447,8 +448,23 @@ class MLEngine:
         if model_name in self.sport_models[sport_type]:
             try:
                 model = self.sport_models[sport_type][model_name]
-                prediction_raw = model.predict([features])
-                return self._format_prediction(prediction_raw, game, config)
+
+                # Check if model has predict_proba (classifiers)
+                if hasattr(model, 'predict_proba'):
+                    # Random Forest or other classifier - use probabilities
+                    prediction_proba = model.predict_proba([features])
+                    prediction_raw = prediction_proba[0][1]  # Probability of home win (class 1)
+                else:
+                    # MLP Regressor - returns single value
+                    prediction_raw = model.predict([features])
+
+                prediction = self._format_prediction(prediction_raw, game, config)
+
+                # Apply agent learning if agent provided
+                if agent:
+                    prediction = self._apply_agent_learning(prediction, agent, sport_type)
+
+                return prediction
             except NotFittedError:
                 self.logger.info(f"{config.name} model not trained yet, using baseline")
                 return self._generate_baseline_prediction(game, config)
@@ -517,12 +533,26 @@ class MLEngine:
             elif feature_name == 'defensive_rating':
                 # NBA defensive rating
                 features.append(away_stats['points_allowed'] - home_stats['points_allowed'])
+            elif feature_name == 'goals_differential':
+                # NHL: Goals per game differential
+                features.append(home_stats['points_per_game'] - away_stats['points_per_game'])
+            elif feature_name == 'goals_against_differential':
+                # NHL: Goals against differential (defensive strength)
+                features.append(away_stats['points_allowed'] - home_stats['points_allowed'])
+            elif feature_name == 'recent_form_differential':
+                # Recent form (last 5 games win rate)
+                home_form = home_stats.get('recent_form', 0.5)
+                away_form = away_stats.get('recent_form', 0.5)
+                features.append(home_form - away_form)
+            elif feature_name == 'goal_differential_variance':
+                # Consistency: how consistent is the goal differential
+                home_variance = home_stats.get('goal_variance', 0.0)
+                away_variance = away_stats.get('goal_variance', 0.0)
+                features.append(away_variance - home_variance)  # Lower variance = more consistent
             elif feature_name in ['back_to_back', 'pitcher_matchup_rating', 'weather_factor',
                                    'runs_differential', 'era_differential', 'batting_avg_differential',
-                                   'bullpen_era_differential', 'goals_differential', 'shots_differential',
-                                   'save_percentage_differential', 'powerplay_differential',
-                                   'penalty_kill_differential', 'goalie_matchup_rating']:
-                # Sport-specific features (placeholder for now - will be enhanced with real data)
+                                   'bullpen_era_differential']:
+                # Other sport-specific features (placeholder for now)
                 features.append(0.0)
             else:
                 # Unknown feature - use zero
@@ -592,6 +622,9 @@ class MLEngine:
             'win_rate': 0,
             'ats_record': 0,
             'days_rest': 7,
+            'shots_per_game': 30,  # NHL average
+            'powerplay_pct': 0.20,  # NHL average ~20%
+            'penalty_kill_pct': 0.80,  # NHL average ~80%
         }
 
         if not recent_games.exists():
@@ -600,6 +633,8 @@ class MLEngine:
         total_points = 0
         total_points_allowed = 0
         wins = 0
+        total_goals_for = 0
+        total_goals_against = 0
 
         for game in recent_games:
             is_home = game.home_team == team
@@ -607,11 +642,15 @@ class MLEngine:
             if is_home:
                 total_points += game.home_score or 0
                 total_points_allowed += game.away_score or 0
+                total_goals_for += game.home_score or 0
+                total_goals_against += game.away_score or 0
                 if game.home_score > game.away_score:
                     wins += 1
             else:
                 total_points += game.away_score or 0
                 total_points_allowed += game.home_score or 0
+                total_goals_for += game.away_score or 0
+                total_goals_against += game.home_score or 0
                 if game.away_score > game.home_score:
                     wins += 1
 
@@ -620,16 +659,105 @@ class MLEngine:
         stats['points_allowed'] = total_points_allowed / count if count > 0 else 0
         stats['win_rate'] = wins / count if count > 0 else 0
 
+        # Calculate recent form and variance (useful for all sports, especially NHL)
+        if count > 0:
+            # Recent form: Win rate in last 5 games
+            recent_5 = list(recent_games)[:min(5, count)]
+            recent_wins = 0
+            for g in recent_5:
+                is_home = g.home_team == team
+                if is_home and g.home_score > g.away_score:
+                    recent_wins += 1
+                elif not is_home and g.away_score > g.home_score:
+                    recent_wins += 1
+            stats['recent_form'] = recent_wins / len(recent_5) if recent_5 else 0.5
+
+            # Goal differential variance: Measure consistency
+            goal_diffs = []
+            for g in recent_games:
+                is_home = g.home_team == team
+                if is_home:
+                    goal_diff = (g.home_score or 0) - (g.away_score or 0)
+                else:
+                    goal_diff = (g.away_score or 0) - (g.home_score or 0)
+                goal_diffs.append(goal_diff)
+
+            if len(goal_diffs) > 1:
+                mean_diff = sum(goal_diffs) / len(goal_diffs)
+                variance = sum((x - mean_diff) ** 2 for x in goal_diffs) / len(goal_diffs)
+                stats['goal_variance'] = variance
+            else:
+                stats['goal_variance'] = 0.0
+
         return stats
 
-    def _format_prediction(self, prediction_raw: np.ndarray, game: 'Game', config) -> Dict:
+    def _calculate_goalie_save_percentage(self, team: 'Team', games: int = 10) -> float:
+        """
+        Calculate goalie save percentage for NHL teams.
+
+        Uses recent games to estimate: Save% = 1 - (Goals Against / (Goals Against + Saves))
+        Since we only have scores, we estimate: Save% ≈ 1 - (Goals Against / Estimated Shots Against)
+        NHL average shots per game ≈ 30
+
+        Args:
+            team: Team object
+            games: Number of recent games to analyze
+
+        Returns:
+            Save percentage (0.0 to 1.0), defaults to 0.900 (NHL average)
+        """
+        from sports.models import Game
+        from django.db.models import Q
+
+        # Get recent completed games
+        recent_games = Game.objects.filter(
+            Q(home_team=team) | Q(away_team=team),
+            status='final',
+            league__sport_type='nhl'
+        ).order_by('-scheduled_start')[:games]
+
+        if not recent_games.exists():
+            return 0.900  # NHL average
+
+        total_goals_against = 0
+        total_estimated_shots_against = 0
+
+        for game in recent_games:
+            is_home = game.home_team == team
+
+            # Goals against
+            goals_against = game.away_score if is_home else game.home_score
+            total_goals_against += goals_against or 0
+
+            # Estimate shots against (NHL average is ~30 shots/game)
+            # Better teams force fewer shots, worse teams face more
+            estimated_shots = 30
+            total_estimated_shots_against += estimated_shots
+
+        # Calculate save percentage
+        if total_estimated_shots_against > 0:
+            saves = total_estimated_shots_against - total_goals_against
+            save_pct = saves / total_estimated_shots_against
+            return max(0.0, min(1.0, save_pct))  # Clamp between 0 and 1
+
+        return 0.900  # Default to NHL average
+
+    def _format_prediction(self, prediction_raw, game: 'Game', config) -> Dict:
         """
         Format raw prediction into sport-friendly output
 
         Works for any sport using SportConfig
         """
         # Convert model output to probability
-        home_win_prob = 1 / (1 + np.exp(-prediction_raw[0]))
+        # If prediction_raw is already a probability (from Random Forest), use it directly
+        if isinstance(prediction_raw, (float, np.floating)):
+            home_win_prob = prediction_raw
+        elif isinstance(prediction_raw, np.ndarray) and len(prediction_raw) == 1:
+            # MLP Regressor output - apply sigmoid
+            home_win_prob = 1 / (1 + np.exp(-prediction_raw[0]))
+        else:
+            # Fallback
+            home_win_prob = 0.5
 
         # Calculate derived metrics (sport-agnostic)
         predicted_spread = (home_win_prob - 0.5) * (config.home_advantage * 2 + 8)
@@ -833,6 +961,80 @@ class MLEngine:
                 'confidence_level': 'low'
             }
         }
+
+    def _apply_agent_learning(self, prediction: Dict, agent, sport_type: str) -> Dict:
+        """
+        Apply agent learning adjustments to base prediction
+
+        Phase 3: Agent Learning Integration
+        - Adjusts confidence based on agent's track record
+        - Checks if agent should make this prediction
+        - Adds agent specialization info to prediction
+
+        Args:
+            prediction: Base prediction dictionary
+            agent: UnifiedAgentTemplate instance
+            sport_type: Sport type ('nfl', 'nba', 'mlb', 'nhl')
+
+        Returns:
+            Enhanced prediction with agent learning applied
+        """
+        from intelligence.agent_learning import AgentLearningSystem
+
+        try:
+            learning_system = AgentLearningSystem(agent)
+
+            # Check if agent should make this prediction
+            if not learning_system.should_make_prediction(sport_type):
+                self.logger.info(
+                    f"Agent {agent.name} declining {sport_type.upper()} prediction due to poor track record"
+                )
+                prediction['agent_declined'] = True
+                prediction['decline_reason'] = f"Agent has weak track record in {sport_type.upper()}"
+                return prediction
+
+            # Get confidence adjustment based on track record
+            confidence_adjustment = learning_system.get_confidence_adjustment(sport_type)
+            original_confidence = prediction['confidence']
+            adjusted_confidence = original_confidence * confidence_adjustment
+
+            # Clamp to valid range (0.5 to 1.0)
+            adjusted_confidence = max(0.5, min(1.0, adjusted_confidence))
+
+            # Get agent specializations
+            specializations = learning_system.get_specializations()
+
+            # Update prediction with agent learning data
+            prediction['confidence'] = round(adjusted_confidence, 3)
+            prediction['agent_learning'] = {
+                'agent_name': agent.name,
+                'original_confidence': round(original_confidence, 3),
+                'confidence_adjustment': round(confidence_adjustment, 3),
+                'adjusted_confidence': round(adjusted_confidence, 3),
+                'agent_status': specializations.get('status', 'new_agent'),
+                'total_predictions': specializations.get('total_predictions', 0),
+                'specializations': specializations.get('specializations', []),
+            }
+
+            # Add note to key factors if confidence was adjusted
+            if confidence_adjustment != 1.0:
+                adjustment_type = "boosted" if confidence_adjustment > 1.0 else "reduced"
+                prediction['key_factors'].insert(0,
+                    f"Agent confidence {adjustment_type} based on {sport_type.upper()} track record"
+                )
+
+            self.logger.info(
+                f"Agent {agent.name}: {sport_type.upper()} confidence adjusted "
+                f"{original_confidence:.3f} → {adjusted_confidence:.3f} (x{confidence_adjustment:.2f})"
+            )
+
+            return prediction
+
+        except Exception as e:
+            self.logger.error(f"Error applying agent learning: {e}")
+            # Return original prediction if agent learning fails
+            prediction['agent_learning_error'] = str(e)
+            return prediction
 
     # ========== END NFL PREDICTIONS ==========
 

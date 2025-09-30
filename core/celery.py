@@ -60,6 +60,66 @@ app.conf.beat_schedule = {
             'expires': 14400,
         }
     },
+    # ML Model Training & Prediction Tasks (Session 24: Updated retraining pipeline)
+    'check-retraining-needed': {
+        'task': 'ml.check_retraining_needed',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'retrain-all-models-weekly': {
+        'task': 'ml.retrain_all_models',
+        'schedule': crontab(day_of_week=0, hour=2, minute=0),  # Sunday 2 AM
+        'options': {
+            'expires': 7200,
+        }
+    },
+    'cleanup-old-model-files': {
+        'task': 'ml.cleanup_old_model_files',
+        'schedule': crontab(day_of_week=1, hour=1, minute=0),  # Monday 1 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
+    # Sports Prediction Evaluation & Bet Settlement
+    # Updated Session 23: Using new PredictionEvaluator system
+    'evaluate-completed-predictions': {
+        'task': 'sports.evaluate_completed_predictions',
+        'schedule': crontab(minute=0),  # Every hour on the hour
+        'options': {
+            'expires': 3600,  # Expire after 1 hour
+        }
+    },
+    'settle-user-bets': {
+        'task': 'sports.settle_user_bets',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,
+        }
+    },
+    'generate-accuracy-report': {
+        'task': 'sports.generate_accuracy_report',
+        'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
+    'cleanup-old-predictions': {
+        'task': 'sports.cleanup_old_predictions',
+        'schedule': crontab(day_of_week=1, hour=3, minute=0),  # Monday 3 AM
+        'options': {
+            'expires': 7200,
+        }
+    },
+    # Agent Learning & Performance Tracking (Session 26: Phase 3)
+    'update-agent-performance': {
+        'task': 'agents.update_agent_performance',
+        'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
 }
 
 # Spider-specific task routing configuration
