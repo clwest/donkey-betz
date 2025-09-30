@@ -155,14 +155,14 @@ THE_ODDS_API_KEY=your_key_here
 3. **Modify data_providers.py** to properly use the key:
 ```python
 def get_odds_for_games(self, games):
-    api_key = os.getenv('THE_ODDS_API_KEY')
-    if not api_key:
+    key = os.getenv('THE_ODDS_API_KEY')
+    if not key:
         logger.error("No Odds API key found!")
         return []
 
     url = f"https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds"
     params = {
-        'apiKey': api_key,
+        'apiKey': key,
         'regions': 'us',
         'markets': 'h2h,spreads,totals',
         'oddsFormat': 'american'
