@@ -6,10 +6,16 @@ These models represent ALL agents, advisors, and system components
 from django.db import models
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 from decimal import Decimal
 import json
 import uuid
 from datetime import datetime
+
+# Import base models
+from .models.base.models import UnifiedBaseModel
 
 class AgentCategory(models.Model):
     """Categories for organizing agents"""
@@ -449,3 +455,478 @@ class AdvisorInsight(models.Model):
     class Meta:
         app_label = 'core'
         ordering = ['-created_at']
+
+
+class UserAgentLearning(UnifiedBaseModel):
+    """
+    Connects user profiles to agent learning - making agents learn FOR specific users
+
+    This model enables personalized agent learning where agents track what works
+    for each individual user, building user-specific knowledge over time.
+
+    Example:
+        For User A (software engineer):
+        - Job Matcher Agent learns A prefers remote Python roles at startups
+        - Content Creator Agent learns A likes technical blog style
+        - Income Builder learns A's best opportunities are on HackerNews
+
+        For User B (designer):
+        - Job Matcher Agent learns B prefers agency creative director roles
+        - Content Creator Agent learns B likes visual portfolio style
+        - Income Builder learns B's best opportunities are on Dribbble
+    """
+
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='agent_learnings',
+        help_text="User this learning applies to"
+    )
+
+    agent_name = models.CharField(
+        max_length=200,
+        help_text="Name of the agent (e.g., 'JobMatcherAgent', 'IncomeBuilder')"
+    )
+
+    learning_domain = models.CharField(
+        max_length=100,
+        choices=[
+            ('opportunity_matching', 'Job/Opportunity Matching'),
+            ('content_creation', 'Content Creation Style'),
+            ('communication', 'Communication Preferences'),
+            ('decision_making', 'Decision Making Patterns'),
+            ('skill_development', 'Skill Development Path'),
+            ('revenue_optimization', 'Revenue Optimization'),
+            ('platform_preferences', 'Platform Preferences'),
+            ('salary_preferences', 'Salary Range Preferences'),
+            ('skill_preferences', 'Skill Type Preferences'),
+            ('company_size_preferences', 'Company Size Preferences'),
+            ('remote_preferences', 'Remote Work Preferences'),
+            ('timing_patterns', 'Optimal Timing Patterns'),
+            ('success_factors', 'Success Factor Analysis'),
+            ('general', 'General Learning'),
+        ],
+        default='general',
+        help_text="What domain is this learning about"
+    )
+
+    # What the agent learned
+    learning_content = models.JSONField(
+        help_text="Structured learning data specific to this agent-user pair"
+    )
+
+    # How confident is the agent in this learning
+    confidence_score = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Agent's confidence in this learning (0-1)"
+    )
+
+    # How many times this learning was validated
+    validation_count = models.IntegerField(
+        default=0,
+        help_text="How many times this learning proved correct"
+    )
+
+    # How many times this learning failed
+    failure_count = models.IntegerField(
+        default=0,
+        help_text="How many times this learning proved incorrect"
+    )
+
+    # Success rate calculated from validation/failure
+    success_rate = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Success rate of this learning"
+    )
+
+    # Source of this learning
+    learning_source = models.CharField(
+        max_length=100,
+        choices=[
+            ('user_feedback', 'Direct User Feedback'),
+            ('success_pattern', 'Observed Success Pattern'),
+            ('failure_analysis', 'Failure Analysis'),
+            ('interaction_mining', 'Interaction Pattern Mining'),
+            ('explicit_instruction', 'Explicit User Instruction'),
+            ('performance_tracking', 'Performance Tracking'),
+        ],
+        default='success_pattern'
+    )
+
+    # Context when this was learned
+    context_metadata = models.JSONField(
+        default=dict,
+        help_text="Context when learning occurred (time, situation, etc.)"
+    )
+
+    # When this learning expires (if temporary)
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this learning becomes obsolete (null = never expires)"
+    )
+
+    # How many times this learning was used
+    usage_count = models.IntegerField(
+        default=0,
+        help_text="How many times this learning influenced agent behavior"
+    )
+
+    last_used = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this learning was last applied"
+    )
+
+    class Meta:
+        verbose_name = "User-Agent Learning"
+        verbose_name_plural = "User-Agent Learnings"
+        app_label = 'core'
+        indexes = [
+            models.Index(fields=['user', 'agent_name', 'learning_domain']),
+            models.Index(fields=['user', '-confidence_score']),
+            models.Index(fields=['user', '-success_rate']),
+            models.Index(fields=['agent_name', '-confidence_score']),
+        ]
+
+    def __str__(self):
+        return f"{self.agent_name} → {self.user.username}: {self.learning_domain} (confidence: {self.confidence_score:.1%})"
+
+    def record_success(self):
+        """Record that this learning proved correct"""
+        self.validation_count += 1
+        self.usage_count += 1
+        self.last_used = timezone.now()
+        self._update_metrics()
+        self.save()
+
+    def record_failure(self):
+        """Record that this learning proved incorrect"""
+        self.failure_count += 1
+        self.usage_count += 1
+        self.last_used = timezone.now()
+        self._update_metrics()
+        self.save()
+
+    def _update_metrics(self):
+        """Update confidence and success rate based on validation/failure counts"""
+        total_attempts = self.validation_count + self.failure_count
+
+        if total_attempts > 0:
+            # Calculate success rate
+            self.success_rate = self.validation_count / total_attempts
+
+            # Adjust confidence based on success rate and sample size
+            # More samples = more confidence in the success rate
+            sample_weight = min(total_attempts / 20.0, 1.0)  # Fully confident after 20 samples
+
+            # Confidence approaches success rate as sample size grows
+            self.confidence_score = (
+                self.confidence_score * (1 - sample_weight) +  # Old confidence
+                self.success_rate * sample_weight  # New evidence
+            )
+
+    @classmethod
+    def get_user_agent_knowledge(cls, user, agent_name, domain=None):
+        """
+        Get all learnings for a specific user-agent pair
+
+        Args:
+            user: User instance
+            agent_name: Name of the agent
+            domain: Optional domain filter
+
+        Returns:
+            QuerySet of learnings, ordered by confidence and recency
+        """
+        learnings = cls.objects.filter(
+            user=user,
+            agent_name=agent_name,
+            is_active=True
+        )
+
+        if domain:
+            learnings = learnings.filter(learning_domain=domain)
+
+        # Filter out expired learnings
+        learnings = learnings.filter(
+            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
+        )
+
+        return learnings.order_by('-confidence_score', '-updated_at')
+
+    @classmethod
+    def create_learning(cls, user, agent_name, domain, content, source='success_pattern', confidence=0.5):
+        """
+        Create a new learning or update existing one
+
+        Args:
+            user: User instance
+            agent_name: Name of the agent
+            domain: Learning domain
+            content: Learning content (JSON)
+            source: Learning source
+            confidence: Initial confidence score
+
+        Returns:
+            UserAgentLearning instance
+        """
+        learning, created = cls.objects.get_or_create(
+            user=user,
+            agent_name=agent_name,
+            learning_domain=domain,
+            defaults={
+                'learning_content': content,
+                'confidence_score': confidence,
+                'learning_source': source,
+                'context_metadata': {
+                    'created_at': timezone.now().isoformat()
+                }
+            }
+        )
+
+        if not created:
+            # Update existing learning
+            learning.learning_content = content
+            learning.confidence_score = confidence
+            learning.save()
+
+        return learning
+
+    @classmethod
+    def get_similar_users_learnings(cls, user, domain, min_confidence=0.6):
+        """
+        Collaborative filtering: Find learnings from similar users
+
+        Args:
+            user: Current user instance
+            domain: Learning domain to find similar learnings
+            min_confidence: Minimum confidence threshold
+
+        Returns:
+            QuerySet of learnings from similar users
+        """
+        # Get current user's learnings in this domain
+        user_learnings = cls.objects.filter(
+            user=user,
+            learning_domain=domain,
+            is_active=True,
+            confidence_score__gte=min_confidence
+        )
+
+        if not user_learnings.exists():
+            return cls.objects.none()
+
+        # Find users with similar learnings
+        similar_users = cls.objects.filter(
+            learning_domain=domain,
+            is_active=True,
+            confidence_score__gte=min_confidence
+        ).exclude(
+            user=user
+        ).values_list('user', flat=True).distinct()
+
+        # Get their learnings in other domains
+        return cls.objects.filter(
+            user__in=similar_users,
+            is_active=True,
+            confidence_score__gte=min_confidence
+        ).exclude(
+            user=user
+        ).order_by('-confidence_score', '-success_rate')
+
+    @classmethod
+    def get_collaborative_recommendations(cls, user, limit=10):
+        """
+        Get collaborative filtering recommendations across all agents
+
+        "Users who learned X also learned Y"
+
+        Args:
+            user: User instance
+            limit: Maximum number of recommendations
+
+        Returns:
+            List of recommended learning domains with reasoning
+        """
+        recommendations = []
+
+        # Get user's current learnings
+        user_learnings = cls.objects.filter(
+            user=user,
+            is_active=True,
+            confidence_score__gte=0.5
+        )
+
+        if not user_learnings.exists():
+            return recommendations
+
+        user_domains = set(user_learnings.values_list('learning_domain', flat=True))
+
+        # Find users with similar learnings
+        similar_users_learnings = cls.objects.filter(
+            learning_domain__in=user_domains,
+            is_active=True,
+            confidence_score__gte=0.6
+        ).exclude(user=user).values_list('user', flat=True).distinct()
+
+        # Get what they learned that current user hasn't
+        other_learnings = cls.objects.filter(
+            user__in=similar_users_learnings,
+            is_active=True,
+            confidence_score__gte=0.6
+        ).exclude(
+            learning_domain__in=user_domains
+        ).values(
+            'learning_domain', 'agent_name'
+        ).annotate(
+            count=models.Count('id'),
+            avg_confidence=models.Avg('confidence_score'),
+            avg_success=models.Avg('success_rate')
+        ).order_by('-count', '-avg_confidence')[:limit]
+
+        for learning_data in other_learnings:
+            recommendations.append({
+                'domain': learning_data['learning_domain'],
+                'agent': learning_data['agent_name'],
+                'similar_users_count': learning_data['count'],
+                'avg_confidence': learning_data['avg_confidence'],
+                'avg_success_rate': learning_data['avg_success'],
+                'reason': f"{learning_data['count']} similar users found this valuable"
+            })
+
+        return recommendations
+
+    @classmethod
+    def share_learning_between_agents(cls, source_user, target_users, domain, min_confidence=0.7):
+        """
+        Share high-confidence learnings from one user to similar users
+        Multi-agent learning propagation
+
+        Args:
+            source_user: User whose learning to share
+            target_users: List of users to share with
+            domain: Learning domain to share
+            min_confidence: Minimum confidence to share
+
+        Returns:
+            Number of learnings shared
+        """
+        shared_count = 0
+
+        # Get source user's high-confidence learnings
+        source_learnings = cls.objects.filter(
+            user=source_user,
+            learning_domain=domain,
+            is_active=True,
+            confidence_score__gte=min_confidence
+        )
+
+        for learning in source_learnings:
+            for target_user in target_users:
+                # Check if target already has this learning
+                existing = cls.objects.filter(
+                    user=target_user,
+                    agent_name=learning.agent_name,
+                    learning_domain=learning.learning_domain
+                ).first()
+
+                if existing:
+                    # Blend learnings - weighted average
+                    existing.confidence_score = (
+                        existing.confidence_score * 0.7 +  # Keep 70% of original
+                        learning.confidence_score * 0.3     # Add 30% of shared
+                    )
+                    existing.learning_content = {
+                        **existing.learning_content,
+                        'shared_from_users': existing.learning_content.get('shared_from_users', []) + [source_user.id]
+                    }
+                    existing.save()
+                else:
+                    # Create new learning with lower confidence
+                    cls.objects.create(
+                        user=target_user,
+                        agent_name=learning.agent_name,
+                        learning_domain=learning.learning_domain,
+                        learning_content={
+                            **learning.learning_content,
+                            'shared_from_user': source_user.id,
+                            'collaborative': True
+                        },
+                        confidence_score=learning.confidence_score * 0.6,  # Reduce confidence for shared
+                        learning_source='interaction_mining',
+                        context_metadata={
+                            'shared_at': timezone.now().isoformat(),
+                            'original_confidence': learning.confidence_score
+                        }
+                    )
+
+                shared_count += 1
+
+        return shared_count
+
+    def get_learning_cohort(self, min_similarity=0.5):
+        """
+        Find users with similar learning patterns
+
+        Args:
+            min_similarity: Minimum similarity score (0-1)
+
+        Returns:
+            List of similar users with similarity scores
+        """
+        # Get this user's learning profile
+        user_profile = self.__class__.objects.filter(
+            user=self.user,
+            is_active=True
+        ).values_list('learning_domain', 'confidence_score')
+
+        user_domains = {domain: conf for domain, conf in user_profile}
+
+        # Find users with overlapping learnings
+        similar_users = []
+
+        all_users = get_user_model().objects.exclude(id=self.user.id)
+
+        for other_user in all_users:
+            other_profile = self.__class__.objects.filter(
+                user=other_user,
+                is_active=True
+            ).values_list('learning_domain', 'confidence_score')
+
+            other_domains = {domain: conf for domain, conf in other_profile}
+
+            # Calculate Jaccard similarity
+            common_domains = set(user_domains.keys()) & set(other_domains.keys())
+            all_domains = set(user_domains.keys()) | set(other_domains.keys())
+
+            if len(all_domains) == 0:
+                continue
+
+            jaccard_similarity = len(common_domains) / len(all_domains)
+
+            # Calculate confidence correlation for common domains
+            if common_domains:
+                conf_correlation = sum(
+                    abs(user_domains[d] - other_domains[d])
+                    for d in common_domains
+                ) / len(common_domains)
+
+                # Invert so higher is better (0 = identical, 1 = completely different)
+                conf_correlation = 1 - conf_correlation
+            else:
+                conf_correlation = 0
+
+            # Combined similarity score
+            similarity = (jaccard_similarity + conf_correlation) / 2
+
+            if similarity >= min_similarity:
+                similar_users.append({
+                    'user': other_user,
+                    'similarity': similarity,
+                    'common_learnings': len(common_domains)
+                })
+
+        return sorted(similar_users, key=lambda x: x['similarity'], reverse=True)
