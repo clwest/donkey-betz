@@ -536,7 +536,7 @@
 let socket = null;
 
 function connectWebSocket() {
-    const wsUrl = 'ws://localhost:8000/ws/dbao/';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/dbao/`;
     console.log('Connecting to DBAO WebSocket:', wsUrl);
 
     socket = new WebSocket(wsUrl);

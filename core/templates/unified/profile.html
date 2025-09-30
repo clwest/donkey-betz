@@ -509,7 +509,7 @@
 let socket = null;
 
 function connectWebSocket() {
-    const wsUrl = 'ws://localhost:8000/ws/profile/';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/profile/`;
     console.log('Connecting to Profile WebSocket:', wsUrl);
 
     socket = new WebSocket(wsUrl);

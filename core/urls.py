@@ -242,7 +242,9 @@ from core.views_isolation_control import (
 from core.views_content import (
     create_content, list_content, generate_blog_post, generate_social_media_post,
     generate_video_script, content_templates, import_file_to_memory, supported_file_formats,
-    gallery_videos, gallery_list, content_library, podcasts_list
+    gallery_videos, gallery_list, content_library, podcasts_list,
+    # Phase 4: Frontend Reality Fix
+    generate_email, generate_podcast_script
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
@@ -726,6 +728,8 @@ urlpatterns = [
     path('api/v1/content/blog/generate/', generate_blog_post, name='blog-generate'),
     path('api/v1/content/social/generate/', generate_social_media_post, name='social-generate'),
     path('api/v1/content/video/script/', generate_video_script, name='video-script'),
+    path('api/v1/content/email/generate/', generate_email, name='email-generate'),  # Phase 4
+    path('api/v1/content/podcast/generate/', generate_podcast_script, name='podcast-generate'),  # Phase 4
     path('api/v1/content/templates/', content_templates, name='content-templates'),
     
     # Video Generation endpoints (RunwayML)

@@ -404,7 +404,7 @@ let notifications = [];
 let currentFilter = 'all';
 
 function connectWebSocket() {
-    const wsUrl = 'ws://localhost:8000/ws/notifications/';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/notifications/`;
     console.log('Connecting to Notifications WebSocket:', wsUrl);
 
     socket = new WebSocket(wsUrl);
