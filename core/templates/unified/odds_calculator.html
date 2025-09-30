@@ -1,0 +1,536 @@
+{% extends "unified/base.html" %}
+
+{% block title %}Odds Calculator - Sports Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calculator-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .page-title {
+        font-size: 2.5em;
+        background: linear-gradient(135deg, #00ff00, #ffd700);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .back-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .back-btn:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        transform: translateY(-2px);
+    }
+
+    .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+
+    .calculator-card {
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 30px;
+    }
+
+    .card-title {
+        font-size: 1.5em;
+        color: #ffd700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        color: #888;
+        margin-bottom: 8px;
+        font-size: 0.9em;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        color: white;
+        font-size: 1.1em;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #00ff00;
+        background: rgba(255,255,255,0.08);
+    }
+
+    .calc-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #00ff00, #ffd700);
+        border: none;
+        color: #000;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+
+    .calc-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0,255,0,0.3);
+    }
+
+    .result-box {
+        margin-top: 20px;
+        padding: 20px;
+        background: rgba(0,255,0,0.1);
+        border: 2px solid rgba(0,255,0,0.3);
+        border-radius: 10px;
+        display: none;
+    }
+
+    .result-box.show {
+        display: block;
+    }
+
+    .result-label {
+        color: #888;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+    }
+
+    .result-value {
+        font-size: 2em;
+        color: #00ff00;
+        font-weight: bold;
+    }
+
+    .format-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .format-tab {
+        flex: 1;
+        padding: 10px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #888;
+    }
+
+    .format-tab.active {
+        background: rgba(0,255,0,0.2);
+        border-color: rgba(0,255,0,0.4);
+        color: #00ff00;
+    }
+
+    .quick-reference {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .reference-title {
+        font-size: 1.3em;
+        color: #ffd700;
+        margin-bottom: 15px;
+    }
+
+    .reference-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        color: #fff;
+    }
+
+    .reference-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calculator-container">
+    <div class="page-header">
+        <h1 class="page-title">🧮 Odds Calculator</h1>
+        <a href="{% url 'sports_hub' %}" class="back-btn">← Back to Sports Hub</a>
+    </div>
+
+    <div class="calculator-grid">
+        <!-- Odds Conversion Calculator -->
+        <div class="calculator-card">
+            <div class="card-title">
+                <span>🔄</span>
+                <span>Odds Converter</span>
+            </div>
+
+            <div class="format-tabs">
+                <div class="format-tab active" data-format="american" onclick="setInputFormat('american')">
+                    American
+                </div>
+                <div class="format-tab" data-format="decimal" onclick="setInputFormat('decimal')">
+                    Decimal
+                </div>
+                <div class="format-tab" data-format="fractional" onclick="setInputFormat('fractional')">
+                    Fractional
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Enter Odds</label>
+                <input type="text" id="odds-input" class="form-input" placeholder="-110">
+            </div>
+
+            <button class="calc-btn" onclick="convertOdds()">Convert</button>
+
+            <div id="conversion-result" class="result-box">
+                <div class="result-label">American</div>
+                <div class="result-value" id="american-result">-110</div>
+
+                <div class="result-label" style="margin-top: 15px;">Decimal</div>
+                <div class="result-value" id="decimal-result">1.91</div>
+
+                <div class="result-label" style="margin-top: 15px;">Fractional</div>
+                <div class="result-value" id="fractional-result">10/11</div>
+
+                <div class="result-label" style="margin-top: 15px;">Implied Probability</div>
+                <div class="result-value" id="probability-result">52.4%</div>
+            </div>
+        </div>
+
+        <!-- Parlay Calculator -->
+        <div class="calculator-card">
+            <div class="card-title">
+                <span>💰</span>
+                <span>Parlay Calculator</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Leg 1 Odds (American)</label>
+                <input type="text" id="parlay-leg1" class="form-input" placeholder="-110">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Leg 2 Odds (American)</label>
+                <input type="text" id="parlay-leg2" class="form-input" placeholder="+150">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Leg 3 Odds (American, optional)</label>
+                <input type="text" id="parlay-leg3" class="form-input" placeholder="+200">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stake Amount ($)</label>
+                <input type="number" id="parlay-stake" class="form-input" placeholder="100">
+            </div>
+
+            <button class="calc-btn" onclick="calculateParlay()">Calculate Parlay</button>
+
+            <div id="parlay-result" class="result-box">
+                <div class="result-label">Total Odds</div>
+                <div class="result-value" id="parlay-odds-result">+650</div>
+
+                <div class="result-label" style="margin-top: 15px;">Potential Payout</div>
+                <div class="result-value" id="parlay-payout-result">$750.00</div>
+
+                <div class="result-label" style="margin-top: 15px;">Potential Profit</div>
+                <div class="result-value" id="parlay-profit-result">$650.00</div>
+            </div>
+        </div>
+
+        <!-- Arbitrage Calculator -->
+        <div class="calculator-card">
+            <div class="card-title">
+                <span>⚖️</span>
+                <span>Arbitrage Calculator</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Bookmaker 1 Odds (Decimal)</label>
+                <input type="number" step="0.01" id="arb-odds1" class="form-input" placeholder="2.10">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Bookmaker 2 Odds (Decimal)</label>
+                <input type="number" step="0.01" id="arb-odds2" class="form-input" placeholder="1.95">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Total Stake ($)</label>
+                <input type="number" id="arb-stake" class="form-input" placeholder="1000">
+            </div>
+
+            <button class="calc-btn" onclick="calculateArbitrage()">Find Arbitrage</button>
+
+            <div id="arbitrage-result" class="result-box">
+                <div class="result-label">Arbitrage Opportunity</div>
+                <div class="result-value" id="arb-exists-result">Yes</div>
+
+                <div class="result-label" style="margin-top: 15px;">Profit Margin</div>
+                <div class="result-value" id="arb-margin-result">2.5%</div>
+
+                <div class="result-label" style="margin-top: 15px;">Stake on Outcome 1</div>
+                <div class="result-value" id="arb-stake1-result">$476.19</div>
+
+                <div class="result-label" style="margin-top: 15px;">Stake on Outcome 2</div>
+                <div class="result-value" id="arb-stake2-result">$523.81</div>
+
+                <div class="result-label" style="margin-top: 15px;">Guaranteed Profit</div>
+                <div class="result-value" id="arb-profit-result">$25.00</div>
+            </div>
+        </div>
+
+        <!-- Kelly Criterion Calculator -->
+        <div class="calculator-card">
+            <div class="card-title">
+                <span>📊</span>
+                <span>Kelly Criterion</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Odds (Decimal)</label>
+                <input type="number" step="0.01" id="kelly-odds" class="form-input" placeholder="2.50">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Win Probability (%)</label>
+                <input type="number" step="0.1" id="kelly-prob" class="form-input" placeholder="45">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Bankroll ($)</label>
+                <input type="number" id="kelly-bankroll" class="form-input" placeholder="10000">
+            </div>
+
+            <button class="calc-btn" onclick="calculateKelly()">Calculate Stake</button>
+
+            <div id="kelly-result" class="result-box">
+                <div class="result-label">Kelly % (Full Kelly)</div>
+                <div class="result-value" id="kelly-percent-result">6.7%</div>
+
+                <div class="result-label" style="margin-top: 15px;">Recommended Stake</div>
+                <div class="result-value" id="kelly-stake-result">$670.00</div>
+
+                <div class="result-label" style="margin-top: 15px;">Half Kelly (Conservative)</div>
+                <div class="result-value" id="kelly-half-result">$335.00</div>
+
+                <div class="result-label" style="margin-top: 15px;">Expected Value</div>
+                <div class="result-value" id="kelly-ev-result">+12.5%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Reference -->
+    <div class="quick-reference">
+        <div class="reference-title">📚 Quick Reference</div>
+        <div class="reference-item">
+            <span>American -110</span>
+            <span>= Decimal 1.91 = Fractional 10/11 = 52.4% implied</span>
+        </div>
+        <div class="reference-item">
+            <span>American +150</span>
+            <span>= Decimal 2.50 = Fractional 3/2 = 40.0% implied</span>
+        </div>
+        <div class="reference-item">
+            <span>American -200</span>
+            <span>= Decimal 1.50 = Fractional 1/2 = 66.7% implied</span>
+        </div>
+        <div class="reference-item">
+            <span>American +200</span>
+            <span>= Decimal 3.00 = Fractional 2/1 = 33.3% implied</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFormat = 'american';
+
+function setInputFormat(format) {
+    currentFormat = format;
+    document.querySelectorAll('.format-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`[data-format="${format}"]`).classList.add('active');
+
+    const input = document.getElementById('odds-input');
+    if (format === 'american') {
+        input.placeholder = '-110';
+    } else if (format === 'decimal') {
+        input.placeholder = '1.91';
+    } else if (format === 'fractional') {
+        input.placeholder = '10/11';
+    }
+}
+
+function convertOdds() {
+    const input = document.getElementById('odds-input').value;
+    if (!input) return;
+
+    let decimalOdds;
+
+    // Convert input to decimal odds
+    if (currentFormat === 'american') {
+        const american = parseFloat(input);
+        if (american > 0) {
+            decimalOdds = (american / 100) + 1;
+        } else {
+            decimalOdds = (100 / Math.abs(american)) + 1;
+        }
+    } else if (currentFormat === 'decimal') {
+        decimalOdds = parseFloat(input);
+    } else if (currentFormat === 'fractional') {
+        const parts = input.split('/');
+        decimalOdds = (parseFloat(parts[0]) / parseFloat(parts[1])) + 1;
+    }
+
+    // Convert to all formats
+    let american;
+    if (decimalOdds >= 2) {
+        american = Math.round((decimalOdds - 1) * 100);
+    } else {
+        american = Math.round(-100 / (decimalOdds - 1));
+    }
+
+    const fractionalNumerator = Math.round((decimalOdds - 1) * 100);
+    const fractional = `${fractionalNumerator}/100`;
+
+    const impliedProb = (1 / decimalOdds * 100).toFixed(1);
+
+    // Display results
+    document.getElementById('american-result').textContent = american > 0 ? `+${american}` : american;
+    document.getElementById('decimal-result').textContent = decimalOdds.toFixed(2);
+    document.getElementById('fractional-result').textContent = fractional;
+    document.getElementById('probability-result').textContent = `${impliedProb}%`;
+
+    document.getElementById('conversion-result').classList.add('show');
+}
+
+function calculateParlay() {
+    const leg1 = parseFloat(document.getElementById('parlay-leg1').value);
+    const leg2 = parseFloat(document.getElementById('parlay-leg2').value);
+    const leg3 = document.getElementById('parlay-leg3').value;
+    const stake = parseFloat(document.getElementById('parlay-stake').value);
+
+    if (!leg1 || !leg2 || !stake) return;
+
+    // Convert American odds to decimal
+    const toDecimal = (american) => {
+        if (american > 0) {
+            return (american / 100) + 1;
+        } else {
+            return (100 / Math.abs(american)) + 1;
+        }
+    };
+
+    let totalDecimal = toDecimal(leg1) * toDecimal(leg2);
+    if (leg3) {
+        totalDecimal *= toDecimal(parseFloat(leg3));
+    }
+
+    const payout = stake * totalDecimal;
+    const profit = payout - stake;
+
+    // Convert back to American odds
+    let totalAmerican;
+    if (totalDecimal >= 2) {
+        totalAmerican = Math.round((totalDecimal - 1) * 100);
+    } else {
+        totalAmerican = Math.round(-100 / (totalDecimal - 1));
+    }
+
+    document.getElementById('parlay-odds-result').textContent = totalAmerican > 0 ? `+${totalAmerican}` : totalAmerican;
+    document.getElementById('parlay-payout-result').textContent = `$${payout.toFixed(2)}`;
+    document.getElementById('parlay-profit-result').textContent = `$${profit.toFixed(2)}`;
+
+    document.getElementById('parlay-result').classList.add('show');
+}
+
+function calculateArbitrage() {
+    const odds1 = parseFloat(document.getElementById('arb-odds1').value);
+    const odds2 = parseFloat(document.getElementById('arb-odds2').value);
+    const stake = parseFloat(document.getElementById('arb-stake').value);
+
+    if (!odds1 || !odds2 || !stake) return;
+
+    const totalImplied = (1 / odds1) + (1 / odds2);
+    const arbExists = totalImplied < 1;
+    const margin = ((1 - totalImplied) * 100).toFixed(2);
+
+    const stake1 = stake / odds1 / totalImplied;
+    const stake2 = stake / odds2 / totalImplied;
+    const profit = stake - (stake1 * odds1) > 0 ? stake - (stake1 * odds1) : stake1 * odds1 - stake;
+
+    document.getElementById('arb-exists-result').textContent = arbExists ? 'Yes ✓' : 'No ✗';
+    document.getElementById('arb-margin-result').textContent = `${margin}%`;
+    document.getElementById('arb-stake1-result').textContent = `$${stake1.toFixed(2)}`;
+    document.getElementById('arb-stake2-result').textContent = `$${stake2.toFixed(2)}`;
+    document.getElementById('arb-profit-result').textContent = arbExists ? `$${Math.abs(profit).toFixed(2)}` : '$0.00';
+
+    document.getElementById('arbitrage-result').classList.add('show');
+}
+
+function calculateKelly() {
+    const odds = parseFloat(document.getElementById('kelly-odds').value);
+    const prob = parseFloat(document.getElementById('kelly-prob').value) / 100;
+    const bankroll = parseFloat(document.getElementById('kelly-bankroll').value);
+
+    if (!odds || !prob || !bankroll) return;
+
+    const q = 1 - prob;
+    const b = odds - 1;
+
+    const kellyPercent = (b * prob - q) / b;
+    const kellyPercentDisplay = (kellyPercent * 100).toFixed(1);
+    const kellyStake = bankroll * kellyPercent;
+    const halfKelly = kellyStake / 2;
+
+    const ev = ((prob * odds) - 1) * 100;
+
+    document.getElementById('kelly-percent-result').textContent = `${kellyPercentDisplay}%`;
+    document.getElementById('kelly-stake-result').textContent = kellyStake > 0 ? `$${kellyStake.toFixed(2)}` : '$0.00 (No Edge)';
+    document.getElementById('kelly-half-result').textContent = halfKelly > 0 ? `$${halfKelly.toFixed(2)}` : '$0.00';
+    document.getElementById('kelly-ev-result').textContent = `${ev > 0 ? '+' : ''}${ev.toFixed(1)}%`;
+
+    document.getElementById('kelly-result').classList.add('show');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends "unified/base.html" %}
+
+{% block title %}Betting History - Sports Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .page-title {
+        font-size: 2.5em;
+        background: linear-gradient(135deg, #00ff00, #ffd700);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .back-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .back-btn:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        transform: translateY(-2px);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #00ff00;
+        margin-bottom: 8px;
+    }
+
+    .stat-value.negative {
+        color: #ff4444;
+    }
+
+    .stat-label {
+        color: #888;
+        font-size: 0.9em;
+    }
+
+    .bets-table {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .table-header {
+        background: rgba(255,255,255,0.05);
+        padding: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-weight: bold;
+        color: #ffd700;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        padding: 15px;
+        text-align: left;
+        color: #ffd700;
+        background: rgba(255,255,255,0.05);
+        font-weight: 600;
+    }
+
+    td {
+        padding: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        color: #fff;
+    }
+
+    tr:hover {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+
+    .status-won {
+        background: rgba(0,255,0,0.2);
+        border: 1px solid rgba(0,255,0,0.4);
+        color: #00ff00;
+    }
+
+    .status-lost {
+        background: rgba(255,0,0,0.2);
+        border: 1px solid rgba(255,0,0,0.4);
+        color: #ff4444;
+    }
+
+    .status-pending {
+        background: rgba(255,215,0,0.2);
+        border: 1px solid rgba(255,215,0,0.4);
+        color: #ffd700;
+    }
+
+    .profit-positive {
+        color: #00ff00;
+        font-weight: bold;
+    }
+
+    .profit-negative {
+        color: #ff4444;
+        font-weight: bold;
+    }
+
+    .no-bets {
+        text-align: center;
+        padding: 60px 20px;
+        color: #888;
+        font-size: 1.2em;
+    }
+
+    .no-bets-icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="history-container">
+    <div class="page-header">
+        <h1 class="page-title">📊 Betting History</h1>
+        <a href="{% url 'sports_hub' %}" class="back-btn">← Back to Sports Hub</a>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_bets }}</div>
+            <div class="stat-label">Total Bets</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.won_bets }}</div>
+            <div class="stat-label">Wins</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.lost_bets }}</div>
+            <div class="stat-label">Losses</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.pending_bets }}</div>
+            <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.win_rate }}%</div>
+            <div class="stat-label">Win Rate</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${{ stats.total_wagered|floatformat:2 }}</div>
+            <div class="stat-label">Total Wagered</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value {% if stats.total_profit < 0 %}negative{% endif %}">
+                ${{ stats.total_profit|floatformat:2 }}
+            </div>
+            <div class="stat-label">Total Profit/Loss</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value {% if stats.roi < 0 %}negative{% endif %}">
+                {{ stats.roi }}%
+            </div>
+            <div class="stat-label">ROI</div>
+        </div>
+    </div>
+
+    {% if user_bets %}
+    <div class="bets-table">
+        <div class="table-header">Recent Bets</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Sport</th>
+                    <th>Game</th>
+                    <th>Pick</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Odds</th>
+                    <th>Status</th>
+                    <th>P/L</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bet in user_bets %}
+                <tr>
+                    <td>{{ bet.date }}</td>
+                    <td>{{ bet.sport }}</td>
+                    <td>{{ bet.game }}</td>
+                    <td>{{ bet.pick }}</td>
+                    <td>{{ bet.bet_type|upper }}</td>
+                    <td>${{ bet.amount|floatformat:2 }}</td>
+                    <td>{{ bet.odds|floatformat:0|stringformat:"+d" }}</td>
+                    <td>
+                        <span class="status-badge status-{{ bet.status|lower }}">
+                            {{ bet.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if bet.profit_loss is not None %}
+                            <span class="{% if bet.profit_loss >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                                ${{ bet.profit_loss|floatformat:2 }}
+                            </span>
+                        {% else %}
+                            <span style="color: #888;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="no-bets">
+        <div class="no-bets-icon">🎲</div>
+        <p>No betting history yet</p>
+        <p style="font-size: 0.9em; margin-top: 10px;">
+            Start by getting AI predictions and placing your first bet!
+        </p>
+        <a href="{% url 'sports_hub' %}" class="back-btn" style="margin-top: 20px;">
+            Get AI Predictions →
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
