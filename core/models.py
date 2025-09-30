@@ -2159,4 +2159,4 @@ class UserAgentLearning(UnifiedBaseModel):
             learning.confidence_score = confidence
             learning.save()
 
-        return learning
+        return learningfrom core.models_engagement_metrics import EngagementMetrics, OpportunityInteraction

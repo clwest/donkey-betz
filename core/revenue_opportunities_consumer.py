@@ -31,6 +31,8 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
         self.room_group_name = None
         self.opportunities_task = None
         self.shown_opportunities = {}  # Track shown opportunities for learning
+        self.engagement_session = None  # Track engagement metrics
+        self.session_start_time = None
 
     async def connect(self):
         """Handle WebSocket connection"""
@@ -51,6 +53,9 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
+        # Initialize engagement tracking
+        await self.initialize_engagement_session()
+
         # Send initial data
         await self.send_initial_opportunities()
 
@@ -63,6 +68,9 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
         """Handle WebSocket disconnect"""
         if self.opportunities_task:
             self.opportunities_task.cancel()
+
+        # End engagement session
+        await self.end_engagement_session()
 
         if self.room_group_name:
             await self.channel_layer.group_discard(
@@ -153,50 +161,128 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
         """Apply user-specific learnings to personalize opportunity ranking"""
         from core.models import UserAgentLearning
 
-        # Get all platform preference learnings for this user
-        learnings = await database_sync_to_async(
-            lambda: list(UserAgentLearning.get_user_agent_knowledge(
+        # Get ALL active learnings for this user across all domains
+        all_learnings = await database_sync_to_async(
+            lambda: list(UserAgentLearning.objects.filter(
                 user=self.user,
                 agent_name='IncomeBuilder',
-                domain='platform_preferences'
+                is_active=True
             ))
         )()
 
-        if not learnings:
+        if not all_learnings:
             logger.info("No learnings yet for this user - showing unbiased results")
             return opportunities
 
-        # Build platform preference map
+        # Organize learnings by domain
         platform_preferences = {}
-        for learning in learnings:
+        salary_preferences = {}
+        skill_preferences = []
+        remote_preferences = None
+        company_size_preferences = None
+
+        for learning in all_learnings:
             content = learning.learning_content
-            if isinstance(content, dict):
-                platform = content.get('preferred_platform')
+            if not isinstance(content, dict):
+                continue
+
+            domain = learning.learning_domain
+            confidence = learning.confidence_score
+            success_rate = learning.success_rate
+
+            if domain == 'platform_preferences':
+                platform = content.get('preferred_platform', '').lower()
                 if platform:
                     platform_preferences[platform] = {
-                        'confidence': learning.confidence_score,
-                        'success_rate': learning.success_rate,
-                        'boost': learning.confidence_score * 0.5  # Boost up to +50%
+                        'confidence': confidence,
+                        'success_rate': success_rate,
+                        'boost': confidence * 0.5  # Up to +50%
                     }
 
-        logger.info(f"📊 Platform preferences for {self.user.username}: {platform_preferences}")
+            elif domain == 'salary_preferences':
+                salary_range = content.get('salary_range', {})
+                if salary_range:
+                    salary_preferences = {
+                        'min': salary_range.get('min', 0),
+                        'max': salary_range.get('max', 999999),
+                        'confidence': confidence,
+                        'boost': confidence * 0.3  # Up to +30%
+                    }
+
+            elif domain == 'skill_preferences':
+                preferred_skills = content.get('preferred_skills', [])
+                if preferred_skills:
+                    skill_preferences = {
+                        'skills': [s.lower() for s in preferred_skills],
+                        'confidence': confidence,
+                        'boost': confidence * 0.2  # Up to +20%
+                    }
+
+            elif domain == 'remote_preferences':
+                remote_pref = content.get('preference', '').lower()
+                if remote_pref:
+                    remote_preferences = {
+                        'preference': remote_pref,  # 'fully_remote', 'hybrid', 'onsite'
+                        'confidence': confidence,
+                        'boost': confidence * 0.25  # Up to +25%
+                    }
+
+            elif domain == 'company_size_preferences':
+                size_pref = content.get('preferred_size', '').lower()
+                if size_pref:
+                    company_size_preferences = {
+                        'size': size_pref,  # 'startup', 'small', 'medium', 'enterprise'
+                        'confidence': confidence,
+                        'boost': confidence * 0.15  # Up to +15%
+                    }
+
+        logger.info(f"📊 Learnings for {self.user.username}: {len(platform_preferences)} platforms, "
+                   f"salary_range={bool(salary_preferences)}, skills={bool(skill_preferences)}, "
+                   f"remote={bool(remote_preferences)}, company_size={bool(company_size_preferences)}")
 
         # Apply boosts to opportunities
         for opp in opportunities:
-            platform = opp.get('platform', '').lower()
+            total_boost = 0
+            reasons = []
 
+            # Platform boost
+            platform = opp.get('platform', '').lower()
             if platform in platform_preferences:
                 pref = platform_preferences[platform]
-                boost = pref['boost']
+                total_boost += pref['boost']
+                reasons.append(f"{pref['success_rate']*100:.0f}% interest in {platform.title()}")
 
-                # Boost match score
+            # Salary boost
+            if salary_preferences:
+                opp_salary = opp.get('budget_min', opp.get('budget', 0))
+                if opp_salary and salary_preferences['min'] <= opp_salary <= salary_preferences['max']:
+                    total_boost += salary_preferences['boost']
+                    reasons.append(f"Matches your salary range")
+
+            # Skills boost
+            if skill_preferences:
+                opp_skills = [s.lower() for s in opp.get('skills', [])]
+                matching_skills = set(skill_preferences['skills']) & set(opp_skills)
+                if matching_skills:
+                    total_boost += skill_preferences['boost']
+                    reasons.append(f"Uses your preferred skills")
+
+            # Remote boost
+            if remote_preferences:
+                location = opp.get('location', '').lower()
+                if 'remote' in location and remote_preferences['preference'] == 'fully_remote':
+                    total_boost += remote_preferences['boost']
+                    reasons.append(f"Fully remote position")
+
+            # Apply total boost
+            if total_boost > 0:
                 original_score = opp.get('match_score', 0)
-                new_score = min(100, original_score * (1 + boost))
+                new_score = min(100, original_score * (1 + total_boost))
                 opp['match_score'] = int(new_score)
-                opp['personalization_boost'] = f"+{boost*100:.0f}%"
-                opp['reason'] = f"You've shown {pref['success_rate']*100:.0f}% interest in {platform.title()}"
+                opp['personalization_boost'] = f"+{total_boost*100:.0f}%"
+                opp['reason'] = " · ".join(reasons[:2])  # Show top 2 reasons
 
-                logger.debug(f"✨ Boosted {opp['title']}: {original_score} → {new_score} (+{boost*100:.0f}%)")
+                logger.debug(f"✨ Boosted {opp['title']}: {original_score} → {new_score} (+{total_boost*100:.0f}%)")
 
         return opportunities
 
@@ -419,6 +505,7 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
     async def handle_opportunity_clicked(self, data: Dict[str, Any]):
         """Record that user clicked on an opportunity"""
         from core.models import UserAgentLearning
+        from core.models_engagement_metrics import OpportunityInteraction
         from django.utils import timezone
 
         opportunity_id = data.get('opportunity_id')
@@ -428,6 +515,27 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
             return
 
         logger.info(f"📊 User {self.user.username} clicked opportunity {opportunity_id} from {platform}")
+
+        # Update engagement metrics
+        if self.engagement_session:
+            self.engagement_session.opportunities_clicked += 1
+            await database_sync_to_async(self.engagement_session.calculate_metrics)()
+
+        # Track interaction
+        await database_sync_to_async(
+            OpportunityInteraction.objects.create
+        )(
+            user=self.user,
+            engagement_session=self.engagement_session,
+            opportunity_id=opportunity_id,
+            opportunity_title=data.get('title', 'Unknown'),
+            opportunity_platform=platform,
+            opportunity_salary=data.get('budget', 0),
+            interaction_type='click',
+            was_personalized=(self.engagement_session.ab_test_group == 'treatment' if self.engagement_session else False),
+            personalization_boost=data.get('personalization_boost', 0),
+            match_score=data.get('match_score', 0)
+        )
 
         # Update or create platform preference learning
         learning = await database_sync_to_async(
@@ -573,6 +681,30 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
 
             logger.info(f"Revenue tracked: ${potential_amount} potential from {opportunity_id}")
 
+            # Update engagement metrics for application
+            if self.engagement_session:
+                self.engagement_session.opportunities_applied += 1
+                self.engagement_session.potential_revenue += potential_amount
+                await database_sync_to_async(self.engagement_session.calculate_metrics)()
+
+            # Track application interaction
+            from core.models_engagement_metrics import OpportunityInteraction
+
+            await database_sync_to_async(
+                OpportunityInteraction.objects.create
+            )(
+                user=self.user,
+                engagement_session=self.engagement_session,
+                opportunity_id=opportunity_id,
+                opportunity_title=data.get('title', 'Unknown'),
+                opportunity_platform=data.get('platform', 'unknown'),
+                opportunity_salary=potential_amount,
+                interaction_type='apply',
+                was_personalized=(self.engagement_session.ab_test_group == 'treatment' if self.engagement_session else False),
+                resulted_in_application=True,
+                match_score=data.get('match_score', 0)
+            )
+
             # NEW: Record high-confidence learning
             from core.models import UserAgentLearning
 
@@ -697,3 +829,62 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
             'type': 'opportunity_update',
             'data': event['data']
         }))
+
+    # ==========================================
+    # ENGAGEMENT METRICS & A/B TESTING
+    # ==========================================
+
+    async def initialize_engagement_session(self):
+        """Initialize engagement tracking for this session"""
+        from core.models_engagement_metrics import EngagementMetrics
+        import random
+
+        self.session_start_time = datetime.now()
+
+        # Assign to A/B test group (20% control, 80% treatment)
+        ab_group = 'control' if random.random() < 0.2 else 'treatment'
+
+        # Create engagement session
+        self.engagement_session = await database_sync_to_async(
+            EngagementMetrics.objects.create
+        )(
+            user=self.user,
+            session_id=f"session_{self.user.id}_{datetime.now().timestamp()}",
+            ab_test_group=ab_group,
+            personalized_results=(ab_group == 'treatment')
+        )
+
+        logger.info(f"📊 Engagement session started: {self.engagement_session.session_id} (Group: {ab_group})")
+
+    async def end_engagement_session(self):
+        """End engagement tracking session"""
+        if self.engagement_session:
+            await database_sync_to_async(self.engagement_session.end_session)()
+            logger.info(f"📊 Engagement session ended: CTR={self.engagement_session.ctr:.2%}, App Rate={self.engagement_session.application_rate:.2%}")
+
+    async def record_opportunities_shown(self, opportunities: List[Dict]):
+        """Track which opportunities were shown to user"""
+        from django.utils import timezone
+
+        # Count opportunities by platform
+        platform_counts = {}
+        for opp in opportunities:
+            platform = opp.get('platform', 'unknown')
+            platform_counts[platform] = platform_counts.get(platform, 0) + 1
+
+        # Store in user's session for later comparison
+        self.shown_opportunities = {
+            opp['id']: {
+                'platform': opp.get('platform'),
+                'title': opp.get('title'),
+                'shown_at': timezone.now().isoformat()
+            }
+            for opp in opportunities
+        }
+
+        # Update engagement metrics
+        if self.engagement_session:
+            self.engagement_session.opportunities_shown += len(opportunities)
+            await database_sync_to_async(self.engagement_session.save)()
+
+        logger.info(f"📊 Showed {len(opportunities)} opportunities to {self.user.username}: {platform_counts}")

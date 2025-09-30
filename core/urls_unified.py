@@ -22,6 +22,8 @@ urlpatterns = [
     path('revenue-dashboard/', views_unified.RevenueDashboardView.as_view(), name='unified_revenue_dashboard_alt'),
     path('monetization/', views_unified.MonetizationHubView.as_view(), name='unified_monetization_hub'),
     path('monetization-hub/', views_unified.MonetizationHubView.as_view(), name='unified_monetization_hub_alt'),
+    path('learning/', views_unified.LearningDashboardView.as_view(), name='unified_learning_dashboard'),
+    path('learning-dashboard/', views_unified.LearningDashboardView.as_view(), name='unified_learning_dashboard_alt'),
 
     # AI Intelligence Section
     path('neural-orchestra/', views_unified.NeuralOrchestraView.as_view(), name='unified_neural_orchestra'),

@@ -97,6 +97,16 @@ class RevenueDashboardView(TemplateView):
         return context
 
 
+class LearningDashboardView(TemplateView):
+    """Learning Dashboard - View what the AI has learned about user preferences"""
+    template_name = 'unified/learning_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'My AI Learning Dashboard'
+        return context
+
+
 class MonetizationHubView(TemplateView):
     """Monetization Hub - Real revenue tracking and withdrawals"""
     template_name = 'unified/monetization_hub.html'

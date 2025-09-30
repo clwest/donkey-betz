@@ -164,12 +164,14 @@ websocket_urlpatterns = [
 from core.revenue_opportunities_consumer import RevenueOpportunitiesConsumer
 from core.monetization_hub_consumer import MonetizationHubConsumer
 from core.control_center_consumer import ControlCenterConsumer
+from core.learning_dashboard_consumer import LearningDashboardConsumer
 
 # Add new template WebSocket patterns
 new_template_patterns = [
     re_path(r'^ws/revenue-opportunities/$', RevenueOpportunitiesConsumer.as_asgi()),
     re_path(r'^ws/monetization-hub/$', MonetizationHubConsumer.as_asgi()),
     re_path(r'^ws/control-center/$', ControlCenterConsumer.as_asgi()),
+    re_path(r'^ws/learning-dashboard/$', LearningDashboardConsumer.as_asgi()),
 ]
 
 websocket_urlpatterns.extend(new_template_patterns)
