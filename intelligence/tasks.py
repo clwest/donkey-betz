@@ -1428,3 +1428,53 @@ def calculate_daily_revenue_metrics():
             'status': 'error',
             'message': str(e)
         }
+
+
+@shared_task
+def execute_agent_task(agent_id: int, task: str, context: dict = None):
+    """
+    Execute an agent task asynchronously
+
+    Args:
+        agent_id: ID of the agent to execute
+        task: Task description
+        context: Optional task context
+
+    Returns:
+        Execution result dictionary
+    """
+    try:
+        from agents.models import UnifiedAgentTemplate
+        from intelligence.agent_executor import AgentExecutor
+
+        logger.info(f"🤖 Executing agent task: agent_id={agent_id}")
+
+        # Get agent
+        agent = UnifiedAgentTemplate.objects.get(id=agent_id)
+
+        # Execute agent
+        executor = AgentExecutor()
+        execution = executor.execute_agent(
+            agent=agent,
+            task=task,
+            context=context
+        )
+
+        logger.info(f"✅ Agent execution completed: {execution.status}")
+
+        return {
+            'status': 'success',
+            'execution_id': execution.id,
+            'agent': agent.name,
+            'result': execution.result,
+            'execution_status': execution.status,
+            'tokens_used': execution.tokens_used,
+            'duration_ms': execution.execution_time_ms
+        }
+
+    except Exception as e:
+        logger.error(f"Error executing agent: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
