@@ -501,6 +501,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
     // Auto-refresh stats every 30 seconds
     function refreshStats() {
         fetch('{% url "api_revenue_stats" %}')
@@ -537,4 +538,5 @@
         checkNotifications();
         setInterval(checkNotifications, 60000);
     });
+</script>
 {% endblock %}
