@@ -1478,3 +1478,222 @@ def execute_agent_task(agent_id: int, task: str, context: dict = None):
             'status': 'error',
             'message': str(e)
         }
+
+
+@shared_task(bind=True)
+def scan_spider_opportunities(self):
+    """
+    CRITICAL FIX: Scheduled task to scan spider network for opportunities
+    and save them to database. This is the missing cron job!
+
+    Should run every 30 minutes to keep opportunities fresh.
+    """
+    try:
+        logger.info("🕷️ Starting scheduled spider opportunity scan...")
+
+        # Create event loop for async code
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        # Scan with spider decision bridge
+        from intelligence.spider_decision_bridge import spider_decision_bridge
+
+        async def run_scan():
+            await spider_decision_bridge.initialize()
+            opportunities = await spider_decision_bridge.scan_for_opportunities()
+            stats = await spider_decision_bridge.get_statistics()
+            return opportunities, stats
+
+        opportunities, stats = loop.run_until_complete(run_scan())
+
+        logger.info(f"✅ Spider scan complete: {len(opportunities)} opportunities found")
+        logger.info(f"📊 Stats: {stats}")
+
+        return {
+            'status': 'success',
+            'opportunities_found': len(opportunities),
+            'stats': stats,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Spider scan error: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+    finally:
+        loop.close()
+
+
+@shared_task(bind=True)
+def scan_income_spider_orchestrator(self):
+    """
+    CRITICAL FIX: Scheduled task for Income Spider Orchestrator
+    Discovers opportunities and saves them to database
+
+    Should run every hour to gather opportunities from multiple sources.
+    """
+    try:
+        logger.info("💰 Starting Income Spider Orchestrator scan...")
+
+        from intelligence.income_spider_orchestrator import income_spider_orchestrator
+        from intelligence.income_builder import UserProfile, SkillLevel
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
+        # Create event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def run_discovery():
+            # Get first user or create a default profile
+            user = User.objects.first()
+
+            # Create default profile for scanning
+            profile = UserProfile(
+                id=str(user.id) if user else 'default',
+                username=user.username if user else 'system',
+                skills=['python', 'javascript', 'content writing', 'data analysis'],
+                skill_level=SkillLevel.INTERMEDIATE,
+                available_hours_per_week=20,
+                current_balance=0,
+                total_earned=0,
+                reputation_score=0
+            )
+
+            # Run discovery with real data
+            result = await income_spider_orchestrator.discover_opportunities_for_user(
+                profile,
+                use_real_data=True,
+                max_opportunities=20
+            )
+
+            return result
+
+        result = loop.run_until_complete(run_discovery())
+
+        logger.info(f"✅ Income orchestrator scan complete")
+        logger.info(f"   Found: {result.total_found} opportunities")
+        logger.info(f"   Filtered: {result.filtered_count} opportunities")
+        logger.info(f"   Sources: {', '.join(result.spider_sources)}")
+
+        return {
+            'status': 'success',
+            'total_found': result.total_found,
+            'filtered_count': result.filtered_count,
+            'sources': result.spider_sources,
+            'discovery_time': result.discovery_time,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Income orchestrator scan error: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+    finally:
+        loop.close()
+
+
+@shared_task(name='intelligence.tasks.fetch_all_opportunities')
+def fetch_all_opportunities():
+    """Fetch opportunities from all spiders - runs hourly"""
+    from intelligence.spider_opportunity_connector import spider_connector, save_opportunity_to_database
+    from django.contrib.auth import get_user_model
+    from channels.db import database_sync_to_async
+    import asyncio
+
+    logger.info("🕷️ Starting spider orchestration...")
+
+    @database_sync_to_async
+    def get_first_user():
+        User = get_user_model()
+        return User.objects.first()
+
+    async def fetch_all():
+        await spider_connector.initialize()
+
+        total_opportunities = 0
+        saved_count = 0
+        user = await get_first_user()
+
+        if not user:
+            logger.error("❌ No user found - cannot save opportunities")
+            return {'total': 0, 'saved': 0}
+
+        # Create a default user profile for fetching opportunities
+        user_profile = {
+            'user_id': user.id,
+            'skills': ['python', 'javascript', 'writing', 'automation'],
+            'location': 'remote',
+            'skillLevel': 'intermediate',
+            'availableHours': 20
+        }
+
+        try:
+            logger.info("Fetching opportunities from spider network...")
+            opportunities = await spider_connector.get_opportunities_for_user(user_profile)
+            total_opportunities = len(opportunities)
+            logger.info(f"✅ Fetched {total_opportunities} opportunities")
+
+            # Save each opportunity to database
+            logger.info("💾 Saving opportunities to database...")
+            for spider_opp in opportunities:
+                try:
+                    saved_opp = await save_opportunity_to_database(spider_opp, user)
+                    if saved_opp:
+                        saved_count += 1
+                        logger.debug(f"Saved opportunity: {saved_opp.title}")
+                except Exception as e:
+                    logger.error(f"Failed to save opportunity {spider_opp.title}: {e}")
+
+            logger.info(f"✅ Saved {saved_count}/{total_opportunities} opportunities to database")
+
+        except Exception as e:
+            logger.error(f"❌ Spider fetch failed: {e}")
+
+        return {'total': total_opportunities, 'saved': saved_count}
+
+    # Run the async function
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        result = loop.run_until_complete(fetch_all())
+        logger.info(f"✅ Spider orchestration complete: {result['saved']}/{result['total']} opportunities saved")
+        return {
+            'success': True,
+            'total_opportunities': result['total'],
+            'saved_opportunities': result['saved'],
+            'timestamp': datetime.now().isoformat()
+        }
+    finally:
+        loop.close()
+
+
+@shared_task(name='intelligence.tasks.cleanup_old_opportunities')
+def cleanup_old_opportunities(days=30):
+    """Mark old opportunities as expired - runs daily"""
+    from core.models_unified_system import Opportunity
+    from django.utils import timezone
+    from datetime import timedelta
+
+    cutoff_date = timezone.now() - timedelta(days=days)
+
+    old_opportunities = Opportunity.objects.filter(
+        created_at__lt=cutoff_date,
+        status='active'
+    )
+
+    count = old_opportunities.count()
+    old_opportunities.update(status='expired')
+
+    logger.info(f"🧹 Marked {count} opportunities as expired")
+
+    return {
+        'success': True,
+        'expired_count': count,
+        'cutoff_date': cutoff_date.isoformat()
+    }

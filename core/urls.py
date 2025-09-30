@@ -292,6 +292,8 @@ from core.views_revenue_tracking import (
     update_revenue_status_view,
     revenue_history_view
 )
+# Import Partnership views (Session 38)
+from core import views_partnership
 
 # Import enhanced learning workflow API
 try:
@@ -884,7 +886,28 @@ urlpatterns = [
     path('api/v1/workflows/analytics/', workflow_analytics, name='workflow-analytics'),
     path('api/v1/workflows/schedule/', schedule_workflow, name='schedule-workflow'),
     path('api/v1/workflows/collaborate/', workflow_collaboration, name='workflow-collaboration'),
-    
+
+    # Revenue tracking endpoints (CRITICAL FIX - Session 37-A Priority 3)
+    path('api/revenue/create/', lambda r: __import__('core.views_revenue', fromlist=['create_revenue']).create_revenue(r), name='create-revenue'),
+    path('api/revenue/summary/', lambda r: __import__('core.views_revenue', fromlist=['get_revenue_summary']).get_revenue_summary(r), name='revenue-summary'),
+
+    # Opportunity and application endpoints (CRITICAL FIX - Session 37-A Priority 5)
+    path('api/opportunities/quick-apply/', lambda r: __import__('core.views_opportunities', fromlist=['quick_apply']).quick_apply(r), name='quick-apply'),
+
+    # ===== PARTNERSHIP SYSTEM (Session 38) =====
+    # Human-AI Partnership tracking and collaboration features
+    path('partnership/', views_partnership.partnership_dashboard, name='partnership-dashboard'),
+    path('partnership/start/<uuid:opportunity_id>/', views_partnership.start_partnership, name='start-partnership'),
+    path('partnership/project/<uuid:project_id>/', views_partnership.partnership_project_detail, name='partnership-project-detail'),
+
+    # Partnership API endpoints
+    path('api/partnership/ai-contribution/<uuid:project_id>/', views_partnership.add_ai_contribution, name='add-ai-contribution'),
+    path('api/partnership/human-contribution/<uuid:project_id>/', views_partnership.add_human_contribution, name='add-human-contribution'),
+    path('api/partnership/complete/<uuid:project_id>/', views_partnership.complete_partnership, name='complete-partnership'),
+    path('api/partnership/opportunities/', views_partnership.partnership_opportunities_api, name='partnership-opportunities-api'),
+    path('api/partnership/stats/', views_partnership.partnership_stats_api, name='partnership-stats-api'),
+    path('api/partnership/health/', views_partnership.partnership_health_check, name='partnership-health'),
+
     # REST framework browsable API (development only)
     path('api-auth/', include('rest_framework.urls')),
 ]

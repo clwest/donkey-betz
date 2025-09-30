@@ -124,6 +124,9 @@ class UnifiedLearningPipeline:
         """
         Analyze user interaction patterns to generate learning insights.
 
+        NEW (Session 37-A): Now includes sports betting intelligence!
+        Sports betting patterns flow into cross-domain insights.
+
         Args:
             user: User to analyze
             lookback_days: Number of days to look back
@@ -157,6 +160,10 @@ class UnifiedLearningPipeline:
             # Generate cross-system insights
             cross_insights = self._generate_cross_system_insights(user, conversations, memories)
             insights.extend(cross_insights)
+
+            # NEW: Analyze sports betting patterns (Session 37-A Integration)
+            sports_insights = self._analyze_sports_betting_patterns(user, lookback_days)
+            insights.extend(sports_insights)
 
             self.logger.info(f"Generated {len(insights)} learning insights for {user.username}")
             return insights
@@ -849,6 +856,37 @@ class UnifiedLearningPipeline:
         recommendations.append("Enhance user journey tracking for better completion rates")
 
         return recommendations
+
+    def _analyze_sports_betting_patterns(self, user: User, lookback_days: int) -> List[LearningInsight]:
+        """
+        Analyze sports betting patterns to generate cross-domain insights (NEW - Session 37-A)
+
+        This is the KEY cross-domain intelligence feature!
+        Sports betting success indicates analytical skills, risk tolerance, pattern recognition
+        that can inform job matching, content creation, and opportunity selection.
+
+        Args:
+            user: User to analyze
+            lookback_days: Number of days to look back
+
+        Returns:
+            List of sports betting insights that apply to other domains
+        """
+        try:
+            from core.learning_bridges.sports_betting_bridge import SportsBettingLearningBridge
+
+            bridge = SportsBettingLearningBridge(user=user)
+            insights = bridge.generate_sports_insights(user, lookback_days)
+
+            self.logger.info(f"Generated {len(insights)} sports betting insights for {user.username}")
+            return insights
+
+        except ImportError:
+            self.logger.warning("Sports betting bridge not available - skipping sports insights")
+            return []
+        except Exception as e:
+            self.logger.error(f"Error analyzing sports betting patterns: {e}")
+            return []
 
     def _classify_user_segment(self, user: User) -> str:
         """Classify user into a segment for targeted insights"""

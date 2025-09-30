@@ -120,6 +120,19 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+    # Partnership System - Spider Orchestration (Session 40)
+    'fetch-opportunities-hourly': {
+        'task': 'intelligence.tasks.fetch_all_opportunities',
+        'schedule': crontab(minute=0, hour='*/1'),  # Every hour at :00
+        'options': {
+            'expires': 3300,  # 55 minutes
+        }
+    },
+    'cleanup-opportunities-daily': {
+        'task': 'intelligence.tasks.cleanup_old_opportunities',
+        'schedule': crontab(minute=0, hour=3),  # 3 AM daily
+        'args': (30,)  # Days before expiring
+    },
 }
 
 # Spider-specific task routing configuration

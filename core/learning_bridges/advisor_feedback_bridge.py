@@ -5,6 +5,7 @@ Tracks advisor consultation effectiveness and optimizes advisor selection
 
 import logging
 from django.db import models
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from typing import Dict
@@ -20,7 +21,7 @@ class AdvisorConsultationFeedback(models.Model):
     Enables learning which advisors provide most valuable insights
     """
     advisor_insight = models.ForeignKey('core.AdvisorInsight', on_delete=models.CASCADE, related_name='feedback')
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     # Feedback metrics
     followed_advice = models.BooleanField(default=False)
