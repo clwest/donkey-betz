@@ -451,6 +451,7 @@
                         <a href="{% url 'unified_diagnostic_dashboard' %}">📈 Diagnostics</a>
                         <div class="separator"></div>
                         <a href="{% url 'unified_ai_nexus' %}">🧠 AI Nexus</a>
+                        <a href="/ai-production-hub/">🏭 AI Production Hub</a>
                     </div>
                 </div>
 
@@ -697,8 +698,34 @@
             }
         }
 
+        // Check authentication status on page load
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/v1/auth/user/', {
+                    credentials: 'include',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+
+                if (!response.ok || response.status === 401 || response.status === 403) {
+                    // User is not authenticated, redirect to login
+                    window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                // On network error, redirect to login
+                window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+            }
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
+            // Check if user is authenticated (only on protected pages)
+            {% if user.is_authenticated %}
+            checkAuthStatus();
+            {% endif %}
+
             // Auto-hide messages after 5 seconds
             setTimeout(() => {
                 document.querySelectorAll('.toast').forEach(toast => {
