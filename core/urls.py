@@ -34,6 +34,10 @@ from core.views_projects import (
     get_latest_code, get_project_stats, get_agent_suggestions, apply_suggestion,
     orchestrate_real_build, get_real_agents
 )
+# Import project API views (Phase 3: Frontend Reality Fix)
+from core.views_projects_api import (
+    projects_list, project_detail, project_agents, assign_agent_to_project
+)
 
 # Import deployment views
 from core.views_deploy import (
@@ -364,6 +368,12 @@ urlpatterns = [
     path('api/ecosystem/live-feed/', ecosystem_live_feed, name='ecosystem-live-feed'),
     path('api/ecosystem/project-status/', get_project_status, name='project-status'),
     path('api/ecosystem/code-preview/', code_preview, name='code-preview'),
+
+    # Project Management APIs (Phase 3: Frontend Reality Fix)
+    path('api/projects/', projects_list, name='projects-list'),
+    path('api/projects/<uuid:project_id>/', project_detail, name='project-detail'),
+    path('api/projects/<uuid:project_id>/agents/', project_agents, name='project-agents'),
+    path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
 
     # Project Builder endpoints for dynamic code generation
     path('api/projects/switch/', switch_project, name='switch-project'),
