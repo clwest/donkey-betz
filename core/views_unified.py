@@ -309,26 +309,86 @@ class OpportunitiesAPIView(View):
 
 
 class RevenueStatsAPIView(View):
-    """API endpoint for revenue statistics"""
+    """API endpoint for revenue statistics - SESSION 30: Now using REAL data!"""
 
     def get(self, request):
         try:
-            # TODO: Fetch from database
-            stats = {
-                'total_revenue': 2600,
-                'pending_revenue': 450,
-                'completed_revenue': 2150,
-                'monthly_trend': [1200, 1400, 1800, 2150, 2600],
-                'success_rate': 0.78
-            }
+            from intelligence.models import RevenueMetrics
+            from django.db.models import Sum
+            from datetime import datetime, timedelta
+
+            # Get REAL data from RevenueMetrics model
+            today = datetime.now().date()
+            thirty_days_ago = today - timedelta(days=30)
+
+            # Get total revenue (all time)
+            total_revenue = RevenueMetrics.objects.aggregate(
+                total=Sum('revenue_generated')
+            )['total'] or 0
+
+            # Get recent revenue (last 30 days)
+            recent_revenue = RevenueMetrics.objects.filter(
+                date__gte=thirty_days_ago
+            ).aggregate(
+                total=Sum('revenue_generated')
+            )['total'] or 0
+
+            # Get latest metrics (today or most recent)
+            try:
+                latest_metrics = RevenueMetrics.objects.latest('date')
+            except RevenueMetrics.DoesNotExist:
+                latest_metrics = None
+
+            # Build stats from REAL database data
+            if latest_metrics:
+                stats = {
+                    'total_revenue': float(total_revenue),
+                    'pending_revenue': 0,  # TODO: Track pending separately
+                    'completed_revenue': float(total_revenue),
+                    'recent_revenue': float(recent_revenue),
+                    'proposals_generated': latest_metrics.proposals_generated,
+                    'proposals_submitted': latest_metrics.proposals_submitted,
+                    'proposals_responded': latest_metrics.proposals_responded,
+                    'conversions': latest_metrics.conversions,
+                    'response_rate': float(latest_metrics.response_rate),
+                    'conversion_rate': float(latest_metrics.conversion_rate),
+                    'opportunities_identified': latest_metrics.opportunities_identified,
+                    'opportunities_analyzed': latest_metrics.opportunities_analyzed,
+                    'average_deal_size': float(latest_metrics.average_deal_size),
+                    'success_rate': float(latest_metrics.conversion_rate),
+                    'last_updated': latest_metrics.date.isoformat()
+                }
+            else:
+                # No data yet - return zeros
+                stats = {
+                    'total_revenue': 0,
+                    'pending_revenue': 0,
+                    'completed_revenue': 0,
+                    'recent_revenue': 0,
+                    'proposals_generated': 0,
+                    'proposals_submitted': 0,
+                    'proposals_responded': 0,
+                    'conversions': 0,
+                    'response_rate': 0.0,
+                    'conversion_rate': 0.0,
+                    'opportunities_identified': 0,
+                    'opportunities_analyzed': 0,
+                    'average_deal_size': 0.0,
+                    'success_rate': 0.0,
+                    'last_updated': today.isoformat()
+                }
 
             return JsonResponse({
                 'success': True,
-                'stats': stats
+                'stats': stats,
+                'data_source': 'database',  # Indicate this is REAL data!
+                'total_records': RevenueMetrics.objects.count()
             })
 
         except Exception as e:
             logger.error(f"Revenue Stats API error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return JsonResponse({
                 'success': False,
                 'error': str(e)
@@ -516,19 +576,27 @@ class LiveScoresView(TemplateView):
 
         # Import models
         from sports.models import Game
-        from django.utils import timezone
-        from datetime import timedelta
+        from datetime import datetime, timedelta
+        import pytz
 
-        # Get today's date range
-        now = timezone.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = today_start + timedelta(days=1)
+        # Use local time to determine "today" - convert to UTC for database query
+        local_now = datetime.now()
+        local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        local_end = local_start + timedelta(hours=48)  # Today + tomorrow
 
-        # Get games for today only (live, scheduled, or completed today)
+        # Convert local times to UTC for database query (MST/MDT timezone)
+        mountain = pytz.timezone('America/Denver')
+        local_start_aware = mountain.localize(local_start)
+        local_end_aware = mountain.localize(local_end)
+
+        now_utc = local_start_aware.astimezone(pytz.UTC)
+        end_time = local_end_aware.astimezone(pytz.UTC)
+
+        # Get upcoming games (today + tomorrow in local time)
         live_games = Game.objects.filter(
-            scheduled_start__gte=today_start,
-            scheduled_start__lt=today_end
-        ).select_related('home_team', 'away_team').order_by('scheduled_start')
+            scheduled_start__gte=now_utc,
+            scheduled_start__lt=end_time
+        ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')
 
         # Format games for display
         games_by_sport = {}

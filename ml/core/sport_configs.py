@@ -97,19 +97,16 @@ SPORT_CONFIGS = {
         sport_type='nhl',
         name='NHL',
         model_name='nhl_predictor',
-        home_advantage=0.5,          # Home teams average ~0.5 goals advantage
-        recent_games_window=10,      # Last 10 games
+        home_advantage=0.4,          # Home teams average ~0.4 goals advantage (reduce bias)
+        recent_games_window=15,      # Increase window for more stable stats
         min_training_games=150,      # Moderate sample needed
         features=[
             'goals_differential',          # Home GPG - Away GPG
-            'shots_differential',          # Shots per game differential
-            'save_percentage_differential', # Goalie save % differential
-            'powerplay_differential',      # Power play % differential
-            'penalty_kill_differential',   # Penalty kill % differential
+            'goals_against_differential',  # Defensive strength (flipped)
             'win_rate_differential',       # Home win% - Away win%
-            'home_indicator',              # 1.0 for home team
-            'back_to_back',               # 1.0 if either team on back-to-back
-            'goalie_matchup_rating'       # Starting goalie quality differential
+            'home_indicator',              # 1.0 for home team (but less weight)
+            'recent_form_differential',    # Last 5 games win%
+            'goal_differential_variance',  # Consistency indicator
         ]
     )
 }

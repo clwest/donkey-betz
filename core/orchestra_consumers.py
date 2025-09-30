@@ -333,7 +333,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
                 orchestra_data['timestamp'] = datetime.now().isoformat()
                 orchestra_data['is_production'] = True
 
-                await self.send(text_data=json.dumps(orchestra_data))
+                await self.send(text_data=json.dumps(orchestra_data, default=str))
 
             except asyncio.CancelledError:
                 break

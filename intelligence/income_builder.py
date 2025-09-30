@@ -1051,6 +1051,86 @@ class AIIncomeBuilder:
 
         return weighted_sum / total_weight if total_weight > 0 else 0.0
 
+    async def discover_opportunities_with_spiders(
+        self,
+        user_profile: UserProfile,
+        use_real_data: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Use REAL SPIDERS to discover income opportunities
+
+        This is the NEW Session 29 implementation that connects to spider network!
+
+        Args:
+            user_profile: User profile with skills and preferences
+            use_real_data: If True, uses real APIs (HackerNews, RemoteOK, Freelancer.com)
+
+        Returns:
+            Dict with opportunities, analysis, and action plan
+        """
+        logger.info("🕷️ Using REAL SPIDERS to discover income opportunities!")
+        logger.info(f"   Real data mode: {use_real_data}")
+
+        try:
+            from intelligence.income_spider_orchestrator import income_spider_orchestrator
+
+            # Discover opportunities using spider network
+            result = await income_spider_orchestrator.discover_opportunities_for_user(
+                user_profile,
+                use_real_data=use_real_data,
+                max_opportunities=20
+            )
+
+            logger.info(f"🎯 Spiders found {len(result.opportunities)} opportunities in {result.discovery_time:.2f}s")
+            logger.info(f"   Sources: {', '.join(result.spider_sources)}")
+
+            # Create complete income pipeline
+            pipeline = await income_spider_orchestrator.create_income_pipeline(
+                user_profile,
+                result.opportunities
+            )
+
+            # Format opportunities for display
+            formatted_opportunities = []
+            for opp in result.opportunities[:10]:  # Top 10
+                formatted_opportunities.append({
+                    'id': opp.id,
+                    'title': opp.title,
+                    'description': opp.description,
+                    'platform': opp.platform,
+                    'budget': opp.budget_min,
+                    'skills': opp.skills_required,
+                    'score': opp.quality_score,
+                    'ml_score': opp.raw_data.get('ml_score') if opp.raw_data else None,
+                    'urgency': opp.urgency,
+                    'client_rating': opp.client_rating
+                })
+
+            return {
+                'success': True,
+                'opportunities': formatted_opportunities,
+                'total_found': result.total_found,
+                'discovery_time': result.discovery_time,
+                'spider_sources': result.spider_sources,
+                'pipeline': pipeline,
+                'action_plan': pipeline.get('action_plan'),
+                'agent_insights': pipeline.get('agent_insights', []),
+                'metadata': {
+                    'user_id': user_profile.id,
+                    'real_data': use_real_data,
+                    'timestamp': datetime.now().isoformat()
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Spider discovery failed: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'opportunities': [],
+                'total_found': 0
+            }
+
     async def discover_opportunities_with_agents(
         self,
         user_profile: UserProfile,

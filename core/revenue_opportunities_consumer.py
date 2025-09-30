@@ -30,6 +30,7 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
         self.room_name = None
         self.room_group_name = None
         self.opportunities_task = None
+        self.shown_opportunities = {}  # Track shown opportunities for learning
 
     async def connect(self):
         """Handle WebSocket connection"""
@@ -79,6 +80,10 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
 
             if action == 'quick_apply':
                 await self.handle_quick_apply(data)
+            elif action == 'opportunity_clicked':
+                await self.handle_opportunity_clicked(data)
+            elif action == 'opportunity_rejected':
+                await self.handle_opportunity_rejected(data)
             elif action == 'filter':
                 await self.apply_filters(data.get('filters', {}))
             elif action == 'refresh':
@@ -102,6 +107,9 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
         """Send initial set of opportunities"""
         opportunities = await self.get_opportunities_from_spiders()
 
+        # Track that we showed these opportunities
+        await self.record_opportunities_shown(opportunities)
+
         await self.send(text_data=json.dumps({
             'type': 'opportunities_update',
             'opportunities': opportunities,
@@ -119,31 +127,210 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
             }
         }))
 
-    @database_sync_to_async
-    def get_opportunities_from_spiders(self) -> List[Dict[str, Any]]:
-        """Get opportunities from spider network and Redis"""
+    async def record_opportunities_shown(self, opportunities: List[Dict]):
+        """Track which opportunities were shown to user"""
+        from django.utils import timezone
+
+        # Count opportunities by platform
+        platform_counts = {}
+        for opp in opportunities:
+            platform = opp.get('platform', 'unknown')
+            platform_counts[platform] = platform_counts.get(platform, 0) + 1
+
+        # Store in user's session for later comparison
+        self.shown_opportunities = {
+            opp['id']: {
+                'platform': opp.get('platform'),
+                'title': opp.get('title'),
+                'shown_at': timezone.now().isoformat()
+            }
+            for opp in opportunities
+        }
+
+        logger.info(f"📊 Showed {len(opportunities)} opportunities to {self.user.username}: {platform_counts}")
+
+    async def apply_user_learnings(self, opportunities: List[Dict]) -> List[Dict]:
+        """Apply user-specific learnings to personalize opportunity ranking"""
+        from core.models import UserAgentLearning
+
+        # Get all platform preference learnings for this user
+        learnings = await database_sync_to_async(
+            lambda: list(UserAgentLearning.get_user_agent_knowledge(
+                user=self.user,
+                agent_name='IncomeBuilder',
+                domain='platform_preferences'
+            ))
+        )()
+
+        if not learnings:
+            logger.info("No learnings yet for this user - showing unbiased results")
+            return opportunities
+
+        # Build platform preference map
+        platform_preferences = {}
+        for learning in learnings:
+            content = learning.learning_content
+            if isinstance(content, dict):
+                platform = content.get('preferred_platform')
+                if platform:
+                    platform_preferences[platform] = {
+                        'confidence': learning.confidence_score,
+                        'success_rate': learning.success_rate,
+                        'boost': learning.confidence_score * 0.5  # Boost up to +50%
+                    }
+
+        logger.info(f"📊 Platform preferences for {self.user.username}: {platform_preferences}")
+
+        # Apply boosts to opportunities
+        for opp in opportunities:
+            platform = opp.get('platform', '').lower()
+
+            if platform in platform_preferences:
+                pref = platform_preferences[platform]
+                boost = pref['boost']
+
+                # Boost match score
+                original_score = opp.get('match_score', 0)
+                new_score = min(100, original_score * (1 + boost))
+                opp['match_score'] = int(new_score)
+                opp['personalization_boost'] = f"+{boost*100:.0f}%"
+                opp['reason'] = f"You've shown {pref['success_rate']*100:.0f}% interest in {platform.title()}"
+
+                logger.debug(f"✨ Boosted {opp['title']}: {original_score} → {new_score} (+{boost*100:.0f}%)")
+
+        return opportunities
+
+    async def get_opportunities_from_spiders(self) -> List[Dict[str, Any]]:
+        """Get opportunities from spider network using real spider orchestrator"""
         opportunities = []
 
         try:
-            # Get from Django cache (spider-collected opportunities)
+            # SESSION 30: Connect to REAL spider network via orchestrator
+            from intelligence.income_spider_orchestrator import income_spider_orchestrator
+            from intelligence.income_builder import UserProfile, SkillLevel
             from django.core.cache import cache
 
-            # Try the latest_opportunities key first (from real spider)
-            latest_opportunities = cache.get('latest_opportunities', [])
-            if latest_opportunities:
-                opportunities = latest_opportunities[:50]  # Show more opportunities (we have 76)
+            logger.info("🕷️ Revenue Opportunities: Fetching real data from spider network...")
 
-                # Add user-specific scoring and ensure proper structure
-                for opportunity in opportunities:
-                    if not opportunity.get('id'):
-                        # Generate ID from title and company
-                        opportunity['id'] = f"{opportunity.get('source', 'unknown').lower()}_{hash(opportunity.get('title', '') + opportunity.get('company', '')) % 10000}"
+            # Try cache first for fast response
+            cached_opportunities = await database_sync_to_async(cache.get)('latest_opportunities', None)
+            if cached_opportunities:
+                logger.info(f"✅ Found {len(cached_opportunities)} cached opportunities")
+                return cached_opportunities[:50]
 
-                    # Add user-specific scoring
-                    opportunity['match_score'] = self.calculate_match_score(opportunity)
-                    opportunity['quick_apply_available'] = True
+            # Get REAL user profile from database
+            from core.models import ExtendedUserProfile, UserProfile as CoreUserProfile
 
-            # If no Redis opportunities, use realistic mock data
+            try:
+                # Try to get extended profile first
+                extended_profile = await database_sync_to_async(
+                    lambda: ExtendedUserProfile.objects.select_related('user').get(user=self.user)
+                )()
+
+                # Extract skills from extended profile
+                user_skills = extended_profile.get_skills_list() if hasattr(extended_profile, 'get_skills_list') else []
+
+                # Get basic profile for additional data
+                try:
+                    basic_profile = await database_sync_to_async(
+                        lambda: CoreUserProfile.objects.get(user=self.user)
+                    )()
+                    if basic_profile.skills and isinstance(basic_profile.skills, list):
+                        user_skills.extend(basic_profile.skills)
+                except CoreUserProfile.DoesNotExist:
+                    pass
+
+                # Map experience level to SkillLevel enum
+                experience_map = {
+                    'entry': SkillLevel.BEGINNER,
+                    'junior': SkillLevel.BEGINNER,
+                    'mid': SkillLevel.INTERMEDIATE,
+                    'senior': SkillLevel.ADVANCED,
+                    'lead': SkillLevel.EXPERT,
+                    'executive': SkillLevel.EXPERT,
+                }
+                skill_level = experience_map.get(extended_profile.experience_level, SkillLevel.INTERMEDIATE)
+
+                # Remove duplicates from skills
+                user_skills = list(set(user_skills)) if user_skills else ['python', 'django']
+
+                logger.info(f"✅ Loaded real profile for {self.user.username}: {len(user_skills)} skills, {skill_level}")
+
+            except ExtendedUserProfile.DoesNotExist:
+                # Fallback to default profile
+                user_skills = ['python', 'django', 'javascript']
+                skill_level = SkillLevel.INTERMEDIATE
+                logger.warning(f"⚠️ No extended profile for {self.user.username}, using defaults")
+
+            # Create Income Builder profile from real user data
+            profile = UserProfile(
+                id=f'user_{self.user.id}',
+                current_balance=0.0,
+                skills=user_skills,
+                skill_level=skill_level,
+                available_hours_per_week=20  # TODO: Add to user profile
+            )
+
+            # Fetch REAL opportunities from spider network
+            result = await income_spider_orchestrator.discover_opportunities_for_user(
+                profile,
+                use_real_data=True,
+                max_opportunities=50
+            )
+
+            logger.info(f"🎯 Spider network found {len(result.opportunities)} real opportunities")
+
+            # Convert to frontend format with FULL details
+            opportunities = []
+            for opp in result.opportunities:
+                # Format salary/budget display
+                if opp.budget_min and opp.budget_max:
+                    if opp.budget_min == opp.budget_max:
+                        salary_display = f"${opp.budget_min:,}"
+                    else:
+                        salary_display = f"${opp.budget_min:,} - ${opp.budget_max:,}"
+                elif opp.budget_min:
+                    salary_display = f"${opp.budget_min:,}+"
+                elif opp.hourly_rate:
+                    salary_display = f"${opp.hourly_rate}/hr"
+                else:
+                    salary_display = "Salary TBD"
+
+                frontend_opp = {
+                    'id': opp.id,
+                    'title': opp.title,
+                    'company': opp.platform,
+                    'platform': opp.platform,
+                    'budget': opp.budget_min or 0,
+                    'budget_min': opp.budget_min,
+                    'budget_max': opp.budget_max,
+                    'hourly_rate': opp.hourly_rate,
+                    'salary_display': salary_display,  # NEW: Formatted for display
+                    'type': 'hourly' if opp.hourly_rate else 'fixed',
+                    'description': opp.description[:300] if opp.description else '',  # More description
+                    'full_description': opp.description,  # Full text for modal
+                    'skills': opp.skills_required[:10],  # More skills
+                    'posted': 'Today',
+                    'deadline': str(opp.deadline) if opp.deadline else 'Flexible',
+                    'client_rating': opp.client_rating or 4.5,
+                    'match_score': int(opp.quality_score * 100),
+                    'experience_level': opp.experience_level,
+                    'quick_apply_available': True,
+                    'url': opp.raw_data.get('url', '#') if opp.raw_data else '#',
+                    'source': opp.spider_source,
+                    'location': opp.raw_data.get('location', 'Remote') if opp.raw_data else 'Remote',
+                }
+                opportunities.append(frontend_opp)
+
+            # Store in cache for 5 minutes
+            if opportunities:
+                await database_sync_to_async(cache.set)('latest_opportunities', opportunities, timeout=300)
+                logger.info(f"💾 Cached {len(opportunities)} opportunities for 5 minutes")
+
+            # NEW: Apply user-specific learnings to personalize results
+            opportunities = await self.apply_user_learnings(opportunities)
+
+            # If no real opportunities (spiders failed), use fallback
             if not opportunities:
                 opportunities = [
                     {
@@ -228,6 +415,69 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
 
         except Exception:
             return 75  # Default score if no profile
+
+    async def handle_opportunity_clicked(self, data: Dict[str, Any]):
+        """Record that user clicked on an opportunity"""
+        from core.models import UserAgentLearning
+        from django.utils import timezone
+
+        opportunity_id = data.get('opportunity_id')
+        platform = data.get('platform')
+
+        if not opportunity_id or not platform:
+            return
+
+        logger.info(f"📊 User {self.user.username} clicked opportunity {opportunity_id} from {platform}")
+
+        # Update or create platform preference learning
+        learning = await database_sync_to_async(
+            UserAgentLearning.create_learning
+        )(
+            user=self.user,
+            agent_name='IncomeBuilder',
+            domain='platform_preferences',
+            content={
+                'preferred_platform': platform,
+                'click_timestamp': timezone.now().isoformat(),
+                'opportunity_id': opportunity_id
+            },
+            source='interaction_mining',
+            confidence=0.6  # Medium confidence - just a click
+        )
+
+        # Record success (user showed interest)
+        await database_sync_to_async(learning.record_success)()
+
+        logger.info(f"✅ Recorded learning: {platform} preference (confidence: {learning.confidence_score:.1%})")
+
+    async def handle_opportunity_rejected(self, data: Dict[str, Any]):
+        """Record that user rejected/ignored an opportunity"""
+        from core.models import UserAgentLearning
+
+        opportunity_id = data.get('opportunity_id')
+        platform = data.get('platform')
+        reason = data.get('reason', 'not_interested')  # Frontend can send reason
+
+        if not opportunity_id or not platform:
+            return
+
+        logger.info(f"❌ User {self.user.username} rejected opportunity {opportunity_id} from {platform}")
+
+        # Get existing platform preference learning
+        learnings = await database_sync_to_async(
+            lambda: list(UserAgentLearning.objects.filter(
+                user=self.user,
+                agent_name='IncomeBuilder',
+                domain='platform_preferences',
+                learning_content__preferred_platform=platform
+            ))
+        )()
+
+        if learnings:
+            learning = learnings[0]
+            # Record failure (user not interested in this platform)
+            await database_sync_to_async(learning.record_failure)()
+            logger.info(f"📉 Reduced {platform} confidence: {learning.confidence_score:.1%}")
 
     async def stream_opportunities(self):
         """Stream new opportunities as they come in"""
@@ -322,6 +572,34 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
             )
 
             logger.info(f"Revenue tracked: ${potential_amount} potential from {opportunity_id}")
+
+            # NEW: Record high-confidence learning
+            from core.models import UserAgentLearning
+
+            platform = data.get('platform', 'unknown')
+
+            # Strong signal - user actually applied!
+            learning = await database_sync_to_async(
+                UserAgentLearning.create_learning
+            )(
+                user=self.user,
+                agent_name='IncomeBuilder',
+                domain='platform_preferences',
+                content={
+                    'preferred_platform': platform,
+                    'application_timestamp': timezone.now().isoformat(),
+                    'opportunity_id': opportunity_id,
+                    'application_successful': True
+                },
+                source='success_pattern',
+                confidence=0.8  # High confidence - actual application
+            )
+
+            # Record multiple successes for strong signal
+            for _ in range(3):  # Weight applications 3x more than clicks
+                await database_sync_to_async(learning.record_success)()
+
+            logger.info(f"🎯 Recorded strong learning: {platform} application (confidence: {learning.confidence_score:.1%})")
 
         await self.send(text_data=json.dumps({
             'type': 'quick_apply_result',

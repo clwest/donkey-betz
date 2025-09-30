@@ -630,7 +630,10 @@
         }
 
         grid.innerHTML = opportunities.map(opp => `
-            <div class="opportunity-card" onclick="viewOpportunity('${opp.id}')">
+            <div class="opportunity-card"
+                 data-opportunity-id="${opp.id}"
+                 data-platform="${opp.platform}"
+                 onclick="handleOpportunityClick(this, '${opp.id}', '${opp.platform}')">
                 <div class="opportunity-header">
                     <div>
                         <div class="opportunity-title">${opp.title}</div>
@@ -638,7 +641,25 @@
                     </div>
                     <div class="opportunity-value">
                         ${(() => {
-                            // Try to display salary information
+                            // Use pre-formatted salary_display if available
+                            if (opp.salary_display) {
+                                return opp.salary_display;
+                            }
+                            // Fallback: Try budget fields
+                            if (opp.budget_min > 0 || opp.budget_max > 0) {
+                                if (opp.budget_min === opp.budget_max) {
+                                    return `$${(opp.budget_max || 0).toLocaleString()}`;
+                                } else if (opp.budget_min > 0 && opp.budget_max > 0) {
+                                    return `$${opp.budget_min.toLocaleString()} - $${opp.budget_max.toLocaleString()}`;
+                                } else if (opp.budget_min > 0) {
+                                    return `$${opp.budget_min.toLocaleString()}+`;
+                                }
+                            }
+                            // Try hourly rate
+                            if (opp.hourly_rate) {
+                                return `$${opp.hourly_rate}/hr`;
+                            }
+                            // Legacy: Try old salary fields
                             if (opp.salary_min > 0 || opp.salary_max > 0) {
                                 if (opp.salary_min === opp.salary_max) {
                                     return `$${(opp.salary_max || 0).toLocaleString()}`;
@@ -658,6 +679,12 @@
                     </div>
                 </div>
 
+                ${opp.description ? `
+                    <div class="opportunity-description" style="margin: 12px 0; color: #aaa; font-size: 14px; line-height: 1.5;">
+                        ${opp.description}
+                    </div>
+                ` : ''}
+
                 <div class="opportunity-tags">
                     ${(opp.skills || []).map(skill => `
                         <span class="tag">${skill}</span>
@@ -674,6 +701,21 @@
                         </span>
                     </div>
                 </div>
+
+                ${opp.personalization_boost ? `
+                    <div class="personalization-badge" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 6px 12px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        display: inline-block;
+                        margin-top: 12px;
+                    ">
+                        🎯 ${opp.personalization_boost} ${opp.reason || 'Personalized for you'}
+                    </div>
+                ` : ''}
 
                 <div class="d-flex gap-2 mt-3">
                     <button class="btn btn-primary flex-fill" onclick="applyToOpportunity(event, '${opp.id}')">
@@ -728,6 +770,45 @@
         }));
 
         showNotification('Opportunity saved!');
+    }
+
+    // Track opportunity clicks
+    function handleOpportunityClick(element, opportunityId, platform) {
+        console.log('📊 Opportunity clicked:', opportunityId, platform);
+
+        // Send tracking event via WebSocket
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                action: 'opportunity_clicked',
+                opportunity_id: opportunityId,
+                platform: platform,
+                timestamp: new Date().toISOString()
+            }));
+        }
+
+        // Visual feedback
+        element.style.transform = 'scale(0.98)';
+        setTimeout(() => {
+            element.style.transform = 'scale(1)';
+        }, 100);
+
+        // Continue to view opportunity
+        viewOpportunity(opportunityId);
+    }
+
+    // Track opportunity rejections (e.g., close button)
+    function handleOpportunityReject(opportunityId, platform, reason = 'not_interested') {
+        console.log('❌ Opportunity rejected:', opportunityId, platform);
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                action: 'opportunity_rejected',
+                opportunity_id: opportunityId,
+                platform: platform,
+                reason: reason,
+                timestamp: new Date().toISOString()
+            }));
+        }
     }
 
     function showNotification(message, type = 'info') {

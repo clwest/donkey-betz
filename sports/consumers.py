@@ -3,6 +3,7 @@ WebSocket consumers for real-time sports data updates
 """
 import json
 import logging
+from datetime import datetime, timedelta
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
@@ -72,6 +73,8 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
         elif message_type == 'get_live_scores':
             await self.send_live_scores()
         elif message_type == 'get_ai_predictions':
+            await self.send_ai_predictions()
+        elif message_type == 'get_predictions':  # Alias for get_ai_predictions
             await self.send_ai_predictions()
         elif message_type == 'get_betting_history':
             await self.send_betting_history()
@@ -207,76 +210,63 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
         })
 
     async def send_live_games(self):
-        """Send real games from the database"""
+        """Send real games from the database (next 36 hours)"""
         from .models import Game, GameStatus
         from django.utils import timezone
         from datetime import timedelta
 
         try:
-            # Get current date
-            now = timezone.now()
-            today = now.date()
-            this_week_end = today + timedelta(days=(6 - today.weekday()))  # Next Sunday
-            next_weekend_start = this_week_end + timedelta(days=5)  # Next Friday
+            # Use local time to determine "today" - convert to UTC for database query
+            local_now = datetime.now()
+            local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            local_end = local_start + timedelta(hours=48)  # Today + tomorrow
 
-            # Priority sports for September/October (Football season!)
-            # NFL and NCAAF are primary, MLB playoffs, NHL starting
-            # NBA/NCAAB shouldn't show unless preseason/early season
-            in_season_sports = ['nfl', 'ncaaf', 'mlb', 'nhl']
-            off_season_sports = ['nba', 'ncaab']  # Only show if they have games
+            # Convert local times to UTC for database query (MST/MDT timezone)
+            import pytz
+            mountain = pytz.timezone('America/Denver')
+            local_start_aware = mountain.localize(local_start)
+            local_end_aware = mountain.localize(local_end)
 
-            games_list = await database_sync_to_async(
-                lambda: {
-                    sport: list(Game.objects.filter(
-                        league__sport_type=sport,
-                        scheduled_start__date__gte=today,
-                        scheduled_start__date__lte=today + timedelta(days=14)  # Next 2 weeks
-                    ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:20])
-                    for sport in in_season_sports + off_season_sports
-                }
+            now_utc = local_start_aware.astimezone(pytz.UTC)
+            end_time = local_end_aware.astimezone(pytz.UTC)
+
+            # Get upcoming games (today + tomorrow in local time)
+            games = await database_sync_to_async(
+                lambda: list(Game.objects.filter(
+                    scheduled_start__gte=now_utc,
+                    scheduled_start__lt=end_time
+                ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start'))
             )()
-
-            # Combine games with proper prioritization
-            all_games = []
-
-            # Add in-season sports first
-            for sport in in_season_sports:
-                all_games.extend(games_list.get(sport, []))
-
-            # Only add off-season sports if they have actual games (preseason/etc)
-            for sport in off_season_sports:
-                sport_games = games_list.get(sport, [])
-                if sport_games:  # Only add if there are actual games
-                    all_games.extend(sport_games[:5])  # Limit off-season games
-
-            # Sort games by priority: Today > This Week > Weekend > Later
-            def game_priority(game):
-                game_date = game.scheduled_start.date()
-                if game_date == today:
-                    return (0, game.scheduled_start)  # Today first
-                elif game_date <= this_week_end:
-                    return (1, game.scheduled_start)  # This week
-                elif game_date <= next_weekend_start + timedelta(days=2):
-                    return (2, game.scheduled_start)  # Next weekend
-                else:
-                    return (3, game.scheduled_start)  # Later
-
-            games = sorted(all_games, key=game_priority)[:60]
 
             # Format games for frontend
             formatted_games = []
             for game in games:
+                # Get team names with cities if available
+                home_team_name = game.home_team.name if game.home_team else 'TBD'
+                away_team_name = game.away_team.name if game.away_team else 'TBD'
+
+                # Add city if available
+                if game.home_team and game.home_team.city:
+                    home_team_name = f"{game.home_team.city} {home_team_name}"
+                if game.away_team and game.away_team.city:
+                    away_team_name = f"{game.away_team.city} {away_team_name}"
+
                 formatted_games.append({
                     'game_id': str(game.id),
-                    'sport': game.league.sport_type if game.league else 'Unknown',
+                    'sport': game.league.sport_type.lower() if game.league and game.league.sport_type else 'unknown',
                     'league': game.league.name if game.league else 'Unknown',
-                    'home_team': game.home_team.name if game.home_team else 'TBD',
-                    'away_team': game.away_team.name if game.away_team else 'TBD',
+                    'league_abbr': game.league.abbreviation if game.league else 'N/A',
+                    'home_team': home_team_name,
+                    'home_team_name': home_team_name,  # Add for frontend compatibility
+                    'away_team': away_team_name,
+                    'away_team_name': away_team_name,  # Add for frontend compatibility
                     'scheduled_start': game.scheduled_start.isoformat() if game.scheduled_start else None,
                     'game_time': game.scheduled_start.isoformat() if game.scheduled_start else None,
                     'status': game.status,
-                    'home_score': 0,  # Will be updated when game is live
-                    'away_score': 0,
+                    'home_score': game.home_score or 0,
+                    'home_team_score': game.home_score or 0,  # Add for frontend compatibility
+                    'away_score': game.away_score or 0,
+                    'away_team_score': game.away_score or 0,  # Add for frontend compatibility
                     'venue': game.venue_name if hasattr(game, 'venue_name') else '',
                 })
 
@@ -286,7 +276,7 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
                 'total_count': len(formatted_games)
             })
 
-            logger.info(f"Sent {len(formatted_games)} real games from database")
+            logger.info(f"Sent {len(formatted_games)} games for today+tomorrow (local: {local_now.strftime('%Y-%m-%d %H:%M %Z')})")
 
         except Exception as e:
             logger.error(f"Error fetching real games: {e}")
@@ -298,13 +288,17 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             })
 
     async def send_live_scores(self):
-        """Send real live scores from ESPN API"""
+        """Send real live scores from ESPN API (fallback to database if ESPN unavailable)"""
         from datetime import datetime
         import requests
+        from django.utils import timezone
 
         try:
-            # Get today's date for ESPN API
-            today = datetime.now().strftime('%Y%m%d')
+            # Use local datetime for ESPN API (ESPN uses local game times, not UTC)
+            local_now = datetime.now()
+            today = local_now.strftime('%Y%m%d')
+
+            logger.info(f"Fetching ESPN scores for date: {today} (local time: {local_now.strftime('%Y-%m-%d %H:%M:%S')})")
             url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={today}"
 
             # Fetch live data from ESPN
@@ -345,14 +339,14 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
                     }
                     live_games.append(game_data)
 
+            logger.info(f"ESPN API returned {len(live_games)} live NFL games for {today}")
+
             await self.send_json({
                 'type': 'live_scores',
                 'games': live_games,
-                'timestamp': datetime.now().isoformat(),
+                'timestamp': local_now.isoformat(),
                 'count': len(live_games)
             })
-
-            logger.info(f"Sent {len(live_games)} live NFL games from ESPN")
 
         except Exception as e:
             logger.error(f"Error fetching live scores from ESPN: {e}")
@@ -453,44 +447,133 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
             })
 
     async def send_ai_predictions(self):
-        """Send AI-generated betting predictions"""
-        import random
+        """Send AI-generated predictions using real ML models with database tracking"""
+        from sports.models import Game, GameStatus
+        from ml.core.ml_engine import MLEngine
+        from django.db.models import Q
+        from datetime import datetime, timedelta
+        import pytz
+        from sports.prediction_tracker import save_ml_prediction, calculate_today_stats, format_prediction_for_frontend
 
-        predictions = {
-            'featured_picks': [
-                {
-                    'game': 'Chiefs vs Bills',
-                    'pick': 'Chiefs -3.5',
-                    'confidence': random.randint(65, 95),
-                    'reasoning': 'Chiefs home field advantage, 5-0 ATS in last 5 home games',
-                    'potential_payout': '+110'
-                },
-                {
-                    'game': 'Lakers vs Celtics',
-                    'pick': 'Over 220.5',
-                    'confidence': random.randint(70, 88),
-                    'reasoning': 'Both teams averaging 115+ PPG in last 10 games',
-                    'potential_payout': '-105'
-                },
-                {
-                    'game': 'Real Madrid vs Man City',
-                    'pick': 'Both Teams to Score',
-                    'confidence': random.randint(75, 92),
-                    'reasoning': 'High-scoring matchup history, both teams in form',
-                    'potential_payout': '-120'
-                }
-            ],
-            'system_performance': {
-                'today': {'win_rate': 0.78, 'units': 12.5},
-                'week': {'win_rate': 0.71, 'units': 45.2},
-                'month': {'win_rate': 0.68, 'units': 156.8}
+        try:
+            # Initialize ML engine
+            ml_engine = MLEngine()
+
+            # Only get games for sports we have trained models for
+            supported_sports = ['nfl', 'nba', 'mlb', 'nhl']
+
+            # Build query for supported sports
+            sport_query = Q()
+            for sport in supported_sports:
+                sport_query |= Q(league__sport_type__iexact=sport)
+
+            # Use local time to determine "today" - convert to UTC for database query
+            # This matches the logic in send_games_list() for consistency
+            local_now = datetime.now()
+            local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            local_end = local_start + timedelta(hours=48)  # Today + tomorrow
+
+            # Convert local times to UTC for database query (MST/MDT timezone)
+            mountain = pytz.timezone('America/Denver')
+            local_start_aware = mountain.localize(local_start)
+            local_end_aware = mountain.localize(local_end)
+
+            now_utc = local_start_aware.astimezone(pytz.UTC)
+            end_time = local_end_aware.astimezone(pytz.UTC)
+
+            # Get upcoming games for supported sports (today + tomorrow in local time)
+            games = await database_sync_to_async(
+                lambda: list(Game.objects.filter(
+                    sport_query,
+                    status=GameStatus.SCHEDULED,
+                    scheduled_start__gte=now_utc,
+                    scheduled_start__lt=end_time
+                ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:10])
+            )()
+
+            logger.info(f"Found {len(games)} games for prediction in supported sports (today+tomorrow)")
+
+            # Generate predictions for each game
+            top_picks = []
+            for game in games:
+                try:
+                    # Determine sport type from league
+                    sport_type = game.league.sport_type.lower() if game.league else 'nfl'
+
+                    # Skip if not a supported sport
+                    if sport_type not in supported_sports:
+                        continue
+
+                    # Get prediction from ML Engine
+                    prediction = await database_sync_to_async(
+                        ml_engine.predict_game
+                    )(str(game.id), sport_type)
+
+                    # Save prediction to database
+                    ml_prediction = await database_sync_to_async(
+                        save_ml_prediction
+                    )(game, prediction, sport_type)
+
+                    # Format for frontend
+                    pick_data = await database_sync_to_async(
+                        format_prediction_for_frontend
+                    )(game, prediction, ml_prediction, sport_type)
+
+                    top_picks.append(pick_data)
+
+                    # Limit to 5 predictions
+                    if len(top_picks) >= 5:
+                        break
+
+                except Exception as e:
+                    logger.error(f"Error predicting game {game.id}: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    continue
+
+            logger.info(f"Generated {len(top_picks)} predictions")
+
+            # If no predictions, send a message
+            if len(top_picks) == 0:
+                await self.send_json({
+                    'type': 'ai_predictions',
+                    'data': {
+                        'top_picks': [],
+                        'win_rate_today': 0,
+                        'units_profit': 0,
+                        'total_predictions': 0,
+                        'message': 'No upcoming games available for supported sports (NFL, NBA, MLB, NHL)'
+                    }
+                })
+                return
+
+            # Calculate REAL win rate and profit from database
+            stats = await database_sync_to_async(calculate_today_stats)()
+
+            # Build response with REAL data
+            predictions_data = {
+                'top_picks': top_picks,
+                'win_rate_today': stats['win_rate'],  # REAL win rate from tracked predictions
+                'units_profit': stats['profit'],       # REAL profit calculation
+                'total_predictions': len(top_picks),
+                'predictions_evaluated_today': stats['total_evaluated']
             }
-        }
 
-        await self.send_json({
-            'type': 'ai_predictions',
-            'predictions': predictions
-        })
+            await self.send_json({
+                'type': 'ai_predictions',
+                'data': predictions_data
+            })
+
+        except Exception as e:
+            logger.error(f"Error generating AI predictions: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+
+            # Send error response
+            await self.send_json({
+                'type': 'error',
+                'message': f'Failed to generate predictions: {str(e)}'
+            })
 
     async def send_betting_history(self):
         """Send user's betting history"""
@@ -913,76 +996,63 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
         })
 
     async def send_live_games(self):
-        """Send real games from the database"""
+        """Send real games from the database (next 36 hours)"""
         from .models import Game, GameStatus
         from django.utils import timezone
         from datetime import timedelta
 
         try:
-            # Get current date
-            now = timezone.now()
-            today = now.date()
-            this_week_end = today + timedelta(days=(6 - today.weekday()))  # Next Sunday
-            next_weekend_start = this_week_end + timedelta(days=5)  # Next Friday
+            # Use local time to determine "today" - convert to UTC for database query
+            local_now = datetime.now()
+            local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            local_end = local_start + timedelta(hours=48)  # Today + tomorrow
 
-            # Priority sports for September/October (Football season!)
-            # NFL and NCAAF are primary, MLB playoffs, NHL starting
-            # NBA/NCAAB shouldn't show unless preseason/early season
-            in_season_sports = ['nfl', 'ncaaf', 'mlb', 'nhl']
-            off_season_sports = ['nba', 'ncaab']  # Only show if they have games
+            # Convert local times to UTC for database query (MST/MDT timezone)
+            import pytz
+            mountain = pytz.timezone('America/Denver')
+            local_start_aware = mountain.localize(local_start)
+            local_end_aware = mountain.localize(local_end)
 
-            games_list = await database_sync_to_async(
-                lambda: {
-                    sport: list(Game.objects.filter(
-                        league__sport_type=sport,
-                        scheduled_start__date__gte=today,
-                        scheduled_start__date__lte=today + timedelta(days=14)  # Next 2 weeks
-                    ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:20])
-                    for sport in in_season_sports + off_season_sports
-                }
+            now_utc = local_start_aware.astimezone(pytz.UTC)
+            end_time = local_end_aware.astimezone(pytz.UTC)
+
+            # Get upcoming games (today + tomorrow in local time)
+            games = await database_sync_to_async(
+                lambda: list(Game.objects.filter(
+                    scheduled_start__gte=now_utc,
+                    scheduled_start__lt=end_time
+                ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start'))
             )()
-
-            # Combine games with proper prioritization
-            all_games = []
-
-            # Add in-season sports first
-            for sport in in_season_sports:
-                all_games.extend(games_list.get(sport, []))
-
-            # Only add off-season sports if they have actual games (preseason/etc)
-            for sport in off_season_sports:
-                sport_games = games_list.get(sport, [])
-                if sport_games:  # Only add if there are actual games
-                    all_games.extend(sport_games[:5])  # Limit off-season games
-
-            # Sort games by priority: Today > This Week > Weekend > Later
-            def game_priority(game):
-                game_date = game.scheduled_start.date()
-                if game_date == today:
-                    return (0, game.scheduled_start)  # Today first
-                elif game_date <= this_week_end:
-                    return (1, game.scheduled_start)  # This week
-                elif game_date <= next_weekend_start + timedelta(days=2):
-                    return (2, game.scheduled_start)  # Next weekend
-                else:
-                    return (3, game.scheduled_start)  # Later
-
-            games = sorted(all_games, key=game_priority)[:60]
 
             # Format games for frontend
             formatted_games = []
             for game in games:
+                # Get team names with cities if available
+                home_team_name = game.home_team.name if game.home_team else 'TBD'
+                away_team_name = game.away_team.name if game.away_team else 'TBD'
+
+                # Add city if available
+                if game.home_team and game.home_team.city:
+                    home_team_name = f"{game.home_team.city} {home_team_name}"
+                if game.away_team and game.away_team.city:
+                    away_team_name = f"{game.away_team.city} {away_team_name}"
+
                 formatted_games.append({
                     'game_id': str(game.id),
-                    'sport': game.league.sport_type if game.league else 'Unknown',
+                    'sport': game.league.sport_type.lower() if game.league and game.league.sport_type else 'unknown',
                     'league': game.league.name if game.league else 'Unknown',
-                    'home_team': game.home_team.name if game.home_team else 'TBD',
-                    'away_team': game.away_team.name if game.away_team else 'TBD',
+                    'league_abbr': game.league.abbreviation if game.league else 'N/A',
+                    'home_team': home_team_name,
+                    'home_team_name': home_team_name,  # Add for frontend compatibility
+                    'away_team': away_team_name,
+                    'away_team_name': away_team_name,  # Add for frontend compatibility
                     'scheduled_start': game.scheduled_start.isoformat() if game.scheduled_start else None,
                     'game_time': game.scheduled_start.isoformat() if game.scheduled_start else None,
                     'status': game.status,
-                    'home_score': 0,  # Will be updated when game is live
-                    'away_score': 0,
+                    'home_score': game.home_score or 0,
+                    'home_team_score': game.home_score or 0,  # Add for frontend compatibility
+                    'away_score': game.away_score or 0,
+                    'away_team_score': game.away_score or 0,  # Add for frontend compatibility
                     'venue': game.venue_name if hasattr(game, 'venue_name') else '',
                 })
 
@@ -992,7 +1062,7 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
                 'total_count': len(formatted_games)
             })
 
-            logger.info(f"Sent {len(formatted_games)} real games from database")
+            logger.info(f"Sent {len(formatted_games)} games for today+tomorrow (local: {local_now.strftime('%Y-%m-%d %H:%M %Z')})")
 
         except Exception as e:
             logger.error(f"Error fetching real games: {e}")
@@ -1004,13 +1074,17 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
             })
 
     async def send_live_scores(self):
-        """Send real live scores from ESPN API"""
+        """Send real live scores from ESPN API (fallback to database if ESPN unavailable)"""
         from datetime import datetime
         import requests
+        from django.utils import timezone
 
         try:
-            # Get today's date for ESPN API
-            today = datetime.now().strftime('%Y%m%d')
+            # Use local datetime for ESPN API (ESPN uses local game times, not UTC)
+            local_now = datetime.now()
+            today = local_now.strftime('%Y%m%d')
+
+            logger.info(f"Fetching ESPN scores for date: {today} (local time: {local_now.strftime('%Y-%m-%d %H:%M:%S')})")
             url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={today}"
 
             # Fetch live data from ESPN
@@ -1051,14 +1125,14 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
                     }
                     live_games.append(game_data)
 
+            logger.info(f"ESPN API returned {len(live_games)} live NFL games for {today}")
+
             await self.send_json({
                 'type': 'live_scores',
                 'games': live_games,
-                'timestamp': datetime.now().isoformat(),
+                'timestamp': local_now.isoformat(),
                 'count': len(live_games)
             })
-
-            logger.info(f"Sent {len(live_games)} live NFL games from ESPN")
 
         except Exception as e:
             logger.error(f"Error fetching live scores from ESPN: {e}")
@@ -1159,44 +1233,133 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
             })
 
     async def send_ai_predictions(self):
-        """Send AI-generated betting predictions"""
-        import random
+        """Send AI-generated predictions using real ML models with database tracking"""
+        from sports.models import Game, GameStatus
+        from ml.core.ml_engine import MLEngine
+        from django.db.models import Q
+        from datetime import datetime, timedelta
+        import pytz
+        from sports.prediction_tracker import save_ml_prediction, calculate_today_stats, format_prediction_for_frontend
 
-        predictions = {
-            'featured_picks': [
-                {
-                    'game': 'Chiefs vs Bills',
-                    'pick': 'Chiefs -3.5',
-                    'confidence': random.randint(65, 95),
-                    'reasoning': 'Chiefs home field advantage, 5-0 ATS in last 5 home games',
-                    'potential_payout': '+110'
-                },
-                {
-                    'game': 'Lakers vs Celtics',
-                    'pick': 'Over 220.5',
-                    'confidence': random.randint(70, 88),
-                    'reasoning': 'Both teams averaging 115+ PPG in last 10 games',
-                    'potential_payout': '-105'
-                },
-                {
-                    'game': 'Real Madrid vs Man City',
-                    'pick': 'Both Teams to Score',
-                    'confidence': random.randint(75, 92),
-                    'reasoning': 'High-scoring matchup history, both teams in form',
-                    'potential_payout': '-120'
-                }
-            ],
-            'system_performance': {
-                'today': {'win_rate': 0.78, 'units': 12.5},
-                'week': {'win_rate': 0.71, 'units': 45.2},
-                'month': {'win_rate': 0.68, 'units': 156.8}
+        try:
+            # Initialize ML engine
+            ml_engine = MLEngine()
+
+            # Only get games for sports we have trained models for
+            supported_sports = ['nfl', 'nba', 'mlb', 'nhl']
+
+            # Build query for supported sports
+            sport_query = Q()
+            for sport in supported_sports:
+                sport_query |= Q(league__sport_type__iexact=sport)
+
+            # Use local time to determine "today" - convert to UTC for database query
+            # This matches the logic in send_games_list() for consistency
+            local_now = datetime.now()
+            local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            local_end = local_start + timedelta(hours=48)  # Today + tomorrow
+
+            # Convert local times to UTC for database query (MST/MDT timezone)
+            mountain = pytz.timezone('America/Denver')
+            local_start_aware = mountain.localize(local_start)
+            local_end_aware = mountain.localize(local_end)
+
+            now_utc = local_start_aware.astimezone(pytz.UTC)
+            end_time = local_end_aware.astimezone(pytz.UTC)
+
+            # Get upcoming games for supported sports (today + tomorrow in local time)
+            games = await database_sync_to_async(
+                lambda: list(Game.objects.filter(
+                    sport_query,
+                    status=GameStatus.SCHEDULED,
+                    scheduled_start__gte=now_utc,
+                    scheduled_start__lt=end_time
+                ).select_related('home_team', 'away_team', 'league').order_by('scheduled_start')[:10])
+            )()
+
+            logger.info(f"Found {len(games)} games for prediction in supported sports (today+tomorrow)")
+
+            # Generate predictions for each game
+            top_picks = []
+            for game in games:
+                try:
+                    # Determine sport type from league
+                    sport_type = game.league.sport_type.lower() if game.league else 'nfl'
+
+                    # Skip if not a supported sport
+                    if sport_type not in supported_sports:
+                        continue
+
+                    # Get prediction from ML Engine
+                    prediction = await database_sync_to_async(
+                        ml_engine.predict_game
+                    )(str(game.id), sport_type)
+
+                    # Save prediction to database
+                    ml_prediction = await database_sync_to_async(
+                        save_ml_prediction
+                    )(game, prediction, sport_type)
+
+                    # Format for frontend
+                    pick_data = await database_sync_to_async(
+                        format_prediction_for_frontend
+                    )(game, prediction, ml_prediction, sport_type)
+
+                    top_picks.append(pick_data)
+
+                    # Limit to 5 predictions
+                    if len(top_picks) >= 5:
+                        break
+
+                except Exception as e:
+                    logger.error(f"Error predicting game {game.id}: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    continue
+
+            logger.info(f"Generated {len(top_picks)} predictions")
+
+            # If no predictions, send a message
+            if len(top_picks) == 0:
+                await self.send_json({
+                    'type': 'ai_predictions',
+                    'data': {
+                        'top_picks': [],
+                        'win_rate_today': 0,
+                        'units_profit': 0,
+                        'total_predictions': 0,
+                        'message': 'No upcoming games available for supported sports (NFL, NBA, MLB, NHL)'
+                    }
+                })
+                return
+
+            # Calculate REAL win rate and profit from database
+            stats = await database_sync_to_async(calculate_today_stats)()
+
+            # Build response with REAL data
+            predictions_data = {
+                'top_picks': top_picks,
+                'win_rate_today': stats['win_rate'],  # REAL win rate from tracked predictions
+                'units_profit': stats['profit'],       # REAL profit calculation
+                'total_predictions': len(top_picks),
+                'predictions_evaluated_today': stats['total_evaluated']
             }
-        }
 
-        await self.send_json({
-            'type': 'ai_predictions',
-            'predictions': predictions
-        })
+            await self.send_json({
+                'type': 'ai_predictions',
+                'data': predictions_data
+            })
+
+        except Exception as e:
+            logger.error(f"Error generating AI predictions: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+
+            # Send error response
+            await self.send_json({
+                'type': 'error',
+                'message': f'Failed to generate predictions: {str(e)}'
+            })
 
     async def send_betting_history(self):
         """Send user's betting history"""
