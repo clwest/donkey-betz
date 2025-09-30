@@ -362,6 +362,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
 let socket = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
@@ -551,4 +552,5 @@ window.addEventListener('focus', function() {
         connectWebSocket();
     }
 });
+</script>
 {% endblock %}
