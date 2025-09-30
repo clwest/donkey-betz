@@ -244,6 +244,9 @@ from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
     video_gallery, save_video_to_gallery, test_runway_connection
 )
+from core.views_image import (
+    gallery_generate, test_image_generation
+)
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
     orchestrate_multi_agent_task, suggest_agent, route_task, get_agent_status, health_check_agents,
@@ -723,6 +726,10 @@ urlpatterns = [
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
     path('api/v1/video/save/', save_video_to_gallery, name='save-video'),
     path('api/v1/video/test-runway/', test_runway_connection, name='test-runway'),
+
+    # Image Generation endpoints (Phase 2: Frontend Reality Fix)
+    path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
+    path('api/v1/gallery/test/', test_image_generation, name='test-image-generation'),
     path('api/v1/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),
     path('api/v1/gallery/list/', gallery_list, name='gallery-list'),
