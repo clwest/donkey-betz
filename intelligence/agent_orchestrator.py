@@ -15,6 +15,7 @@ Features:
 
 import logging
 import asyncio
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -372,21 +373,37 @@ class AgentOrchestrator:
         all_results = []
         for execution in completed:
             if execution.result:
+                duration_ms = (execution.execution_time_seconds * 1000) if execution.execution_time_seconds else 0
                 all_results.append({
-                    'agent': execution.agent.name,
+                    'agent': execution.template.name,
                     'result': execution.result,
-                    'tokens': execution.tokens_used,
-                    'duration_ms': execution.execution_time_ms
+                    'tokens': execution.token_usage.get('total', 0) if execution.token_usage else 0,
+                    'duration_ms': duration_ms
                 })
+
+        # Get token and duration totals
+        total_tokens = 0
+        total_duration = 0
+        for e in executions:
+            if e.token_usage:
+                total_tokens += e.token_usage.get('total', 0)
+            if e.execution_time_seconds:
+                total_duration += e.execution_time_seconds * 1000  # Convert to ms
 
         return {
             'total_executions': len(executions),
+            'agents_executed': len(executions),
             'completed': len(completed),
             'failed': len(failed),
             'success_rate': len(completed) / len(executions) if executions else 0,
+            'aggregated': {
+                'success_rate': len(completed) / len(executions) if executions else 0,
+                'total_tokens': total_tokens,
+                'total_duration_ms': total_duration
+            },
             'results': all_results,
-            'total_tokens': sum(e.tokens_used or 0 for e in executions),
-            'total_duration_ms': sum(e.execution_time_ms or 0 for e in executions)
+            'total_tokens': total_tokens,
+            'total_duration_ms': total_duration
         }
 
     def route_task_to_specialist(
@@ -428,7 +445,7 @@ class AgentOrchestrator:
 
         return {
             'status': execution.status,
-            'agent': execution.agent.name,
+            'agent': execution.template.name,
             'result': execution.result,
             'execution_id': execution.id
         }
