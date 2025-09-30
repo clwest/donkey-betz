@@ -295,10 +295,11 @@ class AgentCommunication:
         Returns:
             List of AgentChannel instances
         """
-        channels = AgentChannel.objects.filter(participants=agent)
+        # AgentChannel uses active_agents JSON field, not M2M participants
+        channels = AgentChannel.objects.filter(active_agents__contains=[agent.id])
 
         if active_only:
-            channels = channels.filter(is_active=True)
+            channels = channels.filter(is_archived=False)
 
         return list(channels)
 

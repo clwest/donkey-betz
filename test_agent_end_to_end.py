@@ -26,7 +26,7 @@ from agents.models import UnifiedAgentTemplate, AgentExecution, AgentOrchestrati
 from intelligence.agent_executor import AgentExecutor
 from intelligence.agent_orchestrator import AgentOrchestrator
 from intelligence.agent_communication import AgentCommunication
-from intelligence.income_builder import AIIncomeBuilder, UserProfile
+from intelligence.income_builder import AIIncomeBuilder, UserProfile, SkillLevel
 
 
 def print_header(text):
@@ -256,11 +256,11 @@ def test_income_builder_integration():
     print_header("TEST 5: Income Builder Integration")
 
     try:
-        # Create user profile
+        # Create user profile (UserProfile uses 'id' not 'user_id')
         user_profile = UserProfile(
-            user_id="test_user_001",
+            id="test_user_001",
             skills=["python", "django", "web development"],
-            skill_level="intermediate",
+            skill_level=SkillLevel.INTERMEDIATE,
             available_hours_per_week=20,
             current_balance=100.0
         )
@@ -322,10 +322,12 @@ def test_execution_history():
 
         for execution in recent_executions:
             print_info(f"\nExecution {execution.id}:")
-            print(f"  Agent: {execution.agent.name}")
+            print(f"  Agent: {execution.template.name}")
             print(f"  Status: {execution.status}")
-            print(f"  Tokens: {execution.tokens_used}")
-            print(f"  Duration: {execution.execution_time_ms}ms")
+            tokens = execution.token_usage.get('total', 0) if execution.token_usage else 0
+            print(f"  Tokens: {tokens}")
+            duration_ms = (execution.execution_time_seconds * 1000) if execution.execution_time_seconds else 0
+            print(f"  Duration: {duration_ms}ms")
             print(f"  Created: {execution.created_at}")
 
         # Get orchestrations
@@ -335,9 +337,10 @@ def test_execution_history():
 
         for orch in orchestrations:
             print_info(f"\nOrchestration {orch.id}:")
-            print(f"  Type: {orch.orchestration_type}")
+            print(f"  Name: {orch.name}")
+            print(f"  Strategy: {orch.execution_strategy}")
             print(f"  Status: {orch.status}")
-            print(f"  Task: {orch.task_description[:100]}...")
+            print(f"  Task: {orch.description[:100]}...")
 
         print_success("Execution history tracked successfully!")
         return True
