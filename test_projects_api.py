@@ -18,7 +18,7 @@ from core.views_projects_api import (
     projects_list, project_detail, project_agents, assign_agent_to_project
 )
 from core.models_partnership import PartnershipProject
-from agents.models import AgentRegistry
+from agents.models import UnifiedAgentTemplate
 from django.test import RequestFactory
 from rest_framework.test import force_authenticate
 
@@ -186,7 +186,7 @@ def test_assign_agent():
         print("❌ No projects found for user")
         return False
 
-    agent = AgentRegistry.objects.filter(is_active=True).first()
+    agent = UnifiedAgentTemplate.objects.filter(is_active=True).first()
     if not agent:
         print("❌ No active agents found")
         return False
