@@ -12,6 +12,7 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 import uuid
+import logging
 from datetime import datetime
 
 # Import base models
@@ -284,8 +285,179 @@ class Opportunity(models.Model):
     requirements = models.JSONField(default=list)
     metadata = models.JSONField(default=dict)
 
+    # NEW (Session Pre-38): Partnership Enhancement Fields (Additive - won't break existing)
+    # These fields enable human-AI partnership tracking WITHOUT changing existing functionality
+    partnership_mode = models.CharField(
+        max_length=20,
+        choices=[
+            ('solo', 'Traditional - User Only'),
+            ('ai_assisted', 'AI-Assisted - User Leads'),
+            ('collaborative', 'True Partnership - Equal'),
+            ('ai_led', 'AI-Led - User Validates'),
+        ],
+        default='solo',
+        null=True,
+        blank=True,
+        help_text="How human + AI will work together (optional)"
+    )
+
+    # Collaboration potential
+    ai_contribution_potential = models.IntegerField(
+        default=0,
+        help_text="0-100: How much can AI contribute? (0 = no AI help possible)"
+    )
+    collaboration_feasibility = models.CharField(
+        max_length=20,
+        choices=[
+            ('not_applicable', 'Not a partnership opportunity'),
+            ('low', 'Minimal AI contribution possible'),
+            ('medium', 'Moderate AI assistance available'),
+            ('high', 'Strong partnership potential'),
+            ('ideal', 'Perfect for human-AI collaboration'),
+        ],
+        default='not_applicable',
+        null=True,
+        blank=True,
+        help_text="Partnership assessment (optional)"
+    )
+
+    # Execution planning (optional - for partnership opportunities)
+    partnership_workflow = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Step-by-step collaboration plan (optional)"
+    )
+    required_human_skills = models.JSONField(
+        default=list,
+        help_text="What human brings to partnership (optional)"
+    )
+    ai_capabilities_match = models.JSONField(
+        default=list,
+        help_text="What AI brings to partnership (optional)"
+    )
+
+    # Value metrics (optional - for showing partnership ROI)
+    estimated_solo_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours if user did alone (optional)"
+    )
+    estimated_partnership_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours with AI partnership (optional)"
+    )
+    time_multiplier = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Efficiency gain (e.g., 3.5x faster) (optional)"
+    )
+
     def __str__(self):
         return f"{self.title} - ${self.potential_revenue}"
+
+    def calculate_partnership_metrics(self):
+        """
+        Calculate partnership value proposition (NEW - Session Pre-38)
+
+        Returns dict showing potential ROI of human-AI partnership
+        Only applicable if partnership fields are set
+        """
+        if not self.estimated_solo_hours or not self.estimated_partnership_hours:
+            return {
+                'available': False,
+                'message': 'Partnership metrics not calculated for this opportunity'
+            }
+
+        self.time_multiplier = self.estimated_solo_hours / self.estimated_partnership_hours
+
+        time_saved = self.estimated_solo_hours - self.estimated_partnership_hours
+        effective_rate = self.potential_revenue / self.estimated_partnership_hours
+
+        return {
+            'available': True,
+            'time_saved_hours': float(time_saved),
+            'efficiency_gain': float(self.time_multiplier),
+            'effective_hourly_rate': float(effective_rate),
+            'solo_estimate': f"{float(self.estimated_solo_hours):.1f} hours",
+            'partnership_estimate': f"{float(self.estimated_partnership_hours):.1f} hours",
+            'ai_contribution': f"{self.ai_contribution_potential}%",
+            'value_proposition': (
+                f"${self.potential_revenue:.2f} in {float(self.estimated_partnership_hours):.1f}h "
+                f"(vs {float(self.estimated_solo_hours):.1f}h solo) = "
+                f"${float(effective_rate):.2f}/h effective rate"
+            )
+        }
+
+    def mark_as_accepted(self, actual_amount=None):
+        """
+        CRITICAL FIX: Mark opportunity as accepted and create Revenue record
+        This is the missing link for revenue tracking!
+        """
+        from decimal import Decimal
+
+        self.status = 'accepted'
+        self.save()
+
+        # Create Revenue record
+        revenue_amount = actual_amount or self.potential_revenue
+
+        Revenue.objects.create(
+            user=self.user,
+            source_type=self.opportunity_type,
+            source_id=str(self.id),
+            agent=self.recommended_by,
+            amount=Decimal(str(revenue_amount)),
+            currency='USD',
+            status='pending',
+            description=f"Revenue from opportunity: {self.title}",
+            metadata={
+                'opportunity_id': str(self.id),
+                'opportunity_title': self.title,
+                'source_platform': self.source,
+                'match_score': self.match_score,
+                'created_via': 'opportunity_acceptance'
+            }
+        )
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"✅ Created Revenue record for opportunity {self.id}: ${revenue_amount}")
+
+    def mark_as_completed(self, actual_amount=None, paid_date=None):
+        """
+        CRITICAL FIX: Mark opportunity as completed and update Revenue to received
+        """
+        from django.utils import timezone
+
+        self.status = 'completed'
+        self.save()
+
+        # Find and update the Revenue record
+        revenue = Revenue.objects.filter(
+            user=self.user,
+            source_id=str(self.id),
+            status='pending'
+        ).first()
+
+        if revenue:
+            revenue.status = 'completed'
+            revenue.earned_at = timezone.now()
+            revenue.paid_at = paid_date or timezone.now()
+            if actual_amount:
+                revenue.amount = actual_amount
+            revenue.save()
+
+            logger = logging.getLogger(__name__)
+            logger.info(f"✅ Updated Revenue record {revenue.id} to completed: ${revenue.amount}")
+        else:
+            # If no revenue record exists, create one
+            self.mark_as_accepted(actual_amount)
 
     class Meta:
         app_label = 'core'
@@ -316,6 +488,41 @@ class Application(models.Model):
     # AI assistance
     assisted_by = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
     ai_confidence = models.IntegerField(default=0)  # 0-100
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    def submit_application(self):
+        """
+        CRITICAL FIX: Submit application and create Application record
+        This ensures applications are tracked in the database
+        """
+        from django.utils import timezone
+
+        self.status = 'submitted'
+        self.submitted_at = timezone.now()
+        self.save()
+
+        # Also update the opportunity status
+        self.opportunity.status = 'applied'
+        self.opportunity.save()
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"✅ Application {self.id} submitted for opportunity {self.opportunity.id}")
+
+    def mark_as_accepted(self):
+        """
+        CRITICAL FIX: Mark application as accepted and trigger revenue creation
+        """
+        self.status = 'accepted'
+        self.save()
+
+        # Mark the opportunity as accepted and create revenue
+        self.opportunity.mark_as_accepted()
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"✅ Application {self.id} accepted, revenue record created")
 
     class Meta:
         app_label = 'core'
@@ -504,6 +711,15 @@ class UserAgentLearning(UnifiedBaseModel):
             ('remote_preferences', 'Remote Work Preferences'),
             ('timing_patterns', 'Optimal Timing Patterns'),
             ('success_factors', 'Success Factor Analysis'),
+            # Sports Betting Learning Domains (integrated via SportsBettingLearningBridge)
+            ('sports_betting_nfl', 'Sports Betting - NFL'),
+            ('sports_betting_nba', 'Sports Betting - NBA'),
+            ('sports_betting_mlb', 'Sports Betting - MLB'),
+            ('sports_betting_nhl', 'Sports Betting - NHL'),
+            ('betting_risk_management', 'Betting Risk Management'),
+            ('kelly_criterion_optimization', 'Kelly Criterion Optimization'),
+            # Partnership Learning Domain (Session 40)
+            ('partnership_success', 'Partnership Success'),
             ('general', 'General Learning'),
         ],
         default='general',

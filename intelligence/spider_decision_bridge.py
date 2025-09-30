@@ -138,6 +138,18 @@ class SpiderDecisionBridge:
         # Generate unique ID
         opportunity_id = f"opp_{int(datetime.now().timestamp())}_{hash(title)%10000}"
 
+        # Save to database NOW (CRITICAL FIX)
+        await self._save_opportunity_to_database(
+            opportunity_id=opportunity_id,
+            title=title,
+            source=source,
+            budget=budget,
+            description=raw_opp.get('description', ''),
+            skills_required=skills_required,
+            raw_opp=raw_opp,
+            analysis=analysis
+        )
+
         return OpportunityDecision(
             id=opportunity_id,
             source=source,
@@ -450,6 +462,77 @@ class SpiderDecisionBridge:
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")
             return {'error': str(e)}
+
+    async def _save_opportunity_to_database(self, opportunity_id: str, title: str, source: str,
+                                            budget: float, description: str, skills_required: List[str],
+                                            raw_opp: Dict, analysis: Dict):
+        """
+        CRITICAL FIX: Save opportunity to Django database
+        This is the missing link that caused 0 opportunities in the database
+        """
+        from channels.db import database_sync_to_async
+        from core.models import Opportunity
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
+        try:
+            @database_sync_to_async
+            def create_opportunity():
+                # Get the first user (or a system user if available)
+                # In production, this should be tied to the user requesting opportunities
+                user = User.objects.first()
+                if not user:
+                    logger.warning("No users found - cannot save opportunity")
+                    return None
+
+                # Check if opportunity already exists
+                existing = Opportunity.objects.filter(
+                    source=source,
+                    metadata__spider_id=opportunity_id
+                ).first()
+
+                if existing:
+                    logger.info(f"Opportunity {opportunity_id} already exists in database")
+                    return existing
+
+                # Calculate match score from analysis
+                ml_score = analysis.get('ml_score', {})
+                match_score = int(ml_score.get('final_score', 0.5) * 100)
+
+                # Create new opportunity
+                opportunity = Opportunity.objects.create(
+                    user=user,
+                    title=title,
+                    opportunity_type=raw_opp.get('type', 'freelance_services'),
+                    source=source,
+                    potential_revenue=budget,
+                    hourly_rate=raw_opp.get('hourly_rate'),
+                    status='active',
+                    match_score=match_score,
+                    description=description,
+                    requirements=skills_required,
+                    metadata={
+                        'spider_id': opportunity_id,
+                        'platform': source,
+                        'url': raw_opp.get('url', ''),
+                        'company': raw_opp.get('company', ''),
+                        'analysis': analysis,
+                        'raw_data': raw_opp,
+                        'created_via': 'spider_decision_bridge'
+                    }
+                )
+
+                logger.info(f"✅ SAVED opportunity to database: {opportunity.id} - {title}")
+                return opportunity
+
+            # Execute the database operation
+            result = await create_opportunity()
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ ERROR saving opportunity to database: {e}", exc_info=True)
+            return None
 
     async def close(self):
         """Close bridge connections"""

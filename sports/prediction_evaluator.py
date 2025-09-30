@@ -37,12 +37,16 @@ class PredictionEvaluator:
         self.incorrect_count = 0
         self.errors = []
 
-    def evaluate_completed_games(self, hours_back: int = 24) -> Dict:
+    def evaluate_completed_games(self, hours_back: int = 24, feed_to_learning_loop: bool = True) -> Dict:
         """
         Find games that completed recently and evaluate their predictions
 
+        NEW (Session 37-A): Integrated with core learning loop!
+        Predictions now flow to UnifiedLearningPipeline for cross-domain intelligence.
+
         Args:
             hours_back: How many hours back to check for completed games
+            feed_to_learning_loop: Whether to send results to core learning loop (default: True)
 
         Returns:
             dict with evaluation results and statistics
@@ -64,6 +68,7 @@ class PredictionEvaluator:
         self.correct_count = 0
         self.incorrect_count = 0
         self.errors = []
+        self.evaluated_predictions = []  # Store for learning loop integration
 
         # Evaluate each game's predictions
         for game in completed_games:
@@ -77,6 +82,11 @@ class PredictionEvaluator:
             f"{self.correct_count} correct, {self.incorrect_count} incorrect"
         )
 
+        # NEW: Feed results into core learning loop
+        learning_loop_result = None
+        if feed_to_learning_loop and self.evaluated_predictions:
+            learning_loop_result = self._feed_to_learning_loop(self.evaluated_predictions)
+
         return {
             'evaluated': self.evaluated_count,
             'correct': self.correct_count,
@@ -84,7 +94,8 @@ class PredictionEvaluator:
             'accuracy': stats['accuracy'],
             'by_sport': stats['by_sport'],
             'by_model': stats['by_model'],
-            'errors': self.errors
+            'errors': self.errors,
+            'learning_loop_integration': learning_loop_result  # NEW
         }
 
     def _evaluate_game_predictions(self, game: Game) -> None:
@@ -188,6 +199,9 @@ class PredictionEvaluator:
             }
 
             prediction.save()
+
+        # NEW: Store evaluated prediction for learning loop integration
+        self.evaluated_predictions.append(prediction)
 
         # Update counters
         if was_correct:
@@ -402,3 +416,72 @@ class PredictionEvaluator:
                 )
 
         return candidates
+
+    def _feed_to_learning_loop(self, predictions: List[MLPrediction]) -> Dict:
+        """
+        Feed evaluated predictions into core learning loop (NEW - Session 37-A Integration)
+
+        This is the KEY integration point between sports betting and core learning!
+        Prediction results flow into the unified learning pipeline where they become
+        available to ALL agents and advisors for cross-domain intelligence.
+
+        Args:
+            predictions: List of evaluated MLPrediction instances
+
+        Returns:
+            Dict with integration results
+        """
+        logger.info(f"Feeding {len(predictions)} predictions to core learning loop")
+
+        try:
+            from core.learning_bridges.sports_betting_bridge import SportsBettingLearningBridge
+
+            # Import learning loop if available
+            try:
+                from ai_core.intelligence.learning_loop import learning_loop
+                has_learning_loop = True
+            except ImportError:
+                logger.warning("ai_core.intelligence.learning_loop not available - skipping feedback")
+                has_learning_loop = False
+
+            results = {
+                'success': True,
+                'predictions_processed': 0,
+                'feedback_items_created': 0,
+                'errors': []
+            }
+
+            bridge = SportsBettingLearningBridge()
+
+            for prediction in predictions:
+                try:
+                    # Create feedback item from prediction
+                    feedback = bridge.create_feedback_from_prediction(prediction)
+
+                    # Store feedback if learning loop available
+                    if has_learning_loop:
+                        learning_loop._store_feedback(feedback)
+                        results['feedback_items_created'] += 1
+
+                    results['predictions_processed'] += 1
+
+                except Exception as e:
+                    error_msg = f"Error processing prediction {prediction.id}: {str(e)}"
+                    logger.error(error_msg)
+                    results['errors'].append(error_msg)
+
+            logger.info(
+                f"Learning loop integration complete: "
+                f"{results['predictions_processed']} predictions processed, "
+                f"{results['feedback_items_created']} feedback items created"
+            )
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error feeding to learning loop: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'predictions_processed': 0
+            }

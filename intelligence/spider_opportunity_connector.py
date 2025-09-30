@@ -156,8 +156,33 @@ class SpiderOpportunityConnector:
                 reverse=True
             )
 
+            # CRITICAL FIX: Save opportunities to database
+            top_opportunities = sorted_opportunities[:self.max_opportunities]
+            try:
+                # Get user from profile (could be 'user' object or 'user_id')
+                user = user_profile.get('user')
+                if not user and user_profile.get('user_id'):
+                    # Fetch user from database
+                    from django.contrib.auth import get_user_model
+                    from channels.db import database_sync_to_async
+
+                    @database_sync_to_async
+                    def get_user_by_id(user_id):
+                        User = get_user_model()
+                        return User.objects.filter(id=user_id).first()
+
+                    user = await get_user_by_id(user_profile['user_id'])
+
+                if user:
+                    saved_count = await save_opportunities_batch(top_opportunities, user)
+                    logger.info(f"✅ Saved {saved_count} opportunities to database")
+                else:
+                    logger.warning("No user provided in profile - opportunities not saved to database")
+            except Exception as e:
+                logger.error(f"Failed to save opportunities to database: {e}")
+
             self.last_fetch_time = datetime.now(timezone.utc)
-            return sorted_opportunities[:self.max_opportunities]
+            return top_opportunities
 
         except Exception as e:
             logger.error(f"Error fetching fresh opportunities: {e}")
@@ -463,7 +488,12 @@ class SpiderOpportunityConnector:
 
     def _generate_cache_key(self, user_profile: Dict) -> str:
         """Generate cache key for user profile"""
-        profile_str = json.dumps(user_profile, sort_keys=True)
+        # Create a serializable copy of the profile
+        cache_profile = {k: v for k, v in user_profile.items() if k != 'user'}
+        # Convert UUID to string if present
+        if 'user_id' in cache_profile:
+            cache_profile['user_id'] = str(cache_profile['user_id'])
+        profile_str = json.dumps(cache_profile, sort_keys=True)
         return f"spider_opportunities:{hashlib.md5(profile_str.encode()).hexdigest()}"
 
     async def _get_cached_opportunities(self, cache_key: str) -> Optional[List[SpiderOpportunity]]:
@@ -556,6 +586,90 @@ class SpiderOpportunityConnector:
 
 # Global instance
 spider_connector = SpiderOpportunityConnector()
+
+
+async def save_opportunity_to_database(spider_opp: SpiderOpportunity, user) -> Optional['Opportunity']:
+    """
+    Save a SpiderOpportunity to the Django Opportunity model
+    Returns the created Opportunity instance or None if failed
+    """
+    from django.db import transaction
+    from core.models_unified_system import Opportunity
+    from channels.db import database_sync_to_async
+
+    @database_sync_to_async
+    def _save_to_db():
+        try:
+            # Calculate potential revenue
+            potential_revenue = spider_opp.budget_max or spider_opp.budget_min or spider_opp.estimated_earnings or 0
+
+            # Calculate match score (convert 0-1 score to 0-100)
+            match_score = int(spider_opp.quality_score * 100)
+
+            with transaction.atomic():
+                # Check if opportunity already exists
+                existing = Opportunity.objects.filter(
+                    user=user,
+                    source=spider_opp.platform,
+                    metadata__spider_id=spider_opp.id
+                ).first()
+
+                if existing:
+                    logger.info(f"Opportunity {spider_opp.id} already exists in database")
+                    return existing
+
+                # Create new opportunity
+                opportunity = Opportunity.objects.create(
+                    user=user,
+                    title=spider_opp.title,
+                    opportunity_type=spider_opp.opportunity_type,
+                    source=spider_opp.platform,
+                    potential_revenue=potential_revenue,
+                    hourly_rate=spider_opp.hourly_rate,
+                    status='active',
+                    match_score=match_score,
+                    description=spider_opp.description,
+                    requirements=spider_opp.skills_required,
+                    expires_at=spider_opp.expires_at,
+                    metadata={
+                        'spider_id': spider_opp.id,
+                        'spider_source': spider_opp.spider_source,
+                        'budget_min': spider_opp.budget_min,
+                        'budget_max': spider_opp.budget_max,
+                        'experience_level': spider_opp.experience_level,
+                        'deadline': spider_opp.deadline,
+                        'urgency': spider_opp.urgency,
+                        'competition_level': spider_opp.competition_level,
+                        'client_rating': spider_opp.client_rating,
+                        'discovered_at': spider_opp.discovered_at.isoformat() if spider_opp.discovered_at else None,
+                        'raw_data': spider_opp.raw_data
+                    }
+                )
+
+                logger.info(f"Created opportunity {opportunity.id} from spider {spider_opp.id}")
+                return opportunity
+
+        except Exception as e:
+            logger.error(f"Error saving opportunity to database: {e}", exc_info=True)
+            return None
+
+    return await _save_to_db()
+
+
+async def save_opportunities_batch(spider_opps: List[SpiderOpportunity], user) -> int:
+    """
+    Save multiple SpiderOpportunities to database in batch
+    Returns count of successfully saved opportunities
+    """
+    saved_count = 0
+
+    for spider_opp in spider_opps:
+        opportunity = await save_opportunity_to_database(spider_opp, user)
+        if opportunity:
+            saved_count += 1
+
+    logger.info(f"Saved {saved_count}/{len(spider_opps)} opportunities to database")
+    return saved_count
 
 
 async def get_spider_opportunities(user_profile: Dict) -> List[SpiderOpportunity]:

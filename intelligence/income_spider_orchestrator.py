@@ -121,7 +121,15 @@ class IncomeSpiderOrchestrator:
             scored_opportunities.sort(key=lambda x: x.quality_score, reverse=True)
             filtered_opportunities = scored_opportunities[:max_opportunities]
 
-            # Step 6: Clean up
+            # Step 6: CRITICAL FIX - Save opportunities to database
+            logger.info("💾 Saving opportunities to database...")
+            saved_count = await self._save_opportunities_to_database(
+                filtered_opportunities,
+                user_profile
+            )
+            logger.info(f"   Saved {saved_count}/{len(filtered_opportunities)} opportunities to database")
+
+            # Step 7: Clean up
             await self.freelance_spider.cleanup()
 
             discovery_time = (datetime.now() - start_time).total_seconds()
@@ -400,6 +408,104 @@ class IncomeSpiderOrchestrator:
                 return cache_entry['opportunities']
 
         return None
+
+    async def _save_opportunities_to_database(
+        self,
+        opportunities: List[SpiderOpportunity],
+        user_profile: UserProfile
+    ) -> int:
+        """
+        CRITICAL FIX: Save discovered opportunities to Django database
+        This ensures opportunities persist and are available for analytics
+        """
+        from channels.db import database_sync_to_async
+        from core.models import Opportunity
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        saved_count = 0
+
+        try:
+            @database_sync_to_async
+            def save_opportunity_batch(opps_to_save):
+                nonlocal saved_count
+                # Get user by ID or first user
+                try:
+                    if hasattr(user_profile, 'user') and user_profile.user:
+                        user = user_profile.user
+                    else:
+                        user = User.objects.first()
+                        if not user:
+                            logger.warning("No users found - cannot save opportunities")
+                            return 0
+                except Exception:
+                    user = User.objects.first()
+
+                for opp in opps_to_save:
+                    try:
+                        # Check if already exists
+                        existing = Opportunity.objects.filter(
+                            user=user,
+                            source=opp.platform,
+                            metadata__spider_id=opp.id
+                        ).first()
+
+                        if existing:
+                            logger.debug(f"Opportunity {opp.id} already exists")
+                            continue
+
+                        # Calculate values
+                        potential_revenue = opp.budget_max or opp.budget_min or opp.estimated_earnings or 0
+                        match_score = int(opp.quality_score * 100)
+
+                        # Create opportunity
+                        Opportunity.objects.create(
+                            user=user,
+                            title=opp.title,
+                            opportunity_type=opp.opportunity_type,
+                            source=opp.platform,
+                            potential_revenue=potential_revenue,
+                            hourly_rate=opp.hourly_rate,
+                            status='active',
+                            match_score=match_score,
+                            description=opp.description,
+                            requirements=opp.skills_required,
+                            expires_at=opp.expires_at,
+                            metadata={
+                                'spider_id': opp.id,
+                                'spider_source': opp.spider_source,
+                                'budget_min': opp.budget_min,
+                                'budget_max': opp.budget_max,
+                                'experience_level': opp.experience_level,
+                                'deadline': opp.deadline,
+                                'urgency': opp.urgency,
+                                'competition_level': opp.competition_level,
+                                'client_rating': opp.client_rating,
+                                'discovered_at': opp.discovered_at.isoformat() if opp.discovered_at else None,
+                                'raw_data': opp.raw_data,
+                                'created_via': 'income_spider_orchestrator'
+                            }
+                        )
+                        saved_count += 1
+                        logger.debug(f"✅ Saved opportunity: {opp.title}")
+
+                    except Exception as e:
+                        logger.error(f"Error saving opportunity {opp.id}: {e}")
+                        continue
+
+                return saved_count
+
+            # Save in batches to avoid overwhelming the database
+            batch_size = 10
+            for i in range(0, len(opportunities), batch_size):
+                batch = opportunities[i:i+batch_size]
+                await save_opportunity_batch(batch)
+
+            return saved_count
+
+        except Exception as e:
+            logger.error(f"Error saving opportunities to database: {e}", exc_info=True)
+            return saved_count
 
 
 # Global orchestrator instance
