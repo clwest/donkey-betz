@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     'workflows',              # Workflow management
     'mythology',              # Mythology detection and prevention system
     'ai_opportunities',       # AI Project Generation & Storage
+    'core.learning_bridges',  # Learning bridges for unified intelligence (NEW)
     # 'realtime',               # WebSocket & Event Bus
     # 'monitoring',             # System Health & Analytics
     # 'billing',                # Unified billing system
