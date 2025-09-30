@@ -87,30 +87,27 @@ class AgentRegistry:
     def _refresh_agent_cache(self):
         """Refresh agent cache from database"""
         try:
-            # Cache all active agents
+            # Cache all active agents - only serialize primitive data, not relations
             active_agents = UnifiedAgentTemplate.objects.filter(
                 is_active=True
-            ).select_related().prefetch_related('executions')
+            ).values(
+                'id', 'name', 'display_name', 'specialization',
+                'capabilities', 'routing_keywords', 'system_prompt',
+                'llm_provider', 'llm_model', 'llm_config',
+                'performance_metrics', 'is_active', 'is_verified',
+                'created_at', 'updated_at'
+            )
 
+            # Convert QuerySet to dict indexed by name
             agent_data = {}
             for agent in active_agents:
-                agent_data[agent.name] = {
-                    'id': agent.id,
-                    'name': agent.name,
-                    'display_name': agent.display_name,
-                    'specialization': agent.specialization,
-                    'capabilities': agent.capabilities,
-                    'routing_keywords': agent.routing_keywords,
-                    'system_prompt': agent.system_prompt,
-                    'llm_provider': agent.llm_provider,
-                    'llm_model': agent.llm_model,
-                    'llm_config': agent.llm_config,
-                    'performance_metrics': getattr(agent, 'performance_metrics', {}),
-                    'is_active': agent.is_active,
-                    'is_verified': agent.is_verified,
-                    'created_at': agent.created_at,
-                    'updated_at': agent.updated_at
-                }
+                # Convert UUID to string for JSON serialization
+                agent_copy = dict(agent)
+                agent_copy['id'] = str(agent_copy['id'])
+
+                # Store by name for easy lookup
+                agent_name = agent_copy['name']
+                agent_data[agent_name] = agent_copy
 
             cache.set('agent_registry_data', agent_data, self.cache_timeout)
             self._last_cache_refresh = datetime.now()
