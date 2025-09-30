@@ -217,8 +217,8 @@ class AgentCommunication:
             }
         )
 
-        # Store agent IDs in active_agents field
-        channel.active_agents = [a.id for a in agents]
+        # Store agent IDs in active_agents field (convert UUID to string)
+        channel.active_agents = [str(a.id) for a in agents]
         channel.save()
 
         logger.info(f"Created orchestration channel: {channel_name} with {len(agents)} agents")
@@ -254,8 +254,8 @@ class AgentCommunication:
                 }
             )
 
-            # Store agent IDs in active_agents field
-            channel.active_agents = [a.id for a in agents]
+            # Store agent IDs in active_agents field (convert UUID to string)
+            channel.active_agents = [str(a.id) for a in agents]
             channel.save()
 
             logger.info(f"Created new channel: {channel_name}")
