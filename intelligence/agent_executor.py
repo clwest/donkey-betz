@@ -227,7 +227,9 @@ class AgentExecutor:
             template=agent,
             execution_id=f"exec_{agent.name}_{int(time.time())}",
             task_description=task,
+            task_type='agent_execution',
             context=context,
+            input_data={},
             status=AgentStatus.INITIALIZING,
             user=user
         )
@@ -366,15 +368,23 @@ class AgentExecutor:
             raise ValueError("OpenAI client not available")
 
         try:
-            response = self.openai_client.chat.completions.create(
-                model=model,
-                messages=[
+            # Build API parameters
+            params = {
+                "model": model,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message}
                 ],
-                temperature=config.get('temperature', 1.0),
-                max_tokens=config.get('max_tokens', 2000)
-            )
+                "temperature": config.get('temperature', 1.0)
+            }
+
+            # Use max_completion_tokens for newer models, max_tokens for older
+            if 'gpt-4' in model or 'gpt-5' in model or 'o1' in model or 'o3' in model:
+                params['max_completion_tokens'] = config.get('max_tokens', 2000)
+            else:
+                params['max_tokens'] = config.get('max_tokens', 2000)
+
+            response = self.openai_client.chat.completions.create(**params)
 
             return {
                 'content': response.choices[0].message.content,

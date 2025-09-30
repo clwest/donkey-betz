@@ -98,16 +98,21 @@ class AgentCommunication:
             'metadata': metadata or {}
         }
 
-        # Add to channel message history
-        message_history = channel.message_history or []
+        # Create message record in channel
+        # Note: AgentChannel uses related AgentChannelMessage model for messages
+        # For now, store in metadata until we wire up the full message system
+        metadata = channel.metadata or {}
+        message_history = metadata.get('message_history', [])
         message_history.append(message_record)
-        channel.message_history = message_history
+        metadata['message_history'] = message_history
+        channel.metadata = metadata
+        channel.message_count += 1
         channel.save()
 
         # Send via WebSocket if channel layer available
         if self.channel_layer:
             self._send_websocket_message(
-                channel_name=channel.channel_name,
+                channel_name=channel.name,
                 message=message_record
             )
 
@@ -173,7 +178,9 @@ class AgentCommunication:
         Returns:
             List of message records
         """
-        messages = channel.message_history or []
+        # Get messages from metadata (until full message system is wired up)
+        metadata = channel.metadata or {}
+        messages = metadata.get('message_history', [])
 
         if limit:
             messages = messages[-limit:]
@@ -198,18 +205,21 @@ class AgentCommunication:
         channel_name = f"orchestration_{orchestration.id}"
 
         channel = AgentChannel.objects.create(
-            channel_name=channel_name,
+            name=channel_name,
+            display_name=f"Orchestration {orchestration.id}",
+            description=f"Agent collaboration channel for {orchestration.name}",
+            channel_type='orchestration',
             orchestration=orchestration,
-            is_active=True,
+            is_public=False,
             metadata={
                 'agents': [a.name for a in agents],
                 'created_at': datetime.now().isoformat()
             }
         )
 
-        # Add participants
-        for agent in agents:
-            channel.participants.add(agent)
+        # Store agent IDs in active_agents field
+        channel.active_agents = [a.id for a in agents]
+        channel.save()
 
         logger.info(f"Created orchestration channel: {channel_name} with {len(agents)} agents")
 
@@ -226,24 +236,27 @@ class AgentCommunication:
 
         # Try to get existing channel
         try:
-            channel = AgentChannel.objects.get(channel_name=channel_name, is_active=True)
+            channel = AgentChannel.objects.get(name=channel_name, is_archived=False)
             logger.debug(f"Using existing channel: {channel_name}")
             return channel
 
         except AgentChannel.DoesNotExist:
             # Create new channel
             channel = AgentChannel.objects.create(
-                channel_name=channel_name,
-                is_active=True,
+                name=channel_name,
+                display_name=channel_name.replace('_', ' ').title(),
+                description=f"Agent collaboration channel",
+                channel_type='general',
+                is_public=False,
                 metadata={
                     'agents': agent_names,
                     'created_at': datetime.now().isoformat()
                 }
             )
 
-            # Add participants
-            for agent in agents:
-                channel.participants.add(agent)
+            # Store agent IDs in active_agents field
+            channel.active_agents = [a.id for a in agents]
+            channel.save()
 
             logger.info(f"Created new channel: {channel_name}")
             return channel
@@ -332,16 +345,19 @@ class AgentCommunication:
                 'metadata': metadata or {}
             }
 
-            # Add to message history
-            message_history = channel.message_history or []
+            # Add to message history in metadata
+            metadata = channel.metadata or {}
+            message_history = metadata.get('message_history', [])
             message_history.append(update_message)
-            channel.message_history = message_history
+            metadata['message_history'] = message_history
+            channel.metadata = metadata
+            channel.message_count += 1
             channel.save()
 
             # Send via WebSocket
             if self.channel_layer:
                 self._send_websocket_message(
-                    channel_name=channel.channel_name,
+                    channel_name=channel.name,
                     message=update_message
                 )
 
