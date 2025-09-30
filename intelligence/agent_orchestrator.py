@@ -197,7 +197,7 @@ class AgentOrchestrator:
                 'agents_executed': len(executions),
                 'executions': [
                     {
-                        'agent': e.agent.name,
+                        'agent': e.template.name,
                         'status': e.status,
                         'result': e.result
                     }
