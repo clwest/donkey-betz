@@ -643,3 +643,27 @@ class LiveScoresView(TemplateView):
         context['total_games'] = live_games.count()
 
         return context
+
+
+# ============================================================================
+# SESSION 36: Analytics Dashboard Proxy Views
+# ============================================================================
+
+class AnalyticsDashboardViewProxy(LoginRequiredMixin, TemplateView):
+    """Proxy view for Analytics Dashboard - imports from views_analytics"""
+    template_name = 'unified/analytics_dashboard.html'
+    login_url = '/accounts/login/'
+    redirect_field_name = 'next'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Analytics Dashboard'
+        context['user'] = self.request.user
+        return context
+
+
+@login_required
+def analytics_api_data_proxy(request):
+    """Proxy function for analytics API - delegates to views_analytics"""
+    from core.views_analytics import analytics_api_data
+    return analytics_api_data(request)

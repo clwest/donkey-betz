@@ -25,6 +25,10 @@ urlpatterns = [
     path('learning/', views_unified.LearningDashboardView.as_view(), name='unified_learning_dashboard'),
     path('learning-dashboard/', views_unified.LearningDashboardView.as_view(), name='unified_learning_dashboard_alt'),
 
+    # Analytics Dashboard (Session 36)
+    path('analytics/', views_unified.AnalyticsDashboardViewProxy.as_view(), name='unified_analytics_dashboard'),
+    path('analytics-dashboard/', views_unified.AnalyticsDashboardViewProxy.as_view(), name='unified_analytics_dashboard_alt'),
+
     # AI Intelligence Section
     path('neural-orchestra/', views_unified.NeuralOrchestraView.as_view(), name='unified_neural_orchestra'),
     path('control/', views_unified.ControlCenterView.as_view(), name='unified_control_center'),
@@ -53,6 +57,7 @@ urlpatterns = [
     path('api/revenue-stats/', views_unified.RevenueStatsAPIView.as_view(), name='api_revenue_stats'),
     path('api/system-health/', views_unified.SystemHealthAPIView.as_view(), name='api_system_health'),
     path('api/spider-status/', views_unified.SpiderStatusAPIView.as_view(), name='api_spider_status'),
+    path('api/analytics/data/', views_unified.analytics_api_data_proxy, name='api_analytics_data'),
 
     # Personal Assistant
     path('assistant/', views_unified.PersonalAssistantView.as_view(), name='unified_personal_assistant'),
