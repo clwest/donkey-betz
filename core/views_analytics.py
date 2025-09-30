@@ -892,3 +892,211 @@ def get_confidence_metrics(user, days):
             'overall_confidence': 0,
             'by_domain': []
         }
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_stats(request):
+    """
+    Get learning system statistics for AI Production Hub
+    Returns aggregate metrics about the learning system
+
+    Phase 1: Learning Loop Integration - Frontend Reality Fix
+    """
+    try:
+        user = request.user
+
+        # Total learning entries
+        total_learnings = UserAgentLearning.objects.filter(user=user).count()
+
+        # Active agents count
+        active_agents = Agent.objects.filter(is_active=True).count()
+
+        # Projects completed (using Revenue as proxy for completed work)
+        projects_completed = Revenue.objects.filter(user=user).values('source_type').distinct().count()
+
+        # Success rate calculation
+        successful_learnings = UserAgentLearning.objects.filter(
+            user=user,
+            confidence_score__gte=0.7
+        ).count()
+        success_rate = successful_learnings / total_learnings if total_learnings > 0 else 0
+
+        # Recent learning activity (last 7 days)
+        last_week = timezone.now() - timedelta(days=7)
+        recent_learnings = UserAgentLearning.objects.filter(
+            user=user,
+            created_at__gte=last_week
+        ).count()
+
+        # Learning by domain breakdown
+        learning_by_domain = UserAgentLearning.objects.filter(
+            user=user
+        ).values('learning_domain').annotate(
+            count=Count('id'),
+            avg_confidence=Avg('confidence_score')
+        ).order_by('-count')[:5]
+
+        # Top performing agents (by learning entries)
+        top_agents = UserAgentLearning.objects.filter(
+            user=user
+        ).values('agent_name').annotate(
+            learning_count=Count('id'),
+            avg_confidence=Avg('confidence_score')
+        ).order_by('-learning_count')[:5]
+
+        return Response({
+            'success': True,
+            'total_learnings': total_learnings,
+            'active_agents': active_agents,
+            'projects_completed': projects_completed,
+            'success_rate': round(success_rate, 2),
+            'recent_activity': {
+                'learnings_last_7_days': recent_learnings,
+                'daily_average': round(recent_learnings / 7, 1)
+            },
+            'learning_by_domain': [
+                {
+                    'domain': item['learning_domain'],
+                    'count': item['count'],
+                    'avg_confidence': round(float(item['avg_confidence'] or 0), 2)
+                }
+                for item in learning_by_domain
+            ],
+            'top_agents': [
+                {
+                    'agent_name': item['agent_name'],
+                    'learning_count': item['learning_count'],
+                    'avg_confidence': round(float(item['avg_confidence'] or 0), 2)
+                }
+                for item in top_agents
+            ],
+            'timestamp': timezone.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching learning stats: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'total_learnings': 0,
+            'active_agents': 0,
+            'projects_completed': 0,
+            'success_rate': 0
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def learning_insights(request):
+    """
+    Get learning insights and patterns for user
+    Returns detailed learning patterns, preferences, and recommendations
+
+    Phase 1: Learning Loop Integration - Frontend Reality Fix
+    """
+    try:
+        user = request.user
+
+        # Get recent learning entries with full context
+        recent_learnings = UserAgentLearning.objects.filter(
+            user=user
+        ).order_by('-created_at')[:10]
+
+        # Extract insights from learning content
+        insights = []
+        for learning in recent_learnings:
+            content = learning.learning_content or {}
+            insights.append({
+                'id': str(learning.id),
+                'agent_name': learning.agent_name,
+                'domain': learning.learning_domain,
+                'source': learning.learning_source,
+                'confidence': round(float(learning.confidence_score), 2),
+                'validation_count': learning.validation_count,
+                'created_at': learning.created_at.isoformat(),
+                'summary': content.get('insights', {}).get('summary', 'No summary available')
+            })
+
+        # Learning patterns by time of day
+        learning_by_hour = UserAgentLearning.objects.filter(
+            user=user
+        ).extra(
+            select={'hour': 'EXTRACT(hour FROM created_at)'}
+        ).values('hour').annotate(
+            count=Count('id')
+        ).order_by('hour')
+
+        # User preferences from learning content
+        preferences = {}
+        for learning in UserAgentLearning.objects.filter(user=user)[:50]:
+            content = learning.learning_content or {}
+            if 'context' in content and 'preferences' in content['context']:
+                prefs = content['context']['preferences']
+                for key, value in prefs.items():
+                    if key not in preferences:
+                        preferences[key] = {}
+                    if value not in preferences[key]:
+                        preferences[key][value] = 0
+                    preferences[key][value] += 1
+
+        # Recommendations based on learning patterns
+        recommendations = []
+
+        # Check if user has low confidence in certain domains
+        low_confidence_domains = UserAgentLearning.objects.filter(
+            user=user,
+            confidence_score__lt=0.5
+        ).values('learning_domain').annotate(
+            count=Count('id')
+        ).order_by('-count')[:3]
+
+        for domain in low_confidence_domains:
+            recommendations.append({
+                'type': 'improvement_opportunity',
+                'domain': domain['learning_domain'],
+                'message': f"Consider reviewing {domain['learning_domain']} - {domain['count']} low-confidence learnings",
+                'priority': 'medium'
+            })
+
+        # Check for highly successful patterns
+        high_confidence_domains = UserAgentLearning.objects.filter(
+            user=user,
+            confidence_score__gte=0.8
+        ).values('learning_domain').annotate(
+            count=Count('id'),
+            avg_confidence=Avg('confidence_score')
+        ).order_by('-count')[:3]
+
+        for domain in high_confidence_domains:
+            recommendations.append({
+                'type': 'successful_pattern',
+                'domain': domain['learning_domain'],
+                'message': f"Strong performance in {domain['learning_domain']} - leverage this expertise",
+                'priority': 'high'
+            })
+
+        return Response({
+            'success': True,
+            'recent_insights': insights,
+            'learning_by_hour': [
+                {
+                    'hour': int(item['hour']),
+                    'count': item['count']
+                }
+                for item in learning_by_hour
+            ],
+            'user_preferences': preferences,
+            'recommendations': recommendations,
+            'total_insights': len(insights),
+            'timestamp': timezone.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching learning insights: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'recent_insights': [],
+            'recommendations': []
+        }, status=500)
