@@ -224,7 +224,9 @@ from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
     update_budget, model_performance_analytics,
     # Session 36: Analytics Dashboard
-    AnalyticsDashboardView, analytics_api_data
+    AnalyticsDashboardView, analytics_api_data,
+    # Phase 1: Learning Loop Integration
+    learning_stats, learning_insights
 )
 from core.views_personal_memories import (
     search_personal_memories_api, personal_memory_stats, delete_personal_memory
@@ -700,7 +702,11 @@ urlpatterns = [
     path('api/v1/analytics/cost-breakdown/', cost_breakdown, name='cost-breakdown'),
     path('api/v1/analytics/update-budget/', update_budget, name='update-budget'),
     path('api/v1/analytics/model-performance/', model_performance_analytics, name='model-performance'),
-    
+
+    # Learning Loop Integration (Phase 1: Frontend Reality Fix)
+    path('api/learning/stats/', learning_stats, name='learning-stats'),
+    path('api/learning/insights/', learning_insights, name='learning-insights'),
+
     # Content Generation APIs (from ai-content-studio)
     path('api/v1/content/create/', create_content, name='content-create'),
     path('api/v1/content/list/', list_content, name='content-list'),
