@@ -10,13 +10,14 @@ Created: September 30, 2025
 
 import logging
 from django.db.models import Q, Count, Avg
+from datetime import datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 
 from core.models_partnership import PartnershipProject
-from agents.models import AgentRegistry, AgentExecution
+from agents.models import UnifiedAgentTemplate, AgentExecution
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -281,9 +282,9 @@ def project_agents(request, project_id):
         project = PartnershipProject.objects.get(id=project_id, user=user)
 
         # Get all active agents
-        agents = AgentRegistry.objects.filter(is_active=True).annotate(
+        agents = UnifiedAgentTemplate.objects.filter(is_active=True).annotate(
             execution_count=Count('executions'),
-            avg_exec_time=Avg('executions__duration_seconds')
+            avg_exec_time=Avg('executions__execution_time_seconds')
         ).order_by('-execution_count')
 
         # Recommend agents based on project type
@@ -330,7 +331,7 @@ def project_agents(request, project_id):
         # Sort recommended agents first
         agents_data.sort(key=lambda x: (not x['recommended'], -x['success_rate']))
 
-        total_registry = AgentRegistry.objects.count()
+        total_registry = UnifiedAgentTemplate.objects.count()
 
         recommendation_text = f"Based on your {project.project_type.replace('_', ' ')} project, we recommend agents specialized in {', '.join(preferred_specs[:2])}."
 
@@ -412,13 +413,16 @@ def assign_agent_to_project(request, project_id):
         project = PartnershipProject.objects.get(id=project_id, user=user)
 
         # Verify agent exists
-        agent = AgentRegistry.objects.get(id=agent_id, is_active=True)
+        agent = UnifiedAgentTemplate.objects.get(id=agent_id, is_active=True)
 
         # Create agent execution record
         execution = AgentExecution.objects.create(
-            agent=agent,
+            template=agent,
             user=user,
-            input_params={
+            execution_id=f"{agent.name}_{project_id}_{int(datetime.now().timestamp())}",
+            task_description=f"{improvement_type.title()}: {task_description or 'Project enhancement'}",
+            task_type=improvement_type,
+            input_data={
                 'project_id': str(project_id),
                 'project_name': project.project_name,
                 'improvement_type': improvement_type,
@@ -445,11 +449,11 @@ def assign_agent_to_project(request, project_id):
 
         # Calculate estimated time based on agent's average
         avg_time = AgentExecution.objects.filter(
-            agent=agent,
+            template=agent,
             status='completed'
-        ).aggregate(Avg('duration_seconds'))
+        ).aggregate(Avg('execution_time_seconds'))
 
-        estimated_time = int(avg_time['duration_seconds__avg'] or 30)
+        estimated_time = int(avg_time['execution_time_seconds__avg'] or 30)
 
         logger.info(f"🤖 Assigned {agent.name} to project {project.project_name}")
 
@@ -458,7 +462,7 @@ def assign_agent_to_project(request, project_id):
             'data': {
                 'message': f'Agent {agent.name} assigned successfully',
                 'real_execution': True,
-                'agent_registry_size': AgentRegistry.objects.count(),
+                'agent_registry_size': UnifiedAgentTemplate.objects.count(),
                 'execution_details': {
                     'agent_name': agent.name,
                     'specialization': agent.specialization,
@@ -479,7 +483,7 @@ def assign_agent_to_project(request, project_id):
             'success': False,
             'error': 'Project not found'
         }, status=404)
-    except AgentRegistry.DoesNotExist:
+    except UnifiedAgentTemplate.DoesNotExist:
         return Response({
             'success': False,
             'error': 'Agent not found or inactive'
