@@ -155,14 +155,16 @@ class AgentOrchestrator:
 
         # Create orchestration record
         orchestration = AgentOrchestration.objects.create(
-            orchestration_type=coordination,
-            task_description=task,
-            task_context=context,
-            execution_plan={
+            name=f"orchestration_{coordination}_{int(time.time())}",
+            description=task,
+            workflow_definition={
                 'agents': [a.name for a in agents],
                 'coordination': coordination,
-                'task': task
+                'task': task,
+                'context': context
             },
+            agent_sequence=[a.name for a in agents],
+            execution_strategy=coordination if coordination in ['sequential', 'parallel'] else 'sequential',
             status=AgentStatus.RUNNING,
             user=user
         )
