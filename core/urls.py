@@ -222,7 +222,9 @@ from core.views_ecosystem_activation import (
 # Import migrated API views
 from core.views_analytics import (
     analytics_dashboard, track_usage, track_feature_usage, cost_breakdown,
-    update_budget, model_performance_analytics
+    update_budget, model_performance_analytics,
+    # Session 36: Analytics Dashboard
+    AnalyticsDashboardView, analytics_api_data
 )
 from core.views_personal_memories import (
     search_personal_memories_api, personal_memory_stats, delete_personal_memory
