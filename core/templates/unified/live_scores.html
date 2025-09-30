@@ -1,0 +1,405 @@
+{% extends "unified/base.html" %}
+
+{% block title %}Live Scores - Sports Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .scores-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .page-title {
+        font-size: 2.5em;
+        background: linear-gradient(135deg, #00ff00, #ffd700);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .back-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .back-btn:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        transform: translateY(-2px);
+    }
+
+    .refresh-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        background: rgba(0,255,0,0.1);
+        border: 1px solid rgba(0,255,0,0.3);
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .refresh-dot {
+        width: 8px;
+        height: 8px;
+        background: #00ff00;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+
+    .sport-section {
+        margin-bottom: 40px;
+    }
+
+    .sport-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+    }
+
+    .sport-icon {
+        font-size: 2em;
+    }
+
+    .sport-name {
+        font-size: 1.5em;
+        color: #ffd700;
+        font-weight: bold;
+    }
+
+    .games-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 20px;
+    }
+
+    .game-card {
+        background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .game-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(0,255,0,0.3);
+        box-shadow: 0 5px 20px rgba(0,255,0,0.2);
+    }
+
+    .game-card.live::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #ff0000, #ff4500);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .game-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .status-live {
+        background: rgba(255,0,0,0.2);
+        border: 1px solid rgba(255,0,0,0.4);
+        color: #ff0000;
+    }
+
+    .status-scheduled {
+        background: rgba(255,215,0,0.2);
+        border: 1px solid rgba(255,215,0,0.4);
+        color: #ffd700;
+    }
+
+    .status-final {
+        background: rgba(128,128,128,0.2);
+        border: 1px solid rgba(128,128,128,0.4);
+        color: #888;
+    }
+
+    .game-date {
+        color: #888;
+        font-size: 0.9em;
+        margin-bottom: 15px;
+    }
+
+    .matchup {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .team-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 8px;
+    }
+
+    .team-row.winner {
+        background: rgba(0,255,0,0.1);
+        border: 1px solid rgba(0,255,0,0.2);
+    }
+
+    .team-name {
+        font-size: 1.2em;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .team-score {
+        font-size: 1.8em;
+        color: #ffd700;
+        font-weight: bold;
+        min-width: 50px;
+        text-align: right;
+    }
+
+    .game-period {
+        text-align: center;
+        margin-top: 10px;
+        padding: 8px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        color: #888;
+        font-size: 0.9em;
+    }
+
+    .no-games {
+        text-align: center;
+        padding: 60px 20px;
+        color: #888;
+        font-size: 1.2em;
+    }
+
+    .no-games-icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #00ff00;
+        font-size: 1.1em;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        border: 3px solid rgba(0,255,0,0.3);
+        border-top-color: #00ff00;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="scores-container">
+    <div class="page-header">
+        <h1 class="page-title">⚡ Live Scores</h1>
+        <a href="{% url 'sports_hub' %}" class="back-btn">← Back to Sports Hub</a>
+    </div>
+
+    <div class="refresh-indicator">
+        <div class="refresh-dot"></div>
+        <span style="color: #00ff00;">Auto-refreshing every 30 seconds</span>
+    </div>
+
+    <div id="scores-content">
+        {% if games_by_sport %}
+            {% for sport, games in games_by_sport.items %}
+            <div class="sport-section">
+                <div class="sport-header">
+                    <span class="sport-icon">
+                        {% if sport == 'NFL' or sport == 'NCAAF' %}🏈
+                        {% elif sport == 'NBA' or sport == 'NCAAB' %}🏀
+                        {% elif sport == 'MLB' %}⚾
+                        {% elif sport == 'NHL' %}🏒
+                        {% elif sport == 'SOCCER' %}⚽
+                        {% else %}🏆{% endif %}
+                    </span>
+                    <span class="sport-name">{{ sport }} ({{ games|length }} games)</span>
+                </div>
+
+                <div class="games-grid">
+                    {% for game in games %}
+                    <div class="game-card {% if game.status == 'IN_PROGRESS' %}live{% endif %}" data-game-id="{{ game.id }}">
+                        <div>
+                            <span class="game-status status-{% if game.status == 'IN_PROGRESS' %}live{% elif game.status == 'SCHEDULED' %}scheduled{% else %}final{% endif %}">
+                                {% if game.status == 'IN_PROGRESS' %}
+                                    🔴 LIVE
+                                {% elif game.status == 'SCHEDULED' %}
+                                    ⏰ SCHEDULED
+                                {% else %}
+                                    ✓ FINAL
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="game-date">{{ game.game_date }}</div>
+
+                        <div class="matchup">
+                            <div class="team-row {% if game.away_score > game.home_score and game.status == 'FINAL' %}winner{% endif %}">
+                                <span class="team-name">{{ game.away_team }}</span>
+                                <span class="team-score">{{ game.away_score }}</span>
+                            </div>
+
+                            <div class="team-row {% if game.home_score > game.away_score and game.status == 'FINAL' %}winner{% endif %}">
+                                <span class="team-name">{{ game.home_team }}</span>
+                                <span class="team-score">{{ game.home_score }}</span>
+                            </div>
+                        </div>
+
+                        {% if game.period %}
+                        <div class="game-period">{{ game.period }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-games">
+                <div class="no-games-icon">📊</div>
+                <p>No games available at this time</p>
+                <p style="font-size: 0.9em; margin-top: 10px;">
+                    Check back later for live games and scores!
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let socket = null;
+
+function connectWebSocket() {
+    const wsUrl = 'ws://localhost:8000/ws/sports/';
+    console.log('Connecting to Sports WebSocket:', wsUrl);
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function(e) {
+        console.log('Live Scores WebSocket connected');
+        requestScoreUpdates();
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'live_scores' || data.type === 'games_list') {
+            updateScores(data);
+        }
+    };
+
+    socket.onclose = function(e) {
+        console.log('Live Scores WebSocket disconnected, reconnecting...');
+        setTimeout(connectWebSocket, 3000);
+    };
+
+    socket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+}
+
+function requestScoreUpdates() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'get_live_games' }));
+        console.log('Requested live games');
+    }
+}
+
+function updateScores(data) {
+    console.log('Received score update:', data);
+
+    // Update individual game cards with new scores
+    const games = data.games || [];
+
+    games.forEach(game => {
+        const gameCard = document.querySelector(`[data-game-id="${game.id}"]`);
+        if (gameCard) {
+            // Update scores
+            const teamRows = gameCard.querySelectorAll('.team-row');
+            if (teamRows.length >= 2) {
+                teamRows[0].querySelector('.team-score').textContent = game.away_score || '0';
+                teamRows[1].querySelector('.team-score').textContent = game.home_score || '0';
+            }
+
+            // Update period/status
+            const periodDiv = gameCard.querySelector('.game-period');
+            if (periodDiv && game.period) {
+                periodDiv.textContent = game.period;
+            }
+
+            // Update winner highlighting
+            if (game.status === 'FINAL') {
+                teamRows.forEach(row => row.classList.remove('winner'));
+                if (game.away_score > game.home_score) {
+                    teamRows[0].classList.add('winner');
+                } else if (game.home_score > game.away_score) {
+                    teamRows[1].classList.add('winner');
+                }
+            }
+        }
+    });
+}
+
+// Initialize WebSocket on page load
+document.addEventListener('DOMContentLoaded', function() {
+    connectWebSocket();
+
+    // Auto-refresh scores every 30 seconds
+    setInterval(requestScoreUpdates, 30000);
+});
+</script>
+{% endblock %}

@@ -34,6 +34,9 @@ urlpatterns = [
     # Sports & Analytics Section (authenticated only)
     path('sports/', views_unified.SportsHubView.as_view(), name='sports_hub'),
     path('sports-hub/', views_unified.SportsHubView.as_view(), name='sports_hub_alt'),
+    path('sports/betting-history/', views_unified.BettingHistoryView.as_view(), name='betting_history'),
+    path('sports/odds-calculator/', views_unified.OddsCalculatorView.as_view(), name='odds_calculator'),
+    path('sports/live-scores/', views_unified.LiveScoresView.as_view(), name='live_scores'),
     path('dbao/', views_unified.DBAODashboardView.as_view(), name='dbao_dashboard'),
     path('dbao-dashboard/', views_unified.DBAODashboardView.as_view(), name='dbao_dashboard_alt'),
 

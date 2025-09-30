@@ -149,10 +149,9 @@ class AINexusView(TemplateView):
         return context
 
 
-class SportsHubView(LoginRequiredMixin, TemplateView):
+class SportsHubView(TemplateView):  # Temporarily removed LoginRequiredMixin for testing
     """Sports Hub - Sports betting and analytics"""
     template_name = 'unified/sports_hub.html'
-    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -413,3 +412,156 @@ class NotificationsAPIView(LoginRequiredMixin, View):
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+
+class BettingHistoryView(TemplateView):
+    """Betting history page showing user's past bets and predictions"""
+    template_name = 'unified/betting_history.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Import models here to avoid circular imports
+        from sports.models import UserBet, MLPrediction
+        from django.db.models import Sum, Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Get user bets if authenticated, otherwise show demo data
+        if self.request.user.is_authenticated:
+            # Get all user bets (base queryset - no slice yet)
+            user_bets_qs = UserBet.objects.filter(
+                user=self.request.user
+            ).select_related(
+                'game', 'prediction', 'selected_team'
+            ).order_by('-created_at')
+
+            # Calculate statistics on full queryset
+            total_bets = user_bets_qs.count()
+            won_bets = user_bets_qs.filter(status='WON').count()
+            lost_bets = user_bets_qs.filter(status='LOST').count()
+            pending_bets = user_bets_qs.filter(status='PENDING').count()
+
+            total_wagered = user_bets_qs.aggregate(
+                total=Sum('bet_amount')
+            )['total'] or 0
+
+            total_profit = user_bets_qs.filter(
+                profit_loss__isnull=False
+            ).aggregate(
+                total=Sum('profit_loss')
+            )['total'] or 0
+
+            win_rate = (won_bets / total_bets * 100) if total_bets > 0 else 0
+
+            # Get recent bets for display (now we slice)
+            recent_bets = []
+            for bet in user_bets_qs[:20]:
+                recent_bets.append({
+                    'id': str(bet.id),
+                    'date': bet.created_at.strftime('%Y-%m-%d %H:%M'),
+                    'game': f"{bet.game.away_team} @ {bet.game.home_team}",
+                    'sport': bet.game.sport,
+                    'pick': bet.selected_team.name,
+                    'bet_type': bet.bet_type,
+                    'amount': float(bet.bet_amount),
+                    'odds': float(bet.odds_at_placement),
+                    'status': bet.status,
+                    'profit_loss': float(bet.profit_loss) if bet.profit_loss else None,
+                })
+
+            context['user_bets'] = recent_bets
+            context['stats'] = {
+                'total_bets': total_bets,
+                'won_bets': won_bets,
+                'lost_bets': lost_bets,
+                'pending_bets': pending_bets,
+                'win_rate': round(win_rate, 1),
+                'total_wagered': float(total_wagered),
+                'total_profit': float(total_profit),
+                'roi': round((total_profit / total_wagered * 100) if total_wagered > 0 else 0, 1)
+            }
+        else:
+            # Demo data for non-authenticated users
+            context['user_bets'] = []
+            context['stats'] = {
+                'total_bets': 0,
+                'won_bets': 0,
+                'lost_bets': 0,
+                'pending_bets': 0,
+                'win_rate': 0,
+                'total_wagered': 0,
+                'total_profit': 0,
+                'roi': 0
+            }
+
+        return context
+
+
+class OddsCalculatorView(TemplateView):
+    """Odds calculator page for converting odds formats and calculating probabilities"""
+    template_name = 'unified/odds_calculator.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+class LiveScoresView(TemplateView):
+    """Live scores page with real-time score updates"""
+    template_name = 'unified/live_scores.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Import models
+        from sports.models import Game
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Get today's date range
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+
+        # Get games for today only (live, scheduled, or completed today)
+        live_games = Game.objects.filter(
+            scheduled_start__gte=today_start,
+            scheduled_start__lt=today_end
+        ).select_related('home_team', 'away_team').order_by('scheduled_start')
+
+        # Format games for display
+        games_by_sport = {}
+        for game in live_games:
+            # Use league abbreviation to determine sport
+            league_abbrev = game.league.abbreviation if game.league else 'OTHER'
+
+            # Group by league abbreviation (NFL, NBA, MLB, NHL, NCAAF, etc.)
+            sport_key = league_abbrev
+
+            if sport_key not in games_by_sport:
+                games_by_sport[sport_key] = []
+
+            # Format team names: just use the name field (it already includes city for NFL teams)
+            def format_team_name(team):
+                if not team:
+                    return 'TBD'
+                # Team name already includes city (e.g., "Cincinnati Bengals", "Denver Broncos")
+                # For teams without city in name (like college teams), just show name
+                return team.name
+
+            games_by_sport[sport_key].append({
+                'id': str(game.id),
+                'home_team': format_team_name(game.home_team),
+                'away_team': format_team_name(game.away_team),
+                'home_score': game.home_score or 0,
+                'away_score': game.away_score or 0,
+                'status': game.status,
+                'game_date': game.scheduled_start.strftime('%Y-%m-%d %H:%M') if game.scheduled_start else 'TBD',
+                'period': game.current_period or 'Pre-Game',
+            })
+
+        context['games_by_sport'] = games_by_sport
+        context['total_games'] = live_games.count()
+
+        return context
