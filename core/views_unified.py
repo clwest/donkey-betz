@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class UnifiedDashboardView(TemplateView):
-    """Main dashboard combining all platform features"""
-    template_name = 'unified/dashboard.html'
+    """Main dashboard combining all platform features - Using AI Production Hub"""
+    template_name = 'ai_production_hub.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
