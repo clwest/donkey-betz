@@ -815,6 +815,153 @@ def generate_video_script(request):
         }
     })
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_email(request):
+    """
+    Generate email content - Phase 4: Frontend Reality Fix
+    """
+    user = request.user
+    data = json.loads(request.body)
+
+    purpose = data.get('purpose', 'general')
+    recipient = data.get('recipient', 'customer')
+    tone = data.get('tone', 'professional')
+    key_points = data.get('key_points', [])
+
+    logger.info(f"📧 Email generation request from {user.username}: {purpose}")
+
+    # Generate email based on purpose
+    email_templates = {
+        'marketing': {
+            'subject': 'Exciting Updates from Our Team',
+            'preview': 'We have some great news to share with you...',
+            'body': '''Hi there,
+
+We're excited to share some updates that we think you'll love!
+
+{key_points}
+
+We value your continued support and look forward to serving you better.
+
+Best regards,
+The Team'''
+        },
+        'newsletter': {
+            'subject': 'Your Weekly Newsletter',
+            'preview': 'This week\'s highlights and insights...',
+            'body': '''Hello,
+
+Here are this week's top stories and insights:
+
+{key_points}
+
+Stay tuned for more next week!
+
+Cheers,
+Newsletter Team'''
+        },
+        'transactional': {
+            'subject': 'Your Account Update',
+            'preview': 'Important information about your account...',
+            'body': '''Dear Customer,
+
+We're writing to inform you about recent activity on your account:
+
+{key_points}
+
+If you have any questions, please don't hesitate to contact us.
+
+Sincerely,
+Customer Support'''
+        }
+    }
+
+    template = email_templates.get(purpose, email_templates['marketing'])
+
+    # Format key points
+    formatted_points = '\n'.join([f"• {point}" for point in key_points]) if key_points else "• Check out our latest features\n• Explore new opportunities\n• Join our community"
+
+    return Response({
+        'success': True,
+        'email': {
+            'id': int(datetime.now().timestamp()),
+            'purpose': purpose,
+            'recipient': recipient,
+            'tone': tone,
+            'subject': template['subject'],
+            'preview_text': template['preview'],
+            'body': template['body'].format(key_points=formatted_points),
+            'estimated_read_time': '2 minutes',
+            'call_to_action': 'Learn More',
+            'created_at': datetime.now().isoformat(),
+            'metadata': {
+                'word_count': len(template['body'].split()),
+                'character_count': len(template['body']),
+                'has_personalization': True
+            }
+        }
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_podcast_script(request):
+    """
+    Generate podcast episode script - Phase 4: Frontend Reality Fix
+    """
+    user = request.user
+    data = json.loads(request.body)
+
+    topic = data.get('topic', '')
+    duration = data.get('duration', 30)  # minutes
+    style = data.get('style', 'conversational')
+    num_hosts = data.get('num_hosts', 1)
+
+    logger.info(f"🎙️ Podcast script generation from {user.username}: {topic}")
+
+    # Calculate segments based on duration
+    intro_time = 2
+    main_time = duration - 5
+    outro_time = 3
+
+    return Response({
+        'success': True,
+        'podcast_script': {
+            'id': int(datetime.now().timestamp()),
+            'topic': topic,
+            'duration_minutes': duration,
+            'style': style,
+            'num_hosts': num_hosts,
+            'segments': [
+                {
+                    'segment_number': 1,
+                    'type': 'intro',
+                    'duration_minutes': intro_time,
+                    'content': f'[MUSIC INTRO]\n\nHost: Welcome back to the show! Today we\'re diving into {topic}. This is going to be an exciting episode, so let\'s get started!',
+                    'notes': 'Upbeat and engaging opener'
+                },
+                {
+                    'segment_number': 2,
+                    'type': 'main_content',
+                    'duration_minutes': main_time,
+                    'content': f'Host: Let\'s break down {topic} into digestible pieces. First, let\'s talk about why this matters...\n\n[Discussion of key points, examples, and insights]\n\n[If multiple hosts: Back-and-forth conversation exploring different angles]',
+                    'notes': 'Deep dive with examples and stories'
+                },
+                {
+                    'segment_number': 3,
+                    'type': 'outro',
+                    'duration_minutes': outro_time,
+                    'content': 'Host: That wraps up our discussion on {topic}. Key takeaways: [Summary of main points]\n\nThanks for listening! Subscribe for more episodes, and we\'ll see you next time!\n\n[MUSIC OUTRO]',
+                    'notes': 'Strong call-to-action and closer'
+                }
+            ],
+            'total_word_count': duration * 150,  # ~150 words per minute
+            'estimated_prep_time': '2-4 hours',
+            'suggested_music': ['Upbeat intro', 'Subtle background', 'Strong outro'],
+            'created_at': datetime.now().isoformat()
+        }
+    })
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def content_templates(request):

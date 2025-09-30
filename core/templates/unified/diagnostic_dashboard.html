@@ -191,7 +191,7 @@
     let ws = null;
 
     function initWebSocket() {
-        const wsUrl = 'ws://localhost:8000/ws/diagnostic/';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/diagnostic/`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {

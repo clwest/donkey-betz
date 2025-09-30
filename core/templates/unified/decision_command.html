@@ -259,7 +259,7 @@
 
     // Initialize WebSocket connection
     function initWebSocket() {
-        const wsUrl = 'ws://localhost:8000/ws/decision-command/';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/decision-command/`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {

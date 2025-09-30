@@ -381,7 +381,7 @@
     };
 
     function connectWebSocket() {
-        const wsUrl = 'ws://localhost:8000/ws/monetization-hub/';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/monetization-hub/`;
 
         console.log('Connecting to WebSocket:', wsUrl);
         ws = new WebSocket(wsUrl);

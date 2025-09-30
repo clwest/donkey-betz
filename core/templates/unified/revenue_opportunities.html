@@ -535,7 +535,7 @@
     };
 
     function connectWebSocket() {
-        const wsUrl = 'ws://localhost:8000/ws/revenue-opportunities/';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/revenue-opportunities/`;
 
         console.log('Connecting to WebSocket:', wsUrl);
         ws = new WebSocket(wsUrl);

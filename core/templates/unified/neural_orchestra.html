@@ -148,7 +148,7 @@
     let connections = [];
 
     function initWebSocket() {
-        const wsUrl = 'ws://localhost:8000/ws/neural-orchestra/';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/neural-orchestra/`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {

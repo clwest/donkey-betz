@@ -369,7 +369,7 @@ const maxReconnectAttempts = 5;
 let isTyping = false;
 
 function connectWebSocket() {
-    const wsUrl = 'ws://localhost:8000/ws/personal-assistant/';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/personal-assistant/`;
     console.log('Connecting to Personal Assistant WebSocket:', wsUrl);
 
     socket = new WebSocket(wsUrl);

@@ -555,7 +555,10 @@
 let socket = null;
 
 function connectWebSocket() {
-    const wsUrl = 'ws://localhost:8000/ws/ai-nexus/';
+    // Phase 5: Frontend Reality Fix - Dynamic WebSocket URL
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws/ai-nexus/`;
     console.log('Connecting to AI Nexus WebSocket:', wsUrl);
 
     socket = new WebSocket(wsUrl);
