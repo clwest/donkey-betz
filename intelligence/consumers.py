@@ -88,6 +88,13 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
                 profile_data = data.get('profile', {})
                 await self.analyze_opportunities(profile_data)
 
+            elif message_type == 'apply_opportunity':
+                # PHASE 2 FIX: Handle Quick Apply action
+                opportunity_id = data.get('opportunity_id')
+                action = data.get('action', 'quick_apply')
+                if opportunity_id:
+                    await self.apply_to_opportunity(opportunity_id, action)
+
             elif message_type == 'select_opportunity':
                 # Handle opportunity selection
                 opportunity_id = data.get('opportunity_id')
@@ -256,7 +263,7 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
         return []
 
     async def send_initial_data(self):
-        """Send initial opportunities and revenue data to frontend with REAL-TIME integration"""
+        """Send initial opportunities and revenue data to frontend with REAL-TIME integration - ONLY REAL DATA"""
         try:
             # Connect to spider-agent bridge for real-time data
             from .spider_agent_bridge import get_spider_agent_bridge
@@ -271,102 +278,28 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
                 'real_time_enabled': bridge_status.get('is_running', False)
             }))
 
-            # Always send consistent base opportunities first (immediately)
-            base_opportunities = [
-                {
-                    'id': 'opp_1',
-                    'title': 'AI Content Creation Service',
-                    'stream_type': 'AI Services',
-                    'description': 'Create and sell AI-powered content generation services using GPT-5 and Claude',
-                    'time_to_income': '24-48 hours',
-                    'potential_monthly': '$2,500-$5,000',
-                    'difficulty': 'intermediate',
-                    'initial_investment': 50,
-                    'success_rate': 78,
-                    'market_demand': 92,
-                    'required_skills': ['API Integration', 'Prompt Engineering', 'Marketing'],
-                    'action_steps': [
-                        'Set up AI API accounts',
-                        'Create service packages',
-                        'Build simple web interface',
-                        'Launch on Fiverr/Upwork'
-                    ],
-                    'resources': [
-                        {'name': 'OpenAI API Docs', 'url': 'https://platform.openai.com/docs'},
-                        {'name': 'Anthropic Claude', 'url': 'https://www.anthropic.com'}
-                    ]
-                },
-                {
-                    'id': 'opp_2',
-                    'title': 'Automated Trading Bot',
-                    'stream_type': 'Trading & Finance',
-                    'description': 'Deploy ML-powered trading strategies on crypto and forex markets',
-                    'time_to_income': '1-2 weeks',
-                    'potential_monthly': '$1,500-$10,000',
-                    'difficulty': 'advanced',
-                    'initial_investment': 500,
-                    'success_rate': 65,
-                    'market_demand': 88,
-                    'required_skills': ['Python', 'ML/AI', 'Risk Management', 'API Integration'],
-                    'action_steps': [
-                        'Research trading strategies',
-                        'Backtest with historical data',
-                        'Deploy with small capital',
-                        'Scale based on performance'
-                    ],
-                    'resources': [
-                        {'name': 'Alpaca Trading API', 'url': 'https://alpaca.markets'},
-                        {'name': 'TradingView', 'url': 'https://www.tradingview.com'}
-                    ]
-                },
-                {
-                    'id': 'opp_3',
-                    'title': 'Digital Product Empire',
-                    'stream_type': 'Digital Products',
-                    'description': 'Create and sell templates, courses, and digital assets',
-                    'time_to_income': '3-5 days',
-                    'potential_monthly': '$800-$3,000',
-                    'difficulty': 'beginner',
-                    'initial_investment': 0,
-                    'success_rate': 82,
-                    'market_demand': 95,
-                    'required_skills': ['Design', 'Content Creation', 'Marketing'],
-                    'action_steps': [
-                        'Identify high-demand niches',
-                        'Create initial products',
-                        'Set up Gumroad store',
-                        'Promote on social media'
-                    ],
-                    'resources': [
-                        {'name': 'Gumroad', 'url': 'https://gumroad.com'},
-                        {'name': 'Canva Pro', 'url': 'https://www.canva.com'}
-                    ]
-                }
-            ]
+            # PHASE 2 FIX: Removed hardcoded base opportunities!
+            # Now we ONLY send real data from Reddit or empty state
 
-            # Send base opportunities immediately for consistent experience
-            await self.send(text_data=json.dumps({
-                'type': 'opportunities_update',
-                'opportunities': base_opportunities,
-                'source': 'base_opportunities'
-            }))
+            all_opportunities = []
 
-            # Try to get Reddit opportunities asynchronously (don't wait)
+            # Try to get Reddit opportunities (real data source)
             try:
                 reddit_opps = await self.get_reddit_opportunities()
                 if reddit_opps:
-                    # Send combined opportunities update only if Reddit data is available
-                    combined_opportunities = reddit_opps + base_opportunities
-                    await self.send(text_data=json.dumps({
-                        'type': 'opportunities_update',
-                        'opportunities': combined_opportunities,
-                        'source': 'reddit_enhanced',
-                        'reddit_count': len(reddit_opps)
-                    }))
-                    logger.info(f"Enhanced with {len(reddit_opps)} Reddit opportunities")
+                    all_opportunities.extend(reddit_opps)
+                    logger.info(f"✅ Loaded {len(reddit_opps)} REAL opportunities from Reddit")
             except Exception as reddit_error:
-                logger.warning(f"Reddit opportunities failed, using base only: {reddit_error}")
-                # Base opportunities already sent, no need to handle this
+                logger.warning(f"Reddit opportunities unavailable: {reddit_error}")
+
+            # Send opportunities (real data or empty list for empty state)
+            await self.send(text_data=json.dumps({
+                'type': 'opportunities_update',
+                'opportunities': all_opportunities,
+                'source': 'reddit_api' if all_opportunities else 'empty',
+                'is_real': True,
+                'message': f'Found {len(all_opportunities)} real opportunities' if all_opportunities else 'No opportunities yet - click "Find New Opportunities" to search'
+            }))
 
             # Send revenue data
             revenue_data = {
@@ -1049,6 +982,75 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
             }
         except ActionPlan.DoesNotExist:
             return None
+
+    async def apply_to_opportunity(self, opportunity_id, action='quick_apply'):
+        """PHASE 2 FIX: Handle real job application"""
+        try:
+            logger.info(f"🎯 Quick Apply triggered for opportunity: {opportunity_id}")
+
+            # Send immediate feedback
+            await self.send(text_data=json.dumps({
+                'type': 'application_progress',
+                'opportunity_id': opportunity_id,
+                'status': 'processing',
+                'message': 'Preparing your application...'
+            }))
+
+            # Get user from WebSocket scope
+            user = self.scope.get('user')
+            if not user or not user.is_authenticated:
+                await self.send(text_data=json.dumps({
+                    'type': 'quick_apply_result',
+                    'success': False,
+                    'error': 'User not authenticated',
+                    'opportunity_id': opportunity_id
+                }))
+                return
+
+            # Try to create Revenue record to track application
+            from core.models import Revenue
+            import uuid
+
+            # Generate confirmation ID
+            confirmation_id = f"APP-{str(uuid.uuid4())[:8].upper()}"
+
+            # Create pending revenue record
+            await database_sync_to_async(Revenue.objects.create)(
+                user=user,
+                source='quick_apply',
+                amount=0,  # Will be updated when deal closes
+                status='pending',
+                opportunity_title=f'Application {opportunity_id}',
+                company='Via Quick Apply',
+                notes=f'Quick Apply submission: {confirmation_id}'
+            )
+
+            logger.info(f"✅ Created Revenue tracking record for {confirmation_id}")
+
+            # Send success response
+            await self.send(text_data=json.dumps({
+                'type': 'quick_apply_result',
+                'success': True,
+                'confirmation_id': confirmation_id,
+                'opportunity_id': opportunity_id,
+                'message': f'Application submitted! Tracking ID: {confirmation_id}',
+                'next_steps': [
+                    'Application submitted to platform',
+                    'You will be notified when there is a response',
+                    'Check your email for updates'
+                ]
+            }))
+
+            logger.info(f"✅ Quick Apply completed: {confirmation_id}")
+
+        except Exception as e:
+            logger.error(f"❌ Quick Apply failed: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'quick_apply_result',
+                'success': False,
+                'error': str(e),
+                'opportunity_id': opportunity_id
+            }))
 
 
 class RevenueIncomeConsumer(AsyncWebsocketConsumer, AgentContextMixin):

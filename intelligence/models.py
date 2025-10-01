@@ -5,8 +5,12 @@ Models for Intelligence System - Action Plans and Execution
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 import json
 import uuid
+
+# Import SpiderQualityMetrics so Django discovers it
+from .spider_quality_tracker import SpiderQualityMetrics
 
 User = get_user_model()
 

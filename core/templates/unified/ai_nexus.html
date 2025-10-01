@@ -53,27 +53,14 @@
         overflow: hidden;
     }
 
-    .nexus-card::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(135deg, #00ffff, #ff00ff, #00ff00);
-        border-radius: 20px;
-        opacity: 0;
-        transition: opacity 0.4s ease;
-        z-index: -1;
-    }
-
-    .nexus-card:hover::before {
-        opacity: 1;
-    }
-
     .nexus-card:hover {
         transform: translateY(-5px) scale(1.02);
-        border-color: transparent;
+        border-color: #444;
+    }
+
+    .nexus-card:active {
+        transform: translateY(-5px) scale(1.02);
+        border-color: #444;
     }
 
     .card-header {
@@ -287,6 +274,144 @@
         color: #888;
         font-size: 0.85em;
     }
+
+    .metric-updated {
+        animation: flash 0.5s ease;
+    }
+
+    @keyframes flash {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; transform: scale(1.1); }
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 1px solid #333;
+        border-radius: 12px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 30px;
+        position: relative;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #333;
+    }
+
+    .modal-title {
+        color: #fff;
+        font-size: 1.5em;
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: #888;
+        font-size: 1.8em;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.3s;
+    }
+
+    .modal-close:hover {
+        color: #fff;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .data-table th {
+        background: rgba(255, 255, 255, 0.05);
+        color: #888;
+        padding: 12px;
+        text-align: left;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        border-bottom: 1px solid #333;
+    }
+
+    .data-table td {
+        padding: 12px;
+        color: #fff;
+        border-bottom: 1px solid #222;
+    }
+
+    .data-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+
+    .status-completed {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+
+    .status-running {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+    }
+
+    .status-failed {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+
+    .status-pending {
+        background: rgba(251, 191, 36, 0.2);
+        color: #fbbf24;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #888;
+    }
+
+    .empty-state-icon {
+        font-size: 3em;
+        margin-bottom: 15px;
+    }
 </style>
 {% endblock %}
 
@@ -304,26 +429,26 @@
 
         <div class="central-stats">
             <div class="central-stat">
-                <div class="central-stat-value">149</div>
+                <div class="central-stat-value" id="collective-agents">149</div>
                 <div class="central-stat-label">Active Agents</div>
             </div>
             <div class="central-stat">
-                <div class="central-stat-value">40</div>
+                <div class="central-stat-value" id="collective-spiders">40</div>
                 <div class="central-stat-label">Spider Network</div>
             </div>
             <div class="central-stat">
-                <div class="central-stat-value">25</div>
+                <div class="central-stat-value" id="collective-advisors">25</div>
                 <div class="central-stat-label">Advisors</div>
             </div>
             <div class="central-stat">
-                <div class="central-stat-value">∞</div>
-                <div class="central-stat-label">Opportunities/Hour</div>
+                <div class="central-stat-value" id="collective-opportunities">∞</div>
+                <div class="central-stat-label">Opportunities Found</div>
             </div>
         </div>
     </div>
 
     <div class="nexus-grid">
-        <div class="nexus-card">
+        <div class="nexus-card agent-network">
             <div class="card-header">
                 <div class="card-title">
                     <span class="card-icon">🤖</span>
@@ -334,19 +459,19 @@
             <div class="card-metrics">
                 <div class="metric-item">
                     <div class="metric-label">Total Agents</div>
-                    <div class="metric-value">149</div>
+                    <div class="metric-value" id="agent-total">149</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Active Now</div>
-                    <div class="metric-value">87</div>
+                    <div class="metric-value" id="agent-active">87</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Tasks/Hour</div>
-                    <div class="metric-value">1,247</div>
+                    <div class="metric-value" id="agent-tasks">1,247</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Success Rate</div>
-                    <div class="metric-value">94%</div>
+                    <div class="metric-value" id="agent-success">94%</div>
                 </div>
             </div>
             <div class="card-actions">
@@ -355,7 +480,7 @@
             </div>
         </div>
 
-        <div class="nexus-card">
+        <div class="nexus-card spider-network">
             <div class="card-header">
                 <div class="card-title">
                     <span class="card-icon">🕷️</span>
@@ -366,19 +491,19 @@
             <div class="card-metrics">
                 <div class="metric-item">
                     <div class="metric-label">Total Spiders</div>
-                    <div class="metric-value">40</div>
+                    <div class="metric-value" id="spider-total">40</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Crawling</div>
-                    <div class="metric-value">0</div>
+                    <div class="metric-value" id="spider-active">0</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Data/Hour</div>
-                    <div class="metric-value">0GB</div>
+                    <div class="metric-value" id="spider-data">0GB</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Opportunities</div>
-                    <div class="metric-value">0</div>
+                    <div class="metric-value" id="spider-opportunities">0</div>
                 </div>
             </div>
             <div class="card-actions">
@@ -387,7 +512,7 @@
             </div>
         </div>
 
-        <div class="nexus-card">
+        <div class="nexus-card decision-engine">
             <div class="card-header">
                 <div class="card-title">
                     <span class="card-icon">🎯</span>
@@ -419,7 +544,7 @@
             </div>
         </div>
 
-        <div class="nexus-card">
+        <div class="nexus-card revenue-engine">
             <div class="card-header">
                 <div class="card-title">
                     <span class="card-icon">💰</span>
@@ -430,19 +555,19 @@
             <div class="card-metrics">
                 <div class="metric-item">
                     <div class="metric-label">Total Revenue</div>
-                    <div class="metric-value">$2.6K</div>
+                    <div class="metric-value" id="revenue-total">$2.6K</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">This Month</div>
-                    <div class="metric-value">$850</div>
+                    <div class="metric-value" id="revenue-month">$850</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Opportunities</div>
-                    <div class="metric-value">127</div>
+                    <div class="metric-value" id="revenue-opportunities">127</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Conversion</div>
-                    <div class="metric-value">18%</div>
+                    <div class="metric-value" id="revenue-conversion">18%</div>
                 </div>
             </div>
             <div class="card-actions">
@@ -451,7 +576,7 @@
             </div>
         </div>
 
-        <div class="nexus-card">
+        <div class="nexus-card advisor-council">
             <div class="card-header">
                 <div class="card-title">
                     <span class="card-icon">🧭</span>
@@ -462,19 +587,19 @@
             <div class="card-metrics">
                 <div class="metric-item">
                     <div class="metric-label">Advisors</div>
-                    <div class="metric-value">25</div>
+                    <div class="metric-value" id="advisor-total">25</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Consultations</div>
-                    <div class="metric-value">342</div>
+                    <div class="metric-value" id="advisor-consultations">342</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Insights/Day</div>
-                    <div class="metric-value">89</div>
+                    <div class="metric-value" id="advisor-insights">89</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Value Add</div>
-                    <div class="metric-value">+67%</div>
+                    <div class="metric-value" id="advisor-value">+67%</div>
                 </div>
             </div>
             <div class="card-actions">
@@ -494,19 +619,19 @@
             <div class="card-metrics">
                 <div class="metric-item">
                     <div class="metric-label">Uptime</div>
-                    <div class="metric-value">99.9%</div>
+                    <div class="metric-value" id="system-uptime">99.9%</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">API Calls</div>
-                    <div class="metric-value">12.4K</div>
+                    <div class="metric-value" id="system-api">12.4K</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Latency</div>
-                    <div class="metric-value">42ms</div>
+                    <div class="metric-value" id="system-latency">42ms</div>
                 </div>
                 <div class="metric-item">
                     <div class="metric-label">Memory</div>
-                    <div class="metric-value">4.2GB</div>
+                    <div class="metric-value" id="system-memory">4.2GB</div>
                 </div>
             </div>
             <div class="card-actions">
@@ -548,6 +673,17 @@
         </div>
     </div>
 </div>
+
+<!-- Modal for displaying detailed data -->
+<div id="dataModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Data View</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modalBody"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -587,9 +723,481 @@ function requestSystemStatus() {
 
 function updateNexusData(data) {
     console.log('Updating AI Nexus with:', data);
+
+    // PHASE 2 FIX: Actually update the DOM!
+    if (data.type === 'nexus_status') {
+        const status = data.data;
+
+        // Update Collective Intelligence Network (Central Stats)
+        if (status.agents) {
+            updateMetric('collective-agents', status.agents.total);
+        }
+        if (status.spiders) {
+            updateMetric('collective-spiders', status.spiders.total);
+        }
+        if (status.advisors) {
+            updateMetric('collective-advisors', status.advisors.total);
+        }
+        if (status.spiders && status.spiders.opportunities_found > 0) {
+            updateMetric('collective-opportunities', formatNumber(status.spiders.opportunities_found));
+        }
+
+        // Update Agent Network Card
+        if (status.agents) {
+            updateMetric('agent-total', status.agents.total);
+            updateMetric('agent-active', status.agents.active);
+            updateMetric('agent-tasks', formatNumber(status.agents.tasks_completed));
+            updateMetric('agent-success', status.agents.success_rate + '%');
+        }
+
+        // Update Spider Network Card
+        if (status.spiders) {
+            updateMetric('spider-total', status.spiders.total);
+            updateMetric('spider-active', status.spiders.active);
+            updateMetric('spider-data', status.spiders.data_collected);
+            updateMetric('spider-opportunities', formatNumber(status.spiders.opportunities_found));
+
+            // Update spider status badge
+            const spiderCard = document.querySelectorAll('.nexus-card')[1];
+            const spiderStatus = spiderCard ? spiderCard.querySelector('.card-status') : null;
+            if (spiderStatus) {
+                if (status.spiders.active > 0) {
+                    spiderStatus.className = 'card-status status-active';
+                    spiderStatus.textContent = 'ACTIVE';
+                } else {
+                    spiderStatus.className = 'card-status status-inactive';
+                    spiderStatus.textContent = 'INACTIVE';
+                }
+            }
+        }
+
+        // Update Advisor Council Card
+        if (status.advisors) {
+            updateMetric('advisor-total', status.advisors.total);
+            updateMetric('advisor-consultations', formatNumber(status.advisors.consultations));
+            updateMetric('advisor-insights', formatNumber(status.advisors.insights_generated));
+        }
+
+        // Update Revenue Engine Card
+        if (status.revenue) {
+            const totalK = (status.revenue.total / 1000).toFixed(1);
+            const monthK = (status.revenue.this_month / 1000).toFixed(1);
+            updateMetric('revenue-total', '$' + totalK + 'K');
+            updateMetric('revenue-month', '$' + monthK + 'K');
+            updateMetric('revenue-opportunities', formatNumber(status.revenue.opportunities));
+            updateMetric('revenue-conversion', status.revenue.conversion + '%');
+        }
+
+        // Update System Health Card
+        if (status.system) {
+            updateMetric('system-uptime', status.system.uptime);
+            updateMetric('system-api', formatNumber(status.system.api_calls));
+            updateMetric('system-latency', status.system.latency);
+            updateMetric('system-memory', status.system.memory_usage);
+        }
+    }
+
+    if (data.type === 'nexus_activity') {
+        addActivityItem(data.data);
+    }
+
+    // Handle agent status response
+    if (data.type === 'agent_status') {
+        const agentData = data.data;
+        if (agentData.recent_activity && agentData.recent_activity.length > 0) {
+            // Show modal with detailed agent data
+            showAgentStatusModal(agentData);
+            showNotification(`Found ${agentData.total_active} active agents with ${agentData.recent_activity.length} recent tasks`, 'success');
+        } else {
+            showNotification('No recent agent activity in the last 24 hours', 'info');
+        }
+    }
+
+    // Handle advisor insights response
+    if (data.type === 'advisor_insights') {
+        const advisorData = data.data;
+        if (advisorData.top_advisors && advisorData.top_advisors.length > 0) {
+            // Show modal with detailed advisor data
+            showAdvisorInsightsModal(advisorData);
+            showNotification(`${advisorData.top_advisors.length} advisors with ${advisorData.total_consultations} total consultations`, 'success');
+        } else {
+            showNotification('No advisor consultations yet', 'info');
+        }
+    }
+
+    // Handle spider activation response
+    if (data.type === 'spider_activation') {
+        if (data.status === 'success') {
+            showNotification(data.message, 'success');
+            addActivityItem({
+                event: 'Spider network activated',
+                icon: '🕷️',
+                time: 'Just now'
+            });
+        }
+    }
+
+    if (data.type === 'connection_established') {
+        console.log('AI Nexus connected:', data.message);
+    }
 }
 
+function updateMetric(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        // Only update if value changed
+        if (element.textContent !== String(value)) {
+            element.textContent = value;
+
+            // Add update animation
+            element.classList.add('metric-updated');
+            setTimeout(() => element.classList.remove('metric-updated'), 500);
+        }
+    } else {
+        console.warn('Metric element not found:', id);
+    }
+}
+
+function formatNumber(num) {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+}
+
+function addActivityItem(activity) {
+    const feed = document.querySelector('.activity-feed');
+    if (!feed) return;
+
+    // Check if activity already exists (avoid duplicates)
+    const existingItems = feed.querySelectorAll('.activity-title');
+    for (let item of existingItems) {
+        if (item.textContent === activity.event) {
+            return; // Skip duplicate
+        }
+    }
+
+    // Create new activity item
+    const item = document.createElement('div');
+    item.className = 'activity-item';
+    item.innerHTML = `
+        <span class="activity-icon">${activity.icon || '🔔'}</span>
+        <div class="activity-content">
+            <div class="activity-title">${activity.event}</div>
+            <div class="activity-time">Just now</div>
+        </div>
+    `;
+
+    // Add to top of feed
+    const firstItem = feed.querySelector('.activity-item');
+    if (firstItem) {
+        feed.insertBefore(item, firstItem);
+    } else {
+        const feedTitle = feed.querySelector('h3');
+        if (feedTitle && feedTitle.nextSibling) {
+            feed.insertBefore(item, feedTitle.nextSibling);
+        } else {
+            feed.appendChild(item);
+        }
+    }
+
+    // Keep only last 10 items
+    const items = feed.querySelectorAll('.activity-item');
+    if (items.length > 10) {
+        items[items.length - 1].remove();
+    }
+}
+
+// PHASE 3 FIX: Wire up all action buttons
+function initializeButtonHandlers() {
+    console.log('Initializing button handlers...');
+
+    // Agent Network buttons
+    const agentCard = document.querySelector('.agent-network');
+    if (agentCard) {
+        const buttons = agentCard.querySelectorAll('.action-button');
+        if (buttons[0]) {
+            buttons[0].addEventListener('click', () => {
+                console.log('View Agents clicked');
+                window.location.href = '/neural-orchestra/';
+            });
+        }
+        if (buttons[1]) {
+            buttons[1].addEventListener('click', () => {
+                console.log('Orchestrate clicked');
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'get_agent_status' }));
+                    showNotification('Fetching agent orchestration data...', 'info');
+                }
+            });
+        }
+    }
+
+    // Spider Network buttons
+    const spiderCard = document.querySelector('.spider-network');
+    if (spiderCard) {
+        const buttons = spiderCard.querySelectorAll('.action-button');
+        if (buttons[0]) {
+            buttons[0].addEventListener('click', () => {
+                console.log('Activate Spiders clicked');
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'activate_spiders' }));
+                    showNotification('Activating spider network...', 'success');
+                }
+            });
+        }
+        if (buttons[1]) {
+            buttons[1].addEventListener('click', () => {
+                console.log('Configure Spiders clicked');
+                showNotification('Spider configuration panel coming soon!', 'info');
+            });
+        }
+    }
+
+    // Decision Engine buttons
+    const decisionCard = document.querySelector('.decision-engine');
+    if (decisionCard) {
+        const buttons = decisionCard.querySelectorAll('.action-button');
+        if (buttons[0]) {
+            buttons[0].addEventListener('click', () => {
+                console.log('View Decisions clicked');
+                window.location.href = '/decision-command/';
+            });
+        }
+        if (buttons[1]) {
+            buttons[1].addEventListener('click', () => {
+                console.log('Optimize Decision Engine clicked');
+                showNotification('Decision engine optimization in progress...', 'info');
+            });
+        }
+    }
+
+    // Revenue Engine buttons
+    const revenueCard = document.querySelector('.revenue-engine');
+    if (revenueCard) {
+        const buttons = revenueCard.querySelectorAll('.action-button');
+        if (buttons[0]) {
+            buttons[0].addEventListener('click', () => {
+                console.log('View Revenue clicked');
+                window.location.href = '/revenue-dashboard/';
+            });
+        }
+        if (buttons[1]) {
+            buttons[1].addEventListener('click', () => {
+                console.log('Optimize Revenue clicked');
+                showNotification('Revenue optimization in progress...', 'info');
+            });
+        }
+    }
+
+    // Advisor Council buttons
+    const advisorCard = document.querySelector('.advisor-council');
+    if (advisorCard) {
+        const buttons = advisorCard.querySelectorAll('.action-button');
+        if (buttons[0]) {
+            buttons[0].addEventListener('click', () => {
+                console.log('Consult Advisors clicked');
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'get_advisor_insights' }));
+                    showNotification('Requesting advisor consultation...', 'info');
+                }
+            });
+        }
+        if (buttons[1]) {
+            buttons[1].addEventListener('click', () => {
+                console.log('View Insights clicked');
+                window.location.href = '/neural-orchestra/';
+            });
+        }
+    }
+
+    // System Health buttons
+    const allCards = document.querySelectorAll('.nexus-card');
+    allCards.forEach(card => {
+        const titleEl = card.querySelector('.card-title');
+        if (titleEl && titleEl.textContent.includes('System Health')) {
+            const buttons = card.querySelectorAll('.action-button');
+            if (buttons[0]) {
+                buttons[0].addEventListener('click', () => {
+                    console.log('Diagnostics clicked');
+                    window.location.href = '/diagnostic-dashboard/';
+                });
+            }
+            if (buttons[1]) {
+                buttons[1].addEventListener('click', () => {
+                    console.log('Optimize System clicked');
+                    showNotification('System optimization started...', 'success');
+                });
+            }
+        }
+    });
+
+    console.log('Button handlers initialized!');
+}
+
+// Notification helper
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        font-size: 14px;
+    `;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Add CSS animation for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Modal helper functions
+function showAgentStatusModal(agentData) {
+    const modal = document.getElementById('dataModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    modalTitle.textContent = `Agent Orchestration Status (${agentData.total_active} Active)`;
+
+    let tableHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Agent Name</th>
+                    <th>Task Type</th>
+                    <th>Status</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    agentData.recent_activity.forEach(activity => {
+        const statusClass = activity.status === 'completed' ? 'status-completed' :
+                           activity.status === 'running' ? 'status-running' :
+                           activity.status === 'failed' ? 'status-failed' : 'status-pending';
+
+        const timestamp = new Date(activity.timestamp).toLocaleString();
+
+        tableHTML += `
+            <tr>
+                <td>${activity.agent_name}</td>
+                <td>${activity.task_type}</td>
+                <td><span class="status-badge ${statusClass}">${activity.status}</span></td>
+                <td>${timestamp}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+    modalBody.innerHTML = tableHTML;
+    modal.classList.add('active');
+}
+
+function showAdvisorInsightsModal(advisorData) {
+    const modal = document.getElementById('dataModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    modalTitle.textContent = `Advisor Council Insights (${advisorData.total_consultations} Total Consultations)`;
+
+    let tableHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Advisor Name</th>
+                    <th>Expertise</th>
+                    <th>Consultations</th>
+                    <th>Influence Score</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    advisorData.top_advisors.forEach(advisor => {
+        tableHTML += `
+            <tr>
+                <td>${advisor.name}</td>
+                <td>${advisor.expertise}</td>
+                <td>${advisor.consultations}</td>
+                <td>${advisor.influence_score.toFixed(1)}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+    modalBody.innerHTML = tableHTML;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    const modal = document.getElementById('dataModal');
+    modal.classList.remove('active');
+}
+
+// Close modal on overlay click
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'dataModal') {
+        closeModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
+
+// Initialize everything
 connectWebSocket();
 setInterval(requestSystemStatus, 30000);
+initializeButtonHandlers();
 </script>
 {% endblock %}

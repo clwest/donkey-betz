@@ -3,7 +3,7 @@
 
 {% block title %}My AI Learning Dashboard - What Your AI Knows About You{% endblock %}
 
-{% block websocket_url %}ws://localhost:8000/ws/learning-dashboard/{% endblock %}
+{% block websocket_url %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -361,7 +361,9 @@ let socket = null;
 // Initialize WebSocket connection
 function initWebSocket() {
     const wsUrl = '{{ block.super }}';
-    socket = new WebSocket(wsUrl.replace('ws://localhost:8000', 'ws://' + window.location.host));
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    socket = new WebSocket(`${protocol}//${host}/ws/learning-dashboard/`);
 
     socket.onopen = function(e) {
         console.log('✅ WebSocket connected to Learning Dashboard');

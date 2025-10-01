@@ -291,6 +291,14 @@ class BaseAgentExecutor(ABC):
                                   result: ExecutionResult) -> None:
         """Pre-execution setup and validation"""
 
+        # LEARNING LOOP: Retrieve user context for personalized execution
+        if context.user_id:
+            user_context = await self.get_user_context(context.user_id)
+            if user_context:
+                # Add user context to task data
+                task_data['user_context'] = user_context
+                self.logger.info(f"{self.agent_name}: Retrieved user context with {len(user_context.get('recent_preferences', []))} preferences")
+
         # Create output directory if specified
         if context.output_dir:
             context.output_dir.mkdir(parents=True, exist_ok=True)
@@ -561,6 +569,98 @@ class BaseAgentExecutor(ABC):
         except Exception as e:
             self.logger.error(f"{self.agent_name}: File creation failed: {e}")
             raise
+
+    async def get_user_context(self, user_id: str) -> Dict[str, Any]:
+        """
+        LEARNING LOOP: Retrieve user-specific context for personalized execution
+
+        Retrieves user profile, memories, preferences, and agent-specific learning
+        to enable personalized agent execution.
+        """
+        try:
+            from django.contrib.auth import get_user_model
+            from core.models.users.models import EnhancedUserProfile
+            from core.models.conversations.models import UserMemoryContext
+            from core.models.ai_learning.models import UserAgentLearning
+
+            User = get_user_model()
+
+            # Get user
+            try:
+                user = await asyncio.get_event_loop().run_in_executor(
+                    None, User.objects.get, {'id': user_id}
+                )
+            except Exception:
+                self.logger.warning(f"{self.agent_name}: User {user_id} not found")
+                return {}
+
+            context = {}
+
+            # Get enhanced profile context
+            try:
+                profile = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: getattr(user, 'enhanced_profile', None)
+                )
+                if profile:
+                    profile_context = await asyncio.get_event_loop().run_in_executor(
+                        None, profile.get_context_for_ai, 'work'
+                    )
+                    context.update(profile_context)
+            except Exception as e:
+                self.logger.debug(f"{self.agent_name}: Could not retrieve enhanced profile: {e}")
+
+            # Get relevant memories
+            try:
+                memories = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: list(UserMemoryContext.objects.filter(
+                        user=user,
+                        is_active=True,
+                        importance__gte=7
+                    ).order_by('-importance', '-created_at')[:5])
+                )
+
+                context['recent_preferences'] = [
+                    {'type': m.memory_type, 'content': m.content}
+                    for m in memories
+                ]
+            except Exception as e:
+                self.logger.debug(f"{self.agent_name}: Could not retrieve memories: {e}")
+                context['recent_preferences'] = []
+
+            # Get agent-specific learning
+            try:
+                learning_records = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: list(UserAgentLearning.objects.filter(
+                        user=user,
+                        agent_name=self.agent_name
+                    ).order_by('-confidence_score')[:3])
+                )
+
+                context['learned_preferences'] = [
+                    {
+                        'domain': l.learning_domain,
+                        'content': l.learning_content,
+                        'confidence': l.confidence_score
+                    }
+                    for l in learning_records
+                ]
+            except Exception as e:
+                self.logger.debug(f"{self.agent_name}: Could not retrieve agent learning: {e}")
+                context['learned_preferences'] = []
+
+            self.logger.info(
+                f"{self.agent_name}: Retrieved user context with "
+                f"{len(context.get('recent_preferences', []))} memories, "
+                f"{len(context.get('learned_preferences', []))} learned preferences"
+            )
+
+            return context
+
+        except Exception as e:
+            self.logger.error(f"{self.agent_name}: Failed to retrieve user context: {e}")
+            return {}
 
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get performance metrics for this executor"""

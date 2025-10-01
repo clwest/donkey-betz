@@ -61,6 +61,7 @@ class SpiderQualityMetrics(models.Model):
     )
 
     class Meta:
+        app_label = 'intelligence_rt'
         unique_together = ['spider_name', 'source_platform']
         indexes = [
             models.Index(fields=['-quality_score']),
@@ -316,3 +317,66 @@ try:
                 logger.error(f"Error in spider learning loop signal: {e}", exc_info=True)
 except ImportError:
     logger.warning("OpportunityInteraction model not found - spider learning signals not registered")
+
+# LEARNING LOOP: Connect job applications to spider quality
+try:
+    from core.models.jobs.models import JobApplication
+
+    @receiver(post_save, sender=JobApplication)
+    def on_job_application_created(sender, instance, created, **kwargs):
+        """
+        LEARNING LOOP: When user applies to job, update spider quality metrics
+        """
+        if created:
+            try:
+                # Extract spider source from job metadata
+                if hasattr(instance, 'metadata') and isinstance(instance.metadata, dict):
+                    spider_name = instance.metadata.get('spider_name', 'JobSpider')
+                    source_platform = instance.platform or 'unknown'
+
+                    # Get or create metrics for this spider/platform
+                    metrics, _ = SpiderQualityMetrics.objects.get_or_create(
+                        spider_name=spider_name,
+                        source_platform=source_platform
+                    )
+
+                    # Record application (high-value interaction)
+                    metrics.record_interaction('apply')
+
+                    logger.info(
+                        f"🎯 Job application recorded for spider quality: "
+                        f"{source_platform} (quality={metrics.quality_score:.1f})"
+                    )
+            except Exception as e:
+                logger.error(f"Error updating spider quality from job application: {e}")
+
+    @receiver(post_save, sender=JobApplication)
+    def on_job_application_outcome(sender, instance, **kwargs):
+        """
+        LEARNING LOOP: When job application has outcome, update spider quality
+        """
+        # Only process status updates (not creation)
+        if instance.pk and instance.status in ['offer_accepted', 'hired']:
+            try:
+                if hasattr(instance, 'metadata') and isinstance(instance.metadata, dict):
+                    spider_name = instance.metadata.get('spider_name', 'JobSpider')
+                    source_platform = instance.platform or 'unknown'
+
+                    # Get or create metrics
+                    metrics, _ = SpiderQualityMetrics.objects.get_or_create(
+                        spider_name=spider_name,
+                        source_platform=source_platform
+                    )
+
+                    # Record acceptance (highest-value interaction)
+                    metrics.record_interaction('accept')
+
+                    logger.info(
+                        f"✅ Job acceptance recorded for spider quality: "
+                        f"{source_platform} (quality={metrics.quality_score:.1f})"
+                    )
+            except Exception as e:
+                logger.error(f"Error updating spider quality from job outcome: {e}")
+
+except ImportError:
+    logger.warning("JobApplication model not found - job application learning signals not registered")

@@ -52,7 +52,7 @@ class AgentLearningEvent(models.Model):
     related_events = models.ManyToManyField('self', blank=True, symmetrical=False)
 
     class Meta:
-        app_label = 'backend'
+        app_label = 'ai_intelligence'
         ordering = ['-timestamp']
         indexes = [
             models.Index(fields=['agent_id', '-timestamp']),
@@ -106,7 +106,7 @@ class LearningDocument(models.Model):
     categories = models.JSONField(default=list)
 
     class Meta:
-        app_label = 'backend'
+        app_label = 'ai_intelligence'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['agent_id', '-created_at']),
@@ -156,7 +156,7 @@ class AgentKnowledgeBase(models.Model):
     curiosity_factor = models.FloatField(default=0.5, validators=[MinValueValidator(0), MaxValueValidator(1)])
 
     class Meta:
-        app_label = 'backend'
+        app_label = 'ai_intelligence'
         indexes = [
             models.Index(fields=['agent_specialization']),
             models.Index(fields=['last_updated']),
@@ -197,7 +197,7 @@ class LearningEmbedding(models.Model):
     quality_score = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)])
 
     class Meta:
-        app_label = 'backend'
+        app_label = 'ai_intelligence'
         unique_together = ['content_hash', 'embedding_model']
         indexes = [
             models.Index(fields=['agent_id', '-created_at']),
@@ -246,7 +246,7 @@ class AgentLearningSession(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
 
     class Meta:
-        app_label = 'backend'
+        app_label = 'ai_intelligence'
         ordering = ['-started_at']
         indexes = [
             models.Index(fields=['status', '-started_at']),
@@ -299,7 +299,7 @@ class LearningInsight(models.Model):
     validation_score = models.FloatField(default=0.0, validators=[MinValueValidator(0), MaxValueValidator(1)])
 
     class Meta:
-        app_label = 'backend'
+        app_label = 'ai_intelligence'
         ordering = ['-impact_score', '-created_at']
         indexes = [
             models.Index(fields=['insight_type', '-created_at']),
