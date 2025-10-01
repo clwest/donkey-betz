@@ -691,3 +691,34 @@ def analytics_api_data_proxy(request):
     """Proxy function for analytics API - delegates to views_analytics"""
     from core.views_analytics import analytics_api_data
     return analytics_api_data(request)
+
+
+@login_required
+def opportunity_detail(request):
+    """Opportunity Detail View - Display full information about a specific opportunity"""
+    opportunity_id = request.GET.get('id')
+
+    if not opportunity_id:
+        messages.error(request, 'Opportunity ID is required')
+        return redirect('income_builder')
+
+    try:
+        from intelligence.models import OpportunityTracking
+
+        opportunity = OpportunityTracking.objects.get(
+            opportunity_id=opportunity_id,
+            user=request.user
+        )
+
+        return render(request, 'unified/opportunity_detail.html', {
+            'opportunity': opportunity,
+            'page_title': opportunity.opportunity_title
+        })
+
+    except OpportunityTracking.DoesNotExist:
+        messages.error(request, 'Opportunity not found or you do not have access to it')
+        return redirect('income_builder')
+    except Exception as e:
+        logger.error(f"Error loading opportunity detail: {e}")
+        messages.error(request, 'An error occurred while loading the opportunity')
+        return redirect('income_builder')
