@@ -344,59 +344,99 @@
                 <div class="section-content">
                     {% if opportunity.opportunity_data.description %}
                         {{ opportunity.opportunity_data.description|linebreaks }}
+                    {% elif opportunity.tracking_notes %}
+                        {{ opportunity.tracking_notes|linebreaks }}
                     {% else %}
-                        <p>No description available.</p>
+                        <p><strong>{{ opportunity.opportunity_title }}</strong></p>
+                        <p>Opportunity Type: {{ opportunity.opportunity_type|title }}</p>
+                        <p>Status: {{ opportunity.get_status_display }}</p>
+                        {% if opportunity.current_step %}
+                            <p>Current Step: {{ opportunity.current_step }}</p>
+                        {% endif %}
+                        <p><em>Detailed description will be added as this opportunity progresses.</em></p>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Action Steps -->
-            {% if opportunity.opportunity_data.action_steps or opportunity.opportunity_data.steps %}
+            {% if opportunity.opportunity_data.action_steps or opportunity.opportunity_data.steps or opportunity.steps_completed %}
             <div class="detail-section" style="margin-top: 20px;">
                 <h2 class="section-title">
                     <span>🎯</span>
                     <span>Action Plan</span>
                 </h2>
                 <ul class="action-steps">
-                    {% for step in opportunity.opportunity_data.action_steps|default:opportunity.opportunity_data.steps %}
+                    {% if opportunity.opportunity_data.action_steps or opportunity.opportunity_data.steps %}
+                        {% for step in opportunity.opportunity_data.action_steps|default:opportunity.opportunity_data.steps %}
+                            <li class="action-step">
+                                <span class="step-number">{{ forloop.counter }}</span>
+                                <span>{{ step }}</span>
+                            </li>
+                        {% endfor %}
+                    {% else %}
                         <li class="action-step">
-                            <span class="step-number">{{ forloop.counter }}</span>
-                            <span>{{ step }}</span>
+                            <span class="step-number">1</span>
+                            <span>Track and monitor this opportunity</span>
                         </li>
-                    {% endfor %}
+                        <li class="action-step">
+                            <span class="step-number">2</span>
+                            <span>Research and analyze details</span>
+                        </li>
+                        <li class="action-step">
+                            <span class="step-number">3</span>
+                            <span>Prepare application or approach strategy</span>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
             {% endif %}
 
             <!-- Skills Required -->
-            {% if opportunity.opportunity_data.skills or opportunity.opportunity_data.required_skills %}
             <div class="detail-section" style="margin-top: 20px;">
                 <h2 class="section-title">
                     <span>💡</span>
                     <span>Required Skills</span>
                 </h2>
                 <div class="skills-list">
-                    {% for skill in opportunity.opportunity_data.skills|default:opportunity.opportunity_data.required_skills %}
-                        <span class="skill-badge">{{ skill }}</span>
-                    {% endfor %}
+                    {% if opportunity.opportunity_data.skills or opportunity.opportunity_data.required_skills %}
+                        {% for skill in opportunity.opportunity_data.skills|default:opportunity.opportunity_data.required_skills %}
+                            <span class="skill-badge">{{ skill }}</span>
+                        {% endfor %}
+                    {% else %}
+                        {% if opportunity.opportunity_type == 'sports_bet' %}
+                            <span class="skill-badge">Sports Analysis</span>
+                            <span class="skill-badge">Odds Calculation</span>
+                            <span class="skill-badge">Risk Management</span>
+                        {% elif opportunity.opportunity_type == 'freelance' or opportunity.opportunity_type == 'job' %}
+                            <span class="skill-badge">{{ opportunity.opportunity_type|title }} Experience</span>
+                            <span class="skill-badge">Professional Skills</span>
+                        {% else %}
+                            <span class="skill-badge">{{ opportunity.opportunity_type|title }}</span>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
         </div>
 
         <!-- Right Column: Stats & Actions -->
         <div class="sidebar">
             <!-- Match Score -->
-            {% if opportunity.opportunity_data.match_score %}
             <div class="detail-section">
                 <div class="match-score">
-                    <div class="score-circle" style="--score-percent: {{ opportunity.opportunity_data.match_score }}%">
-                        <span class="score-value">{{ opportunity.opportunity_data.match_score|floatformat:0 }}%</span>
-                    </div>
-                    <div style="color: #aaa;">Match Score</div>
+                    {% if opportunity.opportunity_data.match_score %}
+                        <div class="score-circle" style="--score-percent: {{ opportunity.opportunity_data.match_score }}%">
+                            <span class="score-value">{{ opportunity.opportunity_data.match_score|floatformat:0 }}%</span>
+                        </div>
+                        <div style="color: #aaa;">Match Score</div>
+                    {% else %}
+                        <div class="score-circle" style="--score-percent: 75%">
+                            <span class="score-value">--</span>
+                        </div>
+                        <div style="color: #aaa;">Analysis Pending</div>
+                        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Match score will be calculated after initial analysis</p>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
 
             <!-- Revenue Info -->
             <div class="detail-section">
@@ -408,8 +448,14 @@
                     <div class="revenue-item">
                         <div class="revenue-label">Potential</div>
                         <div class="revenue-value">
-                            {% if opportunity.opportunity_data.budget or opportunity.opportunity_data.salary_range or opportunity.opportunity_data.revenue_potential %}
-                                ${{ opportunity.opportunity_data.budget|default:opportunity.opportunity_data.salary_range|default:opportunity.opportunity_data.revenue_potential }}
+                            {% if opportunity.opportunity_data.budget %}
+                                ${{ opportunity.opportunity_data.budget }}
+                            {% elif opportunity.opportunity_data.salary_range %}
+                                ${{ opportunity.opportunity_data.salary_range }}
+                            {% elif opportunity.opportunity_data.revenue_potential %}
+                                ${{ opportunity.opportunity_data.revenue_potential }}
+                            {% elif opportunity.target_monthly %}
+                                ${{ opportunity.target_monthly|floatformat:0 }}
                             {% else %}
                                 TBD
                             {% endif %}
@@ -449,12 +495,18 @@
                 </h2>
                 <div class="button-group">
                     {% if opportunity.opportunity_data.url or opportunity.opportunity_data.link %}
-                    <a href="{{ opportunity.opportunity_data.url|default:opportunity.opportunity_data.link }}"
-                       target="_blank"
-                       class="action-button primary-button">
-                        View Opportunity
-                    </a>
+                        <a href="{{ opportunity.opportunity_data.url|default:opportunity.opportunity_data.link }}"
+                           target="_blank"
+                           class="action-button primary-button">
+                            View Opportunity
+                        </a>
+                    {% else %}
+                        <button class="action-button primary-button" style="opacity: 0.5; cursor: not-allowed;" disabled>
+                            External Link Unavailable
+                        </button>
                     {% endif %}
+                </div>
+                <div class="button-group" style="margin-top: 10px;">
                     <a href="{% url 'unified_decision_command' %}?opportunity={{ opportunity.opportunity_id }}"
                        class="action-button secondary-button">
                         Analyze & Plan
@@ -468,13 +520,16 @@
             </div>
 
             <!-- Platform Info -->
-            {% if opportunity.opportunity_data.platform or opportunity.opportunity_data.company %}
             <div class="detail-section">
                 <h2 class="section-title">
                     <span>🏢</span>
                     <span>Details</span>
                 </h2>
                 <div class="section-content">
+                    <div style="margin-bottom: 10px;">
+                        <span style="color: #888;">Opportunity ID:</span>
+                        <span style="color: #fff; font-weight: bold;">{{ opportunity.opportunity_id }}</span>
+                    </div>
                     {% if opportunity.opportunity_data.platform %}
                     <div style="margin-bottom: 10px;">
                         <span style="color: #888;">Platform:</span>
@@ -499,9 +554,16 @@
                         <span style="color: #fff; font-weight: bold;">{{ opportunity.opportunity_data.work_type|title }}</span>
                     </div>
                     {% endif %}
+                    <div style="margin-bottom: 10px;">
+                        <span style="color: #888;">Created:</span>
+                        <span style="color: #fff; font-weight: bold;">{{ opportunity.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <span style="color: #888;">Last Updated:</span>
+                        <span style="color: #fff; font-weight: bold;">{{ opportunity.updated_at|date:"M d, Y" }}</span>
+                    </div>
                 </div>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
