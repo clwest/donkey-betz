@@ -737,8 +737,8 @@
     function viewDetails(event, id) {
         event.stopPropagation();
         console.log('Viewing details for:', id);
-        // Navigate to opportunity details
-        window.location.href = `{% url 'unified_revenue_opportunities' %}?id=${id}`;
+        // Navigate to opportunity detail page
+        window.location.href = `{% url 'opportunity_detail' %}?id=${id}`;
     }
 
     function showSpiderStatus(data) {

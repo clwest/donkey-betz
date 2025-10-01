@@ -16,6 +16,7 @@ urlpatterns = [
     path('income-builder/', views_unified.IncomeBuilderView.as_view(), name='unified_income_builder_alt'),
     path('decisions/', views_unified.DecisionCommandView.as_view(), name='unified_decision_command'),
     path('decision-command/', views_unified.DecisionCommandView.as_view(), name='unified_decision_command_alt'),
+    path('opportunity-detail/', views_unified.opportunity_detail, name='opportunity_detail'),
     path('opportunities/', views_unified.RevenueOpportunitiesView.as_view(), name='unified_revenue_opportunities'),
     path('revenue-opportunities/', views_unified.RevenueOpportunitiesView.as_view(), name='unified_revenue_opportunities_alt'),
     path('revenue/', views_unified.RevenueDashboardView.as_view(), name='unified_revenue_dashboard'),
