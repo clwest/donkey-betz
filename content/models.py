@@ -953,11 +953,85 @@ class ContentGeneration(UnifiedBaseModel):
     def __str__(self):
         return f"Generation {self.id} - {self.status}"
     
+    def save(self, *args, **kwargs):
+        """
+        Save and trigger learning loops
+
+        LEARNING LOOP: Update template performance based on user ratings
+        """
+        super().save(*args, **kwargs)
+
+        # Trigger learning if user has rated the content
+        if self.user_rating and self.template:
+            self._update_template_learning()
+
+    def _update_template_learning(self):
+        """
+        LEARNING LOOP: Update template stats and trigger improvement if needed
+        """
+        try:
+            # Update template statistics
+            self.template.update_stats(
+                generation_time=self.generation_time_ms / 1000 if self.generation_time_ms else 0,
+                success=(self.user_rating >= 4),
+                rating=self.user_rating
+            )
+
+            # Check if template needs improvement
+            if hasattr(self.template, 'avg_user_rating'):
+                # If consistently low-rated with enough samples, flag for improvement
+                if (self.template.avg_user_rating < 3.0 and
+                    self.template.usage_count > 10):
+                    self._request_template_optimization()
+
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to update template learning: {e}")
+
+    def _request_template_optimization(self):
+        """
+        LEARNING LOOP: Queue template for AI-powered improvement
+        """
+        try:
+            # Get recent low-rated generations
+            low_rated = ContentGeneration.objects.filter(
+                template=self.template,
+                user_rating__lt=3
+            ).order_by('-created_at')[:5]
+
+            if low_rated.count() == 0:
+                return
+
+            # Analyze common issues from feedback
+            feedback_list = [g.user_feedback for g in low_rated if g.user_feedback]
+
+            if feedback_list:
+                # Create improvement task in metadata
+                if not self.template.metadata:
+                    self.template.metadata = {}
+
+                self.template.metadata['needs_improvement'] = True
+                self.template.metadata['low_ratings_count'] = low_rated.count()
+                self.template.metadata['recent_feedback'] = feedback_list[:3]
+                self.template.metadata['improvement_requested_at'] = str(timezone.now())
+
+                self.template.save()
+
+                import logging
+                logging.warning(
+                    f"🔧 Template improvement requested: {self.template.display_name} "
+                    f"(avg rating: {self.template.avg_user_rating:.1f})"
+                )
+
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to request template optimization: {e}")
+
     def create_document(self):
         """Create a Document from the generated content"""
         if not self.generated_content or self.output_document:
             return self.output_document
-        
+
         # Determine document type based on template
         doc_type = DocumentType.MARKDOWN
         if self.template:
@@ -967,7 +1041,7 @@ class ContentGeneration(UnifiedBaseModel):
                 doc_type = DocumentType.JSON
             elif self.template.output_format == 'text':
                 doc_type = DocumentType.TEXT
-        
+
         # Create document
         document = Document.objects.create(
             title=f"Generated: {self.template.display_name if self.template else 'Custom'}",
@@ -985,10 +1059,10 @@ class ContentGeneration(UnifiedBaseModel):
                 'token_usage': self.token_usage,
             }
         )
-        
+
         self.output_document = document
         self.save(update_fields=['output_document'])
-        
+
         return document
 
 

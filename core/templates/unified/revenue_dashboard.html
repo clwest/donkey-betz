@@ -3,7 +3,7 @@
 
 {% block title %}Revenue Dashboard - Track Your Earnings{% endblock %}
 
-{% block websocket_url %}ws://localhost:8000/ws/revenue-dashboard/{% endblock %}
+{% block websocket_url %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -422,7 +422,9 @@
 
     // Initialize WebSocket connection
     function initWebSocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/revenue-dashboard/`;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws/revenue-dashboard/`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {

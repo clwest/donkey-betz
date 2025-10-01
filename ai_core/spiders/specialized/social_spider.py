@@ -3,7 +3,7 @@ Social Sentiment Spider - Elite Social Intelligence Gathering
 ===========================================================
 
 Specialized spider for gathering social sentiment and trend data from
-Reddit, Twitter, and other social platforms. Provides real-time sentiment
+Reddit, Bluesky, and other social platforms. Provides real-time sentiment
 analysis and social trend intelligence.
 """
 
@@ -41,8 +41,8 @@ class SocialSentimentSpider(BaseIntelligenceSpider):
         try:
             if 'reddit.com' in target.url:
                 return await self._process_reddit_data(raw_data, target)
-            elif 'twitter.com' in target.url:
-                return await self._process_twitter_data(raw_data, target)
+            elif 'bsky.social' in target.url or 'bluesky' in target.url.lower():
+                return await self._process_bluesky_data(raw_data, target)
             else:
                 return await self._process_general_social(raw_data, target)
         except Exception as e:
@@ -323,10 +323,82 @@ class SocialSentimentSpider(BaseIntelligenceSpider):
 
         return score
 
-    async def _process_twitter_data(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Twitter data (placeholder for now)"""
-        # Twitter API integration would go here
-        return None
+    async def _process_bluesky_data(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
+        """Process Bluesky data"""
+        try:
+            posts = []
+            sentiment_summary = {
+                'overall_sentiment': 0.0,
+                'bullish_posts': 0,
+                'bearish_posts': 0,
+                'neutral_posts': 0,
+                'trending_tickers': {},
+                'sentiment_distribution': {}
+            }
+
+            # Process Bluesky posts
+            if 'posts' in data:
+                posts = data['posts']
+            elif 'feed' in data:
+                posts = data['feed']
+
+            # Analyze each post (similar to Reddit processing)
+            for post in posts:
+                text = post.get('text', '') or post.get('post', {}).get('record', {}).get('text', '')
+                sentiment = self._analyze_sentiment(text)
+                post['sentiment'] = sentiment
+
+                tickers = self._extract_tickers(text)
+                post['mentioned_tickers'] = tickers
+
+                if sentiment > 0.1:
+                    sentiment_summary['bullish_posts'] += 1
+                elif sentiment < -0.1:
+                    sentiment_summary['bearish_posts'] += 1
+                else:
+                    sentiment_summary['neutral_posts'] += 1
+
+                for ticker in tickers:
+                    if ticker not in sentiment_summary['trending_tickers']:
+                        sentiment_summary['trending_tickers'][ticker] = {'count': 0, 'sentiment': 0.0}
+                    sentiment_summary['trending_tickers'][ticker]['count'] += 1
+                    sentiment_summary['trending_tickers'][ticker]['sentiment'] += sentiment
+
+            if posts:
+                sentiment_summary['overall_sentiment'] = sum(p.get('sentiment', 0) for p in posts) / len(posts)
+
+            intelligence_content = {
+                'posts': posts,
+                'sentiment_summary': sentiment_summary,
+                'social_trends': self._identify_social_trends(posts),
+                'viral_content': self._identify_viral_content(posts)
+            }
+
+            quality_score = self._calculate_social_quality(intelligence_content)
+
+            intelligence = IntelligenceData(
+                spider_id=self.spider_id,
+                source_url=target.url,
+                data_type="social_sentiment",
+                content=intelligence_content,
+                metadata={
+                    'post_count': len(posts),
+                    'overall_sentiment': sentiment_summary['overall_sentiment'],
+                    'trending_tickers_count': len(sentiment_summary['trending_tickers']),
+                    'data_source': 'bluesky'
+                },
+                quality_score=quality_score,
+                timestamp=datetime.now(timezone.utc),
+                relevance_tags=['social', 'sentiment', 'bluesky', 'trends'],
+                target_agents=['sentiment_analysis_agent', 'social_trend_agent'],
+                target_advisors=['warren_buffett', 'crypto_expert', 'marketing_strategist']
+            )
+
+            return intelligence
+
+        except Exception as e:
+            self.logger.error(f"Error processing Bluesky data: {e}")
+            return None
 
     async def _process_general_social(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
         """Process general social media data"""
@@ -371,7 +443,7 @@ class SocialSentimentSpider(BaseIntelligenceSpider):
         return 'created'
 
     def get_relevance_keywords(self) -> List[str]:
-        return ['social', 'sentiment', 'reddit', 'twitter', 'trending', 'viral']
+        return ['social', 'sentiment', 'reddit', 'bluesky', 'trending', 'viral']
 
     def validate_data_accuracy(self, data: Dict[str, Any]) -> bool:
         try:

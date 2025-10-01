@@ -112,7 +112,64 @@ class RevenueTransaction(models.Model):
         self.verification_timestamp = timezone.now()
         self.verification_proof = proof
         self.save()
+
+        # LEARNING LOOP: Update agent learning from successful revenue
+        if self.attributed_to_agent and self.status in [PaymentStatus.VERIFIED, PaymentStatus.COMPLETED]:
+            self._update_agent_learning()
+
         return True
+
+    def _update_agent_learning(self):
+        """Update UserAgentLearning based on successful revenue transaction"""
+        from core.models import UserAgentLearning
+
+        try:
+            learning, created = UserAgentLearning.objects.get_or_create(
+                user=self.user,
+                agent_name=self.attributed_to_agent,
+                learning_domain='revenue_optimization',
+                defaults={
+                    'learning_content': {},
+                    'confidence_score': 0.5
+                }
+            )
+
+            # Track successful revenue sources
+            if 'successful_sources' not in learning.learning_content:
+                learning.learning_content['successful_sources'] = []
+
+            learning.learning_content['successful_sources'].append({
+                'source': self.source,
+                'amount': float(self.amount),
+                'net_revenue': float(self.net_revenue),
+                'roi': float(self.roi),
+                'timestamp': self.created_at.isoformat(),
+                'opportunity_id': self.opportunity_id
+            })
+
+            # Track total revenue generated
+            learning.learning_content['total_revenue'] = (
+                learning.learning_content.get('total_revenue', 0) + float(self.amount)
+            )
+            learning.learning_content['transaction_count'] = (
+                learning.learning_content.get('transaction_count', 0) + 1
+            )
+
+            # Calculate average transaction value
+            learning.learning_content['avg_transaction'] = (
+                learning.learning_content['total_revenue'] /
+                learning.learning_content['transaction_count']
+            )
+
+            # Record success (increases confidence)
+            learning.record_success()
+            learning.last_interaction = timezone.now()
+            learning.save()
+
+        except Exception as e:
+            # Don't fail verification if learning update fails
+            import logging
+            logging.error(f"Failed to update agent learning for revenue: {e}")
 
 
 class RevenueFlow(models.Model):

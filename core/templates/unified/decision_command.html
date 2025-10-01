@@ -3,7 +3,7 @@
 
 {% block title %}Decision Command - AI-Powered Decision Analysis{% endblock %}
 
-{% block websocket_url %}ws://localhost:8000/ws/decision-command/{% endblock %}
+{% block websocket_url %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -259,7 +259,9 @@
 
     // Initialize WebSocket connection
     function initWebSocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; const host = window.location.host; const wsUrl = `${protocol}//${host}/ws/decision-command/`;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws/decision-command/`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {

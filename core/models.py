@@ -845,6 +845,202 @@ class JobApplication(UnifiedBaseModel):
             'phone_interview', 'technical_interview', 'final_interview'
         ]
 
+    def save(self, *args, **kwargs):
+        """
+        Save and trigger learning loops based on application status
+
+        LEARNING LOOP: Update agent learning and user embeddings on outcomes
+        """
+        # Track if status changed
+        status_changed = False
+        old_status = None
+
+        if self.pk:
+            try:
+                old_instance = JobApplication.objects.get(pk=self.pk)
+                if old_instance.status != self.status:
+                    status_changed = True
+                    old_status = old_instance.status
+            except JobApplication.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)
+
+        # Trigger learning loops on status changes
+        if status_changed or not self.pk:
+            self._update_learning_from_status()
+
+    def _update_learning_from_status(self):
+        """
+        LEARNING LOOP: Update UserAgentLearning and UserEmbedding based on application status
+        """
+        try:
+            # Import here to avoid circular imports
+            from django.utils import timezone
+
+            # Success states - update with positive learning
+            if self.status in ['offer_received', 'offer_accepted']:
+                self._create_success_learning()
+                self._create_success_embedding()
+
+            # Failure states - update with negative learning
+            elif self.status == 'rejected':
+                self._create_failure_learning()
+
+            # Progress states - update engagement metrics
+            elif self.status in ['phone_interview', 'technical_interview', 'final_interview']:
+                self._update_engagement_learning()
+
+        except Exception as e:
+            # Don't fail the save if learning update fails
+            import logging
+            logging.error(f"Failed to update job application learning: {e}", exc_info=True)
+
+    def _create_success_learning(self):
+        """Create/update learning from successful application"""
+        learning, created = UserAgentLearning.objects.get_or_create(
+            user=self.user,
+            agent_name='JobMatcherAgent',
+            learning_domain='opportunity_matching',
+            defaults={
+                'learning_content': {},
+                'confidence_score': 0.5,
+                'learning_source': 'success_pattern'
+            }
+        )
+
+        # Track successful companies
+        if 'successful_companies' not in learning.learning_content:
+            learning.learning_content['successful_companies'] = []
+        learning.learning_content['successful_companies'].append({
+            'company': self.company,
+            'position': self.position,
+            'platform': self.platform,
+            'match_score': self.match_score,
+            'timestamp': timezone.now().isoformat()
+        })
+
+        # Track successful platforms
+        if 'platform_success_rate' not in learning.learning_content:
+            learning.learning_content['platform_success_rate'] = {}
+
+        platform_data = learning.learning_content['platform_success_rate'].get(self.platform, {'success': 0, 'total': 0})
+        platform_data['success'] += 1
+        platform_data['total'] += 1
+        learning.learning_content['platform_success_rate'][self.platform] = platform_data
+
+        # Record success and update metrics
+        learning.record_success()
+        learning.last_interaction = timezone.now()
+        learning.save()
+
+    def _create_success_embedding(self):
+        """Create embedding for similarity-based job matching"""
+        try:
+            # Create a content string that represents successful pattern
+            content = f"{self.position} at {self.company} - {self.platform}"
+
+            # For now, create a placeholder embedding
+            # TODO: Integrate with actual embedding service when available
+            embedding_vector = self._generate_placeholder_embedding(content)
+
+            UserEmbedding.objects.create(
+                user=self.user,
+                content=content,
+                content_type='successful_application',
+                embedding_vector=embedding_vector,
+                confidence_score=self.match_score / 100.0 if self.match_score else 0.5,
+                source_application=self,
+                source_metadata={
+                    'company': self.company,
+                    'position': self.position,
+                    'platform': self.platform,
+                    'salary_offered': float(self.salary_offered) if self.salary_offered else None,
+                    'application_date': self.applied_date.isoformat()
+                }
+            )
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to create success embedding: {e}")
+
+    def _create_failure_learning(self):
+        """Create/update learning from rejected application"""
+        learning, created = UserAgentLearning.objects.get_or_create(
+            user=self.user,
+            agent_name='JobMatcherAgent',
+            learning_domain='opportunity_matching',
+            defaults={
+                'learning_content': {},
+                'confidence_score': 0.5,
+                'learning_source': 'failure_analysis'
+            }
+        )
+
+        # Track rejected companies/positions
+        if 'rejected_patterns' not in learning.learning_content:
+            learning.learning_content['rejected_patterns'] = []
+
+        learning.learning_content['rejected_patterns'].append({
+            'company': self.company,
+            'position': self.position,
+            'platform': self.platform,
+            'match_score': self.match_score,
+            'timestamp': timezone.now().isoformat()
+        })
+
+        # Record failure to adjust confidence
+        learning.record_failure()
+        learning.last_interaction = timezone.now()
+        learning.save()
+
+    def _update_engagement_learning(self):
+        """Track interview progression as positive signal"""
+        learning, created = UserAgentLearning.objects.get_or_create(
+            user=self.user,
+            agent_name='JobMatcherAgent',
+            learning_domain='opportunity_matching',
+            defaults={
+                'learning_content': {},
+                'confidence_score': 0.5,
+                'learning_source': 'performance_tracking'
+            }
+        )
+
+        # Track companies that lead to interviews
+        if 'interview_progression' not in learning.learning_content:
+            learning.learning_content['interview_progression'] = []
+
+        learning.learning_content['interview_progression'].append({
+            'company': self.company,
+            'position': self.position,
+            'stage': self.status,
+            'timestamp': timezone.now().isoformat()
+        })
+
+        learning.save()
+
+    def _generate_placeholder_embedding(self, content):
+        """
+        Generate a simple placeholder embedding
+        TODO: Replace with actual embedding service integration
+        """
+        import hashlib
+        # Create a deterministic but distributed vector based on content
+        hash_obj = hashlib.sha256(content.encode())
+        hash_bytes = hash_obj.digest()
+
+        # Convert to list of floats normalized to [-1, 1]
+        embedding = []
+        for i in range(min(128, len(hash_bytes))):
+            # Normalize byte value (0-255) to (-1, 1)
+            embedding.append((hash_bytes[i] / 127.5) - 1.0)
+
+        # Pad to 128 dimensions if needed
+        while len(embedding) < 128:
+            embedding.append(0.0)
+
+        return embedding[:128]
+
     class Meta:
         verbose_name = "Job Application"
         verbose_name_plural = "Job Applications"
