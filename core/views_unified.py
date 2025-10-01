@@ -59,18 +59,23 @@ class UnifiedDashboardView(TemplateView):
         return context
 
 
-class IncomeBuilderView(View):
-    """Income Builder - Redirects to consolidated Revenue Opportunities page"""
+class IncomeBuilderView(TemplateView):
+    """Income Builder - AI-Powered Opportunity Discovery"""
+    template_name = 'unified/income_builder.html'
 
-    def get(self, request, *args, **kwargs):
-        # Redirect to the consolidated opportunities page
-        # Preserve any query parameters
-        from django.shortcuts import redirect
-        query_string = request.META.get('QUERY_STRING', '')
-        redirect_url = '/opportunities/'
-        if query_string:
-            redirect_url += '?' + query_string
-        return redirect(redirect_url)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Income Builder'
+
+        # Load opportunity count from database
+        try:
+            from intelligence.models import OpportunityTracking
+            context['total_opportunities'] = OpportunityTracking.objects.count()
+        except Exception as e:
+            logger.error(f"Error loading opportunity count: {e}")
+            context['total_opportunities'] = 0
+
+        return context
 
 
 class DecisionCommandView(TemplateView):

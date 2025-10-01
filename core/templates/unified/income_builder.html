@@ -437,6 +437,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
     // Initialize Income Builder WebSocket
     let incomeBuilderWS = null;
 
@@ -533,45 +534,97 @@
             document.getElementById('spidersActive').textContent = data.spider_count;
         }
 
-        // Render opportunities
-        container.innerHTML = opportunities.map(opp => `
-            <div class="opportunity-card" onclick="selectOpportunity('${opp.id}')">
-                <div class="opportunity-header">
-                    <div class="opportunity-title">${opp.title || 'Opportunity'}</div>
-                    <div class="opportunity-value">${opp.potential_monthly || '$0'}/mo</div>
-                </div>
+        // Render opportunities with type-specific cards
+        container.innerHTML = opportunities.map(opp => {
+            // Sports Betting Card
+            if (opp.opportunity_type === 'sports_bet' && opp.opportunity_data) {
+                const data = opp.opportunity_data;
+                return `
+                    <div class="opportunity-card sports-bet-card" onclick="selectOpportunity('${opp.id}')">
+                        <div class="opportunity-header">
+                            <div class="opportunity-title">🎲 ${opp.title || 'Sports Bet'}</div>
+                            <div class="opportunity-value">$${opp.potential_revenue || '0'}</div>
+                        </div>
 
-                <div class="opportunity-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Type</span>
-                        <span class="detail-value">${opp.stream_type || 'General'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Time to Income</span>
-                        <span class="detail-value">${opp.time_to_income || 'Unknown'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Difficulty</span>
-                        <span class="detail-value">${opp.difficulty || 'Medium'}</span>
-                    </div>
-                </div>
+                        <div class="sports-details">
+                            <div class="detail-item">
+                                <span class="detail-label">⏰ Game Time</span>
+                                <span class="detail-value">${data.game_time ? new Date(data.game_time).toLocaleString() : 'TBD'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">📊 Odds</span>
+                                <span class="detail-value">${data.odds_american || data.odds_decimal || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">📈 Expected Value</span>
+                                <span class="detail-value" style="color: #00ff88;">${data.expected_value ? (data.expected_value * 100).toFixed(1) : '0'}%</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">💵 Suggested Bet</span>
+                                <span class="detail-value">$${data.suggested_bet_amount || '0'}</span>
+                            </div>
+                        </div>
 
-                <div class="opportunity-tags">
-                    ${(opp.match_reasons || []).map(reason => `
-                        <span class="tag">${reason}</span>
-                    `).join('')}
-                </div>
+                        <div class="opportunity-description" style="margin: 10px 0; color: #aaa; font-size: 0.9em;">
+                            ${opp.description || ''}
+                        </div>
 
-                <div class="action-buttons">
-                    <button class="action-btn btn-primary" onclick="applyToOpportunity(event, '${opp.id}')">
-                        ⚡ Quick Apply
-                    </button>
-                    <button class="action-btn btn-secondary" onclick="viewDetails(event, '${opp.id}')">
-                        📋 View Details
-                    </button>
+                        <div class="match-score" style="text-align: center; margin: 10px 0; color: #00d4ff;">
+                            ${opp.match_score ? (opp.match_score * 100).toFixed(0) : '0'}% Match
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="action-btn btn-primary" onclick="placeBet(event, '${opp.id}')">
+                                🎲 Place Bet
+                            </button>
+                            <button class="action-btn btn-secondary" onclick="viewAnalysis(event, '${opp.id}')">
+                                📊 View Analysis
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Default Job/Freelance Card
+            return `
+                <div class="opportunity-card" onclick="selectOpportunity('${opp.id}')">
+                    <div class="opportunity-header">
+                        <div class="opportunity-title">${opp.title || 'Opportunity'}</div>
+                        <div class="opportunity-value">${opp.potential_monthly || opp.potential_revenue ? '$' + opp.potential_revenue : '$0'}/mo</div>
+                    </div>
+
+                    <div class="opportunity-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Type</span>
+                            <span class="detail-value">${opp.opportunity_type || opp.stream_type || 'General'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Time to Income</span>
+                            <span class="detail-value">${opp.time_to_income || 'Unknown'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Difficulty</span>
+                            <span class="detail-value">${opp.difficulty || 'Medium'}</span>
+                        </div>
+                    </div>
+
+                    <div class="opportunity-tags">
+                        ${(opp.match_reasons || []).map(reason => `
+                            <span class="tag">${reason}</span>
+                        `).join('')}
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="action-btn btn-primary" onclick="applyToOpportunity(event, '${opp.id}')">
+                            ⚡ Quick Apply
+                        </button>
+                        <button class="action-btn btn-secondary" onclick="viewDetails(event, '${opp.id}')">
+                            📋 View Details
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         // Update earnings projection
         if (data.earnings_projection) {
@@ -723,4 +776,5 @@
             }
         }, 1000);
     });
+</script>
 {% endblock %}

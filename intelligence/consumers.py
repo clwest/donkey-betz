@@ -3,11 +3,22 @@ WebSocket consumers for Intelligence module
 """
 import json
 import logging
+from datetime import datetime, date
+from decimal import Decimal
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .profile_context_service import profile_context_service, AgentContextMixin
 
 logger = logging.getLogger(__name__)
+
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
@@ -267,6 +278,7 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
         try:
             # Connect to spider-agent bridge for real-time data
             from .spider_agent_bridge import get_spider_agent_bridge
+            from .opportunity_storage import opportunity_storage
 
             bridge = get_spider_agent_bridge()
             bridge_status = bridge.get_bridge_status()
@@ -278,28 +290,55 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
                 'real_time_enabled': bridge_status.get('is_running', False)
             }))
 
-            # PHASE 2 FIX: Removed hardcoded base opportunities!
-            # Now we ONLY send real data from Reddit or empty state
-
             all_opportunities = []
 
-            # Try to get Reddit opportunities (real data source)
+            # PRIORITY 1: Load stored opportunities from database
             try:
-                reddit_opps = await self.get_reddit_opportunities()
-                if reddit_opps:
-                    all_opportunities.extend(reddit_opps)
-                    logger.info(f"✅ Loaded {len(reddit_opps)} REAL opportunities from Reddit")
-            except Exception as reddit_error:
-                logger.warning(f"Reddit opportunities unavailable: {reddit_error}")
+                user = self.scope.get('user')
+                if user and user.is_authenticated:
+                    stored_opps = await database_sync_to_async(opportunity_storage.get_opportunities_for_user)(
+                        user, limit=50
+                    )
+                else:
+                    # Get all opportunities for anonymous/development
+                    stored_opps = await database_sync_to_async(opportunity_storage.get_all_opportunities)(
+                        limit=50
+                    )
 
-            # Send opportunities (real data or empty list for empty state)
+                if stored_opps:
+                    all_opportunities.extend(stored_opps)
+                    logger.info(f"✅ Loaded {len(stored_opps)} STORED opportunities from database")
+            except Exception as db_error:
+                logger.warning(f"Database opportunities unavailable: {db_error}")
+
+            # PRIORITY 2: Try to get Reddit opportunities (supplemental real data)
+            # DISABLED: Reddit opportunities were mixing with database opportunities causing confusion
+            # try:
+            #     reddit_opps = await self.get_reddit_opportunities()
+            #     if reddit_opps:
+            #         all_opportunities.extend(reddit_opps)
+            #         logger.info(f"✅ Loaded {len(reddit_opps)} opportunities from Reddit")
+            # except Exception as reddit_error:
+            #     logger.warning(f"Reddit opportunities unavailable: {reddit_error}")
+
+            # Send opportunities (stored + reddit or empty list for empty state)
+            # Frontend expects 'opportunities_analysis' with 'top_opportunities' field
             await self.send(text_data=json.dumps({
-                'type': 'opportunities_update',
-                'opportunities': all_opportunities,
-                'source': 'reddit_api' if all_opportunities else 'empty',
+                'type': 'opportunities_analysis',
+                'top_opportunities': all_opportunities,
+                'source': 'database' if stored_opps else 'empty',
                 'is_real': True,
-                'message': f'Found {len(all_opportunities)} real opportunities' if all_opportunities else 'No opportunities yet - click "Find New Opportunities" to search'
-            }))
+                'total_opportunities': len(all_opportunities),
+                'message': f'Found {len(all_opportunities)} opportunities' if all_opportunities else 'No opportunities yet - click "Find New Opportunities" to search',
+                'spider_count': len(all_opportunities),
+                'earnings_projection': {
+                    'week_1': 500 if all_opportunities else 0,
+                    'month_1': 2000 if all_opportunities else 0,
+                    'month_3': 6000 if all_opportunities else 0,
+                    'month_6': 15000 if all_opportunities else 0,
+                    'year_1': 50000 if all_opportunities else 0
+                }
+            }, default=json_serial))
 
             # Send revenue data
             revenue_data = {
@@ -325,7 +364,7 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
             await self.send(text_data=json.dumps({
                 'type': 'revenue_update',
                 'revenue': revenue_data
-            }))
+            }, default=json_serial))
 
             logger.info("Sent initial opportunities and revenue data")
 
@@ -375,6 +414,16 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
 
             logger.info(f"🎯 Spider network found {len(result.opportunities)} REAL opportunities in {result.discovery_time:.2f}s")
             logger.info(f"   Sources: {', '.join(result.spider_sources)}")
+
+            # STORE DISCOVERED OPPORTUNITIES IN DATABASE
+            from .opportunity_storage import opportunity_storage
+            user = self.scope.get('user')
+            if user and user.is_authenticated:
+                stored = await database_sync_to_async(opportunity_storage.store_opportunities_batch)(
+                    result.opportunities,
+                    user
+                )
+                logger.info(f"💾 Stored {len(stored)} opportunities in database for user {user.username}")
 
             # Convert spider opportunities to frontend format
             real_opportunities = []

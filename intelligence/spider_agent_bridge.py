@@ -295,10 +295,17 @@ class SpiderAgentBridge:
         """Get current bridge status"""
         uptime_seconds = (datetime.now(timezone.utc) - self.metrics.uptime_start).total_seconds()
 
+        # Convert metrics to dict and serialize datetime objects
+        metrics_dict = asdict(self.metrics)
+        if metrics_dict.get('uptime_start'):
+            metrics_dict['uptime_start'] = metrics_dict['uptime_start'].isoformat()
+        if metrics_dict.get('last_data_timestamp'):
+            metrics_dict['last_data_timestamp'] = metrics_dict['last_data_timestamp'].isoformat()
+
         return {
             'is_running': self.is_running,
             'uptime_seconds': uptime_seconds,
-            'metrics': asdict(self.metrics),
+            'metrics': metrics_dict,
             'queue_sizes': {
                 'spider_data_queue': self.spider_data_queue.qsize(),
                 'agent_result_queue': self.agent_result_queue.qsize()
