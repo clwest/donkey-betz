@@ -21,6 +21,9 @@ from .consumers_ai_training import AITrainingConsumer
 from .consumers_consciousness import ConsciousnessConsumer
 from .command_center_ai import CommandCenterAIConsumer
 
+# Import consumers from intelligence app
+from intelligence.consumers import IncomeBuilderConsumer
+
 # Import SpiderWebSocketConsumer properly
 try:
     from ai_core.api.spider_websocket import SpiderWebSocketConsumer
@@ -278,8 +281,8 @@ unified_endpoints = [
     re_path(r'^ws/revenue-production/$', ProductionRevenueConsumer.as_asgi()),
 
     # Other component endpoints (will upgrade to production one by one)
-    # Income Builder now redirects to Revenue Opportunities, but keep WebSocket for compatibility
-    re_path(r'^ws/income-builder/$', RevenueOpportunitiesConsumer.as_asgi()),
+    # Income Builder - uses dedicated consumer with opportunity loading
+    re_path(r'^ws/income-builder/$', IncomeBuilderConsumer.as_asgi()),
     # re_path(r'^ws/decision-command/$', UnifiedWebSocketHub.as_asgi()),  # Already defined above
     # Neural Orchestra uses dedicated consumer - see line 28
     # re_path(r'^ws/control-center/$', UnifiedWebSocketHub.as_asgi()),  # Already defined above

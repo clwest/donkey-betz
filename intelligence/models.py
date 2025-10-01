@@ -62,7 +62,7 @@ class ActionPlan(models.Model):
     celery_task_id = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'status']),
@@ -145,7 +145,7 @@ class ActionPlanStep(models.Model):
     result = models.JSONField(default=dict)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['action_plan', 'step_number']
         unique_together = ['action_plan', 'step_number']
 
@@ -207,7 +207,7 @@ class OpportunityActionPlan(models.Model):
     files_generated = models.JSONField(default=list)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['platform', 'status']),
@@ -281,7 +281,7 @@ class RevenueMetrics(models.Model):
     platform_metrics = models.JSONField(default=dict)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['-date']
 
     def __str__(self):
@@ -392,7 +392,7 @@ class UserIncomeProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         indexes = [
             models.Index(fields=['skill_level', 'available_hours_per_week']),
         ]
@@ -461,7 +461,7 @@ class OpportunityTracking(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         unique_together = ['user', 'opportunity_id']
         indexes = [
             models.Index(fields=['user', 'status']),
@@ -521,7 +521,7 @@ class EarningRecord(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['-earned_date', '-created_at']
         indexes = [
             models.Index(fields=['user', 'earned_date']),
@@ -565,7 +565,7 @@ class ActionStep(models.Model):
     output_data = models.JSONField(default=dict)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['action_plan', 'step_number']
         unique_together = ['action_plan', 'step_number']
 
@@ -625,7 +625,7 @@ class AgentExecution(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        app_label = 'intelligence'
+        app_label = 'intelligence_rt'
         ordering = ['action_plan', 'step_number', 'created_at']
 
     def __str__(self):
