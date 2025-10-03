@@ -24,7 +24,7 @@ load_dotenv()
 try:
     from config.api_settings import OPENAI_CONFIG, get_openai_client, estimate_cost
 except ImportError:
-    OPENAI_CONFIG = {'model': 'gpt-4o-mini'}
+    OPENAI_CONFIG = {'model': 'gpt-5-mini'}
     get_openai_client = None
     estimate_cost = None
 
@@ -73,7 +73,7 @@ class EnhancedProblemSolver:
             """
 
             response = client.chat.completions.create(
-                model=OPENAI_CONFIG.get('model', 'gpt-4o-mini'),
+                model=OPENAI_CONFIG.get('model', 'gpt-5-mini'),
                 messages=[
                     {"role": "system", "content": "You are an expert Python developer."},
                     {"role": "user", "content": prompt}
@@ -88,7 +88,7 @@ class EnhancedProblemSolver:
                 'success': True,
                 'code': code,
                 'api_used': 'openai',
-                'model': 'gpt-4o-mini',
+                'model': 'gpt-5-mini',
                 'timestamp': datetime.now().isoformat()
             }
 

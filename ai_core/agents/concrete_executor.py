@@ -92,6 +92,105 @@ class ConcreteAgentExecutor:
         if self.llm_integration:
             await self.llm_integration.enable_agent_with_llm(agent_name, agent_instance)
 
+    async def inject_learned_context(self, agent_name: str, agent_instance: Any, task: Dict[str, Any]):
+        """
+        Inject learned knowledge into agent execution context
+
+        Retrieves UserAgentLearning entries for this agent and adds them
+        to the prompt context so the LLM can use learned patterns.
+        """
+        try:
+            from core.models_unified_system import UserAgentLearning
+            from django.db.models import Q
+
+            # Normalize agent name variations (handle hyphens, underscores, and camelCase)
+            agent_name_variants = [
+                agent_name,  # Original
+                agent_name.replace('_', '-'),  # underscore to hyphen
+                agent_name.replace('-', '_'),  # hyphen to underscore
+                ''.join([word.capitalize() for word in agent_name.replace('_', '-').split('-')]),  # CamelCase
+                agent_name.lower(),  # lowercase
+            ]
+            # Remove duplicates while preserving order
+            agent_name_variants = list(dict.fromkeys(agent_name_variants))
+
+            # Get relevant learning entries for this agent (try all name variations)
+            def get_learning_entries():
+                # Build Q filter for all name variations
+                name_filter = Q()
+                for variant in agent_name_variants:
+                    name_filter |= Q(agent_name=variant)
+
+                return list(UserAgentLearning.objects.filter(
+                    name_filter,
+                    is_active=True,
+                    confidence_score__gte=0.5  # Only use high-confidence learning
+                ).order_by('-confidence_score', '-validation_count')[:10])
+
+            learning_entries = await asyncio.get_event_loop().run_in_executor(
+                None,
+                get_learning_entries
+            )
+
+            if not learning_entries:
+                logger.debug(f"No learned knowledge found for {agent_name}")
+                return
+
+            # Build learning context summary
+            learning_context = {
+                'total_learning_entries': len(learning_entries),
+                'domains': set(),
+                'sources': set(),
+                'key_patterns': [],
+                'data_quality_insights': []
+            }
+
+            for entry in learning_entries:
+                content = entry.learning_content or {}
+
+                learning_context['domains'].add(entry.learning_domain)
+                learning_context['sources'].add(entry.learning_source)
+
+                # Extract key insights
+                if 'opportunity_potential' in content:
+                    learning_context['key_patterns'].append({
+                        'source': entry.learning_source,
+                        'potential': content['opportunity_potential'],
+                        'confidence': entry.confidence_score,
+                        'validations': entry.validation_count
+                    })
+
+                if 'data_source_reliability' in content:
+                    learning_context['data_quality_insights'].append({
+                        'source': entry.learning_source,
+                        'reliability': content['data_source_reliability'],
+                        'quality': content.get('quality_score', 0)
+                    })
+
+            # Convert sets to lists for JSON serialization
+            learning_context['domains'] = list(learning_context['domains'])
+            learning_context['sources'] = list(learning_context['sources'])
+
+            # Inject into agent instance
+            if hasattr(agent_instance, 'learned_context'):
+                agent_instance.learned_context = learning_context
+            else:
+                # Add as attribute even if not defined
+                agent_instance.learned_context = learning_context
+
+            # Also add to task context for prompt building
+            if 'context' not in task:
+                task['context'] = {}
+            task['context']['learned_knowledge'] = learning_context
+
+            logger.info(f"✅ Injected {len(learning_entries)} learned patterns into {agent_name}")
+            logger.debug(f"   Domains: {learning_context['domains']}")
+            logger.debug(f"   Sources: {learning_context['sources']}")
+
+        except Exception as e:
+            logger.error(f"Failed to inject learned context for {agent_name}: {e}")
+            # Don't fail agent execution if learning injection fails
+
     async def execute_agent(self, agent_name: str, task: Dict[str, Any], user=None) -> Dict[str, Any]:
         """
         Execute a specific agent with given task parameters with retry logic.
@@ -119,15 +218,17 @@ class ConcreteAgentExecutor:
                 return await self._execute_project_builder_agent(agent_name, task, user, start_time)
 
             # Validate agent exists
+            original_agent_name = agent_name
             if agent_name not in self.agent_classes:
                 # Try partial match
-                agent_name = self._find_agent_by_partial_name(agent_name)
-                if not agent_name:
+                matched_name = self._find_agent_by_partial_name(agent_name)
+                if not matched_name:
                     return {
                         'success': False,
-                        'error': f'Agent {agent_name} not found in registry',
-                        'available_agents': list(self.agent_classes.keys())
+                        'error': f'Agent "{original_agent_name}" not found in registry',
+                        'available_agents': list(self.agent_classes.keys())[:20]  # Show first 20 to avoid huge output
                     }
+                agent_name = matched_name
 
             # Instantiate the agent
             agent_class = self.agent_classes[agent_name]
@@ -136,7 +237,10 @@ class ConcreteAgentExecutor:
             # Enable intelligence capabilities (spider data + LLM)
             await self.enable_agent_with_intelligence(agent_name, agent_instance)
 
-            logger.info(f"🏃 Executing agent: {agent_name} (with spider data + LLM)")
+            # 🆕 INJECT LEARNED KNOWLEDGE
+            await self.inject_learned_context(agent_name, agent_instance, task)
+
+            logger.info(f"🏃 Executing agent: {agent_name} (with spider data + LLM + learned patterns)")
 
             # Prepare task input
             task_input = task.get('input', {})
@@ -686,11 +790,19 @@ if __name__ == "__main__":
     asyncio.run(test_executor())
 
 
-def execute_agent_sync(agent_name: str, task_description: str, context: Dict = None) -> Dict[str, Any]:
+def execute_agent_sync(agent_name: str, task_description: str, context: Dict = None, user=None) -> Dict[str, Any]:
     """
-    Synchronous wrapper for agent execution
-    Use this when calling from non-async code
+    Synchronous wrapper for agent execution with automatic learning
+
+    Creates AgentExecution records that trigger learning bridges for autonomous improvement.
+    Use this when calling from non-async code.
+
+    Args:
+        agent_name: Name of the agent to execute
+        task_description: Task for the agent
+        context: Optional context dict
+        user: User executing agent (enables learning)
     """
     from ai_core.agents.sync_executor import SyncAgentExecutor
     sync_executor = SyncAgentExecutor()
-    return sync_executor.execute(agent_name, task_description, context)
+    return sync_executor.execute(agent_name, task_description, context, user=user)

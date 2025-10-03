@@ -21,10 +21,10 @@
                             <i class="fas fa-circle pulse"></i> System Operational
                         </span>
                         <span class="badge bg-info mx-2">
-                            <i class="fas fa-robot"></i> 149 Agents Active
+                            <i class="fas fa-robot"></i> <span id="agentCount">Loading...</span> Agents Active
                         </span>
                         <span class="badge bg-warning mx-2">
-                            <i class="fas fa-spider"></i> 40 Spiders Ready
+                            <i class="fas fa-spider"></i> <span id="spiderCount">Loading...</span> Spiders Ready
                         </span>
                     </div>
                 </div>
@@ -38,9 +38,9 @@
             <div class="card">
                 <div class="card-body">
                     <h6 class="text-muted">CPU Usage</h6>
-                    <h3 id="cpuUsage">45%</h3>
+                    <h3 id="cpuUsage">--</h3>
                     <div class="progress">
-                        <div class="progress-bar bg-info" style="width: 45%"></div>
+                        <div id="cpuProgressBar" class="progress-bar bg-info" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -169,11 +169,44 @@
         };
     }
 
-    function updateMetrics(data) {
-        if (data.cpu) document.getElementById('cpuUsage').textContent = data.cpu + '%';
-        if (data.memory) document.getElementById('memoryUsage').textContent = data.memory + '%';
-        if (data.tasks) document.getElementById('activeTasks').textContent = data.tasks;
-        if (data.uptime) document.getElementById('uptime').textContent = data.uptime + '%';
+    function updateMetrics(message) {
+        console.log('Received WebSocket message:', message);
+
+        // Handle system_status message from consumer
+        if (message.type === 'system_status' && message.data) {
+            const data = message.data;
+
+            // Update agent and spider counts
+            if (data.active_agents !== undefined) {
+                document.getElementById('agentCount').textContent = data.active_agents;
+            }
+            if (data.active_spiders !== undefined) {
+                document.getElementById('spiderCount').textContent = data.active_spiders;
+            }
+
+            // Update CPU usage
+            if (data.cpu_percent !== undefined) {
+                const cpuPercent = Math.round(data.cpu_percent);
+                document.getElementById('cpuUsage').textContent = cpuPercent + '%';
+                document.getElementById('cpuProgressBar').style.width = cpuPercent + '%';
+            }
+
+            // Update memory usage
+            if (data.memory_percent !== undefined) {
+                const memPercent = Math.round(data.memory_percent);
+                if (document.getElementById('memoryUsage')) {
+                    document.getElementById('memoryUsage').textContent = memPercent + '%';
+                }
+            }
+
+            // Update other metrics if present
+            if (data.tasks && document.getElementById('activeTasks')) {
+                document.getElementById('activeTasks').textContent = data.tasks;
+            }
+            if (data.uptime && document.getElementById('uptime')) {
+                document.getElementById('uptime').textContent = data.uptime + '%';
+            }
+        }
     }
 
     function startAllAgents() {

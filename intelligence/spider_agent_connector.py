@@ -29,125 +29,73 @@ class SpiderAgentConnector:
         }
 
     def _build_routing_map(self) -> Dict[str, List[str]]:
-        """Build mapping of spider categories to agent names"""
+        """Build mapping of spider categories to agent keyword patterns
+
+        Instead of exact names, use keywords that match actual agents in DB
+        """
         return {
             # Job spiders -> Job-related agents
             'job': [
-                'Job Application Automator',
-                'Resume Optimizer AI',
-                'Interview Prep Coach',
-                'Career Path Strategist',
-                'Job Market Analyst',
-                'Salary Negotiation Expert',
-                'Career Development Coach'
+                'Job', 'Application', 'Resume', 'Interview', 'Career',
+                'Salary', 'Negotiation', 'LinkedIn', 'Cover Letter'
             ],
 
             # Freelance spiders -> Freelance agents
             'freelance': [
-                'Freelance Hunter',
-                'Gig Economy Optimizer',
-                'Client Relationship Manager',
-                'Project Bid Writer',
-                'Freelance Proposal Generator',
-                'Freelance Rate Calculator'
+                'Freelance', 'Gig', 'Commission', 'Side Hustle',
+                'Contract', 'Consulting'
             ],
 
             # Market spiders -> Market analysis agents
             'market': [
-                'Market Research Analyst',
-                'Competitive Intelligence',
-                'Trend Predictor',
-                'Price Optimization Engine',
-                'Business Growth Architect',
-                'Revenue Stream Analyzer',
-                'Market Opportunity Scout'
+                'Market', 'Research', 'Competitive', 'Trend',
+                'Business Growth', 'Revenue', 'Analysis'
             ],
 
             # Content spiders -> Content agents
             'content': [
-                'Content Generator',
-                'Blog Post Writer',
-                'Social Media Manager',
-                'Email Marketing Automator',
-                'Content Strategy Planner',
-                'Creative Director AI',
-                'SEO Content Optimizer',
-                'Video Script Writer',
-                'Podcast Script Generator'
+                'Content', 'Blog', 'Social Media', 'Email',
+                'Creative', 'SEO', 'Video', 'Newsletter',
+                'Brand', 'Marketing'
             ],
 
             # Finance spiders -> Finance agents
             'finance': [
-                'Investment Portfolio Manager',
-                'Financial Advisor Bot',
-                'Expense Tracker Pro',
-                'Tax Optimization Planner',
-                'Retirement Planning Expert',
-                'Passive Income Architect',
-                'Budget Optimization Expert',
-                'Crypto Investment Advisor',
-                'Stock Analysis Expert'
+                'Investment', 'Financial', 'Expense', 'Tax',
+                'Retirement', 'Passive Income', 'Budget',
+                'Savings', 'Personal Finance'
             ],
 
             # Tech spiders -> Tech agents
             'tech': [
-                'Code Generator',
-                'Tech Stack Advisor',
-                'Bug Hunter',
-                'Performance Optimizer',
-                'AI Model Trainer',
-                'Deep Learning Specialist',
-                'Data Scientist Pro',
-                'Workflow Automation Expert',
-                'API Development Expert',
-                'DevOps Automation Specialist'
+                'AI', 'Data Scientist', 'Deep Learning',
+                'Workflow Automation', 'Machine Learning',
+                'Computer Vision', 'Natural Language',
+                'Innovation', 'Research'
             ],
 
             # Lead spiders -> Sales agents
             'lead': [
-                'Lead Generation Engine',
-                'Sales Funnel Optimizer',
-                'Customer Acquisition Specialist',
-                'Conversion Rate Optimizer',
-                'Digital Marketing Strategist',
-                'Growth Hacker Pro',
-                'B2B Sales Accelerator',
-                'Customer Success Manager'
+                'Marketing', 'Growth', 'Digital Marketing',
+                'Conversion', 'Customer', 'Analytics'
             ],
 
             # Investment spiders -> Investment agents
             'investment': [
-                'Stock Market Predictor',
-                'Crypto Trading Bot',
-                'Portfolio Rebalancer',
-                'Risk Assessment Analyzer',
-                'Investment Strategy Advisor',
-                'Options Trading Strategist',
-                'Real Estate Investment Scout',
-                'Forex Trading Assistant'
+                'Investment', 'Portfolio', 'Risk',
+                'Real Estate', 'Revenue Stream'
             ],
 
             # Research spiders -> Research agents
             'research': [
-                'Research Assistant Pro',
-                'Data Analyst Expert',
-                'Insight Generator',
-                'Research Report Writer',
-                'Patent Research Assistant',
-                'Academic Research Compiler',
-                'Literature Review Assistant',
-                'Predictive Analytics Engine'
+                'Research', 'Data', 'Analytics', 'Predictive',
+                'Patent', 'Analysis', 'Insight'
             ],
 
             # Social spiders -> Social media agents
             'social': [
-                'Social Media Influencer',
-                'Community Manager Pro',
-                'Engagement Optimizer',
-                'Viral Content Creator',
-                'Brand Ambassador Bot',
-                'Social Media Analytics Expert',
-                'Influencer Outreach Specialist'
+                'Social Media', 'Content', 'Brand',
+                'Influencer', 'User-Generated'
             ]
         }
 
@@ -177,33 +125,38 @@ class SpiderAgentConnector:
                 logger.warning(f"No category found for spider: {spider_data.spider_name}")
                 return results
 
-            # Get agents for this category
-            agent_names = self.routing_map.get(category, [])
+            # Get keyword patterns for this category
+            keywords = self.routing_map.get(category, [])
 
-            # Route to each relevant agent
-            for agent_name in agent_names:
+            # Find agents matching any keyword
+            matched_agents = set()
+            for keyword in keywords:
+                agents = Agent.objects.filter(name__icontains=keyword, is_active=True)
+                matched_agents.update(agents)
+
+            logger.info(f"Category '{category}' matched {len(matched_agents)} agents for spider '{spider_data.spider_name}'")
+
+            # Route to each matched agent
+            for agent in matched_agents:
                 try:
-                    agent = Agent.objects.filter(name__icontains=agent_name).first()
+                    # Create a solution based on spider data
+                    solution = self._create_agent_solution(agent, spider_data)
 
-                    if agent:
-                        # Create a solution based on spider data
-                        solution = self._create_agent_solution(agent, spider_data)
+                    if solution:
+                        results['solutions_created'].append({
+                            'agent': agent.name,
+                            'solution_id': str(solution.id),
+                            'solution_type': solution.solution_type
+                        })
 
-                        if solution:
-                            results['solutions_created'].append({
-                                'agent': agent.name,
-                                'solution_id': str(solution.id),
-                                'solution_type': solution.solution_type
-                            })
+                        # Create learning record
+                        self._create_learning_record(agent, spider_data, solution)
 
-                            # Create learning record
-                            self._create_learning_record(agent, spider_data, solution)
-
-                            results['agents_notified'].append(agent.name)
-                            self.processing_stats['successful_processing'] += 1
+                        results['agents_notified'].append(agent.name)
+                        self.processing_stats['successful_processing'] += 1
 
                 except Exception as e:
-                    logger.error(f"Error routing to agent {agent_name}: {e}")
+                    logger.error(f"Error routing to agent {agent.name}: {e}")
                     self.processing_stats['failed_processing'] += 1
 
             self.processing_stats['total_routed'] += 1
@@ -224,10 +177,10 @@ class SpiderAgentConnector:
             'market': ['market', 'competitor', 'analysis', 'intelligence'],
             'content': ['content', 'article', 'blog', 'writing'],
             'finance': ['finance', 'financial', 'money', 'budget'],
-            'tech': ['tech', 'technology', 'code', 'software'],
+            'tech': ['tech', 'technology', 'code', 'software', 'innovation', 'tracker'],
             'lead': ['lead', 'sales', 'customer', 'prospect'],
             'investment': ['investment', 'stock', 'crypto', 'trading'],
-            'research': ['research', 'academic', 'paper', 'journal'],
+            'research': ['research', 'academic', 'paper', 'journal', 'adaptive', 'test'],
             'social': ['social', 'media', 'twitter', 'facebook']
         }
 
@@ -235,16 +188,18 @@ class SpiderAgentConnector:
             if any(keyword in spider_name_lower for keyword in keywords):
                 return category
 
-        return None
+        # Default fallback for unmatched spiders
+        logger.info(f"No category match for spider '{spider_name}', using 'research' as fallback")
+        return 'research'
 
     def _create_agent_solution(self, agent: Agent, spider_data: SpiderData) -> Optional[AgentSolution]:
         """Create a solution based on spider data"""
         try:
-            # Parse spider data
-            data = spider_data.raw_data if isinstance(spider_data.raw_data, dict) else {}
+            # Parse spider data (use structured_data or content)
+            data = spider_data.structured_data if spider_data.structured_data else {}
 
             # Generate solution title and description
-            title = f"Opportunity: {data.get('title', 'New Opportunity from Spider')}"
+            title = spider_data.title or data.get('title') or f"Opportunity from {spider_data.spider_name}"
             description = data.get('description', f"Data collected by {spider_data.spider_name}")
 
             # Create code snippet if relevant data exists

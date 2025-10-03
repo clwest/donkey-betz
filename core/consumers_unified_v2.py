@@ -1,0 +1,265 @@
+"""
+WebSocket consumers for Unified Platform V2
+"""
+import json
+import asyncio
+import logging
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+from core.llm_enforcer import LLMEnforcer
+
+logger = logging.getLogger(__name__)
+
+
+class PersonalAssistantConsumer(AsyncWebsocketConsumer):
+    """
+    Personal Assistant WebSocket consumer with authentication.
+    Provides intelligent routing based on user intent.
+    """
+
+    async def connect(self):
+        """Accept WebSocket connection if user is authenticated"""
+        # Get user from scope (set by AuthMiddleware)
+        self.user = self.scope.get("user")
+
+        # Reject if not authenticated
+        if not self.user or isinstance(self.user, AnonymousUser):
+            await self.close(code=4001)
+            return
+
+        self.user_id = str(self.user.id)
+        self.room_group_name = f"assistant_{self.user_id}"
+
+        # Initialize LLM enforcer for REAL AI responses
+        self.llm_enforcer = LLMEnforcer()
+
+        # Join user-specific channel group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+        # Send welcome message using REAL AI
+        user_name = self.user.first_name or self.user.username
+        welcome_response = await self.generate_ai_response(
+            f"Generate a friendly welcome message for {user_name} explaining what you can help them with.",
+            is_welcome=True
+        )
+
+        await self.send(text_data=json.dumps({
+            'type': 'message',
+            'content': welcome_response
+        }))
+
+    async def disconnect(self, close_code):
+        """Leave channel group on disconnect"""
+        if hasattr(self, 'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+
+    async def receive(self, text_data):
+        """Handle incoming messages from WebSocket"""
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+
+            if message_type == 'message':
+                content = data.get('content', '')
+
+                # Detect user intent
+                intent = self.detect_intent(content)
+
+                # Handle based on intent
+                response = await self.handle_intent(intent, content)
+
+                # Send response
+                await self.send(text_data=json.dumps(response))
+
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Invalid message format'
+            }))
+        except Exception as e:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Error processing message: {str(e)}'
+            }))
+
+    def detect_intent(self, message):
+        """
+        Detect user intent from message content.
+        Returns intent category for routing.
+        """
+        message_lower = message.lower()
+
+        # Income generation keywords
+        if any(word in message_lower for word in [
+            'work', 'job', 'freelance', 'income', 'money', 'earn', 'gig',
+            'opportunity', 'opportunities', 'employment', 'hire', 'contract'
+        ]):
+            return 'income_generation'
+
+        # Investment advice keywords
+        elif any(word in message_lower for word in [
+            'invest', 'stock', 'advisor', 'buffett', 'cathie', 'dalio',
+            'portfolio', 'market', 'trading', 'dividend', 'finance'
+        ]):
+            return 'investment_advice'
+
+        # Content creation keywords
+        elif any(word in message_lower for word in [
+            'create', 'generate', 'blog', 'image', 'video', 'content',
+            'write', 'design', 'social', 'twitter', 'instagram', 'article'
+        ]):
+            return 'content_creation'
+
+        # Data analysis keywords
+        elif any(word in message_lower for word in [
+            'data', 'spider', 'intelligence', 'analyze', 'search',
+            'find', 'discover', 'collect', 'scrape', 'monitor'
+        ]):
+            return 'data_analysis'
+
+        # Agent execution keywords
+        elif any(word in message_lower for word in [
+            'agent', 'execute', 'run', 'task', 'automate', 'ai'
+        ]):
+            return 'agent_execution'
+
+        # Advisor consultation
+        elif any(word in message_lower for word in [
+            'advice', 'consult', 'ask', 'recommend', 'suggest', 'expert'
+        ]):
+            return 'advisor_consultation'
+
+        else:
+            return 'general'
+
+    async def generate_ai_response(self, message, is_welcome=False):
+        """
+        Generate response using REAL AI (GPT-5-mini).
+        """
+        user_name = self.user.first_name or self.user.username
+
+        # Get system stats for context
+        agent_count = await self.get_agent_count()
+        advisor_count = await self.get_advisor_count()
+        spider_count = await self.get_spider_count()
+        data_count = await self.get_spider_data_count()
+        opportunity_count = await self.get_opportunity_count()
+
+        # Build system context
+        system_context = f"""You are an intelligent Personal Assistant for {user_name} in the Unified AI Platform.
+
+SYSTEM CAPABILITIES:
+- {agent_count} AI Agents available for task execution
+- {advisor_count} Legendary Advisors (Warren Buffett, Cathie Wood, Ray Dalio, etc.)
+- {spider_count} Active Spiders collecting real-time intelligence
+- {data_count}+ data items in Intelligence Hub
+- {opportunity_count} income opportunities currently available
+- Content Studio with 70+ image styles, blog generation, video scripts, social media
+- Real-time data analysis and monitoring
+
+AVAILABLE FEATURES:
+1. Income Generation - Find work opportunities, freelance gigs, job matches
+2. Investment Advice - Consult with legendary investors and advisors
+3. Content Creation - Generate images, blogs, videos, social media content
+4. Data Intelligence - Access spider network data and opportunities
+5. Agent Execution - Run any of the {agent_count} specialized AI agents
+6. Advisor Consultation - Get expert guidance from {advisor_count} advisors
+
+INSTRUCTIONS:
+- Be friendly, conversational, and helpful
+- Address the user by name: {user_name}
+- Provide specific, actionable responses
+- Reference real system capabilities and stats
+- Suggest concrete next steps
+- Use emojis sparingly (max 2-3 per message)
+{"- This is a welcome message - explain what you can do and ask what they'd like help with" if is_welcome else "- Respond directly to their request"}
+"""
+
+        try:
+            # Call REAL AI using LLMEnforcer
+            result = await asyncio.to_thread(
+                self.llm_enforcer.enforce_real_ai,
+                prompt=message,
+                context=system_context,
+                agent_name="PersonalAssistantV2",
+                task_type="conversation",
+                max_tokens=400
+            )
+
+            if result['success']:
+                logger.info(f"✅ Generated REAL AI response using {result.get('model', 'GPT-5-mini')}")
+                return result['response']
+            else:
+                logger.warning(f"⚠️ AI generation failed: {result.get('error')}")
+                return self.get_fallback_response(message, user_name, agent_count, advisor_count, spider_count)
+
+        except Exception as e:
+            logger.error(f"❌ Error calling LLM: {e}")
+            return self.get_fallback_response(message, user_name, agent_count, advisor_count, spider_count)
+
+    def get_fallback_response(self, message, user_name, agent_count, advisor_count, spider_count):
+        """Fallback response if AI fails"""
+        message_lower = message.lower()
+
+        if any(word in message_lower for word in ['work', 'job', 'income', 'money']):
+            return f"Hi {user_name}! I can help you find income opportunities. We have {spider_count} spiders searching right now. Would you like to see current opportunities?"
+        elif any(word in message_lower for word in ['invest', 'advisor', 'stock']):
+            return f"Hi {user_name}! I can connect you with {advisor_count} legendary advisors for investment guidance. Who would you like to consult?"
+        elif any(word in message_lower for word in ['create', 'content', 'image', 'blog']):
+            return f"Hi {user_name}! The Content Studio is ready with 70+ image styles, blog generation, and more. What would you like to create?"
+        else:
+            return f"Hi {user_name}! I have {agent_count} AI agents, {advisor_count} advisors, and {spider_count} spiders ready to help. What would you like to do?"
+
+    async def handle_intent(self, intent, message):
+        """
+        Generate intelligent response using REAL AI instead of hardcoded responses.
+        Returns response dictionary.
+        """
+        # Use REAL AI to generate response
+        ai_response = await self.generate_ai_response(message)
+
+        return {
+            'type': 'message',
+            'content': ai_response
+        }
+
+    # Database query methods (async)
+
+    @database_sync_to_async
+    def get_agent_count(self):
+        """Get count of available agents"""
+        from core.models_unified_system import Agent
+        return Agent.objects.count()
+
+    @database_sync_to_async
+    def get_advisor_count(self):
+        """Get count of available advisors"""
+        from core.models_unified_system import Advisor
+        return Advisor.objects.count()
+
+    @database_sync_to_async
+    def get_spider_count(self):
+        """Get count of active spiders"""
+        from ai_core.spiders.spider_registry import spider_registry
+        return len(spider_registry.list_spiders())
+
+    @database_sync_to_async
+    def get_spider_data_count(self):
+        """Get count of spider data items"""
+        from core.models_unified_system import SpiderData
+        return SpiderData.objects.count()
+
+    @database_sync_to_async
+    def get_opportunity_count(self):
+        """Get count of available opportunities"""
+        from core.models_unified_system import Opportunity
+        return Opportunity.objects.filter(status='active').count()

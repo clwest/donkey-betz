@@ -73,7 +73,7 @@ class RemoteOKIntelligenceSpider(BaseIntelligenceSpider):
             quality_score=quality_score,
             timestamp=datetime.now(timezone.utc),
             relevance_tags=['remote_work', 'tech_jobs', 'startup'] + job_info.get('tags', [])[:5],
-            target_agents=['income_builder', 'tech_job_specialist', 'startup_opportunities'],
+            target_agents=['income-builder', 'job_application_agent', 'career-agent', 'tech-job-specialist'],  # FIXED: Correct agent names
             target_advisors=['startup_guru', 'tech_innovator']
         )
 
@@ -155,6 +155,6 @@ class RemoteOKIntelligenceSpider(BaseIntelligenceSpider):
             quality_score=0.4,
             timestamp=datetime.now(timezone.utc),
             relevance_tags=['tech_jobs', 'general'],
-            target_agents=['income_builder'],
+            target_agents=['income-builder', 'job_application_agent', 'career-agent'],
             target_advisors=[]
         )

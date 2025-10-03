@@ -1,0 +1,156 @@
+{% extends 'unified_v2/base.html' %}
+
+{% block title %}{{ advisor.name }}{% endblock %}
+{% block page_title %}{{ advisor.name }}{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Back Button -->
+    <a href="{% url 'unified_v2:advisor_council' %}"
+       class="mb-4 inline-block text-purple-400 hover:text-purple-300 transition-colors">
+        ← Back to Council
+    </a>
+
+    {% if advisor %}
+    <!-- Advisor Header -->
+    <div class="mb-6 rounded-lg bg-gradient-to-br from-purple-900 to-gray-800 p-8 shadow-xl">
+        <div class="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+            <!-- Avatar -->
+            {% if advisor.avatar_url %}
+            <img src="{{ advisor.avatar_url }}"
+                 alt="{{ advisor.name }}"
+                 class="w-24 h-24 rounded-full border-4 border-purple-400 shadow-lg">
+            {% else %}
+            <div class="w-24 h-24 rounded-full bg-purple-600 flex items-center justify-center text-4xl font-bold text-white border-4 border-purple-400 shadow-lg">
+                {{ advisor.name|slice:":1" }}
+            </div>
+            {% endif %}
+
+            <!-- Info -->
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold text-white mb-2">{{ advisor.name }}</h1>
+                {% if advisor.title %}
+                <p class="text-lg text-purple-300 mb-3">{{ advisor.title }}</p>
+                {% endif %}
+
+                <!-- Badges -->
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <span class="rounded-full bg-purple-600 px-4 py-1 text-sm text-white">
+                        {{ advisor.expertise|default:'Strategic Advisor' }}
+                    </span>
+                    {% if advisor.category %}
+                    <span class="rounded-full bg-gray-700 px-4 py-1 text-sm text-gray-300">
+                        {{ advisor.category }}
+                    </span>
+                    {% endif %}
+                    {% if advisor.influence_score %}
+                    <span class="rounded-full bg-yellow-600 px-4 py-1 text-sm text-white">
+                        ★ {{ advisor.influence_score }}/100 Influence
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Stats -->
+                <div class="flex gap-6 text-sm text-gray-300">
+                    <div>
+                        <span class="text-purple-400 font-semibold">{{ advisor.total_consultations|default:0 }}</span>
+                        Consultations
+                    </div>
+                    <div>
+                        <span class="text-purple-400 font-semibold">{{ advisor.total_insights_provided|default:0 }}</span>
+                        Insights
+                    </div>
+                    {% if advisor.last_consultation %}
+                    <div>
+                        Last: {{ advisor.last_consultation|date:"M d, Y" }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Wisdom Quote -->
+        {% if advisor.wisdom %}
+        <div class="mt-6 border-l-4 border-purple-400 pl-4">
+            <p class="text-gray-200 italic">"{{ advisor.wisdom }}"</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Consultation Form -->
+    <div class="mb-6 rounded-lg bg-gray-800 p-6 shadow-lg">
+        <h2 class="mb-4 text-xl font-semibold text-white flex items-center gap-2">
+            <span class="text-2xl">💭</span>
+            Request Consultation
+        </h2>
+
+        <form id="consultation-form">
+            <div class="mb-4">
+                <label class="mb-2 block text-sm font-medium text-gray-300">
+                    What would you like advice on?
+                </label>
+                <textarea id="question-input"
+                          class="w-full rounded-lg bg-gray-700 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          rows="5"
+                          placeholder="Ask {{ advisor.name }} for strategic advice, insights, or guidance..."></textarea>
+                <p class="mt-1 text-xs text-gray-400">
+                    Be specific with your question. {{ advisor.name }} will provide personalized advice based on their expertise in {{ advisor.expertise|default:'strategic thinking' }}.
+                </p>
+            </div>
+
+            <button type="submit"
+                    class="w-full sm:w-auto rounded-lg bg-purple-600 px-8 py-3 text-white font-semibold hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500">
+                Request Consultation with {{ advisor.name }}
+            </button>
+        </form>
+
+        <!-- Consultation Result -->
+        <div id="consultation-result" class="mt-6 hidden">
+            <!-- Results will appear here -->
+        </div>
+    </div>
+
+    <!-- Consultation History -->
+    {% if consultation_history %}
+    <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+        <h2 class="mb-4 text-xl font-semibold text-white">Previous Consultations</h2>
+        <div class="space-y-4">
+            {% for consultation in consultation_history %}
+            <div class="rounded-lg border border-gray-700 p-4 hover:bg-gray-750 transition-colors">
+                <div class="mb-2 flex justify-between items-start">
+                    <span class="text-sm text-gray-300">{{ consultation.created_at|date:"M d, Y H:i" }}</span>
+                    <span class="text-xs px-2 py-1 rounded bg-{% if consultation.status == 'completed' %}green{% elif consultation.status == 'pending' %}yellow{% else %}gray{% endif %}-600 text-white">
+                        {{ consultation.status|upper }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-400 mb-2"><strong>Question:</strong> {{ consultation.question|truncatewords:20 }}</p>
+                {% if consultation.response %}
+                <p class="text-sm text-gray-300"><strong>Advice:</strong> {{ consultation.response|truncatewords:30 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="rounded-lg bg-gray-800 p-6 shadow-lg text-center">
+        <p class="text-gray-400">No consultation history yet. Be the first to consult with {{ advisor.name }}!</p>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Error State -->
+    <div class="rounded-lg bg-red-900 border border-red-700 p-6 text-center">
+        <h2 class="text-xl font-semibold text-white mb-2">Advisor Not Found</h2>
+        <p class="text-red-200 mb-4">{{ error|default:'The requested advisor could not be found.' }}</p>
+        <a href="{% url 'unified_v2:advisor_council' %}"
+           class="inline-block rounded-lg bg-red-700 px-6 py-2 text-white hover:bg-red-800 transition-colors">
+            Return to Council
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/unified_v2/advisor_detail.js"></script>
+{% endblock %}

@@ -13,6 +13,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 from django.core.cache import cache
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
@@ -180,17 +181,27 @@ Ready to start today and make your life easier!
             Focus on psychological insights that will help win the project.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert freelance consultant who understands client psychology."},
-                    {"role": "user", "content": analysis_prompt}
-                ],
-                max_tokens=400,
-                temperature=0.3
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ProposalEngine",
+                prompt=f"You are an expert freelance consultant who understands client psychology.\n\n{analysis_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="high",
+                verbosity="medium",
+                max_output_tokens=400
             )
 
-            analysis_text = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error analyzing client: {result.get('error')}")
+                return ClientAnalysis(
+                    budget_sensitivity="medium",
+                    experience_level="intermediate",
+                    urgency="medium",
+                    communication_style="professional",
+                    pain_points=["needs reliable freelancer"],
+                    decision_factors=["quality", "communication", "price"]
+                )
+
+            analysis_text = result['response']
 
             # Parse JSON response
             analysis_data = json.loads(analysis_text)
@@ -332,17 +343,20 @@ Ready to start today and make your life easier!
             Return only the final personalized proposal text.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert freelance proposal writer who wins 30%+ of projects."},
-                    {"role": "user", "content": personalization_prompt}
-                ],
-                max_tokens=400,
-                temperature=0.7
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ProposalEngine",
+                prompt=f"You are an expert freelance proposal writer who wins 30%+ of projects.\n\n{personalization_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="high",
+                verbosity="medium",
+                max_output_tokens=400
             )
 
-            personalized_proposal = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error personalizing proposal: {result.get('error')}")
+                return template.template
+
+            personalized_proposal = result['response']
 
             logger.info(f"📝 Personalized proposal for {client_analysis.experience_level} client")
             return personalized_proposal
@@ -430,17 +444,20 @@ Ready to start today and make your life easier!
             Generate a follow-up message that moves us closer to getting hired.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert sales communicator who converts prospects into clients."},
-                    {"role": "user", "content": follow_up_prompt}
-                ],
-                max_tokens=250,
-                temperature=0.6
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ProposalEngine",
+                prompt=f"You are an expert sales communicator who converts prospects into clients.\n\n{follow_up_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="high",
+                verbosity="medium",
+                max_output_tokens=250
             )
 
-            follow_up = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error generating follow-up: {result.get('error')}")
+                return "Thank you for your response. I'm happy to discuss any questions you might have about the project."
+
+            follow_up = result['response']
 
             logger.info(f"📧 Generated smart follow-up message")
             return follow_up

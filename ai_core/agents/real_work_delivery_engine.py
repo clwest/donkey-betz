@@ -20,6 +20,7 @@ from django.conf import settings
 import subprocess
 import tempfile
 from pathlib import Path
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
@@ -159,17 +160,20 @@ class RealWorkDeliveryEngine:
             ]
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert project manager who breaks down freelance projects into specific, deliverable tasks."},
-                    {"role": "user", "content": deliverable_prompt}
-                ],
-                max_tokens=800,
-                temperature=0.3
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert project manager who breaks down freelance projects into specific, deliverable tasks.\n\n{deliverable_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="medium",
+                max_output_tokens=800
             )
 
-            deliverable_data = json.loads(response.choices[0].message.content)
+            if not result['success']:
+                logger.error(f"LLM error creating deliverables: {result.get('error')}")
+                return []
+
+            deliverable_data = json.loads(result['response'])
 
             deliverables = []
             for i, item in enumerate(deliverable_data):
@@ -259,17 +263,20 @@ class RealWorkDeliveryEngine:
             Return the complete code with explanations.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert Python developer who writes clean, production-ready code."},
-                    {"role": "user", "content": code_prompt}
-                ],
-                max_tokens=2000,
-                temperature=0.2
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert Python developer who writes clean, production-ready code.\n\n{code_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
             )
 
-            code_content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error executing Python development: {result.get('error')}")
+                return None
+
+            code_content = result['response']
 
             # Save code to file
             code_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
@@ -336,17 +343,20 @@ class RealWorkDeliveryEngine:
             Write the complete content piece.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert content writer who creates compelling, original content that engages readers and meets client objectives."},
-                    {"role": "user", "content": content_prompt}
-                ],
-                max_tokens=3000,
-                temperature=0.7
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert content writer who creates compelling, original content that engages readers and meets client objectives.\n\n{content_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=3000
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error executing content writing: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             # Save content to file
             content_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
@@ -402,17 +412,20 @@ class RealWorkDeliveryEngine:
             Create a comprehensive analysis report.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert data analyst who creates thorough, insightful analyses with actionable recommendations."},
-                    {"role": "user", "content": analysis_prompt}
-                ],
-                max_tokens=2500,
-                temperature=0.3
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert data analyst who creates thorough, insightful analyses with actionable recommendations.\n\n{analysis_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2500
             )
 
-            analysis_content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error executing data analysis: {result.get('error')}")
+                return None
+
+            analysis_content = result['response']
 
             # Save analysis to file
             analysis_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
@@ -460,17 +473,20 @@ class RealWorkDeliveryEngine:
             Be thorough and professional in your delivery.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert virtual assistant who completes tasks efficiently and professionally."},
-                    {"role": "user", "content": va_prompt}
-                ],
-                max_tokens=1500,
-                temperature=0.4
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert virtual assistant who completes tasks efficiently and professionally.\n\n{va_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="low",
+                verbosity="medium",
+                max_output_tokens=1500
             )
 
-            va_content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error executing virtual assistance: {result.get('error')}")
+                return None
+
+            va_content = result['response']
 
             # Save deliverable
             va_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
@@ -488,6 +504,194 @@ class RealWorkDeliveryEngine:
 
         except Exception as e:
             logger.error(f"Error executing virtual assistance: {e}")
+            return False
+
+    async def _execute_web_development(self,
+                                     deliverable: WorkDeliverable,
+                                     project: ProjectExecution,
+                                     agent: str) -> bool:
+        """Execute web development work"""
+        try:
+            client = openai.AsyncOpenAI()
+
+            web_prompt = f"""
+            Create web development code for this deliverable:
+
+            Title: {deliverable.title}
+            Description: {deliverable.description}
+            Requirements: {', '.join(deliverable.requirements)}
+
+            Generate production-ready web code (HTML/CSS/JS) that meets all requirements.
+            """
+
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert web developer.\n\n{web_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
+            )
+
+            if not result['success']:
+                logger.error(f"LLM error executing web development: {result.get('error')}")
+                return None
+
+            content = result['response']
+            work_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
+            work_dir.mkdir(parents=True, exist_ok=True)
+            work_file = work_dir / f"{deliverable.deliverable_id}.html"
+            with open(work_file, 'w') as f:
+                f.write(content)
+
+            deliverable.file_path = str(work_file)
+            deliverable.content = content
+            logger.info(f"✅ Web development completed")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error executing web development: {e}")
+            return False
+
+    async def _execute_design_work(self,
+                                  deliverable: WorkDeliverable,
+                                  project: ProjectExecution,
+                                  agent: str) -> bool:
+        """Execute design work"""
+        try:
+            client = openai.AsyncOpenAI()
+
+            design_prompt = f"""
+            Create a comprehensive design deliverable:
+
+            Title: {deliverable.title}
+            Description: {deliverable.description}
+            Requirements: {', '.join(deliverable.requirements)}
+
+            Provide detailed design specifications, mockups description, and implementation guidelines.
+            """
+
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert designer.\n\n{design_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
+            )
+
+            if not result['success']:
+                logger.error(f"LLM error executing design work: {result.get('error')}")
+                return None
+
+            content = result['response']
+            work_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
+            work_dir.mkdir(parents=True, exist_ok=True)
+            work_file = work_dir / f"{deliverable.deliverable_id}_design.md"
+            with open(work_file, 'w') as f:
+                f.write(content)
+
+            deliverable.file_path = str(work_file)
+            deliverable.content = content
+            logger.info(f"✅ Design work completed")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error executing design work: {e}")
+            return False
+
+    async def _execute_seo_work(self,
+                               deliverable: WorkDeliverable,
+                               project: ProjectExecution,
+                               agent: str) -> bool:
+        """Execute SEO work"""
+        try:
+            client = openai.AsyncOpenAI()
+
+            seo_prompt = f"""
+            Create comprehensive SEO deliverable:
+
+            Title: {deliverable.title}
+            Description: {deliverable.description}
+            Requirements: {', '.join(deliverable.requirements)}
+
+            Provide detailed SEO strategy, keyword research, and optimization recommendations.
+            """
+
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert SEO specialist.\n\n{seo_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
+            )
+
+            if not result['success']:
+                logger.error(f"LLM error executing SEO work: {result.get('error')}")
+                return None
+
+            content = result['response']
+            work_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
+            work_dir.mkdir(parents=True, exist_ok=True)
+            work_file = work_dir / f"{deliverable.deliverable_id}_seo.md"
+            with open(work_file, 'w') as f:
+                f.write(content)
+
+            deliverable.file_path = str(work_file)
+            deliverable.content = content
+            logger.info(f"✅ SEO work completed")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error executing SEO work: {e}")
+            return False
+
+    async def _execute_marketing_work(self,
+                                     deliverable: WorkDeliverable,
+                                     project: ProjectExecution,
+                                     agent: str) -> bool:
+        """Execute marketing work"""
+        try:
+            client = openai.AsyncOpenAI()
+
+            marketing_prompt = f"""
+            Create comprehensive marketing deliverable:
+
+            Title: {deliverable.title}
+            Description: {deliverable.description}
+            Requirements: {', '.join(deliverable.requirements)}
+
+            Provide detailed marketing strategy, campaigns, and implementation plan.
+            """
+
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert marketing strategist.\n\n{marketing_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
+            )
+
+            if not result['success']:
+                logger.error(f"LLM error executing marketing work: {result.get('error')}")
+                return None
+
+            content = result['response']
+            work_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
+            work_dir.mkdir(parents=True, exist_ok=True)
+            work_file = work_dir / f"{deliverable.deliverable_id}_marketing.md"
+            with open(work_file, 'w') as f:
+                f.write(content)
+
+            deliverable.file_path = str(work_file)
+            deliverable.content = content
+            logger.info(f"✅ Marketing work completed")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error executing marketing work: {e}")
             return False
 
     async def _execute_general_work(self,
@@ -514,17 +718,20 @@ class RealWorkDeliveryEngine:
             Be specific, actionable, and professional.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert freelancer who delivers high-quality work across multiple disciplines."},
-                    {"role": "user", "content": general_prompt}
-                ],
-                max_tokens=2000,
-                temperature=0.5
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are an expert freelancer who delivers high-quality work across multiple disciplines.\n\n{general_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error executing general work: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             # Save deliverable
             work_dir = Path(f"/tmp/project_deliverables/{project.project_id}")
@@ -573,17 +780,20 @@ class RealWorkDeliveryEngine:
             Return only a number between 1-10 (e.g., 8.5)
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a quality assessor who rates deliverables objectively."},
-                    {"role": "user", "content": quality_prompt}
-                ],
-                max_tokens=50,
-                temperature=0.1
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="WorkDeliveryEngine",
+                prompt=f"You are a quality assessor who rates deliverables objectively.\n\n{quality_prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="high",
+                verbosity="low",
+                max_output_tokens=50
             )
 
-            quality_text = response.choices[0].message.content.strip()
+            if not result['success']:
+                logger.error(f"LLM error assessing quality: {result.get('error')}")
+                return 7.0  # Default quality score
+
+            quality_text = result['response'].strip()
 
             # Extract number
             quality_score = float(''.join(c for c in quality_text if c.isdigit() or c == '.'))

@@ -292,10 +292,22 @@
         if (data.type === 'analysis_update') {
             updateAnalysisResults(data.analysis);
             updateMetrics(data.metrics);
+            analysisInProgress = true;
+        } else if (data.type === 'decision_update') {
+            // Initial decisions from server
+            if (data.decisions && data.decisions.length > 0) {
+                updateAnalysisResults({decisions: data.decisions});
+                updateMetrics(data.metrics || {});
+            }
         } else if (data.type === 'decision_executed') {
             addExecutedDecision(data.decision);
         } else if (data.type === 'decision_pending') {
             addPendingDecision(data.decision);
+        } else if (data.type === 'opportunities_analysis') {
+            // Real analysis results from AI
+            updateAnalysisResults(data);
+            updateMetrics(data.metrics || {});
+            analysisInProgress = true;
         }
     }
 
@@ -327,12 +339,15 @@
                     ai_recommendation: document.getElementById('aiRecommendation').checked
                 }
             }));
+        } else {
+            // WebSocket not connected - show error
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> WebSocket not connected. Please refresh the page.
+                </div>
+            `;
+            analysisInProgress = false;
         }
-
-        // Simulate analysis for demo
-        setTimeout(() => {
-            simulateAnalysisComplete();
-        }, 2000);
     }
 
     // Execute decision
@@ -385,37 +400,63 @@
         `;
     }
 
-    // Update analysis results
+    // Update analysis results with REAL data from AI
     function updateAnalysisResults(analysis) {
-        const resultsHtml = `
-            <div class="row">
-                <div class="col-md-4">
-                    <h6 class="text-success">Strengths</h6>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-check text-success"></i> High potential ROI</li>
-                        <li><i class="fas fa-check text-success"></i> Market timing favorable</li>
-                        <li><i class="fas fa-check text-success"></i> Resources available</li>
-                    </ul>
+        if (analysis.decisions && analysis.decisions.length > 0) {
+            // Show real decisions from server
+            const decisionsHtml = analysis.decisions.map(decision => `
+                <div class="decision-item mb-3 p-3 border rounded">
+                    <h5>${decision.title || 'Decision'}</h5>
+                    <p>${decision.description || ''}</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Value:</strong> $${Math.abs(decision.value || 0)}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Success Probability:</strong> ${((decision.success_probability || 0) * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="badge ${decision.recommended_action === 'INVEST' ? 'bg-success' : decision.recommended_action === 'CONSIDER' ? 'bg-warning' : 'bg-info'}">
+                            ${decision.recommended_action || 'REVIEW'}
+                        </span>
+                    </div>
+                    <p class="mt-2 mb-0"><small>${decision.reasoning || ''}</small></p>
                 </div>
-                <div class="col-md-4">
-                    <h6 class="text-warning">Risks</h6>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-exclamation text-warning"></i> Competition increasing</li>
-                        <li><i class="fas fa-exclamation text-warning"></i> Regulatory concerns</li>
-                        <li><i class="fas fa-exclamation text-warning"></i> Timeline constraints</li>
-                    </ul>
+            `).join('');
+            document.getElementById('analysisResults').innerHTML = decisionsHtml;
+        } else if (analysis.top_opportunities) {
+            // Show opportunities analysis
+            const oppsHtml = analysis.top_opportunities.map(opp => `
+                <div class="decision-item mb-3 p-3 border rounded">
+                    <h5>${opp.title || 'Opportunity'}</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Value:</strong> $${opp.value || 0}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Decision Score:</strong> ${opp.decision_score || 0}/100
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Risk:</strong> ${opp.risk_level || 'medium'}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="badge ${opp.recommendation === 'PURSUE' ? 'bg-success' : 'bg-warning'}">
+                            ${opp.recommendation || 'CONSIDER'}
+                        </span>
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <h6 class="text-info">Recommendations</h6>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-lightbulb text-info"></i> Proceed with phased approach</li>
-                        <li><i class="fas fa-lightbulb text-info"></i> Establish risk mitigation</li>
-                        <li><i class="fas fa-lightbulb text-info"></i> Monitor key metrics</li>
-                    </ul>
+            `).join('');
+            document.getElementById('analysisResults').innerHTML = oppsHtml;
+        } else {
+            // Generic analysis result
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="alert alert-info">
+                    <p>Analysis complete. ${analysis.message || 'Results processed successfully.'}</p>
                 </div>
-            </div>
-        `;
-        document.getElementById('analysisResults').innerHTML = resultsHtml;
+            `;
+        }
     }
 
     // Update metrics
@@ -451,12 +492,7 @@
         document.getElementById('processingSpeed').textContent = speed + 'ms';
     }
 
-    // Simulate analysis complete
-    function simulateAnalysisComplete() {
-        updateAnalysisResults({});
-        updateMetrics({});
-        analysisInProgress = false;
-    }
+    // Removed simulateAnalysisComplete() - now uses only real WebSocket data
 
     // Update connection status
     function updateConnectionStatus(connected) {

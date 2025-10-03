@@ -250,22 +250,10 @@
                 </div>
                 <div class="card-body">
                     <canvas id="sourcesChart" height="200"></canvas>
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="fas fa-circle text-primary"></i> Freelance</span>
-                            <strong>45%</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="fas fa-circle text-success"></i> Contracts</span>
-                            <strong>30%</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="fas fa-circle text-warning"></i> Consulting</span>
-                            <strong>15%</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span><i class="fas fa-circle text-info"></i> Other</span>
-                            <strong>10%</strong>
+                    <div class="mt-3" id="sourcesLegend">
+                        <!-- Revenue sources legend will be populated dynamically from API data -->
+                        <div class="text-center text-muted py-2">
+                            <small>Loading revenue sources...</small>
                         </div>
                     </div>
                 </div>
@@ -346,33 +334,10 @@
                         <i class="fas fa-chart-bar"></i> Performance Metrics
                     </h5>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Monthly Goal</span>
-                            <span>$780 / $1,000</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar bg-success" style="width: 78%"></div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Applications Submitted</span>
-                            <span>45 / 50</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar bg-info" style="width: 90%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Conversion Rate</span>
-                            <span>18 / 45</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar bg-warning" style="width: 40%"></div>
-                        </div>
+                <div class="card-body" id="performanceMetrics">
+                    <!-- Performance metrics will be populated dynamically from API data -->
+                    <div class="text-center text-muted py-4">
+                        <small>Loading performance metrics...</small>
                     </div>
                 </div>
             </div>
@@ -687,7 +652,66 @@
             sourcesChart.data.labels = sources.map(s => s.source);
             sourcesChart.data.datasets[0].data = sources.map(s => s.total);
             sourcesChart.update();
+
+            // Update legend with real percentages
+            const total = sources.reduce((sum, s) => sum + s.total, 0);
+            const legendHtml = sources.map((s, idx) => {
+                const percentage = total > 0 ? ((s.total / total) * 100).toFixed(0) : 0;
+                const colors = ['text-primary', 'text-success', 'text-warning', 'text-info'];
+                return `
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-circle ${colors[idx % colors.length]}"></i> ${s.source}</span>
+                        <strong>${percentage}%</strong>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('sourcesLegend').innerHTML = legendHtml;
         }
+
+        // Update performance metrics with real data
+        updatePerformanceMetrics(data);
+    }
+
+    // Update performance metrics dynamically
+    function updatePerformanceMetrics(data) {
+        const monthlyGoal = 1000; // Could be fetched from user settings
+        const monthlyRevenue = data.time_based?.this_month || 0;
+        const monthlyProgress = Math.min((monthlyRevenue / monthlyGoal) * 100, 100);
+
+        const totalApps = data.recent_applications?.length || 0;
+        const successfulApps = data.recent_applications?.filter(a => ['confirmed', 'received'].includes(a.status)).length || 0;
+        const conversionPercentage = totalApps > 0 ? ((successfulApps / totalApps) * 100).toFixed(0) : 0;
+
+        const metricsHtml = `
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Monthly Goal</span>
+                    <span>$${monthlyRevenue.toFixed(2)} / $${monthlyGoal}</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar bg-success" style="width: ${monthlyProgress}%"></div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Applications Tracked</span>
+                    <span>${totalApps} total</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar bg-info" style="width: ${Math.min((totalApps / 50) * 100, 100)}%"></div>
+                </div>
+            </div>
+            <div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Conversion Rate</span>
+                    <span>${successfulApps} / ${totalApps}</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar bg-warning" style="width: ${conversionPercentage}%"></div>
+                </div>
+            </div>
+        `;
+        document.getElementById('performanceMetrics').innerHTML = metricsHtml;
     }
 
     // Initialize on page load

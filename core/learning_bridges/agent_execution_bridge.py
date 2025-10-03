@@ -50,6 +50,9 @@ class AgentExecutionLearningLoop:
             # Update Agent model aggregate metrics
             self._update_agent_aggregate_metrics(execution, was_successful)
 
+            # TRIGGER LEARNING ORCHESTRATOR
+            self._trigger_orchestrator(execution, was_successful, performance)
+
             logger.info(f"✅ Agent execution learning complete")
 
         except Exception as e:
@@ -211,6 +214,32 @@ class AgentExecutionLearningLoop:
                 agent.effectiveness_score * 0.8 + recent_success_rate * 0.2
             )
             agent.save()
+
+    def _trigger_orchestrator(self, execution: AgentExecution, was_successful: bool, performance: Dict):
+        """
+        Trigger the Learning Orchestrator for autonomous improvement
+        """
+        try:
+            from core.self_development.learning_orchestrator import trigger_learning_cycle
+
+            event_data = {
+                'agent_name': execution.agent.name,
+                'task': execution.task if hasattr(execution, 'task') else '',
+                'success': was_successful,
+                'performance': performance,
+                'execution_id': str(execution.id)
+            }
+
+            trigger_learning_cycle(
+                user=execution.user,
+                event_type='agent_execution',
+                event_data=event_data
+            )
+
+            logger.info(f"🚀 Triggered learning orchestrator for autonomous improvement")
+
+        except Exception as e:
+            logger.error(f"Error triggering orchestrator: {e}")
 
 
 # Signal integration

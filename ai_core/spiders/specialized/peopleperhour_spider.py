@@ -563,7 +563,7 @@ class PeoplePerHourIntelligenceSpider(BaseIntelligenceSpider):
                 quality_score=0.3,
                 timestamp=datetime.now(timezone.utc),
                 relevance_tags=['project', 'general'],
-                target_agents=['income_builder'],
+                target_agents=['income-builder', 'job_application_agent', 'career-agent'],
                 target_advisors=[]
             )
 

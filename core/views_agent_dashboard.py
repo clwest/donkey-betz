@@ -168,7 +168,7 @@ def agent_costs_data(request):
         'solutionTokens': solution_tokens,
         'learningTokens': learning_tokens,
         'tokensPerDollar': int(total_tokens / total_cost) if total_cost > 0 else 0,
-        'modelUsed': 'gpt-4o-mini',
+        'modelUsed': 'gpt-5-mini',
         'timestamp': datetime.now().isoformat()
     })
 

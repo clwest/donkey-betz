@@ -85,36 +85,8 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
                 decision_opp['type'] = 'income'  # Ensure type is set
                 formatted_opportunities.append(decision_opp)
 
-            # Add investment decisions
-            investment_decisions = [
-                {
-                    'id': 'invest_1',
-                    'type': 'invest',
-                    'title': 'Upgrade to AI Tools Suite',
-                    'description': 'Invest in premium AI tools to increase productivity',
-                    'value': -299,
-                    'roi_projection': 1500,
-                    'payback_period': '2 months',
-                    'success_probability': 0.85,
-                    'recommended_action': 'INVEST',
-                    'reasoning': 'Will increase your output by 3x and allow higher-value projects'
-                },
-                {
-                    'id': 'invest_2',
-                    'type': 'invest',
-                    'title': 'Professional Portfolio Website',
-                    'description': 'Create a professional presence to attract premium clients',
-                    'value': -500,
-                    'roi_projection': 3000,
-                    'payback_period': '3 months',
-                    'success_probability': 0.70,
-                    'recommended_action': 'CONSIDER',
-                    'reasoning': 'Important for long-term growth but can wait until first revenue'
-                }
-            ]
-
-            # Combine all decisions
-            all_decisions = formatted_opportunities + investment_decisions
+            # Use only real opportunities from spider network - no hardcoded investments
+            all_decisions = formatted_opportunities
 
             # Calculate earnings projections based on real data
             total_potential = sum(opp.get('value', 0) for opp in formatted_opportunities if opp.get('value', 0) > 0)

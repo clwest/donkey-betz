@@ -19,6 +19,7 @@ django.setup()
 
 import openai
 import logging
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class RealJobExecutor:
         self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
 
-    def execute_job(self, opportunity: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def execute_job(self, opportunity: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Execute a job based on its actual requirements
 
@@ -50,15 +51,15 @@ class RealJobExecutor:
 
             # Execute based on job type
             if job_type == 'content_writing':
-                return self._execute_content_job(opportunity)
+                return await self._execute_content_job(opportunity)
             elif job_type == 'code_development':
-                return self._execute_coding_job(opportunity)
+                return await self._execute_coding_job(opportunity)
             elif job_type == 'data_analysis':
-                return self._execute_data_job(opportunity)
+                return await self._execute_data_job(opportunity)
             elif job_type == 'design':
-                return self._execute_design_job(opportunity)
+                return await self._execute_design_job(opportunity)
             else:
-                return self._execute_general_job(opportunity)
+                return await self._execute_general_job(opportunity)
 
         except Exception as e:
             logger.error(f"Error executing job: {e}")
@@ -92,7 +93,7 @@ class RealJobExecutor:
 
         return 'general'
 
-    def _execute_content_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_content_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
         """Execute content writing job"""
         title = opportunity.get('title', 'Content Project')
         description = opportunity.get('description', '')
@@ -115,17 +116,20 @@ class RealJobExecutor:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"You are a professional content writer working on this specific job: {title}"},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1200,
-                temperature=0.7
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="JobExecutor",
+                prompt=f"You are a professional content writer working on this specific job: {title}\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="low",
+                verbosity="medium",
+                max_output_tokens=1200
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error in content job: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             # Save unique file
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -154,7 +158,7 @@ class RealJobExecutor:
             logger.error(f"Error creating content: {e}")
             return None
 
-    def _execute_coding_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_coding_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
         """Execute coding/development job"""
         title = opportunity.get('title', 'Development Project')
         description = opportunity.get('description', '')
@@ -178,17 +182,20 @@ class RealJobExecutor:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"You are an expert developer working on: {title}"},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1200,
-                temperature=0.3
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="JobExecutor",
+                prompt=f"You are an expert developer working on: {title}\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="low",
+                verbosity="medium",
+                max_output_tokens=1200
             )
 
-            code_content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error in coding job: {result.get('error')}")
+                return None
+
+            code_content = result['response']
 
             # Clean up code formatting
             if "```python" in code_content:
@@ -234,7 +241,7 @@ class RealJobExecutor:
             logger.error(f"Error creating code: {e}")
             return None
 
-    def _execute_data_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_data_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
         """Execute data analysis job"""
         title = opportunity.get('title', 'Data Analysis Project')
         description = opportunity.get('description', '')
@@ -256,17 +263,20 @@ class RealJobExecutor:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"You are a data analyst working on: {title}"},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1200,
-                temperature=0.3
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="JobExecutor",
+                prompt=f"You are a data analyst working on: {title}\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="low",
+                verbosity="medium",
+                max_output_tokens=1200
             )
 
-            code_content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error in data job: {result.get('error')}")
+                return None
+
+            code_content = result['response']
 
             # Clean up code formatting
             if "```python" in code_content:
@@ -302,7 +312,7 @@ class RealJobExecutor:
             logger.error(f"Error creating data analysis: {e}")
             return None
 
-    def _execute_design_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_design_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
         """Execute design job (creates specification/requirements)"""
         title = opportunity.get('title', 'Design Project')
         description = opportunity.get('description', '')
@@ -324,17 +334,20 @@ class RealJobExecutor:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"You are a UX/UI designer working on: {title}"},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1200,
-                temperature=0.7
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="JobExecutor",
+                prompt=f"You are a UX/UI designer working on: {title}\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="low",
+                verbosity="medium",
+                max_output_tokens=1200
             )
 
-            design_content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error in design job: {result.get('error')}")
+                return None
+
+            design_content = result['response']
 
             # Save unique file
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -362,7 +375,7 @@ class RealJobExecutor:
             logger.error(f"Error creating design: {e}")
             return None
 
-    def _execute_general_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_general_job(self, opportunity: Dict[str, Any]) -> Dict[str, Any]:
         """Execute general job type"""
         title = opportunity.get('title', 'General Project')
         description = opportunity.get('description', '')
@@ -383,17 +396,20 @@ class RealJobExecutor:
         """
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"You are a freelancer working on: {title}"},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1200,
-                temperature=0.7
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="JobExecutor",
+                prompt=f"You are a freelancer working on: {title}\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="low",
+                verbosity="medium",
+                max_output_tokens=1200
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error in general job: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             # Save unique file
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

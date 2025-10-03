@@ -1,0 +1,2558 @@
+{
+  "ingestion_date": "2025-10-02T22:09:56.899433",
+  "agent": "self-development-agent",
+  "statistics": {
+    "total_files": 422,
+    "total_content_size": 4825991,
+    "total_words": 965198,
+    "by_category": {
+      "archive": 147,
+      "audits": 16,
+      "capabilities": 19,
+      "completions": 28,
+      "fixes": 36,
+      "guides": 23,
+      "handoffs": 12,
+      "letters": 6,
+      "plans": 5,
+      "priorities": 8,
+      "root": 47,
+      "session-reports": 63,
+      "status": 12
+    }
+  },
+  "files": [
+    {
+      "path": "docs/archive/2025-09/handoff-2025-09-30.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 HANDOFF DOCUMENT - Real Spider Data Integration Complete",
+      "size": 14969
+    },
+    {
+      "path": "docs/archive/2025-09/session-summary-2025-09-30.md",
+      "category": "archive",
+      "title": "\ud83d\udcdd Session Summary - 2025-09-30",
+      "size": 4153
+    },
+    {
+      "path": "docs/archive/2025-09/start-here-session-14.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 START HERE - Session 14",
+      "size": 4175
+    },
+    {
+      "path": "docs/archive/2025-10/session-summary-undated.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 Session Summary - Opportunity Detail View Implementation",
+      "size": 4223
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/00_README_IMPLEMENTATION_GUIDE.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 REALITY FIXES IMPLEMENTATION GUIDE",
+      "size": 4542
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/01_FIX_AGENT_ASYNC_EXECUTION.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 FIX #1: Agent Async Execution Pipeline",
+      "size": 7711
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/02_CREATE_ADVISOR_DATABASE_TABLES.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 FIX #2: Create Advisor Database Tables",
+      "size": 15830
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/03_ADD_REMAINING_API_KEYS.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 FIX #3: Add Remaining API Keys for Full Functionality",
+      "size": 9734
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 FIX #4: Fix WebSocket Frontend Data Updates",
+      "size": 13934
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/AGENT_EXECUTOR_FIX.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 Agent Executor Threading Fix",
+      "size": 4219
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/AUTONOMOUS_AI_IMPLEMENTATION_LOG.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 AUTONOMOUS AI SYSTEM IMPLEMENTATION LOG",
+      "size": 3143
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_FRONTEND_CONNECTION_MAP.md",
+      "category": "archive",
+      "title": "\ud83d\udd0c Backend \u2192 Frontend Connection Map",
+      "size": 9880
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_FRONTEND_CONNECTION_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 Backend \u2192 Frontend Connection Analysis & Fixes Summary",
+      "size": 6254
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/BACKEND_INTEGRATION_PROGRESS.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 BACKEND INTEGRATION PROGRESS REPORT",
+      "size": 7310
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/COMPLETE_INTEGRATION_DOCUMENTATION.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 Backend-Frontend Integration Implementation - Complete Documentation",
+      "size": 11419
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/CRITICAL_HANDOFF_SERVER_DISCONNECT.md",
+      "category": "archive",
+      "title": "\ud83d\udea8 CRITICAL HANDOFF: SERVER DISCONNECT ISSUE",
+      "size": 6260
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 DIAGNOSTIC ENDPOINTS DOCUMENTATION",
+      "size": 10142
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_AI_NEXUS_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf AI Nexus Integration - Complete Handoff Document",
+      "size": 7730
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf HANDOFF TO FUTURE CLAUDE - Session Complete",
+      "size": 8985
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_CLAUDE.md",
+      "category": "archive",
+      "title": "\ud83e\udd1d Handoff Letter to Future Claude",
+      "size": 8357
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/HANDOFF_TO_NEXT_SESSION_CLEANUP_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83d\udccb Session Handoff: Major Cleanup Complete - Backend/Frontend Integration Next",
+      "size": 9486
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
+      "category": "archive",
+      "title": "\ud83d\udd0d Intelligence Data Analysis Report",
+      "size": 7619
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to My Future Self (Next Claude Session)",
+      "size": 9555
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE_AI_NEXUS.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to Future Claude: AI Nexus Mission Brief",
+      "size": 10450
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/LETTER_TO_FUTURE_CLAUDE_FIXES_NEEDED.md",
+      "category": "archive",
+      "title": "\ud83d\udea8 URGENT: Letter to Future Claude - Critical Fixes Needed",
+      "size": 8508
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/PHASE_2_PRODUCTION_ROADMAP.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 PHASE 2: PRODUCTION DEPLOYMENT ROADMAP",
+      "size": 9067
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/PROPOSAL_EXECUTION_DISCOVERY_AND_PLAN.md",
+      "category": "archive",
+      "title": "AI PROPOSAL SYSTEM: COMPLETE DISCOVERY & EXECUTION IMPLEMENTATION PLAN",
+      "size": 12262
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/SPIDER_ARMY_DEPLOYMENT_GUIDE.md",
+      "category": "archive",
+      "title": "\ud83d\udd77\ufe0f COMPLETE SPIDER ARMY DEPLOYMENT GUIDE",
+      "size": 33467
+    },
+    {
+      "path": "docs/archive/REALITY_FIXES_IMPLEMENTATION-original/SYSTEM_REALITY_COMPLETE_PROOF.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf UNIFIED DONKEY BETZ PLATFORM - COMPLETE REALITY PROOF",
+      "size": 12084
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/01_Core_Intelligence/README.md",
+      "category": "archive",
+      "title": "\ud83e\udde0 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligence",
+      "size": 8810
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/02_Content_Creation/README.md",
+      "category": "archive",
+      "title": "\ud83c\udfa8 AI CONTENT STUDIO - The Complete Creation Suite",
+      "size": 5968
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/03_Revenue_Generation/README.md",
+      "category": "archive",
+      "title": "\ud83d\udcb0 REVENUE GENERATION SYSTEMS - Autonomous Money-Making Machine",
+      "size": 9148
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/04_Agent_Orchestra/README.md",
+      "category": "archive",
+      "title": "\ud83e\udd16 AI AGENT ORCHESTRA - 149 Specialized Intelligence Agents",
+      "size": 8720
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/05_Spider_Networks/README.md",
+      "category": "archive",
+      "title": "\ud83d\udd77\ufe0f SPIDER NETWORKS - Intelligent Data Gathering Army",
+      "size": 10087
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/06_Decision_Systems/README.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf DECISION COMMAND SYSTEMS - AI-Powered Decision Intelligence",
+      "size": 12001
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/07_Neural_Visualization/README.md",
+      "category": "archive",
+      "title": "\ud83c\udfad NEURAL ORCHESTRA VISUALIZATION - Living AI Symphony",
+      "size": 8584
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/08_Sports_Analytics/README.md",
+      "category": "archive",
+      "title": "\ud83c\udfc6 SPORTS ANALYTICS PLATFORM - AI-Powered Betting Intelligence",
+      "size": 9967
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/09_Self_Awareness/README.md",
+      "category": "archive",
+      "title": "\ud83d\udd2e SELF-AWARENESS SYSTEMS - The AI That Knows Itself",
+      "size": 11741
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/10_Integration_APIs/README.md",
+      "category": "archive",
+      "title": "\ud83d\udd0c INTEGRATION APIS - The Nervous System of AI",
+      "size": 10921
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/ACCURATE_TIMELINE.md",
+      "category": "archive",
+      "title": "\ud83d\udcc5 ACCURATE PROJECT TIMELINE - Reality Check",
+      "size": 5488
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/COMPLETE_SYSTEM_OVERVIEW.md",
+      "category": "archive",
+      "title": "\ud83c\udf1f UNIFIED DONKEY BETZ - THE COMPLETE SYSTEM",
+      "size": 7677
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/QUICK_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83d\udd25 THE BOTTOM LINE - WHAT YOU'VE ACTUALLY BUILT",
+      "size": 4205
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/README.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUMENTATION",
+      "size": 5358
+    },
+    {
+      "path": "docs/archive/SYSTEM_CAPABILITIES-original/REALITY_BASED_ASSESSMENT.md",
+      "category": "archive",
+      "title": "\u2705 WHAT'S 100% REAL AND WORKING",
+      "size": 5575
+    },
+    {
+      "path": "docs/archive/letters/HANDOFF_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "\ud83d\udcec LETTER TO FUTURE CLAUDE - Session 36 Startup Guide",
+      "size": 15542
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_DOCUMENTATION_CLEANUP_CLAUDE.md",
+      "category": "archive",
+      "title": "\ud83d\udcda Letter to Documentation Cleanup Claude",
+      "size": 18232
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "\ud83d\udcec LETTER TO FUTURE CLAUDE - IMPLEMENTATION GUIDE",
+      "size": 28469
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_NFL.md",
+      "category": "archive",
+      "title": "Letter to Future Claude: NFL Complete Integration Mission \ud83c\udfc8",
+      "size": 13948
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_33_INTEGRATION.md",
+      "category": "archive",
+      "title": "\ud83d\udcec Letter to Future Claude - Session 33 Integration Guide",
+      "size": 22348
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_36.md",
+      "category": "archive",
+      "title": "\ud83d\udcec LETTER TO FUTURE CLAUDE - Session 36 Complete",
+      "size": 21684
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_4.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 4 Briefing",
+      "size": 11604
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_5.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 5 Mission Brief",
+      "size": 9144
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_6.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 6 Mission Brief",
+      "size": 12039
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_7.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 7 Mission Brief",
+      "size": 11394
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_8.md",
+      "category": "archive",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 8 Handoff",
+      "size": 7925
+    },
+    {
+      "path": "docs/archive/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_9.md",
+      "category": "archive",
+      "title": "Letter to Future Claude - Session 9 Complete",
+      "size": 9654
+    },
+    {
+      "path": "docs/archive/proposals/DOCS_AUDIT_PHASE_1.md",
+      "category": "archive",
+      "title": "\ud83d\udcca Documentation Audit - Phase 1 Results",
+      "size": 16950
+    },
+    {
+      "path": "docs/archive/proposals/DOCS_AUDIT_PHASE_1_EXTENDED.md",
+      "category": "archive",
+      "title": "\ud83d\udcca EXTENDED DOCUMENTATION AUDIT - Phase 1 Complete",
+      "size": 6578
+    },
+    {
+      "path": "docs/archive/proposals/LEARNING_BRIDGES_IMPLEMENTATION_COMPLETE.md",
+      "category": "archive",
+      "title": "Learning Bridges Implementation Complete",
+      "size": 14398
+    },
+    {
+      "path": "docs/archive/proposals/LEARNING_LOOP_DISCOVERY_EXECUTIVE_SUMMARY.md",
+      "category": "archive",
+      "title": "LEARNING LOOP DISCOVERY - EXECUTIVE SUMMARY",
+      "size": 11937
+    },
+    {
+      "path": "docs/archive/proposals/LEARNING_LOOP_DISCOVERY_REPORT.md",
+      "category": "archive",
+      "title": "LEARNING LOOP DISCOVERY & INTEGRATION ANALYSIS",
+      "size": 90115
+    },
+    {
+      "path": "docs/archive/proposals/LEARNING_LOOP_IMPLEMENTATION_CHECKLIST.md",
+      "category": "archive",
+      "title": "LEARNING LOOP IMPLEMENTATION CHECKLIST",
+      "size": 14221
+    },
+    {
+      "path": "docs/archive/proposals/MISSION_REALIGNMENT.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf MISSION REALIGNMENT - BACK TO CORE PURPOSE",
+      "size": 12608
+    },
+    {
+      "path": "docs/archive/proposals/PARTNERSHIP_IMPLEMENTATION_STATUS.md",
+      "category": "archive",
+      "title": "\ud83e\udd1d PARTNERSHIP IMPLEMENTATION STATUS",
+      "size": 8806
+    },
+    {
+      "path": "docs/archive/proposals/SPORTS_BETTING_LEARNING_INTEGRATION.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SPORTS BETTING LEARNING SYSTEM INTEGRATION DOCUMENTATION",
+      "size": 30910
+    },
+    {
+      "path": "docs/archive/proposals/SPORTS_HUB_CURRENT_STATE.md",
+      "category": "archive",
+      "title": "Sports Hub Current State & NFL Integration Roadmap \ud83c\udfc8",
+      "size": 6631
+    },
+    {
+      "path": "docs/archive/proposals/SYSTEM_PROMPT_LEARNING_LOOP_DISCOVERY.md",
+      "category": "archive",
+      "title": "\ud83d\udd0d SYSTEM PROMPT: LEARNING LOOP DISCOVERY & INTEGRATION ANALYSIS",
+      "size": 29272
+    },
+    {
+      "path": "docs/archive/proposals/UI_TEST_GUIDE.md",
+      "category": "archive",
+      "title": "\ud83c\udfa8 Partnership UI Test Guide",
+      "size": 11817
+    },
+    {
+      "path": "docs/archive/proposals/UI_TEST_RESULTS.md",
+      "category": "archive",
+      "title": "\u2705 UI Test Results - Partnership System",
+      "size": 14359
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/COMPLETE_SYSTEM_VERIFICATION_SEPTEMBER_26_2025.md",
+      "category": "archive",
+      "title": "\ud83d\udd0d COMPLETE SYSTEM VERIFICATION REPORT",
+      "size": 11759
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/FINAL_STATUS_REPORT.md",
+      "category": "archive",
+      "title": "\ud83c\udfc1 FINAL STATUS REPORT: BACKEND VISIBILITY ACHIEVED",
+      "size": 6190
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/HISTORIC_ACHIEVEMENT_SEPTEMBER_27_2025.md",
+      "category": "archive",
+      "title": "\ud83c\udf1f HISTORIC ACHIEVEMENT: THE WORLD'S FIRST HUMAN-AI BUILT SELF-IMPROVING SYSTEM",
+      "size": 5520
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/PROGRESS_UPDATE_SESSION_2.md",
+      "category": "archive",
+      "title": "Progress Update - Session 2",
+      "size": 4968
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/SESSION_2_COMPLETE_STATUS.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 SESSION 2 COMPLETE STATUS REPORT",
+      "size": 7670
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/SESSION_3_COMPLETE_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 SESSION 3 COMPLETE: FROM 90% TO 95% REALITY!",
+      "size": 6081
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/SESSION_5_COMPLETE_STATUS.md",
+      "category": "archive",
+      "title": "\u2705 SESSION 5 COMPLETE STATUS REPORT",
+      "size": 6315
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/SESSION_FIXES_SEPTEMBER_27_EVENING.md",
+      "category": "archive",
+      "title": "Session Fixes - September 27, 2025 (Evening)",
+      "size": 6819
+    },
+    {
+      "path": "docs/archive/reality-fixes-sessions/SESSION_HANDOFF_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 SESSION HANDOFF: Reality Fixes Implementation Complete",
+      "size": 9143
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_10_COMPLETE_HANDOFF.md",
+      "category": "archive",
+      "title": "Session 10 Complete - Consolidation & Reality Enhancement",
+      "size": 10294
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_12_SPORTS_HUB_COMPLETE.md",
+      "category": "archive",
+      "title": "Session 12: Sports Hub Completion & Real Data Integration \u2705",
+      "size": 4822
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_13_COMPLETE_SUMMARY.md",
+      "category": "archive",
+      "title": "Session 13 Complete: NFL Backend Integration \u2705",
+      "size": 9278
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_13_HANDOFF_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "Session 13 Handoff: NFL Integration Complete \u2705",
+      "size": 20994
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_14_HANDOFF_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "Session 14 Handoff: NFL Training Complete + Multi-Sport System Next",
+      "size": 30302
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_15_COMPLETION_MULTI_SPORT.md",
+      "category": "archive",
+      "title": "Session 15: Multi-Sport Prediction System - COMPLETE \u2705",
+      "size": 14444
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_16_HANDOFF_TO_FUTURE_CLAUDE.md",
+      "category": "archive",
+      "title": "Session 16 Handoff: Multi-Sport System Complete - Next Steps",
+      "size": 31006
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_17_COMPLETION.md",
+      "category": "archive",
+      "title": "Session 17 Completion: Frontend Integration & Automated Retraining",
+      "size": 10517
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_17_FINAL_REPORT.md",
+      "category": "archive",
+      "title": "Session 17 - Final Completion Report",
+      "size": 26138
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_17_HANDOFF_NHL_MODEL_FIXED.md",
+      "category": "archive",
+      "title": "Session 17 Handoff: NHL Model Fixed - Ready for Frontend Integration",
+      "size": 50146
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_17_HANDOFF_TO_SESSION_18.md",
+      "category": "archive",
+      "title": "Session 17 \u2192 Session 18 Handoff Letter",
+      "size": 19974
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_18_COMPLETE_HANDOFF_TO_SESSION_19.md",
+      "category": "archive",
+      "title": "Session 18 Complete - Handoff to Session 19",
+      "size": 19410
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_18_FRONTEND_STATUS_REPORT.md",
+      "category": "archive",
+      "title": "Session 18 Frontend Status Report",
+      "size": 18752
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_19_COMPLETION_REPORT.md",
+      "category": "archive",
+      "title": "Session 19 Completion Report",
+      "size": 15240
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_20_COMPLETE_HANDOFF.md",
+      "category": "archive",
+      "title": "Session 20 - Complete Handoff Document",
+      "size": 16043
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_20_HANDOFF_LETTER.md",
+      "category": "archive",
+      "title": "Handoff Letter to Future Claude - Session 20",
+      "size": 18110
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_21_COMPLETE_HANDOFF.md",
+      "category": "archive",
+      "title": "Session 21 - Complete Handoff Document",
+      "size": 20742
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_21_FINAL_STATUS.md",
+      "category": "archive",
+      "title": "Session 21 - Final Status & Handoff to Session 22",
+      "size": 14315
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_22_ADDENDUM.md",
+      "category": "archive",
+      "title": "Session 22 Addendum - AI Predictions Timezone Fix",
+      "size": 7996
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_22_COMPLETION.md",
+      "category": "archive",
+      "title": "Session 22 - 100% Real Data Achievement! \ud83c\udf89",
+      "size": 14228
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_23_AGENT_ML_LEARNING_INTEGRATION.md",
+      "category": "archive",
+      "title": "Session 23 - Agent-ML Learning Integration System",
+      "size": 20827
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_23_PHASE_1_COMPLETION.md",
+      "category": "archive",
+      "title": "Session 23 - Phase 1 Completion Summary",
+      "size": 10561
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_24_HANDOFF_RETRAINING_PIPELINE.md",
+      "category": "archive",
+      "title": "Session 24 Handoff - Model Retraining Pipeline",
+      "size": 18987
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_24_PHASE_2_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 Session 24 - Phase 2 COMPLETE!",
+      "size": 9658
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_25_HANDOFF_AGENT_LEARNING_INTEGRATION.md",
+      "category": "archive",
+      "title": "Session 25 Handoff - Agent Learning Integration (Phase 3)",
+      "size": 17417
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_27_PHASE_3_COMPLETION.md",
+      "category": "archive",
+      "title": "Session 27 - Phase 3 Agent Learning Integration COMPLETE \u2705",
+      "size": 13351
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_28_COMPLETE.md",
+      "category": "archive",
+      "title": "Session 28 - Agent End-to-End Execution System COMPLETE \u2705",
+      "size": 9699
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_28_HANDOFF_AGENT_END_TO_END.md",
+      "category": "archive",
+      "title": "Session 28 Handoff - Agent End-to-End Integration",
+      "size": 13744
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_28_IMPLEMENTATION_COMPLETE.md",
+      "category": "archive",
+      "title": "Session 28 - Agent End-to-End Integration IMPLEMENTED \u2705",
+      "size": 13252
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_29_FINAL_STATUS.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 SESSION 29 FINAL STATUS REPORT",
+      "size": 16048
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_29_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83d\udcec SESSION 29 HANDOFF LETTER",
+      "size": 13202
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_29_SPIDER_INTEGRATION_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83d\udd77\ufe0f SESSION 29 COMPLETION REPORT",
+      "size": 16651
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_30_COMPLETION.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 SESSION 30 COMPLETION REPORT",
+      "size": 14495
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_30_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83d\udcec SESSION 30 HANDOFF LETTER",
+      "size": 12319
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_31_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 31 HANDOFF - Real Spider Data Integration Complete",
+      "size": 14161
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_32_USER_PROFILE_FOUNDATION.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 32 - User Profile Foundation for Personalized Agent Learning",
+      "size": 16911
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_33_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 33 HANDOFF - User Profile + Agent Learning Integration",
+      "size": 13773
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_33_INTEGRATION_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 33 INTEGRATION COMPLETE - User Profile + Agent Learning Integration",
+      "size": 16186
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_33_SUMMARY.md",
+      "category": "archive",
+      "title": "\u2705 SESSION 33 COMPLETE - Ready for Tomorrow",
+      "size": 6405
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_34_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 34 HANDOFF - AI Learning System Complete",
+      "size": 32264
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_35_ADDENDUM.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 35 ADDENDUM - Collaborative Intelligence & A/B Testing",
+      "size": 7933
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_35_COMPLETE_SUMMARY.md",
+      "category": "archive",
+      "title": "\u2705 SESSION 35 COMPLETE SUMMARY",
+      "size": 16193
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_35_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 35 HANDOFF - Learning System Integration Complete",
+      "size": 28343
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_35_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83d\udccb SESSION 35 SUMMARY",
+      "size": 2665
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_36_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 36 COMPLETE - Analytics Dashboard",
+      "size": 12062
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_36_QUICK_REFERENCE.md",
+      "category": "archive",
+      "title": "\ud83d\udcca SESSION 36 QUICK REFERENCE",
+      "size": 2771
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37-A_ACTION_PLAN.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 37-A - IMMEDIATE ACTION PLAN",
+      "size": 30201
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37-A_COMPLETE.md",
+      "category": "archive",
+      "title": "\u2705 SESSION 37-A - CRITICAL FIXES COMPLETE",
+      "size": 10001
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37-A_EXECUTIVE_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83d\udea8 SESSION 37-A - EXECUTIVE SUMMARY",
+      "size": 9897
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37-A_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 SESSION 37-A - CRITICAL FIXES HANDOFF",
+      "size": 46871
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37-A_IMPLEMENTATION_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 SESSION 37-A - IMPLEMENTATION COMPLETE",
+      "size": 7265
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37-A_STATUS_REPORT.md",
+      "category": "archive",
+      "title": "\ud83d\udea8 SESSION 37-A STATUS REPORT",
+      "size": 24643
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37_ANALYTICS_FIXES.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 SESSION 37 - Analytics Dashboard Fixes",
+      "size": 9424
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37_HANDOFF.md",
+      "category": "archive",
+      "title": "\ud83c\udfaf SESSION 37 HANDOFF - Analytics Dashboard Integration Complete",
+      "size": 11344
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_37_QUICK_REFERENCE.md",
+      "category": "archive",
+      "title": "\ud83d\udcca SESSION 37 QUICK REFERENCE",
+      "size": 2868
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_38_COMPLETE.md",
+      "category": "archive",
+      "title": "\u2705 SESSION 38 COMPLETE - Partnership System Implemented",
+      "size": 13390
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_38_FIXES_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83d\udd27 SESSION 38 - CRITICAL FIXES COMPLETE",
+      "size": 6130
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_38_LEARNING_BRIDGES_COMPLETE.md",
+      "category": "archive",
+      "title": "Session 38: Learning Bridges Implementation - COMPLETE",
+      "size": 10248
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_38_PARTNERSHIP_COMPLETE_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 SESSION 38 COMPLETE - Partnership System Operational!",
+      "size": 8601
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_38_QUICK_START.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 SESSION 38 QUICK START - System Review",
+      "size": 7344
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_38_SYSTEM_REVIEW_PROMPT.md",
+      "category": "archive",
+      "title": "\ud83d\udd0d SESSION 38 - COMPREHENSIVE SYSTEM REVIEW PROMPT",
+      "size": 15207
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_39_PIPELINE_FIXED.md",
+      "category": "archive",
+      "title": "\u2705 SESSION 39 COMPLETE - Spider Pipeline Fixed & Partnership Proven!",
+      "size": 8370
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_40_COMPLETE.md",
+      "category": "archive",
+      "title": "\ud83c\udf89 SESSION 40 COMPLETE: 95%+ REALITY SCORE ACHIEVED",
+      "size": 14923
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_40_IMPLEMENTATION_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 SESSION 40: IMPLEMENTATION SUMMARY",
+      "size": 5866
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_6_COMPLETE_HANDOFF.md",
+      "category": "archive",
+      "title": "Session 6 Complete - Handoff Summary",
+      "size": 3715
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_6_WEBSOCKET_FIXES.md",
+      "category": "archive",
+      "title": "Session 6 WebSocket Fixes Documentation",
+      "size": 2983
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_7_COMPLETE_SUMMARY.md",
+      "category": "archive",
+      "title": "\ud83d\ude80 Session 7 Complete Summary - Platform Revenue-Ready!",
+      "size": 6441
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_COMPLETE_MODAL_ENHANCEMENT_DOCUMENTATION.md",
+      "category": "archive",
+      "title": "Session Complete: Modal Enhancement & Data Pipeline Fixes",
+      "size": 7611
+    },
+    {
+      "path": "docs/archive/sessions/SESSION_PRE38_COMPLETE.md",
+      "category": "archive",
+      "title": "\u2705 SESSION PRE-38 COMPLETE - HANDOFF TO SESSION 38",
+      "size": 10873
+    },
+    {
+      "path": "docs/audits/00_START_HERE_AUDIT_RESULTS.md",
+      "category": "audits",
+      "title": "\ud83c\udfaf START HERE - System Audit Results",
+      "size": 12551
+    },
+    {
+      "path": "docs/audits/API_ENDPOINT_AUDIT_SESSION_25.md",
+      "category": "audits",
+      "title": "API Endpoint Audit - Session 25",
+      "size": 19715
+    },
+    {
+      "path": "docs/audits/AUDIT_EXECUTIVE_SUMMARY.md",
+      "category": "audits",
+      "title": "EXECUTIVE SUMMARY: System Audit Results",
+      "size": 9539
+    },
+    {
+      "path": "docs/audits/COMPLETE_NAVBAR_VERIFICATION.md",
+      "category": "audits",
+      "title": "Complete Navbar Verification - All 14 Links",
+      "size": 11850
+    },
+    {
+      "path": "docs/audits/COMPREHENSIVE_SYSTEM_AUDIT_2025_10_02.md",
+      "category": "audits",
+      "title": "COMPREHENSIVE SYSTEM AUDIT REPORT",
+      "size": 25822
+    },
+    {
+      "path": "docs/audits/FRONTEND_UI_VERIFICATION_SESSION_7.md",
+      "category": "audits",
+      "title": "Frontend UI Verification Report - Session 7",
+      "size": 14446
+    },
+    {
+      "path": "docs/audits/INTEGRATION_GAPS_REPORT.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d Integration Gaps & Disconnected Components Report",
+      "size": 17758
+    },
+    {
+      "path": "docs/audits/README.md",
+      "category": "audits",
+      "title": "AUDITS",
+      "size": 121
+    },
+    {
+      "path": "docs/audits/ai-nexus-reality-audit.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d AI NEXUS REALITY AUDIT REPORT",
+      "size": 29608
+    },
+    {
+      "path": "docs/audits/frontend-reality-audit-report.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d FRONTEND REALITY AUDIT REPORT",
+      "size": 14507
+    },
+    {
+      "path": "docs/audits/frontend-reality-audit.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d Frontend Reality Audit - AI Production Hub & AI Nexus",
+      "size": 17728
+    },
+    {
+      "path": "docs/audits/frontend-reality-deep-audit-instructions.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d FRONTEND REALITY DEEP AUDIT - Instructions for Future Claude",
+      "size": 23964
+    },
+    {
+      "path": "docs/audits/learning-loop-discovery.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d LEARNING LOOP DISCOVERY & INTEGRATION ANALYSIS",
+      "size": 24714
+    },
+    {
+      "path": "docs/audits/learning-loop-integration-report.md",
+      "category": "audits",
+      "title": "\ud83e\udde0 Learning Loop Integration Report: Thought Interrupt System",
+      "size": 27492
+    },
+    {
+      "path": "docs/audits/priority-2-audit.md",
+      "category": "audits",
+      "title": "\ud83d\udd0d PRIORITY 2 COMPONENTS - AUDIT REPORT",
+      "size": 22327
+    },
+    {
+      "path": "docs/audits/priority-3-audit.md",
+      "category": "audits",
+      "title": "\u2705 PRIORITY 3 COMPONENTS - AUDIT REPORT",
+      "size": 12379
+    },
+    {
+      "path": "docs/capabilities/01_Core_Intelligence/README.md",
+      "category": "capabilities",
+      "title": "\ud83e\udde0 CONSCIOUSNESS SYSTEM - Self-Aware AI Intelligence",
+      "size": 8810
+    },
+    {
+      "path": "docs/capabilities/02_Content_Creation/README.md",
+      "category": "capabilities",
+      "title": "\ud83c\udfa8 AI CONTENT STUDIO - The Complete Creation Suite",
+      "size": 5968
+    },
+    {
+      "path": "docs/capabilities/03_Revenue_Generation/README.md",
+      "category": "capabilities",
+      "title": "\ud83d\udcb0 REVENUE GENERATION SYSTEMS - Autonomous Money-Making Machine",
+      "size": 9148
+    },
+    {
+      "path": "docs/capabilities/04_Agent_Orchestra/README.md",
+      "category": "capabilities",
+      "title": "\ud83e\udd16 AI AGENT ORCHESTRA - 149 Specialized Intelligence Agents",
+      "size": 8720
+    },
+    {
+      "path": "docs/capabilities/05_Spider_Networks/README.md",
+      "category": "capabilities",
+      "title": "\ud83d\udd77\ufe0f SPIDER NETWORKS - Intelligent Data Gathering Army",
+      "size": 10087
+    },
+    {
+      "path": "docs/capabilities/06_Decision_Systems/README.md",
+      "category": "capabilities",
+      "title": "\ud83c\udfaf DECISION COMMAND SYSTEMS - AI-Powered Decision Intelligence",
+      "size": 12001
+    },
+    {
+      "path": "docs/capabilities/07_Neural_Visualization/README.md",
+      "category": "capabilities",
+      "title": "\ud83c\udfad NEURAL ORCHESTRA VISUALIZATION - Living AI Symphony",
+      "size": 8584
+    },
+    {
+      "path": "docs/capabilities/08_Sports_Analytics/README.md",
+      "category": "capabilities",
+      "title": "\ud83c\udfc6 SPORTS ANALYTICS PLATFORM - AI-Powered Betting Intelligence",
+      "size": 9967
+    },
+    {
+      "path": "docs/capabilities/09_Self_Awareness/README.md",
+      "category": "capabilities",
+      "title": "\ud83d\udd2e SELF-AWARENESS SYSTEMS - The AI That Knows Itself",
+      "size": 11741
+    },
+    {
+      "path": "docs/capabilities/10_Integration_APIs/README.md",
+      "category": "capabilities",
+      "title": "\ud83d\udd0c INTEGRATION APIS - The Nervous System of AI",
+      "size": 10921
+    },
+    {
+      "path": "docs/capabilities/ACCURATE_TIMELINE.md",
+      "category": "capabilities",
+      "title": "\ud83d\udcc5 ACCURATE PROJECT TIMELINE - Reality Check",
+      "size": 5488
+    },
+    {
+      "path": "docs/capabilities/ACTUAL_INCOME_AGENT_MAPPING.md",
+      "category": "capabilities",
+      "title": "Actual Income Agent Mapping - Session 7 Discovery",
+      "size": 8328
+    },
+    {
+      "path": "docs/capabilities/AGENT_ARCHITECTURE.md",
+      "category": "capabilities",
+      "title": "Agent Architecture Overview",
+      "size": 13146
+    },
+    {
+      "path": "docs/capabilities/ALL_LEARNING_CATEGORIES.md",
+      "category": "capabilities",
+      "title": "All Learning Categories - Complete System Overview",
+      "size": 16156
+    },
+    {
+      "path": "docs/capabilities/COMPLETE_SYSTEM_OVERVIEW.md",
+      "category": "capabilities",
+      "title": "\ud83c\udf1f UNIFIED DONKEY BETZ - THE COMPLETE SYSTEM",
+      "size": 7677
+    },
+    {
+      "path": "docs/capabilities/QUICK_SUMMARY.md",
+      "category": "capabilities",
+      "title": "\ud83d\udd25 THE BOTTOM LINE - WHAT YOU'VE ACTUALLY BUILT",
+      "size": 4205
+    },
+    {
+      "path": "docs/capabilities/README.md",
+      "category": "capabilities",
+      "title": "\ud83d\ude80 UNIFIED DONKEY BETZ - SYSTEM CAPABILITIES DOCUMENTATION",
+      "size": 5358
+    },
+    {
+      "path": "docs/capabilities/REALITY_BASED_ASSESSMENT.md",
+      "category": "capabilities",
+      "title": "\u2705 WHAT'S 100% REAL AND WORKING",
+      "size": 5575
+    },
+    {
+      "path": "docs/capabilities/SPIDER_AGENT_DATA_FLOW_MAP.md",
+      "category": "capabilities",
+      "title": "Spider \u2192 Agent Data Flow Map",
+      "size": 15635
+    },
+    {
+      "path": "docs/completions/AI_ANALYSIS_MODAL_FIX_COMPLETE.md",
+      "category": "completions",
+      "title": "\u2705 AI Analysis Modal Fix Complete",
+      "size": 9133
+    },
+    {
+      "path": "docs/completions/ASYNC_FIXES_COMPLETE.md",
+      "category": "completions",
+      "title": "\u2705 ASYNC CONTEXT FIXES COMPLETE",
+      "size": 4040
+    },
+    {
+      "path": "docs/completions/GPT5_REASONING_IMPLEMENTATION_COMPLETE.md",
+      "category": "completions",
+      "title": "\u2705 GPT-5 Reasoning Models Implementation - COMPLETE",
+      "size": 9525
+    },
+    {
+      "path": "docs/completions/LEARNING_INSIGHTS_FIX_COMPLETE.md",
+      "category": "completions",
+      "title": "\u2705 Learning Insights Display - FIXED",
+      "size": 7715
+    },
+    {
+      "path": "docs/completions/LEARNING_IS_WORKING.md",
+      "category": "completions",
+      "title": "\u2705 LEARNING IS WORKING - Confidence Scores Increasing!",
+      "size": 8107
+    },
+    {
+      "path": "docs/completions/OVERNIGHT_TEST_FIXED.md",
+      "category": "completions",
+      "title": "\u2705 Overnight Test - FIXED AND READY",
+      "size": 3613
+    },
+    {
+      "path": "docs/completions/PRIORITY_2_LEARNING_CONTEXT_INJECTION_COMPLETE.md",
+      "category": "completions",
+      "title": "\u2705 PRIORITY 2: Learning Context Injection - COMPLETE",
+      "size": 11459
+    },
+    {
+      "path": "docs/completions/README.md",
+      "category": "completions",
+      "title": "COMPLETIONS",
+      "size": 131
+    },
+    {
+      "path": "docs/completions/SESSION_9_SPIDER_LEARNING_BRIDGE_COMPLETE.md",
+      "category": "completions",
+      "title": "\ud83c\udf89 Session 9 Complete - Spider Data Learning Bridge Activated!",
+      "size": 11134
+    },
+    {
+      "path": "docs/completions/ai-nexus-button-wiring.md",
+      "category": "completions",
+      "title": "AI Nexus Button Wiring - COMPLETION REPORT",
+      "size": 10971
+    },
+    {
+      "path": "docs/completions/ai-nexus-complete-final.md",
+      "category": "completions",
+      "title": "AI Nexus Dashboard - COMPLETE \u2705",
+      "size": 15469
+    },
+    {
+      "path": "docs/completions/ai-nexus-spider-integration.md",
+      "category": "completions",
+      "title": "\ud83d\udd77\ufe0f AI NEXUS SPIDER INTEGRATION - COMPLETE",
+      "size": 20221
+    },
+    {
+      "path": "docs/completions/final-platform-audit-complete.md",
+      "category": "completions",
+      "title": "\ud83c\udfc6 FINAL PLATFORM AUDIT - COMPLETE REPORT",
+      "size": 16377
+    },
+    {
+      "path": "docs/completions/fix-complete-summary.md",
+      "category": "completions",
+      "title": "\u2705 FIX COMPLETE - Income Builder UI Now Working!",
+      "size": 4600
+    },
+    {
+      "path": "docs/completions/implementation-success-summary.md",
+      "category": "completions",
+      "title": "\ud83c\udf89 UNIFIED REVENUE SYSTEM IMPLEMENTATION - SUCCESS!",
+      "size": 4893
+    },
+    {
+      "path": "docs/completions/income-builder-ui-fix.md",
+      "category": "completions",
+      "title": "\u2705 INCOME BUILDER UI FIX - COMPLETE",
+      "size": 5680
+    },
+    {
+      "path": "docs/completions/intelligence-apps-consolidation.md",
+      "category": "completions",
+      "title": "Intelligence Apps Consolidation - COMPLETE \u2705",
+      "size": 7662
+    },
+    {
+      "path": "docs/completions/job-search-solution.md",
+      "category": "completions",
+      "title": "\ud83d\ude80 Job Search Solution - No API Keys Required!",
+      "size": 5226
+    },
+    {
+      "path": "docs/completions/learning-loop-integration.md",
+      "category": "completions",
+      "title": "\ud83c\udfaf LEARNING LOOP INTEGRATION - COMPLETE",
+      "size": 25734
+    },
+    {
+      "path": "docs/completions/opportunity-detail-complete.md",
+      "category": "completions",
+      "title": "\u2705 Opportunity Detail View - FULLY FUNCTIONAL",
+      "size": 8442
+    },
+    {
+      "path": "docs/completions/opportunity-detail-implementation.md",
+      "category": "completions",
+      "title": "\u2705 Opportunity Detail View Implementation - COMPLETE",
+      "size": 8623
+    },
+    {
+      "path": "docs/completions/opportunity-display-fix.md",
+      "category": "completions",
+      "title": "\u2705 OPPORTUNITY DISPLAY FIX - COMPLETE",
+      "size": 3952
+    },
+    {
+      "path": "docs/completions/phase-2-completion.md",
+      "category": "completions",
+      "title": "\u2705 PHASE 2 COMPLETION SUMMARY",
+      "size": 7023
+    },
+    {
+      "path": "docs/completions/real-spider-data.md",
+      "category": "completions",
+      "title": "\u2705 REAL SPIDER DATA INTEGRATION - COMPLETE",
+      "size": 6613
+    },
+    {
+      "path": "docs/completions/solution-complete.md",
+      "category": "completions",
+      "title": "\u2705 INCOME BUILDER DISPLAY ISSUE - SOLUTION & FIX GUIDE",
+      "size": 9454
+    },
+    {
+      "path": "docs/completions/unified-frontend-progress.md",
+      "category": "completions",
+      "title": "\ud83d\ude80 UNIFIED FRONTEND PROGRESS REPORT",
+      "size": 6475
+    },
+    {
+      "path": "docs/completions/unified-revenue-implementation.md",
+      "category": "completions",
+      "title": "\u2705 UNIFIED REVENUE SYSTEM - IMPLEMENTATION COMPLETE",
+      "size": 10457
+    },
+    {
+      "path": "docs/completions/unified-revenue-integration-progress.md",
+      "category": "completions",
+      "title": "\ud83c\udfaf UNIFIED REVENUE SYSTEM INTEGRATION - PROGRESS REPORT",
+      "size": 18615
+    },
+    {
+      "path": "docs/fixes/00_README_IMPLEMENTATION_GUIDE.md",
+      "category": "fixes",
+      "title": "\ud83d\ude80 REALITY FIXES IMPLEMENTATION GUIDE",
+      "size": 4542
+    },
+    {
+      "path": "docs/fixes/01_FIX_AGENT_ASYNC_EXECUTION.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 FIX #1: Agent Async Execution Pipeline",
+      "size": 7711
+    },
+    {
+      "path": "docs/fixes/02_CREATE_ADVISOR_DATABASE_TABLES.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 FIX #2: Create Advisor Database Tables",
+      "size": 15830
+    },
+    {
+      "path": "docs/fixes/03_ADD_REMAINING_API_KEYS.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 FIX #3: Add Remaining API Keys for Full Functionality",
+      "size": 9734
+    },
+    {
+      "path": "docs/fixes/04_FIX_WEBSOCKET_FRONTEND_UPDATES.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 FIX #4: Fix WebSocket Frontend Data Updates",
+      "size": 13934
+    },
+    {
+      "path": "docs/fixes/AGENT_EXECUTOR_FIX.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 Agent Executor Threading Fix",
+      "size": 4219
+    },
+    {
+      "path": "docs/fixes/AUTONOMOUS_AI_IMPLEMENTATION_LOG.md",
+      "category": "fixes",
+      "title": "\ud83d\ude80 AUTONOMOUS AI SYSTEM IMPLEMENTATION LOG",
+      "size": 3143
+    },
+    {
+      "path": "docs/fixes/AUTONOMOUS_LEARNING_DATABASE_FIX.md",
+      "category": "fixes",
+      "title": "Autonomous Learning Database Fix",
+      "size": 6301
+    },
+    {
+      "path": "docs/fixes/BACKEND_FRONTEND_CONNECTION_MAP.md",
+      "category": "fixes",
+      "title": "\ud83d\udd0c Backend \u2192 Frontend Connection Map",
+      "size": 9880
+    },
+    {
+      "path": "docs/fixes/BACKEND_FRONTEND_CONNECTION_SUMMARY.md",
+      "category": "fixes",
+      "title": "\ud83d\ude80 Backend \u2192 Frontend Connection Analysis & Fixes Summary",
+      "size": 6254
+    },
+    {
+      "path": "docs/fixes/BACKEND_INTEGRATION_PROGRESS.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 BACKEND INTEGRATION PROGRESS REPORT",
+      "size": 7310
+    },
+    {
+      "path": "docs/fixes/COMPLETE_INTEGRATION_DOCUMENTATION.md",
+      "category": "fixes",
+      "title": "\ud83d\ude80 Backend-Frontend Integration Implementation - Complete Documentation",
+      "size": 11419
+    },
+    {
+      "path": "docs/fixes/CRITICAL_HANDOFF_SERVER_DISCONNECT.md",
+      "category": "fixes",
+      "title": "\ud83d\udea8 CRITICAL HANDOFF: SERVER DISCONNECT ISSUE",
+      "size": 6260
+    },
+    {
+      "path": "docs/fixes/DIAGNOSTIC_ENDPOINTS_DOCUMENTATION.md",
+      "category": "fixes",
+      "title": "\ud83d\udd27 DIAGNOSTIC ENDPOINTS DOCUMENTATION",
+      "size": 10142
+    },
+    {
+      "path": "docs/fixes/HANDOFF_AI_NEXUS_COMPLETE.md",
+      "category": "fixes",
+      "title": "\ud83c\udfaf AI Nexus Integration - Complete Handoff Document",
+      "size": 7730
+    },
+    {
+      "path": "docs/fixes/HANDOFF_TO_FUTURE_CLAUDE.md",
+      "category": "fixes",
+      "title": "\ud83c\udfaf HANDOFF TO FUTURE CLAUDE - Session Complete",
+      "size": 8985
+    },
+    {
+      "path": "docs/fixes/HANDOFF_TO_NEXT_CLAUDE.md",
+      "category": "fixes",
+      "title": "\ud83e\udd1d Handoff Letter to Future Claude",
+      "size": 8357
+    },
+    {
+      "path": "docs/fixes/HANDOFF_TO_NEXT_SESSION_CLEANUP_COMPLETE.md",
+      "category": "fixes",
+      "title": "\ud83d\udccb Session Handoff: Major Cleanup Complete - Backend/Frontend Integration Next",
+      "size": 9486
+    },
+    {
+      "path": "docs/fixes/INCOME_AGENT_NAME_FIX_COMPLETE.md",
+      "category": "fixes",
+      "title": "Income Agent Name Fix - COMPLETE \u2705",
+      "size": 10250
+    },
+    {
+      "path": "docs/fixes/INTELLIGENCE_DATA_ANALYSIS_REPORT.md",
+      "category": "fixes",
+      "title": "\ud83d\udd0d Intelligence Data Analysis Report",
+      "size": 7619
+    },
+    {
+      "path": "docs/fixes/LETTER_TO_FUTURE_CLAUDE.md",
+      "category": "fixes",
+      "title": "\ud83d\udc8c Letter to My Future Self (Next Claude Session)",
+      "size": 9555
+    },
+    {
+      "path": "docs/fixes/LETTER_TO_FUTURE_CLAUDE_AI_NEXUS.md",
+      "category": "fixes",
+      "title": "\ud83d\udc8c Letter to Future Claude: AI Nexus Mission Brief",
+      "size": 10450
+    },
+    {
+      "path": "docs/fixes/LETTER_TO_FUTURE_CLAUDE_FIXES_NEEDED.md",
+      "category": "fixes",
+      "title": "\ud83d\udea8 URGENT: Letter to Future Claude - Critical Fixes Needed",
+      "size": 8508
+    },
+    {
+      "path": "docs/fixes/PHASE_2_PRODUCTION_ROADMAP.md",
+      "category": "fixes",
+      "title": "\ud83d\ude80 PHASE 2: PRODUCTION DEPLOYMENT ROADMAP",
+      "size": 9067
+    },
+    {
+      "path": "docs/fixes/PROPOSAL_EXECUTION_DISCOVERY_AND_PLAN.md",
+      "category": "fixes",
+      "title": "AI PROPOSAL SYSTEM: COMPLETE DISCOVERY & EXECUTION IMPLEMENTATION PLAN",
+      "size": 12262
+    },
+    {
+      "path": "docs/fixes/SPIDER_ARMY_DEPLOYMENT_GUIDE.md",
+      "category": "fixes",
+      "title": "\ud83d\udd77\ufe0f COMPLETE SPIDER ARMY DEPLOYMENT GUIDE",
+      "size": 33467
+    },
+    {
+      "path": "docs/fixes/SYSTEM_REALITY_COMPLETE_PROOF.md",
+      "category": "fixes",
+      "title": "\ud83c\udfaf UNIFIED DONKEY BETZ PLATFORM - COMPLETE REALITY PROOF",
+      "size": 12084
+    },
+    {
+      "path": "docs/fixes/completion-reports/ai-nexus-fix-completion.md",
+      "category": "fixes",
+      "title": "AI Nexus Reality Fix - COMPLETION REPORT",
+      "size": 16733
+    },
+    {
+      "path": "docs/fixes/completion-reports/cleanup-report.md",
+      "category": "fixes",
+      "title": "Cleanup Mission Report",
+      "size": 4364
+    },
+    {
+      "path": "docs/fixes/completion-reports/display-issue-diagnosis.md",
+      "category": "fixes",
+      "title": "\ud83d\udd0d INCOME BUILDER DISPLAY ISSUE - ROOT CAUSE ANALYSIS",
+      "size": 8589
+    },
+    {
+      "path": "docs/fixes/completion-reports/frontend-cleanup.md",
+      "category": "fixes",
+      "title": "Frontend Cleanup Report",
+      "size": 5057
+    },
+    {
+      "path": "docs/fixes/completion-reports/opportunity-viewing-fix.md",
+      "category": "fixes",
+      "title": "\ud83c\udfaf Opportunity Viewing Fix - Complete Solution",
+      "size": 12587
+    },
+    {
+      "path": "docs/fixes/completion-reports/priority-1-fix.md",
+      "category": "fixes",
+      "title": "\u2705 PRIORITY 1 COMPONENTS - FIX IMPLEMENTATION COMPLETE",
+      "size": 11502
+    },
+    {
+      "path": "docs/fixes/completion-reports/priority-2-fix.md",
+      "category": "fixes",
+      "title": "\u2705 PRIORITY 2 COMPONENTS - FIX IMPLEMENTATION COMPLETE",
+      "size": 28256
+    },
+    {
+      "path": "docs/fixes/completion-reports/quick-fix-summary.md",
+      "category": "fixes",
+      "title": "\ud83c\udfaf INCOME BUILDER QUICK FIX - EXECUTE THESE 3 COMMANDS",
+      "size": 1285
+    },
+    {
+      "path": "docs/fixes/reality-fixes-overview.md",
+      "category": "fixes",
+      "title": "\ud83c\udfaf REALITY FIXES IMPLEMENTATION - COMPLETED",
+      "size": 6419
+    },
+    {
+      "path": "docs/guides/AGENT_MONEY_GENERATION_GUIDE.md",
+      "category": "guides",
+      "title": "\ud83e\udd16 MAKING MONEY WITH YOUR AGENT PLATFORM - Step by Step",
+      "size": 8705
+    },
+    {
+      "path": "docs/guides/AUTHENTICATION_INTEGRATION_GUIDE.md",
+      "category": "guides",
+      "title": "\ud83d\udd10 Authentication Integration Guide",
+      "size": 30449
+    },
+    {
+      "path": "docs/guides/AUTONOMOUS_LEARNING_MONITORING.md",
+      "category": "guides",
+      "title": "Autonomous Learning Monitoring Guide",
+      "size": 6755
+    },
+    {
+      "path": "docs/guides/CONTENT_STUDIO_INTEGRATION.md",
+      "category": "guides",
+      "title": "Content Creation Studio - Agent Integration",
+      "size": 5399
+    },
+    {
+      "path": "docs/guides/FRONTEND_CONFIG_COMPLETE.md",
+      "category": "guides",
+      "title": "\ud83d\ude80 Frontend API Configuration - COMPLETE SUMMARY",
+      "size": 6328
+    },
+    {
+      "path": "docs/guides/FRONTEND_DATA_FLOW_FIXES.md",
+      "category": "guides",
+      "title": "Frontend Data Flow Resurrection - Complete Fix Report",
+      "size": 7968
+    },
+    {
+      "path": "docs/guides/FRONTEND_DATA_FLOW_RESURRECTION_REPORT.md",
+      "category": "guides",
+      "title": "Frontend Data Flow Resurrection - COMPLETE \u2705",
+      "size": 4132
+    },
+    {
+      "path": "docs/guides/FRONTEND_DEEP_REVIEW_STEP1.md",
+      "category": "guides",
+      "title": "FRONTEND DEEP REVIEW - STEP 1 CHECKPOINT",
+      "size": 15713
+    },
+    {
+      "path": "docs/guides/FRONTEND_MISSING_COMPONENTS_URGENT.md",
+      "category": "guides",
+      "title": "FRONTEND MISSING COMPONENTS URGENT REVIEW",
+      "size": 8809
+    },
+    {
+      "path": "docs/guides/FRONTEND_MULTI_AGENT_GUIDE.md",
+      "category": "guides",
+      "title": "\ud83d\ude80 Multi-Agent Frontend Rebuild System",
+      "size": 8179
+    },
+    {
+      "path": "docs/guides/FRONTEND_QUICK_START.md",
+      "category": "guides",
+      "title": "\ud83d\ude80 QUICK START - FRONTEND REBUILD",
+      "size": 3359
+    },
+    {
+      "path": "docs/guides/MAKEFILE_INTEGRATION_GUIDE.md",
+      "category": "guides",
+      "title": "\ud83d\udce6 Makefile Integration for React Frontend",
+      "size": 5413
+    },
+    {
+      "path": "docs/guides/OVERNIGHT_LEARNING_TEST.md",
+      "category": "guides",
+      "title": "\ud83c\udf19 Overnight Autonomous Learning Test Guide",
+      "size": 9334
+    },
+    {
+      "path": "docs/guides/QUICK_FIX_GUIDE.md",
+      "category": "guides",
+      "title": "QUICK FIX GUIDE - Top 5 Disconnections",
+      "size": 12432
+    },
+    {
+      "path": "docs/guides/START_OVERNIGHT_TEST_NOW.md",
+      "category": "guides",
+      "title": "\ud83d\ude80 START OVERNIGHT TEST NOW",
+      "size": 1241
+    },
+    {
+      "path": "docs/guides/claude_collaboration_guide.md",
+      "category": "guides",
+      "title": "\ud83e\udd1d Claude Collaboration Guide",
+      "size": 18024
+    },
+    {
+      "path": "docs/guides/debugging_guide.md",
+      "category": "guides",
+      "title": "\ud83d\udd27 Unified Donkey Betz - Debugging Guide",
+      "size": 15150
+    },
+    {
+      "path": "docs/guides/development/kaggle-nfl-training.md",
+      "category": "guides",
+      "title": "NFL Model Training Instructions",
+      "size": 5347
+    },
+    {
+      "path": "docs/guides/development/ml-integration-analysis.md",
+      "category": "guides",
+      "title": "ML Integration Analysis: NFL Predictions + Existing ML Infrastructure",
+      "size": 16676
+    },
+    {
+      "path": "docs/guides/testing_guide.md",
+      "category": "guides",
+      "title": "\ud83e\uddea Unified Donkey Betz - Testing Guide",
+      "size": 13698
+    },
+    {
+      "path": "docs/guides/user-guides/SYSTEM_LEARNING_EXPLAINED.md",
+      "category": "guides",
+      "title": "System Learning Explained: How Your AI Actually Learns",
+      "size": 10362
+    },
+    {
+      "path": "docs/guides/user-guides/revenue-tracking.md",
+      "category": "guides",
+      "title": "\ud83d\udcb0 Revenue Tracking System Documentation",
+      "size": 9807
+    },
+    {
+      "path": "docs/guides/user-guides/ui-testing-guide.md",
+      "category": "guides",
+      "title": "\ud83c\udfaf UI Testing Guide - Viewing 250 Opportunities",
+      "size": 10892
+    },
+    {
+      "path": "docs/handoffs/BACKEND_INTEGRATION_SESSION_23_HANDOFF.md",
+      "category": "handoffs",
+      "title": "Backend Integration - Session 23 Handoff to Future Claude Code",
+      "size": 10178
+    },
+    {
+      "path": "docs/handoffs/HANDOFF_SESSION_22_TO_23.md",
+      "category": "handoffs",
+      "title": "Session 22 \u2192 23 Handoff",
+      "size": 2347
+    },
+    {
+      "path": "docs/handoffs/NEXT_CLAUDE_START_HERE_BACKEND.md",
+      "category": "handoffs",
+      "title": "\ud83d\udc4b START HERE - Backend Integration Handoff",
+      "size": 3554
+    },
+    {
+      "path": "docs/handoffs/README.md",
+      "category": "handoffs",
+      "title": "\ud83e\udd1d Session Handoffs",
+      "size": 613
+    },
+    {
+      "path": "docs/handoffs/SESSION_10_HANDOFF_LEARNING_LIVE.md",
+      "category": "handoffs",
+      "title": "\ud83d\ude80 Session 10 Handoff - Learning System LIVE and Expanding",
+      "size": 13166
+    },
+    {
+      "path": "docs/handoffs/SESSION_20_HANDOFF_OVERNIGHT_TEST.md",
+      "category": "handoffs",
+      "title": "Session 20 Handoff - Autonomous Learning + Overnight Test Ready",
+      "size": 7506
+    },
+    {
+      "path": "docs/handoffs/SESSION_7_COMPLETION_SUMMARY.md",
+      "category": "handoffs",
+      "title": "Session 7 Completion Summary",
+      "size": 10512
+    },
+    {
+      "path": "docs/handoffs/SESSION_7_HANDOFF.md",
+      "category": "handoffs",
+      "title": "Session 7 Handoff - Income Builder Authentication & Integration Fix",
+      "size": 10327
+    },
+    {
+      "path": "docs/handoffs/SESSION_7_HANDOFF_TO_SESSION_8.md",
+      "category": "handoffs",
+      "title": "Session 7 \u2192 Session 8 Handoff",
+      "size": 15787
+    },
+    {
+      "path": "docs/handoffs/SESSION_8_COMPLETE_AUTONOMOUS_LEARNING_ACTIVATED.md",
+      "category": "handoffs",
+      "title": "Session 8 Complete: Autonomous Learning Activated! \ud83c\udf89",
+      "size": 9960
+    },
+    {
+      "path": "docs/handoffs/WAKE_UP_README.md",
+      "category": "handoffs",
+      "title": "\ud83c\udf05 WAKE UP! - Morning Instructions",
+      "size": 4876
+    },
+    {
+      "path": "docs/handoffs/session-4-deploy-real-spiders.md",
+      "category": "handoffs",
+      "title": "\ud83e\udd1d Session 4 Handoff - Deploy Real Spiders",
+      "size": 18090
+    },
+    {
+      "path": "docs/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_25.md",
+      "category": "letters",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 25: The Great Prompting System Audit",
+      "size": 1111
+    },
+    {
+      "path": "docs/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_26.md",
+      "category": "letters",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 26: Implement The Fix!",
+      "size": 2413
+    },
+    {
+      "path": "docs/letters/LETTER_TO_FUTURE_CLAUDE_SESSION_27.md",
+      "category": "letters",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 27: Make AI Analysis Feel Real",
+      "size": 17862
+    },
+    {
+      "path": "docs/letters/README.md",
+      "category": "letters",
+      "title": "LETTERS",
+      "size": 123
+    },
+    {
+      "path": "docs/letters/letter-to-future-claude.md",
+      "category": "letters",
+      "title": "\ud83d\udcec Letter to Future Claude",
+      "size": 30219
+    },
+    {
+      "path": "docs/letters/urgent-fixes-for-future-claude.md",
+      "category": "letters",
+      "title": "\ud83d\udea8 URGENT: Backend-Frontend Integration Fixes Required",
+      "size": 11801
+    },
+    {
+      "path": "docs/plans/README.md",
+      "category": "plans",
+      "title": "\ud83d\udccb Strategic Plans & Roadmaps",
+      "size": 656
+    },
+    {
+      "path": "docs/plans/documentation-reorganization-plan.md",
+      "category": "plans",
+      "title": "\ud83d\udcda Documentation Reorganization Plan",
+      "size": 13866
+    },
+    {
+      "path": "docs/plans/multi-sport-system-guide.md",
+      "category": "plans",
+      "title": "Multi-Sport Prediction System - Complete Guide",
+      "size": 14718
+    },
+    {
+      "path": "docs/plans/spider-recovery-10-session-plan.md",
+      "category": "plans",
+      "title": "\ud83d\udd77\ufe0f Spider Recovery & Deployment Plan",
+      "size": 27350
+    },
+    {
+      "path": "docs/plans/unified-revenue-integration.md",
+      "category": "plans",
+      "title": "\ud83c\udfaf UNIFIED REVENUE SYSTEM INTEGRATION PLAN",
+      "size": 25906
+    },
+    {
+      "path": "docs/priorities/PRIORITY_2_LEARNING_CONTEXT_INJECTION.md",
+      "category": "priorities",
+      "title": "\ud83c\udfaf PRIORITY 2: Learning Context Injection",
+      "size": 12441
+    },
+    {
+      "path": "docs/priorities/README.md",
+      "category": "priorities",
+      "title": "PRIORITIES",
+      "size": 129
+    },
+    {
+      "path": "docs/priorities/TONIGHT_AND_TOMORROW.md",
+      "category": "priorities",
+      "title": "\ud83c\udf19 TONIGHT & TOMORROW - Quick Reference",
+      "size": 2281
+    },
+    {
+      "path": "docs/priorities/current/next-session-task.md",
+      "category": "priorities",
+      "title": "\ud83c\udfaf NEXT SESSION: Fix Opportunity Detail Data Display",
+      "size": 5270
+    },
+    {
+      "path": "docs/priorities/historical/next-steps-2025-10-01.md",
+      "category": "priorities",
+      "title": "Next Steps and Development Priorities",
+      "size": 8486
+    },
+    {
+      "path": "docs/priorities/historical/next-steps-priorities.md",
+      "category": "priorities",
+      "title": "\ud83c\udfaf Next Steps & Priorities",
+      "size": 27071
+    },
+    {
+      "path": "docs/priorities/historical/sports-hub-focus.md",
+      "category": "priorities",
+      "title": "\ud83c\udfaf Session 11 Mission",
+      "size": 7210
+    },
+    {
+      "path": "docs/priorities/historical/sports-hub-progress.md",
+      "category": "priorities",
+      "title": "Next Session: Sports Hub Continued Progress \ud83c\udfc6",
+      "size": 7742
+    },
+    {
+      "path": "docs/00-START-HERE-UI-FRESH-START.md",
+      "category": "root",
+      "title": "\ud83c\udfa8 START HERE - UI Fresh Start Documentation",
+      "size": 11036
+    },
+    {
+      "path": "docs/00-START-HERE.md",
+      "category": "root",
+      "title": "\ud83d\udcda Documentation Master Index",
+      "size": 10177
+    },
+    {
+      "path": "docs/00-START-SESSION-10.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 10",
+      "size": 10932
+    },
+    {
+      "path": "docs/00-START-SESSION-11.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 11",
+      "size": 11910
+    },
+    {
+      "path": "docs/00-START-SESSION-13.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 13",
+      "size": 20984
+    },
+    {
+      "path": "docs/00-START-SESSION-14.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 14",
+      "size": 22122
+    },
+    {
+      "path": "docs/00-START-SESSION-15.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 15",
+      "size": 11958
+    },
+    {
+      "path": "docs/00-START-SESSION-16.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 16",
+      "size": 13017
+    },
+    {
+      "path": "docs/00-START-SESSION-17.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 17",
+      "size": 10475
+    },
+    {
+      "path": "docs/00-START-SESSION-19.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 19",
+      "size": 14773
+    },
+    {
+      "path": "docs/00-START-SESSION-20.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 20",
+      "size": 12319
+    },
+    {
+      "path": "docs/00-START-SESSION-21.md",
+      "category": "root",
+      "title": "\ud83c\udf05 Session 21 - Morning After Overnight Test",
+      "size": 1067
+    },
+    {
+      "path": "docs/00-START-SESSION-22-UI-FRESH-START.md",
+      "category": "root",
+      "title": "\ud83c\udfa8 Session 22 - UI Fresh Start Initiative",
+      "size": 23601
+    },
+    {
+      "path": "docs/00-START-SESSION-23.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 23: Tool Integration Implementation",
+      "size": 12424
+    },
+    {
+      "path": "docs/00-START-SESSION-26.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 26",
+      "size": 10728
+    },
+    {
+      "path": "docs/00-START-SESSION-27.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 27: GPT-5 Agent Migration",
+      "size": 5336
+    },
+    {
+      "path": "docs/00-START-SESSION-5.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 5",
+      "size": 9493
+    },
+    {
+      "path": "docs/00-START-SESSION-6.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 6",
+      "size": 12388
+    },
+    {
+      "path": "docs/00-START-SESSION-7.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Session 7",
+      "size": 12896
+    },
+    {
+      "path": "docs/00-START-SESSION-9.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Start Here - Session 9",
+      "size": 10518
+    },
+    {
+      "path": "docs/AGENT_READINESS_ANALYSIS.md",
+      "category": "root",
+      "title": "AGENT_READINESS_ANALYSIS.md",
+      "size": 7522
+    },
+    {
+      "path": "docs/AUTHENTICATION.md",
+      "category": "root",
+      "title": "Authentication System Documentation",
+      "size": 6881
+    },
+    {
+      "path": "docs/AUTONOMOUS_SELF_DEVELOPMENT.md",
+      "category": "root",
+      "title": "\ud83e\udde0 Autonomous Self-Development System",
+      "size": 14400
+    },
+    {
+      "path": "docs/CLAUDE_CODE_SPEED_ADVANTAGE.md",
+      "category": "root",
+      "title": "\u26a1 Claude Code Speed Advantage",
+      "size": 7171
+    },
+    {
+      "path": "docs/DATA_FLOW_ANALYSIS_COMPLETE.md",
+      "category": "root",
+      "title": "\ud83d\udd04 Complete Data Flow Analysis - Spider \u2192 Agent \u2192 Learning",
+      "size": 15331
+    },
+    {
+      "path": "docs/DOCUMENTATION_AUDIT_COMPLETE.md",
+      "category": "root",
+      "title": "Documentation & System Audit Complete \u2705",
+      "size": 9218
+    },
+    {
+      "path": "docs/DOCUMENTATION_REORGANIZATION_COMPLETE.md",
+      "category": "root",
+      "title": "\ud83d\udcda Documentation Reorganization - COMPLETE \u2705",
+      "size": 7965
+    },
+    {
+      "path": "docs/DOCUMENTATION_REORGANIZATION_SESSION_27.md",
+      "category": "root",
+      "title": "\ud83d\udcda Documentation Reorganization Complete - Session 27",
+      "size": 7812
+    },
+    {
+      "path": "docs/FRONTEND_INTEGRATION_PLAN.md",
+      "category": "root",
+      "title": "\ud83c\udfa8 Frontend End-to-End Integration Plan",
+      "size": 31569
+    },
+    {
+      "path": "docs/IMPLEMENTATION_ROADMAP.md",
+      "category": "root",
+      "title": "\ud83d\uddfa\ufe0f UI Fresh Start - Implementation Roadmap",
+      "size": 19324
+    },
+    {
+      "path": "docs/INDEX-OLD.md",
+      "category": "root",
+      "title": "\ud83d\udcda Documentation Index",
+      "size": 17713
+    },
+    {
+      "path": "docs/INDEX.md",
+      "category": "root",
+      "title": "\ud83d\udcda Unified Donkey Betz - Documentation Index",
+      "size": 9961
+    },
+    {
+      "path": "docs/LETTER_TO_FUTURE_CLAUDE_SESSION_22.md",
+      "category": "root",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 22 UI Fresh Start",
+      "size": 31493
+    },
+    {
+      "path": "docs/LETTER_TO_FUTURE_CLAUDE_SESSION_23.md",
+      "category": "root",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 23",
+      "size": 24975
+    },
+    {
+      "path": "docs/LETTER_TO_FUTURE_CLAUDE_SESSION_24.md",
+      "category": "root",
+      "title": "\ud83d\udc8c Letter to Future Claude - Session 24",
+      "size": 28552
+    },
+    {
+      "path": "docs/QUICKSTART.md",
+      "category": "root",
+      "title": "Quick Start Guide: Agent Execution System",
+      "size": 1148
+    },
+    {
+      "path": "docs/QUICK_DEPLOYMENT_GUIDE.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Quick Spider Deployment Guide",
+      "size": 11404
+    },
+    {
+      "path": "docs/README.md",
+      "category": "root",
+      "title": "\ud83d\udcda Unified Donkey Betz - Documentation Index",
+      "size": 10514
+    },
+    {
+      "path": "docs/SESSION_4_COMPLETE_SUMMARY.md",
+      "category": "root",
+      "title": "\u2705 Session 4 Complete - Spider Army Deployed",
+      "size": 15806
+    },
+    {
+      "path": "docs/SESSION_4_HANDOFF_NEXT_SESSION.md",
+      "category": "root",
+      "title": "\ud83d\ude80 Session 4 \u2192 Session 5 Handoff",
+      "size": 12810
+    },
+    {
+      "path": "docs/SESSION_9_10_FINAL_ACHIEVEMENTS.md",
+      "category": "root",
+      "title": "\ud83c\udf89 Sessions 9-10 FINAL ACHIEVEMENTS - Learning System FULLY OPERATIONAL",
+      "size": 11950
+    },
+    {
+      "path": "docs/SPIDER_DATA_QUALITY_AUDIT.md",
+      "category": "root",
+      "title": "\ud83d\udd77\ufe0f Spider Data Quality & Validation Audit",
+      "size": 20984
+    },
+    {
+      "path": "docs/SPIDER_DEPLOYMENT_REALITY_CHECK.md",
+      "category": "root",
+      "title": "\ud83d\udd77\ufe0f Spider Network - Reality Check & Deployment Guide",
+      "size": 8018
+    },
+    {
+      "path": "docs/START_HERE.md",
+      "category": "root",
+      "title": "\ud83d\ude80 START HERE - Unified Donkey Betz Documentation Hub",
+      "size": 9995
+    },
+    {
+      "path": "docs/SYSTEM_ARCHITECTURE_INDEX.md",
+      "category": "root",
+      "title": "\ud83c\udfd7\ufe0f System Architecture Master Index",
+      "size": 15688
+    },
+    {
+      "path": "docs/SYSTEM_READINESS_REPORT.md",
+      "category": "root",
+      "title": "\ud83e\udd16\ud83d\udd77\ufe0f System Readiness Report - Agents & Spiders",
+      "size": 12857
+    },
+    {
+      "path": "docs/YOUR_ANSWER.md",
+      "category": "root",
+      "title": "\u2705 YES - THE SYSTEM EXISTS TO UPDATE YOUR AGENTS!",
+      "size": 3924
+    },
+    {
+      "path": "docs/session-reports/2025-09-30/quick-reference-session-10.md",
+      "category": "session-reports",
+      "title": "Quick Reference - Session 10 Fixes",
+      "size": 3686
+    },
+    {
+      "path": "docs/session-reports/2025-10-01/README_SESSION_19.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 Session 19 Complete - Revenue Pipeline Verified!",
+      "size": 5642
+    },
+    {
+      "path": "docs/session-reports/2025-10-01/README_SESSION_5.md",
+      "category": "session-reports",
+      "title": "\ud83d\ude80 Session 5 Quick Start",
+      "size": 631
+    },
+    {
+      "path": "docs/session-reports/2025-10-01/evening-session-complete.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 Session Complete - Opportunity Detail View",
+      "size": 8334
+    },
+    {
+      "path": "docs/session-reports/2025-10-01/night-session-complete.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf19 Night Session Complete - October 1, 2025",
+      "size": 21018
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/AUTHENTICATION_AUDIT_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Authentication Audit Complete \u2705",
+      "size": 10542
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/AUTONOMOUS_LEARNING_FIXES_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Autonomous Learning Test Fixes - Complete \u2705",
+      "size": 4881
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/DOCS_UPDATED_SESSION_20.md",
+      "category": "session-reports",
+      "title": "\ud83d\udcda Documentation Updated - Session 20",
+      "size": 4784
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/EXTERNAL_DOCS_DEDUPLICATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83e\uddf9 External Documentation Deduplication Complete",
+      "size": 4328
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/OVERNIGHT_TEST_SETUP_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Overnight Autonomous Learning Test - Setup Complete \u2705",
+      "size": 6590
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/PRIORITY_3_SPORTS_SPIDERS_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83c\udfc6 Priority 3 Complete - Sports Intelligence Activated",
+      "size": 9359
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SECURITY_AUDIT_20251002_053615.md",
+      "category": "session-reports",
+      "title": "Security Audit Report",
+      "size": 89
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SECURITY_AUDIT_20251002_053655.md",
+      "category": "session-reports",
+      "title": "Security Audit Report",
+      "size": 3946
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SECURITY_FIXES_SESSION_19.md",
+      "category": "session-reports",
+      "title": "\ud83d\udd12 Security Fixes - Session 19",
+      "size": 8016
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_AGENT_INGESTION_GUIDE.md",
+      "category": "session-reports",
+      "title": "\ud83e\udde0 Self-Development-Agent Ingestion Guide",
+      "size": 10401
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_ANALYSIS_20251002_050942.md",
+      "category": "session-reports",
+      "title": "Self-Development Agent Analysis",
+      "size": 177
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_ANALYSIS_20251002_051022.md",
+      "category": "session-reports",
+      "title": "Self-Development Agent Analysis",
+      "size": 2490
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_ANALYSIS_20251002_051151.md",
+      "category": "session-reports",
+      "title": "Self-Development Agent Analysis",
+      "size": 2485
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_ANALYSIS_20251002_052455.md",
+      "category": "session-reports",
+      "title": "Self-Development Agent Analysis",
+      "size": 2729
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_ANALYSIS_20251002_052614.md",
+      "category": "session-reports",
+      "title": "Self-Development Agent Analysis",
+      "size": 3041
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SELF_DEVELOPMENT_ANALYSIS_20251002_052726.md",
+      "category": "session-reports",
+      "title": "Self-Development Agent Analysis",
+      "size": 4385
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_12_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 Session 12 Complete - HISTORIC SPIDER DEPLOYMENT",
+      "size": 10390
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_12_PROGRESS.md",
+      "category": "session-reports",
+      "title": "\ud83d\ude80 Session 12 Progress Report",
+      "size": 7355
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_13_COMPLETE_SUMMARY.md",
+      "category": "session-reports",
+      "title": "Session 13 Complete Summary - Sports Spider & Agent Expansion",
+      "size": 8848
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_13_DEPLOYMENT_SUMMARY.md",
+      "category": "session-reports",
+      "title": "Session 13 - Sports Spider Deployment Summary",
+      "size": 18899
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_14_ROUTING_FIX_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83c\udfaf Session 14: Agent Routing Fix Complete",
+      "size": 9097
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_14_SPORTS_HUB_INTEGRATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 14: Sports Hub Integration & Spider Verification Complete",
+      "size": 12776
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_15_ROUTING_ENHANCEMENT_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83d\ude80 Session 15 Complete - Enhanced Routing Implementation",
+      "size": 12137
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_16_AGENT_CREATION_AND_SPIDER_DEPLOYMENT_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 16 Complete - Agent Creation & Spider Deployment \u2705",
+      "size": 12245
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_16_AGENT_EXPANSION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 16 Complete - Specialized Agent Expansion \ud83c\udfaf",
+      "size": 16431
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_17_DOCUMENTATION_SELF_AWARENESS_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83e\udd2f Session 17 - Documentation-Powered Self-Awareness COMPLETE",
+      "size": 10627
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_17_FINAL_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83d\ude80 Session 17 - FINAL COMPLETE",
+      "size": 9418
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_18_90_PERCENT_COVERAGE_ACHIEVED.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 90% COVERAGE ACHIEVED - Session 18 Complete!",
+      "size": 7907
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_18_AGENT_EXECUTION_TEST_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\u2705 Session 18 Complete - Agent Execution Test Verified",
+      "size": 7683
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_18_COMPLETE_SUMMARY.md",
+      "category": "session-reports",
+      "title": "\ud83c\udfc6 Session 18 - Complete Summary & Achievements",
+      "size": 15083
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_18_COVERAGE_PROGRESS.md",
+      "category": "session-reports",
+      "title": "\ud83d\udcc8 Session 18 - Coverage Progress Report",
+      "size": 5779
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_19_AUTONOMOUS_LEARNING_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 19: Autonomous Self-Development System - COMPLETE \u2705",
+      "size": 12242
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_19_COMPLETE_SUMMARY.md",
+      "category": "session-reports",
+      "title": "\ud83c\udfc6 Session 19 - Complete Summary",
+      "size": 12501
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_20_AUTONOMOUS_LEARNING_FINAL_FIX.md",
+      "category": "session-reports",
+      "title": "Session 20: Autonomous Learning System - Final Fix Complete \u2705",
+      "size": 8703
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_20_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 Session 20 - COMPLETE",
+      "size": 6027
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_20_FINAL_SUMMARY.md",
+      "category": "session-reports",
+      "title": "\ud83d\udcca Session 20 - Final Summary",
+      "size": 6767
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_20_STATUS_UPDATE.md",
+      "category": "session-reports",
+      "title": "\ud83d\udcca Session 20 - Status Update",
+      "size": 7475
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_22_UI_FRESH_START_DOCUMENTATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83d\udcca Session 22 - UI Fresh Start Documentation Complete",
+      "size": 15946
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_24_TOOL_INTEGRATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 Session 24 Complete: Tool Integration System",
+      "size": 17170
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_25_API_FIXES_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 25: Critical API Fixes Complete \u2705",
+      "size": 12400
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_25_PROMPTING_AUDIT_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\u2705 Session 25: Prompting System Audit - COMPLETE",
+      "size": 9424
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_26_AI_SPORTSBOOK_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 26: AI-Powered Sports Betting UI Complete \u2705",
+      "size": 11220
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_26_DOCS_SYSTEM_TEST_RESULTS.md",
+      "category": "session-reports",
+      "title": "Session 26: /docs/ System Test Results",
+      "size": 9272
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_26_DOCS_SYSTEM_VALIDATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Session 26: Documentation System Validation Complete \u2705",
+      "size": 8990
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_26_GPT5_IMPLEMENTATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\u2705 Session 26 Complete - GPT-5 Reasoning Implementation",
+      "size": 7084
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_26_REAL_ODDS_INTEGRATION.md",
+      "category": "session-reports",
+      "title": "Session 26: Real-Time Odds Integration Complete \u2705",
+      "size": 10900
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_26_SPORTSBOOK_FIXES.md",
+      "category": "session-reports",
+      "title": "Session 26: Sportsbook Fixes - Real Odds Working \u2705",
+      "size": 1203
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SESSION_COMPLETE_AGENT_ARCHITECTURE_ENHANCEMENT.md",
+      "category": "session-reports",
+      "title": "Session Complete: Agent Architecture Enhancement",
+      "size": 10808
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SPORTS_BETTING_SPIDER_AGENT_REVIEW.md",
+      "category": "session-reports",
+      "title": "Sports Betting Spider-Agent Connection Review",
+      "size": 7661
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SPORTS_HUB_SPIDER_INTEGRATION_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Sports Hub Spider Integration Complete! \ud83c\udf89",
+      "size": 12081
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SPORTS_HUB_STATUS_REPORT.md",
+      "category": "session-reports",
+      "title": "Sports Hub Status Report",
+      "size": 10534
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/SPORTS_SPIDER_PRAW_FIX_COMPLETE.md",
+      "category": "session-reports",
+      "title": "Sports Sentiment Spider PRAW Fix - COMPLETE \u2705",
+      "size": 5049
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/VALIDATION_TEST_SUCCESS.md",
+      "category": "session-reports",
+      "title": "Autonomous Learning Validation Test - SUCCESS \u2705",
+      "size": 7529
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/session-1-assessment.md",
+      "category": "session-reports",
+      "title": "\ud83d\udd0d Session 1: Verification & Assessment Report",
+      "size": 12434
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/session-2-persistence-fix.md",
+      "category": "session-reports",
+      "title": "\ud83d\udd27 Session 2: Fix Data Persistence - COMPLETE",
+      "size": 14379
+    },
+    {
+      "path": "docs/session-reports/2025-10-02/session-3-deployment-test.md",
+      "category": "session-reports",
+      "title": "\ud83d\ude80 Session 3: Spider Deployment Test - COMPLETE",
+      "size": 10254
+    },
+    {
+      "path": "docs/session-reports/README.md",
+      "category": "session-reports",
+      "title": "\ud83d\udcca Session Reports",
+      "size": 1515
+    },
+    {
+      "path": "docs/session-reports/SESSION_11_COMPLETE.md",
+      "category": "session-reports",
+      "title": "\ud83c\udf89 SESSION 11 COMPLETE - Intelligence Amplification!",
+      "size": 8816
+    },
+    {
+      "path": "docs/status/AUTONOMOUS_LEARNING_STATUS.md",
+      "category": "status",
+      "title": "Autonomous Learning Status Dashboard",
+      "size": 12112
+    },
+    {
+      "path": "docs/status/README.md",
+      "category": "status",
+      "title": "STATUS",
+      "size": 121
+    },
+    {
+      "path": "docs/status/SPIDER_DEPLOYMENT_MONITORING_SESSION_7.md",
+      "category": "status",
+      "title": "Spider Deployment Monitoring Report - Session 7",
+      "size": 7541
+    },
+    {
+      "path": "docs/status/current/deployment-checklist.md",
+      "category": "status",
+      "title": "\ud83d\ude80 DEPLOYMENT CHECKLIST - Learning Bridges Activation",
+      "size": 6756
+    },
+    {
+      "path": "docs/status/current/start-here.md",
+      "category": "status",
+      "title": "\ud83c\udfaf START HERE - Income Builder Is Now Working!",
+      "size": 3748
+    },
+    {
+      "path": "docs/status/current/system-state-snapshot.md",
+      "category": "status",
+      "title": "\ud83d\udcf8 System State Snapshot",
+      "size": 26317
+    },
+    {
+      "path": "docs/status/historical/bedtime-status-2025-10-01.md",
+      "category": "status",
+      "title": "\ud83c\udf19 Bedtime Status Report - October 1, 2025, 11:25 PM",
+      "size": 6398
+    },
+    {
+      "path": "docs/status/historical/income-builder-status.md",
+      "category": "status",
+      "title": "\ud83d\udcca INCOME BUILDER - CURRENT STATUS",
+      "size": 4546
+    },
+    {
+      "path": "docs/status/historical/morning-checklist-2025-10-02.md",
+      "category": "status",
+      "title": "\u2600\ufe0f Morning Checklist - October 2, 2025",
+      "size": 3246
+    },
+    {
+      "path": "docs/status/historical/morning-report-2025-10-02.md",
+      "category": "status",
+      "title": "\u2600\ufe0f Morning Report - October 2, 2025",
+      "size": 9301
+    },
+    {
+      "path": "docs/status/historical/start-here-morning-2025-10-02.md",
+      "category": "status",
+      "title": "\u2600\ufe0f START HERE - Morning of October 2, 2025",
+      "size": 4528
+    },
+    {
+      "path": "docs/status/historical/tonight-summary-2025-10-01.md",
+      "category": "status",
+      "title": "\ud83c\udf19 Tonight's Work Summary - October 1, 2025",
+      "size": 5598
+    }
+  ]
+}

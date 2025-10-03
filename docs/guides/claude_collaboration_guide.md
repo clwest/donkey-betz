@@ -481,6 +481,88 @@ Before considering a session complete:
 
 ---
 
+## 📚 Documentation Structure
+
+### `/docs/` Organization
+
+The project uses a **comprehensive organized documentation system** in `/docs/`:
+
+**Session Start Files** (Top-level):
+- `00-START-HERE.md` - Original overview
+- `00-START-SESSION-5.md` through `00-START-SESSION-9.md` - Session-specific starts
+
+**Subdirectories**:
+```
+docs/
+├── agents/          # Agent-specific documentation
+├── architecture/    # System architecture docs
+├── archive/         # Archived historical docs (2025-09/, 2025-10/)
+├── audits/          # System audit reports (integration gaps, reality checks)
+├── capabilities/    # System capability documentation
+├── completions/     # Session completion summaries
+├── executors/       # Executor documentation
+├── fixes/           # Technical fix documentation (30+ files)
+├── guides/          # User and developer guides (THIS FILE)
+│   ├── claude_collaboration_guide.md (YOU ARE HERE)
+│   ├── development/       # Development guides
+│   └── user-guides/       # End-user guides
+├── handoffs/        # Session handoff documents
+├── letters/         # Letters to future Claude sessions
+├── plans/           # Implementation plans
+├── priorities/      # Priority documentation
+├── session-reports/ # Detailed session reports
+├── status/          # System status snapshots
+└── system_status/   # Historical system status
+```
+
+### Key Documentation by Category
+
+**For Starting New Sessions**:
+1. Read latest: `docs/00-START-SESSION-9.md`
+2. Check: `docs/handoffs/SESSION_8_COMPLETE_AUTONOMOUS_LEARNING_ACTIVATED.md`
+3. Review: `docs/audits/INTEGRATION_GAPS_REPORT.md`
+
+**For Understanding Fixes**:
+- Browse: `docs/fixes/` (30+ technical fix documents)
+- Recent: `docs/fixes/INCOME_AGENT_NAME_FIX_COMPLETE.md`
+- Spider: `docs/fixes/SPIDER_ARMY_DEPLOYMENT_GUIDE.md`
+
+**For System Architecture**:
+- Main: `docs/architecture/system_design.md`
+- Learning: `docs/architecture/learning_system.md`
+- Partnership: `docs/architecture/partnership_model.md`
+
+**For Development Guides**:
+- This guide: `docs/guides/claude_collaboration_guide.md`
+- Monitoring: `docs/guides/AUTONOMOUS_LEARNING_MONITORING.md`
+- User guides: `docs/guides/user-guides/`
+
+**For Historical Context**:
+- Archive: `docs/archive/2025-09/`, `docs/archive/2025-10/`
+- Old implementations: `docs/archive/REALITY_FIXES_IMPLEMENTATION-original/`
+
+### Documentation Best Practices
+
+**When Starting a Session**:
+1. Read the latest `00-START-SESSION-X.md` file first
+2. Check recent handoffs in `docs/handoffs/`
+3. Review any audit reports in `docs/audits/`
+
+**When Making Changes**:
+1. Document fixes in `docs/fixes/`
+2. Update session reports in `docs/session-reports/`
+3. Create handoffs in `docs/handoffs/` for major milestones
+
+**When Planning**:
+1. Check `docs/plans/` for existing plans
+2. Review `docs/priorities/` for priority lists
+3. Check `docs/audits/` for known gaps
+
+**Archiving**:
+- Outdated docs move to `docs/archive/YYYY-MM/`
+- Original versions kept in `docs/archive/FILENAME-original/`
+- Session history in `docs/session_history/`
+
 ## 📚 Related Documentation
 
 - **Testing Guide**: `testing_guide.md` - How to test everything
@@ -488,6 +570,8 @@ Before considering a session complete:
 - **System Architecture**: `../architecture/system_design.md`
 - **Learning System**: `../architecture/learning_system.md`
 - **Partnership Model**: `../architecture/partnership_model.md`
+- **Autonomous Learning**: `AUTONOMOUS_LEARNING_MONITORING.md`
+- **Integration Gaps**: `../audits/INTEGRATION_GAPS_REPORT.md`
 
 ---
 

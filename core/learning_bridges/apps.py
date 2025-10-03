@@ -30,6 +30,7 @@ class LearningBridgesConfig(AppConfig):
                 collaboration_bridge,
                 personalization_bridge,
                 sports_betting_bridge,
+                spider_data_bridge,
             )
 
             logger.info("✅ Learning Bridges initialized - all signals registered")
@@ -40,6 +41,7 @@ class LearningBridgesConfig(AppConfig):
             logger.info("  - Collaboration Bridge: ✓")
             logger.info("  - Personalization Bridge: ✓")
             logger.info("  - Sports Betting Bridge: ✓")
+            logger.info("  - Spider Data Bridge: ✓")
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize Learning Bridges: {e}", exc_info=True)

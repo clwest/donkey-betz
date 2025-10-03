@@ -173,7 +173,19 @@ class UnifiedAgentTemplate(UnifiedBaseModel):
         default=dict,
         help_text="LLM configuration (temperature, max_tokens, etc.)"
     )
-    
+
+    # Tool integrations - NEW ENHANCEMENT!
+    tool_integrations = models.JSONField(
+        default=dict,
+        help_text="""Tool integration configuration:
+        {
+            "web_search": {"enabled": true, "provider": "serper", "max_results": 10},
+            "api_calls": {"enabled": true, "allowed_apis": ["openai", "serper"]},
+            "data_access": {"spider_data": true, "learning_context": true},
+            "content_generation": {"types": ["blog", "social"], "max_length": 5000}
+        }"""
+    )
+
     fallback_provider = models.CharField(
         max_length=50,
         choices=LLMProvider.choices,

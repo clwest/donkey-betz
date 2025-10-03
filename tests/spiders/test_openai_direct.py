@@ -27,7 +27,7 @@ def test_openai_direct():
         # Make a simple API call
         print("🌐 Making direct API call to OpenAI...")
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             messages=[
                 {"role": "user", "content": "Say exactly: 'REAL API WORKING'"}
             ],

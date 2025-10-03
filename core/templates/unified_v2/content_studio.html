@@ -1,0 +1,252 @@
+{% extends 'unified_v2/base.html' %}
+
+{% block title %}Content Studio{% endblock %}
+{% block page_title %}Content Studio{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Content Type Tabs -->
+    <div class="mb-6 flex gap-2 overflow-x-auto">
+        <button class="tab-button active rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 transition-colors"
+                data-tab="images">
+            🎨 Images
+        </button>
+        <button class="tab-button rounded-lg bg-gray-700 px-6 py-3 text-white font-semibold hover:bg-gray-600 transition-colors"
+                data-tab="blog">
+            📝 Blog Posts
+        </button>
+        <button class="tab-button rounded-lg bg-gray-700 px-6 py-3 text-white font-semibold hover:bg-gray-600 transition-colors"
+                data-tab="video">
+            🎥 Video Scripts
+        </button>
+        <button class="tab-button rounded-lg bg-gray-700 px-6 py-3 text-white font-semibold hover:bg-gray-600 transition-colors"
+                data-tab="social">
+            📱 Social Media
+        </button>
+    </div>
+
+    <!-- Image Generation Tab -->
+    <div id="tab-images" class="tab-content">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">AI Image Generation</h2>
+            <p class="mb-6 text-sm text-gray-400">Generate stunning images with 70+ artistic styles using DALL-E 3</p>
+
+            <form id="image-form" class="space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Image Description</label>
+                    <textarea id="image-prompt"
+                              class="w-full rounded-lg bg-gray-700 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              rows="4"
+                              placeholder="Describe the image you want to create..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-300">Style</label>
+                        <select id="image-style"
+                                class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="photorealistic">Photorealistic</option>
+                            <option value="digital-art">Digital Art</option>
+                            <option value="oil-painting">Oil Painting</option>
+                            <option value="watercolor">Watercolor</option>
+                            <option value="sketch">Sketch</option>
+                            <option value="3d-render">3D Render</option>
+                            <option value="anime">Anime</option>
+                            <option value="cartoon">Cartoon</option>
+                            <option value="minimalist">Minimalist</option>
+                            <option value="abstract">Abstract</option>
+                            <option value="surreal">Surreal</option>
+                            <option value="cyberpunk">Cyberpunk</option>
+                            <option value="steampunk">Steampunk</option>
+                            <option value="fantasy">Fantasy</option>
+                            <option value="sci-fi">Sci-Fi</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-300">Size</label>
+                        <select id="image-size"
+                                class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1024x1024">Square (1024x1024)</option>
+                            <option value="1024x1792">Portrait (1024x1792)</option>
+                            <option value="1792x1024">Landscape (1792x1024)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Batch Size (1-4)</label>
+                    <input type="number" id="image-batch" min="1" max="4" value="1"
+                           class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <button type="submit"
+                        class="w-full sm:w-auto rounded-lg bg-blue-600 px-8 py-3 text-white font-semibold hover:bg-blue-700 transition-colors">
+                    Generate Images
+                </button>
+            </form>
+
+            <div id="image-result" class="mt-6 hidden"></div>
+        </div>
+    </div>
+
+    <!-- Blog Generation Tab -->
+    <div id="tab-blog" class="tab-content hidden">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">AI Blog Post Generation</h2>
+            <p class="mb-6 text-sm text-gray-400">Create engaging, SEO-optimized blog posts with AI</p>
+
+            <form id="blog-form" class="space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Blog Title</label>
+                    <input type="text" id="blog-title"
+                           class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Enter your blog post title...">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Topic/Keywords</label>
+                    <input type="text" id="blog-keywords"
+                           class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="AI, Machine Learning, Technology (comma-separated)">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-300">Word Count</label>
+                        <select id="blog-wordcount"
+                                class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="500">Short (500 words)</option>
+                            <option value="1000">Medium (1000 words)</option>
+                            <option value="1500" selected>Long (1500 words)</option>
+                            <option value="2000">Very Long (2000 words)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-300">Tone</label>
+                        <select id="blog-tone"
+                                class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="professional">Professional</option>
+                            <option value="casual">Casual</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="authoritative">Authoritative</option>
+                            <option value="conversational">Conversational</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full sm:w-auto rounded-lg bg-blue-600 px-8 py-3 text-white font-semibold hover:bg-blue-700 transition-colors">
+                    Generate Blog Post
+                </button>
+            </form>
+
+            <div id="blog-result" class="mt-6 hidden"></div>
+        </div>
+    </div>
+
+    <!-- Video Script Tab -->
+    <div id="tab-video" class="tab-content hidden">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">AI Video Script Generation</h2>
+            <p class="mb-6 text-sm text-gray-400">Create engaging video scripts for YouTube, TikTok, and more</p>
+
+            <form id="video-form" class="space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Video Topic</label>
+                    <input type="text" id="video-topic"
+                           class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="What is your video about?">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-300">Duration (seconds)</label>
+                        <select id="video-duration"
+                                class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="60">1 minute (Short)</option>
+                            <option value="180">3 minutes</option>
+                            <option value="300" selected>5 minutes</option>
+                            <option value="600">10 minutes</option>
+                            <option value="900">15 minutes</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-300">Style</label>
+                        <select id="video-style"
+                                class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="educational">Educational</option>
+                            <option value="entertaining">Entertaining</option>
+                            <option value="promotional">Promotional</option>
+                            <option value="tutorial">Tutorial</option>
+                            <option value="storytelling">Storytelling</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full sm:w-auto rounded-lg bg-blue-600 px-8 py-3 text-white font-semibold hover:bg-blue-700 transition-colors">
+                    Generate Video Script
+                </button>
+            </form>
+
+            <div id="video-result" class="mt-6 hidden"></div>
+        </div>
+    </div>
+
+    <!-- Social Media Tab -->
+    <div id="tab-social" class="tab-content hidden">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">AI Social Media Content</h2>
+            <p class="mb-6 text-sm text-gray-400">Generate engaging posts for Twitter, LinkedIn, Facebook, and Instagram</p>
+
+            <form id="social-form" class="space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Platform</label>
+                    <select id="social-platform"
+                            class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="twitter">Twitter/X</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="threads">Threads</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Topic/Message</label>
+                    <textarea id="social-topic"
+                              class="w-full rounded-lg bg-gray-700 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              rows="3"
+                              placeholder="What do you want to post about?"></textarea>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-300">Tone</label>
+                    <select id="social-tone"
+                            class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="engaging">Engaging</option>
+                        <option value="professional">Professional</option>
+                        <option value="casual">Casual</option>
+                        <option value="humorous">Humorous</option>
+                        <option value="inspirational">Inspirational</option>
+                    </select>
+                </div>
+
+                <button type="submit"
+                        class="w-full sm:w-auto rounded-lg bg-blue-600 px-8 py-3 text-white font-semibold hover:bg-blue-700 transition-colors">
+                    Generate Post
+                </button>
+            </form>
+
+            <div id="social-result" class="mt-6 hidden"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/unified_v2/content_studio.js"></script>
+{% endblock %}

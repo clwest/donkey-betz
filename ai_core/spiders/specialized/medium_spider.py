@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+from ..revenue_tracker import create_project_revenue
 
 
 class MediumIntelligenceSpider(BaseIntelligenceSpider):
@@ -198,3 +199,46 @@ class MediumIntelligenceSpider(BaseIntelligenceSpider):
             target_agents=['income_builder'],
             target_advisors=[]
         )
+
+    async def track_revenue_conversion(
+        self,
+        application_id: str,
+        user_id: str,
+        content_title: str,
+        revenue_amount: float,
+        client_name: str = "Medium Partner Program",
+        **kwargs
+    ) -> Optional[str]:
+        """
+        Track revenue when Medium content generates earnings.
+        Called when content monetization occurs.
+
+        Args:
+            application_id: Unique identifier for this content opportunity
+            user_id: User who created the content
+            content_title: Title of the content that generated revenue
+            revenue_amount: Amount earned from the content
+            client_name: Platform or client name (defaults to Medium)
+            **kwargs: Additional metadata (tags, satisfaction_score, etc.)
+
+        Returns:
+            Revenue record ID if successful, None otherwise
+        """
+        try:
+            record_id = await create_project_revenue(
+                application_id=application_id,
+                user_id=user_id,
+                client_name=client_name,
+                project_title=content_title,
+                contract_value=revenue_amount,
+                **kwargs
+            )
+
+            if record_id:
+                self.logger.info(f"💰 Tracked Medium revenue: ${revenue_amount} for '{content_title}'")
+
+            return record_id
+
+        except Exception as e:
+            self.logger.error(f"Error tracking Medium revenue conversion: {e}")
+            return None

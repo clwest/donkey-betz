@@ -375,6 +375,56 @@
         text-align: center;
     }
 
+    /* Spider Intelligence Badges */
+    .spider-intel-badge {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+        padding: 6px 10px;
+        background: rgba(138, 43, 226, 0.15);
+        border: 1px solid rgba(138, 43, 226, 0.3);
+        border-radius: 8px;
+        font-size: 0.85em;
+    }
+
+    .spider-intel-badge .sentiment {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    .spider-intel-badge .sentiment.bullish {
+        background: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+        border: 1px solid rgba(0, 255, 0, 0.4);
+    }
+
+    .spider-intel-badge .sentiment.neutral {
+        background: rgba(255, 215, 0, 0.2);
+        color: #ffd700;
+        border: 1px solid rgba(255, 215, 0, 0.4);
+    }
+
+    .spider-intel-badge .sentiment.slightly.positive,
+    .spider-intel-badge .sentiment.slightly_positive {
+        background: rgba(144, 238, 144, 0.2);
+        color: #90ee90;
+        border: 1px solid rgba(144, 238, 144, 0.4);
+    }
+
+    .spider-intel-badge .tips {
+        padding: 3px 8px;
+        background: rgba(255, 140, 0, 0.2);
+        color: #ff8c00;
+        border: 1px solid rgba(255, 140, 0, 0.4);
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
     .prediction-pick {
         background: rgba(0,0,0,0.3);
         padding: 15px;
@@ -836,6 +886,12 @@ function getLiveGames() {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'get_live_games' }));
         console.log('Requested live games');
+
+        // Also request ML predictions after games load
+        setTimeout(() => {
+            console.log('Requesting ML predictions...');
+            socket.send(JSON.stringify({ type: 'get_predictions' }));
+        }, 1000);
     }
 }
 
@@ -872,6 +928,22 @@ function handleOddItemClick(event) {
             oddItem.style.borderColor = 'rgba(0,255,0,0.3)';
         }
     }, 100);
+}
+
+// Fetch spider intelligence for a game
+async function fetchGameSpiderInsights(gameId) {
+    try {
+        const response = await fetch(`/api/v1/games/${gameId}/spider-insights/`);
+        if (!response.ok) {
+            console.warn(`No spider insights for game ${gameId}`);
+            return null;
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error(`Error fetching spider insights for game ${gameId}:`, error);
+        return null;
+    }
 }
 
 function updateTicker(games) {
@@ -976,8 +1048,28 @@ function updateGamesDisplay(games) {
         // Build matches HTML
         let matchesHTML = '';
         sportGames.forEach(game => {
+            // Fetch spider insights for each game (async)
+            fetchGameSpiderInsights(game.game_id).then(insights => {
+                if (insights && insights.spider_intelligence) {
+                    const intel = insights.spider_intelligence;
+                    const matchItem = document.querySelector(`[data-game-id="${game.game_id}"]`);
+                    if (matchItem) {
+                        // Add spider intelligence badge
+                        const spiderBadge = document.createElement('div');
+                        spiderBadge.className = 'spider-intel-badge';
+                        spiderBadge.innerHTML = `
+                            <span class="sentiment ${intel.sentiment.mood.toLowerCase()}" title="${intel.sentiment.mood}">
+                                ${intel.trending ? '🔥' : '📊'} ${intel.total_mentions} mentions
+                            </span>
+                            ${intel.betting_tips.count > 0 ? `<span class="tips">💡 ${intel.betting_tips.count} tips</span>` : ''}
+                        `;
+                        matchItem.appendChild(spiderBadge);
+                    }
+                }
+            });
+
             matchesHTML += `
-                <div class="match-item">
+                <div class="match-item" data-game-id="${game.game_id}">
                     <div class="teams">
                         <span class="team-name">${game.away_team_name || game.away_team || 'TBD'}</span>
                         <span class="score">${game.away_team_score || game.away_score || 0}</span>

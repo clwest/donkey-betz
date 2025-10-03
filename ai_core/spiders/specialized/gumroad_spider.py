@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+from ..revenue_tracker import create_project_revenue
 
 
 class GumroadIntelligenceSpider(BaseIntelligenceSpider):
@@ -113,3 +114,46 @@ class GumroadIntelligenceSpider(BaseIntelligenceSpider):
             if tag and len(tag) < 30:
                 tags.append(tag)
         return tags[:10]
+
+    async def track_revenue_conversion(
+        self,
+        application_id: str,
+        user_id: str,
+        product_title: str,
+        sale_amount: float,
+        client_name: str = "Gumroad Marketplace",
+        **kwargs
+    ) -> Optional[str]:
+        """
+        Track revenue when a Gumroad product makes a sale.
+        Called when product sales occur.
+
+        Args:
+            application_id: Unique identifier for this product opportunity
+            user_id: User who created/sold the product
+            product_title: Title of the product that generated revenue
+            sale_amount: Amount earned from the sale
+            client_name: Platform or buyer name (defaults to Gumroad)
+            **kwargs: Additional metadata (product_category, buyer_info, etc.)
+
+        Returns:
+            Revenue record ID if successful, None otherwise
+        """
+        try:
+            record_id = await create_project_revenue(
+                application_id=application_id,
+                user_id=user_id,
+                client_name=client_name,
+                project_title=product_title,
+                contract_value=sale_amount,
+                **kwargs
+            )
+
+            if record_id:
+                self.logger.info(f"💰 Tracked Gumroad revenue: ${sale_amount} for '{product_title}'")
+
+            return record_id
+
+        except Exception as e:
+            self.logger.error(f"Error tracking Gumroad revenue conversion: {e}")
+            return None

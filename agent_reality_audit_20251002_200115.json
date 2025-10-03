@@ -1,0 +1,133 @@
+{
+  "timestamp": "2025-10-02T20:01:15.197599",
+  "total_agents": 206,
+  "tested": 20,
+  "results": [
+    {
+      "name": "ProjectManagementAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "MakefileBuilderAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "SocialMediaManagerAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "UcwsfDeployAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "PromptDiagnosticsAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "GamePredictorAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "ApiEndpointValidatorAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "WriterAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "ComplianceAdvisorAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "TechnicalSignalAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "ReactDeveloperAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "IntelligentPromptingIntegratorAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "GovernmentContractScoutAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "OddsCalculationAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "RagSpecialistAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "PdfFinancialSummaryAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "SeoSpecialistAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "LlmProviderDistributionAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "ContentCreatorAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    },
+    {
+      "name": "PythonDevAgentAgent",
+      "status": "broken",
+      "reason": "could not find class definition",
+      "reality_score": 0.0
+    }
+  ],
+  "summary": {
+    "real": 0,
+    "partial": 0,
+    "mock": 0,
+    "broken": 20
+  }
+}

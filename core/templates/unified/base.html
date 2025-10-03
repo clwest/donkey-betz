@@ -399,6 +399,190 @@
             }
         }
 
+        /* Autonomous Learning Notifications */
+        .learning-insight-notification {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(138,43,226,0.95), rgba(75,0,130,0.95));
+            border: 1px solid rgba(138,43,226,0.5);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(138,43,226,0.4);
+            z-index: 10000;
+            display: flex;
+            gap: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .learning-insight-notification .insight-icon {
+            font-size: 2em;
+        }
+
+        .learning-insight-notification .insight-content h4 {
+            margin: 0 0 8px 0;
+            color: #fff;
+            font-size: 1.1em;
+        }
+
+        .learning-insight-notification .insight-content p {
+            margin: 0;
+            color: rgba(255,255,255,0.9);
+            font-size: 0.95em;
+        }
+
+        .learning-insight-notification.animate-slide-in {
+            animation: slideInRight 0.5s ease;
+        }
+
+        .learning-insight-notification.fade-out {
+            animation: fadeOut 0.3s ease forwards;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+        }
+
+        /* Learning Insights Panel */
+        #learning-insights-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .optimization-card {
+            background: rgba(138,43,226,0.1);
+            border: 1px solid rgba(138,43,226,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .optimization-card.animate-fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .optimization-card h4 {
+            color: #8a2be2;
+            margin: 0 0 8px 0;
+            font-size: 1.1em;
+        }
+
+        .optimization-card .reason {
+            color: #aaa;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .optimization-card .domains {
+            color: #888;
+            font-size: 0.85em;
+            margin: 5px 0;
+        }
+
+        .optimization-card .benefit {
+            color: #4ecdc4;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .team-recommendation-card {
+            background: rgba(78,205,196,0.1);
+            border: 1px solid rgba(78,205,196,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .team-recommendation-card.animate-fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .team-recommendation-card h4 {
+            color: #4ecdc4;
+            margin: 0 0 10px 0;
+        }
+
+        .team-recommendation-card .team-members {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            color: #fff;
+        }
+
+        .team-recommendation-card .best-for {
+            color: #aaa;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .team-recommendation-card .success-rate {
+            color: #00ff88;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Connection Status Indicator */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        }
+
+        .connection-status.connected {
+            background: rgba(0,255,136,0.2);
+            border: 1px solid rgba(0,255,136,0.5);
+            color: #00ff88;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255,107,107,0.2);
+            border: 1px solid rgba(255,107,107,0.5);
+            color: #ff6b6b;
+        }
+
+        .connection-status.error {
+            background: rgba(255,170,0,0.2);
+            border: 1px solid rgba(255,170,0,0.5);
+            color: #ffaa00;
+        }
+
         {% block extra_css %}{% endblock %}
     </style>
 
@@ -413,6 +597,9 @@
 </head>
 <body>
     <div class="neural-background"></div>
+
+    <!-- Connection Status Indicator -->
+    <div id="ws-connection-status" class="connection-status" style="display: none;"></div>
 
     <nav class="nav-bar">
         <div class="nav-left">
@@ -482,12 +669,22 @@
 
             <!-- User Profile -->
             {% if user.is_authenticated %}
-            <div class="user-profile" id="user-menu">
-                <div class="user-avatar">
-                    {{ user.username|first|upper }}
+            <div class="nav-dropdown">
+                <div class="user-profile nav-dropdown-toggle" id="user-menu">
+                    <div class="user-avatar">
+                        {{ user.username|first|upper }}
+                    </div>
+                    <span class="user-name">{{ user.username }}</span>
+                    <span style="font-size: 0.7rem;">▼</span>
                 </div>
-                <span class="user-name">{{ user.username }}</span>
+                <div class="nav-dropdown-menu">
+                    <a href="/profile/">👤 Profile</a>
+                    <a href="/notifications/">🔔 Notifications</a>
+                    <div class="separator"></div>
+                    <a href="{% url 'logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">🚪 Logout</a>
+                </div>
             </div>
+            <form id="logout-form" action="{% url 'logout' %}" method="GET" style="display: none;"></form>
             {% else %}
             <a href="{% url 'login' %}" class="btn">Login</a>
             {% endif %}
@@ -736,6 +933,17 @@
             }, 5000);
         });
 
+    </script>
+
+    <!-- Autonomous Learning Client -->
+    <script src="{% static 'js/autonomous-learning-client.js' %}"></script>
+    <script>
+        // Initialize Autonomous Learning Client on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            window.autonomousLearning = new AutonomousLearningClient();
+            window.autonomousLearning.connect();
+            console.log('🧠 Autonomous Learning Client initialized and connected');
+        });
     </script>
 
     {% block extra_js %}{% endblock %}

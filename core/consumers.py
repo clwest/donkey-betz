@@ -2184,7 +2184,7 @@ Volume: $45M
                 response = await database_sync_to_async(llm_integration.generate_response)(
                     prompt,
                     provider='openai',
-                    model='gpt-4o-mini'
+                    model='gpt-5-mini'
                 )
 
                 if response and not response.startswith("Error"):
@@ -2235,7 +2235,7 @@ Ask me anything about our capabilities!"""
                     response = await database_sync_to_async(llm_integration.generate_response)(
                         command,
                         provider='openai',
-                        model='gpt-4o-mini'
+                        model='gpt-5-mini'
                     )
 
                     if response and not response.startswith("Error"):

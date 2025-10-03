@@ -677,13 +677,14 @@ Please create:
 Format as proper Markdown with sections and code examples."""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Using mini for cost efficiency
+                model="gpt-5-mini",  # Using mini for cost efficiency
                 messages=[
                     {"role": "system", "content": "You are a technical documentation expert. Create clear, comprehensive documentation."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
-                max_tokens=2000
+                # temperature=0.7,  # GPT-5-mini uses fixed temperature
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability
             )
 
             documentation = response.choices[0].message.content
@@ -715,7 +716,7 @@ Format as proper Markdown with sections and code examples."""
                 "implementation_type": "REAL - Used OpenAI GPT-4 to generate actual documentation",
                 "file_created": filepath,
                 "file_size": f"{file_size} bytes",
-                "model_used": "gpt-4o-mini",
+                "model_used": "gpt-5-mini",
                 "tokens_used": response.usage.total_tokens if hasattr(response, 'usage') else "unknown",
                 "documentation_preview": documentation[:500] + "..." if len(documentation) > 500 else documentation,
                 "view_file": f"Open {filepath} to see the full documentation"
@@ -948,13 +949,14 @@ The component should:
 Return ONLY the React component code, no explanations."""
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert React developer. Create production-ready components with modern best practices."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
-                max_tokens=3000
+                # temperature=0.7,  # GPT-5-mini uses fixed temperature
+                max_completion_tokens=3000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability
             )
 
             component_code = response.choices[0].message.content
@@ -1027,7 +1029,7 @@ Return ONLY the React component code, no explanations."""
                     {"path": filepath, "size": f"{file_size} bytes", "type": "React Component"},
                     {"path": instructions_path, "type": "Integration Guide"}
                 ],
-                "model_used": "gpt-4o-mini",
+                "model_used": "gpt-5-mini",
                 "tokens_used": response.usage.total_tokens if hasattr(response, 'usage') else "unknown",
                 "component_name": f"{component_name}Dashboard",
                 "next_steps": [

@@ -1,0 +1,321 @@
+{% extends 'unified_v2/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Welcome Section -->
+    <div class="mb-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-8 shadow-lg">
+        <h2 class="text-3xl font-bold text-white mb-2">
+            Welcome back, {{ user_data.first_name }}! 👋
+        </h2>
+        <p class="text-blue-100 text-lg">
+            Your AI-powered platform is running with {{ user_stats.agent_count }} agents ready to help.
+        </p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <!-- AI Agents -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">🤖</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">AI Agents</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.agent_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'unified_v2:agent_marketplace' %}"
+                       class="text-sm text-blue-400 hover:text-blue-300">
+                        Browse agents →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legendary Advisors -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">🎯</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Legendary Advisors</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.advisor_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'unified_v2:advisor_council' %}"
+                       class="text-sm text-blue-400 hover:text-blue-300">
+                        Consult advisors →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Executions -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">⚡</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Agent Executions</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.execution_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <span class="text-sm text-gray-400">
+                        {{ user_stats.recent_executions }} in last 7 days
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Records -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">🧠</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Learning Records</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.learning_records }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <span class="text-sm text-gray-400">
+                        Avg confidence: {{ user_stats.avg_confidence }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spider Data -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">🕷️</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Spider Data Items</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.spider_data_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'unified_v2:intelligence_hub' %}"
+                       class="text-sm text-blue-400 hover:text-blue-300">
+                        View intelligence →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Spiders -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">🌐</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Active Spiders</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.active_spider_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <span class="text-sm text-gray-400">
+                        Collecting data 24/7
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opportunities -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">💰</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Opportunities</dt>
+                            <dd class="text-3xl font-semibold text-white">{{ user_stats.opportunities_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'unified_v2:intelligence_hub' %}"
+                       class="text-sm text-blue-400 hover:text-blue-300">
+                        View opportunities →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Studio -->
+        <div class="overflow-hidden rounded-lg bg-gray-800 shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-4xl">🎨</span>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="truncate text-sm font-medium text-gray-400">Content Studio</dt>
+                            <dd class="text-3xl font-semibold text-white">70+</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'unified_v2:content_studio' %}"
+                       class="text-sm text-blue-400 hover:text-blue-300">
+                        Create content →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mb-8 rounded-lg bg-gray-800 p-6 shadow">
+        <h3 class="text-lg font-medium text-white mb-4">Quick Actions</h3>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <a href="{% url 'unified_v2:personal_assistant' %}"
+               class="block rounded-lg bg-blue-600 px-4 py-3 text-center text-white hover:bg-blue-700 transition">
+                <span class="text-2xl block mb-1">💬</span>
+                <span class="font-medium">Chat with Assistant</span>
+            </a>
+            <a href="{% url 'unified_v2:agent_marketplace' %}"
+               class="block rounded-lg bg-purple-600 px-4 py-3 text-center text-white hover:bg-purple-700 transition">
+                <span class="text-2xl block mb-1">🤖</span>
+                <span class="font-medium">Execute Agent</span>
+            </a>
+            <a href="{% url 'unified_v2:content_studio' %}"
+               class="block rounded-lg bg-green-600 px-4 py-3 text-center text-white hover:bg-green-700 transition">
+                <span class="text-2xl block mb-1">🎨</span>
+                <span class="font-medium">Generate Content</span>
+            </a>
+            <a href="{% url 'unified_v2:intelligence_hub' %}"
+               class="block rounded-lg bg-orange-600 px-4 py-3 text-center text-white hover:bg-orange-700 transition">
+                <span class="text-2xl block mb-1">🕷️</span>
+                <span class="font-medium">View Intelligence</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Two-column layout for activity and insights -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <!-- Recent Activity -->
+        <div class="rounded-lg bg-gray-800 p-6 shadow">
+            <h3 class="text-lg font-medium text-white mb-4">Recent Activity</h3>
+            {% if recent_activity %}
+                <div class="space-y-4">
+                    {% for execution in recent_activity %}
+                        <div class="flex items-start space-x-3 border-l-4 border-blue-500 pl-4 py-2">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-white">
+                                    {{ execution.agent.name }}
+                                </p>
+                                <p class="text-xs text-gray-400">
+                                    {{ execution.created_at|timesince }} ago
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Status: <span class="text-green-400">{{ execution.status }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-400 text-sm">No recent activity. Execute an agent to get started!</p>
+            {% endif %}
+        </div>
+
+        <!-- Learning Insights -->
+        <div class="rounded-lg bg-gray-800 p-6 shadow">
+            <h3 class="text-lg font-medium text-white mb-4">Learning Insights</h3>
+            {% if learning_insights %}
+                <div class="space-y-4">
+                    {% for insight in learning_insights %}
+                        <div class="border-l-4 border-green-500 pl-4 py-2">
+                            <p class="text-sm font-medium text-white">
+                                {{ insight.agent.name }}
+                            </p>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <div class="flex-1 bg-gray-700 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full"
+                                         style="width: {{ insight.confidence_score|floatformat:0|default:0 }}%">
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-400">
+                                    {{ insight.confidence_score|floatformat:2 }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-400 text-sm">Learning in progress. Execute agents to build insights!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Opportunities -->
+    {% if recent_opportunities %}
+        <div class="mt-6 rounded-lg bg-gray-800 p-6 shadow">
+            <h3 class="text-lg font-medium text-white mb-4">Recent Opportunities</h3>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {% for opp in recent_opportunities %}
+                    <div class="rounded-lg bg-gray-700 p-4 hover:bg-gray-600 transition">
+                        <h4 class="text-sm font-medium text-white mb-1">{{ opp.title }}</h4>
+                        <p class="text-xs text-gray-400 mb-2">{{ opp.description|truncatewords:20 }}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-green-400">
+                                ${{ opp.estimated_value|default:"TBD" }}
+                            </span>
+                            <a href="{% url 'unified_v2:intelligence_hub' %}"
+                               class="text-xs text-blue-400 hover:text-blue-300">
+                                View →
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Dashboard-specific JavaScript
+    console.log('Dashboard loaded for user:', window.USERNAME);
+
+    // WebSocket connection for real-time updates (placeholder)
+    // Will be implemented when WebSocket consumer is created
+</script>
+{% endblock %}

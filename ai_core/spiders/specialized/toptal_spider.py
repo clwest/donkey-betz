@@ -20,6 +20,7 @@ from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+from ..revenue_tracker import create_project_revenue
 
 
 class ToptalIntelligenceSpider(BaseIntelligenceSpider):
@@ -352,22 +353,23 @@ class ToptalIntelligenceSpider(BaseIntelligenceSpider):
 
     def _determine_targets(self, opportunity: Dict[str, Any]) -> tuple:
         """Determine target agents and advisors"""
-        target_agents = ['income_builder', 'freelance_specialist']
+        # CRITICAL FIX: Use correct agent names with hyphens (income-builder, not income_builder)
+        target_agents = ['income-builder', 'job_application_agent', 'career-agent']
         target_advisors = []
 
         # Skill-based targeting
         skills = [skill.lower() for skill in opportunity.get('required_skills', [])]
 
         if any(skill in ['ai', 'machine learning', 'data science'] for skill in skills):
-            target_agents.extend(['ai_specialist', 'data_scientist'])
+            target_agents.extend(['ai-specialist', 'data-scientist'])
             target_advisors.append('tech_innovator')
 
         if any(skill in ['blockchain', 'crypto', 'web3'] for skill in skills):
-            target_agents.append('blockchain_specialist')
+            target_agents.append('blockchain-specialist')
             target_advisors.append('crypto_expert')
 
         if any(skill in ['react', 'vue', 'angular', 'frontend'] for skill in skills):
-            target_agents.append('frontend_specialist')
+            target_agents.append('frontend-specialist')
 
         return target_agents, target_advisors
 
@@ -517,10 +519,53 @@ class ToptalIntelligenceSpider(BaseIntelligenceSpider):
                 quality_score=0.3,
                 timestamp=datetime.now(timezone.utc),
                 relevance_tags=['freelance', 'general'],
-                target_agents=['income_builder'],
+                target_agents=['income-builder', 'job_application_agent', 'career-agent'],  # FIXED: Use correct agent names
                 target_advisors=[]
             )
 
         except Exception as e:
             self.logger.error(f"Error processing general freelance data: {e}")
+            return None
+
+    async def track_revenue_conversion(
+        self,
+        application_id: str,
+        user_id: str,
+        project_title: str,
+        contract_value: float,
+        client_name: str,
+        **kwargs
+    ) -> Optional[str]:
+        """
+        Track revenue when a Toptal project is won and generates earnings.
+        Called when project contracts are signed and payments are received.
+
+        Args:
+            application_id: Unique identifier for this job opportunity
+            user_id: User who won the project
+            project_title: Title of the project
+            contract_value: Total contract value
+            client_name: Client/company name
+            **kwargs: Additional metadata (hourly_rate, duration, skills, etc.)
+
+        Returns:
+            Revenue record ID if successful, None otherwise
+        """
+        try:
+            record_id = await create_project_revenue(
+                application_id=application_id,
+                user_id=user_id,
+                client_name=client_name,
+                project_title=project_title,
+                contract_value=contract_value,
+                **kwargs
+            )
+
+            if record_id:
+                self.logger.info(f"💰 Tracked Toptal revenue: ${contract_value} for '{project_title}' with {client_name}")
+
+            return record_id
+
+        except Exception as e:
+            self.logger.error(f"Error tracking Toptal revenue conversion: {e}")
             return None

@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from openai import OpenAI
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class RealContentCreatorAgent:
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.created_content = []
 
-    def create_blog_post(self, topic: str, keywords: List[str], word_count: int = 800) -> Dict[str, Any]:
+    async def create_blog_post(self, topic: str, keywords: List[str], word_count: int = 800) -> Dict[str, Any]:
         """
         Create a real blog post that can be sold
 
@@ -57,17 +58,21 @@ class RealContentCreatorAgent:
             Create a blog post that is ready to publish and sell.
             """
 
-            # Generate the content
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Fast content generation
-                messages=[
-                    {"role": "system", "content": "You are a professional content writer creating high-quality, sellable content."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_completion_tokens=1500
+            # Generate the content using GPT-5 Responses API
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ContentCreator",
+                prompt=f"You are a professional content writer creating high-quality, sellable content.\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",  # Content needs detail
+                max_output_tokens=1500
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error creating blog post: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             # Create metadata
             blog_post = {
@@ -81,11 +86,7 @@ class RealContentCreatorAgent:
                 'value_estimate': self._estimate_content_value(word_count),
                 'ready_to_sell': True,
                 'format': 'markdown',
-                'usage': {
-                    'prompt_tokens': response.usage.prompt_tokens,
-                    'completion_tokens': response.usage.completion_tokens,
-                    'total_cost': (response.usage.prompt_tokens * 0.0005 + response.usage.completion_tokens * 0.0015) / 1000
-                }
+                'usage': result.get('usage', {})
             }
 
             # Save the content
@@ -100,7 +101,7 @@ class RealContentCreatorAgent:
             logger.error(f"Error creating blog post: {e}")
             return None
 
-    def create_technical_documentation(self, project: str, sections: List[str]) -> Dict[str, Any]:
+    async def create_technical_documentation(self, project: str, sections: List[str]) -> Dict[str, Any]:
         """
         Create technical documentation
 
@@ -131,16 +132,20 @@ class RealContentCreatorAgent:
             Create documentation that developers would pay for.
             """
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Fast content generation
-                messages=[
-                    {"role": "system", "content": "You are a technical writer creating professional documentation."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_completion_tokens=2000
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ContentCreator",
+                prompt=f"You are a technical writer creating professional documentation.\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=2000
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error creating documentation: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             documentation = {
                 'type': 'technical_documentation',
@@ -164,7 +169,7 @@ class RealContentCreatorAgent:
             logger.error(f"Error creating documentation: {e}")
             return None
 
-    def create_social_media_campaign(self, brand: str, platform: str, posts_count: int = 5) -> List[Dict[str, Any]]:
+    async def create_social_media_campaign(self, brand: str, platform: str, posts_count: int = 5) -> List[Dict[str, Any]]:
         """
         Create a social media campaign
 
@@ -196,16 +201,20 @@ class RealContentCreatorAgent:
             - Content type (educational/promotional/engaging)
             """
 
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Fast content generation
-                messages=[
-                    {"role": "system", "content": f"You are a social media expert creating content for {platform}."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_completion_tokens=1000
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ContentCreator",
+                prompt=f"You are a social media expert creating content for {platform}.\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="medium",
+                verbosity="high",
+                max_output_tokens=1000
             )
 
-            content = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error creating social campaign: {result.get('error')}")
+                return None
+
+            content = result['response']
 
             campaign = {
                 'type': 'social_media_campaign',

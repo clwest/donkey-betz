@@ -1,0 +1,77 @@
+{% extends 'unified_v2/base.html' %}
+
+{% block title %}Personal Assistant{% endblock %}
+{% block page_title %}Personal Assistant{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Connection Status -->
+    <div id="connection-status" class="mb-4 rounded-lg bg-yellow-900/30 border border-yellow-600 p-3 text-sm text-yellow-200">
+        <span id="status-text">Connecting to assistant...</span>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="mb-4 rounded-lg bg-gray-800 p-6 shadow">
+        <div id="chat-messages" class="mb-4 overflow-y-auto" style="height: 500px;">
+            <!-- Messages will be loaded here via WebSocket -->
+        </div>
+
+        <!-- Input Area -->
+        <div class="flex space-x-2">
+            <input type="text"
+                   id="message-input"
+                   class="flex-1 rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   placeholder="What would you like to do?"
+                   autocomplete="off">
+            <button onclick="sendMessage()"
+                    id="send-button"
+                    class="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <!-- Suggested Actions -->
+    <div class="mb-4">
+        <h3 class="mb-3 text-lg font-semibold text-white">Quick Actions</h3>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {% for action in suggested_actions %}
+            <button onclick="quickAction('{{ action.text }}')"
+                    class="rounded-lg bg-gray-800 p-4 text-left text-white hover:bg-gray-700 transition-colors">
+                <div class="font-semibold">{{ action.text }}</div>
+                {% if action.description %}
+                <div class="mt-1 text-sm text-gray-400">{{ action.description }}</div>
+                {% endif %}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="rounded-lg bg-gray-800 p-4">
+        <h3 class="mb-2 text-sm font-semibold text-gray-400">System Status</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm lg:grid-cols-4">
+            <div>
+                <div class="text-gray-400">AI Agents</div>
+                <div class="text-xl font-bold text-white">{{ user_stats.agent_count }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Advisors</div>
+                <div class="text-xl font-bold text-white">{{ user_stats.advisor_count }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Active Spiders</div>
+                <div class="text-xl font-bold text-white">{{ user_stats.active_spider_count }}</div>
+            </div>
+            <div>
+                <div class="text-gray-400">Opportunities</div>
+                <div class="text-xl font-bold text-white">{{ user_stats.opportunities_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/unified_v2/personal_assistant.js"></script>
+{% endblock %}

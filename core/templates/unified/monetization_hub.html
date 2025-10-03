@@ -555,34 +555,8 @@
     document.addEventListener('DOMContentLoaded', function() {
         connectWebSocket();
 
-        // Simulate initial data for demo
-        setTimeout(() => {
-            handleRevenueUpdate({
-                revenue: {
-                    today: 450,
-                    week: 2150,
-                    month: 2600,
-                    lifetime: 12500,
-                    todayTrend: 15,
-                    weekTrend: 12,
-                    monthTrend: 18
-                },
-                streams: [
-                    { id: '1', name: 'Freelance Projects', amount: 1200, status: 'active', type: 'Contract' },
-                    { id: '2', name: 'Content Creation', amount: 350, status: 'pending', type: 'Recurring' },
-                    { id: '3', name: 'Consulting', amount: 600, status: 'completed', type: 'One-time' }
-                ],
-                dailyEarnings: [
-                    { label: 'Mon', amount: 320 },
-                    { label: 'Tue', amount: 450 },
-                    { label: 'Wed', amount: 280 },
-                    { label: 'Thu', amount: 520 },
-                    { label: 'Fri', amount: 380 },
-                    { label: 'Sat', amount: 200 },
-                    { label: 'Sun', amount: 450 }
-                ]
-            });
-        }, 1000);
+        // WebSocket will send real revenue data from consumer
+        // No demo data injection - using real database queries
     });
 </script>
 {% endblock %}

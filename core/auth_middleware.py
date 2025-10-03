@@ -35,6 +35,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/auth/register/',  # Registration endpoint
         '/api/v1/auth/forgot-password/',  # Password reset
         '/api/v1/auth/reset-password/',  # Password reset confirmation
+        '/api/v1/intelligence/real-income-builder/',  # Income Builder endpoint - session auth
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]

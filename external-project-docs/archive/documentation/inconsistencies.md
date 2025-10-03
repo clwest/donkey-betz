@@ -1,0 +1,225 @@
+# Field Naming Inconsistencies
+
+## Timestamp Fields
+
+- **created_at**: 94 models
+- **updated_at**: 27 models
+- **completed_at**: 6 models
+- **started_at**: 5 models
+  - agent_orchestra.TaskOrchestration
+  - ai_evolution.EvolutionExperiment
+  - ai_partner.ConversationSegment
+  - learning_intelligence.LearningSession
+  - walking_companion.WalkingSession
+- **last_used**: 5 models
+  - agent_orchestra.AgentTool
+  - agent_orchestra.HistoricalLegislativePattern
+  - agent_orchestra.SavedSearch
+  - learning_intelligence.SymbolicMemoryAnchor
+  - universal_builder.BuilderAgent
+- **timestamp**: 4 models
+  - ai_evolution.EvolutionMetrics
+  - memory.MemoryEntry
+  - mythology_lab.MythPropagation
+  - walking_companion.ConversationTurn
+- **date**: 4 models
+  - core.PaddleLog
+  - core.DailyGoal
+  - shame.DailyLockout
+  - shame.ShamePost
+- **ended_at**: 3 models
+  - ai_partner.ConversationSegment
+  - learning_intelligence.LearningSession
+  - walking_companion.WalkingSession
+- **read_at**: 2 models
+  - agent_orchestra.AgentCommunication
+  - agent_orchestra.AgentMessage
+- **reviewed_at**: 2 models
+  - agent_orchestra.RedditIdea
+  - learning_intelligence.AnchorSuggestion
+- **effective_date**: 2 models
+  - agent_orchestra.RegulatoryDocumentEmbedding
+  - agent_orchestra.BusinessImpactAnalysis
+- **last_updated**: 2 models
+  - ai_partner.UserLifeProfile
+  - ml_models.MLUserModel
+- **last_discussed**: 2 models
+  - ai_partner.LifeGoalTracking
+  - ai_partner.StartupIdeaIncubator
+- **start_time**: 2 models
+  - movement.MovementSession
+  - movement.DetectedWorkout
+- **end_time**: 2 models
+  - movement.MovementSession
+  - movement.DetectedWorkout
+- **acknowledged_at**: 2 models
+  - mythology_lab.MythologyAlert
+  - walking_companion.BreakReminder
+- **date_joined**: 1 models
+  - accounts.User
+- **email_sent_at**: 1 models
+  - agent_orchestra.TaskOrchestration
+- **archived_at**: 1 models
+  - agent_orchestra.TaskOrchestration
+- **estimated_completion**: 1 models
+  - agent_orchestra.AgentInstance
+- **actual_completion**: 1 models
+  - agent_orchestra.AgentInstance
+- **discovered_at**: 1 models
+  - agent_orchestra.RedditIdea
+- **business_plan_started_at**: 1 models
+  - agent_orchestra.RedditIdea
+- **business_plan_completed_at**: 1 models
+  - agent_orchestra.RedditIdea
+- **deleted_at**: 1 models
+  - agent_orchestra.DeletedRedditIdea
+- **responded_at**: 1 models
+  - agent_orchestra.AgentMessage
+- **introduced_date**: 1 models
+  - agent_orchestra.LegislativeBillEmbedding
+- **last_action_date**: 1 models
+  - agent_orchestra.LegislativeBillEmbedding
+- **publication_date**: 1 models
+  - agent_orchestra.RegulatoryDocumentEmbedding
+- **comment_due_date**: 1 models
+  - agent_orchestra.RegulatoryDocumentEmbedding
+- **posted_date**: 1 models
+  - agent_orchestra.GovernmentContractEmbedding
+- **due_date**: 1 models
+  - agent_orchestra.GovernmentContractEmbedding
+- **computed_at**: 1 models
+  - agent_orchestra.BillComparisonEmbedding
+- **last_alert_sent**: 1 models
+  - agent_orchestra.LegislativeAlert
+- **last_trained**: 1 models
+  - agent_orchestra.HistoricalLegislativePattern
+- **last_data_export**: 1 models
+  - ai_partner.UserLifeProfile
+- **last_message_at**: 1 models
+  - ai_partner.ConversationSession
+- **session_date**: 1 models
+  - ai_partner.ConversationMemory
+- **target_date**: 1 models
+  - ai_partner.LifeGoalTracking
+- **last_mentioned**: 1 models
+  - ai_partner.ConversationTopic
+- **conversation_timestamp**: 1 models
+  - ai_partner.ConversationEmbedding
+- **last_pattern_update**: 1 models
+  - ai_partner.UserPatternProfile
+- **last_accessed**: 1 models
+  - ai_partner.CodeEmbedding
+- **last_active**: 1 models
+  - core.Profile
+- **mood_last_updated**: 1 models
+  - core.Profile
+- **start_date**: 1 models
+  - core.MovementGoal
+- **end_date**: 1 models
+  - core.MovementGoal
+- **uploaded_at**: 1 models
+  - images.SourceImage
+- **last_success**: 1 models
+  - learning_intelligence.SymbolicMemoryAnchor
+- **acquisition_date**: 1 models
+  - learning_intelligence.SymbolicMemoryAnchor
+- **accessed_at**: 1 models
+  - learning_intelligence.MemoryEntry
+- **window_start**: 1 models
+  - learning_intelligence.AnchorDriftLog
+- **window_end**: 1 models
+  - learning_intelligence.AnchorDriftLog
+- **last_used_in_reflection**: 1 models
+  - memory.SymbolicMemoryAnchor
+- **stabilized_at**: 1 models
+  - memory.SymbolicMemoryAnchor
+- **is_validated**: 1 models
+  - ml_models.MLTrainingData
+- **last_inference**: 1 models
+  - ml_models.MLUserModel
+- **injection_timestamp**: 1 models
+  - mythology_lab.MythologyExperiment
+- **first_observed**: 1 models
+  - mythology_lab.MythPattern
+- **last_observed**: 1 models
+  - mythology_lab.MythPattern
+- **last_mythology_event**: 1 models
+  - mythology_lab.AgentMythologyProfile
+- **issued_at**: 1 models
+  - shame.DonkeyChallenge
+- **expires_at**: 1 models
+  - shame.DonkeyChallenge
+- **scheduled_time**: 1 models
+  - walking_companion.BreakReminder
+- **sent_at**: 1 models
+  - walking_companion.BreakReminder
+- **published_at**: 1 models
+  - walking_companion.InsightExtraction
+
+## User Reference Fields
+
+- **user**: 61 models
+- **user_satisfaction**: 3 models
+  - agent_orchestra.TaskOrchestration
+  - ai_partner.RAGPerformanceMetrics
+  - learning_intelligence.LearningSession
+- **user_feedback**: 2 models
+  - agent_orchestra.TaskOrchestration
+  - ai_partner.ConversationMemory
+- **created_by**: 2 models
+  - ml_models.MLModelVersion
+  - shame.Herd
+- **username**: 1 models
+  - accounts.User
+- **telegram_username**: 1 models
+  - accounts.User
+- **user_context**: 1 models
+  - agent_orchestra.AgentInstance
+- **user_notes**: 1 models
+  - agent_orchestra.RedditIdea
+- **avg_user_satisfaction**: 1 models
+  - ai_evolution.EvolutionExperiment
+- **user_mood**: 1 models
+  - ai_partner.ConversationMemory
+- **is_user_message**: 1 models
+  - ai_partner.ConversationMemory
+- **user_skills_match**: 1 models
+  - ai_partner.StartupIdeaIncubator
+- **user_acknowledged**: 1 models
+  - ai_partner.PersonalInsight
+- **reinforcing_user**: 1 models
+  - learning_intelligence.AnchorReinforcementLog
+- **submitted_by**: 1 models
+  - memory.MemoryFeedback
+- **max_concurrent_users**: 1 models
+  - universal_builder.StackPattern
+
+## Status/Boolean Fields
+
+- **is_active**: 14 models
+- **is_public**: 3 models
+- **requires_approval**: 2 models
+- **telegram_notified**: 2 models
+- **is_favorite**: 2 models
+- **is_broadcast**: 2 models
+- **acknowledged**: 2 models
+- **success**: 2 models
+- **is_completed**: 2 models
+- **is_failed**: 2 models
+- **is_builtin**: 2 models
+- **is_fork**: 2 models
+- **is_featured**: 2 models
+- **is_stable**: 2 models
+- **is_staff**: 1 models
+- **is_verified**: 1 models
+- **telegram_notifications**: 1 models
+- **email_requested**: 1 models
+- **email_sent**: 1 models
+- **is_archived**: 1 models
+
+## Relationship Field Patterns
+
+- user -> User: 49 occurrences
+- user -> settings.AUTH_USER_MODEL: 11 occurrences
+- user -> get_user_model(): 1 occurrences
+- reinforcing_user -> User: 1 occurrences
