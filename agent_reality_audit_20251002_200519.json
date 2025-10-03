@@ -1,0 +1,361 @@
+{
+  "timestamp": "2025-10-02T20:05:19.606919",
+  "total_agents": 206,
+  "tested": 20,
+  "results": [
+    {
+      "name": "UltimateMoneyMachine",
+      "status": "broken",
+      "reason": "No execute method",
+      "reality_score": 0.0
+    },
+    {
+      "name": "SportsAnalyticsAgentAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "AgentOrchestraUiRefactorAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "PlannedAgentsAgent",
+      "status": "partial",
+      "reality_score": 0.6,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": false,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": false
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "LlmProviderDistributionAgent",
+      "status": "partial",
+      "reality_score": 0.6,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": false,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": false
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "DependencyScannerAgentAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "ContentSpecialistAgent",
+      "status": "partial",
+      "reality_score": 0.5,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": false,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "PromptEngineerAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "ContentMonetizationAgentAgent",
+      "status": "partial",
+      "reality_score": 0.5,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": false,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "TaskDelegationOrchestratorAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "PlatformSecurityUnifierAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "ApiIntegratorAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "SpiderArmySupremeOrchestratorAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "RevenueActivationOrchestratorAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "WorkingProjectBuilderAgent",
+      "status": "partial",
+      "reality_score": 0.5,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": false,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "ContentStrategyAgentAgent",
+      "status": "partial",
+      "reality_score": 0.6,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": false,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "SystemUnificationArchitectAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "PlatformConvergenceAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "KellyBetSizingAgentAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    },
+    {
+      "name": "LiveBettingAgentAgent",
+      "status": "real",
+      "reality_score": 0.7,
+      "indicators": {
+        "has_openai": true,
+        "has_api_calls": true,
+        "has_serper": false,
+        "has_real_data": true,
+        "avoids_mock": true,
+        "has_async": true,
+        "has_real_logic": true
+      },
+      "execution_success": false,
+      "is_dynamic_agent": false,
+      "code_size": 0,
+      "agent_type": "hardcoded"
+    }
+  ],
+  "summary": {
+    "real": 13,
+    "partial": 6,
+    "mock": 0,
+    "broken": 1
+  }
+}

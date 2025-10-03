@@ -31,6 +31,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         # Get user if authenticated
         self.user = self.scope.get("user")
 
+        # Join user-specific group for learning insights
+        if self.user and self.user.is_authenticated:
+            await self.channel_layer.group_add(
+                f"user_{self.user.id}",
+                self.channel_name
+            )
+
         logger.info(f"Personal Assistant WebSocket connected: {self.channel_name}")
 
         # Send connection confirmation
@@ -46,6 +53,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
+        # Leave user group
+        if self.user and self.user.is_authenticated:
+            await self.channel_layer.group_discard(
+                f"user_{self.user.id}",
+                self.channel_name
+            )
+
         logger.info(f"Personal Assistant WebSocket disconnected: {self.channel_name}")
 
     async def receive(self, text_data):
@@ -250,10 +264,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         application_count = revenue_stats['count'] or 0
 
         # Get opportunities count
-        from agents.models import OpportunityInteraction
-        opportunities_count = OpportunityInteraction.objects.filter(
-            user=self.user
-        ).count() if OpportunityInteraction.objects.filter(user=self.user).exists() else 0
+        try:
+            from core.models_engagement_metrics import OpportunityInteraction
+            opportunities_count = OpportunityInteraction.objects.filter(
+                user=self.user
+            ).count()
+        except Exception:
+            opportunities_count = 0
 
         # Calculate success rate
         confirmed_revenue = Revenue.objects.filter(
@@ -262,7 +279,7 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         success_rate = (confirmed_revenue / application_count * 100) if application_count > 0 else 0
 
         return {
-            'id': self.user.id,
+            'id': str(self.user.id),  # Convert UUID to string for JSON serialization
             'name': self.user.get_full_name() or self.user.username,
             'email': self.user.email,
             'member_since': self.user.date_joined.isoformat() if hasattr(self.user, 'date_joined') else None,
@@ -451,9 +468,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
     def get_activity_stats(self):
         """Get real activity statistics from database"""
         from core.models import Revenue
-        from agents.models import OpportunityInteraction, AgentExecution
         from django.db.models import Sum, Count
         from datetime import timedelta
+
+        try:
+            from core.models_engagement_metrics import OpportunityInteraction
+        except ImportError:
+            OpportunityInteraction = None
 
         # Get total stats
         total_revenue_stats = Revenue.objects.filter(user=self.user).aggregate(
@@ -485,9 +506,13 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         success_rate = (completed_projects / total_apps * 100) if total_apps > 0 else 0
 
         # Get opportunities
-        opportunities = OpportunityInteraction.objects.filter(
-            user=self.user
-        ).count() if OpportunityInteraction.objects.filter(user=self.user).exists() else 0
+        if OpportunityInteraction:
+            try:
+                opportunities = OpportunityInteraction.objects.filter(user=self.user).count()
+            except Exception:
+                opportunities = 0
+        else:
+            opportunities = 0
 
         return {
             'applications': total_apps,
@@ -500,3 +525,22 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
                 'revenue': week_revenue
             }
         }
+
+    # LEARNING ORCHESTRATOR INTEGRATION
+    async def learning_insights(self, event):
+        """
+        Receive learning insights from Learning Orchestrator
+        and display to user via Personal Assistant
+        """
+        message = event.get('message', '')
+        optimizations = event.get('optimizations', {})
+
+        # Send learning insights to frontend
+        await self.send(text_data=json.dumps({
+            'type': 'learning_insights',
+            'message': message,
+            'optimizations': optimizations,
+            'timestamp': timezone.now().isoformat()
+        }))
+
+        logger.info(f"📨 Delivered learning insights to user via Personal Assistant")

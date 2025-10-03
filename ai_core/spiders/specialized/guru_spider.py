@@ -20,6 +20,7 @@ from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+from ..revenue_tracker import create_project_revenue
 
 
 class GuruIntelligenceSpider(BaseIntelligenceSpider):
@@ -330,7 +331,8 @@ class GuruIntelligenceSpider(BaseIntelligenceSpider):
 
     def _determine_targets(self, job_info: Dict[str, Any]) -> tuple:
         """Determine target agents and advisors"""
-        target_agents = ['income_builder', 'freelance_specialist']
+        # CRITICAL FIX: Use correct agent names with hyphens
+        target_agents = ['income-builder', 'job_application_agent', 'career-agent']
         target_advisors = []
 
         category = job_info.get('category', '').lower()
@@ -338,17 +340,17 @@ class GuruIntelligenceSpider(BaseIntelligenceSpider):
 
         # Category-based targeting
         if 'programming' in category or 'development' in category:
-            target_agents.append('developer_specialist')
+            target_agents.append('developer-specialist')
 
         if 'design' in category or 'creative' in category:
-            target_agents.append('design_specialist')
+            target_agents.append('design-specialist')
 
         if 'writing' in category or 'content' in category:
-            target_agents.append('content_specialist')
+            target_agents.append('content-specialist')
 
         # Skill-based targeting
         if any(skill in ['ai', 'machine learning', 'data science'] for skill in skills):
-            target_agents.append('ai_specialist')
+            target_agents.append('ai-specialist')
             target_advisors.append('tech_innovator')
 
         return target_agents, target_advisors
@@ -500,10 +502,53 @@ class GuruIntelligenceSpider(BaseIntelligenceSpider):
                 quality_score=0.3,
                 timestamp=datetime.now(timezone.utc),
                 relevance_tags=['job', 'general'],
-                target_agents=['income_builder'],
+                target_agents=['income-builder', 'job_application_agent', 'career-agent'],
                 target_advisors=[]
             )
 
         except Exception as e:
             self.logger.error(f"Error processing general job data: {e}")
+            return None
+
+    async def track_revenue_conversion(
+        self,
+        application_id: str,
+        user_id: str,
+        project_title: str,
+        contract_value: float,
+        client_name: str,
+        **kwargs
+    ) -> Optional[str]:
+        """
+        Track revenue when a Guru project is won and generates earnings.
+        Called when project contracts are awarded and payments are received.
+
+        Args:
+            application_id: Unique identifier for this job opportunity
+            user_id: User who won the project
+            project_title: Title of the project
+            contract_value: Total contract value
+            client_name: Client/company name
+            **kwargs: Additional metadata (budget_type, category, skills, etc.)
+
+        Returns:
+            Revenue record ID if successful, None otherwise
+        """
+        try:
+            record_id = await create_project_revenue(
+                application_id=application_id,
+                user_id=user_id,
+                client_name=client_name,
+                project_title=project_title,
+                contract_value=contract_value,
+                **kwargs
+            )
+
+            if record_id:
+                self.logger.info(f"💰 Tracked Guru revenue: ${contract_value} for '{project_title}' with {client_name}")
+
+            return record_id
+
+        except Exception as e:
+            self.logger.error(f"Error tracking Guru revenue conversion: {e}")
             return None

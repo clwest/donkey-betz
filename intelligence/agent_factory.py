@@ -275,7 +275,8 @@ class UnifiedAgentFactory:
                                 "content": prompt
                             }
                         ],
-                        max_completion_tokens=2000,  # GPT-4o-mini token parameter
+                        max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-4o-mini token parameter
                         # temperature=0.7  # GPT-5 only supports default temperature,  # Optimal for GPT-4o-mini
                         # GPT-4o-mini - no special reasoning parameters needed
                     )
@@ -295,7 +296,7 @@ class UnifiedAgentFactory:
                         "result": structured_result,
                         "content": content,
                         "method": "real_api",
-                        "model_used": "gpt-4o-mini"
+                        "model_used": "gpt-5-mini"
                     }
 
                 except Exception as e:

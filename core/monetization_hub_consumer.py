@@ -105,7 +105,8 @@ class MonetizationHubConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_revenue_data(self) -> Dict[str, Any]:
         """Get revenue data from database"""
-        from core.models import JobApplication, Revenue, WithdrawalRequest
+        from core.models import Revenue
+        from django.db.models import Sum
 
         # Calculate total earnings
         total_earned = Revenue.objects.filter(
@@ -120,14 +121,12 @@ class MonetizationHubConsumer(AsyncWebsocketConsumer):
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
         # Calculate available balance (completed - withdrawn)
-        withdrawn = WithdrawalRequest.objects.filter(
-            user=self.user,
-            status='completed'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
+        # WithdrawalRequest model doesn't exist yet, so withdrawn = 0
+        withdrawn = Decimal('0')
         available_balance = total_earned - withdrawn
 
         # Get recent earnings (last 30 days)
+        from datetime import timedelta
         thirty_days_ago = timezone.now() - timedelta(days=30)
         recent_earnings = Revenue.objects.filter(
             user=self.user,
@@ -135,20 +134,19 @@ class MonetizationHubConsumer(AsyncWebsocketConsumer):
             status='completed'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
-        # Get active projects count
-        active_projects = JobApplication.objects.filter(
+        # Get active/completed projects count from Revenue instead of JobApplication
+        active_projects = Revenue.objects.filter(
             user=self.user,
-            status__in=['in_progress', 'under_review']
+            status='pending'
         ).count()
 
-        # Get completed projects count
-        completed_projects = JobApplication.objects.filter(
+        completed_projects = Revenue.objects.filter(
             user=self.user,
-            status='offer_accepted'
+            status='completed'
         ).count()
 
         # Calculate success rate
-        total_applications = JobApplication.objects.filter(user=self.user).count()
+        total_applications = Revenue.objects.filter(user=self.user).count()
         success_rate = (completed_projects / total_applications * 100) if total_applications > 0 else 0
 
         # Get recent transactions

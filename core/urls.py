@@ -5,13 +5,24 @@ Main URL routing for the unified mega-platform.
 """
 
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
+from django.contrib.auth import views as auth_views, logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
+
+# Import unified v2 views (Session 22 UI Fresh Start)
+from core import views_unified_v2
+
+# Import advisor API views (Session 25)
+from core.views_advisor_api import advisor_consult, advisor_list, advisor_detail
+
+# Import intelligence API views (Session 25)
+from core.views_intelligence_api import (
+    intelligence_activity_feed, spider_network_status, intelligence_data_quality
+)
 
 # Import core views
 from core.intelligence_api import (
@@ -188,6 +199,7 @@ from core.views_unified_bridge import (
     trigger_component_sync
 )
 from core.views_unified_metrics import unified_platform_metrics
+from core.views_unified import WebSocketDiagnosticsView
 from core.views_unified_placeholders import (
     unified_assistant_chat,
     unified_assistant_context,
@@ -262,7 +274,8 @@ from core.views_odds_sports import (
     convert_odds, calculate_expected_value, calculate_kelly_criterion, detect_arbitrage,
     sports_game_analysis, live_betting_opportunities, list_betting_markets,
     get_bankroll_management, get_bankroll_stats, live_odds, get_weather_data, get_injury_data,
-    get_betting_intelligence, orchestrate_agent_analysis, get_game_details, get_bookmaker_analysis
+    get_betting_intelligence, orchestrate_agent_analysis, get_orchestration_status, get_game_details,
+    get_bookmaker_analysis, get_game_spider_insights
 )
 
 # Import Phase 2 advanced features
@@ -297,6 +310,7 @@ from core.views_ai_ecosystem import (
 from core import views_agent_execution
 from core import views_categorized_opportunities
 from core import views_agent_work_platform
+from core import views_self_development
 from core.views_revenue_tracking import (
     revenue_stats_view,
     track_revenue_view,
@@ -324,6 +338,19 @@ from core.views_diagnostics import (
 )
 
 urlpatterns = [
+    # UNIFIED V2 - Session 22 UI Fresh Start (highest priority)
+    path('v2/', include(([
+        path('', views_unified_v2.DashboardView.as_view(), name='dashboard'),
+        path('assistant/', views_unified_v2.PersonalAssistantView.as_view(), name='personal_assistant'),
+        path('agents/', views_unified_v2.AgentMarketplaceView.as_view(), name='agent_marketplace'),
+        path('agents/<uuid:agent_id>/', views_unified_v2.AgentDetailView.as_view(), name='agent_detail'),
+        path('advisors/', views_unified_v2.AdvisorCouncilView.as_view(), name='advisor_council'),
+        path('advisors/<uuid:advisor_id>/', views_unified_v2.AdvisorDetailView.as_view(), name='advisor_detail'),
+        path('content/', views_unified_v2.ContentStudioView.as_view(), name='content_studio'),
+        path('intelligence/', views_unified_v2.IntelligenceHubView.as_view(), name='intelligence_hub'),
+        path('sportsbook/', views_unified_v2.SportsbookView.as_view(), name='sportsbook'),
+    ], 'unified_v2'), namespace='unified_v2')),
+
     # UNIFIED FRONTEND - Primary routing (takes precedence)
     path('', include('core.urls_unified')),  # Unified platform URLs
 
@@ -344,7 +371,7 @@ urlpatterns = [
 
     # Authentication URLs
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('accounts/logout/', lambda request: (logout(request), redirect('/'))[1], name='logout'),
 
     # Diagnostic Endpoints - Complete Backend Visibility
     path('diagnostics/', diagnostic_dashboard, name='diagnostics-dashboard'),
@@ -352,6 +379,7 @@ urlpatterns = [
     path('api/diagnostics/test-spiders/', test_spider_network, name='diagnostics-test-spiders'),
     path('api/diagnostics/test-income-builder/', test_income_builder, name='diagnostics-test-income'),
     path('diagnostics/websocket-test/', websocket_test_page, name='diagnostics-websocket-test'),
+    path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
 
     # AI Building Products page (moved up to ensure it's matched first)
     path('ai-building-products/', ai_building_products, name='ai-building-products'),
@@ -631,6 +659,16 @@ urlpatterns = [
     path('api/v1/agents/test-execution/', views_agent_execution.test_agent_execution, name='agent-test-execution'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
 
+    # Advisor API Endpoints (Session 25)
+    path('api/v1/advisors/consult/', advisor_consult, name='advisor-consult'),
+    path('api/v1/advisors/list/', advisor_list, name='advisor-list'),
+    path('api/v1/advisors/<uuid:advisor_id>/', advisor_detail, name='advisor-detail'),
+
+    # Intelligence Hub API Endpoints (Session 25)
+    path('api/v1/intelligence/activity/', intelligence_activity_feed, name='intelligence-activity'),
+    path('api/v1/intelligence/spider-status/', spider_network_status, name='spider-status'),
+    path('api/v1/intelligence/data-quality/', intelligence_data_quality, name='data-quality'),
+
     # Categorized Opportunities with ML Pipeline
     path('api/v1/categorized-opportunities/', views_categorized_opportunities.async_categorized_opportunities_view, name='categorized-opportunities'),
     path('api/v1/select-opportunity/', views_categorized_opportunities.select_opportunity, name='select-opportunity'),
@@ -640,6 +678,14 @@ urlpatterns = [
     path('api/v1/agent-work-platform/', views_agent_work_platform.async_agent_work_platform_view, name='agent-work-platform'),
     path('api/v1/agent-revenue-dashboard/', views_agent_work_platform.agent_revenue_dashboard, name='agent-revenue-dashboard'),
     path('api/v1/agent-workforce-status/', views_agent_work_platform.agent_workforce_status, name='agent-workforce-status'),
+    # Self-Development & Autonomous Learning APIs
+    path('api/self-awareness/', views_self_development.self_awareness_api, name='self-awareness-api'),
+    path('api/self-awareness/report/', views_self_development.self_awareness_report, name='self-awareness-report'),
+    path('api/collaboration/suggest-team/', views_self_development.suggest_team_api, name='suggest-team'),
+    path('api/agent/execute/', views_self_development.execute_agent_api, name='execute-agent-api'),
+    path('api/learning/status/', views_self_development.learning_status_api, name='learning-status'),
+    path('api/agents/list/', views_self_development.list_agents_api, name='list-agents'),
+
     path('api/v1/assign-job/', views_agent_work_platform.assign_specific_job, name='assign-specific-job'),
     path('api/v1/revenue-analytics/', views_agent_work_platform.revenue_analytics, name='revenue-analytics'),
 
@@ -777,11 +823,13 @@ urlpatterns = [
     # Game detail endpoints
     path('api/v1/games/<str:game_id>/details/', get_game_details, name='game-details'),
     path('api/v1/games/<str:game_id>/bookmaker-analysis/', get_bookmaker_analysis, name='bookmaker-analysis'),
+    path('api/v1/games/<str:game_id>/spider-insights/', get_game_spider_insights, name='game-spider-insights'),
     path('api/v1/odds/bankroll/stats/', get_bankroll_stats, name='bankroll-stats'),
     path('api/v1/sports/weather/', get_weather_data, name='weather-data'),
     path('api/v1/sports/injuries/', get_injury_data, name='injury-data'),
     path('api/v1/sports/betting-intelligence/', get_betting_intelligence, name='betting-intelligence'),
     path('api/v1/sports/orchestrate/', orchestrate_agent_analysis, name='orchestrate-agents'),
+    path('api/v1/sports/orchestration/status/<str:task_id>/', get_orchestration_status, name='orchestration-status'),
     # Add missing betting endpoints expected by verification
     path('api/v1/betting/live/', live_betting_opportunities, name='betting-live'),
     path('api/v1/betting/arbitrage/', detect_arbitrage, name='betting-arbitrage'),

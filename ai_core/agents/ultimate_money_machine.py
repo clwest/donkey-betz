@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from django.core.cache import cache
 
 # Import our real money-making components
-from .real_client_acquisition import real_client_acquisition_engine, RealJobOpportunity
+from .real_client_acquisition import real_client_acquisition, RealJobOpportunity
 from .ai_proposal_engine import ai_proposal_engine, generate_winning_proposal_for_job
 from .automated_job_bot import automated_job_bot, ApplicationResult
 from .real_work_delivery_engine import real_work_delivery_engine, execute_real_project
@@ -46,6 +46,29 @@ class UltimateMoneyMachine:
             "average_project_value": 0.0
         }
 
+    async def execute(self, **kwargs) -> Dict[str, Any]:
+        """
+        Standard agent interface - executes money machine tasks
+
+        Supported actions:
+        - activate: Start the money machine
+        - status: Get current status
+        - stop: Stop the money machine
+        - cycle: Run one money-making cycle
+        """
+        action = kwargs.get('action', 'status')
+
+        if action == 'activate':
+            return await self.activate_money_machine()
+        elif action == 'stop':
+            return await self.stop_money_machine()
+        elif action == 'cycle':
+            await self._execute_money_cycle()
+            return {"success": True, "action": "cycle_executed"}
+        else:
+            # Default: return status
+            return self.get_money_machine_status()
+
     async def activate_money_machine(self) -> Dict[str, Any]:
         """Activate the complete money-making system"""
 
@@ -60,7 +83,7 @@ class UltimateMoneyMachine:
 
             # 1. Activate Client Acquisition
             logger.info("🎯 Activating client acquisition system...")
-            acquisition_result = await real_client_acquisition_engine.find_real_job_opportunities()
+            acquisition_result = await real_client_acquisition.find_real_job_opportunities()
             results["client_acquisition"] = {
                 "status": "active",
                 "jobs_found": len(acquisition_result),
@@ -163,7 +186,7 @@ class UltimateMoneyMachine:
             logger.info("💰 Executing money-making cycle...")
 
             # 1. Find new job opportunities
-            new_jobs = await real_client_acquisition_engine.find_real_job_opportunities()
+            new_jobs = await real_client_acquisition.find_real_job_opportunities()
             logger.info(f"🎯 Found {len(new_jobs)} new job opportunities")
 
             # 2. Apply to promising jobs
@@ -287,7 +310,7 @@ class UltimateMoneyMachine:
 
         try:
             # Get current stats from all subsystems
-            acquisition_stats = real_client_acquisition_engine.get_acquisition_stats()
+            acquisition_stats = real_client_acquisition.get_acquisition_stats()
             proposal_stats = ai_proposal_engine.get_proposal_statistics()
             delivery_stats = real_work_delivery_engine.get_delivery_engine_status()
             payment_stats = real_payment_processor.get_payment_processor_status()
@@ -349,7 +372,7 @@ class UltimateMoneyMachine:
 
         try:
             # Get all subsystem statuses
-            acquisition_stats = real_client_acquisition_engine.get_acquisition_stats()
+            acquisition_stats = real_client_acquisition.get_acquisition_stats()
             proposal_stats = ai_proposal_engine.get_proposal_statistics()
             delivery_stats = real_work_delivery_engine.get_delivery_engine_status()
             payment_stats = real_payment_processor.get_payment_processor_status()

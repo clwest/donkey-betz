@@ -133,6 +133,14 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=3),  # 3 AM daily
         'args': (30,)  # Days before expiring
     },
+    # Session 6: Automated Spider Data Processing
+    'process-spider-data-automatic': {
+        'task': 'core.tasks.process_spider_data_automatic',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,  # Expire after 5 minutes if not executed
+        }
+    },
 }
 
 # Spider-specific task routing configuration

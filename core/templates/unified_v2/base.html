@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}AI Platform{% endblock %} | Unified Intelligence</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#8b5cf6',
+                    }
+                }
+            }
+        }
+    </script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full text-gray-100">
+    <div class="min-h-full">
+        <!-- Navigation -->
+        <nav class="bg-gray-800 border-b border-gray-700">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <!-- Logo and primary navigation -->
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <h1 class="text-2xl font-bold text-blue-500">🧠 AI Platform</h1>
+                        </div>
+                        <div class="hidden md:block">
+                            <div class="ml-10 flex items-baseline space-x-4">
+                                <a href="{% url 'unified_v2:dashboard' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'dashboard' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Dashboard
+                                </a>
+                                <a href="{% url 'unified_v2:personal_assistant' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'personal_assistant' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Personal Assistant
+                                </a>
+                                <a href="{% url 'unified_v2:agent_marketplace' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'agent_marketplace' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Agent Marketplace
+                                </a>
+                                <a href="{% url 'unified_v2:advisor_council' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'advisor_council' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Advisor Council
+                                </a>
+                                <a href="{% url 'unified_v2:content_studio' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'content_studio' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Content Studio
+                                </a>
+                                <a href="{% url 'unified_v2:intelligence_hub' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'intelligence_hub' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Intelligence Hub
+                                </a>
+                                <a href="{% url 'unified_v2:sportsbook' %}"
+                                   class="nav-link rounded-md px-3 py-2 text-sm font-medium
+                                          {% if request.resolver_match.url_name == 'sportsbook' %}
+                                          bg-gray-900 text-white
+                                          {% else %}
+                                          text-gray-300 hover:bg-gray-700 hover:text-white
+                                          {% endif %}">
+                                    Sportsbook
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User menu -->
+                    <div class="hidden md:block">
+                        <div class="ml-4 flex items-center md:ml-6">
+                            <span class="text-sm text-gray-300 mr-4">
+                                Welcome, <span class="font-semibold text-white">{{ user_data.first_name }}</span>
+                            </span>
+                            <a href="{% url 'logout' %}"
+                               class="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Mobile menu button -->
+                    <div class="-mr-2 flex md:hidden">
+                        <button type="button" id="mobile-menu-button"
+                                class="inline-flex items-center justify-center rounded-md bg-gray-800 p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
+                            <span class="sr-only">Open main menu</span>
+                            <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile menu -->
+            <div class="hidden md:hidden" id="mobile-menu">
+                <div class="space-y-1 px-2 pb-3 pt-2 sm:px-3">
+                    <a href="{% url 'unified_v2:dashboard' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Dashboard</a>
+                    <a href="{% url 'unified_v2:personal_assistant' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Personal Assistant</a>
+                    <a href="{% url 'unified_v2:agent_marketplace' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Agent Marketplace</a>
+                    <a href="{% url 'unified_v2:advisor_council' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Advisor Council</a>
+                    <a href="{% url 'unified_v2:content_studio' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Content Studio</a>
+                    <a href="{% url 'unified_v2:intelligence_hub' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Intelligence Hub</a>
+                    <a href="{% url 'unified_v2:sportsbook' %}" class="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white">Sportsbook</a>
+                    <div class="border-t border-gray-700 pt-4 pb-3">
+                        <div class="text-sm text-gray-300 px-3 pb-2">{{ user_data.full_name }}</div>
+                        <a href="{% url 'logout' %}" class="block rounded-md px-3 py-2 text-base font-medium text-red-400 hover:bg-gray-700 hover:text-red-300">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Page header -->
+        <header class="bg-gray-800 shadow">
+            <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                <h1 class="text-3xl font-bold tracking-tight text-white">
+                    {% block page_title %}Dashboard{% endblock %}
+                </h1>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main>
+            <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Common utilities (must load first) -->
+    <script src="/static/js/unified_v2/common.js"></script>
+
+    <!-- User context for JavaScript -->
+    <script>
+        // Global user context available to all JavaScript
+        window.USER_ID = "{{ user_data.id }}";
+        window.USERNAME = "{{ user_data.username }}";
+        window.CSRF_TOKEN = "{{ csrf_token }}";
+
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+    </script>
+
+    <!-- WebSocket connection placeholder -->
+    <script>
+        // WebSocket will be initialized by page-specific scripts
+        window.wsConnections = {};
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

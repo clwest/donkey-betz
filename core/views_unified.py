@@ -19,9 +19,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class UnifiedDashboardView(TemplateView):
-    """Main dashboard combining all platform features"""
+class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
+    """Main dashboard combining all platform features - REQUIRES AUTHENTICATION"""
     template_name = 'unified/dashboard.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -59,9 +60,10 @@ class UnifiedDashboardView(TemplateView):
         return context
 
 
-class IncomeBuilderView(TemplateView):
-    """Income Builder - AI-Powered Opportunity Discovery"""
+class IncomeBuilderView(LoginRequiredMixin, TemplateView):
+    """Income Builder - AI-Powered Opportunity Discovery - REQUIRES AUTHENTICATION"""
     template_name = 'unified/income_builder.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -78,9 +80,10 @@ class IncomeBuilderView(TemplateView):
         return context
 
 
-class DecisionCommandView(TemplateView):
+class DecisionCommandView(LoginRequiredMixin, TemplateView):
     """Decision Command - Real-time decision analysis and execution"""
     template_name = 'unified/decision_command.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -92,9 +95,10 @@ class DecisionCommandView(TemplateView):
         return context
 
 
-class RevenueOpportunitiesView(TemplateView):
+class RevenueOpportunitiesView(LoginRequiredMixin, TemplateView):
     """Revenue Opportunities - Spider network opportunity feed"""
     template_name = 'unified/revenue_opportunities.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -102,9 +106,10 @@ class RevenueOpportunitiesView(TemplateView):
         return context
 
 
-class RevenueDashboardView(TemplateView):
+class RevenueDashboardView(LoginRequiredMixin, TemplateView):
     """Revenue Dashboard - Track earnings and revenue"""
     template_name = 'unified/revenue_dashboard.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -112,9 +117,10 @@ class RevenueDashboardView(TemplateView):
         return context
 
 
-class LearningDashboardView(TemplateView):
+class LearningDashboardView(LoginRequiredMixin, TemplateView):
     """Learning Dashboard - View what the AI has learned about user preferences"""
     template_name = 'unified/learning_dashboard.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -122,9 +128,10 @@ class LearningDashboardView(TemplateView):
         return context
 
 
-class MonetizationHubView(TemplateView):
+class MonetizationHubView(LoginRequiredMixin, TemplateView):
     """Monetization Hub - Real revenue tracking and withdrawals"""
     template_name = 'unified/monetization_hub.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -132,9 +139,10 @@ class MonetizationHubView(TemplateView):
         return context
 
 
-class NeuralOrchestraView(TemplateView):
+class NeuralOrchestraView(LoginRequiredMixin, TemplateView):
     """Neural Orchestra - Agent visualization and orchestration"""
     template_name = 'unified/neural_orchestra.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -144,9 +152,10 @@ class NeuralOrchestraView(TemplateView):
         return context
 
 
-class ControlCenterView(TemplateView):
+class ControlCenterView(LoginRequiredMixin, TemplateView):
     """Control Center - System monitoring and control"""
     template_name = 'unified/control_center.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -154,9 +163,10 @@ class ControlCenterView(TemplateView):
         return context
 
 
-class DiagnosticDashboardView(TemplateView):
+class DiagnosticDashboardView(LoginRequiredMixin, TemplateView):
     """Diagnostic Dashboard - System diagnostics and health"""
     template_name = 'unified/diagnostic_dashboard.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -164,9 +174,10 @@ class DiagnosticDashboardView(TemplateView):
         return context
 
 
-class AINexusView(TemplateView):
+class AINexusView(LoginRequiredMixin, TemplateView):
     """AI Nexus - Central AI intelligence hub"""
     template_name = 'unified/ai_nexus.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -174,13 +185,15 @@ class AINexusView(TemplateView):
         return context
 
 
-class SportsHubView(TemplateView):  # Temporarily removed LoginRequiredMixin for testing
-    """Sports Hub - Sports betting and analytics"""
+class SportsHubView(LoginRequiredMixin, TemplateView):
+    """Sports Hub - Sports betting and analytics - REQUIRES AUTHENTICATION"""
     template_name = 'unified/sports_hub.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Sports Hub'
+        context['user'] = self.request.user
         return context
 
 
@@ -195,9 +208,10 @@ class DBAODashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class PersonalAssistantView(TemplateView):
+class PersonalAssistantView(LoginRequiredMixin, TemplateView):
     """Personal Assistant - AI chat and interview system"""
     template_name = 'unified/personal_assistant.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -508,9 +522,10 @@ class NotificationsAPIView(LoginRequiredMixin, View):
             }, status=500)
 
 
-class BettingHistoryView(TemplateView):
+class BettingHistoryView(LoginRequiredMixin, TemplateView):
     """Betting history page showing user's past bets and predictions"""
     template_name = 'unified/betting_history.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -592,18 +607,20 @@ class BettingHistoryView(TemplateView):
         return context
 
 
-class OddsCalculatorView(TemplateView):
+class OddsCalculatorView(LoginRequiredMixin, TemplateView):
     """Odds calculator page for converting odds formats and calculating probabilities"""
     template_name = 'unified/odds_calculator.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         return context
 
 
-class LiveScoresView(TemplateView):
+class LiveScoresView(LoginRequiredMixin, TemplateView):
     """Live scores page with real-time score updates"""
     template_name = 'unified/live_scores.html'
+    login_url = '/login/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -698,9 +715,12 @@ def opportunity_detail(request):
     """Opportunity Detail View - Display full information about a specific opportunity"""
     opportunity_id = request.GET.get('id')
 
+    logger.info(f"opportunity_detail called with id: {opportunity_id}, user: {request.user}")
+
     if not opportunity_id:
+        logger.warning("No opportunity_id provided in request")
         messages.error(request, 'Opportunity ID is required')
-        return redirect('income_builder')
+        return redirect('unified_income_builder')
 
     try:
         from intelligence.models import OpportunityTracking
@@ -710,15 +730,28 @@ def opportunity_detail(request):
             user=request.user
         )
 
+        logger.info(f"Successfully loaded opportunity: {opportunity.opportunity_id}")
+
         return render(request, 'unified/opportunity_detail.html', {
             'opportunity': opportunity,
             'page_title': opportunity.opportunity_title
         })
 
     except OpportunityTracking.DoesNotExist:
+        logger.warning(f"Opportunity {opportunity_id} not found for user {request.user}")
         messages.error(request, 'Opportunity not found or you do not have access to it')
-        return redirect('income_builder')
+        return redirect('unified_income_builder')
     except Exception as e:
-        logger.error(f"Error loading opportunity detail: {e}")
+        logger.error(f"Error loading opportunity detail: {e}", exc_info=True)
         messages.error(request, 'An error occurred while loading the opportunity')
-        return redirect('income_builder')
+        return redirect('unified_income_builder')
+
+class WebSocketDiagnosticsView(LoginRequiredMixin, TemplateView):
+    """WebSocket Diagnostics - Test all WebSocket connections"""
+    template_name = 'unified/websocket_diagnostics.html'
+    login_url = '/login/'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'WebSocket Diagnostics'
+        return context

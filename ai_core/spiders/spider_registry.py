@@ -27,6 +27,22 @@ from .specialized.remoteok_spider import RemoteOKIntelligenceSpider
 # Import content monetization spiders
 from .specialized.medium_spider import MediumIntelligenceSpider
 from .specialized.gumroad_spider import GumroadIntelligenceSpider
+from .specialized.content_monetization_spider import ContentMonetizationSpider
+from .specialized.tech_community_spider import TechCommunitySpider
+
+# Import sports betting spiders
+from .specialized.horse_racing_spider import HorseRacingSpider
+from .specialized.combat_sports_spider import CombatSportsSpider
+
+# Import legal spiders
+from .specialized.courtlistener_spider import CourtListenerSpider
+from .specialized.justia_spider import JustiaSpider
+from .specialized.findlaw_spider import FindLawSpider
+from .specialized.lii_spider import LegalInformationInstituteSpider
+
+# Import financial API spiders (CRITICAL FIX: These were built but not registered!)
+from .specialized.coingecko_spider import CoinGeckoSpider
+from .specialized.yahoo_finance_spider import YahooFinanceSpider
 
 # Import base spider for fallbacks
 from .base_spider import BaseIntelligenceSpider
@@ -50,7 +66,7 @@ class SpiderRegistry:
             'category': 'financial',
             'priority': 1,
             'rate_limit': 1.0,
-            'targets': ['sec.gov', 'finance.yahoo.com', 'polygon.io']
+            'targets': ['finance.yahoo.com', 'polygon.io']  # Removed sec.gov - temporarily disabled
         })
 
         self.register_spider('innovation', InnovationTrackingSpider, {
@@ -71,7 +87,7 @@ class SpiderRegistry:
             'category': 'market',
             'priority': 1,
             'rate_limit': 5.0,
-            'targets': ['binance.com', 'coinbase.com', 'tradingview.com']
+            'targets': ['binance.com', 'coinbase.com']  # Removed tradingview.com - replaced with Polygon
         })
 
         self.register_spider('news_harvester', NewsHarvesterSpider, {
@@ -156,31 +172,73 @@ class SpiderRegistry:
             'targets': ['gumroad.com/discover']
         })
 
-        # Register placeholder spiders for remaining content platforms
-        content_platforms = [
-            ('substack', 'substack.com'),
-            ('patreon', 'patreon.com'),
-            ('kofi', 'ko-fi.com'),
+        # Register content monetization spiders with concrete implementation
+        self.register_spider('substack', ContentMonetizationSpider, {
+            'category': 'content',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['substack.com']
+        })
+
+        self.register_spider('patreon', ContentMonetizationSpider, {
+            'category': 'content',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['patreon.com']
+        })
+
+        self.register_spider('kofi', ContentMonetizationSpider, {
+            'category': 'content',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['ko-fi.com']
+        })
+
+        self.register_spider('producthunt', ContentMonetizationSpider, {
+            'category': 'content',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['producthunt.com']
+        })
+
+        # Register placeholder spiders for remaining education platforms
+        education_platforms = [
             ('teachable', 'teachable.com'),
             ('udemy', 'udemy.com'),
             ('skillshare', 'skillshare.com')
         ]
 
-        for platform, target in content_platforms:
+        for platform, target in education_platforms:
             self.register_spider(platform, BaseIntelligenceSpider, {
-                'category': 'content',
+                'category': 'education',
                 'priority': 3,
                 'rate_limit': 1.0,
                 'targets': [target],
                 'placeholder': True
             })
 
-        # === FINANCIAL/CRYPTO SPIDERS (7) ===
+        # === FINANCIAL/CRYPTO SPIDERS ===
+        # ✅ CRITICAL FIX: Register real CoinGecko and Yahoo Finance spiders
+        self.register_spider('coingecko', CoinGeckoSpider, {
+            'category': 'financial',
+            'priority': 1,  # High priority - real implementation
+            'rate_limit': 1.0,
+            'targets': ['api.coingecko.com/api/v3']
+        })
+
+        self.register_spider('yahoo_finance', YahooFinanceSpider, {
+            'category': 'financial',
+            'priority': 1,  # High priority - real implementation
+            'rate_limit': 1.0,
+            'targets': ['query1.finance.yahoo.com/v8', 'query2.finance.yahoo.com/v10']
+        })
+
+        # NOTE: TradingView removed - replaced with Polygon API
+        # NOTE: SEC.gov temporarily disabled - will be re-enabled soon
         financial_platforms = [
-            ('coingecko', 'coingecko.com/api'),
             ('etherscan', 'etherscan.io/apis'),
             ('opensea', 'opensea.io/activity'),
-            ('tradingview', 'tradingview.com/markets'),
+            # ('tradingview', 'tradingview.com/markets'),  # DISABLED - replaced with Polygon
             ('seekingalpha', 'seekingalpha.com'),
             ('bloomberg_terminal', 'bloomberg.com/professional'),
             ('reuters_eikon', 'reuters.com/en/eikon')
@@ -196,12 +254,37 @@ class SpiderRegistry:
             })
 
         # === AI/TECH OPPORTUNITY SPIDERS (10) ===
-        tech_platforms = [
-            ('huggingface', 'huggingface.co/jobs'),
-            ('kaggle', 'kaggle.com/competitions'),
-            ('github_jobs', 'github.com/jobs'),
-            ('stackoverflow_jobs', 'stackoverflow.com/jobs'),
-            ('producthunt', 'producthunt.com'),
+        # Register tech community spiders with concrete implementation
+        self.register_spider('huggingface', TechCommunitySpider, {
+            'category': 'tech',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['huggingface.co']
+        })
+
+        self.register_spider('kaggle', TechCommunitySpider, {
+            'category': 'tech',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['kaggle.com']
+        })
+
+        self.register_spider('github_jobs', TechCommunitySpider, {
+            'category': 'tech',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['github.com']
+        })
+
+        self.register_spider('stackoverflow_jobs', TechCommunitySpider, {
+            'category': 'tech',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['stackoverflow.com']
+        })
+
+        # Register placeholder spiders for remaining tech platforms
+        tech_placeholder_platforms = [
             ('hackernews', 'news.ycombinator.com'),
             ('devto', 'dev.to/jobs'),
             ('hashnode', 'hashnode.com/jobs'),
@@ -209,14 +292,61 @@ class SpiderRegistry:
             ('kickstarter', 'kickstarter.com')
         ]
 
-        for platform, target in tech_platforms:
+        for platform, target in tech_placeholder_platforms:
             self.register_spider(platform, BaseIntelligenceSpider, {
                 'category': 'tech',
-                'priority': 2,
+                'priority': 3,
                 'rate_limit': 1.0,
                 'targets': [target],
                 'placeholder': True
             })
+
+        # === SPORTS BETTING SPIDERS (5) ===
+        self.register_spider('horse_racing', HorseRacingSpider, {
+            'category': 'sports_betting',
+            'priority': 1,
+            'rate_limit': 2.0,
+            'targets': ['reddit.com/r/horseracing']
+        })
+
+        self.register_spider('combat_sports', CombatSportsSpider, {
+            'category': 'sports_betting',
+            'priority': 1,
+            'rate_limit': 2.0,
+            'targets': ['reddit.com/r/MMA', 'reddit.com/r/ufc', 'reddit.com/r/Boxing']
+        })
+
+        # === LEGAL SPIDERS (4) ===
+        self.register_spider('courtlistener', CourtListenerSpider, {
+            'category': 'legal',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['courtlistener.com/api']
+        })
+
+        self.register_spider('justia', JustiaSpider, {
+            'category': 'legal',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['news.justia.com', 'law.justia.com']
+        })
+
+        self.register_spider('findlaw', FindLawSpider, {
+            'category': 'legal',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['findlaw.com/legalblogs']
+        })
+
+        self.register_spider('lii', LegalInformationInstituteSpider, {
+            'category': 'legal',
+            'priority': 2,
+            'rate_limit': 1.0,
+            'targets': ['law.cornell.edu/supct', 'law.cornell.edu/uscode']
+        })
+
+        # Register social_sentiment for enhanced NCAA coverage
+        # (Already registered above, but documented here for sports coverage)
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")
 

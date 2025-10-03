@@ -22,6 +22,7 @@ from selenium.webdriver.chrome.options import Options
 import openai
 from django.core.cache import cache
 from django.utils import timezone
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
@@ -281,17 +282,20 @@ class RealClientAcquisitionEngine:
             Write as an experienced freelancer who can deliver exceptional results.
             """
 
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert freelance proposal writer who wins high-paying projects."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=300,
-                temperature=0.7
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="ClientAcquisition",
+                prompt=f"You are an expert freelance proposal writer who wins high-paying projects.\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="high",
+                verbosity="medium",
+                max_output_tokens=300
             )
 
-            proposal_text = response.choices[0].message.content
+            if not result['success']:
+                logger.error(f"LLM error generating proposal: {result.get('error')}")
+                return f"I'm interested in your {job.title} project and confident I can deliver excellent results within your timeline and budget."
+
+            proposal_text = result['response']
 
             logger.info(f"📝 Generated winning proposal for '{job.title}'")
             return proposal_text
@@ -560,6 +564,40 @@ class RealClientAcquisitionEngine:
         except Exception as e:
             logger.error(f"Error delivering to client: {e}")
 
+    async def find_real_job_opportunities(self) -> List[RealJobOpportunity]:
+        """Find real job opportunities across all platforms"""
+
+        try:
+            # Use the Upwork scraper as primary source
+            upwork_scraper = UpworkJobScraper()
+            jobs = await upwork_scraper.find_matching_jobs([
+                "python", "django", "react", "content writing", "data analysis",
+                "virtual assistant", "social media", "graphic design"
+            ])
+
+            # Store opportunities
+            for job in jobs:
+                self.active_opportunities[job.job_id] = job
+
+            logger.info(f"🔍 Found {len(jobs)} real job opportunities")
+            return jobs
+
+        except Exception as e:
+            logger.error(f"Error finding job opportunities: {e}")
+            return []
+
+    def get_acquisition_stats(self) -> Dict[str, Any]:
+        """Get client acquisition statistics"""
+
+        return {
+            'total_opportunities_found': len(self.active_opportunities),
+            'submitted_proposals': len(self.submitted_proposals),
+            'proposals_won': len([p for p in self.submitted_proposals.values() if p.status == ProposalStatus.ACCEPTED]),
+            'active_projects': len([p for p in self.active_projects.values() if p.status == 'active']),
+            'success_rate': len([p for p in self.submitted_proposals.values() if p.status == ProposalStatus.ACCEPTED]) / max(1, len(self.submitted_proposals)),
+            'total_revenue': self.total_real_earnings
+        }
+
     async def get_real_earnings_dashboard(self) -> Dict[str, Any]:
         """Get real earnings dashboard data"""
 
@@ -628,6 +666,9 @@ class UpworkJobScraper:
 
 # Global instance
 real_client_acquisition = RealClientAcquisitionEngine()
+
+# Alias for backwards compatibility and agent loader
+RealClientAcquisition = RealClientAcquisitionEngine
 
 async def start_real_money_machine():
     """START THE REAL MONEY MACHINE!"""

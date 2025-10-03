@@ -379,3 +379,53 @@ def process_spider_data_task():
     logger.info("Processing spider data via Celery task...")
     call_command('process_spider_data')
     return "Spider data processing complete"
+
+@shared_task
+def process_spider_data_automatic():
+    """
+    Automatically process unprocessed spider data every 5 minutes
+    Routes spider data to relevant agents for solution creation and learning
+
+    Session 6: Spider → Agent → Learning automation
+    """
+    from persistence.models import SpiderData
+    from intelligence.spider_agent_connector import SpiderAgentConnector
+
+    logger.info("🕷️ Starting automated spider data processing...")
+
+    connector = SpiderAgentConnector()
+
+    # Get unprocessed spider data (limit to 100 per run to avoid overload)
+    unprocessed = SpiderData.objects.filter(is_processed=False)[:100]
+
+    results = {
+        'processed': 0,
+        'solutions_created': 0,
+        'learning_records': 0,
+        'errors': 0,
+        'agents_matched': 0
+    }
+
+    for spider_data in unprocessed:
+        try:
+            # Route spider data to agents
+            result = connector.route_spider_data(spider_data)
+
+            # Mark as processed
+            spider_data.is_processed = True
+            spider_data.save()
+
+            results['processed'] += 1
+            results['solutions_created'] += len(result.get('solutions_created', []))
+            results['learning_records'] += len(result.get('learning_records', []))
+            results['agents_matched'] += len(result.get('matched_agents', []))
+
+        except Exception as e:
+            results['errors'] += 1
+            logger.error(f"Error processing spider data {spider_data.id}: {e}")
+
+    logger.info(f"✅ Automated processing complete: {results['processed']} spider entries processed")
+    logger.info(f"   Solutions: {results['solutions_created']}, Learning: {results['learning_records']}")
+    logger.info(f"   Agents matched: {results['agents_matched']}, Errors: {results['errors']}")
+
+    return results

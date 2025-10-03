@@ -1,0 +1,5106 @@
+{
+  "total_files": 2533,
+  "unique_files": 1430,
+  "duplicate_sets": 666,
+  "duplicates": [
+    {
+      "hash": "c0bab292a0bf38793347b05f9564d20a",
+      "files": [
+        "archive/guide/PERFORMANCE_OPTIMIZATION_GUIDE.md",
+        "archive/guide/donkey-betz-frontend_PERFORMANCE_OPTIMIZATION_GUIDE.md",
+        "archive/guide/PERF-2025-07-15-performance-optimization-guide-304a.md"
+      ]
+    },
+    {
+      "hash": "320120bb61341f90cba58452213f2875",
+      "files": [
+        "archive/guide/DATA-2025-07-15-pgvector-scaling-guide-0082.md",
+        "archive/guide/PGVECTOR_SCALING_GUIDE.md",
+        "archive/guide/backend_PGVECTOR_SCALING_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "9bebe69dfd0127c93bb7e7d5801de8a7",
+      "files": [
+        "archive/guide/donkey-betz-frontend_src_features_stock-intelligence_REFACTORING_GUIDE.md",
+        "archive/guide/REFACTORING_GUIDE.md",
+        "archive/documentation/DONKEY-2025-07-15-donkey-betz-frontend-src-featu-e1a6.md"
+      ]
+    },
+    {
+      "hash": "7457689988e07ec82c5b0951168bfbf8",
+      "files": [
+        "archive/guide/DATABASE_REBUILD_GUIDE.md",
+        "archive/guide/docs_DATABASE_REBUILD_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "cce4b55045be447f48f6c787c8285854",
+      "files": [
+        "archive/guide/DONKEY-2025-07-15-centralized-logging-guide-1-faf5.md",
+        "archive/guide/CENTRALIZED_LOGGING_GUIDE_1.md",
+        "archive/guide/CENTRALIZED_LOGGING_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "9a367dd3a39cf3384c099a258f8d5df7",
+      "files": [
+        "archive/guide/PHASE-2025-07-06-phase-1-implementation-guide-629c.md",
+        "archive/guide/PHASE_1_IMPLEMENTATION_GUIDE.md",
+        "other/guide/PHASE_1_IMPLEMENTATION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "3e208ad8a00c44081ceba2dd7e4ffa79",
+      "files": [
+        "archive/guide/WEBSOCKET_CLUSTERING_GUIDE_1.md",
+        "archive/guide/DONKEY-2025-07-15-websocket-clustering-guide-1-5982.md",
+        "archive/guide/WEBSOCKET_CLUSTERING_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "a2369f6c82bfd0e331d378f93ce02b08",
+      "files": [
+        "archive/guide/CURRENT_STATE_STOCK_SCOUT_HISTORY_GUIDE.md",
+        "archive/documentation/DONKEY-2025-07-05-current-state-stock-scout-hist-93a2.md",
+        "other/guide/STOCK_SCOUT_HISTORY_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "8ae13c6bf3a1bba407c910b6eda3b72a",
+      "files": [
+        "archive/guide/SECRET_ROTATION_GUIDE.md",
+        "archive/guide/DONKEY-2025-07-09-secret-rotation-guide-9536.md",
+        "other/guide/SECRET_ROTATION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "010e7e080ffa5fb2637ac7b162be6f44",
+      "files": [
+        "archive/guide/DONKEY-2025-07-06-claude-migration-guide-923f.md",
+        "archive/guide/CLAUDE_MIGRATION_GUIDE.md",
+        "other/guide/CLAUDE_MIGRATION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "0c147ff22840f06fa62a6256fbe40734",
+      "files": [
+        "archive/guide/backend_MARKDOWN_INGESTION_GUIDE.md",
+        "archive/guide/DONKEY-2025-07-10-markdown-ingestion-guide-bcc2.md",
+        "other/guide/MARKDOWN_INGESTION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "cc54655f481a11979ce7b2c5e9352e90",
+      "files": [
+        "archive/guide/USER_PROFILE_GUIDE.md",
+        "archive/guide/backend_USER_PROFILE_GUIDE.md",
+        "archive/guide/DONKEY-2025-07-13-user-profile-guide-7b44.md"
+      ]
+    },
+    {
+      "hash": "5d03dbb8a3da870e70c3b97df91f1d6e",
+      "files": [
+        "archive/guide/DONKEY-2025-07-09-security-guide-5fb8.md",
+        "archive/guide/SECURITY_GUIDE.md",
+        "other/guide/SECURITY_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "d72b38198adcde063e97f45e24b68bd0",
+      "files": [
+        "archive/guide/MARKDOWN_IMPORT_GUIDE.md",
+        "archive/guide/DONKEY-2025-07-18-markdown-import-guide-e0a6.md"
+      ]
+    },
+    {
+      "hash": "a73dcf5cb67053a6d783ca97868515a2",
+      "files": [
+        "archive/guide/AI-2025-07-09-ml-setup-guide-a412.md",
+        "archive/guide/backend_ML_SETUP_GUIDE.md",
+        "other/guide/ML_SETUP_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "45d4e0dc1179fb93bbd6df4c753104e1",
+      "files": [
+        "archive/guide/docs_TEST_ASSERTION_GUIDELINES.md",
+        "archive/guide/REF-2025-07-15-test-assertion-guidelines-e777.md",
+        "archive/guide/TEST_ASSERTION_GUIDELINES.md"
+      ]
+    },
+    {
+      "hash": "3d511b52d892e9ed82bc535c40e8fca6",
+      "files": [
+        "archive/guide/backend_SERVICE_STARTUP_GUIDE.md",
+        "archive/guide/DONKEY-2025-07-14-service-startup-guide-fb75.md",
+        "archive/guide/SERVICE_STARTUP_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "91b96dbc840acd26c2c725e7c1ed8495",
+      "files": [
+        "archive/guide/SUPERCLAUDE_CONFIGURATION_GUIDE.md",
+        "archive/documentation/AI-2025-07-13-superclaude-configuration-guid-2492.md"
+      ]
+    },
+    {
+      "hash": "0aed60e256537f248065e5e5c2810eb8",
+      "files": [
+        "archive/guide/DONKEY-2025-07-15-monitoring-guide-c3b1.md",
+        "archive/guide/docs_MONITORING_GUIDE.md",
+        "archive/guide/MONITORING_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "d8abee31430ad16713ac20bf232b9f72",
+      "files": [
+        "archive/guide/DONKEY-2025-07-07-production-config-guide-a8ba.md",
+        "archive/guide/backend_PRODUCTION_CONFIG_GUIDE.md",
+        "other/guide/PRODUCTION_CONFIG_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "226f2bdecf2f0d39cb484eca637e84b0",
+      "files": [
+        "archive/guide/DONKEY-2025-07-11-integration-guide-1633.md",
+        "archive/guide/INTEGRATION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "97569e52a8ceb45bf092b0f7ae933e6e",
+      "files": [
+        "archive/guide/AUTOMATED_REDDIT_SCOUT_GUIDE.md",
+        "archive/guide/DONKEY-2025-07-07-automated-reddit-scout-guide-07e7.md",
+        "other/guide/AUTOMATED_REDDIT_SCOUT_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "e1adc4308f3e873386960ee2d98c22c8",
+      "files": [
+        "archive/guide/SUPERCLAUDE_IMPLEMENTATION_GUIDE.md",
+        "archive/documentation/AI-2025-07-13-superclaude-implementation-gui-5261.md"
+      ]
+    },
+    {
+      "hash": "a8ac129254f757f75176c37b45f86681",
+      "files": [
+        "archive/guide/CLEAN_EMBEDDING_GENERATION_GUIDE.md",
+        "archive/guide/backend_CLEAN_EMBEDDING_GENERATION_GUIDE.md",
+        "archive/documentation/DONKEY-2025-07-12-clean-embedding-generation-gui-1a06.md"
+      ]
+    },
+    {
+      "hash": "92d52cb47507ae1c57b7a4022cac1443",
+      "files": [
+        "archive/guide/FRONTEND_MARKDOWN_PREPROCESSING_GUIDE.md",
+        "archive/documentation/DONKEY-2025-07-18-frontend-markdown-preprocessin-a44d.md"
+      ]
+    },
+    {
+      "hash": "bace79d29f7654b89864c143318c3ba3",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-knowledge-base-demo-usage-a017.md",
+        "archive/documentation/knowledge_base_DEMO_USAGE.md",
+        "other/documentation/DEMO_USAGE.md"
+      ]
+    },
+    {
+      "hash": "f6e63aabce17d78ff316580248b6f7f4",
+      "files": [
+        "archive/documentation/COMPONENT_LIBRARY_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-18-component-library-complete-ec3d.md"
+      ]
+    },
+    {
+      "hash": "72293a604d890fbb92a6e7f128d175bc",
+      "files": [
+        "archive/documentation/backend_STOCK_SCOUT_CLEANUP_SOLUTION.md",
+        "archive/documentation/CODE-2025-07-06-stock-scout-cleanup-solution-2de6.md",
+        "other/documentation/STOCK_SCOUT_CLEANUP_SOLUTION.md"
+      ]
+    },
+    {
+      "hash": "4219b9c85fa275ded2f95463d12c292c",
+      "files": [
+        "archive/documentation/PROMPT_SETS_INTEGRATION_FINAL.md",
+        "archive/documentation/DONKEY-2025-07-18-prompt-sets-integration-final-4f88.md"
+      ]
+    },
+    {
+      "hash": "bf8e7686c0a06520594da7a699297e3b",
+      "files": [
+        "archive/documentation/document.md",
+        "archive/documentation/DONKEY-2025-07-13-document-8c22.md"
+      ]
+    },
+    {
+      "hash": "dccb437152f8ae64db566bdfac3325a0",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-05-donkey-betz-frontend-react-per-6de3.md",
+        "archive/documentation/donkey-betz-frontend_REACT_PERFORMANCE_FIX.md",
+        "other/documentation/REACT_PERFORMANCE_FIX.md"
+      ]
+    },
+    {
+      "hash": "5783048b4d14fb6931c929d7e4e481f4",
+      "files": [
+        "archive/documentation/authentication.md",
+        "archive/api/backend_docs_api_authentication.md",
+        "archive/api/SECURITY-2025-07-15-docs-api-authentication-472f.md"
+      ]
+    },
+    {
+      "hash": "aa2c83599ff536bb8da46881db92060d",
+      "files": [
+        "archive/documentation/spawn.md",
+        "archive/documentation/DONKEY-2025-07-13-spawn-9b8f.md"
+      ]
+    },
+    {
+      "hash": "977013ff7b3a08ce69de7e4aaca5f3fe",
+      "files": [
+        "archive/documentation/EMBEDDING_MODEL_VERIFICATION.md",
+        "archive/documentation/DATA-2025-07-12-embedding-model-verification-1df4.md",
+        "archive/documentation/backend_EMBEDDING_MODEL_VERIFICATION.md"
+      ]
+    },
+    {
+      "hash": "0f5a7e6b532fb48b9cf2d0e27442ec8a",
+      "files": [
+        "archive/documentation/DOCUMENT_UPLOAD_VERIFICATION.md",
+        "archive/documentation/TRULY_COMPLETE_DOCUMENT_UPLOAD_VERIFICATION.md",
+        "archive/documentation/DONKEY-2025-07-13-document-upload-verification-c360.md"
+      ]
+    },
+    {
+      "hash": "8e9e7d8b2729f0d4e1e20902252631f3",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-10-430-push-a9d1.md",
+        "archive/documentation/430_PUSH.md",
+        "other/documentation/430_PUSH.md"
+      ]
+    },
+    {
+      "hash": "1c585a34bc6ba579f06d0f30d05262ee",
+      "files": [
+        "archive/documentation/docs_development_REAL_TIME_WEBSOCKET_COMPLETE.md",
+        "archive/documentation/REF-2025-07-03-development-real-time-websocke-db86.md",
+        "other/documentation/REAL_TIME_WEBSOCKET_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "2425e65591b7a9e897a282571a4d832d",
+      "files": [
+        "archive/documentation/SECURITY_EMERGENCY_FIXED.md",
+        "other/documentation/SECURITY_EMERGENCY_FIXED.md"
+      ]
+    },
+    {
+      "hash": "1eaa450e26075c318ba856b7c519bcb3",
+      "files": [
+        "archive/documentation/estimate.md",
+        "archive/documentation/DONKEY-2025-07-13-estimate-08f9.md"
+      ]
+    },
+    {
+      "hash": "bdfb38265db80cc8cbb6633f0c97575a",
+      "files": [
+        "archive/documentation/docs_RESOURCE_LIMITS.md",
+        "archive/documentation/DONKEY-2025-07-15-resource-limits-b501.md",
+        "archive/documentation/RESOURCE_LIMITS.md"
+      ]
+    },
+    {
+      "hash": "318def26e4f653d34a98aeb1e4dc263d",
+      "files": [
+        "archive/documentation/INSTALL_EXPERIMENT_DEPS.md",
+        "archive/documentation/DONKEY-2025-07-17-install-experiment-deps-5940.md"
+      ]
+    },
+    {
+      "hash": "4918510a60cc63a2eef06e804afb2544",
+      "files": [
+        "archive/documentation/AI-2025-07-13-ai-assistant-verification-61b6.md",
+        "archive/documentation/AI_ASSISTANT_VERIFICATION.md",
+        "archive/documentation/TRULY_COMPLETE_AI_ASSISTANT_VERIFICATION.md"
+      ]
+    },
+    {
+      "hash": "52cdc73993a9ef6a4aca71bbf61246ff",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-contributing-1-aa24.md",
+        "archive/documentation/CONTRIBUTING_1.md"
+      ]
+    },
+    {
+      "hash": "9cba5a5a424dad3dab2a34717fb47dec",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-feature-completi-c883.md",
+        "archive/documentation/CURRENT_STATE_feature-completion-july-6.md",
+        "other/documentation/feature-completion-july-6.md"
+      ]
+    },
+    {
+      "hash": "25a4d1d992568795af0bcf9ec924df56",
+      "files": [
+        "archive/documentation/CODE_OF_CONDUCT.md",
+        "archive/documentation/DONKEY-2025-07-13-code-of-conduct-dc8e.md"
+      ]
+    },
+    {
+      "hash": "4ba7aaeb34c0b0f25869881608fccc1a",
+      "files": [
+        "archive/documentation/ARCH-2025-07-13-design-ab02.md",
+        "archive/documentation/design.md"
+      ]
+    },
+    {
+      "hash": "8b2e81dac51c128ea47081e2e9beb74e",
+      "files": [
+        "archive/documentation/backend_INTELLIGENT_PROMPTING_FIX.md",
+        "archive/documentation/INTELLIGENT_PROMPTING_FIX.md",
+        "archive/documentation/CODE-2025-07-12-intelligent-prompting-fix-91b1.md"
+      ]
+    },
+    {
+      "hash": "40555f8c97b6349a36eeb8d06ae79273",
+      "files": [
+        "archive/documentation/TEMPLATE_LIBRARY_UI_UPDATE_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-18-template-library-ui-update-com-8b67.md"
+      ]
+    },
+    {
+      "hash": "bd9cc77fdc9516a2be090680360816aa",
+      "files": [
+        "archive/documentation/EXAMPLES.md",
+        "archive/documentation/DONKEY-2025-07-11-examples-c345.md",
+        "archive/documentation/ukf_EXAMPLES.md",
+        "archive/documentation/EXAMPLES_1.md"
+      ]
+    },
+    {
+      "hash": "0c447fd78e8077ce3abe2cbaf0b6271d",
+      "files": [
+        "archive/documentation/REF-2025-07-03-development-real-time-integrat-9fe2.md",
+        "archive/documentation/docs_development_REAL_TIME_INTEGRATION_STATUS.md",
+        "other/documentation/REAL_TIME_INTEGRATION_STATUS.md"
+      ]
+    },
+    {
+      "hash": "689e41c9124d8d6bb2a9a92ad6bc6f65",
+      "files": [
+        "archive/documentation/backend_ASYNC_FIX_COMPLETE.md",
+        "archive/documentation/ASYNC_FIX_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "d9ecd9afedfae90509bfae46ff2f988c",
+      "files": [
+        "archive/documentation/risk_assessment.md",
+        "archive/documentation/backend_schema_audit_risk_assessment.md",
+        "archive/documentation/DONKEY-2025-07-11-risk-assessment-1e41.md"
+      ]
+    },
+    {
+      "hash": "c375369137e353284c0c9ba4373c1eca",
+      "files": [
+        "archive/documentation/CODE-2025-07-06-add-extract-button-to-frontend-bb76.md",
+        "archive/documentation/backend_add_extract_button_to_frontend.md",
+        "other/documentation/add_extract_button_to_frontend.md"
+      ]
+    },
+    {
+      "hash": "154da80b19c20293be64abf1ec6c4d81",
+      "files": [
+        "archive/documentation/REF-2025-07-04-media-generated-businesses-ver-1b88.md",
+        "archive/readme/backend_media_generated_businesses_VeroSpace_92082be7-cce6-47a3-b04c-e509395bc4e1_README.md",
+        "other/readme/README_18.md"
+      ]
+    },
+    {
+      "hash": "83015ee00e51b3daaffd382052ddacb1",
+      "files": [
+        "archive/documentation/backend_CONNECTIVITY_FIXES_JULY_12_2025.md",
+        "archive/documentation/DEBUG-2025-07-12-connectivity-fixes-july-12-202-b163.md",
+        "archive/documentation/CONNECTIVITY_FIXES_JULY_12_2025.md"
+      ]
+    },
+    {
+      "hash": "9783b6346e6bf93f5dab4e73634c3482",
+      "files": [
+        "archive/documentation/project-review-framework.md",
+        "archive/documentation/DONKEY-2025-07-07-project-review-framework-c000.md",
+        "other/documentation/project-review-framework.md"
+      ]
+    },
+    {
+      "hash": "79054d37e26426b1f36032662a128345",
+      "files": [
+        "archive/documentation/SECURITY-2025-07-15-two-factor-authentication-12a0.md",
+        "archive/documentation/docs_TWO_FACTOR_AUTHENTICATION.md",
+        "archive/documentation/TWO_FACTOR_AUTHENTICATION.md"
+      ]
+    },
+    {
+      "hash": "03f389202125073a353616404a57eaeb",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-analyze-6a6a.md",
+        "archive/documentation/analyze.md"
+      ]
+    },
+    {
+      "hash": "b7c2e32bb8f92c50d7c400393783ca2c",
+      "files": [
+        "archive/documentation/NOTE-2025-07-06-current-state-memory-palace-co-350f.md",
+        "archive/documentation/CURRENT_STATE_memory_palace_complete.md",
+        "other/documentation/memory_palace_complete.md"
+      ]
+    },
+    {
+      "hash": "04287e6acdc08b61a26e8272454f4ad8",
+      "files": [
+        "archive/documentation/CODE-2025-07-18-dynamic-prompts-implementation-4d12.md",
+        "archive/documentation/DYNAMIC_PROMPTS_IMPLEMENTATION.md"
+      ]
+    },
+    {
+      "hash": "565f82c289953aea3c0d259dd2073f44",
+      "files": [
+        "archive/documentation/CURRENT_STATE_JULY_8_THROTTLING_AND_INDEX_FIXES.md",
+        "archive/documentation/DEBUG-2025-07-08-current-state-july-8-throttlin-3a6b.md",
+        "other/documentation/JULY_8_THROTTLING_AND_INDEX_FIXES.md"
+      ]
+    },
+    {
+      "hash": "1665c45217b5b5cda902833bf75205a9",
+      "files": [
+        "archive/documentation/JULY_8_Q&A.md",
+        "archive/documentation/DONKEY-2025-07-08-july-8-q&a-e9c8.md",
+        "other/documentation/JULY_8_Q&A.md"
+      ]
+    },
+    {
+      "hash": "526b64615cdafbed960527918c27a054",
+      "files": [
+        "archive/documentation/FRAMEWORK-2025-07-09-django-models-review-52a5.md",
+        "archive/documentation/DJANGO_MODELS_REVIEW.md",
+        "other/documentation/DJANGO_MODELS_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "2aef9a295e35a9b0fbea2cfa7cc3acf3",
+      "files": [
+        "archive/documentation/REDDIT_STOCK_SCOUT_ROADMAP.md",
+        "archive/documentation/PROJ-2025-07-06-reddit-stock-scout-roadmap-9ea6.md",
+        "other/documentation/REDDIT_STOCK_SCOUT_ROADMAP.md"
+      ]
+    },
+    {
+      "hash": "30e5b7a4d636e7298a9c2162e082a5af",
+      "files": [
+        "archive/documentation/REF-2025-07-03-development-frontend-backend-i-5797.md",
+        "archive/documentation/docs_development_FRONTEND_BACKEND_INTEGRATION_STATUS.md",
+        "other/documentation/FRONTEND_BACKEND_INTEGRATION_STATUS.md"
+      ]
+    },
+    {
+      "hash": "6478e84377704525e6deea6db3e95d4d",
+      "files": [
+        "archive/documentation/CURRENT_STATE_stock-intelligence-status.md",
+        "archive/documentation/DONKEY-2025-07-06-current-state-stock-intelligen-1dc9.md",
+        "other/documentation/stock-intelligence-status.md"
+      ]
+    },
+    {
+      "hash": "f94142512c911b193a09e603fb0db26a",
+      "files": [
+        "archive/documentation/LICENSE.md",
+        "archive/documentation/LICENSE.f94142512c91.md",
+        "archive/documentation/LICENSE-SELECT2.md",
+        "archive/documentation/LICENSE-SELECT2.f94142512c91.md",
+        "archive/documentation/DONKEY-2025-07-18-license-0e82.md",
+        "dbao-studio/documentation/LICENSE.md",
+        "dbao-studio/documentation/LICENSE-SELECT2.md",
+        "donkey-betz/documentation/LICENSE.md",
+        "donkey-betz/documentation/LICENSE_1.md",
+        "donkey-betz/documentation/LICENSE.f94142512c91.md",
+        "donkey-betz/documentation/LICENSE-SELECT2.md",
+        "donkey-betz/documentation/LICENSE-SELECT2.f94142512c91.md",
+        "donkey-betz/documentation/LICENSE-SELECT2_1.md"
+      ]
+    },
+    {
+      "hash": "044b4d12d94ec6fc68768213b951a4fd",
+      "files": [
+        "archive/documentation/backend_REALITY_ENGINE_350_MYTH_TOOLS.md",
+        "archive/documentation/CODE-2025-07-11-reality-engine-350-myth-tools-8ded.md",
+        "other/documentation/REALITY_ENGINE_350_MYTH_TOOLS.md"
+      ]
+    },
+    {
+      "hash": "860dc90c7ab0c6923c7c6bd1c78da053",
+      "files": [
+        "archive/documentation/AI-2025-07-12-ai-assistant-memory-fix-summar-aa3c.md",
+        "archive/report/backend_AI_ASSISTANT_MEMORY_FIX_SUMMARY.md",
+        "archive/report/AI_ASSISTANT_MEMORY_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "436ea44b99a553630f582c08ff355966",
+      "files": [
+        "archive/documentation/research_shit_REALITY_ENGINE_RESEARCH.md",
+        "archive/documentation/DONKEY-2025-07-10-research-shit-reality-engine-r-b510.md",
+        "other/documentation/REALITY_ENGINE_RESEARCH.md"
+      ]
+    },
+    {
+      "hash": "3cdfadd817b5bac5f8028f125a1d5168",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-truly-complete-memory-rag-syst-b70e.md",
+        "archive/architecture/TRULY_COMPLETE_MEMORY_RAG_SYSTEM.md",
+        "other/architecture/MEMORY_RAG_SYSTEM.md"
+      ]
+    },
+    {
+      "hash": "0049c2ecdd95b5ba8592f6e0d7cf4c36",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-tool-orchestra-implementation--ad60.md",
+        "archive/documentation/TOOL_ORCHESTRA_IMPLEMENTATION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "55d515e30fb7d5259394501d973cd1da",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-memory-rag-completion-8dd7.md",
+        "archive/documentation/MEMORY_RAG_COMPLETION.md",
+        "archive/documentation/TRULY_COMPLETE_MEMORY_RAG_COMPLETION.md"
+      ]
+    },
+    {
+      "hash": "3244d7d6373036f3f0c9020dae22b24e",
+      "files": [
+        "archive/documentation/backend_REDDIT_SCOUT_REVIEW_AND_ROADMAP.md",
+        "archive/documentation/DONKEY-2025-07-06-reddit-scout-review-and-roadma-fc6f.md",
+        "other/documentation/REDDIT_SCOUT_REVIEW_AND_ROADMAP.md"
+      ]
+    },
+    {
+      "hash": "f3404e6a1c618d3f746c10919e148400",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-12-unified-search-event-loop-fix-cfcf.md",
+        "archive/documentation/UNIFIED_SEARCH_EVENT_LOOP_FIX.md",
+        "archive/documentation/backend_UNIFIED_SEARCH_EVENT_LOOP_FIX.md"
+      ]
+    },
+    {
+      "hash": "b3eedbea47ffef680396ab7203635198",
+      "files": [
+        "archive/documentation/09_SECURITY_AUTHENTICATION_REVIEW.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_09_SECURITY_AUTHENTICATION_REVIEW.md",
+        "archive/documentation/SECURITY-2025-07-15-09-security-authentication-rev-211f.md"
+      ]
+    },
+    {
+      "hash": "2143c75957782e754a918466bb127b59",
+      "files": [
+        "archive/documentation/scan.md",
+        "archive/documentation/DONKEY-2025-07-13-scan-8372.md"
+      ]
+    },
+    {
+      "hash": "95da392de2fd7ae77cca028d1088d292",
+      "files": [
+        "archive/documentation/SSL_TLS_CONFIGURATION.md",
+        "archive/documentation/docs_SSL_TLS_CONFIGURATION.md",
+        "archive/documentation/DONKEY-2025-07-15-ssl-tls-configuration-ffdd.md"
+      ]
+    },
+    {
+      "hash": "22b4351969b7718a52a809e892a2a464",
+      "files": [
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_Section_09_Security_Authentication.md",
+        "archive/documentation/SECURITY-2025-07-15-section-09-security-authentica-8357.md",
+        "archive/documentation/Section_09_Security_Authentication.md"
+      ]
+    },
+    {
+      "hash": "d38bb58449ab5dd513da338aa5d2378d",
+      "files": [
+        "archive/documentation/CLAUDE_1.md",
+        "archive/documentation/DONKEY-2025-07-16-claude-1-f9e0.md"
+      ]
+    },
+    {
+      "hash": "36a60fa272763615ac7d1e982a1dee4e",
+      "files": [
+        "archive/documentation/DATA_LOSS_INCIDENT_JULY_16_1.md",
+        "archive/documentation/DATA_LOSS_INCIDENT_JULY_16.md",
+        "archive/documentation/DATA-2025-07-16-data-loss-incident-july-16-1-eb4d.md"
+      ]
+    },
+    {
+      "hash": "d7e7097eebd3b45c2cdca7236ab21c0f",
+      "files": [
+        "archive/documentation/AI-2025-07-09-goofy-ass-ai-9a7f.md",
+        "archive/documentation/GOOFY_ASS_AI.md",
+        "other/documentation/GOOFY_ASS_AI.md"
+      ]
+    },
+    {
+      "hash": "0ff9d2e95251d3a48d3e8979f9b760f9",
+      "files": [
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_Section_08_Infrastructure_DevOps.md",
+        "archive/documentation/DONKEY-2025-07-15-section-08-infrastructure-devo-611f.md",
+        "archive/documentation/Section_08_Infrastructure_DevOps.md"
+      ]
+    },
+    {
+      "hash": "2c3065a00fa064c39deb60efbbe650d0",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-reality-engine-phenomenon-1542.md",
+        "archive/documentation/backend_REALITY_ENGINE_PHENOMENON.md",
+        "other/documentation/REALITY_ENGINE_PHENOMENON_1.md"
+      ]
+    },
+    {
+      "hash": "5b0895e6f75686c02e6f2981c42df0e2",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-ai-history-import-documentatio-12dc.md",
+        "archive/documentation/AI_HISTORY_IMPORT_DOCUMENTATION.md",
+        "archive/documentation/backend_AI_HISTORY_IMPORT_DOCUMENTATION.md"
+      ]
+    },
+    {
+      "hash": "a52075223ab45a04bfbb7bfb5cd2719b",
+      "files": [
+        "archive/documentation/REDIS_CACHE_IMPLEMENTATION.md",
+        "archive/documentation/backend_docs_REDIS_CACHE_IMPLEMENTATION.md",
+        "archive/documentation/CODE-2025-07-15-docs-redis-cache-implementatio-662c.md"
+      ]
+    },
+    {
+      "hash": "945230276b9c1ca5456972a9c43e15cd",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-07-current-state-completion-july--aa88.md",
+        "archive/documentation/CURRENT_STATE_COMPLETION_JULY_8_2025.md",
+        "other/documentation/COMPLETION_JULY_8_2025.md"
+      ]
+    },
+    {
+      "hash": "f897f605f095a704e2a7cbbbd6d8459b",
+      "files": [
+        "archive/documentation/PHASE-2025-07-06-current-state-memory-research--c818.md",
+        "archive/documentation/CURRENT_STATE_memory_research_integration_phase1.md",
+        "other/documentation/memory_research_integration_phase1.md"
+      ]
+    },
+    {
+      "hash": "ff6cd7314d317ea08657c08174ea0eef",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-12-stable-diffusion-default-updat-4ab6.md",
+        "archive/documentation/STABLE_DIFFUSION_DEFAULT_UPDATE_1.md",
+        "archive/documentation/STABLE_DIFFUSION_DEFAULT_UPDATE.md"
+      ]
+    },
+    {
+      "hash": "d4dfdfb714ef60daaed716bf7c8a2680",
+      "files": [
+        "archive/documentation/ARCH-2025-07-16-evolution-framework-analysis-1-3c62.md",
+        "archive/documentation/EVOLUTION_FRAMEWORK_ANALYSIS_1.md",
+        "archive/documentation/EVOLUTION_FRAMEWORK_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "5c12d0bb22ca7b46ea1718be283cfb36",
+      "files": [
+        "archive/documentation/python.md",
+        "archive/api/backend_docs_api_examples_python.md",
+        "archive/api/CODE-2025-07-15-docs-api-examples-python-a5dd.md"
+      ]
+    },
+    {
+      "hash": "157ae67043c01b084efa4741f24c7d73",
+      "files": [
+        "archive/documentation/TEMPLATE_COMPONENT_EXTRACTION_POC.md",
+        "archive/documentation/DONKEY-2025-07-18-template-component-extraction--5a82.md"
+      ]
+    },
+    {
+      "hash": "1605854350808db9d01906aafec0babc",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-08-resilience-validation-fixes-4459.md",
+        "archive/documentation/backend_RESILIENCE_VALIDATION_FIXES.md",
+        "other/documentation/RESILIENCE_VALIDATION_FIXES.md"
+      ]
+    },
+    {
+      "hash": "df7c477b97812ce369990db955caff3e",
+      "files": [
+        "archive/documentation/troubleshoot.md",
+        "archive/documentation/DEBUG-2025-07-13-troubleshoot-b1fc.md"
+      ]
+    },
+    {
+      "hash": "3167b5ac38d4fe1e1490bc1eeb117ab2",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-recommended-approach-5317.md",
+        "archive/documentation/Recommended_Approach.md"
+      ]
+    },
+    {
+      "hash": "0cb5d13ec96c2deacf8710a0b8d4d553",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-10-memory-mystery-solved-adb0.md",
+        "archive/documentation/MEMORY_MYSTERY_SOLVED.md",
+        "other/documentation/MEMORY_MYSTERY_SOLVED.md"
+      ]
+    },
+    {
+      "hash": "8fd2e3899c25f68abb02630f926b81ac",
+      "files": [
+        "archive/documentation/DATA-2025-07-12-embedding-metadata-enhancement-23e0.md",
+        "archive/documentation/backend_EMBEDDING_METADATA_ENHANCEMENT_COMPLETE.md",
+        "archive/documentation/EMBEDDING_METADATA_ENHANCEMENT_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "13599713a7eb18df697eb3537763f363",
+      "files": [
+        "archive/documentation/docs_development_NEXT_PHASE_ROADMAP.md",
+        "archive/documentation/PHASE-2025-07-04-development-next-phase-roadmap-8a5a.md",
+        "other/documentation/NEXT_PHASE_ROADMAP.md"
+      ]
+    },
+    {
+      "hash": "c8a065b7eabaea4956f17b8492470bbc",
+      "files": [
+        "archive/documentation/INDEX_1.md",
+        "archive/documentation/DONKEY-2025-07-16-index-1-7639.md"
+      ]
+    },
+    {
+      "hash": "858840bc1ba4eb12b988627249efe353",
+      "files": [
+        "archive/documentation/TEMPLATE_LIBRARY_DEBUG_COMPLETE.md",
+        "archive/documentation/DEBUG-2025-07-18-template-library-debug-complet-eb3f.md"
+      ]
+    },
+    {
+      "hash": "15161d9385373bdc92ed730f7cae51ac",
+      "files": [
+        "archive/documentation/backend_PHASE_8_DOCUMENTATION.md",
+        "archive/documentation/PHASE-2025-07-12-phase-8-documentation-3497.md",
+        "archive/documentation/PHASE_8_DOCUMENTATION.md"
+      ]
+    },
+    {
+      "hash": "10def03daaadd0947dea7376c6e6a366",
+      "files": [
+        "archive/documentation/backend_schema_audit_field_usage.md",
+        "archive/documentation/field_usage.md",
+        "archive/documentation/DONKEY-2025-07-11-field-usage-c430.md"
+      ]
+    },
+    {
+      "hash": "9797e7e6969b057fd2ed76e110923e07",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-chart-components-styling-compl-4aed.md",
+        "archive/documentation/CHART_COMPONENTS_STYLING_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "4e02435bb735e8202b5e495dd29703dc",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_STOCK_SCOUT_INVESTIGATION.md",
+        "other/documentation/HANDOFF_STOCK_SCOUT_INVESTIGATION.md"
+      ]
+    },
+    {
+      "hash": "726cf6fb4e701decd4ad501b456e0d7f",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-09-truly-complete-ai-command-cent-961d.md",
+        "archive/documentation/TRULY_COMPLETE_AI_COMMAND_CENTER.md",
+        "other/documentation/AI_COMMAND_CENTER.md"
+      ]
+    },
+    {
+      "hash": "e25c88733b82efe2f34a03f587c99e80",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-15-08-infrastructure-devops-inves-e389.md",
+        "archive/documentation/08_Infrastructure_DevOps_Investigation.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_08_Infrastructure_DevOps_Investigation.md"
+      ]
+    },
+    {
+      "hash": "a996844d645f32a87c0fef1e4d28aa23",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-media-content-st-ec5e.md",
+        "archive/documentation/CURRENT_STATE_media-content-studio-status.md",
+        "other/documentation/media-content-studio-status.md"
+      ]
+    },
+    {
+      "hash": "4224b1357e6eeb85da6f036627093283",
+      "files": [
+        "archive/documentation/TRULY_COMPLETE_AUTHENTICATION.md",
+        "archive/documentation/SECURITY-2025-07-09-truly-complete-authentication-b7e6.md",
+        "other/documentation/AUTHENTICATION.md"
+      ]
+    },
+    {
+      "hash": "2583875ca60e78067e7c1d34d0476695",
+      "files": [
+        "archive/documentation/backend_REDDIT_SCOUT_QUICK_IMPROVEMENTS.md",
+        "archive/documentation/DONKEY-2025-07-06-reddit-scout-quick-improvement-95d2.md",
+        "other/documentation/REDDIT_SCOUT_QUICK_IMPROVEMENTS.md"
+      ]
+    },
+    {
+      "hash": "448757a29d09bafca52b6aea4668bc49",
+      "files": [
+        "archive/documentation/REF-2025-07-18-template-prompt-integration-co-c20b.md",
+        "archive/documentation/TEMPLATE_PROMPT_INTEGRATION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "3d46a81c94b0caa1292c651265ac5fe2",
+      "files": [
+        "archive/documentation/DATA-2025-07-15-database-connection-pooling-c805.md",
+        "archive/documentation/DATABASE_CONNECTION_POOLING.md",
+        "archive/documentation/docs_DATABASE_CONNECTION_POOLING.md"
+      ]
+    },
+    {
+      "hash": "b32d2d437730495ac6b01788fe5db285",
+      "files": [
+        "archive/documentation/CURRENT_STATE_JULY_8_2025_COMPLETION.md",
+        "archive/documentation/DONKEY-2025-07-07-current-state-july-8-2025-comp-6eef.md",
+        "other/documentation/JULY_8_2025_COMPLETION.md"
+      ]
+    },
+    {
+      "hash": "dfd5208acb50629da5cdf90163409f41",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-reddit-scout-fin-f595.md",
+        "archive/documentation/backend_CURRENT_STATE_reddit_scout_final_status.md",
+        "other/documentation/reddit_scout_final_status.md"
+      ]
+    },
+    {
+      "hash": "01956ded383d44580af8f6d76b8966b7",
+      "files": [
+        "archive/documentation/backend_WEBSOCKET_IMPLEMENTATION_COMPLETE.md",
+        "archive/documentation/CODE-2025-07-03-websocket-implementation-compl-1470.md",
+        "other/documentation/WEBSOCKET_IMPLEMENTATION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "8ee6d2dc13dacf720bfed9aa47ae94d3",
+      "files": [
+        "archive/documentation/backend_INTELLIGENT_PROMPTING_ENABLED.md",
+        "archive/documentation/CODE-2025-07-10-intelligent-prompting-enabled-065c.md",
+        "other/documentation/INTELLIGENT_PROMPTING_ENABLED.md"
+      ]
+    },
+    {
+      "hash": "5c2b7517440ca0b847284437a3735260",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-inconsistencies-22ac.md",
+        "archive/documentation/inconsistencies.md",
+        "archive/documentation/backend_schema_audit_inconsistencies.md"
+      ]
+    },
+    {
+      "hash": "f34fef2d0f6db82f41ed99fb0cc082fe",
+      "files": [
+        "archive/documentation/PHASE_2_HANDOFF_NOTES.md",
+        "archive/documentation/PHASE-2025-07-12-phase-2-handoff-notes-ccb2.md",
+        "archive/documentation/backend_PHASE_2_HANDOFF_NOTES.md"
+      ]
+    },
+    {
+      "hash": "08641c69abdaeaab2c43f774e59eeffa",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-05-frontend-migration-checklist-5bde.md",
+        "archive/documentation/FRONTEND_MIGRATION_CHECKLIST.md",
+        "other/documentation/FRONTEND_MIGRATION_CHECKLIST.md"
+      ]
+    },
+    {
+      "hash": "ad52a399397647403b268ffb73a0e9c8",
+      "files": [
+        "archive/documentation/03_Memory_Conversation_Traceability_Investigation.md",
+        "archive/documentation/DONKEY-2025-07-15-03-memory-conversation-traceab-a61e.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_03_Memory_Conversation_Traceability_Investigation.md"
+      ]
+    },
+    {
+      "hash": "25a8e99c9a6f71537f05d547a210c231",
+      "files": [
+        "archive/documentation/EXAMPLE_EXTRACTION_POC_COMPLETE.md",
+        "archive/documentation/CODE-2025-07-18-example-extraction-poc-complet-8397.md"
+      ]
+    },
+    {
+      "hash": "c37ea52c50643b79fd43b4c4e994e7ac",
+      "files": [
+        "archive/documentation/improve.md",
+        "archive/documentation/DONKEY-2025-07-13-improve-a3fb.md"
+      ]
+    },
+    {
+      "hash": "b38ac284981350b83fd6f02fac567404",
+      "files": [
+        "archive/documentation/REF-2025-07-04-media-generated-businesses-new-2aa4.md",
+        "archive/readme/backend_media_generated_businesses_NewsNugget_a534efe7-7a8f-4537-93fe-6408b50cbfa5_README.md",
+        "other/readme/README_16.md"
+      ]
+    },
+    {
+      "hash": "fcddf768ef61d5160b4f5342ba04c516",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-day-5-multi-llm-complete-739f.md",
+        "archive/documentation/DAY_5_MULTI_LLM_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "43fdd0460ee4875e77cf98caf8a00eb4",
+      "files": [
+        "archive/documentation/backend_ADDITIONAL_UNUSED_CODE_ANALYSIS.md",
+        "archive/documentation/CODE-2025-07-09-additional-unused-code-analysi-2c44.md",
+        "other/documentation/ADDITIONAL_UNUSED_CODE_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "e84929a07686a0d6a4a7a39f44eb89d9",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-15-05-business-intelligence-revie-d621.md",
+        "archive/documentation/05_BUSINESS_INTELLIGENCE_REVIEW.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_05_BUSINESS_INTELLIGENCE_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "d3cc8e0c2989de95f048fbe27316b33a",
+      "files": [
+        "archive/documentation/08_INFRASTRUCTURE_DEVOPS_REVIEW.md",
+        "archive/documentation/DONKEY-2025-07-15-08-infrastructure-devops-revie-d767.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_08_INFRASTRUCTURE_DEVOPS_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "d73625fd49750b6b96ce1bd2dd079e13",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-18-MTA-claude-7b89.md",
+        "other/documentation/CLAUDE.md"
+      ]
+    },
+    {
+      "hash": "2f4c48f8b2dd6a0082446399606c1022",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-research-intelligence-status-3c65.md",
+        "archive/documentation/RESEARCH_INTELLIGENCE_STATUS.md",
+        "other/documentation/RESEARCH_INTELLIGENCE_STATUS.md"
+      ]
+    },
+    {
+      "hash": "59b4803e017a2cb36cf364be522d31e1",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-clade-code-action-items-a252.md",
+        "archive/documentation/clade-code-action-items.md"
+      ]
+    },
+    {
+      "hash": "0a356eb43e973c11cd2e9d7cd503c966",
+      "files": [
+        "archive/documentation/CHANGELOG.md",
+        "archive/documentation/DONKEY-2025-07-13-changelog-02a7.md"
+      ]
+    },
+    {
+      "hash": "b9594e6e9592bbeb3647bd708e6ea0dc",
+      "files": [
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_Investigation_Methodology_Template.md",
+        "archive/documentation/Investigation_Methodology_Template.md",
+        "archive/documentation/DONKEY-2025-07-15-investigation-methodology-temp-b3d3.md"
+      ]
+    },
+    {
+      "hash": "e82a91967fd1a88cb914a552be5d89c4",
+      "files": [
+        "archive/documentation/backend_AUDIT_KEY_FINDINGS.md",
+        "archive/documentation/DONKEY-2025-07-12-audit-key-findings-b338.md",
+        "archive/documentation/AUDIT_KEY_FINDINGS.md"
+      ]
+    },
+    {
+      "hash": "78a1d1cbe496c8216f24ccf0f3eb1013",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-index-0fb3.md",
+        "archive/documentation/index.md"
+      ]
+    },
+    {
+      "hash": "c2477ceb37f9732158499f1c63248dea",
+      "files": [
+        "archive/documentation/WEBSOCKET_DEBUG_PLAN.md",
+        "archive/documentation/DEBUG-2025-07-17-websocket-debug-plan-6b87.md"
+      ]
+    },
+    {
+      "hash": "8941933994b9c53ae85fe6da9ca3658a",
+      "files": [
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_Master_Review_Synthesis.md",
+        "archive/documentation/DONKEY-2025-07-15-review-sections-master-review--33bb.md",
+        "archive/documentation/Master_Review_Synthesis.md"
+      ]
+    },
+    {
+      "hash": "666ad55c3c6a0d86493cc3cbe7cfcb15",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-git-983d.md",
+        "archive/documentation/git.md"
+      ]
+    },
+    {
+      "hash": "aecde082fbae4007be22286e53a24c30",
+      "files": [
+        "archive/documentation/RESEARCH_INTELLIGENCE_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-06-research-intelligence-complete-d2cd.md",
+        "other/documentation/RESEARCH_INTELLIGENCE_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "ac3ba3130be307e994f32c32874550e4",
+      "files": [
+        "archive/documentation/backend_ALPHA_VANTAGE_RATE_LIMIT_FIX.md",
+        "archive/documentation/CODE-2025-07-08-alpha-vantage-rate-limit-fix-f196.md",
+        "other/documentation/ALPHA_VANTAGE_RATE_LIMIT_FIX.md"
+      ]
+    },
+    {
+      "hash": "8a2d536cd677d1ffc742ae2dce453958",
+      "files": [
+        "archive/documentation/research_shit_350_investigation_dashboard.md",
+        "archive/documentation/DONKEY-2025-07-11-research-shit-350-investigatio-fbca.md",
+        "other/documentation/350_investigation_dashboard.md"
+      ]
+    },
+    {
+      "hash": "ee1af738b9b50cee84a2da0dad318e55",
+      "files": [
+        "archive/documentation/CURRENT_STATE_JULY_8_RESILIENCE_COMPLETE.md",
+        "other/documentation/JULY_8_RESILIENCE_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "d487c91c8bb4b53c482ccb642debcac8",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-12-embedding-verification-complet-c8e0.md",
+        "archive/documentation/EMBEDDING_VERIFICATION_COMPLETE.md",
+        "archive/documentation/backend_EMBEDDING_VERIFICATION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "1e9cb8f4a021d3450400c0e7287c3fb9",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-18-dynamic-prompts-frontend-integ-b7d3.md",
+        "archive/documentation/DYNAMIC_PROMPTS_FRONTEND_INTEGRATION.md"
+      ]
+    },
+    {
+      "hash": "779acf74e8c2eb8c0d361c4522dc0cf7",
+      "files": [
+        "archive/documentation/CHAT_GPT_Q&A.md",
+        "archive/documentation/AI-2025-07-10-chat-gpt-q&a-5b06.md",
+        "other/documentation/CHAT_GPT_Q&A.md"
+      ]
+    },
+    {
+      "hash": "4bf547d00e4ec5e7f57606c3c6626ce4",
+      "files": [
+        "archive/documentation/CODE-2025-07-15-docs-redis-caching-implementat-f41f.md",
+        "archive/documentation/REDIS_CACHING_IMPLEMENTATION.md",
+        "archive/documentation/backend_docs_REDIS_CACHING_IMPLEMENTATION.md"
+      ]
+    },
+    {
+      "hash": "d6c0923e790d1ed5fe9e39c73d0fa0de",
+      "files": [
+        "archive/documentation/AI_ASSISTANT_UNIFIED_MEMORY_INTEGRATION.md",
+        "archive/documentation/backend_AI_ASSISTANT_UNIFIED_MEMORY_INTEGRATION.md",
+        "archive/documentation/AI-2025-07-12-ai-assistant-unified-memory-in-25e9.md"
+      ]
+    },
+    {
+      "hash": "cc636140f9f7242dc7ba2c47e2c09f12",
+      "files": [
+        "archive/documentation/PLATFORM_STATUS_JANUARY_17_2025.md",
+        "archive/documentation/DONKEY-2025-07-17-platform-status-january-17-202-073c.md"
+      ]
+    },
+    {
+      "hash": "ed34cf3efaa16dec359c6f26ee168dbb",
+      "files": [
+        "archive/documentation/REF-2025-07-04-media-generated-businesses-min-4a6c.md",
+        "archive/readme/backend_media_generated_businesses_MindfulBoost_f4c531fe-768d-4a75-9064-daaff33ce5eb_README.md",
+        "other/readme/README_19.md"
+      ]
+    },
+    {
+      "hash": "a67f2cf691caf6afc7f37948b283d320",
+      "files": [
+        "archive/documentation/backend_VECTOR_PARTITIONING_STRATEGY.md",
+        "archive/documentation/DATA-2025-07-15-vector-partitioning-strategy-01b7.md",
+        "archive/documentation/VECTOR_PARTITIONING_STRATEGY.md"
+      ]
+    },
+    {
+      "hash": "fcbc30fe9b9c93e175f35b115a1d3d4c",
+      "files": [
+        "archive/documentation/console_stuff.md",
+        "archive/documentation/DONKEY-2025-07-10-console-stuff-0a44.md",
+        "other/documentation/console_stuff.md"
+      ]
+    },
+    {
+      "hash": "b7e2338294bdf9531a934f805c1b403b",
+      "files": [
+        "archive/documentation/PLATFORM_STATUS_JULY_8_2025.md",
+        "archive/documentation/DONKEY-2025-07-07-platform-status-july-8-2025-d4eb.md",
+        "other/documentation/PLATFORM_STATUS_JULY_8_2025.md"
+      ]
+    },
+    {
+      "hash": "ff57c0347f06f0dc98f603cbcd09a149",
+      "files": [
+        "archive/documentation/COMMANDS.md",
+        "archive/documentation/DONKEY-2025-07-13-commands-7c3e.md"
+      ]
+    },
+    {
+      "hash": "cce21ec79bc1a5d0ae394180f8c15de4",
+      "files": [
+        "archive/documentation/explain.md",
+        "archive/documentation/DONKEY-2025-07-13-explain-3c09.md"
+      ]
+    },
+    {
+      "hash": "604300f254a6b62c16e4997d7650d7e2",
+      "files": [
+        "archive/documentation/multi-llm-quickstart.md",
+        "archive/documentation/AI-2025-07-17-multi-llm-quickstart-4a4a.md"
+      ]
+    },
+    {
+      "hash": "aa9dd4bae5d03e10e0d49ed4d26c3cdf",
+      "files": [
+        "archive/documentation/TRULY_COMPLETE_CONTENT_CREATION.md",
+        "archive/documentation/DONKEY-2025-07-10-truly-complete-content-creatio-fbf5.md",
+        "other/documentation/CONTENT_CREATION.md"
+      ]
+    },
+    {
+      "hash": "fcc4ef76a9ced22ab9036b2f8910a600",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-active-tasks-2e2c.md",
+        "archive/documentation/backend_CURRENT_STATE_active-tasks.md",
+        "other/documentation/active-tasks.md"
+      ]
+    },
+    {
+      "hash": "9b4cb8237f9bccf1c5477aecf87dc834",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-16-ai-evolution-mythology-connect-1e7b.md",
+        "archive/documentation/AI_EVOLUTION_MYTHOLOGY_CONNECTION.md"
+      ]
+    },
+    {
+      "hash": "fa668e7ab8829eb8922b33ccb5660c37",
+      "files": [
+        "archive/documentation/TRULY_COMPLETE_PHASE_9_USER_PROFILE_INTELLIGENCE.md",
+        "archive/documentation/PHASE-2025-07-13-truly-complete-phase-9-user-pr-e655.md",
+        "archive/documentation/PHASE_9_USER_PROFILE_INTELLIGENCE.md"
+      ]
+    },
+    {
+      "hash": "45ed29d74b4eca41d4cb5c6aefee235b",
+      "files": [
+        "archive/documentation/DAY_4_MULTI_LLM_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-17-day-4-multi-llm-complete-aaec.md"
+      ]
+    },
+    {
+      "hash": "b2a54fa106a7ce55d2a357d7ed27eb46",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-research-shit-chris-mythology--7d03.md",
+        "archive/documentation/research_shit_chris_mythology_lab_brief.md",
+        "other/documentation/chris_mythology_lab_brief.md"
+      ]
+    },
+    {
+      "hash": "ae3eeb0bdaeb6fa96400dc63075f643f",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_8_2025.md",
+        "other/documentation/HANDOFF_JULY_8_2025.md"
+      ]
+    },
+    {
+      "hash": "159cb99019d5669d3bbb62695276d880",
+      "files": [
+        "archive/documentation/migrate.md",
+        "archive/documentation/DONKEY-2025-07-13-migrate-f615.md"
+      ]
+    },
+    {
+      "hash": "5ba942f114f0f9d8157aa1021cb75a5f",
+      "files": [
+        "archive/documentation/CODE-2025-07-08-truly-complete-unused-function-7c61.md",
+        "archive/report/backend_TRULY_COMPLETE_UNUSED_FUNCTIONS_REPORT.md",
+        "other/report/UNUSED_FUNCTIONS_REPORT.md"
+      ]
+    },
+    {
+      "hash": "4e32a1c9e066c0e8fc3c171a4686b79a",
+      "files": [
+        "archive/documentation/CONTENT_STUDIO_BACKEND_COMPLETE.md",
+        "archive/documentation/CODE-2025-07-17-content-studio-backend-complet-767e.md"
+      ]
+    },
+    {
+      "hash": "8046f3fec851acaf68a9eea7cf59ec87",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-multi-llm-experiments-ui-updat-dfad.md",
+        "archive/documentation/MULTI_LLM_EXPERIMENTS_UI_UPDATE_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "5446a313622654cf635ee1818b9b298e",
+      "files": [
+        "archive/documentation/backend_MEMORY_ACCESS_FIX_COMPLETE.md",
+        "archive/documentation/CODE-2025-07-10-memory-access-fix-complete-5b0a.md",
+        "other/documentation/MEMORY_ACCESS_FIX_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "22e0d1d31e4a229984028b12368f0221",
+      "files": [
+        "archive/documentation/DONKEY-2025-08-06-merge-and-reorganize-plan-f40a.md",
+        "archive/documentation/MERGE_AND_REORGANIZE_PLAN.md"
+      ]
+    },
+    {
+      "hash": "0987f03ce4f1c690ea7426aea054243e",
+      "files": [
+        "archive/documentation/TRULY_COMPLETE_RESEARCH_INTELLIGENCE.md",
+        "archive/documentation/DONKEY-2025-07-09-truly-complete-research-intell-6d53.md",
+        "other/documentation/RESEARCH_INTELLIGENCE.md"
+      ]
+    },
+    {
+      "hash": "36f09d05eea0c5e0607a6ec5adac229d",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-vector-ml-integration-314d.md",
+        "archive/documentation/VECTOR_ML_INTEGRATION.md",
+        "other/documentation/VECTOR_ML_INTEGRATION.md"
+      ]
+    },
+    {
+      "hash": "172ab0a2c3fa916a578fb679a14185fa",
+      "files": [
+        "archive/documentation/AUTHENTICATION_FIXES_2025.md",
+        "archive/documentation/SECURITY-2025-07-17-authentication-fixes-2025-7772.md"
+      ]
+    },
+    {
+      "hash": "c58947a8c918eeb6d1df45c0aa54cb2e",
+      "files": [
+        "archive/documentation/04_CONTENT_MEDIA_REVIEW.md",
+        "archive/documentation/DONKEY-2025-07-15-04-content-media-review-cde9.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_04_CONTENT_MEDIA_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "636b4e1e22ae663c767d74d5d6a81df8",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-research-intelli-9846.md",
+        "archive/documentation/CURRENT_STATE_research_intelligence_status.md",
+        "other/documentation/research_intelligence_status_1.md"
+      ]
+    },
+    {
+      "hash": "aa7f587a013277aa4681b842b4b1aeaa",
+      "files": [
+        "archive/documentation/CONVERSATION_MEMORY_INTEGRITYERROR_FIX.md",
+        "archive/documentation/backend_CONVERSATION_MEMORY_INTEGRITYERROR_FIX.md",
+        "archive/documentation/DEBUG-2025-07-15-conversation-memory-integritye-f51b.md"
+      ]
+    },
+    {
+      "hash": "1d8cdedbbf9003403f7b79beff69e73e",
+      "files": [
+        "archive/documentation/CURRENT_STATE_STOCK_SCOUT_REDESIGN_PLAN.md",
+        "archive/documentation/DONKEY-2025-07-08-current-state-stock-scout-rede-b96f.md",
+        "other/documentation/STOCK_SCOUT_REDESIGN_PLAN.md"
+      ]
+    },
+    {
+      "hash": "f9d19e489e175e62b7f8265f781f0eec",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-proposed-standards-8f5c.md",
+        "archive/documentation/proposed_standards.md",
+        "archive/documentation/backend_schema_audit_proposed_standards.md"
+      ]
+    },
+    {
+      "hash": "b9ccbecefb42b70c1af35e90b6194d33",
+      "files": [
+        "archive/documentation/PROJ-2025-07-13-roadmap-e75c.md",
+        "archive/documentation/ROADMAP.md"
+      ]
+    },
+    {
+      "hash": "1929876df420f8e5f218fb18db614a59",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-11-three-way-integration-fix-summ-83c8.md",
+        "archive/report/backend_THREE_WAY_INTEGRATION_FIX_SUMMARY.md",
+        "other/report/THREE_WAY_INTEGRATION_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "ce51640416d30e5ca68a0215d6bf7019",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-10-memory-mystery-solvred-2766.md",
+        "archive/documentation/MEMORY_MYSTERY_SOLVRED.md",
+        "other/documentation/MEMORY_MYSTERY_SOLVRED.md"
+      ]
+    },
+    {
+      "hash": "ad678dc9b5f7110929cfc92609745873",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_9_RESILIENCE.md",
+        "other/documentation/HANDOFF_JULY_9_RESILIENCE.md"
+      ]
+    },
+    {
+      "hash": "75bafa1c74919f98ce461f0c15829a22",
+      "files": [
+        "archive/documentation/CHANGELOG_2025_07_17.md",
+        "archive/documentation/DONKEY-2025-07-17-changelog-8017.md"
+      ]
+    },
+    {
+      "hash": "46bce5bafb31e5d1f89c0ab2ce6e8e70",
+      "files": [
+        "archive/documentation/REF-2025-07-03-development-reddit-scout-imple-7f0b.md",
+        "archive/documentation/docs_development_REDDIT_SCOUT_IMPLEMENTATION.md",
+        "other/documentation/REDDIT_SCOUT_IMPLEMENTATION.md"
+      ]
+    },
+    {
+      "hash": "ec58d046b470603b2b01fcd0032f03a8",
+      "files": [
+        "archive/documentation/Code_Paths_and_Query_Patterns.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_Code_Paths_and_Query_Patterns.md",
+        "archive/documentation/DONKEY-2025-07-15-code-paths-and-query-patterns-2e6d.md"
+      ]
+    },
+    {
+      "hash": "bf3dd6419584c74cdfd8beeae55c30fc",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-15-section-04-content-media-syste-485e.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_Section_04_Content_Media_Systems.md",
+        "archive/architecture/Section_04_Content_Media_Systems.md"
+      ]
+    },
+    {
+      "hash": "29b6342d9a24a120ffb77338b9a89982",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-07-method-index-essential-16f3.md",
+        "archive/documentation/METHOD_INDEX_ESSENTIAL.md",
+        "other/documentation/METHOD_INDEX_ESSENTIAL.md"
+      ]
+    },
+    {
+      "hash": "32dec5eba0734037c991c7266e52ea0a",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-frontend-integration-roadmap-1431.md",
+        "archive/documentation/FRONTEND_INTEGRATION_ROADMAP.md"
+      ]
+    },
+    {
+      "hash": "cf433ff6e7cf7c7addcb2dcc8db7608b",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-07-resilience-implementation-b647.md",
+        "archive/documentation/RESILIENCE_IMPLEMENTATION.md",
+        "other/documentation/RESILIENCE_IMPLEMENTATION.md"
+      ]
+    },
+    {
+      "hash": "6dab219f7424d42994f82412f8678c51",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-18-cross-domain-adapter-quality-r-2f75.md",
+        "archive/report/CROSS_DOMAIN_ADAPTER_QUALITY_REPORT.md"
+      ]
+    },
+    {
+      "hash": "775b6543da10ced02bfd4eaff5ef0b86",
+      "files": [
+        "archive/documentation/backend_CONTEXTUAL_SUGGESTIONS_FIX.md",
+        "archive/documentation/CODE-2025-07-10-contextual-suggestions-fix-8972.md",
+        "other/documentation/CONTEXTUAL_SUGGESTIONS_FIX.md"
+      ]
+    },
+    {
+      "hash": "96ad33fdebbe8641c696b8a9fbf5bd73",
+      "files": [
+        "archive/documentation/USAGE_POLICY_MYSTERY.md",
+        "archive/documentation/DONKEY-2025-07-10-usage-policy-mystery-2ff7.md",
+        "other/documentation/USAGE_POLICY_MYSTERY.md"
+      ]
+    },
+    {
+      "hash": "31682120001698144c64ae43db462bcf",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-15-03-memory-&-knowledge-review-ecee.md",
+        "archive/documentation/03_MEMORY_&_KNOWLEDGE_REVIEW.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_03_MEMORY_&_KNOWLEDGE_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "42bfb460ff1e689e740c7004bed3c1fb",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-prompt-sets-integration-plan-54eb.md",
+        "archive/documentation/Prompt-Sets-Integration-Plan.md"
+      ]
+    },
+    {
+      "hash": "cc40f54acb5184e73edf3222c9ba2d5a",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-07-method-index-c97b.md",
+        "archive/documentation/METHOD_INDEX.md",
+        "other/documentation/METHOD_INDEX.md"
+      ]
+    },
+    {
+      "hash": "e1cf4f91d8ee5b2baf6eaafdf660e103",
+      "files": [
+        "archive/documentation/CURRENT_STATE_memory_research_integration_plan.md",
+        "archive/api/API-2025-07-06-current-state-memory-research--80f6.md",
+        "other/documentation/memory_research_integration_plan.md"
+      ]
+    },
+    {
+      "hash": "2be0103f1e00d4b0c58ea4dc531d4270",
+      "files": [
+        "archive/documentation/FRONTEND_MIGRATION_ANALYSIS.md",
+        "archive/documentation/DONKEY-2025-07-05-frontend-migration-analysis-3992.md",
+        "other/documentation/FRONTEND_MIGRATION_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "9bc3539484df0162bdbae06b5491d5fb",
+      "files": [
+        "archive/documentation/COMPLETE_INTEGRATION_VERIFICATION.md",
+        "archive/documentation/DONKEY-2025-07-16-complete-integration-verificat-eeaa.md"
+      ]
+    },
+    {
+      "hash": "edd43063a9eedc27f2e8106be44bb968",
+      "files": [
+        "archive/documentation/AI-2025-07-15-01-ai-assistant-conversation-f-6532.md",
+        "archive/documentation/01_AI_Assistant_Conversation_Flow_Investigation.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_01_AI_Assistant_Conversation_Flow_Investigation.md"
+      ]
+    },
+    {
+      "hash": "a435f498227a7e09e71e851e3da0303a",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-09-truly-complete-business-hub-b9b9.md",
+        "archive/documentation/TRULY_COMPLETE_BUSINESS_HUB.md",
+        "other/documentation/BUSINESS_HUB.md"
+      ]
+    },
+    {
+      "hash": "cdeeaacc23ce9aad34d4dc5aecbb4652",
+      "files": [
+        "archive/documentation/backend_PLATFORM_STATUS_JULY_12_EVENING.md",
+        "archive/documentation/CODE-2025-07-12-platform-status-july-12-evenin-12b5.md",
+        "archive/documentation/PLATFORM_STATUS_JULY_12_EVENING.md"
+      ]
+    },
+    {
+      "hash": "6796ec2063132b586020d4baa7d23c59",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-claude-942f.md",
+        "archive/documentation/CLAUDE.md"
+      ]
+    },
+    {
+      "hash": "699c94a6b37d927f49bd1932f73b2c2f",
+      "files": [
+        "archive/documentation/TRULY_COMPLETE_AI_PARTNER.md",
+        "archive/documentation/AI-2025-07-10-truly-complete-ai-partner-bb61.md",
+        "other/documentation/AI_PARTNER.md"
+      ]
+    },
+    {
+      "hash": "4553bd1590192948f398441b1a0a834b",
+      "files": [
+        "archive/documentation/AI_ASSISTANT_ANALYSIS.md",
+        "archive/documentation/AI_ASSISTANT_ANALYSIS_1.md",
+        "archive/documentation/AI-2025-07-15-ai-assistant-analysis-1eed.md"
+      ]
+    },
+    {
+      "hash": "71e7d680280c58f8d2f6c1d0f4f8e83d",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-16-evolution-activation-plan-1-ac62.md",
+        "archive/documentation/EVOLUTION_ACTIVATION_PLAN_1.md",
+        "archive/documentation/EVOLUTION_ACTIVATION_PLAN.md"
+      ]
+    },
+    {
+      "hash": "78b49f695aff2e993d08acd3b3f8c738",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-15-review-sections-master-synthes-4008.md",
+        "archive/report/PROJECT_REVIEW_SECTIONS_MASTER_SYNTHESIS_REPORT.md",
+        "archive/report/MASTER_SYNTHESIS_REPORT.md"
+      ]
+    },
+    {
+      "hash": "9788c178ba1fd7a8833b2f55c6418bd3",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-17-dashboard-field-fixes-complete-ff66.md",
+        "archive/documentation/DASHBOARD_FIELD_FIXES_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "f1911d433a29db9724abfb8d696a9773",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-08-current-state-verification-jul-48a5.md",
+        "archive/documentation/CURRENT_STATE_VERIFICATION_JULY_9_2025.md",
+        "other/documentation/VERIFICATION_JULY_9_2025.md"
+      ]
+    },
+    {
+      "hash": "3d309a91b88e74c0be675f0f00770a56",
+      "files": [
+        "archive/documentation/DEPLOY-2025-07-13-deploy-7d92.md",
+        "archive/documentation/deploy.md"
+      ]
+    },
+    {
+      "hash": "f5f0c21ffd5fa8e9ee6859d1c9a01c75",
+      "files": [
+        "archive/documentation/LEARNING_INTELLIGENCE_INTEGRATION.md",
+        "archive/documentation/DONKEY-2025-07-16-learning-intelligence-integrat-545e.md"
+      ]
+    },
+    {
+      "hash": "a76ef325eeacfa5caad3a0c0b8c84d9b",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-12-platform-is-connected-proof-2053.md",
+        "archive/documentation/backend_PLATFORM_IS_CONNECTED_PROOF.md",
+        "archive/documentation/PLATFORM_IS_CONNECTED_PROOF.md"
+      ]
+    },
+    {
+      "hash": "fcc58091a990c98bd489f74cdd663d35",
+      "files": [
+        "archive/documentation/ENCRYPTION_STRATEGY.md",
+        "archive/documentation/backend_docs_ENCRYPTION_STRATEGY.md",
+        "archive/documentation/DONKEY-2025-07-15-docs-encryption-strategy-8e0a.md"
+      ]
+    },
+    {
+      "hash": "3ca52cdb6cecda147380faaf9fba7d87",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-cleanup-bc21.md",
+        "archive/documentation/cleanup.md"
+      ]
+    },
+    {
+      "hash": "6cc351bbbeffd155fb310cca971fd3e1",
+      "files": [
+        "archive/documentation/DATA_CONSISTENCY_ERROR_ANALYSIS.md",
+        "other/documentation/DATA_CONSISTENCY_ERROR_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "0518b030fa342792dfe4d95186e81115",
+      "files": [
+        "archive/documentation/09_Security_Authentication_Investigation.md",
+        "archive/documentation/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_09_Security_Authentication_Investigation.md",
+        "archive/documentation/SECURITY-2025-07-15-09-security-authentication-inv-ac6b.md"
+      ]
+    },
+    {
+      "hash": "4d1a9a5428fa058ed3147f47bb268056",
+      "files": [
+        "archive/documentation/javascript.md",
+        "archive/api/CODE-2025-07-15-docs-api-examples-javascript-e0b8.md",
+        "archive/api/backend_docs_api_examples_javascript.md"
+      ]
+    },
+    {
+      "hash": "bd28c5bf5f085838dc12aabd963c717c",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-08-current-state-error-fixes-july-cd3c.md",
+        "archive/documentation/CURRENT_STATE_ERROR_FIXES_JULY_9_2025.md",
+        "other/documentation/ERROR_FIXES_JULY_9_2025.md"
+      ]
+    },
+    {
+      "hash": "4d59bc179d7bf5c299784ee95ee94a1e",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-15-review-sections-01-ai-core-sys-5cad.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_01_AI_CORE_SYSTEMS_REVIEW.md",
+        "archive/architecture/01_AI_CORE_SYSTEMS_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "5d5ec787bd5858969cd1189cf883bd1b",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-11-research-shit-digital-folklore-2676.md",
+        "archive/documentation/research_shit_digital_folklore.md",
+        "other/documentation/digital_folklore.md"
+      ]
+    },
+    {
+      "hash": "6bbd54552259d8d4cbebad17b81c24a8",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-review-f57f.md",
+        "archive/documentation/review.md"
+      ]
+    },
+    {
+      "hash": "b4c09a913d31fb69b6e4ce80ea2748e7",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-09-truly-complete-stock-intellige-4705.md",
+        "archive/documentation/TRULY_COMPLETE_STOCK_INTELLIGENCE.md",
+        "other/documentation/STOCK_INTELLIGENCE.md"
+      ]
+    },
+    {
+      "hash": "9c1b2cda1836af703a586d280dcb7c95",
+      "files": [
+        "archive/documentation/FRESH_CHAT.md",
+        "archive/documentation/DONKEY-2025-07-10-fresh-chat-3daa.md",
+        "other/documentation/FRESH_CHAT.md"
+      ]
+    },
+    {
+      "hash": "de82ff7ea373a6805aa228d183db1d97",
+      "files": [
+        "archive/documentation/HANDOFF_NOTES.md",
+        "other/documentation/HANDOFF_NOTES.md"
+      ]
+    },
+    {
+      "hash": "da2f8e4aec1b7008706ef8ff9aaeb0ae",
+      "files": [
+        "archive/documentation/CODE-2025-07-12-ukf-migration-complete-a663.md",
+        "archive/documentation/backend_UKF_MIGRATION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "dbf7d0ee95865a30d2d2f69d549a8a59",
+      "files": [
+        "archive/documentation/backend_CURRENT_STATE_quick_reference_july_6.md",
+        "archive/documentation/DONKEY-2025-07-06-current-state-quick-reference--973b.md",
+        "other/documentation/quick_reference_july_6.md"
+      ]
+    },
+    {
+      "hash": "833955332cbd4abb8a87cc74951113cf",
+      "files": [
+        "archive/documentation/load.md",
+        "archive/documentation/DONKEY-2025-07-13-load-24f2.md"
+      ]
+    },
+    {
+      "hash": "01d9702da04fc63f629243398fa580a1",
+      "files": [
+        "archive/documentation/backend_REALITY_ENGINE_DISCOVERY.md",
+        "archive/documentation/DONKEY-2025-07-10-reality-engine-discovery-9508.md",
+        "other/documentation/REALITY_ENGINE_DISCOVERY.md"
+      ]
+    },
+    {
+      "hash": "9c0a7228c678eb0d655bdd4ae89763df",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-10-current-state-active-tasks-d24f.md",
+        "archive/documentation/CURRENT_STATE_active-tasks.md",
+        "other/documentation/active-tasks_1.md"
+      ]
+    },
+    {
+      "hash": "235ac48c1b05814e8098f6ef6f38c96b",
+      "files": [
+        "archive/documentation/REF-2025-07-04-media-generated-businesses-fin-d200.md",
+        "archive/readme/backend_media_generated_businesses_FinGenius_PART_2_-_e8f9e32a-613e-4c5b-916d-99e62f9c7cbf_README.md",
+        "other/readme/README_17.md"
+      ]
+    },
+    {
+      "hash": "1ede50065d0bd24c65186d0ccb956254",
+      "files": [
+        "archive/documentation/REF-2025-07-05-media-generated-businesses-fin-a58f.md",
+        "archive/readme/backend_media_generated_businesses_FinanceAI_e45a4068-8d75-49fe-bf27-2f8114a43cf1_README.md",
+        "other/readme/README_14.md"
+      ]
+    },
+    {
+      "hash": "281f141556f833d07a0af36aa29108c9",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_9_2025.md",
+        "other/documentation/HANDOFF_JULY_9_2025.md"
+      ]
+    },
+    {
+      "hash": "f44cdb59913bb2f8e3881be36f340e4a",
+      "files": [
+        "archive/documentation/CURRENT_STATE_completion_status_jan7.md",
+        "archive/documentation/DONKEY-2025-07-06-current-state-completion-statu-967d.md",
+        "other/documentation/completion_status_jan7.md"
+      ]
+    },
+    {
+      "hash": "86217da453b85e3e9857ba9cee4f3bc2",
+      "files": [
+        "archive/documentation/KNOWLEDGE_BASE_QUICK_START.md",
+        "archive/documentation/DONKEY-2025-07-11-knowledge-base-quick-start-6b61.md",
+        "other/documentation/KNOWLEDGE_BASE_QUICK_START.md"
+      ]
+    },
+    {
+      "hash": "0cf7ec6ae3378db70f9f66aa1417d79c",
+      "files": [
+        "archive/documentation/REF-2025-07-04-media-generated-businesses-loc-04be.md",
+        "archive/readme/backend_media_generated_businesses_LocalCraft_Market_-_Marketplace_for_handmade_goods_e551b8ab-7630-406b-afc7-5d1ac20bf63d_README.md",
+        "other/readme/README_20.md"
+      ]
+    },
+    {
+      "hash": "198a6bde5027ec94e1ca0cfa33ba8eb5",
+      "files": [
+        "archive/documentation/COMPREHENSIVE_BACKEND_FIXES_JULY_17_2025.md",
+        "archive/documentation/CODE-2025-07-17-comprehensive-backend-fixes-ju-f8db.md"
+      ]
+    },
+    {
+      "hash": "e2cb0f42a2ad1f7ebdc50c6ab525da2b",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-active-tasks-upd-ea5f.md",
+        "archive/documentation/CURRENT_STATE_active-tasks-updated.md",
+        "other/documentation/active-tasks-updated.md"
+      ]
+    },
+    {
+      "hash": "20cf093ac260f32f768431e9f39572e7",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-current-state-integration-road-a494.md",
+        "archive/documentation/CURRENT_STATE_integration_roadmap.md",
+        "other/documentation/integration_roadmap.md"
+      ]
+    },
+    {
+      "hash": "ac0ac438d591226f1e31297034fb7c49",
+      "files": [
+        "archive/documentation/curl.md",
+        "archive/api/backend_docs_api_examples_curl.md",
+        "archive/api/CODE-2025-07-15-docs-api-examples-curl-2115.md"
+      ]
+    },
+    {
+      "hash": "c1b1a75b8ea83444a5c65bc6eb9f42ab",
+      "files": [
+        "archive/documentation/backend_REALITY_ENGINE_INTROSPECTION_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-10-reality-engine-introspection-c-17fc.md",
+        "other/documentation/REALITY_ENGINE_INTROSPECTION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "80065791f5b1527ab0616d93f65703cc",
+      "files": [
+        "archive/documentation/CURRENT_STATE_integration-complete-july-7.md",
+        "archive/api/API-2025-07-06-current-state-integration-comp-7d66.md",
+        "other/documentation/integration-complete-july-7.md"
+      ]
+    },
+    {
+      "hash": "dbda95adeb39e2a333127536f63fe051",
+      "files": [
+        "archive/documentation/ARCH-2025-07-15-section-03-memory-knowledge-sy-2496.md",
+        "archive/architecture/Section_03_Memory_Knowledge_Systems.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_Section_03_Memory_Knowledge_Systems.md"
+      ]
+    },
+    {
+      "hash": "21032cb15730d92fc1c688866e9d8be9",
+      "files": [
+        "archive/documentation/backend_CURRENT_STATE_stock_scout_parameter_fixes.md",
+        "archive/documentation/DEBUG-2025-07-06-current-state-stock-scout-para-f5f2.md",
+        "other/documentation/stock_scout_parameter_fixes.md"
+      ]
+    },
+    {
+      "hash": "8c035d994ff541428f7142f06d7bb931",
+      "files": [
+        "archive/documentation/backend_ERROR_HANDLING_ANALYSIS.md",
+        "other/documentation/ERROR_HANDLING_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "cad9b1d9015902b96a8877c4b83254e1",
+      "files": [
+        "archive/documentation/NOTE-2025-07-09-truly-complete-final-stretch-t-9d24.md",
+        "archive/documentation/TRULY_COMPLETE_FINAL_STRETCH_TODO.md",
+        "other/documentation/FINAL_STRETCH_TODO.md"
+      ]
+    },
+    {
+      "hash": "537e823334bd3ff275e367f70bc7326f",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-18-template-library-complete-arch-5a60.md",
+        "archive/architecture/TEMPLATE_LIBRARY_COMPLETE_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "hash": "b9f3119926178a4e6b4a0842975161d0",
+      "files": [
+        "archive/documentation/MYTHOLOGY_LAB_INTEGRATION_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-16-mythology-lab-integration-comp-6689.md"
+      ]
+    },
+    {
+      "hash": "0cdb5b70ee809579e5bd7fcf31809a25",
+      "files": [
+        "archive/documentation/FRONTEND_REFACTORING_COMPLETE_1.md",
+        "archive/documentation/FRONTEND_REFACTORING_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-15-frontend-refactoring-complete--0d2b.md"
+      ]
+    },
+    {
+      "hash": "648ce7525819217d6bd66c29ac17c3b6",
+      "files": [
+        "archive/documentation/ERROR_PROPAGATION_ANALYSIS.md",
+        "other/documentation/ERROR_PROPAGATION_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "16dce7d6339ba70c79429de0cec643b4",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-dev-setup-cb78.md",
+        "archive/documentation/dev-setup.md"
+      ]
+    },
+    {
+      "hash": "6fefc3c72e7cb6db9b7219e1b33ff9f0",
+      "files": [
+        "archive/documentation/AI-2025-07-17-multi-llm-implementation-statu-2ce4.md",
+        "archive/documentation/MULTI_LLM_IMPLEMENTATION_STATUS.md"
+      ]
+    },
+    {
+      "hash": "6f0c0fb29131f1000e58335a34c2c444",
+      "files": [
+        "archive/documentation/PROMPT_SETS_INTEGRATION_PROGRESS.md",
+        "archive/documentation/DONKEY-2025-07-17-prompt-sets-integration-progre-efe6.md"
+      ]
+    },
+    {
+      "hash": "f3efe468076984c6a94a8eeb40eb5b5b",
+      "files": [
+        "archive/documentation/DOCUMENT_DEDUPLICATION_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-18-document-deduplication-complet-8282.md"
+      ]
+    },
+    {
+      "hash": "9f63cd05977cc4cca0c09675feff46f1",
+      "files": [
+        "archive/documentation/RESILIENCE_SUCCESS.md",
+        "archive/documentation/DONKEY-2025-07-07-resilience-success-d492.md",
+        "other/documentation/RESILIENCE_SUCCESS.md"
+      ]
+    },
+    {
+      "hash": "edc825d628b632e831783125f5f6fbe7",
+      "files": [
+        "archive/documentation/UKF_MIGRATION_COMPLETE.md",
+        "archive/documentation/DATA-2025-07-16-ukf-migration-complete-3deb.md"
+      ]
+    },
+    {
+      "hash": "9f37b42773963d2b223ba3eb0d0c6cbc",
+      "files": [
+        "archive/documentation/knowledge_dashboard.md",
+        "archive/documentation/DONKEY-2025-07-11-knowledge-dashboard-ebb7.md"
+      ]
+    },
+    {
+      "hash": "cbf0385863e2a366869ed2220740ab6f",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_8_POLYGON_UPGRADE.md",
+        "other/documentation/HANDOFF_JULY_8_POLYGON_UPGRADE.md"
+      ]
+    },
+    {
+      "hash": "9d67366f5afb9418b2b19210bf0ea338",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-pull-request-template-2-2c22.md",
+        "archive/documentation/pull_request_template_2.md"
+      ]
+    },
+    {
+      "hash": "06bf8e9942a2b2129a431cd66c36c674",
+      "files": [
+        "archive/documentation/PHASE-2025-07-06-current-state-memory-research--d29e.md",
+        "archive/documentation/CURRENT_STATE_memory_research_integration_phase2.md",
+        "other/documentation/memory_research_integration_phase2.md"
+      ]
+    },
+    {
+      "hash": "35e6aaa515a6defdc28b47b46c940f8c",
+      "files": [
+        "archive/documentation/REF-9810-06-12-media-generated-businesses-tas-1464.md",
+        "archive/readme/backend_media_generated_businesses_TaskFlow_Pro_-_A_project_management_tool_for_remote_teams_98100612-209f-4228-9db7-4dd331701eab_README.md",
+        "other/readme/README_13.md"
+      ]
+    },
+    {
+      "hash": "a5a5585c78008dbbb61510baf09c9f1c",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-multi-llm-tools-execution-flow-72ed.md",
+        "archive/documentation/multi-llm-tools-execution-flow.md"
+      ]
+    },
+    {
+      "hash": "8aa7caa450882e9e0ff2e579fa8c2240",
+      "files": [
+        "archive/documentation/AI-2025-07-15-section-01-core-ai-assistant-s-4be0.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_Section_01_Core_AI_Assistant_Systems.md",
+        "archive/architecture/Section_01_Core_AI_Assistant_Systems.md"
+      ]
+    },
+    {
+      "hash": "9823145d6d0a66c2ef23926540c42456",
+      "files": [
+        "archive/documentation/STOCK_SCOUT_FIX_DOCUMENTATION.md",
+        "archive/documentation/DEBUG-2025-07-06-stock-scout-fix-documentation-b9f6.md",
+        "other/documentation/STOCK_SCOUT_FIX_DOCUMENTATION.md"
+      ]
+    },
+    {
+      "hash": "fb9f9f46d1a52d941728b5dc4b245ce1",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-09-DB-donkey-betz-true-story-a482.md",
+        "donkey-betz/documentation/DONKEY_BETZ_TRUE_STORY.md",
+        "donkey-betz/documentation/DONKEY_BETZ_TRUE_STORY_1.md"
+      ]
+    },
+    {
+      "hash": "c0fcd04add7a4f46cea1905023337ce7",
+      "files": [
+        "archive/documentation/CODE-2025-07-12-platform-audit-july12-checkpoi-43af.md",
+        "archive/documentation/backend_PLATFORM_AUDIT_JULY12_CHECKPOINT.md",
+        "archive/documentation/PLATFORM_AUDIT_JULY12_CHECKPOINT.md"
+      ]
+    },
+    {
+      "hash": "6d8ced561141c99ca7300207f63d52f0",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-17-ai-learning-center-restoration-6a15.md",
+        "archive/documentation/AI_LEARNING_CENTER_RESTORATION_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "3f3ef630debc4205d35231670c2d11be",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_10_TEXT_CLEANER_FIX.md",
+        "other/documentation/HANDOFF_JULY_10_TEXT_CLEANER_FIX.md"
+      ]
+    },
+    {
+      "hash": "c1c23a3807282b4ef9f6819414e90776",
+      "files": [
+        "archive/documentation/migration_strategy.md",
+        "archive/documentation/DATA-2025-07-11-migration-strategy-7302.md",
+        "archive/documentation/backend_schema_audit_migration_strategy.md"
+      ]
+    },
+    {
+      "hash": "8089e8bed1ef9be2391455bc67fe99d3",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-09-truly-complete-context-preserv-583c.md",
+        "archive/architecture/TRULY_COMPLETE_CONTEXT_PRESERVATION_SYSTEM.md",
+        "other/architecture/CONTEXT_PRESERVATION_SYSTEM.md"
+      ]
+    },
+    {
+      "hash": "b971882a9fd1bbdd3cf7ff971b0278c0",
+      "files": [
+        "archive/documentation/CURRENT_STATE_handoff-notes.md",
+        "other/documentation/handoff-notes_1.md"
+      ]
+    },
+    {
+      "hash": "1ae2070fd8b1e2a6ea995dc890a5d3a2",
+      "files": [
+        "archive/documentation/CURRENT_STATE_REMAINING_ERRORS_JULY_9_2025.md",
+        "other/documentation/REMAINING_ERRORS_JULY_9_2025.md"
+      ]
+    },
+    {
+      "hash": "ed3fd0307d1520eb78a594f1e2cecf9c",
+      "files": [
+        "archive/documentation/task.md",
+        "archive/documentation/DONKEY-2025-07-13-task-9e38.md"
+      ]
+    },
+    {
+      "hash": "ec8d102d7408b9bf32bfd9e5d0d44410",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-06-current-state-cors-upload-fix-4ba1.md",
+        "archive/documentation/CURRENT_STATE_cors_upload_fix.md",
+        "other/documentation/cors_upload_fix.md"
+      ]
+    },
+    {
+      "hash": "13fb5dbb30cb1642dd40208bff10d120",
+      "files": [
+        "archive/documentation/research_shit_mythology_monitoring_setup.md",
+        "archive/documentation/DONKEY-2025-07-11-research-shit-mythology-monito-4126.md",
+        "other/documentation/mythology_monitoring_setup.md"
+      ]
+    },
+    {
+      "hash": "4b92f4d2cf02dc21d9654edd10b9e473",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-15-section-05-business-intelligen-c8df.md",
+        "archive/architecture/Section_05_Business_Intelligence_Systems.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_Section_05_Business_Intelligence_Systems.md"
+      ]
+    },
+    {
+      "hash": "e97df70026768805f5ab48e5afd0d201",
+      "files": [
+        "archive/documentation/backend_CURRENT_STATE_handoff-notes.md",
+        "other/documentation/handoff-notes.md"
+      ]
+    },
+    {
+      "hash": "24866816fe123d36c15317b46d274aeb",
+      "files": [
+        "archive/documentation/research_shit_REALITY_ENGINE_PHENOMENON.md",
+        "other/documentation/REALITY_ENGINE_PHENOMENON.md"
+      ]
+    },
+    {
+      "hash": "9737a33179119254e7fcd783873eb36b",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-security-eb18.md",
+        "archive/documentation/SECURITY.md"
+      ]
+    },
+    {
+      "hash": "8f2a467f52a55542d91348a5150da360",
+      "files": [
+        "archive/documentation/LUCIDE_ICONS_MIGRATION_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-17-lucide-icons-migration-complet-5e3a.md"
+      ]
+    },
+    {
+      "hash": "b8dee395aca4ee1a39564ec4e1ac970b",
+      "files": [
+        "archive/documentation/backend_CURRENT_STATE_recent-fixes.md",
+        "other/documentation/recent-fixes.md"
+      ]
+    },
+    {
+      "hash": "efa9650bcc8181ca7117c3385d1ba9ea",
+      "files": [
+        "archive/documentation/INTEGRATION_FIX_PLAN.md",
+        "archive/api/API-2025-07-09-integration-fix-plan-8622.md",
+        "other/documentation/INTEGRATION_FIX_PLAN.md"
+      ]
+    },
+    {
+      "hash": "78e8e3a90b1f4e4d5875e4a1fd73e602",
+      "files": [
+        "archive/documentation/TRULY_COMPLETE_MASTER_COORDINATION.md",
+        "archive/documentation/DONKEY-2025-07-09-truly-complete-master-coordina-ef77.md",
+        "other/documentation/MASTER_COORDINATION.md"
+      ]
+    },
+    {
+      "hash": "34be1ba0844d5f78d28dbd291d90f279",
+      "files": [
+        "archive/documentation/PHASE-2025-07-06-current-state-memory-research--f777.md",
+        "archive/agent/CURRENT_STATE_memory_research_agent_integration_phase3.md",
+        "other/agent/memory_research_agent_integration_phase3.md"
+      ]
+    },
+    {
+      "hash": "97688debca71414d462db81f36036228",
+      "files": [
+        "archive/documentation/DYNAMIC_PROMPT_ABSTRACTION_COMPLETE.md",
+        "archive/documentation/DONKEY-2025-07-18-dynamic-prompt-abstraction-com-2692.md"
+      ]
+    },
+    {
+      "hash": "07f61f08bf52a654ad0f6e42f9eb9a7b",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-13-service-consolidation-plan-3437.md",
+        "archive/documentation/backend_SERVICE_CONSOLIDATION_PLAN.md",
+        "archive/documentation/SERVICE_CONSOLIDATION_PLAN.md"
+      ]
+    },
+    {
+      "hash": "941f1e6478fee789a681b4edacc00cb6",
+      "files": [
+        "archive/documentation/backend_schema_audit_detailed_inconsistencies.md",
+        "archive/documentation/AI-2025-07-11-detailed-inconsistencies-49cd.md",
+        "archive/documentation/detailed_inconsistencies.md"
+      ]
+    },
+    {
+      "hash": "2f4cda86b60d2adddc69bab0537732d6",
+      "files": [
+        "archive/documentation/DEBUG-2025-07-15-05-business-intelligence-syste-6e4a.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_05_Business_Intelligence_Systems_Investigation.md",
+        "archive/architecture/05_Business_Intelligence_Systems_Investigation.md"
+      ]
+    },
+    {
+      "hash": "8ae96ac919a3029428b775f88c429228",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-10-realistic-project-status-july--1ba7.md",
+        "archive/documentation/REALISTIC_PROJECT_STATUS_JULY_9_2025.md",
+        "other/documentation/REALISTIC_PROJECT_STATUS_JULY_9_2025.md"
+      ]
+    },
+    {
+      "hash": "09b54ae647784c04913d3b2dd89f3af8",
+      "files": [
+        "archive/documentation/DASHBOARD_BACKEND_COMPLETE.md",
+        "archive/documentation/CODE-2025-07-17-dashboard-backend-complete-ce70.md"
+      ]
+    },
+    {
+      "hash": "4390fb7cb8742b17bae1a2a9ff5dfa5d",
+      "files": [
+        "archive/documentation/research_shit_350_myth_dicoveries.md",
+        "archive/documentation/DONKEY-2025-07-11-research-shit-350-myth-dicover-179e.md",
+        "other/documentation/350_myth_dicoveries.md"
+      ]
+    },
+    {
+      "hash": "2188a10888749760ba09b027c33dd7f1",
+      "files": [
+        "archive/documentation/DONKEY-2025-07-06-memory-palace-update-f3b5.md",
+        "archive/documentation/MEMORY_PALACE_UPDATE.md",
+        "other/documentation/MEMORY_PALACE_UPDATE.md"
+      ]
+    },
+    {
+      "hash": "83c5d2b6360338d86785c175fa467c49",
+      "files": [
+        "archive/documentation/backend_SPACE_MAN.md",
+        "archive/documentation/CODE-2025-07-10-space-man-826a.md",
+        "other/documentation/SPACE_MAN.md"
+      ]
+    },
+    {
+      "hash": "b9c5033dd34552195f5784466bd347dc",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_9_2025_EVENING.md",
+        "other/documentation/HANDOFF_JULY_9_2025_EVENING.md"
+      ]
+    },
+    {
+      "hash": "74ca06cf4034c9c35ee979739cafdc57",
+      "files": [
+        "archive/documentation/CURRENT_STATE_HANDOFF_JULY_9_STOCK_SCOUT_FIXES.md",
+        "other/documentation/HANDOFF_JULY_9_STOCK_SCOUT_FIXES.md"
+      ]
+    },
+    {
+      "hash": "f319a28ca4bc57bef5331302d7e4ff96",
+      "files": [
+        "archive/documentation/REF-2025-07-15-docs-memory-search-optimizatio-3b6f.md",
+        "archive/report/backend_docs_MEMORY_SEARCH_OPTIMIZATION_REPORT.md",
+        "archive/report/MEMORY_SEARCH_OPTIMIZATION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "2072b134887092757c9bce314b8bf7e1",
+      "files": [
+        "archive/documentation/CURRENT_STATE_recent-fixes.md",
+        "other/documentation/recent-fixes_1.md"
+      ]
+    },
+    {
+      "hash": "516f26e7eee55650f2b7f4e4fb6edbc0",
+      "files": [
+        "archive/documentation/REF-2025-07-04-media-generated-businesses-min-9198.md",
+        "archive/readme/backend_media_generated_businesses_MindfulMinutes_090f7e9e-f83b-4467-9941-9d282be17e31_README.md",
+        "other/readme/README_15.md"
+      ]
+    },
+    {
+      "hash": "2171f56a143dddf675d862cb1b1890ef",
+      "files": [
+        "archive/documentation/websockets.md",
+        "archive/api/backend_docs_api_websockets.md",
+        "archive/api/DONKEY-2025-07-15-docs-api-websockets-bf90.md"
+      ]
+    },
+    {
+      "hash": "453936b81dfa239a2f000e751c46047f",
+      "files": [
+        "archive/agent/DEBUG-2025-07-14-event-loop-content-agent-fix-s-5b9c.md",
+        "archive/agent/EVENT_LOOP_CONTENT_AGENT_FIX_SUMMARY_1.md",
+        "archive/agent/EVENT_LOOP_CONTENT_AGENT_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "934898b8ce491b8e2b2ce021dd2cdd64",
+      "files": [
+        "archive/agent/Agent_Integration_Recommendations.md",
+        "archive/agent/AI-2025-07-06-agent-integration-recommendati-658e.md",
+        "other/agent/Agent_Integration_Recommendations.md"
+      ]
+    },
+    {
+      "hash": "ab591eb2e4eba5d24dcb4d31a3dfd774",
+      "files": [
+        "archive/agent/DONKEY-2025-07-06-research-agent-system-7b00.md",
+        "archive/agent/RESEARCH_AGENT_SYSTEM.md",
+        "other/agent/RESEARCH_AGENT_SYSTEM.md"
+      ]
+    },
+    {
+      "hash": "95a316a632d3cc1324acb4e8250ac83f",
+      "files": [
+        "archive/agent/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_02_Agent_Prompt_Task_Mismatch_Investigation.md",
+        "archive/agent/02_Agent_Prompt_Task_Mismatch_Investigation.md",
+        "archive/agent/DONKEY-2025-07-15-02-agent-prompt-task-mismatch--c4e9.md"
+      ]
+    },
+    {
+      "hash": "c53e9cf07e86444db5658a26af073209",
+      "files": [
+        "archive/agent/AI-2025-07-15-section-02-agent-orchestra-sys-8113.md",
+        "archive/agent/Section_02_Agent_Orchestra_System.md",
+        "archive/agent/PROJECT_REVIEW_SECTIONS_Section_02_Agent_Orchestra_System.md"
+      ]
+    },
+    {
+      "hash": "69010200c837a5d10fda90426cf902e2",
+      "files": [
+        "archive/agent/backend_agent_orchestra_README.md",
+        "archive/agent/REF-2025-07-14-agent-orchestra-readme-b217.md",
+        "other/readme/README_11.md"
+      ]
+    },
+    {
+      "hash": "ff6eb22119006d129367e83918fadec9",
+      "files": [
+        "archive/agent/AGENT_ARCHITECTURE_REDESIGN_PLAN.md",
+        "archive/agent/ARCH-2025-07-17-agent-architecture-redesign-pl-04ef.md"
+      ]
+    },
+    {
+      "hash": "164b69274a4cae00de7fd55f0799d32f",
+      "files": [
+        "archive/agent/DEPLOY-2025-07-14-agent-deployment-enhancement-s-8568.md",
+        "archive/agent/backend_AGENT_DEPLOYMENT_ENHANCEMENT_SUMMARY.md",
+        "archive/agent/AGENT_DEPLOYMENT_ENHANCEMENT_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "8f365486c975092b3a414864c11d8ff9",
+      "files": [
+        "archive/agent/backend_AGENT_SYSTEM_REVIEW_REPORT.md",
+        "archive/agent/SYSTEM_REVIEW_JULY_2025_AGENT_SYSTEM_REVIEW_REPORT.md",
+        "archive/agent/DONKEY-2025-07-09-agent-system-review-report-b8e7.md",
+        "other/agent/AGENT_SYSTEM_REVIEW_REPORT_1.md",
+        "other/agent/AGENT_SYSTEM_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "633a928bf04d853dd256ce4a59d18491",
+      "files": [
+        "archive/agent/AGENT_ERROR_ANALYSIS.md",
+        "other/agent/AGENT_ERROR_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "a033c967b53e9fb18de6ca51a4242b0a",
+      "files": [
+        "archive/agent/02_AGENT_ORCHESTRA_REVIEW.md",
+        "archive/agent/PROJECT_REVIEW_SECTIONS_02_AGENT_ORCHESTRA_REVIEW.md",
+        "archive/agent/DONKEY-2025-07-15-02-agent-orchestra-review-2920.md"
+      ]
+    },
+    {
+      "hash": "49dbe3af39294b97fd50c32286c0eedc",
+      "files": [
+        "archive/agent/AI-2025-07-17-multi-llm-agent-system-oversit-b974.md",
+        "archive/agent/multi-llm-agent-system-oversite.md"
+      ]
+    },
+    {
+      "hash": "ac44c564978839522c8e120046983f24",
+      "files": [
+        "archive/agent/SECURITY-2025-07-14-agent-orchestra-security-valid-52fe.md",
+        "archive/agent/backend_agent_orchestra_SECURITY_VALIDATOR_README.md",
+        "other/readme/SECURITY_VALIDATOR_README.md"
+      ]
+    },
+    {
+      "hash": "fd1ccd3e8ab5dc035ce9471d511fbd62",
+      "files": [
+        "archive/agent/DONKEY-2025-07-17-market-scout-agent-7f25.md",
+        "archive/agent/Market_Scout_Agent.md"
+      ]
+    },
+    {
+      "hash": "d01d3e98c1252c65a8690e6209c4b05e",
+      "files": [
+        "archive/agent/STOCK_SCOUT_AGENT_FIXES_JULY_16_2025.md",
+        "archive/agent/STOCK_SCOUT_AGENT_FIXES_JULY_16_2025_1.md",
+        "archive/agent/DEBUG-2025-07-16-stock-scout-agent-fixes-july-1-cd14.md"
+      ]
+    },
+    {
+      "hash": "a03a089e4fc392195acb40f4ccdf9157",
+      "files": [
+        "archive/agent/Business_Generator_Agent.md",
+        "archive/agent/DONKEY-2025-07-17-business-generator-agent-f05a.md"
+      ]
+    },
+    {
+      "hash": "72086eb06ed4bab41f2675ed5404e93b",
+      "files": [
+        "archive/agent/DONKEY-2025-07-17-exercise-intelligence-agent-9361.md",
+        "archive/agent/Exercise_Intelligence_Agent.md"
+      ]
+    },
+    {
+      "hash": "19c3b6307ead738a5b444671516d149b",
+      "files": [
+        "archive/agent/DONKEY-2025-07-08-agent-api-access-improvements-ef38.md",
+        "archive/agent/AGENT_API_ACCESS_IMPROVEMENTS.md",
+        "other/agent/AGENT_API_ACCESS_IMPROVEMENTS.md"
+      ]
+    },
+    {
+      "hash": "c2283eb19e8c0fdb9b08530b3cfe95b6",
+      "files": [
+        "archive/agent/DONKEY-2025-07-08-agent-tool-mapping-dea6.md",
+        "archive/agent/AGENT_TOOL_MAPPING.md",
+        "other/agent/AGENT_TOOL_MAPPING.md"
+      ]
+    },
+    {
+      "hash": "e42a7b097b5f928d1678e4dcf60aec0c",
+      "files": [
+        "archive/agent/backend_agent_orchestra_AUTOMATIC_RESTART_SOLUTION.md",
+        "archive/agent/CODE-2025-07-14-agent-orchestra-automatic-rest-20c6.md",
+        "other/documentation/AUTOMATIC_RESTART_SOLUTION.md"
+      ]
+    },
+    {
+      "hash": "3010fdfde28a3c3deccdfe84299e8247",
+      "files": [
+        "archive/agent/AGENT_TOOL_FIX_PLAN.md",
+        "other/agent/AGENT_TOOL_FIX_PLAN.md"
+      ]
+    },
+    {
+      "hash": "07bf1a4ee3021bbc388ae16dd2a8f43c",
+      "files": [
+        "archive/agent/AGENT_INTEGRATION_REPORT.md",
+        "archive/agent/backend_AGENT_INTEGRATION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "5e624f0049f3d7c5e80045605482aa56",
+      "files": [
+        "archive/agent/DONKEY-2025-07-09-truly-complete-agent-memory-in-ae24.md",
+        "archive/agent/TRULY_COMPLETE_AGENT_MEMORY_INTEGRATION.md",
+        "other/agent/AGENT_MEMORY_INTEGRATION.md"
+      ]
+    },
+    {
+      "hash": "edc0ebdc788df538c1c9c822f57605e6",
+      "files": [
+        "archive/agent/AI-2025-07-17-custom-agent-system-complete-fe9c.md",
+        "archive/agent/CUSTOM_AGENT_SYSTEM_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "5eb729ef1d0a0d4c32a77e280397f76b",
+      "files": [
+        "archive/agent/CODE-2025-07-10-content-agent-fix-july-10-2025-8fcf.md",
+        "archive/agent/backend_CONTENT_AGENT_FIX_JULY_10_2025.md",
+        "other/agent/CONTENT_AGENT_FIX_JULY_10_2025.md"
+      ]
+    },
+    {
+      "hash": "d1efdf806b5e80bb725e028adc526097",
+      "files": [
+        "archive/agent/CURRENT_STATE_HANDOFF_JULY_9_BUSINESS_AGENT_FIX.md",
+        "other/agent/HANDOFF_JULY_9_BUSINESS_AGENT_FIX.md"
+      ]
+    },
+    {
+      "hash": "9fc3736f359715bbb339b1b6d1ef2f8a",
+      "files": [
+        "archive/readme/README_14.md",
+        "archive/readme/DONKEY-2025-07-15-readme-14-f21a.md",
+        "archive/api/backend_docs_api_README.md"
+      ]
+    },
+    {
+      "hash": "f85964d8b2c51b17bd9603aa6989cd7b",
+      "files": [
+        "archive/readme/scripts_README.md",
+        "archive/readme/REF-2025-07-05-scripts-readme-e46a.md",
+        "other/readme/README_23.md"
+      ]
+    },
+    {
+      "hash": "03fd5106c49f3fda13148eb80c939aae",
+      "files": [
+        "archive/readme/README_10.md",
+        "archive/readme/DONKEY-2025-07-16-readme-10-6ecc.md"
+      ]
+    },
+    {
+      "hash": "18de54d352b2d9e4a3db561a7ae410ab",
+      "files": [
+        "archive/readme/backend_schema_audit_README.md",
+        "archive/readme/README_11.md",
+        "archive/readme/REF-2025-07-11-schema-audit-readme-134e.md"
+      ]
+    },
+    {
+      "hash": "d383cb713fcebfe9cf86bafe3f48851b",
+      "files": [
+        "archive/readme/REF-2025-07-13-readme-8-e40e.md",
+        "archive/readme/README_8.md"
+      ]
+    },
+    {
+      "hash": "7fa10df3c60fa6748a226da839f89391",
+      "files": [
+        "archive/readme/TRULY_COMPLETE_README.md",
+        "archive/readme/DONKEY-2025-07-10-truly-complete-readme-ba08.md",
+        "other/readme/README_22.md"
+      ]
+    },
+    {
+      "hash": "08e743e1cdf9623226fff65833641e94",
+      "files": [
+        "archive/readme/DONKEY-2025-07-15-readme-15-85e6.md",
+        "archive/readme/README_15.md",
+        "other/readme/README_9.md"
+      ]
+    },
+    {
+      "hash": "6d19eab833765d78dff6156406c736dc",
+      "files": [
+        "archive/readme/REF-2025-07-13-readme-bcdb.md",
+        "archive/readme/README.md"
+      ]
+    },
+    {
+      "hash": "90a837daf51dad51d8aec5a706799b03",
+      "files": [
+        "archive/readme/backend_load_tests_README.md",
+        "archive/readme/REF-2025-07-09-load-tests-readme-3ba0.md",
+        "other/readme/README_12.md"
+      ]
+    },
+    {
+      "hash": "e6f690ee20922196d26ecfd45beba340",
+      "files": [
+        "archive/readme/DONKEY-2025-07-11-mythology-lab-readme-a365.md",
+        "archive/readme/backend_mythology_lab_README.md"
+      ]
+    },
+    {
+      "hash": "98dcc565c03288c801aa95e7e878a558",
+      "files": [
+        "archive/readme/REF-2025-07-11-ukf-readme-c4dd.md",
+        "archive/readme/ukf_README.md",
+        "archive/readme/README_1.md",
+        "archive/readme/README_9.md"
+      ]
+    },
+    {
+      "hash": "7cc7f8d7cb2f2f6ea48da17c4b42c097",
+      "files": [
+        "archive/readme/backend_.pytest_cache_README.md",
+        "archive/readme/REF-2025-07-15-.pytest-cache-readme-8c54.md",
+        "archive/readme/README_12.md",
+        "ai-content-studio/readme/README_2.md"
+      ]
+    },
+    {
+      "hash": "dfd51b62f80d7e9dd3dd759deaeb7995",
+      "files": [
+        "archive/readme/docs_README.md",
+        "archive/readme/REF-2025-07-05-readme-401a.md",
+        "other/readme/README_21.md"
+      ]
+    },
+    {
+      "hash": "05effa70e0366a08399518c6020071d5",
+      "files": [
+        "archive/readme/DONKEY-2025-07-14-security-readme-8cf5.md",
+        "archive/readme/backend_security_README.md",
+        "archive/readme/README_13.md"
+      ]
+    },
+    {
+      "hash": "f350a78f2790b57d9443f6c0a9abd997",
+      "files": [
+        "archive/readme/knowledge_base_README.md",
+        "archive/readme/REF-2025-07-11-knowledge-base-readme-e6b0.md",
+        "other/readme/README_24.md"
+      ]
+    },
+    {
+      "hash": "657181cc1dad6a504cd856df8845dbf6",
+      "files": [
+        "archive/readme/DONKEY-2025-07-16-MTA-readme-615a.md",
+        "other/readme/README_10.md"
+      ]
+    },
+    {
+      "hash": "ccb68e651d4d8b82db4de4b87f4e5242",
+      "files": [
+        "archive/testing/TEST-2025-07-13-test-132b.md",
+        "archive/testing/test.md"
+      ]
+    },
+    {
+      "hash": "c109e3f04d5dab64129a5a4a473a90f1",
+      "files": [
+        "archive/testing/10_TESTING_QUALITY_REVIEW.md",
+        "archive/testing/TEST-2025-07-15-10-testing-quality-review-aa8d.md",
+        "archive/testing/PROJECT_REVIEW_SECTIONS_10_TESTING_QUALITY_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "c5bff889c5f6996f15dbea97f5977bf4",
+      "files": [
+        "archive/testing/PROJECT_REVIEW_SECTIONS_Section_10_Testing_Quality.md",
+        "archive/testing/Section_10_Testing_Quality.md",
+        "archive/testing/TEST-2025-07-15-section-10-testing-quality-7824.md"
+      ]
+    },
+    {
+      "hash": "c47426b7b9fa102de3384b3705cf2bc1",
+      "files": [
+        "archive/testing/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_10_Testing_Quality_Investigation.md",
+        "archive/testing/TEST-2025-07-15-10-testing-quality-investigati-a9c5.md",
+        "archive/testing/10_Testing_Quality_Investigation.md"
+      ]
+    },
+    {
+      "hash": "c3ccfed2986e8ba8a26a02311cead01a",
+      "files": [
+        "archive/testing/DONKEY-2025-07-09-donkey-betz-frontend-testing-1327.md",
+        "archive/testing/donkey-betz-frontend_TESTING.md",
+        "other/testing/TESTING.md"
+      ]
+    },
+    {
+      "hash": "b046b7556e0171005ce644b12874853a",
+      "files": [
+        "archive/testing/REALITY_BREAK_TESTS.md",
+        "archive/testing/DONKEY-2025-07-10-reality-break-tests-68e4.md",
+        "other/testing/REALITY_BREAK_TESTS.md"
+      ]
+    },
+    {
+      "hash": "f738b8583859a0da184c0fb042d25f9d",
+      "files": [
+        "archive/testing/backend_REALITY_ENGINE_TESTING.md",
+        "archive/testing/TEST-2025-07-10-reality-engine-testing-3e01.md",
+        "other/testing/REALITY_ENGINE_TESTING.md"
+      ]
+    },
+    {
+      "hash": "cfa84e9d0f853573053d68053e1b0c58",
+      "files": [
+        "archive/testing/donkey-betz-frontend_error-boundary-test.md",
+        "other/testing/error-boundary-test.md"
+      ]
+    },
+    {
+      "hash": "1826665ad66b17314a6b67375827dd2a",
+      "files": [
+        "archive/testing/MORNING_TEST_REVIEW.md",
+        "archive/testing/DONKEY-2025-07-10-morning-test-review-e97f.md",
+        "other/testing/MORNING_TEST_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "2e0eec14b74f368540387e0c585f845d",
+      "files": [
+        "archive/testing/TEST-2025-07-05-business-hub-e2e-testing-compl-a153.md",
+        "archive/testing/backend_BUSINESS_HUB_E2E_TESTING_COMPLETE.md",
+        "other/testing/BUSINESS_HUB_E2E_TESTING_COMPLETE.md"
+      ]
+    },
+    {
+      "hash": "20dd78c8175ea7c739dd0be75e1db086",
+      "files": [
+        "archive/testing/Critical_Test_Questions.md",
+        "archive/testing/DONKEY-2025-07-10-critical-test-questions-8d04.md",
+        "other/testing/Critical_Test_Questions.md"
+      ]
+    },
+    {
+      "hash": "5a33e67bd209a806417e4a2c8faabdd1",
+      "files": [
+        "archive/testing/INTEGRATION_TEST_SUITE_DESIGN.md",
+        "archive/testing/TEST-2025-07-09-integration-test-suite-design-4d85.md",
+        "other/testing/INTEGRATION_TEST_SUITE_DESIGN.md"
+      ]
+    },
+    {
+      "hash": "d50fa3f35b7bcf920c4dc2841217725d",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-12-entity-system-readme-90bf.md",
+        "archive/architecture/ENTITY_SYSTEM_README.md",
+        "archive/architecture/backend_ENTITY_SYSTEM_README.md"
+      ]
+    },
+    {
+      "hash": "32a4d6a20fe185a329753d2d8347756d",
+      "files": [
+        "archive/architecture/backend_MEMORY_RAG_SYSTEM_FIX_REPORT.md",
+        "archive/architecture/DEBUG-2025-07-09-memory-rag-system-fix-report-f867.md",
+        "other/architecture/MEMORY_RAG_SYSTEM_FIX_REPORT.md"
+      ]
+    },
+    {
+      "hash": "a5301bb48333b74c44b67d92d7e489de",
+      "files": [
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_BACKEND_REVIEW_REPORT.md",
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-backen-48eb.md",
+        "archive/report/backend_BACKEND_REVIEW_REPORT.md",
+        "other/report/BACKEND_REVIEW_REPORT.md",
+        "other/report/BACKEND_REVIEW_REPORT_1.md"
+      ]
+    },
+    {
+      "hash": "f834ad1b218da310218ec736e856e68c",
+      "files": [
+        "archive/architecture/TRULY_COMPLETE_TEMPLATE_SYSTEM.md",
+        "archive/architecture/DONKEY-2025-07-09-truly-complete-template-system-67af.md",
+        "other/architecture/TEMPLATE_SYSTEM.md"
+      ]
+    },
+    {
+      "hash": "1ee42c97716818eaac2f1de5d5b4f320",
+      "files": [
+        "archive/architecture/UNIFIED_MEMORY_SYSTEM_COMPLETE.md",
+        "archive/architecture/DONKEY-2025-07-18-unified-memory-system-complete-ae83.md"
+      ]
+    },
+    {
+      "hash": "bc5e23d0520ca49181416f61c583c96f",
+      "files": [
+        "archive/architecture/STYLE_SYSTEM_FIX_REPORT_1.md",
+        "archive/architecture/DEBUG-2025-07-13-style-system-fix-report-1-4878.md",
+        "archive/architecture/STYLE_SYSTEM_FIX_REPORT.md"
+      ]
+    },
+    {
+      "hash": "ae698d2669f22bd933eb9aead3b8f6ac",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-securi-1764.md",
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_SECURITY_REVIEW_REPORT.md",
+        "other/report/SECURITY_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "76b50d56b6b8135aabcc09c2aefd6876",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-integr-d369.md",
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_INTEGRATION_REVIEW_REPORT.md",
+        "other/report/INTEGRATION_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "f9abd88bb813214abc284c84a0c28d2d",
+      "files": [
+        "archive/architecture/ARCH-2025-07-06-ml-scoring-system-design-5465.md",
+        "archive/architecture/ML_SCORING_SYSTEM_DESIGN.md",
+        "other/architecture/ML_SCORING_SYSTEM_DESIGN.md"
+      ]
+    },
+    {
+      "hash": "2dcd82e555dd3391e29e32fa04d961b8",
+      "files": [
+        "archive/architecture/AI-2025-07-17-multi-llm-architecture-6953.md",
+        "archive/architecture/multi-llm-architecture.md"
+      ]
+    },
+    {
+      "hash": "1b2280be848616894520cb5efa574e32",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-16-complete-system-integration-ma-1ff3.md",
+        "archive/architecture/COMPLETE_SYSTEM_INTEGRATION_MAP.md"
+      ]
+    },
+    {
+      "hash": "299bd234f443dfbec3c36206a13cd89e",
+      "files": [
+        "archive/architecture/backend_SYSTEM_WIDE_MODEL_FIX_JULY_10_2025.md",
+        "archive/architecture/CODE-2025-07-10-system-wide-model-fix-july-10--15de.md",
+        "other/architecture/SYSTEM_WIDE_MODEL_FIX_JULY_10_2025.md"
+      ]
+    },
+    {
+      "hash": "44442547292488cb1b5cffb0dff2f6b5",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-15-section-07-frontend-systems-af5f.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_Section_07_Frontend_Systems.md",
+        "archive/architecture/Section_07_Frontend_Systems.md"
+      ]
+    },
+    {
+      "hash": "bcd31119a4d5f5c6ac10b308f98fc986",
+      "files": [
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_04_Content_Media_Systems_Investigation.md",
+        "archive/architecture/04_Content_Media_Systems_Investigation.md",
+        "archive/architecture/DONKEY-2025-07-15-04-content-media-systems-inves-7821.md"
+      ]
+    },
+    {
+      "hash": "0d101b556ccb319fb132d24e79af61ff",
+      "files": [
+        "archive/architecture/ENTITY_SYSTEM_INTEGRATION.md",
+        "archive/architecture/DONKEY-2025-07-12-entity-system-integration-7cde.md",
+        "archive/architecture/backend_ENTITY_SYSTEM_INTEGRATION.md"
+      ]
+    },
+    {
+      "hash": "5e1478665a7e6b9755146e45873ebcc9",
+      "files": [
+        "archive/architecture/TECH-2025-07-09-system-review-july-2025-master-445a.md",
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_MASTER_ANALYSIS.md",
+        "other/documentation/MASTER_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "3b1f04ace9b25a6457e4f047a1340f01",
+      "files": [
+        "archive/architecture/PROMPTING_SYSTEM_OVERHAUL.md",
+        "archive/architecture/DONKEY-2025-07-17-prompting-system-overhaul-ca34.md"
+      ]
+    },
+    {
+      "hash": "94e1b0ec7e23d712507ddf3374569fce",
+      "files": [
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_MEMORY_SYSTEM_REVIEW_REPORT.md",
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-memory-1817.md",
+        "other/architecture/MEMORY_SYSTEM_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "11fa59b2fd5fc28dbbb7f6abe448bbcd",
+      "files": [
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_07_Frontend_Systems_Investigation.md",
+        "archive/architecture/DONKEY-2025-07-15-07-frontend-systems-investigat-8489.md",
+        "archive/architecture/07_Frontend_Systems_Investigation.md"
+      ]
+    },
+    {
+      "hash": "e0329fe955c845c5554810da7b8eb09a",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-10-prompting-system-audit-1646.md",
+        "archive/architecture/backend_PROMPTING_SYSTEM_AUDIT.md",
+        "other/architecture/PROMPTING_SYSTEM_AUDIT.md"
+      ]
+    },
+    {
+      "hash": "f7230609a8d0c7372cb85f52a589bac7",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-06-current-state-system-health-ju-d6ec.md",
+        "archive/architecture/CURRENT_STATE_system-health-july-7.md",
+        "other/architecture/system-health-july-7.md"
+      ]
+    },
+    {
+      "hash": "3f7117edded109fe5ad8270550d67030",
+      "files": [
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_FRONTEND_REVIEW_REPORT.md",
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-fronte-f9e2.md",
+        "other/report/FRONTEND_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "326612b68a217f5374574b00952c7f5d",
+      "files": [
+        "archive/architecture/07_FRONTEND_ARCHITECTURE_REVIEW.md",
+        "archive/architecture/PROJECT_REVIEW_SECTIONS_07_FRONTEND_ARCHITECTURE_REVIEW.md",
+        "archive/architecture/DONKEY-2025-07-15-07-frontend-architecture-revie-6d72.md"
+      ]
+    },
+    {
+      "hash": "2a8932504a127bc5ff35e59189c63d78",
+      "files": [
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_PERFORMANCE_REVIEW_REPORT.md",
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-perfor-94df.md",
+        "other/report/PERFORMANCE_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "ef7f381b4c182cc2b54cd97a75ad1955",
+      "files": [
+        "archive/architecture/PROMPTING_SYSTEM_ARCHITECTURE.md",
+        "archive/architecture/ARCH-2025-07-16-prompting-system-architecture-4e96.md"
+      ]
+    },
+    {
+      "hash": "8c72cade861f648a76af87df77c1cef7",
+      "files": [
+        "archive/architecture/ARCH-2025-07-12-ukf-unified-architecture-dadd.md",
+        "archive/architecture/UKF_UNIFIED_ARCHITECTURE.md",
+        "archive/architecture/backend_UKF_UNIFIED_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "hash": "a7a5f1271190d406c0e7966a6084ad30",
+      "files": [
+        "archive/architecture/SYSTEM_REVIEW_JULY_2025_DOCUMENTATION_REVIEW_REPORT.md",
+        "archive/architecture/DONKEY-2025-07-09-system-review-july-2025-docume-e154.md",
+        "other/report/DOCUMENTATION_REVIEW_REPORT.md"
+      ]
+    },
+    {
+      "hash": "80e714568215e188ca29b4e8af68f231",
+      "files": [
+        "archive/architecture/DONKEY-2025-07-16-tool-orchestra-architecture-9b6e.md",
+        "archive/architecture/TOOL_ORCHESTRA_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "hash": "075c4862e6b0d5ca61ab9031356bd7ad",
+      "files": [
+        "archive/architecture/SYSTEM_INTEGRATION_VERIFICATION.md",
+        "archive/architecture/DONKEY-2025-07-16-system-integration-verificatio-ae44.md"
+      ]
+    },
+    {
+      "hash": "5ef98b31e73c2000bf777b0f81e2ca0a",
+      "files": [
+        "archive/deployment/DEPLOY-2025-07-16-stock-scout-deployment-fix-sum-81e0.md",
+        "archive/report/STOCK_SCOUT_DEPLOYMENT_FIX_SUMMARY_1.md",
+        "archive/report/STOCK_SCOUT_DEPLOYMENT_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "ffdce08b2cc8365778438cd409d7a30a",
+      "files": [
+        "archive/api/OPENAPI_PARAMETER_FIX_SUMMARY_1.md",
+        "archive/api/OPENAPI_PARAMETER_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "6c0b165c451c69a2e7e446f99a203038",
+      "files": [
+        "archive/api/backend_content_API_DOCUMENTATION_SUMMARY.md",
+        "archive/api/DONKEY-2025-07-15-content-api-documentation-summ-6235.md",
+        "archive/api/API_DOCUMENTATION_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "240b60c280a63cdb9d74f349c58e354f",
+      "files": [
+        "archive/api/API_DOCUMENTATION.md",
+        "archive/api/backend_accounts_API_DOCUMENTATION.md",
+        "archive/api/DONKEY-2025-07-15-api-documentation-738c.md"
+      ]
+    },
+    {
+      "hash": "8bef94aa43cdacaa95be4eef2f6a9bde",
+      "files": [
+        "archive/api/CURRENT_STATE_POLYGON_API_FIX_INSTRUCTIONS.md",
+        "archive/api/API-2025-07-08-current-state-polygon-api-fix--a995.md",
+        "other/api/POLYGON_API_FIX_INSTRUCTIONS.md"
+      ]
+    },
+    {
+      "hash": "09a778ae5ab48b5ea87ce6b0557901e5",
+      "files": [
+        "archive/api/DONKEY-2025-07-06-api-suggestions-free-e9d7.md",
+        "archive/api/API_SUGGESTIONS_FREE.md",
+        "other/api/API_SUGGESTIONS_FREE.md"
+      ]
+    },
+    {
+      "hash": "886e422125ea4e286a54f5dddf2f5538",
+      "files": [
+        "archive/api/PROJECT_REVIEW_SECTIONS_Section_06_API_Integration_Layer.md",
+        "archive/api/API-2025-07-15-review-sections-section-06-api-6b07.md",
+        "archive/api/Section_06_API_Integration_Layer.md"
+      ]
+    },
+    {
+      "hash": "71d01e0bcf2d396162ec1392a70f7456",
+      "files": [
+        "archive/api/PLATFORM_SYNC_API_CONTRACTS.md",
+        "archive/api/API-2025-07-09-platform-sync-api-contracts-b282.md",
+        "other/api/API_CONTRACTS.md"
+      ]
+    },
+    {
+      "hash": "6418977e4cee4fc794679c85a9f0d1b5",
+      "files": [
+        "archive/api/TRULY_COMPLETE_REFERENCE_API_ENDPOINTS.md",
+        "archive/api/API-2025-07-09-truly-complete-reference-api-e-0589.md",
+        "other/api/REFERENCE_API_ENDPOINTS.md"
+      ]
+    },
+    {
+      "hash": "93b87ad701719e42ec1f2d28ce0e5530",
+      "files": [
+        "archive/api/DONKEY-2025-07-08-unified-api-access-a97b.md",
+        "archive/api/UNIFIED_API_ACCESS.md",
+        "other/api/UNIFIED_API_ACCESS.md"
+      ]
+    },
+    {
+      "hash": "0a1162b62f63f0f74da38a16012d5b31",
+      "files": [
+        "archive/api/API_DOCUMENTATION_SUMMARY_1.md",
+        "archive/api/DONKEY-2025-07-15-api-documentation-summary-1-4f55.md",
+        "archive/api/backend_docs_api_API_DOCUMENTATION_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "3cfc8abda2f3a3ffe5fa0f093b9516be",
+      "files": [
+        "archive/api/PROJECT_REVIEW_SECTIONS_API_ARCHITECTURE_REVIEW.md",
+        "archive/api/DONKEY-2025-07-15-review-sections-api-architectu-6cf1.md",
+        "archive/api/API_ARCHITECTURE_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "8c6a7ab3245d9f0451558a62d0a16765",
+      "files": [
+        "archive/api/backend_POLYGON_API_MIGRATION.md",
+        "archive/api/API-2025-07-08-polygon-api-migration-db2d.md",
+        "other/api/POLYGON_API_MIGRATION.md"
+      ]
+    },
+    {
+      "hash": "b812d36c459d46431c48d72bfd6c4bf1",
+      "files": [
+        "archive/api/backend_ai_partner_API_DOCUMENTATION_ADDED.md",
+        "archive/api/API_DOCUMENTATION_ADDED.md",
+        "archive/api/DONKEY-2025-07-15-ai-partner-api-documentation-a-12c6.md"
+      ]
+    },
+    {
+      "hash": "0a3085c4cc26f1ca018ec1528b4359ba",
+      "files": [
+        "archive/api/FRONTEND_API_URL_FIXES_COMPLETE.md",
+        "archive/api/DONKEY-2025-07-17-frontend-api-url-fixes-complet-fe05.md"
+      ]
+    },
+    {
+      "hash": "3f94c0efcb4d74e4eb736bd2f47d6613",
+      "files": [
+        "archive/api/backend_POLYGON_API_KEY_FIX.md",
+        "archive/api/API-2025-07-08-polygon-api-key-fix-559b.md",
+        "other/api/POLYGON_API_KEY_FIX.md"
+      ]
+    },
+    {
+      "hash": "80ca2bbc698ff6b72b703637fc6b9ee4",
+      "files": [
+        "archive/api/DONKEY-2025-07-07-api-status-update-939a.md",
+        "archive/api/API_STATUS_UPDATE.md",
+        "other/api/API_STATUS_UPDATE.md"
+      ]
+    },
+    {
+      "hash": "53e12e0d282506dcfa3c816cbc12b6c2",
+      "files": [
+        "archive/api/SECURITY-2025-07-09-api-security-audit-6e3a.md",
+        "archive/api/backend_API_SECURITY_AUDIT.md",
+        "other/api/API_SECURITY_AUDIT.md"
+      ]
+    },
+    {
+      "hash": "8274be07d4cbbdd7fb86e5a03d59c165",
+      "files": [
+        "archive/api/06_API_Integration_Layer_Investigation.md",
+        "archive/api/API-2025-07-15-06-api-integration-layer-inves-b692.md",
+        "archive/api/PROJECT_REVIEW_SECTIONS_DETAILED_INVESTIGATIONS_06_API_Integration_Layer_Investigation.md"
+      ]
+    },
+    {
+      "hash": "a37ecf2074ce5606d74165c5acd0b80b",
+      "files": [
+        "archive/api/API-2025-07-08-api-inventory-and-ml-integrati-71eb.md",
+        "archive/api/API_INVENTORY_AND_ML_INTEGRATION.md",
+        "other/api/API_INVENTORY_AND_ML_INTEGRATION.md"
+      ]
+    },
+    {
+      "hash": "a81978b117517450447ed118ebcbd445",
+      "files": [
+        "archive/api/06_API_ARCHITECTURE_REVIEW.md",
+        "archive/api/DONKEY-2025-07-15-06-api-architecture-review-fe0f.md",
+        "archive/api/PROJECT_REVIEW_SECTIONS_06_API_ARCHITECTURE_REVIEW.md"
+      ]
+    },
+    {
+      "hash": "dc47092f818df431f5a95db10992e525",
+      "files": [
+        "archive/api/API-2025-07-06-current-state-july-6-ml-api-in-4559.md",
+        "archive/api/backend_CURRENT_STATE_july_6_ml_api_integration.md",
+        "other/api/july_6_ml_api_integration.md"
+      ]
+    },
+    {
+      "hash": "d31f6b86aab95032efa8a2500ce8e082",
+      "files": [
+        "archive/api/DONKEY-2025-07-06-reddit-api-setup-guide-c913.md",
+        "archive/api/REDDIT_API_SETUP_GUIDE.md",
+        "other/api/REDDIT_API_SETUP_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "4a42793ec91782e83e717d1af8c90fad",
+      "files": [
+        "archive/api/backend_GOVERNMENT_API_INTEGRATION.md",
+        "archive/api/API-2025-07-06-government-api-integration-2b55.md",
+        "other/api/GOVERNMENT_API_INTEGRATION.md"
+      ]
+    },
+    {
+      "hash": "bf342e5ea911511ad7c93c47c9f4fbd4",
+      "files": [
+        "archive/report/USER_PROFILE_INTELLIGENCE_REPORT.md",
+        "archive/report/backend_USER_PROFILE_INTELLIGENCE_REPORT.md"
+      ]
+    },
+    {
+      "hash": "a16b24d0d4e64eb62bf6d70705e0c737",
+      "files": [
+        "archive/report/UNIFIED_SEARCH_FIX_REPORT.md",
+        "archive/report/DEBUG-2025-07-12-unified-search-fix-report-9d93.md",
+        "archive/report/backend_UNIFIED_SEARCH_FIX_REPORT.md"
+      ]
+    },
+    {
+      "hash": "5756d31c348fd2fc73930f03186bea15",
+      "files": [
+        "archive/report/CACHE_IMPORT_FIX_SUMMARY_1.md",
+        "archive/report/CACHE_IMPORT_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "431fd4be99a539a43b44cd2111036410",
+      "files": [
+        "archive/report/DONKEY-2025-07-13-service-consolidation-report-1099.md",
+        "archive/report/backend_SERVICE_CONSOLIDATION_REPORT.md",
+        "archive/report/SERVICE_CONSOLIDATION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "5e221e40b6cb79dd6d35da136d34bb15",
+      "files": [
+        "archive/report/DONKEY-2025-07-12-service-optimization-report-779e.md",
+        "archive/report/backend_SERVICE_OPTIMIZATION_REPORT.md",
+        "archive/report/SERVICE_OPTIMIZATION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "1795b4e136bfedd82735baeb027786b7",
+      "files": [
+        "archive/report/ASYNC_FIX_SUMMARY.md",
+        "archive/report/DEBUG-2025-07-12-async-fix-summary-07e6.md",
+        "archive/report/backend_ASYNC_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "5be4366e43d1b16405b1fe33268a17e4",
+      "files": [
+        "archive/report/CURRENT_STATE_FINAL_INTEGRATION_SUMMARY.md",
+        "other/report/FINAL_INTEGRATION_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "9b5f29db844650643b6ce9565a5d7948",
+      "files": [
+        "archive/report/backend_UNIVERSAL_BUILDER_FIXES_SUMMARY.md",
+        "other/report/UNIVERSAL_BUILDER_FIXES_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "0927fbcdda74bd7924563d6faeafa572",
+      "files": [
+        "archive/report/BUSINESS_HUB_AUDIT_REPORT.md",
+        "archive/report/DONKEY-2025-07-08-business-hub-audit-report-ecb1.md",
+        "other/report/BUSINESS_HUB_AUDIT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "62238efa589b0818aa1135b95348e301",
+      "files": [
+        "archive/report/SECURITY-2025-07-09-authentication-test-report-8dfb.md",
+        "archive/report/AUTHENTICATION_TEST_REPORT.md",
+        "other/report/AUTHENTICATION_TEST_REPORT.md"
+      ]
+    },
+    {
+      "hash": "2bb88f707abb34269e961b51613b3bdb",
+      "files": [
+        "archive/report/backend_RESILIENCE_FIXES_SUMMARY.md",
+        "archive/report/DEBUG-2025-07-08-resilience-fixes-summary-16d8.md",
+        "other/report/RESILIENCE_FIXES_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "e760f17699dbf31d38a2b86b73518e48",
+      "files": [
+        "archive/report/DONKEY-2025-07-18-commit-summary-41fa.md",
+        "archive/report/COMMIT_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "92f0726e623621f0f325acbb75d2c70a",
+      "files": [
+        "archive/report/EMBEDDING_CONNECTIVITY_REPORT.md",
+        "archive/report/DATA-2025-07-16-embedding-connectivity-report-7c97.md"
+      ]
+    },
+    {
+      "hash": "19c30e8c85aa350d95fa0a86c5d4730a",
+      "files": [
+        "archive/report/backend_research_shit_memory_integration_report.md",
+        "other/report/memory_integration_report.md"
+      ]
+    },
+    {
+      "hash": "d8d646e6decad1a7bd251a4bbf732803",
+      "files": [
+        "archive/report/DONKEY-2025-07-11-350-investigation-report-ec4a.md",
+        "archive/report/backend_350_investigation_report.md",
+        "other/report/350_investigation_report.md"
+      ]
+    },
+    {
+      "hash": "88066c7255b938cd536ec6222e6fb9b2",
+      "files": [
+        "archive/report/multi-llm-execuitve-summary.md",
+        "archive/report/DONKEY-2025-07-17-multi-llm-execuitve-summary-7bcf.md"
+      ]
+    },
+    {
+      "hash": "50d15c035c8a84757512eec9643ef220",
+      "files": [
+        "archive/report/backend_INVALID_TICKER_FIX_SUMMARY.md",
+        "other/report/INVALID_TICKER_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "7b4a72b764b7eaca2f588df70d5db29f",
+      "files": [
+        "archive/report/RESILIENCE_FINAL_REPORT.md",
+        "other/report/RESILIENCE_FINAL_REPORT.md"
+      ]
+    },
+    {
+      "hash": "e4df8b536b615e129e178dea4dc6237b",
+      "files": [
+        "archive/report/UNCONNECTED_FEATURES_REPORT.md",
+        "archive/report/DONKEY-2025-07-17-unconnected-features-report-245a.md"
+      ]
+    },
+    {
+      "hash": "3f0d182269ee0ce2a1afd62304311dcc",
+      "files": [
+        "archive/report/PHASE-2025-07-11-phase2-final-summary-fa3e.md",
+        "archive/report/PHASE2_FINAL_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "cd6cdb6db66f4b9c48d5c3bad7d0b08f",
+      "files": [
+        "archive/report/PHASE-2025-07-11-phase2-completion-report-456d.md",
+        "archive/report/phase2_completion_report.md"
+      ]
+    },
+    {
+      "hash": "0574e9c92551228f6d4a8bd0c6a91b4f",
+      "files": [
+        "archive/report/DAY_2_REPORT.md",
+        "archive/report/DONKEY-2025-07-09-day-2-report-49c7.md",
+        "other/report/DAY_2_REPORT.md"
+      ]
+    },
+    {
+      "hash": "c88b34d748e0e1fc3ad7eada00d3b2e3",
+      "files": [
+        "archive/report/backend_REDDIT_SCOUT_COMPLETION_SUMMARY.md",
+        "other/report/REDDIT_SCOUT_COMPLETION_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "2b5f4134c719af2b2bc176df200193f0",
+      "files": [
+        "archive/report/discovery_report.md",
+        "archive/report/DONKEY-2025-07-11-discovery-report-e082.md"
+      ]
+    },
+    {
+      "hash": "a40b3d2abca72c48b1a0ee7336b14ac6",
+      "files": [
+        "archive/report/CONTENT_STUDIO_TEST_SUMMARY.md",
+        "archive/report/CONTENT_STUDIO_TEST_SUMMARY_1.md"
+      ]
+    },
+    {
+      "hash": "e04f721889507796f847dba82efadfa5",
+      "files": [
+        "archive/report/backend_DOCUMENTATION_AUDIT_REPORT.md",
+        "archive/report/DONKEY-2025-07-09-documentation-audit-report-06f8.md",
+        "other/report/DOCUMENTATION_AUDIT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "1b56dbb2008f42cfdc75baefbc4dccf4",
+      "files": [
+        "archive/report/DEBUG-2025-07-16-stock-cache-import-fix-summary-067c.md",
+        "archive/report/STOCK_CACHE_IMPORT_FIX_SUMMARY_1.md",
+        "archive/report/STOCK_CACHE_IMPORT_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "e1027e1b984cd1ad1554bc58f76ec069",
+      "files": [
+        "archive/report/DONKEY-2025-07-11-memory-date-corruption-report-b75a.md",
+        "archive/report/backend_MEMORY_DATE_CORRUPTION_REPORT.md",
+        "other/report/MEMORY_DATE_CORRUPTION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "89902b38966edbfd089a88a1d6c995e8",
+      "files": [
+        "archive/report/backend_TRULY_COMPLETE_BACKEND_CLEANUP_SUMMARY.md",
+        "other/report/BACKEND_CLEANUP_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "f8ca0a0ee36a7771c847aae0934c48eb",
+      "files": [
+        "archive/report/DONKEY-2025-07-11-schema-audit-validation-report-d8d4.md",
+        "archive/report/backend_schema_audit_validation_report.md",
+        "archive/report/validation_report.md"
+      ]
+    },
+    {
+      "hash": "939e31f8ab5cfc20737020c316ece6f2",
+      "files": [
+        "archive/report/AI-2025-07-14-ai-assistant-status-report-3ef5.md",
+        "archive/report/backend_AI_ASSISTANT_STATUS_REPORT.md",
+        "archive/report/AI_ASSISTANT_STATUS_REPORT.md"
+      ]
+    },
+    {
+      "hash": "288753f08efe3af3d9597def65de840b",
+      "files": [
+        "archive/report/BUSINESS_HUB_IMPORT_FIX_SUMMARY.md",
+        "archive/report/BUSINESS_HUB_IMPORT_FIX_SUMMARY_1.md"
+      ]
+    },
+    {
+      "hash": "c971f8ef9ef6925aa67ad34ada94b8a2",
+      "files": [
+        "archive/report/DATA-2025-07-12-embedding-metadata-report-0a8f.md",
+        "archive/report/EMBEDDING_METADATA_REPORT.md",
+        "archive/report/backend_EMBEDDING_METADATA_REPORT.md"
+      ]
+    },
+    {
+      "hash": "4af2b9182bdaaab7d03ecbba27585981",
+      "files": [
+        "archive/report/knowledge_base_reports_inventory_report.md",
+        "archive/report/DONKEY-2025-07-11-knowledge-base-reports-invento-1d63.md",
+        "other/report/inventory_report.md"
+      ]
+    },
+    {
+      "hash": "7c1ec4bbbabbdc91819548d92195486a",
+      "files": [
+        "archive/report/backend_REALITY_ENGINE_FIX_SUMMARY.md",
+        "other/report/REALITY_ENGINE_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "546166ae5899a12579daf79d1e99e8eb",
+      "files": [
+        "archive/report/AI_EVOLUTION_IMPORT_FIX_SUMMARY.md",
+        "archive/report/AI_EVOLUTION_IMPORT_FIX_SUMMARY_1.md"
+      ]
+    },
+    {
+      "hash": "1ce48bd4c65cb99e56728c8b6fefdba0",
+      "files": [
+        "archive/report/backend_chatgpt_import_verification_summary.md",
+        "archive/report/chatgpt_import_verification_summary.md"
+      ]
+    },
+    {
+      "hash": "517db52aa9e760488685b3bd04c27e17",
+      "files": [
+        "archive/report/backend_MEMORY_ACCESS_FIX_REPORT.md",
+        "other/report/MEMORY_ACCESS_FIX_REPORT.md"
+      ]
+    },
+    {
+      "hash": "0153db12af5f81575af8b5e57b0b5426",
+      "files": [
+        "archive/report/MIDDLEWARE_IMPORT_FIX_SUMMARY.md",
+        "archive/report/MIDDLEWARE_IMPORT_FIX_SUMMARY_1.md"
+      ]
+    },
+    {
+      "hash": "2ef025532de809c0629655ea64acda2e",
+      "files": [
+        "archive/report/PHASE-2025-07-10-reality-engine-phase2-summary-02ec.md",
+        "archive/report/backend_REALITY_ENGINE_PHASE2_SUMMARY.md",
+        "other/report/REALITY_ENGINE_PHASE2_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "5e7a6aa55515943d6a29e53c6b4df9f4",
+      "files": [
+        "archive/report/OPTIMIZATION_SUMMARY.md",
+        "archive/report/donkey-betz-frontend_OPTIMIZATION_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "43c859700320e0f62bb4c6a4efd1e927",
+      "files": [
+        "archive/report/CACHE_GETTER_EXPORTS_FIX_SUMMARY_1.md",
+        "archive/report/CACHE_GETTER_EXPORTS_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "82cbed5cb52890eaaf836014f06515d8",
+      "files": [
+        "archive/report/FRONTEND_REFACTORING_SUMMARY.md",
+        "archive/report/donkey-betz-frontend_FRONTEND_REFACTORING_SUMMARY.md",
+        "archive/report/DONKEY-2025-07-15-frontend-refactoring-summary-bc96.md"
+      ]
+    },
+    {
+      "hash": "2fd96cb532bdc2208bc3917af70d52c4",
+      "files": [
+        "archive/report/backend_RESILIENCE_FINAL_REPORT.md",
+        "archive/report/DONKEY-2025-07-07-resilience-final-report-1fa2.md",
+        "other/report/RESILIENCE_FINAL_REPORT_1.md"
+      ]
+    },
+    {
+      "hash": "b8a129fa04451d7ad5a11dd89a140e7b",
+      "files": [
+        "archive/report/MOCK_DATA_REMOVAL_SUMMARY.md",
+        "other/report/MOCK_DATA_REMOVAL_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "34901bcc08c5a76466e173765e4be29c",
+      "files": [
+        "archive/report/UKF_AUDIT_REPORT.md",
+        "archive/report/backend_UKF_AUDIT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "bd536f5a2192696fc73dcd1019deca20",
+      "files": [
+        "archive/report/DONKEY-2025-07-09-load-tests-performance-report-f03e.md",
+        "archive/report/backend_load_tests_PERFORMANCE_REPORT.md",
+        "other/report/PERFORMANCE_REPORT.md"
+      ]
+    },
+    {
+      "hash": "e2baf81caabb726e4265a141a41e51bf",
+      "files": [
+        "archive/report/DONKEY-2025-07-09-day-1-report-9113.md",
+        "archive/report/DAY_1_REPORT.md",
+        "other/report/DAY_1_REPORT.md"
+      ]
+    },
+    {
+      "hash": "958ae247f3109793f0c12aef5008dd37",
+      "files": [
+        "archive/report/DONKEY-2025-07-11-integration-success-summary-4f08.md",
+        "archive/report/backend_INTEGRATION_SUCCESS_SUMMARY.md",
+        "other/report/INTEGRATION_SUCCESS_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "058721e498a1d21965e8130202b84ba5",
+      "files": [
+        "archive/report/AI_PLATFORM_FIXES_SUMMARY.md",
+        "other/report/AI_PLATFORM_FIXES_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "e23a5bef61038d11ff02fd66d9da817b",
+      "files": [
+        "archive/report/backend_STOCK_SCOUT_DISPLAY_FIX_SUMMARY.md",
+        "other/report/STOCK_SCOUT_DISPLAY_FIX_SUMMARY.md"
+      ]
+    },
+    {
+      "hash": "43f719cbd798b4d8f48d801eeb2ee50a",
+      "files": [
+        "dbao-studio/guide/PARALLEL_DEPLOYMENT_GUIDE.md",
+        "donkey-betz/guide/PARALLEL_DEPLOYMENT_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "0e0421ee9d3ff431783fa94e63fb81a4",
+      "files": [
+        "dbao-studio/documentation/CORS_AUDIT_HANDOFF.md",
+        "donkey-betz/documentation/CORS_AUDIT_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "14d076de0a245aba8aabf139239e6507",
+      "files": [
+        "dbao-studio/documentation/MEMORY_SHARING_IMPLEMENTATION.md",
+        "donkey-betz/documentation/MEMORY_SHARING_IMPLEMENTATION.md"
+      ]
+    },
+    {
+      "hash": "afe1b0c04f92fd1fee0b320d24bd3d28",
+      "files": [
+        "dbao-studio/documentation/DBAO_RELIABILITY_FIXES_HANDOFF_1.md",
+        "dbao-studio/documentation/DBAO_RELIABILITY_FIXES_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "75eaca061e57153b49a24eb15306312e",
+      "files": [
+        "dbao-studio/documentation/GLOSSARY_ANCHOR_CURATOR_HANDOFF.md",
+        "donkey-betz/documentation/GLOSSARY_ANCHOR_CURATOR_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "92bad2ada6c871c7df7b232e7e0ffae3",
+      "files": [
+        "dbao-studio/documentation/DBAO_GAMEDAY_SENTINEL_DEPLOYED_1.md",
+        "dbao-studio/documentation/DBAO_GAMEDAY_SENTINEL_DEPLOYED.md"
+      ]
+    },
+    {
+      "hash": "7f24a701c3bb9e5845f138023a46d2ca",
+      "files": [
+        "dbao-studio/documentation/FRONTEND_INTEGRATION_STRATEGY.md",
+        "donkey-betz/documentation/FRONTEND_INTEGRATION_STRATEGY.md"
+      ]
+    },
+    {
+      "hash": "e5fe84d05c5c468d1c1b6a1186f916e8",
+      "files": [
+        "dbao-studio/documentation/PORT_ALLOCATION.md",
+        "donkey-betz/documentation/PORT_ALLOCATION.md"
+      ]
+    },
+    {
+      "hash": "2f1da1956df6c676ca0b26d13731e543",
+      "files": [
+        "dbao-studio/documentation/MIGRATION_PLAN.md",
+        "donkey-betz/documentation/MIGRATION_PLAN.md"
+      ]
+    },
+    {
+      "hash": "d16155b449d0e2f518359dd1bc75a95b",
+      "files": [
+        "dbao-studio/documentation/TOKEN_OPTIMIZATION_IMPLEMENTATION_CHECKLIST.md",
+        "donkey-betz/documentation/TOKEN_OPTIMIZATION_IMPLEMENTATION_CHECKLIST.md"
+      ]
+    },
+    {
+      "hash": "ebdba53253a0e8970b0d9e9aa0712a17",
+      "files": [
+        "dbao-studio/documentation/sports_analytics_overview.md",
+        "donkey-betz/documentation/sports_analytics_overview.md"
+      ]
+    },
+    {
+      "hash": "d8ab9bcf1560cea91f50ce06d4e378f8",
+      "files": [
+        "dbao-studio/documentation/USAGE_EXAMPLES.md",
+        "donkey-betz/documentation/USAGE_EXAMPLES.md"
+      ]
+    },
+    {
+      "hash": "ff41665e6e43c79a83d097f1d2c34f82",
+      "files": [
+        "dbao-studio/documentation/WEBSOCKET_DIAGNOSTICS_HANDOFF.md",
+        "donkey-betz/documentation/WEBSOCKET_DIAGNOSTICS_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "effa07c59fa4945a321a47838e48d458",
+      "files": [
+        "dbao-studio/documentation/PROMPT_DIAGNOSTICS_HANDOFF.md",
+        "donkey-betz/documentation/PROMPT_DIAGNOSTICS_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "806d85faa16690bdcbfdbaf436fd68b5",
+      "files": [
+        "dbao-studio/documentation/memory-bridge-coordinator-handoff.md",
+        "donkey-betz/documentation/memory-bridge-coordinator-handoff.md"
+      ]
+    },
+    {
+      "hash": "24959cb731e3d714a3a31643d4cd4fea",
+      "files": [
+        "dbao-studio/documentation/capability-map.md",
+        "donkey-betz/documentation/capability-map.md"
+      ]
+    },
+    {
+      "hash": "184a1fa8aa1f154eef5241fceecb63de",
+      "files": [
+        "dbao-studio/documentation/iOS_WebSocket_Config.md",
+        "donkey-betz/documentation/iOS_WebSocket_Config.md"
+      ]
+    },
+    {
+      "hash": "4188be32476c74d8e6e24169c4d79566",
+      "files": [
+        "dbao-studio/documentation/AUTHENTICATION_SETUP.md",
+        "donkey-betz/documentation/AUTHENTICATION_SETUP.md"
+      ]
+    },
+    {
+      "hash": "415c07cb45db3841c52ea9fdad4a0600",
+      "files": [
+        "dbao-studio/agent/TOKEN_BUDGET_AGENT_HANDOFF.md",
+        "donkey-betz/agent/TOKEN_BUDGET_AGENT_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "ecd4ae2cf09c03b627252e588943e49a",
+      "files": [
+        "dbao-studio/agent/DBAO_Agent_Verification_Report.md",
+        "dbao-studio/agent/DBAO_Agent_Verification_Report_1.md"
+      ]
+    },
+    {
+      "hash": "e1b8d7e81343b16c9d8bd151058f7fb8",
+      "files": [
+        "dbao-studio/agent/SPORTS_AGENT_SYSTEM_PROMPT.md",
+        "donkey-betz/agent/SPORTS_AGENT_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "92f93474d8c7f13b56adb16bb166a57b",
+      "files": [
+        "dbao-studio/agent/SPORTS_ODDS_AGENT_IMPLEMENTATION_GUIDE.md",
+        "donkey-betz/agent/SPORTS_ODDS_AGENT_IMPLEMENTATION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "2d0ead011b7c265f4b2ab3e79feecf17",
+      "files": [
+        "dbao-studio/agent/ODDS_AGENT_SYSTEM_PROMPT.md",
+        "donkey-betz/agent/ODDS_AGENT_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "24a1346c1c4d96dd2dae681a72db1790",
+      "files": [
+        "dbao-studio/agent/AGENT_SPECIFICATIONS.md",
+        "dbao-studio/agent/NEW_AGENT_SUGGESTIONS.md",
+        "donkey-betz/agent/AGENT_SPECIFICATIONS.md",
+        "donkey-betz/agent/NEW_AGENT_SUGGESTIONS.md"
+      ]
+    },
+    {
+      "hash": "97de9d5a81cfa34aae8629ac86dc98df",
+      "files": [
+        "dbao-studio/agent/IMPLEMENTATION_AGENT_TEST_RESULTS.md",
+        "donkey-betz/agent/IMPLEMENTATION_AGENT_TEST_RESULTS.md"
+      ]
+    },
+    {
+      "hash": "26e68ffc1cf23190c7175fc8c4d4884b",
+      "files": [
+        "dbao-studio/agent/MISSING_COMPONENTS_AND_AGENTS.md",
+        "donkey-betz/agent/MISSING_COMPONENTS_AND_AGENTS.md"
+      ]
+    },
+    {
+      "hash": "17d8a28c030abc4e5762a6efd2c15502",
+      "files": [
+        "dbao-studio/agent/RAG_DIAGNOSTICS_AGENT_HANDOFF.md",
+        "donkey-betz/agent/RAG_DIAGNOSTICS_AGENT_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "b898cd9a6442274a45342c2797b565f0",
+      "files": [
+        "dbao-studio/agent/DONKEY_BETZ_IMPLEMENTATION_AGENT_DEPLOYMENT_REPORT.md",
+        "donkey-betz/agent/DONKEY_BETZ_IMPLEMENTATION_AGENT_DEPLOYMENT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "33849a38720378f4e2c55979745ed36c",
+      "files": [
+        "dbao-studio/agent/RISK_AGENT_SYSTEM_PROMPT.md",
+        "donkey-betz/agent/RISK_AGENT_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "d3d5de2c73da71a639fc41f4598de92b",
+      "files": [
+        "dbao-studio/agent/odds-calculation-agent-deployment-report.md",
+        "donkey-betz/agent/odds-calculation-agent-deployment-report.md"
+      ]
+    },
+    {
+      "hash": "58ea656fba7f9141fe736fa19bd302fc",
+      "files": [
+        "dbao-studio/agent/DATA_ANALYTICS_AGENT_SYSTEM_PROMPT.md",
+        "donkey-betz/agent/DATA_ANALYTICS_AGENT_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "bc5635d768227ab0d338f67fa70b991d",
+      "files": [
+        "dbao-studio/readme/README_1.md",
+        "ai-content-studio/readme/README_4.md",
+        "donkey-betz/readme/README_1.md",
+        "donkey-betz/readme/README_56.md"
+      ]
+    },
+    {
+      "hash": "d813c56f57aa5c135cb8a2d40e9959d8",
+      "files": [
+        "dbao-studio/readme/README_2.md",
+        "donkey-betz/readme/README_2.md"
+      ]
+    },
+    {
+      "hash": "24057838bee9372fa315538291448631",
+      "files": [
+        "dbao-studio/testing/DBAO_SMOKE_TEST_HANDOFF.md",
+        "dbao-studio/testing/DBAO_SMOKE_TEST_HANDOFF_1.md"
+      ]
+    },
+    {
+      "hash": "e74fc795ed3f025ec9a7da700d96e3b6",
+      "files": [
+        "dbao-studio/architecture/DBAO_SYSTEM_AUDIT_HANDOFF.md",
+        "dbao-studio/architecture/DBAO_SYSTEM_AUDIT_HANDOFF_1.md"
+      ]
+    },
+    {
+      "hash": "93f5e47b142ed4b0157f13aa04623ce3",
+      "files": [
+        "dbao-studio/architecture/DBAO_SYSTEM_HANDOFF_2025_09_04.md",
+        "dbao-studio/architecture/DBAO_SYSTEM_HANDOFF_2025_09_04_1.md"
+      ]
+    },
+    {
+      "hash": "a625045d83c5e4c18d92de93295cd1c0",
+      "files": [
+        "dbao-studio/architecture/COMPLETE_SYSTEM_HANDOFF.md",
+        "donkey-betz/architecture/COMPLETE_SYSTEM_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "3d34c20f9f83f23b199fdb94fc850d51",
+      "files": [
+        "dbao-studio/architecture/SYSTEM_REVIEW_AND_SETUP.md",
+        "donkey-betz/architecture/SYSTEM_REVIEW_AND_SETUP.md"
+      ]
+    },
+    {
+      "hash": "adee14d90d8515b27826099e7dca39a2",
+      "files": [
+        "dbao-studio/architecture/PRODUCTION_SYSTEM_HANDOFF.md",
+        "donkey-betz/architecture/PRODUCTION_SYSTEM_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "5355dd81899df14477739b5238f68bb9",
+      "files": [
+        "dbao-studio/architecture/LEARNING_SYSTEM_IMPLEMENTATION_GUIDE.md",
+        "donkey-betz/architecture/LEARNING_SYSTEM_IMPLEMENTATION_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "20e4eb29bbdd9dbbaeb51db8215ad948",
+      "files": [
+        "dbao-studio/deployment/PRODUCTION_DEPLOYMENT.md",
+        "donkey-betz/deployment/PRODUCTION_DEPLOYMENT.md"
+      ]
+    },
+    {
+      "hash": "d3390e31c124eedbff9bd1dec9a840a5",
+      "files": [
+        "dbao-studio/deployment/DEPLOYMENT_HANDOFF.md",
+        "donkey-betz/deployment/DEPLOYMENT_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "ccf748323ffd8df5047bf81d25e985d6",
+      "files": [
+        "dbao-studio/report/UNIFIED_PLATFORM_REPORT.md",
+        "donkey-betz/report/UNIFIED_PLATFORM_REPORT.md"
+      ]
+    },
+    {
+      "hash": "4f20e4cc6d9123b7e873d8f26ba0c4cf",
+      "files": [
+        "dbao-studio/report/BETTING_TOOLS_ARCHITECT_COMPLETE_REPORT.md",
+        "donkey-betz/report/BETTING_TOOLS_ARCHITECT_COMPLETE_REPORT.md"
+      ]
+    },
+    {
+      "hash": "c4e61f69e5fc083a2c2a208bdb5b9ea0",
+      "files": [
+        "dbao-studio/report/TOKEN_OPTIMIZATION_ANALYSIS_REPORT.md",
+        "donkey-betz/report/TOKEN_OPTIMIZATION_ANALYSIS_REPORT.md"
+      ]
+    },
+    {
+      "hash": "d20652618715a2a535abb2ed95bf9237",
+      "files": [
+        "dbao-studio/report/DEPENDENCY_VERIFICATION_REPORT.md",
+        "donkey-betz/report/DEPENDENCY_VERIFICATION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "96294df30eae3aa3eeb746957b00f4cf",
+      "files": [
+        "dbao-studio/report/SECURITY_AUDIT_REPORT.md",
+        "donkey-betz/report/SECURITY_AUDIT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "50213d9a462fedf7a3e1363d033e5faf",
+      "files": [
+        "dbao-studio/report/DBAO_Unification_Report.md",
+        "dbao-studio/report/DBAO_Unification_Report_1.md"
+      ]
+    },
+    {
+      "hash": "311b6a68ffef4dca77460968b34050f8",
+      "files": [
+        "dbao-studio/report/SPORTS_ANALYTICS_EXPERT_DEPLOYMENT_REPORT.md",
+        "donkey-betz/report/SPORTS_ANALYTICS_EXPERT_DEPLOYMENT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "b6f34626c36eca1e9e2196b08518566c",
+      "files": [
+        "dbao-studio/report/risk-assessment-specialist-deployment-report.md",
+        "donkey-betz/report/risk-assessment-specialist-deployment-report.md"
+      ]
+    },
+    {
+      "hash": "ce6aa4f64d58b580605bd5f70b31959f",
+      "files": [
+        "dbao-studio/report/SPORTS_ANALYTICS_INTEGRATION_REPORT.md",
+        "donkey-betz/report/SPORTS_ANALYTICS_INTEGRATION_REPORT.md"
+      ]
+    },
+    {
+      "hash": "50ad56a744ee068d3f283d0fea14f53f",
+      "files": [
+        "dbao-studio/report/LIMITLESS_DEPLOYMENT_REPORT.md",
+        "donkey-betz/report/LIMITLESS_DEPLOYMENT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "ba51ce609d4318b9e4896307394528d0",
+      "files": [
+        "dbao-studio/report/REDIS_CACHE_DEPLOYMENT_REPORT.md",
+        "donkey-betz/report/REDIS_CACHE_DEPLOYMENT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "aea2d390eac4a714e6e1663ed58b657f",
+      "files": [
+        "dbao-studio/report/dependency-analysis-comprehensive-report.md",
+        "donkey-betz/report/dependency-analysis-comprehensive-report.md"
+      ]
+    },
+    {
+      "hash": "ed11d2dce9409af36a9dc3a31342ca26",
+      "files": [
+        "dbao-studio/report/NCAAF_BRING_UP_REPORT.md",
+        "donkey-betz/report/NCAAF_BRING_UP_REPORT.md"
+      ]
+    },
+    {
+      "hash": "046592b871b2699e6d17a89d6322e1d3",
+      "files": [
+        "dbao-studio/report/IMPORT_REFACTORING_REPORT.md",
+        "donkey-betz/report/IMPORT_REFACTORING_REPORT.md"
+      ]
+    },
+    {
+      "hash": "40fd36b7e9c14af9910db5d94c27e726",
+      "files": [
+        "dbao-studio/report/COORDINATOR_DEPLOYMENT_REPORT.md",
+        "donkey-betz/report/COORDINATOR_DEPLOYMENT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "40ca6b8204fa1a7d51895045abe1775b",
+      "files": [
+        "dbao-studio/report/COMPLETE_ACCOMPLISHMENT_REPORT.md",
+        "donkey-betz/report/COMPLETE_ACCOMPLISHMENT_REPORT.md"
+      ]
+    },
+    {
+      "hash": "6280c37ce5890b3b1b05f79ec7d7f1a0",
+      "files": [
+        "dbao-studio/report/CRITICAL_ISSUES_FIX_REPORT.md",
+        "donkey-betz/report/CRITICAL_ISSUES_FIX_REPORT.md"
+      ]
+    },
+    {
+      "hash": "0a2d33ae8d70d214b0f0e177ae15972b",
+      "files": [
+        "other/documentation/UNIFICATION_MASTER_PLAN.md",
+        "donkey-betz/documentation/UNIFICATION_MASTER_PLAN.md"
+      ]
+    },
+    {
+      "hash": "606241196f08642dcc9f7acef0d2d8da",
+      "files": [
+        "other/readme/README_1.md",
+        "other/readme/README_8.md"
+      ]
+    },
+    {
+      "hash": "b3690ef1cc92759f025d7cc3e014b942",
+      "files": [
+        "ai-content-studio/readme/README_UNIFIED_TESTING_FRAMEWORK.md",
+        "donkey-betz/readme/README_UNIFIED_TESTING_FRAMEWORK.md"
+      ]
+    },
+    {
+      "hash": "25ec8d21fb86d3eaef3b4c0f3d6aa8cb",
+      "files": [
+        "donkey-betz/guide/ukf-integration-guide.md",
+        "donkey-betz/guide/ukf-integration-guide_1.md",
+        "donkey-betz/architecture/system_docs_ukf-integration-guide.md"
+      ]
+    },
+    {
+      "hash": "c398f3901bc935dadafcdab8cde3cb57",
+      "files": [
+        "donkey-betz/guide/self-diagnosis-guide_1.md",
+        "donkey-betz/guide/self-diagnosis-guide.md",
+        "donkey-betz/architecture/system_docs_self-diagnosis-guide.md"
+      ]
+    },
+    {
+      "hash": "7a3092b2bb61a1b182ead6c536ddc6d0",
+      "files": [
+        "donkey-betz/guide/MAIN_AI_ASSISTANT_COMPLETE_GUIDE.md",
+        "donkey-betz/guide/MAIN_AI_ASSISTANT_COMPLETE_GUIDE_1.md"
+      ]
+    },
+    {
+      "hash": "0eb06db47896d56f435015eaaca61124",
+      "files": [
+        "donkey-betz/guide/batch-processing-guide.md",
+        "donkey-betz/guide/batch-processing-guide_1.md",
+        "donkey-betz/architecture/system_docs_batch-processing-guide.md"
+      ]
+    },
+    {
+      "hash": "298578aac137ff75e36ad8733f0d0e1f",
+      "files": [
+        "donkey-betz/guide/onboarding-integration-guide_1.md",
+        "donkey-betz/guide/onboarding-integration-guide.md",
+        "donkey-betz/architecture/system_docs_onboarding-integration-guide.md"
+      ]
+    },
+    {
+      "hash": "714195412d8b4d11eb8a638e7e86d509",
+      "files": [
+        "donkey-betz/guide/phase-3-integration-review-guide.md",
+        "donkey-betz/guide/phase-3-integration-review-guide_1.md",
+        "donkey-betz/architecture/system_docs_phase-3-integration-review-guide.md"
+      ]
+    },
+    {
+      "hash": "4151c991ca8ad73e3d43da706cc2d684",
+      "files": [
+        "donkey-betz/guide/obs-implementation-guide.md",
+        "donkey-betz/guide/obs-implementation-guide_1.md",
+        "donkey-betz/architecture/system_docs_obs-implementation-guide.md"
+      ]
+    },
+    {
+      "hash": "74907f16ba3b0370f95d67a3a379d87e",
+      "files": [
+        "donkey-betz/guide/essential_SETUP_GUIDE.md",
+        "donkey-betz/guide/SETUP_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "aaefa2ee8a84a4316a4104d0d77d0b95",
+      "files": [
+        "donkey-betz/documentation/performance-optimization_1.md",
+        "donkey-betz/documentation/performance-optimization.md",
+        "donkey-betz/architecture/system_docs_performance-optimization.md"
+      ]
+    },
+    {
+      "hash": "0a0cea77f82080b5dc5fbf244150860d",
+      "files": [
+        "donkey-betz/documentation/ai-profile-intelligents_1.md",
+        "donkey-betz/documentation/ai-profile-intelligents.md",
+        "donkey-betz/architecture/system_docs_ai-profile-intelligents.md"
+      ]
+    },
+    {
+      "hash": "762f2772c2fa755752d855e4bae1ad70",
+      "files": [
+        "donkey-betz/documentation/AI-P1-20250807-integration.md",
+        "donkey-betz/documentation/implementation_AI-P1-20250807-integration.md"
+      ]
+    },
+    {
+      "hash": "d362666dd594b6a820ea398d481225ad",
+      "files": [
+        "donkey-betz/documentation/ai-profile-learning.md",
+        "donkey-betz/documentation/ai-profile-learning_1.md",
+        "donkey-betz/architecture/system_docs_ai-profile-learning.md"
+      ]
+    },
+    {
+      "hash": "18e0d3ae05ed547026c769f6d7145c4b",
+      "files": [
+        "donkey-betz/documentation/frontend-integration-complete_1.md",
+        "donkey-betz/documentation/frontend-integration-complete.md",
+        "donkey-betz/architecture/system_docs_frontend-integration-complete.md"
+      ]
+    },
+    {
+      "hash": "5eed67a4ef7dd84c9195c7c6c44dd016",
+      "files": [
+        "donkey-betz/documentation/BATCH_PROCESSING_PHASE7.md",
+        "donkey-betz/documentation/BATCH_PROCESSING_PHASE7_1.md"
+      ]
+    },
+    {
+      "hash": "3a55cf346ea93792a3082068df9c12b0",
+      "files": [
+        "donkey-betz/documentation/mythology-lab_1.md",
+        "donkey-betz/documentation/mythology-lab.md",
+        "donkey-betz/architecture/system_docs_mythology-lab.md"
+      ]
+    },
+    {
+      "hash": "b8242c10d848ccf9cbc6667a10fabe49",
+      "files": [
+        "donkey-betz/documentation/smart-selection.md",
+        "donkey-betz/documentation/smart-selection_1.md",
+        "donkey-betz/architecture/system_docs_smart-selection.md"
+      ]
+    },
+    {
+      "hash": "a2629d4f09481ed3faa4774e5e37ae1f",
+      "files": [
+        "donkey-betz/documentation/database-seed-log_1.md",
+        "donkey-betz/documentation/essential_database-seed-log.md",
+        "donkey-betz/documentation/database-seed-log.md"
+      ]
+    },
+    {
+      "hash": "b4f22f9e96f027f54204c6015248ebad",
+      "files": [
+        "donkey-betz/documentation/OPTIMIZATION_CHANGES.md",
+        "donkey-betz/documentation/OPTIMIZATION_CHANGES_1.md",
+        "donkey-betz/documentation/operations_OPTIMIZATION_CHANGES.md"
+      ]
+    },
+    {
+      "hash": "7dd0be90bb8f9499659d3e64abf7172e",
+      "files": [
+        "donkey-betz/documentation/DATABASE_RESTORATION_COMPLETE.md",
+        "donkey-betz/documentation/DATABASE_RESTORATION_COMPLETE_1.md"
+      ]
+    },
+    {
+      "hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "files": [
+        "donkey-betz/documentation/memory-palace-performance-optimization.md",
+        "donkey-betz/documentation/CLAUDE.local.md"
+      ]
+    },
+    {
+      "hash": "cf14460c442788f266f1d349d0ac7baa",
+      "files": [
+        "donkey-betz/documentation/handoff-complete_1.md",
+        "donkey-betz/documentation/handoff-complete.md",
+        "donkey-betz/architecture/system_docs_handoff-complete.md"
+      ]
+    },
+    {
+      "hash": "0eb4175d1b7f7573868348908acbfffb",
+      "files": [
+        "donkey-betz/documentation/troubleshooting-reference.md",
+        "donkey-betz/documentation/operations_troubleshooting-reference.md",
+        "donkey-betz/documentation/troubleshooting-reference_1.md"
+      ]
+    },
+    {
+      "hash": "820203217180707de04d3b670c206b0d",
+      "files": [
+        "donkey-betz/documentation/operations_OPTIMIZATION_ISSUES.md",
+        "donkey-betz/documentation/OPTIMIZATION_ISSUES.md",
+        "donkey-betz/documentation/OPTIMIZATION_ISSUES_1.md"
+      ]
+    },
+    {
+      "hash": "7147751af1921c0b9d6818f6ea83838c",
+      "files": [
+        "donkey-betz/documentation/davinci-resolve-integration_1.md",
+        "donkey-betz/documentation/davinci-resolve-integration.md",
+        "donkey-betz/architecture/system_docs_davinci-resolve-integration.md"
+      ]
+    },
+    {
+      "hash": "b68d18061fbb6d4ec2f1b88ff15127bf",
+      "files": [
+        "donkey-betz/documentation/key-final-status.md",
+        "donkey-betz/documentation/key-final-status_1.md",
+        "donkey-betz/architecture/system_docs_key-final-status.md"
+      ]
+    },
+    {
+      "hash": "78dce7a9fbc757bd5b630f82df5af293",
+      "files": [
+        "donkey-betz/documentation/index_1.md",
+        "donkey-betz/documentation/index.md",
+        "donkey-betz/architecture/system_docs_index.md"
+      ]
+    },
+    {
+      "hash": "6e68bae4dcf7bdefc7f288f797b06f55",
+      "files": [
+        "donkey-betz/documentation/obs-integration-design.md",
+        "donkey-betz/documentation/obs-integration-design_1.md",
+        "donkey-betz/architecture/system_docs_obs-integration-design.md"
+      ]
+    },
+    {
+      "hash": "3ce7e793cbd5f9f7adc7d87296392061",
+      "files": [
+        "donkey-betz/documentation/channels-status.md",
+        "donkey-betz/documentation/channels-status_1.md",
+        "donkey-betz/architecture/system_docs_channels-status.md"
+      ]
+    },
+    {
+      "hash": "fc017f94a2b3c87aa823b9ff0b3cadc7",
+      "files": [
+        "donkey-betz/documentation/frontend-integration-status_1.md",
+        "donkey-betz/documentation/frontend-integration-status.md",
+        "donkey-betz/architecture/system_docs_frontend-integration-status.md"
+      ]
+    },
+    {
+      "hash": "1aa0f46dc0a9521381161d2ed5c54509",
+      "files": [
+        "donkey-betz/documentation/CACHE_ACTIVATION_RESULTS.md",
+        "donkey-betz/documentation/CACHE_ACTIVATION_RESULTS_1.md",
+        "donkey-betz/documentation/operations_CACHE_ACTIVATION_RESULTS.md"
+      ]
+    },
+    {
+      "hash": "2dd89eb469b02e432fc8d0bf0b87ddc6",
+      "files": [
+        "donkey-betz/documentation/frontend-integration-plan_1.md",
+        "donkey-betz/documentation/frontend-integration-plan.md",
+        "donkey-betz/architecture/system_docs_frontend-integration-plan.md"
+      ]
+    },
+    {
+      "hash": "b78f59669515f5c2d70ed7e157a8827d",
+      "files": [
+        "donkey-betz/documentation/essential_youtube-setup.md",
+        "donkey-betz/documentation/youtube-setup_1.md",
+        "donkey-betz/documentation/youtube-setup.md"
+      ]
+    },
+    {
+      "hash": "ebc0b297abc292de513e79567fc92c7a",
+      "files": [
+        "donkey-betz/documentation/integration-audit_1.md",
+        "donkey-betz/documentation/integration-audit.md",
+        "donkey-betz/architecture/system_docs_integration-audit.md"
+      ]
+    },
+    {
+      "hash": "9d72b136b9e41a4c36232d37227c9e44",
+      "files": [
+        "donkey-betz/documentation/operations_PRIVACY_SECURITY_ANALYSIS.md",
+        "donkey-betz/documentation/PRIVACY_SECURITY_ANALYSIS_1.md",
+        "donkey-betz/documentation/PRIVACY_SECURITY_ANALYSIS.md"
+      ]
+    },
+    {
+      "hash": "332cf212d660d2fc6507e749e0761490",
+      "files": [
+        "donkey-betz/documentation/operations_PERFORMANCE_BASELINE.md",
+        "donkey-betz/documentation/PERFORMANCE_BASELINE_1.md",
+        "donkey-betz/documentation/PERFORMANCE_BASELINE.md"
+      ]
+    },
+    {
+      "hash": "f4eb7c64c354cc21e534316be31e49a9",
+      "files": [
+        "donkey-betz/documentation/youtube-oauth2-setup.md",
+        "donkey-betz/documentation/youtube-oauth2-setup_1.md",
+        "donkey-betz/documentation/essential_youtube-oauth2-setup.md"
+      ]
+    },
+    {
+      "hash": "2484327fc801bdb4fe89b220214e8f00",
+      "files": [
+        "donkey-betz/documentation/ukf-embedding-gaps_1.md",
+        "donkey-betz/documentation/ukf-embedding-gaps.md",
+        "donkey-betz/architecture/system_docs_ukf-embedding-gaps.md"
+      ]
+    },
+    {
+      "hash": "875c4a5929e017ae79bd1cf9accb6095",
+      "files": [
+        "donkey-betz/documentation/ukf-integration-handoff_1.md",
+        "donkey-betz/documentation/ukf-integration-handoff.md",
+        "donkey-betz/architecture/system_docs_ukf-integration-handoff.md"
+      ]
+    },
+    {
+      "hash": "735a24b828bea08985a9fe7418265ead",
+      "files": [
+        "donkey-betz/documentation/crunchbase-implementation.md",
+        "donkey-betz/documentation/crunchbase-implementation_1.md",
+        "donkey-betz/architecture/system_docs_crunchbase-implementation.md"
+      ]
+    },
+    {
+      "hash": "3222f557f2c48d204be618379616c570",
+      "files": [
+        "donkey-betz/documentation/implementation_AI-P1-20250806-unified-command.md",
+        "donkey-betz/documentation/AI-P1-20250806-unified-command.md"
+      ]
+    },
+    {
+      "hash": "e0f811fe491030e53b7219be508dd127",
+      "files": [
+        "donkey-betz/documentation/channels-integration_1.md",
+        "donkey-betz/documentation/channels-integration.md",
+        "donkey-betz/architecture/system_docs_channels-integration.md"
+      ]
+    },
+    {
+      "hash": "810c037b239b0b1876dc98add336aae5",
+      "files": [
+        "donkey-betz/documentation/OPTIMIZATION_HANDOFF.md",
+        "donkey-betz/documentation/OPTIMIZATION_HANDOFF_1.md",
+        "donkey-betz/documentation/operations_OPTIMIZATION_HANDOFF.md"
+      ]
+    },
+    {
+      "hash": "c40e936652364dea803df7a9ec506f66",
+      "files": [
+        "donkey-betz/documentation/FIX_IMPLEMENTATION_PLAN_1.md",
+        "donkey-betz/documentation/FIX_IMPLEMENTATION_PLAN.md"
+      ]
+    },
+    {
+      "hash": "c784f0e09c4399b50f02e877ce3334d1",
+      "files": [
+        "donkey-betz/documentation/donkey_betz_emergency_fixes.md",
+        "donkey-betz/documentation/donkey_betz_emergency_fixes_1.md"
+      ]
+    },
+    {
+      "hash": "f7c1e46ef54342e349a8b0fa9d0bc27c",
+      "files": [
+        "donkey-betz/documentation/CODE_CHANGES_1.md",
+        "donkey-betz/documentation/CODE_CHANGES.md"
+      ]
+    },
+    {
+      "hash": "cb212f34bba354fe161b19f8dabff84b",
+      "files": [
+        "donkey-betz/documentation/deprecation-plan_1.md",
+        "donkey-betz/documentation/deprecation-plan.md",
+        "donkey-betz/architecture/system_docs_deprecation-plan.md"
+      ]
+    },
+    {
+      "hash": "07452c8d0770a476344d0ea565398c4b",
+      "files": [
+        "donkey-betz/documentation/unified-memory-implementation_1.md",
+        "donkey-betz/documentation/unified-memory-implementation.md",
+        "donkey-betz/architecture/system_docs_unified-memory-implementation.md"
+      ]
+    },
+    {
+      "hash": "f29c481366c52011d98d40a9c40cc3ed",
+      "files": [
+        "donkey-betz/documentation/telegram-cleanup_1.md",
+        "donkey-betz/documentation/telegram-cleanup.md",
+        "donkey-betz/architecture/system_docs_telegram-cleanup.md"
+      ]
+    },
+    {
+      "hash": "03b73b492e84680a4b5a938a9fe6b5be",
+      "files": [
+        "donkey-betz/documentation/integration-analysis.md",
+        "donkey-betz/documentation/integration-analysis_1.md",
+        "donkey-betz/architecture/system_docs_integration-analysis.md"
+      ]
+    },
+    {
+      "hash": "74d77ac66a6ee4559fee12f1a2631bfc",
+      "files": [
+        "donkey-betz/documentation/configuration_1.md",
+        "donkey-betz/documentation/essential_configuration.md",
+        "donkey-betz/documentation/configuration.md"
+      ]
+    },
+    {
+      "hash": "3e2209d26d1ba19ac33d6ee7fb0b750a",
+      "files": [
+        "donkey-betz/documentation/communication-activation_1.md",
+        "donkey-betz/documentation/communication-activation.md",
+        "donkey-betz/architecture/system_docs_communication-activation.md"
+      ]
+    },
+    {
+      "hash": "8a35fac22a940730522b688026d1064f",
+      "files": [
+        "donkey-betz/documentation/essential_GOOGLE_CLOUD_CONSOLE_SETUP.md",
+        "donkey-betz/documentation/GOOGLE_CLOUD_CONSOLE_SETUP.md",
+        "donkey-betz/documentation/GOOGLE_CLOUD_CONSOLE_SETUP_1.md"
+      ]
+    },
+    {
+      "hash": "8bdd1c849ca9f0dc9a1ebea7fd68978a",
+      "files": [
+        "donkey-betz/documentation/CURRENT_STATE.md",
+        "donkey-betz/documentation/implementation_CURRENT_STATE.md"
+      ]
+    },
+    {
+      "hash": "e31d76e47d5c1d55fae37b27de42b600",
+      "files": [
+        "donkey-betz/documentation/obs-integration-success.md",
+        "donkey-betz/documentation/obs-integration-success_1.md",
+        "donkey-betz/architecture/system_docs_obs-integration-success.md"
+      ]
+    },
+    {
+      "hash": "e1cf1582e053970f527acf268efaefd9",
+      "files": [
+        "donkey-betz/documentation/production-checklist_1.md",
+        "donkey-betz/documentation/operations_production-checklist.md",
+        "donkey-betz/documentation/production-checklist.md"
+      ]
+    },
+    {
+      "hash": "a81507e6daf4f3d0c4a0335219e90014",
+      "files": [
+        "donkey-betz/documentation/communication-diagnosis.md",
+        "donkey-betz/documentation/communication-diagnosis_1.md",
+        "donkey-betz/architecture/system_docs_communication-diagnosis.md"
+      ]
+    },
+    {
+      "hash": "808be8648c84102a5914e68ff092809f",
+      "files": [
+        "donkey-betz/documentation/integration-status.md",
+        "donkey-betz/documentation/integration-status_1.md",
+        "donkey-betz/architecture/system_docs_integration-status.md"
+      ]
+    },
+    {
+      "hash": "813d760177a54eb77b2690fe57f36172",
+      "files": [
+        "donkey-betz/documentation/statistics.md",
+        "donkey-betz/documentation/statistics_1.md",
+        "donkey-betz/architecture/system_docs_statistics.md"
+      ]
+    },
+    {
+      "hash": "bc18f85c5b00e987c905b0c11205fe1a",
+      "files": [
+        "donkey-betz/documentation/memory-palace.md",
+        "donkey-betz/documentation/memory-palace_1.md",
+        "donkey-betz/architecture/system_docs_memory-palace.md"
+      ]
+    },
+    {
+      "hash": "5a3a107c48a2df53a0528b48b3b8c804",
+      "files": [
+        "donkey-betz/documentation/smart-selection-phase2-handoff.md",
+        "donkey-betz/documentation/smart-selection-phase2-handoff_1.md",
+        "donkey-betz/architecture/system_docs_smart-selection-phase2-handoff.md"
+      ]
+    },
+    {
+      "hash": "686d643cd544d9a76d40f2253eff3282",
+      "files": [
+        "donkey-betz/documentation/CRITICAL_ISSUES_138.md",
+        "donkey-betz/documentation/implementation_CRITICAL_ISSUES_138.md"
+      ]
+    },
+    {
+      "hash": "286e9263d47e1b0b7e31c479a1054141",
+      "files": [
+        "donkey-betz/documentation/hallucination-tracking_1.md",
+        "donkey-betz/documentation/hallucination-tracking.md",
+        "donkey-betz/architecture/system_docs_hallucination-tracking.md"
+      ]
+    },
+    {
+      "hash": "45747757298730b6a83bbbaa32c98b6a",
+      "files": [
+        "donkey-betz/documentation/ukf-frontend-integration_1.md",
+        "donkey-betz/documentation/ukf-frontend-integration.md",
+        "donkey-betz/architecture/system_docs_ukf-frontend-integration.md"
+      ]
+    },
+    {
+      "hash": "b07c98139f2c739096d3bfbd2d1f5248",
+      "files": [
+        "donkey-betz/documentation/youtube-oauth2-quick-reference_1.md",
+        "donkey-betz/documentation/youtube-oauth2-quick-reference.md",
+        "donkey-betz/architecture/system_docs_youtube-oauth2-quick-reference.md"
+      ]
+    },
+    {
+      "hash": "b56f4906c61c336c33f8a0d4aa569245",
+      "files": [
+        "donkey-betz/documentation/obs-phase4_1.md",
+        "donkey-betz/documentation/obs-phase4.md",
+        "donkey-betz/architecture/system_docs_obs-phase4.md"
+      ]
+    },
+    {
+      "hash": "88440c04c822faab20dad0e7cc50f56d",
+      "files": [
+        "donkey-betz/documentation/obs-davinci-integration_1.md",
+        "donkey-betz/documentation/obs-davinci-integration.md",
+        "donkey-betz/architecture/system_docs_obs-davinci-integration.md"
+      ]
+    },
+    {
+      "hash": "555450664150ae6c121a3bde7944bf9d",
+      "files": [
+        "donkey-betz/documentation/technical-debt_1.md",
+        "donkey-betz/documentation/technical-debt.md",
+        "donkey-betz/architecture/system_docs_technical-debt.md"
+      ]
+    },
+    {
+      "hash": "ec4b80af36ff82e3352e580a850e5c51",
+      "files": [
+        "donkey-betz/documentation/channels-display-fix_1.md",
+        "donkey-betz/documentation/channels-display-fix.md",
+        "donkey-betz/architecture/system_docs_channels-display-fix.md"
+      ]
+    },
+    {
+      "hash": "65d2815c9acd9a3e5635d12b9bab3a2c",
+      "files": [
+        "donkey-betz/documentation/fix-implemented_1.md",
+        "donkey-betz/documentation/fix-implemented.md",
+        "donkey-betz/architecture/system_docs_fix-implemented.md"
+      ]
+    },
+    {
+      "hash": "5aaf20d169f679110a13483d8c9c2050",
+      "files": [
+        "donkey-betz/documentation/youtube-oauth2-complete_1.md",
+        "donkey-betz/documentation/youtube-oauth2-complete.md",
+        "donkey-betz/architecture/system_docs_youtube-oauth2-complete.md"
+      ]
+    },
+    {
+      "hash": "31eb50f172aa14a9ae18e122305d0e28",
+      "files": [
+        "donkey-betz/documentation/ukf-integration-complete_1.md",
+        "donkey-betz/documentation/ukf-integration-complete.md",
+        "donkey-betz/architecture/system_docs_ukf-integration-complete.md"
+      ]
+    },
+    {
+      "hash": "9d3ab1071c8aa9c27fcacb98ed10f6b3",
+      "files": [
+        "donkey-betz/documentation/crunchbase-alternatives_1.md",
+        "donkey-betz/documentation/crunchbase-alternatives.md",
+        "donkey-betz/architecture/system_docs_crunchbase-alternatives.md"
+      ]
+    },
+    {
+      "hash": "651b4ee6bffa67f3bff846a1ff5e4188",
+      "files": [
+        "donkey-betz/documentation/youtube-integration_1.md",
+        "donkey-betz/documentation/youtube-integration.md",
+        "donkey-betz/architecture/system_docs_youtube-integration.md"
+      ]
+    },
+    {
+      "hash": "213eb0207d20fcbdad2f18b390b414fc",
+      "files": [
+        "donkey-betz/documentation/obs-issues-resolved_1.md",
+        "donkey-betz/documentation/obs-issues-resolved.md",
+        "donkey-betz/architecture/system_docs_obs-issues-resolved.md"
+      ]
+    },
+    {
+      "hash": "2f66b9377b95853a0b9b44e2b4e730e5",
+      "files": [
+        "donkey-betz/documentation/integration-success_1.md",
+        "donkey-betz/documentation/integration-success.md",
+        "donkey-betz/architecture/system_docs_integration-success.md"
+      ]
+    },
+    {
+      "hash": "00e450bfedc4563c6e66c9723cb5ebd4",
+      "files": [
+        "donkey-betz/documentation/polygon-integration.md",
+        "donkey-betz/documentation/polygon-integration_1.md",
+        "donkey-betz/architecture/system_docs_polygon-integration.md"
+      ]
+    },
+    {
+      "hash": "b5f04313ab67864fea34cd083aba8fe3",
+      "files": [
+        "donkey-betz/documentation/handoff_1.md",
+        "donkey-betz/documentation/handoff.md",
+        "donkey-betz/architecture/system_docs_handoff.md"
+      ]
+    },
+    {
+      "hash": "34532a3c768260438206324f11dce0a2",
+      "files": [
+        "donkey-betz/documentation/selection-flowchart.md",
+        "donkey-betz/documentation/selection-flowchart_1.md",
+        "donkey-betz/architecture/system_docs_selection-flowchart.md"
+      ]
+    },
+    {
+      "hash": "4b9e1ff210f35a35848cb0df14997b63",
+      "files": [
+        "donkey-betz/documentation/data-cleanup.md",
+        "donkey-betz/documentation/data-cleanup_1.md",
+        "donkey-betz/architecture/system_docs_data-cleanup.md"
+      ]
+    },
+    {
+      "hash": "ac0a0c5c3667e55273750f4694695972",
+      "files": [
+        "donkey-betz/agent/operations_AGENT_INITIALIZATION_INSTRUCTIONS.md",
+        "donkey-betz/agent/AGENT_INITIALIZATION_INSTRUCTIONS_1.md",
+        "donkey-betz/agent/AGENT_INITIALIZATION_INSTRUCTIONS.md"
+      ]
+    },
+    {
+      "hash": "3fddf9a56072f31b22d8e596990856e5",
+      "files": [
+        "donkey-betz/agent/OPTIMIZATION_AGENT_SYSTEM_PROMPT.md",
+        "donkey-betz/agent/operations_OPTIMIZATION_AGENT_SYSTEM_PROMPT.md",
+        "donkey-betz/agent/OPTIMIZATION_AGENT_SYSTEM_PROMPT_1.md"
+      ]
+    },
+    {
+      "hash": "f6efa69ef38b85c445c3409cc9aa05a9",
+      "files": [
+        "donkey-betz/agent/core-agents-audit.md",
+        "donkey-betz/agent/core-agents-audit_1.md",
+        "donkey-betz/agent/system_docs_core-agents-audit.md"
+      ]
+    },
+    {
+      "hash": "3d79fea593016162f6f29d24b48c2452",
+      "files": [
+        "donkey-betz/agent/core-agents-upgrade-progress.md",
+        "donkey-betz/agent/core-agents-upgrade-progress_1.md",
+        "donkey-betz/agent/system_docs_core-agents-upgrade-progress.md"
+      ]
+    },
+    {
+      "hash": "e6fe32209a806fb576d3a519f3197a44",
+      "files": [
+        "donkey-betz/agent/core-agents-upgrade-log_1.md",
+        "donkey-betz/agent/core-agents-upgrade-log.md",
+        "donkey-betz/agent/system_docs_core-agents-upgrade-log.md"
+      ]
+    },
+    {
+      "hash": "b82e1eeaff2b8943eabab3908decfc73",
+      "files": [
+        "donkey-betz/agent/spider-agent-concept_1.md",
+        "donkey-betz/agent/spider-agent-concept.md",
+        "donkey-betz/agent/system_docs_spider-agent-concept.md"
+      ]
+    },
+    {
+      "hash": "cd0561cdbd1ea434b8e1d7e26d8040e7",
+      "files": [
+        "donkey-betz/agent/CACHE_ACTIVATION_AGENT_PROMPT.md",
+        "donkey-betz/agent/CACHE_ACTIVATION_AGENT_PROMPT_1.md",
+        "donkey-betz/agent/operations_CACHE_ACTIVATION_AGENT_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "613cbb3e45e595a93571078d6b90813d",
+      "files": [
+        "donkey-betz/agent/system_docs_agent-inventory.md",
+        "donkey-betz/agent/agent-inventory_1.md",
+        "donkey-betz/agent/agent-inventory.md"
+      ]
+    },
+    {
+      "hash": "4bbed6707793bad3a2ec98639f420579",
+      "files": [
+        "donkey-betz/agent/AGENT_TOOLS_DEEP_DIVE.md",
+        "donkey-betz/agent/AGENT_TOOLS_DEEP_DIVE_1.md"
+      ]
+    },
+    {
+      "hash": "58e621d589982f596f1969310236627a",
+      "files": [
+        "donkey-betz/readme/README_14.md",
+        "donkey-betz/readme/README_18_1.md",
+        "donkey-betz/readme/essential_README_18.md"
+      ]
+    },
+    {
+      "hash": "3e91efb72e972d08e2e589b1efdc1cee",
+      "files": [
+        "donkey-betz/readme/README_20.md",
+        "donkey-betz/readme/essential_README_24.md",
+        "donkey-betz/readme/README_24_1.md"
+      ]
+    },
+    {
+      "hash": "12e58531608c345fb862bfe28e1d45cf",
+      "files": [
+        "donkey-betz/readme/essential_README_11.md",
+        "donkey-betz/readme/README_6.md",
+        "donkey-betz/readme/README_11_1.md"
+      ]
+    },
+    {
+      "hash": "bc4b386aa6055cb1b7e2ff48c983969b",
+      "files": [
+        "donkey-betz/readme/README_30.md",
+        "donkey-betz/readme/essential_README_30.md"
+      ]
+    },
+    {
+      "hash": "7c0cbe88391c2f1e91226f6da24f5cb6",
+      "files": [
+        "donkey-betz/readme/essential_README_25.md",
+        "donkey-betz/readme/README_25.md",
+        "donkey-betz/readme/README_21.md"
+      ]
+    },
+    {
+      "hash": "39de3d2aa3827b52793f71c8761e3e45",
+      "files": [
+        "donkey-betz/readme/README_22_1.md",
+        "donkey-betz/readme/README_18.md",
+        "donkey-betz/readme/essential_README_22.md"
+      ]
+    },
+    {
+      "hash": "032c6efef8fa53ffbffb5e05cb2db333",
+      "files": [
+        "donkey-betz/readme/README_3_1.md",
+        "donkey-betz/readme/essential_README_3.md",
+        "donkey-betz/readme/README_33.md"
+      ]
+    },
+    {
+      "hash": "ff61c166fc975c5b9ec6e0285ef0037a",
+      "files": [
+        "donkey-betz/readme/README_24.md",
+        "donkey-betz/readme/recent_progress_README.md"
+      ]
+    },
+    {
+      "hash": "bc69a970f6dd2ac6c9937a1d9a906949",
+      "files": [
+        "donkey-betz/readme/phase-3-integration_README.md",
+        "donkey-betz/readme/essential_phase-3-integration_README.md",
+        "donkey-betz/readme/README_47.md"
+      ]
+    },
+    {
+      "hash": "8216581839d7ecf626d7b24dfe702f23",
+      "files": [
+        "donkey-betz/readme/README_14_1.md",
+        "donkey-betz/readme/README_10.md",
+        "donkey-betz/readme/essential_README_14.md"
+      ]
+    },
+    {
+      "hash": "8645e6909f3da8a570f945735476bf6b",
+      "files": [
+        "donkey-betz/readme/essential_README_31.md",
+        "donkey-betz/readme/README_31.md"
+      ]
+    },
+    {
+      "hash": "fb84f46942d0161a177129a48bc7c6f4",
+      "files": [
+        "donkey-betz/readme/essential_README_21.md",
+        "donkey-betz/readme/README_17.md",
+        "donkey-betz/readme/README_21_1.md"
+      ]
+    },
+    {
+      "hash": "ccb90e68b83710ce6fee873ffcfdd499",
+      "files": [
+        "donkey-betz/readme/essential_README_15.md",
+        "donkey-betz/readme/README_11.md",
+        "donkey-betz/readme/README_15_1.md"
+      ]
+    },
+    {
+      "hash": "4985a863cd05ba31a059f2030d6beca6",
+      "files": [
+        "donkey-betz/readme/README_65.md",
+        "donkey-betz/readme/README_66.md"
+      ]
+    },
+    {
+      "hash": "9e6c7bf9ce00e05b977018e9a6bce6ab",
+      "files": [
+        "donkey-betz/readme/essential_README_20.md",
+        "donkey-betz/readme/README_20_1.md",
+        "donkey-betz/readme/README_16.md"
+      ]
+    },
+    {
+      "hash": "4e51d4ee1c9ab871a41ce54a72e14f6b",
+      "files": [
+        "donkey-betz/readme/README_35.md",
+        "donkey-betz/readme/README_26_1.md",
+        "donkey-betz/readme/essential_README_26.md"
+      ]
+    },
+    {
+      "hash": "a1ee4141188e1f86492d69dc8759ba80",
+      "files": [
+        "donkey-betz/readme/README_2_1.md",
+        "donkey-betz/readme/essential_README_2.md",
+        "donkey-betz/readme/README_9.md"
+      ]
+    },
+    {
+      "hash": "13bbd71f4b20588a5cfee34162d0f16f",
+      "files": [
+        "donkey-betz/readme/README_23_1.md",
+        "donkey-betz/readme/README_19.md",
+        "donkey-betz/readme/essential_README_23.md"
+      ]
+    },
+    {
+      "hash": "95c83a380a43cadb347b6fba9306c5bb",
+      "files": [
+        "donkey-betz/readme/README_15.md",
+        "donkey-betz/readme/README_19_1.md",
+        "donkey-betz/readme/essential_README_19.md"
+      ]
+    },
+    {
+      "hash": "72aec28e7a93b1d18de17b1a939bb8fb",
+      "files": [
+        "donkey-betz/readme/essential_README_10.md",
+        "donkey-betz/readme/README_5.md",
+        "donkey-betz/readme/README_10_1.md"
+      ]
+    },
+    {
+      "hash": "032d49158c758fab37ed10710ed13c7c",
+      "files": [
+        "donkey-betz/readme/README_5_1.md",
+        "donkey-betz/readme/essential_README_5.md",
+        "donkey-betz/readme/README_39.md"
+      ]
+    },
+    {
+      "hash": "f6741395ff800f5f148b88a84b020f01",
+      "files": [
+        "donkey-betz/readme/production-testing-readme.md",
+        "donkey-betz/readme/production-testing-readme_1.md",
+        "donkey-betz/readme/essential_production-testing-readme.md"
+      ]
+    },
+    {
+      "hash": "0b212b532989f43c11d5fbbcc4565c59",
+      "files": [
+        "donkey-betz/readme/README_12_1.md",
+        "donkey-betz/readme/README_7.md",
+        "donkey-betz/readme/essential_README_12.md"
+      ]
+    },
+    {
+      "hash": "7c468753204261309b40793527a0a8e6",
+      "files": [
+        "donkey-betz/readme/README_9_1.md",
+        "donkey-betz/readme/README_4.md",
+        "donkey-betz/readme/essential_README_9.md"
+      ]
+    },
+    {
+      "hash": "04e26663788508421ba8fed68eb53976",
+      "files": [
+        "donkey-betz/readme/claude-code-readme_1.md",
+        "donkey-betz/readme/claude-code-readme.md",
+        "donkey-betz/readme/essential_claude-code-readme.md"
+      ]
+    },
+    {
+      "hash": "28d0cb907df40945b2b30538971deba2",
+      "files": [
+        "donkey-betz/readme/essential_README_4.md",
+        "donkey-betz/readme/README_4_1.md",
+        "donkey-betz/readme/README_37.md"
+      ]
+    },
+    {
+      "hash": "1005b33e95ac666f77a4453562aae909",
+      "files": [
+        "donkey-betz/readme/README_8_1.md",
+        "donkey-betz/readme/essential_README_8.md"
+      ]
+    },
+    {
+      "hash": "ddcc58da5d827c41e92fa754fde18a3e",
+      "files": [
+        "donkey-betz/readme/README_13_1.md",
+        "donkey-betz/readme/README_8.md",
+        "donkey-betz/readme/essential_README_13.md"
+      ]
+    },
+    {
+      "hash": "38dfac2c18d11e35092ded02ad673bda",
+      "files": [
+        "donkey-betz/readme/essential_README_1.md",
+        "donkey-betz/readme/README_1_1.md"
+      ]
+    },
+    {
+      "hash": "ef526b709b9e7666c53b92ee445bcb85",
+      "files": [
+        "donkey-betz/readme/README_49.md",
+        "donkey-betz/readme/essential_README_6.md",
+        "donkey-betz/readme/README_6_1.md"
+      ]
+    },
+    {
+      "hash": "dee9b166e46fcc102eb4e6d6fa57fa1b",
+      "files": [
+        "donkey-betz/readme/essential_README_29.md",
+        "donkey-betz/readme/README_29.md"
+      ]
+    },
+    {
+      "hash": "817348669a965aa421d6dc82c5e51da2",
+      "files": [
+        "donkey-betz/readme/README_7_1.md",
+        "donkey-betz/readme/essential_README_7.md"
+      ]
+    },
+    {
+      "hash": "d7bc60a13f73d742110353a3a51afbad",
+      "files": [
+        "donkey-betz/readme/README_28.md",
+        "donkey-betz/readme/README_38.md",
+        "donkey-betz/readme/essential_README_28.md"
+      ]
+    },
+    {
+      "hash": "97a350242f3c1a6571b27eb2b691652e",
+      "files": [
+        "donkey-betz/readme/essential_README.md",
+        "donkey-betz/readme/README_26.md"
+      ]
+    },
+    {
+      "hash": "1fc76fb84d05cd302490830dab704ad1",
+      "files": [
+        "donkey-betz/readme/implementation_README.md",
+        "donkey-betz/readme/README_32.md"
+      ]
+    },
+    {
+      "hash": "a16b97facb0f0673574520888db11b88",
+      "files": [
+        "donkey-betz/readme/README_12.md",
+        "donkey-betz/readme/README_16_1.md",
+        "donkey-betz/readme/essential_README_16.md"
+      ]
+    },
+    {
+      "hash": "a7a9af704853016b316373a6ef83fae2",
+      "files": [
+        "donkey-betz/readme/README_36.md",
+        "donkey-betz/readme/essential_README_27.md",
+        "donkey-betz/readme/README_27.md"
+      ]
+    },
+    {
+      "hash": "2eeed50776704871527285d420fc8cea",
+      "files": [
+        "donkey-betz/readme/essential_README_17.md",
+        "donkey-betz/readme/README_17_1.md",
+        "donkey-betz/readme/README_13.md"
+      ]
+    },
+    {
+      "hash": "911c6bc90143926fba17e25c10a2af9a",
+      "files": [
+        "donkey-betz/readme/README_22.md",
+        "donkey-betz/architecture/system_docs_README.md"
+      ]
+    },
+    {
+      "hash": "e01dea784cb23c40a84d08ea1f0b1901",
+      "files": [
+        "donkey-betz/readme/README_23.md",
+        "donkey-betz/readme/operations_README.md"
+      ]
+    },
+    {
+      "hash": "35a2f0c8d48c27696831e599734e4ba4",
+      "files": [
+        "donkey-betz/testing/obs-testing-recommendations.md",
+        "donkey-betz/testing/obs-testing-recommendations_1.md",
+        "donkey-betz/architecture/system_docs_obs-testing-recommendations.md"
+      ]
+    },
+    {
+      "hash": "0186c0a1ed2dec61bca47ca93252e204",
+      "files": [
+        "donkey-betz/testing/obs-testing.md",
+        "donkey-betz/testing/obs-testing_1.md",
+        "donkey-betz/architecture/system_docs_obs-testing.md"
+      ]
+    },
+    {
+      "hash": "7701c670e560a9c2bf50cb95645d7f49",
+      "files": [
+        "donkey-betz/architecture/system_docs_improvements-summary.md",
+        "donkey-betz/report/improvements-summary.md",
+        "donkey-betz/report/improvements-summary_1.md"
+      ]
+    },
+    {
+      "hash": "445c762edd5c8f00b045de622ab4e57a",
+      "files": [
+        "donkey-betz/architecture/MYTHOLOGY_SYSTEM_COMPLETE_GUIDE.md",
+        "donkey-betz/architecture/MYTHOLOGY_SYSTEM_COMPLETE_GUIDE_1.md"
+      ]
+    },
+    {
+      "hash": "341e3a502c257579f7e14fd5d4f0df17",
+      "files": [
+        "donkey-betz/architecture/AUTH_CACHE_FIX_SYSTEM_PROMPT_1.md",
+        "donkey-betz/architecture/AUTH_CACHE_FIX_SYSTEM_PROMPT.md",
+        "donkey-betz/architecture/operations_AUTH_CACHE_FIX_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "a674bc0650a2891b1cca478d2c31391b",
+      "files": [
+        "donkey-betz/architecture/system_docs_prompting-system.md",
+        "donkey-betz/architecture/prompting-system_1.md",
+        "donkey-betz/architecture/prompting-system.md"
+      ]
+    },
+    {
+      "hash": "f79e812477887d5ff39dd8b3dbac868c",
+      "files": [
+        "donkey-betz/architecture/knowledge-systems_1.md",
+        "donkey-betz/architecture/system_docs_knowledge-systems.md",
+        "donkey-betz/architecture/knowledge-systems.md"
+      ]
+    },
+    {
+      "hash": "1899b7810126362b3b40d185a29eb482",
+      "files": [
+        "donkey-betz/architecture/PROMPTING_SYSTEM_COMPLETE_GUIDE.md",
+        "donkey-betz/architecture/PROMPTING_SYSTEM_COMPLETE_GUIDE_1.md"
+      ]
+    },
+    {
+      "hash": "23f1b08d9d408c4dcaffd47df6941783",
+      "files": [
+        "donkey-betz/architecture/AI_INSIGHTS_SYSTEM_COMPLETE_GUIDE.md",
+        "donkey-betz/architecture/AI_INSIGHTS_SYSTEM_COMPLETE_GUIDE_1.md"
+      ]
+    },
+    {
+      "hash": "13430a6ef77670954965091499dd33c8",
+      "files": [
+        "donkey-betz/architecture/MONITORING_SYSTEM_PROMPT_1.md",
+        "donkey-betz/architecture/MONITORING_SYSTEM_PROMPT.md",
+        "donkey-betz/architecture/operations_MONITORING_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "fe523e3a06be6451fca5e8d282383393",
+      "files": [
+        "donkey-betz/architecture/system_docs_davinci-resolve-summary.md",
+        "donkey-betz/report/davinci-resolve-summary_1.md",
+        "donkey-betz/report/davinci-resolve-summary.md"
+      ]
+    },
+    {
+      "hash": "18cdbb8cc87bf68c64a6a92701ae30af",
+      "files": [
+        "donkey-betz/architecture/learning-systems_1.md",
+        "donkey-betz/architecture/system_docs_learning-systems.md",
+        "donkey-betz/architecture/learning-systems.md"
+      ]
+    },
+    {
+      "hash": "4cf9f78a8a13b0f232222324ddd9ace8",
+      "files": [
+        "donkey-betz/architecture/scout-systems_1.md",
+        "donkey-betz/architecture/system_docs_scout-systems.md",
+        "donkey-betz/architecture/scout-systems.md"
+      ]
+    },
+    {
+      "hash": "94a31f6bb4d6be46424ab33726ad3af6",
+      "files": [
+        "donkey-betz/architecture/system_docs_status-report.md",
+        "donkey-betz/report/status-report.md",
+        "donkey-betz/report/status-report_1.md"
+      ]
+    },
+    {
+      "hash": "9a04b347337f8224b3dc58a78d53e1ee",
+      "files": [
+        "donkey-betz/architecture/AI_LEARNING_SYSTEM_COMPLETE_GUIDE_1.md",
+        "donkey-betz/architecture/AI_LEARNING_SYSTEM_COMPLETE_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "41ce0f348e3630147fb429f34165b8a6",
+      "files": [
+        "donkey-betz/architecture/CACHE_OPTIMIZATION_SYSTEM_PROMPT_1.md",
+        "donkey-betz/architecture/CACHE_OPTIMIZATION_SYSTEM_PROMPT.md",
+        "donkey-betz/architecture/operations_CACHE_OPTIMIZATION_SYSTEM_PROMPT.md"
+      ]
+    },
+    {
+      "hash": "b73c9b8511417510fda5a2ccfb912c0e",
+      "files": [
+        "donkey-betz/architecture/system_docs_davinci-integration-summary.md",
+        "donkey-betz/report/davinci-integration-summary.md",
+        "donkey-betz/report/davinci-integration-summary_1.md"
+      ]
+    },
+    {
+      "hash": "0d5993688f46520eab45b251a577b234",
+      "files": [
+        "donkey-betz/architecture/MEMORY_SYSTEM_COMPLETE_GUIDE_1.md",
+        "donkey-betz/architecture/MEMORY_SYSTEM_COMPLETE_GUIDE.md"
+      ]
+    },
+    {
+      "hash": "1253a85af58264dbaea046a9b73913c6",
+      "files": [
+        "donkey-betz/architecture/system_docs_fixes-summary.md",
+        "donkey-betz/report/fixes-summary_1.md",
+        "donkey-betz/report/fixes-summary.md"
+      ]
+    },
+    {
+      "hash": "c6ce501883b43bc98cd6e7270e706633",
+      "files": [
+        "donkey-betz/architecture/system_docs_ukf-integration-report.md",
+        "donkey-betz/report/ukf-integration-report_1.md",
+        "donkey-betz/report/ukf-integration-report.md"
+      ]
+    },
+    {
+      "hash": "3a3f488c72d50ae0497231777956b0b8",
+      "files": [
+        "donkey-betz/deployment/deployment-checklist.md",
+        "donkey-betz/deployment/operations_deployment-checklist.md",
+        "donkey-betz/deployment/deployment-checklist_1.md"
+      ]
+    },
+    {
+      "hash": "f215b4d4a9cd8d4393801b3de4f9a159",
+      "files": [
+        "donkey-betz/api/system_docs_davinci-api-map.md",
+        "donkey-betz/api/davinci-api-map.md",
+        "donkey-betz/api/davinci-api-map_1.md"
+      ]
+    },
+    {
+      "hash": "62172e9b262f09b06f63193325d511c0",
+      "files": [
+        "donkey-betz/api/system_docs_asset-library-api.md",
+        "donkey-betz/api/asset-library-api_1.md",
+        "donkey-betz/api/asset-library-api.md"
+      ]
+    },
+    {
+      "hash": "13fcd3386fba7303e7a14bac07ce34e7",
+      "files": [
+        "donkey-betz/report/REALITY_CHECK_REPORT.md",
+        "donkey-betz/report/REALITY_CHECK_REPORT_1.md"
+      ]
+    },
+    {
+      "hash": "caa77225e2c44714cc85d12b6146695b",
+      "files": [
+        "donkey-betz/report/AUDIT_REPORT.md",
+        "donkey-betz/report/AUDIT_REPORT_1.md"
+      ]
+    }
+  ]
+}

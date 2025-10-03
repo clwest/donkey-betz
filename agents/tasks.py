@@ -549,10 +549,111 @@ def execute_orchestration(self, orchestration_id: str):
         raise
 
 
-@shared_task(bind=True, max_retries=2)
-def execute_sports_orchestration(self, game_id: str, home_team: str, away_team: str, 
+def _transform_orchestration_for_frontend(orchestration_results: dict, home_team: str, away_team: str) -> dict:
+    """
+    Transform complex orchestration results into frontend-friendly format.
+
+    Frontend expects:
+    {
+        agents: [
+            {name: "Agent Name", confidence: 85, analysis: "Detailed text with team names"}
+        ],
+        recommendation: {
+            team: "Buffalo Bills",
+            bet_type: "moneyline",
+            stake_percent: 2.5,
+            expected_value: 12.5
+        },
+        overall_confidence: 82
+    }
+    """
+    frontend_format = {
+        'agents': [],
+        'recommendation': {},
+        'overall_confidence': 75
+    }
+
+    try:
+        # Extract agent results from all phases
+        phase_results = orchestration_results.get('phase_results', {})
+
+        for phase_name, phase_data in phase_results.items():
+            agent_results = phase_data.get('results', {})
+
+            for agent_id, agent_result in agent_results.items():
+                # Skip failed agents
+                if not agent_result.get('success', True):
+                    continue
+
+                # Get agent data
+                agent_data = agent_result.get('data', {})
+                agent_name = agent_result.get('agent_name', agent_id.replace('-', ' ').title())
+                confidence = int(agent_data.get('confidence', 0.75) * 100)
+
+                # Build analysis text from insights
+                insights = agent_data.get('insights', [])
+                if insights:
+                    # Join insights into a readable analysis paragraph
+                    analysis = ' '.join(insights)
+                else:
+                    # Fallback to generic message if no insights
+                    analysis = f"{agent_name} completed analysis for {home_team} vs {away_team}"
+
+                frontend_format['agents'].append({
+                    'name': agent_name,
+                    'confidence': confidence,
+                    'analysis': analysis
+                })
+
+        # Extract final recommendation
+        final_rec = orchestration_results.get('final_recommendation', {})
+
+        if final_rec.get('action') in ['BET', 'LEAN']:
+            primary_rec = final_rec.get('primary_recommendation', {})
+
+            frontend_format['recommendation'] = {
+                'team': primary_rec.get('side', home_team),
+                'bet_type': 'moneyline',
+                'stake_percent': float(final_rec.get('kelly_allocation', '2.5%').rstrip('%')),
+                'expected_value': float(final_rec.get('expected_value', '+0%').lstrip('+').rstrip('%'))
+            }
+        else:
+            # No strong recommendation - pass
+            frontend_format['recommendation'] = {
+                'team': 'No Strong Play',
+                'bet_type': 'pass',
+                'stake_percent': 0,
+                'expected_value': 0
+            }
+
+        # Set overall confidence
+        frontend_format['overall_confidence'] = int(final_rec.get('overall_confidence', 0.75) * 100)
+
+        return frontend_format
+
+    except Exception as e:
+        logger.error(f"Error transforming orchestration results: {e}")
+        # Return minimal valid structure on error
+        return {
+            'agents': [{
+                'name': 'System',
+                'confidence': 50,
+                'analysis': f'Analysis completed for {home_team} vs {away_team}. Error formatting results.'
+            }],
+            'recommendation': {
+                'team': home_team,
+                'bet_type': 'pass',
+                'stake_percent': 0,
+                'expected_value': 0
+            },
+            'overall_confidence': 50
+        }
+
+
+@shared_task(bind=True, max_retries=2, soft_time_limit=90, time_limit=120)
+def execute_sports_orchestration(self, game_id: str, home_team: str, away_team: str,
                                  league: str, subscription_tier: str = 'basic',
-                                 selected_agents: list = None):
+                                 selected_agents: list = None, cache_key: str = None):
     """
     Execute sports betting agent orchestration asynchronously.
     This task handles the coordination of multiple betting analysis agents.
@@ -620,11 +721,31 @@ def execute_sports_orchestration(self, game_id: str, home_team: str, away_team: 
             )
             
             logger.info(f"✅ Sports orchestration completed successfully for game {game_id}")
-            return {
+
+            # Transform orchestration results into frontend-friendly format
+            frontend_results = _transform_orchestration_for_frontend(
+                orchestration_results,
+                home_team,
+                away_team
+            )
+
+            result_data = {
                 'success': True,
                 'game_id': game_id,
-                'results': orchestration_results
+                'results': frontend_results
             }
+
+            # Cache results for 20 minutes to avoid redundant expensive operations
+            if cache_key:
+                from django.core.cache import cache
+                cache.set(cache_key, {
+                    'result': result_data,
+                    'timestamp': datetime.now().isoformat(),
+                    'cache_age': 0  # Fresh result
+                }, timeout=1200)  # 20 minutes
+                logger.info(f"💾 Cached analysis for game {game_id} (cache_key: {cache_key}, TTL: 20 min)")
+
+            return result_data
             
         finally:
             loop.close()

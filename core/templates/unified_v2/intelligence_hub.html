@@ -1,0 +1,198 @@
+{% extends 'unified_v2/base.html' %}
+
+{% block title %}Intelligence Hub{% endblock %}
+{% block page_title %}Intelligence Hub{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Data Quality Overview -->
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-lg bg-gradient-to-br from-blue-900 to-gray-800 p-6 shadow-lg">
+            <div class="mb-2 text-3xl font-bold text-white">{{ spiders|length }}</div>
+            <div class="text-sm text-blue-300">Active Spiders</div>
+            <div class="mt-2 text-xs text-gray-400">Collecting intelligence</div>
+        </div>
+
+        <div class="rounded-lg bg-gradient-to-br from-green-900 to-gray-800 p-6 shadow-lg">
+            <div class="mb-2 text-3xl font-bold text-white">{{ data_quality.total_items|default:0 }}</div>
+            <div class="text-sm text-green-300">Data Items</div>
+            <div class="mt-2 text-xs text-gray-400">+{{ data_quality.recent_items_24h|default:0 }} in 24h</div>
+        </div>
+
+        <div class="rounded-lg bg-gradient-to-br from-purple-900 to-gray-800 p-6 shadow-lg">
+            <div class="mb-2 text-3xl font-bold text-white">{{ opportunities|length }}</div>
+            <div class="text-sm text-purple-300">Opportunities</div>
+            <div class="mt-2 text-xs text-gray-400">Ready to pursue</div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="mb-6 flex gap-2 overflow-x-auto">
+        <button class="hub-tab-button active rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 transition-colors"
+                data-tab="spiders">
+            🕷️ Spider Network
+        </button>
+        <button class="hub-tab-button rounded-lg bg-gray-700 px-6 py-3 text-white font-semibold hover:bg-gray-600 transition-colors"
+                data-tab="data">
+            📊 Intelligence Data
+        </button>
+        <button class="hub-tab-button rounded-lg bg-gray-700 px-6 py-3 text-white font-semibold hover:bg-gray-600 transition-colors"
+                data-tab="opportunities">
+            💰 Opportunities
+        </button>
+        <button class="hub-tab-button rounded-lg bg-gray-700 px-6 py-3 text-white font-semibold hover:bg-gray-600 transition-colors"
+                data-tab="activity">
+            📈 Activity Feed
+        </button>
+    </div>
+
+    <!-- Spider Network Tab -->
+    <div id="hub-tab-spiders" class="hub-tab-content">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-white">Spider Network ({{ spiders|length }})</h2>
+                <div class="text-sm">
+                    <span class="inline-block rounded-full bg-green-600 px-3 py-1 text-white">
+                        {{ data_quality.quality_score|floatformat:0 }}% Quality
+                    </span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <input type="text" id="spider-search"
+                       class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="Search spiders...">
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {% for spider in spiders %}
+                <div class="spider-item rounded-lg bg-gray-700 p-4 hover:bg-gray-600 transition-colors"
+                     data-name="{{ spider.name }}">
+                    <div class="mb-2 flex items-center gap-2">
+                        <span class="text-2xl">🕷️</span>
+                        <h3 class="flex-1 text-sm font-semibold text-white">{{ spider.name }}</h3>
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-500" title="Active"></span>
+                    </div>
+                    <p class="text-xs text-gray-400">{{ spider.description|default:"Intelligence collector" }}</p>
+                    <div class="mt-2 text-xs text-gray-500">Type: {{ spider.spider_type|default:"web" }}</div>
+                </div>
+                {% empty %}
+                <div class="col-span-full text-center text-gray-400 py-8">
+                    No spiders deployed yet.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Intelligence Data Tab -->
+    <div id="hub-tab-data" class="hub-tab-content hidden">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">Recent Intelligence Data</h2>
+
+            <div class="space-y-3">
+                {% for item in recent_spider_data %}
+                <div class="rounded-lg bg-gray-700 p-4 hover:bg-gray-600 transition-colors">
+                    <div class="mb-2 flex items-start justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-white">{{ item.data_type|default:"Data" }}</h3>
+                            <p class="text-xs text-gray-400">Source: {{ item.source_url|default:"Unknown" }}</p>
+                        </div>
+                        <span class="text-xs text-gray-500">{{ item.created_at|date:"M d, H:i" }}</span>
+                    </div>
+
+                    {% if item.data %}
+                    <div class="mt-2 rounded bg-gray-800 p-3">
+                        <pre class="text-xs text-gray-300 overflow-x-auto">{{ item.data|truncatechars:200 }}</pre>
+                    </div>
+                    {% endif %}
+
+                    {% if item.quality_score %}
+                    <div class="mt-2">
+                        <span class="text-xs text-gray-400">Quality: </span>
+                        <span class="text-xs text-green-400">{{ item.quality_score|floatformat:0 }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-400 py-12">
+                    No intelligence data collected yet. Deploy spiders to start gathering data.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Opportunities Tab -->
+    <div id="hub-tab-opportunities" class="hub-tab-content hidden">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">Income Opportunities ({{ opportunities|length }})</h2>
+
+            <div class="space-y-4">
+                {% for opportunity in opportunities %}
+                <div class="rounded-lg bg-gradient-to-r from-green-900 to-gray-800 p-4 border border-green-700 hover:border-green-600 transition-colors">
+                    <div class="mb-2 flex items-start justify-between">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-white">{{ opportunity.title }}</h3>
+                            {% if opportunity.platform %}
+                            <p class="text-xs text-gray-400">Platform: {{ opportunity.platform }}</p>
+                            {% endif %}
+                        </div>
+                        {% if opportunity.potential_earnings %}
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-green-400">${{ opportunity.potential_earnings }}</div>
+                            <div class="text-xs text-gray-400">Est. earnings</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if opportunity.description %}
+                    <p class="mb-3 text-sm text-gray-300">{{ opportunity.description|truncatewords:30 }}</p>
+                    {% endif %}
+
+                    <div class="flex items-center gap-4 text-xs text-gray-400">
+                        <span>⏰ {{ opportunity.created_at|date:"M d, Y" }}</span>
+                        {% if opportunity.match_score %}
+                        <span>🎯 {{ opportunity.match_score }}% match</span>
+                        {% endif %}
+                        {% if opportunity.url %}
+                        <a href="{{ opportunity.url }}" target="_blank"
+                           class="text-blue-400 hover:text-blue-300">View Details →</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-gray-400 py-12">
+                    No opportunities found yet. Your spiders are searching for the perfect matches!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Feed Tab -->
+    <div id="hub-tab-activity" class="hub-tab-content hidden">
+        <div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+            <h2 class="mb-4 text-xl font-semibold text-white">Real-Time Activity Feed</h2>
+
+            <div id="activity-feed" class="space-y-3">
+                <!-- Activity items will be loaded dynamically -->
+                <div class="text-center text-gray-400 py-12">
+                    <div class="animate-pulse">Loading activity feed...</div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <button onclick="refreshActivityFeed()"
+                        class="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 transition-colors">
+                    Refresh Feed
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/unified_v2/intelligence_hub.js"></script>
+{% endblock %}

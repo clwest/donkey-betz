@@ -110,6 +110,93 @@ class AutomatedJobApplicationBot:
 
         await asyncio.gather(*tasks, return_exceptions=True)
 
+    async def start_daily_application_cycle(self) -> Dict[str, Any]:
+        """Start a single daily application cycle (for integration with money machine)"""
+
+        try:
+            logger.info("🚀 Starting daily application cycle...")
+
+            applications_sent = 0
+            successful_applications = 0
+
+            # Find jobs on each platform
+            platforms = [PlatformType.UPWORK, PlatformType.FIVERR, PlatformType.FREELANCER]
+
+            for platform in platforms:
+                try:
+                    # Find jobs
+                    if platform == PlatformType.UPWORK:
+                        jobs = await self._find_upwork_jobs()
+                    elif platform == PlatformType.FIVERR:
+                        jobs = await self._find_fiverr_buyer_requests()
+                    else:
+                        jobs = await self._find_freelancer_projects()
+
+                    # Apply to qualifying jobs (limit to 5 per platform)
+                    for job in jobs[:5]:
+                        if await self._should_apply_to_job(job):
+                            result = await self.apply_to_job_opportunity(job)
+                            applications_sent += 1
+                            if result.success:
+                                successful_applications += 1
+
+                except Exception as e:
+                    logger.error(f"Error processing {platform.value}: {e}")
+
+            success_rate = successful_applications / max(1, applications_sent)
+
+            logger.info(f"✅ Daily cycle complete: {applications_sent} applications, {successful_applications} successful")
+
+            return {
+                "applications_sent": applications_sent,
+                "successful_applications": successful_applications,
+                "success_rate": success_rate,
+                "cycle_completed": timezone.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Error in daily application cycle: {e}")
+            return {
+                "applications_sent": 0,
+                "successful_applications": 0,
+                "success_rate": 0.0,
+                "error": str(e)
+            }
+
+    async def apply_to_job_opportunity(self, job: RealJobOpportunity) -> ApplicationResult:
+        """Apply to a specific job opportunity (wrapper for platform-specific methods)"""
+
+        try:
+            if job.platform == PlatformType.UPWORK:
+                return await self._apply_to_upwork_job(job)
+            elif job.platform == PlatformType.FIVERR:
+                return await self._apply_to_fiverr_request(job)
+            elif job.platform == PlatformType.FREELANCER:
+                return await self._apply_to_freelancer_project(job)
+            else:
+                logger.warning(f"Platform {job.platform.value} not supported yet")
+                return ApplicationResult(
+                    job_id=job.job_id,
+                    platform=job.platform,
+                    success=False,
+                    error_message=f"Platform {job.platform.value} not yet implemented",
+                    proposal_text="",
+                    bid_amount=0.0,
+                    timestamp=timezone.now()
+                )
+
+        except Exception as e:
+            logger.error(f"Error applying to job opportunity: {e}")
+            return ApplicationResult(
+                job_id=job.job_id,
+                platform=job.platform,
+                success=False,
+                error_message=str(e),
+                proposal_text="",
+                bid_amount=0.0,
+                timestamp=timezone.now()
+            )
+
     # ==========================================
     # UPWORK APPLICATION BOT
     # ==========================================
@@ -291,17 +378,18 @@ class AutomatedJobApplicationBot:
             return False
 
         # Check match score
-        if job.ai_match_score < 0.6:  # 60% match required
+        if hasattr(job, 'ai_match_score') and job.ai_match_score < 0.6:  # 60% match required
             return False
 
         # Check competition
-        if job.proposals_count > 30:  # Too competitive
+        if hasattr(job, 'proposals_count') and job.proposals_count > 30:  # Too competitive
             return False
 
         # Check if posted recently
-        hours_since_posted = (timezone.now() - job.posted_date).total_seconds() / 3600
-        if hours_since_posted > 48:  # Only apply to jobs posted within 48 hours
-            return False
+        if hasattr(job, 'posted_date'):
+            hours_since_posted = (timezone.now() - job.posted_date).total_seconds() / 3600
+            if hours_since_posted > 48:  # Only apply to jobs posted within 48 hours
+                return False
 
         logger.info(f"✅ Job '{job.title}' qualifies for application")
         return True
@@ -700,6 +788,9 @@ class AutomatedJobApplicationBot:
 
 # Global instance
 automated_job_bot = AutomatedJobApplicationBot()
+
+# Alias for backwards compatibility and agent loader
+AutomatedJobBot = AutomatedJobApplicationBot
 
 async def start_job_application_engine():
     """Start the automated job application engine"""

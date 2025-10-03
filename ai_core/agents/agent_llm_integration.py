@@ -28,7 +28,7 @@ class LLMProvider(ABC):
 
 
 class OpenAIProvider(LLMProvider):
-    """OpenAI GPT provider"""
+    """OpenAI GPT provider - Using Responses API for GPT-5 reasoning models"""
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
@@ -39,31 +39,85 @@ class OpenAIProvider(LLMProvider):
             self.client = None
             logger.warning("OpenAI API key not found")
 
-    async def generate(self, prompt: str, model: str = "gpt-4o-mini",
-                      temperature: float = 0.7, max_tokens: int = 1000,
-                      **kwargs) -> str:
-        """Generate response using OpenAI"""
+    async def generate(self, prompt: str, model: str = "gpt-5-mini",
+                      reasoning_effort: str = "low",
+                      verbosity: str = "medium",
+                      max_output_tokens: int = 1000,
+                      previous_response_id: Optional[str] = None,
+                      **kwargs) -> Dict[str, Any]:
+        """Generate response using OpenAI Responses API
+
+        Args:
+            prompt: Input text for the model
+            model: Model to use (gpt-5, gpt-5-mini, gpt-5-nano)
+            reasoning_effort: Reasoning level (minimal, low, medium, high)
+            verbosity: Output verbosity (low, medium, high)
+            max_output_tokens: Maximum output tokens (not including reasoning)
+            previous_response_id: ID from previous response for chain of thought
+
+        Returns:
+            Dict containing content, response_id, and usage stats
+        """
         if not self.client:
-            return "OpenAI API key not configured"
+            return {
+                'content': "OpenAI API key not configured",
+                'response_id': None,
+                'usage': None,
+                'error': True
+            }
 
         try:
-            response = await self.client.chat.completions.create(
+            # Use Responses API for GPT-5 models
+            response = await self.client.responses.create(
                 model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens,
+                input=prompt,
+                reasoning={"effort": reasoning_effort},
+                text={"verbosity": verbosity},
+                max_output_tokens=max_output_tokens,
+                previous_response_id=previous_response_id,
                 **kwargs
             )
-            return response.choices[0].message.content
+
+            return {
+                'content': response.output_text,
+                'response_id': response.id,
+                'usage': {
+                    'input_tokens': response.usage.input_tokens,
+                    'output_tokens': response.usage.output_tokens,
+                    'reasoning_tokens': getattr(response.usage, 'reasoning_tokens', 0)
+                },
+                'error': False
+            }
         except Exception as e:
             logger.error(f"OpenAI generation error: {e}")
-            return f"Error generating response: {e}"
+            return {
+                'content': f"Error generating response: {e}",
+                'response_id': None,
+                'usage': None,
+                'error': True
+            }
 
-    def get_cost(self, tokens_in: int, tokens_out: int) -> float:
-        """Calculate cost for OpenAI usage"""
-        # GPT-4o-mini pricing (per 1M tokens)
-        input_cost = (tokens_in / 1_000_000) * 0.15
-        output_cost = (tokens_out / 1_000_000) * 0.60
+    def get_cost(self, tokens_in: int, tokens_out: int, reasoning_tokens: int = 0, model: str = "gpt-5-mini") -> float:
+        """Calculate cost for OpenAI usage including reasoning tokens
+
+        GPT-5 Pricing (per 1M tokens):
+        - gpt-5: $1.25 input / $10.00 output
+        - gpt-5-mini: $0.25 input / $2.00 output
+        - gpt-5-nano: $0.05 input / $0.40 output
+        """
+        pricing = {
+            'gpt-5': {'input': 1.25, 'output': 10.00},
+            'gpt-5-mini': {'input': 0.25, 'output': 2.00},
+            'gpt-5-nano': {'input': 0.05, 'output': 0.40}
+        }
+
+        model_pricing = pricing.get(model, pricing['gpt-5-mini'])
+
+        # Input tokens + reasoning tokens are both billed as input
+        total_input_tokens = tokens_in + reasoning_tokens
+        input_cost = (total_input_tokens / 1_000_000) * model_pricing['input']
+        output_cost = (tokens_out / 1_000_000) * model_pricing['output']
+
         return input_cost + output_cost
 
 
@@ -159,8 +213,26 @@ class AgentLLMIntegration:
 
     async def generate_for_agent(self, agent_name: str, prompt: str,
                                 provider: Optional[str] = None,
+                                learned_context: Optional[Dict[str, Any]] = None,
+                                reasoning_effort: str = "low",
+                                verbosity: str = "medium",
+                                max_output_tokens: int = 1000,
+                                previous_response_id: Optional[str] = None,
+                                model: str = "gpt-5-mini",
                                 **kwargs) -> Dict[str, Any]:
-        """Generate LLM response for a specific agent"""
+        """Generate LLM response for a specific agent with proper GPT-5 reasoning configuration
+
+        Args:
+            agent_name: Name of the agent requesting generation
+            prompt: Input prompt for the model
+            provider: LLM provider to use (openai, anthropic, mock)
+            learned_context: Previous learning data to include in context
+            reasoning_effort: Reasoning level for GPT-5 (minimal, low, medium, high)
+            verbosity: Output verbosity (low, medium, high)
+            max_output_tokens: Maximum output tokens
+            previous_response_id: Previous response ID for chain of thought
+            model: Model to use (gpt-5, gpt-5-mini, gpt-5-nano)
+        """
         provider_name = provider or self.default_provider
         llm_provider = self.providers.get(provider_name)
 
@@ -172,22 +244,89 @@ class AgentLLMIntegration:
             }
 
         try:
-            # Add agent context to prompt
-            enhanced_prompt = f"[Agent: {agent_name}]\n{prompt}"
+            # Build enhanced prompt with learned context
+            enhanced_prompt = f"[Agent: {agent_name}]\n"
 
-            # Generate response
-            response = await llm_provider.generate(enhanced_prompt, **kwargs)
+            # Add learned knowledge if available
+            if learned_context and learned_context.get('total_learning_entries', 0) > 0:
+                enhanced_prompt += "\n🧠 LEARNED KNOWLEDGE (from past experiences):\n"
 
-            # Track usage
-            self._track_usage(agent_name, provider_name, len(prompt), len(response))
+                if learned_context.get('domains'):
+                    enhanced_prompt += f"\nDomains you've learned about: {', '.join(learned_context['domains'])}\n"
 
-            return {
-                'success': True,
-                'response': response,
-                'provider': provider_name,
-                'agent': agent_name,
-                'timestamp': datetime.now().isoformat()
-            }
+                if learned_context.get('sources'):
+                    sources_str = ', '.join(learned_context['sources'])
+                    enhanced_prompt += f"\nReliable data sources: {sources_str}\n"
+
+                if learned_context.get('key_patterns'):
+                    enhanced_prompt += f"\nKey patterns identified ({len(learned_context['key_patterns'])} insights):\n"
+                    for pattern in learned_context['key_patterns'][:3]:  # Top 3 patterns
+                        enhanced_prompt += f"  - {pattern['source']}: {pattern.get('potential', 'N/A')} (confidence: {pattern['confidence']:.0%})\n"
+
+                if learned_context.get('data_quality_insights'):
+                    enhanced_prompt += "\nData quality insights:\n"
+                    for insight in learned_context['data_quality_insights'][:3]:  # Top 3 insights
+                        enhanced_prompt += f"  - {insight['source']}: {insight.get('reliability', 'N/A')} reliability\n"
+
+                enhanced_prompt += "\n💡 Use this learned knowledge to improve your response quality and accuracy.\n\n"
+
+            enhanced_prompt += prompt
+
+            # Generate response with proper GPT-5 configuration
+            if provider_name == 'openai':
+                result = await llm_provider.generate(
+                    enhanced_prompt,
+                    model=model,
+                    reasoning_effort=reasoning_effort,
+                    verbosity=verbosity,
+                    max_output_tokens=max_output_tokens,
+                    previous_response_id=previous_response_id,
+                    **kwargs
+                )
+
+                if result.get('error'):
+                    return {
+                        'success': False,
+                        'error': result.get('content'),
+                        'response': None
+                    }
+
+                # Track usage with reasoning tokens
+                usage = result.get('usage', {})
+                self._track_usage(
+                    agent_name,
+                    provider_name,
+                    usage.get('input_tokens', len(enhanced_prompt)),
+                    usage.get('output_tokens', len(result['content'])),
+                    usage.get('reasoning_tokens', 0),
+                    model
+                )
+
+                return {
+                    'success': True,
+                    'response': result['content'],
+                    'response_id': result.get('response_id'),  # For chain of thought
+                    'usage': usage,
+                    'provider': provider_name,
+                    'agent': agent_name,
+                    'model': model,
+                    'timestamp': datetime.now().isoformat()
+                }
+
+            else:
+                # For non-OpenAI providers (Anthropic, Mock)
+                response = await llm_provider.generate(enhanced_prompt, **kwargs)
+
+                # Track usage (estimated for non-OpenAI)
+                self._track_usage(agent_name, provider_name, len(enhanced_prompt), len(response))
+
+                return {
+                    'success': True,
+                    'response': response,
+                    'provider': provider_name,
+                    'agent': agent_name,
+                    'timestamp': datetime.now().isoformat()
+                }
 
         except Exception as e:
             logger.error(f"LLM generation failed for {agent_name}: {e}")
@@ -227,16 +366,22 @@ class AgentLLMIntegration:
             return result
 
     def _track_usage(self, agent_name: str, provider: str,
-                    tokens_in: int, tokens_out: int):
-        """Track LLM usage statistics"""
+                    tokens_in: int, tokens_out: int,
+                    reasoning_tokens: int = 0, model: str = "gpt-5-mini"):
+        """Track LLM usage statistics including reasoning tokens"""
         self.usage_stats['total_requests'] += 1
         self.usage_stats['total_tokens_in'] += tokens_in
         self.usage_stats['total_tokens_out'] += tokens_out
 
-        # Calculate cost
+        # Calculate cost including reasoning tokens
         if provider in self.providers:
-            cost = self.providers[provider].get_cost(tokens_in, tokens_out)
+            if provider == 'openai':
+                cost = self.providers[provider].get_cost(tokens_in, tokens_out, reasoning_tokens, model)
+            else:
+                cost = self.providers[provider].get_cost(tokens_in, tokens_out)
             self.usage_stats['total_cost'] += cost
+        else:
+            cost = 0
 
         # Track per-agent usage
         if agent_name not in self.usage_stats['by_agent']:
@@ -244,6 +389,7 @@ class AgentLLMIntegration:
                 'requests': 0,
                 'tokens_in': 0,
                 'tokens_out': 0,
+                'reasoning_tokens': 0,
                 'cost': 0.0
             }
 
@@ -251,7 +397,8 @@ class AgentLLMIntegration:
         agent_stats['requests'] += 1
         agent_stats['tokens_in'] += tokens_in
         agent_stats['tokens_out'] += tokens_out
-        agent_stats['cost'] += cost if provider in self.providers else 0
+        agent_stats['reasoning_tokens'] = agent_stats.get('reasoning_tokens', 0) + reasoning_tokens
+        agent_stats['cost'] += cost
 
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get current usage statistics"""
@@ -261,9 +408,11 @@ class AgentLLMIntegration:
                                    agent_instance: Any) -> bool:
         """Enable an agent with LLM capabilities"""
         try:
-            # Add LLM methods to agent instance
+            # Add LLM methods to agent instance with learned context support
             agent_instance.generate_llm_response = lambda prompt: self.generate_for_agent(
-                agent_name, prompt
+                agent_name,
+                prompt,
+                learned_context=getattr(agent_instance, 'learned_context', None)
             )
             agent_instance.process_with_llm = lambda data, analysis_type: self.process_spider_data_with_llm(
                 agent_name, data, analysis_type

@@ -21,6 +21,9 @@ from .consumers_ai_training import AITrainingConsumer
 from .consumers_consciousness import ConsciousnessConsumer
 from .command_center_ai import CommandCenterAIConsumer
 
+# Import V2 consumers for new unified UI
+from .consumers_unified_v2 import PersonalAssistantConsumer as PersonalAssistantV2Consumer
+
 # Import consumers from intelligence app
 from intelligence.consumers import IncomeBuilderConsumer
 
@@ -125,8 +128,8 @@ websocket_urlpatterns = [
     # Sports real-time updates and force refresh
     re_path(r'^ws/sports/updates/$', consumers.SportsUpdatesConsumer.as_asgi()),
     
-    # Assistant chat WebSocket (from ai-content-studio)
-    re_path(r'^ws/assistant/$', consumers.AssistantChatConsumer.as_asgi()),
+    # Assistant chat WebSocket (V2 - new unified UI)
+    re_path(r'^ws/assistant/$', PersonalAssistantV2Consumer.as_asgi()),
 
     # Enhanced AI Assistant with full personalization
     re_path(r'^ws/ai-assistant/$', consumers.AssistantChatConsumer.as_asgi()),

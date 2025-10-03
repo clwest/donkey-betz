@@ -610,7 +610,7 @@
     function updateStats(newStats) {
         stats = { ...stats, ...newStats };
 
-        document.getElementById('activeCount').textContent = stats.active || 0;
+        document.getElementById('activeCount').textContent = stats.activeCount || stats.active || 0;
         document.getElementById('totalValue').textContent = `$${(stats.totalValue || 0).toLocaleString()}`;
         document.getElementById('appliedToday').textContent = stats.appliedToday || 0;
         document.getElementById('successRate').textContent = `${(stats.successRate || 0).toFixed(1)}%`;

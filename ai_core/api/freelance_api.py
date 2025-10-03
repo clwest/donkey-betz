@@ -205,7 +205,7 @@ Respond in JSON format:
 
         # Use proven working models - GPT-5 models have empty response issues
         possible_models = [
-            "gpt-4o-mini",      # Proven working model - use first
+            "gpt-5-mini",      # Proven working model - use first
             "gpt-4o",           # Proven working flagship model
             "gpt-4.1-mini",     # Latest GPT-4.1 model - 83% cheaper, half latency vs gpt-4o
             "gpt-4.1",          # Latest GPT-4.1 flagship model
@@ -216,9 +216,9 @@ Respond in JSON format:
             # "gpt-5-nano",     # GPT-5 nano - returning empty responses
             "o4-mini",          # Latest reasoning model optimized for cost/performance
             "o3",               # Advanced reasoning model
-            "gpt-4o-mini",      # Fallback to 2024 model
+            "gpt-5-mini",      # Fallback to 2024 model
             "gpt-4o",           # Fallback to 2024 flagship
-            "gpt-4o-mini-2024-07-18"  # Specific dated version
+            "gpt-5-mini-2024-07-18"  # Specific dated version
         ]
 
         response = None
@@ -274,7 +274,7 @@ Should I take this job? Respond with: PURSUE, AVOID, or MAYBE and explain why in
                     # Remove temperature for reasoning models
                     del call_params["temperature"]
                 else:
-                    # Standard models (gpt-4o, gpt-4o-mini, etc.)
+                    # Standard models (gpt-4o, gpt-5-mini, etc.)
                     call_params["max_tokens"] = 800
                     call_params["messages"] = [
                         {"role": "system", "content": "You are an expert freelance job analyzer. Provide realistic, data-driven analysis in JSON format only."},

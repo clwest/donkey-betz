@@ -398,6 +398,7 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
             from .orchestration_reality_connector import orchestration_connector
             from .models_unified_system import Advisor
             from django.db.models import Count
+            from datetime import timedelta
             import random
 
             # Get real agent data from database

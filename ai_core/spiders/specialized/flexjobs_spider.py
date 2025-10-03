@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 
 from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+from ..revenue_tracker import create_project_revenue
 
 
 class FlexJobsIntelligenceSpider(BaseIntelligenceSpider):
@@ -205,9 +206,52 @@ class FlexJobsIntelligenceSpider(BaseIntelligenceSpider):
                 quality_score=0.3,
                 timestamp=datetime.now(timezone.utc),
                 relevance_tags=['remote_work', 'general'],
-                target_agents=['income_builder'],
+                target_agents=['income-builder', 'job_application_agent', 'career-agent'],
                 target_advisors=[]
             )
         except Exception as e:
             self.logger.error(f"Error processing general remote job: {e}")
+            return None
+
+    async def track_revenue_conversion(
+        self,
+        application_id: str,
+        user_id: str,
+        job_title: str,
+        contract_value: float,
+        employer_name: str,
+        **kwargs
+    ) -> Optional[str]:
+        """
+        Track revenue when a FlexJobs position is secured and generates earnings.
+        Called when job offers are accepted and employment begins.
+
+        Args:
+            application_id: Unique identifier for this job opportunity
+            user_id: User who was hired
+            job_title: Title of the position
+            contract_value: Total compensation (salary, hourly * estimated hours, etc.)
+            employer_name: Employer/company name
+            **kwargs: Additional metadata (job_type, remote_level, duration, etc.)
+
+        Returns:
+            Revenue record ID if successful, None otherwise
+        """
+        try:
+            record_id = await create_project_revenue(
+                application_id=application_id,
+                user_id=user_id,
+                client_name=employer_name,
+                project_title=job_title,
+                contract_value=contract_value,
+                **kwargs
+            )
+
+            if record_id:
+                self.logger.info(f"💰 Tracked FlexJobs revenue: ${contract_value} for '{job_title}' with {employer_name}")
+
+            return record_id
+
+        except Exception as e:
+            self.logger.error(f"Error tracking FlexJobs revenue conversion: {e}")
             return None

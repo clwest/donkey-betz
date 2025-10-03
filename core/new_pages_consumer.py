@@ -50,6 +50,8 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
 
         # Start appropriate updates based on page type
         if self.page_type == 'ai_nexus':
+            # Send initial status immediately
+            await self.send_ai_nexus_status()
             self.update_task = asyncio.create_task(self.send_ai_nexus_updates())
         elif self.page_type == 'dbao':
             self.update_task = asyncio.create_task(self.send_dbao_updates())
@@ -435,8 +437,8 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
                         'timestamp': timezone.now().isoformat()
                     }))
 
-                # Send status updates every ~2 minutes (probability ~0.13 per 15s check)
-                if random.random() > 0.7:
+                # Send status updates more frequently (every ~45 seconds)
+                if random.random() > 0.5:  # 50% chance every 15s = avg 30s between updates
                     await self.send_ai_nexus_status()
 
             except asyncio.CancelledError:

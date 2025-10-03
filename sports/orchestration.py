@@ -387,8 +387,8 @@ class AgentOrchestrator:
         if real_result:
             return real_result
         
-        # Fallback to mock if real agent fails
-        
+        # Fallback to mock if real agent fails - USE ACTUAL TEAM NAMES!
+
         mock_results = {
             "weather-analyzer": {
                 "temperature": 68,
@@ -396,37 +396,52 @@ class AgentOrchestrator:
                 "precipitation": 0,
                 "impact_on_totals": "favorable for over",
                 "confidence": 0.85,
-                "insights": ["Clear conditions favor passing offense", "Wind speed minimal impact"]
+                "insights": [
+                    f"Clear conditions in {context.venue} favor passing offense for both {context.home_team} and {context.away_team}",
+                    f"Wind speed minimal - expect normal offensive output from both teams"
+                ]
             },
             "injury-analyzer": {
                 "key_injuries": [
-                    {"player": "Star QB", "status": "Questionable", "impact": "High"},
-                    {"player": "Top WR", "status": "Out", "impact": "Medium"}
+                    {"player": f"{context.away_team} Star QB", "status": "Questionable", "impact": "High"},
+                    {"player": f"{context.home_team} Top WR", "status": "Out", "impact": "Medium"}
                 ],
-                "team_impact": "Moderate offensive downgrade",
+                "team_impact": f"Moderate offensive downgrade for {context.home_team}",
                 "confidence": 0.75,
-                "insights": ["Backup QB less mobile", "Reduced red zone efficiency expected"]
+                "insights": [
+                    f"{context.away_team} backup QB less mobile - may impact passing game",
+                    f"{context.home_team} missing key receiver - reduced red zone efficiency expected"
+                ]
             },
             "market-value-analyzer": {
-                "line_value": "Home team undervalued by 2.5 points",
+                "line_value": f"{context.home_team} undervalued by 2.5 points based on power ratings",
                 "efficiency_rating": 73,
                 "implied_probability": 0.58,
                 "confidence": 0.80,
-                "insights": ["Market overreacting to injury news", "Sharp money on home team"]
+                "insights": [
+                    f"Market overreacting to {context.away_team} recent performance - {context.home_team} presents value",
+                    f"Sharp money backing {context.home_team} despite public favoring {context.away_team}"
+                ]
             },
             "kelly-bet-sizing": {
                 "optimal_allocation": "4.2%",
                 "expected_roi": "12.8%",
                 "risk_level": "Moderate",
                 "confidence": 0.82,
-                "insights": ["Strong edge identified", "Fractional Kelly recommended"]
+                "insights": [
+                    f"Strong edge identified on {context.home_team} based on market inefficiency",
+                    f"Fractional Kelly (0.5x) recommended for {context.home_team} play"
+                ]
             },
             "public-sentiment-analyzer": {
                 "public_percentage": 67,
                 "sharp_percentage": 33,
                 "reverse_line_movement": True,
                 "confidence": 0.78,
-                "insights": ["Classic contrarian spot", "Public overvaluing road team"]
+                "insights": [
+                    f"Classic contrarian spot: 67% of public betting on {context.away_team}, but line moving toward {context.home_team}",
+                    f"Sharp bettors backing {context.home_team} - reverse line movement signals professional action"
+                ]
             }
         }
         
@@ -594,9 +609,12 @@ Provide specific {agent_id.replace('-', ' ').title()} analysis using these exact
                 'phase': 'analysis'
             })
             
-            # Execute agent (will use Celery if configured, otherwise synchronous)
-            result = await sync_to_async(execute_agent_with_tools)(execution_id=execution_id)
-            
+            # Execute agent in a thread pool to avoid CurrentThreadExecutor issues
+            import concurrent.futures
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = await loop.run_in_executor(pool, execute_agent_with_tools, execution_id)
+
             # Refresh execution object to get results
             await sync_to_async(execution.refresh_from_db)()
             

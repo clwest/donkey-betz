@@ -256,7 +256,7 @@ class BaseIntelligenceSpider(ABC):
         pass
 
     async def _distribute_intelligence(self, intelligence: IntelligenceData):
-        """Distribute intelligence to subscribers via Redis"""
+        """Distribute intelligence to subscribers via Redis and persist to database"""
         try:
             # Send to specific subscribers
             for subscriber in self.subscribers:
@@ -280,6 +280,9 @@ class BaseIntelligenceSpider(ABC):
 
             self.logger.debug(f"Distributed intelligence to {len(self.subscribers)} subscribers")
 
+            # CRITICAL FIX: Persist to database
+            await self._persist_to_database(intelligence)
+
         except Exception as e:
             self.logger.error(f"Failed to distribute intelligence: {e}")
 
@@ -287,6 +290,90 @@ class BaseIntelligenceSpider(ABC):
         """Async wrapper for Redis publish"""
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.redis_client.publish, channel, message)
+
+    async def _persist_to_database(self, intelligence: IntelligenceData):
+        """
+        Persist intelligence data to the SpiderData database table.
+
+        This ensures all collected data is permanently stored and can be:
+        - Retrieved for analysis
+        - Routed to agents/advisors
+        - Used for opportunity creation
+        - Tracked for revenue attribution
+        """
+        try:
+            from persistence.models import SpiderData
+            from django.utils import timezone
+
+            # Prepare the data for persistence
+            spider_name = intelligence.spider_id.rsplit('_', 1)[0] if '_' in intelligence.spider_id else intelligence.spider_id
+
+            # Extract platform from source URL
+            from urllib.parse import urlparse
+            parsed_url = urlparse(intelligence.source_url)
+            domain = parsed_url.netloc.replace('www.', '')
+
+            # Map domains to platform names
+            platform_mapping = {
+                'upwork.com': 'upwork',
+                'fiverr.com': 'fiverr',
+                'freelancer.com': 'freelancer',
+                'linkedin.com': 'linkedin',
+                'reddit.com': 'reddit',
+                'twitter.com': 'twitter',
+                'x.com': 'twitter',
+                'facebook.com': 'facebook',
+                'instagram.com': 'instagram',
+                'youtube.com': 'youtube',
+                'github.com': 'github',
+                'stackoverflow.com': 'stackoverflow',
+                'medium.com': 'medium',
+                'substack.com': 'substack',
+                'producthunt.com': 'producthunt',
+                'indeed.com': 'indeed',
+                'glassdoor.com': 'glassdoor',
+                'angellist.com': 'angellist',
+            }
+
+            source_platform = 'other'
+            for key, value in platform_mapping.items():
+                if key in domain:
+                    source_platform = value
+                    break
+
+            # Create SpiderData entry
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: SpiderData.objects.create(
+                    spider_name=spider_name,
+                    spider_version='1.0.0',
+                    source_url=intelligence.source_url,
+                    source_platform=source_platform,
+                    source_metadata=intelligence.metadata,
+                    title=intelligence.content.get('title', intelligence.data_type)[:500],
+                    content=json.dumps(intelligence.content),
+                    structured_data=intelligence.content,
+                    data_type=intelligence.data_type if intelligence.data_type in [
+                        'opportunity', 'job_posting', 'market_data', 'competitor_info',
+                        'trend_data', 'user_feedback', 'product_info', 'pricing_data',
+                        'content_idea', 'collaboration', 'news', 'research',
+                        'tool_discovery', 'learning_resource'
+                    ] else 'research',  # Default to 'research' if type doesn't match choices
+                    quality_score=intelligence.quality_score,
+                    relevance_score=intelligence.quality_score,
+                    tags=intelligence.relevance_tags,
+                    routed_to_agents=intelligence.target_agents,  # CRITICAL FIX: Save target agents for autonomous learning
+                    is_processed=False,
+                    discovered_at=intelligence.timestamp
+                )
+            )
+
+            self.logger.info(f"✅ Persisted data to SpiderData table: {intelligence.spider_id} -> {intelligence.data_type}")
+
+        except Exception as e:
+            self.logger.error(f"❌ Failed to persist to database: {e}", exc_info=True)
+            # Don't raise - we don't want persistence failures to stop spider execution
 
     def calculate_data_quality(self, data: Dict[str, Any]) -> float:
         """

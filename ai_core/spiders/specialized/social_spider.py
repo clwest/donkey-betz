@@ -7,6 +7,7 @@ Reddit, Bluesky, and other social platforms. Provides real-time sentiment
 analysis and social trend intelligence.
 """
 
+import os
 import re
 import json
 import asyncio
@@ -36,6 +37,49 @@ class SocialSentimentSpider(BaseIntelligenceSpider):
             'neutral': ['sideways', 'consolidation', 'wait and see', 'cautious']
         }
 
+        # Initialize Reddit API with PRAW
+        self.reddit = None
+        try:
+            client_id = os.getenv('REDDIT_CLIENT_ID', '')
+            client_secret = os.getenv('REDDIT_CLIENT_SECRET', '')
+            user_agent = os.getenv('REDDIT_USER_AGENT', 'unified-donkey-betz/1.0')
+
+            if client_id and client_secret:
+                self.reddit = praw.Reddit(
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    user_agent=user_agent
+                )
+                self.logger.info(f"Reddit API authenticated for spider {spider_id}")
+            else:
+                self.logger.warning(f"Reddit API not configured - will use HTML scraping fallback for {spider_id}")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Reddit API: {e}")
+            self.reddit = None
+
+    async def _fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
+        """
+        Override base _fetch_data to use PRAW API for Reddit URLs.
+
+        This ensures Reddit data is fetched using PRAW instead of HTTP scraping.
+        """
+        try:
+            # For Reddit URLs, use PRAW API directly
+            if 'reddit.com' in target.url and self.reddit:
+                posts = await self._fetch_reddit_posts_with_praw(target.url)
+                if posts:
+                    return {'posts': posts, 'data_source': 'praw'}
+                else:
+                    self.logger.warning(f"PRAW returned no posts for {target.url}")
+                    return None
+
+            # For other URLs, use base HTTP fetching
+            return await super()._fetch_data(target)
+
+        except Exception as e:
+            self.logger.error(f"Error in SocialSentimentSpider._fetch_data: {e}")
+            return None
+
     async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
         """Process social media data"""
         try:
@@ -62,12 +106,17 @@ class SocialSentimentSpider(BaseIntelligenceSpider):
                 'sentiment_distribution': {}
             }
 
-            # Extract posts from HTML or API data
-            if 'content' in data:
-                soup = BeautifulSoup(data['content'], 'html.parser')
-                posts = self._extract_reddit_posts(soup)
-            elif 'posts' in data:
-                posts = data['posts']
+            # Try PRAW API first if authenticated
+            if self.reddit:
+                posts = await self._fetch_reddit_posts_with_praw(target.url)
+
+            # Fallback to HTML scraping if PRAW failed or not configured
+            if not posts:
+                if 'content' in data:
+                    soup = BeautifulSoup(data['content'], 'html.parser')
+                    posts = self._extract_reddit_posts(soup)
+                elif 'posts' in data:
+                    posts = data['posts']
 
             # Analyze each post
             for post in posts:
@@ -132,6 +181,59 @@ class SocialSentimentSpider(BaseIntelligenceSpider):
         except Exception as e:
             self.logger.error(f"Error processing Reddit data: {e}")
             return None
+
+    async def _fetch_reddit_posts_with_praw(self, url: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Fetch Reddit posts using PRAW API (runs in thread pool to avoid blocking)"""
+        posts = []
+        try:
+            if not self.reddit:
+                return posts
+
+            # Extract subreddit from URL
+            subreddit_name = None
+            if '/r/' in url:
+                parts = url.split('/r/')
+                if len(parts) > 1:
+                    subreddit_name = parts[1].split('/')[0]
+
+            if not subreddit_name:
+                self.logger.warning(f"Could not extract subreddit from URL: {url}")
+                return posts
+
+            # Run synchronous PRAW calls in a thread pool to avoid blocking the event loop
+            def fetch_posts():
+                post_list = []
+                try:
+                    # Fetch posts from subreddit
+                    subreddit = self.reddit.subreddit(subreddit_name)
+
+                    # Get hot posts (most active)
+                    for submission in subreddit.hot(limit=limit):
+                        post = {
+                            'title': submission.title,
+                            'body': submission.selftext[:500] if submission.selftext else '',
+                            'author': str(submission.author) if submission.author else '[deleted]',
+                            'score': submission.score,
+                            'comments': submission.num_comments,
+                            'subreddit': str(submission.subreddit),
+                            'url': f"https://reddit.com{submission.permalink}",
+                            'created': datetime.fromtimestamp(submission.created_utc, tz=timezone.utc).isoformat()
+                        }
+                        post_list.append(post)
+                except Exception as e:
+                    self.logger.error(f"Error in PRAW fetch thread: {e}")
+                return post_list
+
+            # Execute in thread pool
+            posts = await asyncio.to_thread(fetch_posts)
+
+            if posts:
+                self.logger.info(f"Fetched {len(posts)} posts from r/{subreddit_name} using PRAW API")
+
+        except Exception as e:
+            self.logger.error(f"Error fetching Reddit posts with PRAW: {e}")
+
+        return posts
 
     def _extract_reddit_posts(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
         """Extract Reddit posts from HTML"""

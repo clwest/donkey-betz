@@ -83,7 +83,7 @@ class LLMEnforcer:
                        context: str = "",
                        agent_name: str = "Unknown Agent",
                        task_type: str = "general",
-                       max_tokens: int = 500,
+                       max_tokens: int = 2000,  # Increased for GPT-5-mini reasoning models
                        temperature: float = 0.7,
                        use_claude: bool = False) -> Dict[str, Any]:
         """
@@ -128,7 +128,7 @@ class LLMEnforcer:
                 # Use OpenAI
                 response = self._call_openai(full_prompt, max_tokens, temperature, task_type)
                 provider = "openai"
-                model = "gpt-4o-mini"  # Reliable and efficient
+                model = "gpt-4o-mini"  # Fast and reliable standard model
             else:
                 raise Exception("No LLM client available")
 
@@ -192,36 +192,80 @@ class LLMEnforcer:
             raise Exception("OpenAI client not initialized")
 
         # Customize system message based on task type
+        # IMPORTANT: GPT-5-mini is a reasoning model - it needs explicit output instructions
         system_messages = {
-            'cover_letter': "You are an expert cover letter writer creating personalized, compelling applications.",
-            'content': "You are a professional content creator producing high-quality, engaging content.",
-            'analysis': "You are an expert analyst providing detailed, accurate insights.",
-            'code': "You are an expert programmer writing clean, efficient, well-documented code.",
-            'general': "You are a helpful AI assistant providing accurate and useful information."
+            'cover_letter': """You are an expert cover letter writer creating personalized, compelling applications.
+
+After analyzing the job and candidate information, write your cover letter below:
+
+COVER LETTER:""",
+            'content': """You are a professional content creator producing high-quality, engaging content.
+
+After considering all requirements and context, write your content below:
+
+FINAL CONTENT:""",
+            'analysis': """You are an expert analyst providing detailed, accurate insights.
+
+After analyzing all available data, provide your findings below:
+
+ANALYSIS:""",
+            'code': """You are an expert programmer writing clean, efficient, well-documented code.
+
+After planning the implementation, write your code below:
+
+CODE:""",
+            'general': """You are a helpful AI assistant providing accurate and useful information.
+
+After thinking through the request, provide your response below:
+
+RESPONSE:"""
         }
 
         system_msg = system_messages.get(task_type, system_messages['general'])
 
-        # Build parameters - switching to GPT-4o-mini for reliable content generation
-        # GPT-5-nano has issues with returning empty content
+        # For GPT-5-mini reasoning model: add explicit output instruction to user message
+        # The model thinks internally unless told to provide visible output
+        output_instructions = {
+            'cover_letter': "\n\nProvide your complete cover letter below:",
+            'content': "\n\nProvide your complete content below:",
+            'analysis': "\n\nProvide your complete analysis below:",
+            'code': "\n\nProvide your complete code below:",
+            'general': "\n\nProvide your complete response below:"
+        }
+        output_instruction = output_instructions.get(task_type, output_instructions['general'])
+        user_message = f"{prompt}{output_instruction}"
+
+        # Build parameters for GPT-4o-mini
         params = {
-            'model': "gpt-4o-mini",  # Using GPT-4o-mini for reliable content generation
+            'model': "gpt-4o-mini",
             'messages': [
                 {"role": "system", "content": system_msg},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": user_message}
             ],
-            'max_tokens': max_tokens,  # GPT-4 uses max_tokens
+            'max_tokens': max_tokens,
             'temperature': temperature
         }
 
         response = self.openai_client.chat.completions.create(**params)
 
         content = response.choices[0].message.content
-        # Debug: check if content is empty
+
+        # For reasoning models like GPT-5-mini, check if reasoning output is available
+        if not content and hasattr(response.choices[0], 'reasoning_content'):
+            content = response.choices[0].reasoning_content
+            logger.info(f"📊 Using reasoning content from GPT-5-mini")
+
+        # Debug: check if content is still empty
         if not content:
             logger.warning(f"⚠️ OpenAI returned empty content for prompt: {prompt[:100]}...")
             logger.warning(f"⚠️ Response object: {response}")
-            content = "[AI Response Error: Empty content returned from OpenAI]"
+
+            # For reasoning models, provide helpful fallback
+            usage = response.usage
+            if hasattr(usage, 'completion_tokens_details') and usage.completion_tokens_details.reasoning_tokens > 0:
+                content = f"[GPT-5-mini used {usage.completion_tokens_details.reasoning_tokens} reasoning tokens but produced no visible output. The model may need explicit instruction to provide a final answer.]"
+            else:
+                content = "[AI Response Error: Empty content returned from OpenAI]"
 
         tokens = response.usage.total_tokens
 

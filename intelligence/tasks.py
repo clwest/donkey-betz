@@ -603,7 +603,7 @@ Base recommendations on the concrete data collected, not generic advice."""
                         # NOTE: GPT-4o-mini works reliably with system prompts
                         response = ai_manager.generate_content(
                             provider='openai',
-                            model='gpt-4o-mini',  # Using stable GPT-4o-mini instead of experimental GPT-5
+                            model='gpt-5-mini',  # Using stable GPT-4o-mini instead of experimental GPT-5
                             system_prompt="You are an expert business consultant creating detailed action plans.",
                             user_prompt=prompt + "\n\n" + """Generate a detailed action plan using this EXACT format from our best-performing template:
 

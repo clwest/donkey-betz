@@ -18,6 +18,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 import re
 from dataclasses import dataclass
+from ai_core.agents.agent_llm_integration import agent_llm_integration
 
 logger = logging.getLogger(__name__)
 
@@ -316,17 +317,20 @@ Make it personal, not generic. Show personality while remaining professional.
             # Make REAL API call to OpenAI
             logger.info(f"🤖 {job_match.agent_name} is using OpenAI to write cover letter...")
 
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert cover letter writer. Create compelling, personalized applications."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.8,
-                max_completion_tokens=500
+            result = await agent_llm_integration.generate_for_agent(
+                agent_name="JobApplicationOrchestrator",
+                prompt=f"You are an expert cover letter writer. Create compelling, personalized applications.\n\n{prompt}",
+                model="gpt-5-mini",
+                reasoning_effort="high",
+                verbosity="medium",
+                max_output_tokens=500
             )
 
-            cover_letter = response.choices[0].message.content.strip()
+            if not result['success']:
+                logger.error(f"LLM error generating cover letter: {result.get('error')}")
+                return f"I am very interested in the {job_title} position and would love to discuss how my experience aligns with your needs."
+
+            cover_letter = result['response'].strip()
 
             logger.info(f"✅ Real AI-generated cover letter created (used {response.usage.total_tokens} tokens)")
 

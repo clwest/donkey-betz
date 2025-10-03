@@ -561,7 +561,7 @@ This presentation structure ensures engagement and clear message delivery.
 
             response = await asyncio.to_thread(
                 openai.chat.completions.create,
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "You are a professional content creator generating high-quality deliverables."},
                     {"role": "user", "content": prompt}

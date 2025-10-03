@@ -68,9 +68,10 @@ class FinancialIntelligenceSpider(BaseIntelligenceSpider):
         """Process financial data into structured intelligence"""
         try:
             # Determine data type based on source
-            if 'sec.gov' in target.url:
-                return await self._process_sec_filing(raw_data, target)
-            elif 'finance.yahoo.com' in target.url:
+            # NOTE: SEC.gov temporarily disabled - will be re-enabled soon
+            # if 'sec.gov' in target.url:
+            #     return await self._process_sec_filing(raw_data, target)
+            if 'finance.yahoo.com' in target.url:
                 return await self._process_yahoo_finance(raw_data, target)
             elif any(crypto in target.url for crypto in ['binance', 'coinbase', 'crypto']):
                 return await self._process_crypto_data(raw_data, target)

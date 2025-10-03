@@ -2,7 +2,7 @@
 API Configuration Settings
 ==========================
 Centralized configuration for all API models and settings
-Optimized for cost with gpt-4o-mini
+Optimized for cost with gpt-5-mini
 """
 
 import os
@@ -11,18 +11,18 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# OpenAI Settings - Using gpt-4o-mini for cost optimization
+# OpenAI Settings - Using gpt-5-mini for cost optimization
 OPENAI_CONFIG = {
     'api_key': os.getenv('OPENAI_API_KEY'),
-    'model': 'gpt-4o-mini',  # Cost-optimized model
+    'model': 'gpt-5-mini',  # Cost-optimized model
     'temperature': 0.7,
     'max_tokens': 1000,
-    'fallback_model': 'gpt-4o-mini',  # Even fallback uses mini
+    'fallback_model': 'gpt-5-mini',  # Even fallback uses mini
 }
 
 # Cost comparison (per 1M tokens as of 2024)
 COST_COMPARISON = {
-    'gpt-4o-mini': {
+    'gpt-5-mini': {
         'input': 0.15,   # $0.15 per 1M input tokens
         'output': 0.60,  # $0.60 per 1M output tokens
     },
@@ -72,23 +72,23 @@ def get_openai_client():
 def get_model_for_task(task_type='general'):
     """
     Get the appropriate model based on task type
-    All tasks use gpt-4o-mini for now (cost optimization)
+    All tasks use gpt-5-mini for now (cost optimization)
     """
     model_mapping = {
-        'general': 'gpt-4o-mini',
-        'code_generation': 'gpt-4o-mini',
-        'analysis': 'gpt-4o-mini',
-        'creative': 'gpt-4o-mini',
-        'translation': 'gpt-4o-mini',
+        'general': 'gpt-5-mini',
+        'code_generation': 'gpt-5-mini',
+        'analysis': 'gpt-5-mini',
+        'creative': 'gpt-5-mini',
+        'translation': 'gpt-5-mini',
     }
-    return model_mapping.get(task_type, 'gpt-4o-mini')
+    return model_mapping.get(task_type, 'gpt-5-mini')
 
-def estimate_cost(input_tokens, output_tokens, model='gpt-4o-mini'):
+def estimate_cost(input_tokens, output_tokens, model='gpt-5-mini'):
     """
     Estimate the cost of an API call
     """
     if model not in COST_COMPARISON:
-        model = 'gpt-4o-mini'
+        model = 'gpt-5-mini'
 
     costs = COST_COMPARISON[model]
     input_cost = (input_tokens / 1_000_000) * costs['input']

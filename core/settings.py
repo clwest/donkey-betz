@@ -26,7 +26,8 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Dynamic ALLOWED_HOSTS for production
 if DEBUG:
-    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,192.168.*,*').split(',')
+    # Dev hosts - removed wildcard for security
+    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,192.168.*').split(',')
 else:
     # Production hosts
     default_hosts = [
@@ -65,8 +66,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'channels',
-    # 'django_celery_beat',      # Will add when package is installed
-    # 'django_celery_results',   # Will add when package is installed
+    'django_celery_beat',      # Celery Beat scheduler for automated tasks
+    'django_celery_results',   # Celery task result storage
     
     # Core app only for now
     'core',                    # Core utilities and management
@@ -107,7 +108,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'core.middleware.DisableCSRFForAuthEndpoints',  # Custom CSRF exemption
-    # 'django.middleware.csrf.CsrfViewMiddleware',  # Temporarily disabled for testing
+    'django.middleware.csrf.CsrfViewMiddleware',  # CSRF protection ENABLED
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.auth_middleware.UnifiedTokenAuthenticationMiddleware',  # Unified API auth with dev bypass
     'django.contrib.messages.middleware.MessageMiddleware',

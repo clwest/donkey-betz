@@ -62,7 +62,8 @@ def get_all_agent_classes() -> Dict[str, type]:
                 'configuration': template.llm_config or {},
                 'is_active': template.is_active,
                 'system_prompt': template.system_prompt,
-                'domain_tags': template.domain_tags or []
+                'domain_tags': template.domain_tags or [],
+                'tool_integrations': template.tool_integrations or {}
             }
 
             # Create a dynamic class that uses UniversalLLMAgent
@@ -86,7 +87,7 @@ def get_all_agent_classes() -> Dict[str, type]:
                         logger.info(f"Initialized {agent_name_copy} with specialization: {self.specialization}")
 
                     async def execute(self, **kwargs):
-                        """Execute agent task using AI"""
+                        """Execute agent task using AI with tool integration"""
                         # Build context from template
                         context = {
                             'agent_type': self.specialization,
@@ -104,7 +105,109 @@ def get_all_agent_classes() -> Dict[str, type]:
                         # Generate prompt based on specialization
                         task = kwargs.get('task', 'Complete the requested task')
 
-                        prompt = f"""
+                        # ========== TOOL INTEGRATION ==========
+                        # Get tool configuration from template
+                        tool_config = self.config.get('tool_integrations', {})
+                        tool_context = []
+                        tools_used = []
+
+                        logger.info(f"🔧 Tool integration check for {self.config['name']}: {json.dumps(tool_config, indent=2)}")
+
+                        # Web Search Tool
+                        if tool_config.get('web_search', {}).get('enabled'):
+                            logger.info(f"🔍 Web search enabled for {self.config['name']}")
+                            try:
+                                from core.tools import ToolRegistry
+                                web_search = ToolRegistry.get_tool('web_search')
+                                if web_search:
+                                    max_results = tool_config['web_search'].get('max_results', 5)
+                                    # Execute web search with task as query
+                                    search_result = web_search.execute(query=task[:200], max_results=max_results)
+                                    if search_result.get('success') and search_result.get('data'):
+                                        tool_context.append(f"WEB SEARCH RESULTS:\n{json.dumps(search_result['data'], indent=2)}")
+                                        tools_used.append('web_search')
+                                        logger.info(f"Agent {self.config['name']} used web_search: {len(search_result['data'])} results")
+                            except Exception as e:
+                                logger.warning(f"Web search failed for {self.config['name']}: {e}")
+
+                        # Spider Data Access
+                        if tool_config.get('data_access', {}).get('spider_data'):
+                            try:
+                                from persistence.models import SpiderData
+                                # Get recent spider data relevant to this agent's specialization
+                                relevant_data = SpiderData.objects.filter(
+                                    routed_to_agents__contains=[self.config['name']]
+                                ).order_by('-created_at')[:10]
+
+                                if relevant_data.exists():
+                                    spider_summary = []
+                                    for data in relevant_data:
+                                        spider_summary.append({
+                                            'spider': data.spider_name,
+                                            'data': data.data,
+                                            'timestamp': data.created_at.isoformat()
+                                        })
+                                    tool_context.append(f"SPIDER NETWORK DATA:\n{json.dumps(spider_summary, indent=2, default=str)}")
+                                    tools_used.append('spider_data')
+                                    logger.info(f"Agent {self.config['name']} accessed spider data: {len(spider_summary)} entries")
+                            except Exception as e:
+                                logger.warning(f"Spider data access failed for {self.config['name']}: {e}")
+
+                        # Learning Context Access
+                        if tool_config.get('data_access', {}).get('learning_context'):
+                            try:
+                                from core.models_unified_system import LearningInsight
+                                # Get relevant learning insights
+                                insights = LearningInsight.objects.filter(
+                                    insight_type__in=['success_pattern', 'failure_pattern', 'cross_domain']
+                                ).order_by('-created_at')[:5]
+
+                                if insights.exists():
+                                    learning_summary = []
+                                    for insight in insights:
+                                        learning_summary.append({
+                                            'type': insight.insight_type,
+                                            'source': insight.source_domain,
+                                            'pattern': insight.pattern_data,
+                                            'confidence': float(insight.confidence_score)
+                                        })
+                                    tool_context.append(f"LEARNING INSIGHTS:\n{json.dumps(learning_summary, indent=2)}")
+                                    tools_used.append('learning_context')
+                                    logger.info(f"Agent {self.config['name']} accessed learning context: {len(learning_summary)} insights")
+                            except Exception as e:
+                                logger.warning(f"Learning context access failed for {self.config['name']}: {e}")
+
+                        # Use system prompt from template if available, otherwise use generic prompt
+                        system_prompt = self.config.get('system_prompt', '').strip()
+
+                        # Build tool context section
+                        tool_context_section = ""
+                        if tool_context:
+                            tool_context_section = "\n\n".join(["ENHANCED DATA FROM TOOLS:"] + tool_context)
+
+                        if system_prompt:
+                            # Use the database system prompt
+                            prompt = f"""
+                        {system_prompt}
+
+                        PLATFORM KNOWLEDGE:
+                        {PLATFORM_CONTEXT}
+
+                        Your capabilities include: {', '.join(self.capabilities) if self.capabilities else 'general task execution'}
+
+                        {tool_context_section}
+
+                        Task: {task}
+
+                        Additional context: {json.dumps(kwargs, default=str)}
+
+                        IMPORTANT: After completing your analysis using all information above, provide your final output below. Be specific, actionable, and complete.
+
+                        FINAL OUTPUT:
+                        """
+                        else:
+                            # Fallback to generic prompt
+                            prompt = f"""
                         You are a specialized {self.specialization} agent named {self.config['name']}.
 
                         PLATFORM KNOWLEDGE:
@@ -112,20 +215,26 @@ def get_all_agent_classes() -> Dict[str, type]:
 
                         Your capabilities include: {', '.join(self.capabilities) if self.capabilities else 'general task execution'}
 
+                        {tool_context_section}
+
                         Task: {task}
 
                         Additional context: {json.dumps(kwargs, default=str)}
 
-                        Please complete this task using your specialized knowledge and the platform capabilities.
-                        Focus on generating REAL, IMMEDIATE income opportunities.
-                        Provide detailed, actionable output appropriate for a {self.specialization} agent.
+                        After analyzing the task and using your specialized knowledge, provide your complete response below:
+
+                        FINAL RESPONSE:
                         """
 
                         # Use AI to generate response
+                        # Get max_tokens from agent config, default to 3000 for GPT-5-mini reasoning models
+                        max_tokens = self.config.get('configuration', {}).get('max_completion_tokens', 3000)
+
                         response = super().generate_ai_text(
                             prompt=prompt,
                             context=json.dumps(context, default=str),
-                            task_type=self.specialization
+                            task_type=self.specialization,
+                            max_tokens=max_tokens
                         )
 
                         # Track AI usage if method exists
@@ -138,6 +247,8 @@ def get_all_agent_classes() -> Dict[str, type]:
                             'specialization': self.specialization,
                             'output': response,
                             'ai_used': True,
+                            'tools_used': tools_used,
+                            'tool_enhanced': len(tools_used) > 0,
                             'timestamp': datetime.now().isoformat()
                         }
 
@@ -176,6 +287,30 @@ def get_all_agent_classes() -> Dict[str, type]:
             logger.info("Added ContentMarketplaceAgent")
         except ImportError as e:
             logger.warning(f"Could not add ContentMarketplaceAgent: {e}")
+
+        # ✅ CRITICAL FIX: Add orphaned revenue-generating agents
+        orphaned_agents = [
+            ('ultimate_money_machine', 'UltimateMoneyMachine'),
+            ('affiliate_marketing_empire', 'AffiliateMarketingEmpire'),
+            ('autonomous_revenue_system', 'AutonomousRevenueSystem'),
+            ('real_client_acquisition', 'RealClientAcquisition'),
+            ('real_payment_processor', 'RealPaymentProcessor'),
+            ('automated_job_bot', 'AutomatedJobBot'),
+            ('intelligent_job_matcher', 'IntelligentJobMatcher'),
+            ('job_application_agent', 'JobApplicationAgent'),
+            ('freelance_job_analyzer', 'FreelanceJobAnalyzer'),
+            ('real_work_delivery_engine', 'RealWorkDeliveryEngine'),
+            ('real_job_executor', 'RealJobExecutor'),
+        ]
+
+        for module_name, class_name in orphaned_agents:
+            try:
+                module = __import__(f'ai_core.agents.{module_name}', fromlist=[class_name])
+                agent_class = getattr(module, class_name)
+                agent_classes[module_name] = agent_class
+                logger.info(f"✅ Added orphaned agent: {class_name}")
+            except (ImportError, AttributeError) as e:
+                logger.debug(f"Skipped {module_name}: {e}")
 
         return agent_classes
 
@@ -222,7 +357,8 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
                     'configuration': template.llm_config or {},
                     'is_active': template.is_active,
                     'system_prompt': template.system_prompt,
-                    'domain_tags': template.domain_tags or []
+                    'domain_tags': template.domain_tags or [],
+                    'tool_integrations': template.tool_integrations or {}
                 }
 
                 # Create a dynamic class that uses UniversalLLMAgent
@@ -246,7 +382,7 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
                             logger.debug(f"Initialized {agent_name_copy} with specialization: {self.specialization}")
 
                         async def execute(self, **kwargs):
-                            """Execute agent task using AI"""
+                            """Execute agent task using AI with tool integration"""
                             # Build context from template
                             context = {
                                 'agent_type': self.specialization,
@@ -258,23 +394,56 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
                             # Generate prompt based on specialization
                             task = kwargs.get('task', 'Complete the requested task')
 
+                            # ========== TOOL INTEGRATION (SYNC VERSION) ==========
+                            tool_config = self.config.get('tool_integrations', {})
+                            tool_context = []
+                            tools_used = []
+
+                            logger.info(f"🔧 [SYNC] Tool check for {self.config['name']}: {json.dumps(tool_config, indent=2)}")
+
+                            # Web Search Tool
+                            if tool_config.get('web_search', {}).get('enabled'):
+                                logger.info(f"🔍 [SYNC] Web search enabled for {self.config['name']}")
+                                try:
+                                    from core.tools import ToolRegistry
+                                    web_search = ToolRegistry.get_tool('web_search')
+                                    if web_search:
+                                        max_results = tool_config['web_search'].get('max_results', 5)
+                                        search_result = web_search.execute(query=task[:200], max_results=max_results)
+                                        if search_result.get('success') and search_result.get('data'):
+                                            tool_context.append(f"WEB SEARCH RESULTS:\n{json.dumps(search_result['data'], indent=2)}")
+                                            tools_used.append('web_search')
+                                            logger.info(f"Agent {self.config['name']} used web_search: {len(search_result['data'])} results")
+                                except Exception as e:
+                                    logger.warning(f"Web search failed for {self.config['name']}: {e}")
+
+                            # Build tool context section
+                            tool_context_section = ""
+                            if tool_context:
+                                tool_context_section = "\n\n".join(["ENHANCED DATA FROM TOOLS:"] + tool_context)
+
                             prompt = f"""
                             You are a specialized {self.specialization} agent with the following capabilities:
                             {', '.join(self.capabilities)}
+
+                            {tool_context_section}
 
                             Task: {task}
 
                             Additional context: {json.dumps(kwargs, default=str)}
 
-                            Please complete this task using your specialized knowledge and capabilities.
-                            Provide detailed, actionable output appropriate for a {self.specialization} agent.
+                            After analyzing the task and using your specialized knowledge, provide your complete response below:
+
+                            FINAL RESPONSE:
                             """
 
                             # Use AI to generate response
+                            # GPT-5-mini reasoning models need more tokens (reasoning + output)
                             response = super().generate_ai_text(
                                 prompt=prompt,
                                 context=json.dumps(context, default=str),
-                                task_type=self.specialization
+                                task_type=self.specialization,
+                                max_tokens=3000  # Enough for reasoning tokens + actual output
                             )
 
                             # Track AI usage if method exists
@@ -287,6 +456,8 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
                                 'specialization': self.specialization,
                                 'output': response,
                                 'ai_used': True,
+                                'tools_used': tools_used,
+                                'tool_enhanced': len(tools_used) > 0,
                                 'timestamp': datetime.now().isoformat()
                             }
 
@@ -325,6 +496,30 @@ def get_all_agent_classes_sync() -> Dict[str, type]:
                 logger.info("Added ContentMarketplaceAgent")
             except ImportError as e:
                 logger.warning(f"Could not add ContentMarketplaceAgent: {e}")
+
+            # ✅ CRITICAL FIX: Add orphaned revenue-generating agents (sync version)
+            orphaned_agents = [
+                ('ultimate_money_machine', 'UltimateMoneyMachine'),
+                ('affiliate_marketing_empire', 'AffiliateMarketingEmpire'),
+                ('autonomous_revenue_system', 'AutonomousRevenueSystem'),
+                ('real_client_acquisition', 'RealClientAcquisition'),
+                ('real_payment_processor', 'RealPaymentProcessor'),
+                ('automated_job_bot', 'AutomatedJobBot'),
+                ('intelligent_job_matcher', 'IntelligentJobMatcher'),
+                ('job_application_agent', 'JobApplicationAgent'),
+                ('freelance_job_analyzer', 'FreelanceJobAnalyzer'),
+                ('real_work_delivery_engine', 'RealWorkDeliveryEngine'),
+                ('real_job_executor', 'RealJobExecutor'),
+            ]
+
+            for module_name, class_name in orphaned_agents:
+                try:
+                    module = __import__(f'ai_core.agents.{module_name}', fromlist=[class_name])
+                    agent_class = getattr(module, class_name)
+                    agent_classes[module_name] = agent_class
+                    logger.info(f"✅ Added orphaned agent: {class_name}")
+                except (ImportError, AttributeError) as e:
+                    logger.debug(f"Skipped {module_name}: {e}")
 
             result_container['agent_classes'] = agent_classes
 

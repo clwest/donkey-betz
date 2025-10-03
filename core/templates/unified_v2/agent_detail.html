@@ -1,0 +1,92 @@
+{% extends 'unified_v2/base.html' %}
+
+{% block title %}{{ agent.name }}{% endblock %}
+{% block page_title %}{{ agent.name }}{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Back Button -->
+    <a href="{% url 'unified_v2:agent_marketplace' %}"
+       class="mb-4 inline-block text-blue-400 hover:text-blue-300 transition-colors">
+        ← Back to Marketplace
+    </a>
+
+    <!-- Agent Info -->
+    <div class="mb-6 rounded-lg bg-gray-800 p-6">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-white">{{ agent.name }}</h1>
+            <div class="mt-2 flex gap-2 flex-wrap">
+                <span class="rounded bg-blue-600 px-3 py-1 text-sm text-white">
+                    {{ agent.category|default:"Uncategorized" }}
+                </span>
+                <span class="rounded bg-gray-700 px-3 py-1 text-sm text-gray-300">
+                    v{{ agent.version|default:"1.0" }}
+                </span>
+            </div>
+        </div>
+        <p class="text-gray-300">{{ agent.description|default:"No description available." }}</p>
+    </div>
+
+    <!-- Capabilities -->
+    {% if agent.capabilities %}
+    <div class="mb-6 rounded-lg bg-gray-800 p-6">
+        <h2 class="mb-3 text-lg font-semibold text-white">Capabilities</h2>
+        <ul class="list-disc list-inside text-gray-300 space-y-1">
+            {% for capability in agent.capabilities %}
+            <li>{{ capability }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Execution Form -->
+    <div class="mb-6 rounded-lg bg-gray-800 p-6">
+        <h2 class="mb-3 text-lg font-semibold text-white">Execute Agent</h2>
+        <form id="execute-form">
+            <div class="mb-4">
+                <label class="mb-2 block text-sm text-gray-300">Task Description</label>
+                <textarea id="task-input"
+                          class="w-full rounded-lg bg-gray-700 px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          rows="4"
+                          placeholder="Describe what you want this agent to do..."></textarea>
+            </div>
+            <button type="submit"
+                    class="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500">
+                Execute Agent
+            </button>
+        </form>
+        <div id="execution-result" class="mt-4 hidden rounded-lg bg-gray-700 p-4">
+            <!-- Execution results will appear here -->
+        </div>
+    </div>
+
+    <!-- Execution History -->
+    {% if execution_history %}
+    <div class="rounded-lg bg-gray-800 p-6">
+        <h2 class="mb-3 text-lg font-semibold text-white">Recent Executions</h2>
+        <div class="space-y-3">
+            {% for execution in execution_history %}
+            <div class="rounded border border-gray-700 p-3">
+                <div class="mb-1 flex justify-between">
+                    <span class="text-sm text-gray-300">{{ execution.created_at|date:"M d, Y H:i" }}</span>
+                    <span class="text-xs text-{% if execution.status == 'completed' %}green{% elif execution.status == 'failed' %}red{% else %}yellow{% endif %}-400">
+                        {{ execution.status|upper }}
+                    </span>
+                </div>
+                <p class="text-sm text-gray-400">{{ execution.task|truncatewords:20 }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="rounded-lg bg-gray-800 p-6">
+        <h2 class="mb-3 text-lg font-semibold text-white">Recent Executions</h2>
+        <p class="text-gray-400">No execution history yet. Execute this agent to get started!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/unified_v2/agent_detail.js"></script>
+{% endblock %}

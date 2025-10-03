@@ -497,6 +497,33 @@
         }
     }
 
+    // REST API fallback - Load opportunities from database immediately
+    async function loadOpportunitiesFromDatabase() {
+        console.log('📊 Loading opportunities from database (REST API fallback)...');
+        try {
+            const response = await fetch('/api/v1/intelligence/real-income-builder/');
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Loaded opportunities from database:', data);
+
+                // Transform to expected format if needed
+                if (data.opportunities && data.opportunities.length > 0) {
+                    updateOpportunities({
+                        type: 'opportunities_analysis',
+                        top_opportunities: data.opportunities,
+                        spider_count: data.spider_count || 0
+                    });
+                } else {
+                    console.log('⚠️ No opportunities in database');
+                }
+            } else {
+                console.error('❌ Failed to load opportunities:', response.status);
+            }
+        } catch (error) {
+            console.error('❌ Error loading opportunities from database:', error);
+        }
+    }
+
     function updateOpportunities(data) {
         const container = document.getElementById('opportunityList');
         const opportunities = data.top_opportunities || [];
@@ -540,13 +567,13 @@
             if (opp.opportunity_type === 'sports_bet' && opp.opportunity_data) {
                 const data = opp.opportunity_data;
                 return `
-                    <div class="opportunity-card sports-bet-card" onclick="selectOpportunity('${opp.id}')">
-                        <div class="opportunity-header">
+                    <div class="opportunity-card sports-bet-card">
+                        <div class="opportunity-header" onclick="selectOpportunity('${opp.id}')" style="cursor: pointer;">
                             <div class="opportunity-title">🎲 ${opp.title || 'Sports Bet'}</div>
                             <div class="opportunity-value">$${opp.potential_revenue || '0'}</div>
                         </div>
 
-                        <div class="sports-details">
+                        <div class="sports-details" onclick="selectOpportunity('${opp.id}')" style="cursor: pointer;">
                             <div class="detail-item">
                                 <span class="detail-label">⏰ Game Time</span>
                                 <span class="detail-value">${data.game_time ? new Date(data.game_time).toLocaleString() : 'TBD'}</span>
@@ -587,13 +614,13 @@
 
             // Default Job/Freelance Card
             return `
-                <div class="opportunity-card" onclick="selectOpportunity('${opp.id}')">
-                    <div class="opportunity-header">
+                <div class="opportunity-card">
+                    <div class="opportunity-header" onclick="selectOpportunity('${opp.id}')" style="cursor: pointer;">
                         <div class="opportunity-title">${opp.title || 'Opportunity'}</div>
                         <div class="opportunity-value">${opp.potential_monthly || opp.potential_revenue ? '$' + opp.potential_revenue : '$0'}/mo</div>
                     </div>
 
-                    <div class="opportunity-details">
+                    <div class="opportunity-details" onclick="selectOpportunity('${opp.id}')" style="cursor: pointer;">
                         <div class="detail-item">
                             <span class="detail-label">Type</span>
                             <span class="detail-value">${opp.opportunity_type || opp.stream_type || 'General'}</span>
@@ -736,9 +763,35 @@
 
     function viewDetails(event, id) {
         event.stopPropagation();
-        console.log('Viewing details for:', id);
+        console.log('🔍 viewDetails called with ID:', id);
+        console.log('🔍 ID type:', typeof id);
+        console.log('🔍 ID value:', JSON.stringify(id));
+
+        if (!id) {
+            console.error('❌ No ID provided to viewDetails!');
+            return;
+        }
+
+        const url = `{% url 'opportunity_detail' %}?id=${id}`;
+        console.log('🔍 Navigating to:', url);
         // Navigate to opportunity detail page
-        window.location.href = `{% url 'opportunity_detail' %}?id=${id}`;
+        window.location.href = url;
+    }
+
+    function viewAnalysis(event, id) {
+        event.stopPropagation();
+        console.log('📊 viewAnalysis called with ID:', id);
+        console.log('📊 ID type:', typeof id);
+
+        if (!id) {
+            console.error('❌ No ID provided to viewAnalysis!');
+            return;
+        }
+
+        const url = `{% url 'opportunity_detail' %}?id=${id}`;
+        console.log('📊 Navigating to:', url);
+        // Navigate to opportunity detail page (same as viewDetails)
+        window.location.href = url;
     }
 
     function showSpiderStatus(data) {
@@ -763,7 +816,12 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Income Builder WebSocket
+        console.log('🚀 Income Builder initializing...');
+
+        // BELT: Load opportunities from database immediately (REST API)
+        loadOpportunitiesFromDatabase();
+
+        // SUSPENDERS: Initialize WebSocket for real-time updates
         incomeBuilderWS = new IncomeBuilderWebSocket();
 
         // Request opportunities after a short delay to ensure WebSocket is connected

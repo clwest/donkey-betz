@@ -58,7 +58,8 @@ class ContentCreatorAgent(BaseAgent):
                     {"role": "system", "content": "You are a professional content creator. Generate high-quality, engaging content. Think through your approach carefully."},
                     {"role": "user", "content": f"Create content for: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -70,7 +71,7 @@ class ContentCreatorAgent(BaseAgent):
                 'file_created': filename,
                 'word_count': len(content.split()),
                 'content_preview': content[:500],
-                'model_used': 'gpt-4o-mini'
+                'model_used': 'gpt-5-mini'
             }
         except Exception as e:
             logger.error(f"ContentCreatorAgent error: {str(e)}")
@@ -96,7 +97,8 @@ class MLAnalyticsAgent(BaseAgent):
                     {"role": "system", "content": "You are an ML analytics expert. Provide data-driven insights and predictions."},
                     {"role": "user", "content": f"Analyze and predict: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -220,7 +222,8 @@ class PublishingAutomationAgent(BaseAgent):
                     {"role": "system", "content": "You are a social media expert. Optimize content for each platform."},
                     {"role": "user", "content": f"Create platform-specific posts for {platforms} based on: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -265,7 +268,8 @@ class DataAnalystAgent(BaseAgent):
                     {"role": "system", "content": "You are a data analyst. Provide detailed data analysis and actionable insights."},
                     {"role": "user", "content": f"Analyze data for: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -317,7 +321,8 @@ class SEOOptimizerAgent(BaseAgent):
                     {"role": "system", "content": "You are an SEO expert. Optimize content for search engines while maintaining quality."},
                     {"role": "user", "content": f"SEO optimize: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -363,7 +368,8 @@ class EmailMarketingAgent(BaseAgent):
                     {"role": "system", "content": "You are an email marketing expert. Create compelling email campaigns that convert."},
                     {"role": "user", "content": f"Create email campaign for: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -413,7 +419,8 @@ class SocialMediaSchedulerAgent(BaseAgent):
                     {"role": "system", "content": "You are a social media manager. Create engaging posts optimized for each platform."},
                     {"role": "user", "content": f"Create social media posts for: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
@@ -469,7 +476,8 @@ class MarketResearchAgent(BaseAgent):
                     {"role": "system", "content": "You are a market research expert. Provide comprehensive market analysis and competitive insights."},
                     {"role": "user", "content": f"Research market for: {action}"}
                 ],  # Optimal for GPT-5-mini
-                max_completion_tokens=2000,  # GPT-5 uses max_completion_tokens
+                max_completion_tokens=2000,
+                reasoning_effort="medium"  # GPT-5 reasoning capability,  # GPT-5 uses max_completion_tokens
                 # GPT-5-mini parameters
             )
 
