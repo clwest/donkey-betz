@@ -92,7 +92,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'
+EMAIL_HOST_PASSWORD = 'REDACTED'
 DEFAULT_FROM_EMAIL = 'UKF Alerts <alerts@example.com>'
 ```
 

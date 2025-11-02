@@ -271,7 +271,7 @@ else:
 ```python
 # Bad - hardcoded
 class PolygonService:
-    API_KEY = "abc123"  # Don't do this!
+    API_KEY = "REDACTED"  # Don't do this!
 
 # Good - environment variable
 class PolygonService:

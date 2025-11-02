@@ -20,6 +20,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables
 load_dotenv(BASE_DIR / '.env')
 
+import os
+
+# --- LLM Router defaults (prep only; no behavior change yet) ---
+LLM_DEFAULT_PROVIDER = os.getenv("LLM_DEFAULT_PROVIDER", "ollama")  # "ollama" or "openai"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+
+LLM_DEFAULTS = {
+    "chat": {
+        "ollama": os.getenv("OLLAMA_CHAT_MODEL", "qwen2.5:14b-instruct"),
+        "openai": os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+    },
+    "embed": {
+        "ollama": os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text:latest"),
+        "openai": os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-large"),
+    },
+}
+
+LLM_HTTP_TIMEOUT = int(os.getenv("LLM_HTTP_TIMEOUT", "30"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
 # Security
 SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -68,7 +88,7 @@ INSTALLED_APPS = [
     'channels',
     'django_celery_beat',      # Celery Beat scheduler for automated tasks
     'django_celery_results',   # Celery task result storage
-    
+    "pgvector",
     # Core app only for now
     'core',                    # Core utilities and management
 
@@ -80,6 +100,7 @@ INSTALLED_APPS = [
     'ai_core.spiders',         # Spider Army System
     'ai_core',                 # AI Core app for agents, spiders, intelligence
     'ai_core.intelligence',    # AI Intelligence & Learning System (business logic + learning models)
+    # 'intelligence_rt',         # Real-Time Intelligence Engine (Spider Quality + Action Plans + Income Tracking)
     'intelligence',            # Real-Time Intelligence Engine (Spider Quality + Action Plans + Income Tracking)
     'ml',                     # Machine Learning Engine
     'sports',                 # Sports Analytics Engine

@@ -9,8 +9,8 @@ from django.apps import AppConfig
 class IntelligenceConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'intelligence'
-    label = 'intelligence_rt'  # Unique label to avoid conflict with ai_core.intelligence
-    verbose_name = 'Real-Time Intelligence Engine'
+    label = 'intelligence'  # Unique label to avoid conflict with ai_core.intelligence
+    verbose_name = 'intelligence'
 
     def ready(self):
         """Initialize the intelligence engine when Django starts"""

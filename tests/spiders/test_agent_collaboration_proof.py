@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test Agent Collaboration with Proof Generation

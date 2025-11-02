@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test RSS Feeds and Public APIs for Job Data
@@ -201,7 +202,7 @@ async def test_job_rss_feeds():
     print("=" * 50)
 
     working_count = len(working_feeds)
-    print(f"✅ Working feeds: {working_count}/{len(sources)}")
+    print(f"✅ Working feeds: {working_count}/{len(ources)}")
 
     if working_feeds:
         print("\n🎯 READY-TO-USE DATA SOURCES:")

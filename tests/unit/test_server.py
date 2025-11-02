@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Simple HTTP server for testing login functionality.

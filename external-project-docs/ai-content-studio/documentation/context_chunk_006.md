@@ -449,7 +449,7 @@ class ProductAPITest(APITestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='REDACTED'
         )
         self.client.force_authenticate(user=self.user)
         self.category = Category.objects.create(name='Electronics')
@@ -4611,7 +4611,7 @@ obs_service = OBSWebSocketService(user.id)
 await obs_service.connect(
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # Start recording

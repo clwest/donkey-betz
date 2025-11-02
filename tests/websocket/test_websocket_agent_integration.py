@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 WebSocket Agent Integration Testing
@@ -600,7 +601,7 @@ class WebSocketAgentIntegrationTester:
                 "status": "PASSED",
                 "content_id": content_piece.id,
                 "chunks_streamed": len(content_chunks),
-                "websocket_messages": len(streaming_messages),
+                "websocket_messages": len(treaming_messages),
                 "final_content_length": len(accumulated_content)
             })
             print(f"   ✅ Content streaming WebSocket test passed ({len(content_chunks)} chunks)")

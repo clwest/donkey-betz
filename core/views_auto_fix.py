@@ -23,7 +23,7 @@ PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_g
 def auto_fix_code(request):
     """Auto-fix failed code using AI agents"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project = data.get('project', '')
         file_name = data.get('file', '')
         error_message = data.get('error', '')

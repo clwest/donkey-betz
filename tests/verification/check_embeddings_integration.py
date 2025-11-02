@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Check the integration of migrated embeddings with the RAG system
@@ -142,7 +143,7 @@ def test_semantic_search():
         sources = rag.search_embeddings(query, limit=3)
         
         if sources:
-            print(f"✅ Found {len(sources)} embedding matches:")
+            print(f"✅ Found {len(ources)} embedding matches:")
             for source in sources:
                 print(f"   • {source['title']} (relevance: {source['relevance']:.3f})")
         else:

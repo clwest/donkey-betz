@@ -56,7 +56,7 @@
     <div id="results"></div>
 
     <script>
-        const TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        const os.environ["TOKEN"] = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
         
         function addResult(title, content, status = 'info') {
             const results = document.getElementById('results');
@@ -79,7 +79,7 @@
             try {
                 const response = await fetch(url, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`,
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`,
                         'Content-Type': 'application/json',
                         'X-DBAO-Client': 'Test'
                     }

@@ -24,7 +24,7 @@ def baseline_knowledge(request):
     Get baseline knowledge about a topic before learning
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         topic = data.get('topic', '')
 
         if not topic:
@@ -73,7 +73,7 @@ def collect_data(request):
     Collect real data using spiders
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         topic = data.get('topic', '')
 
         if not topic:
@@ -118,7 +118,7 @@ def analyze_data(request):
     Have AI agents analyze the collected data
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         topic = data.get('topic', '')
         goal = data.get('goal', '')
         spider_data = data.get('data', [])
@@ -177,7 +177,7 @@ def synthesize_knowledge(request):
     Synthesize all learning into final personalized content
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         topic = data.get('topic', '')
         goal = data.get('goal', '')
         format_type = data.get('format', 'guide')
@@ -278,7 +278,7 @@ def save_learning_session(request):
     Save a completed learning session (placeholder for future implementation)
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         # Would save to database in real implementation
         return JsonResponse({'success': True, 'saved': True})
     except Exception as e:

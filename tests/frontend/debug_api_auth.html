@@ -9,7 +9,7 @@
     
     <script>
         const API_BASE = 'http://localhost:8000/api';
-        const TOKEN = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
+        const os.environ["TOKEN"] = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
         
         const results = document.getElementById('results');
         
@@ -18,7 +18,7 @@
                 const response = await fetch(`${API_BASE}${url}`, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Token ${TOKEN}`,
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`,
                         'Content-Type': 'application/json'
                     }
                 });

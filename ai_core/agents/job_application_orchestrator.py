@@ -12,6 +12,7 @@ Key Features:
 """
 
 import logging
+from asgiref.sync import async_to_sync
 import json
 import asyncio
 from typing import Dict, List, Any, Optional, Tuple
@@ -317,7 +318,7 @@ Make it personal, not generic. Show personality while remaining professional.
             # Make REAL API call to OpenAI
             logger.info(f"🤖 {job_match.agent_name} is using OpenAI to write cover letter...")
 
-            result = await agent_llm_integration.generate_for_agent(
+            result = async_to_sync(agent_llm_integration.generate_for_agent)(
                 agent_name="JobApplicationOrchestrator",
                 prompt=f"You are an expert cover letter writer. Create compelling, personalized applications.\n\n{prompt}",
                 model="gpt-5-mini",

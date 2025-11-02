@@ -230,7 +230,7 @@ cd backend && python manage.py migrate
 python manage.py shell
 >>> from django.contrib.auth.models import User
 >>> from rest_framework.authtoken.models import Token
->>> user = User.objects.create_user('testuser', password='testpass123')
+>>> user = User.objects.create_user('testuser', password='REDACTED')
 >>> Token.objects.create(user=user, key='993f8273f70877e23b5c7d2f92ed30562a089fe3')
 
 # 4. Restart

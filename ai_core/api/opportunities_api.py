@@ -262,7 +262,7 @@ class OpportunitiesAPIView(View):
     def post(self, request):
         """Apply to an opportunity"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             opportunity_id = data.get('opportunity_id')
 
             # Simulate application submission

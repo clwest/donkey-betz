@@ -886,7 +886,7 @@ class Content(models.Model):
 ```python
 # Dead simple views
 def create_content(request):
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}"))
     content = studio.create_content(data)
     return JsonResponse({"content": content})
 ```
@@ -3582,7 +3582,7 @@ from obs_studio.models import OBSConnection
 
 # Update with your actual password
 conn = OBSConnection.objects.first()
-conn.password = "your_secure_password"
+conn.password = "REDACTED"
 conn.save()
 ```
 
@@ -3600,7 +3600,7 @@ import asyncio
 import obsws_python as obs
 
 async def test_connection():
-    cl = obs.ReqClient(host='localhost', port=4455, password='your_secure_password')
+    cl = obs.ReqClient(host='localhost', port=4455, password='REDACTED')
     
     # Get version
     version = cl.get_version()

@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Comprehensive Cross-System Workflow Testing Suite
@@ -255,7 +256,7 @@ class CrossSystemWorkflowTester:
                 ))
             )()
             
-            print(f"   Found {len(sports_agents)} sports agents")
+            print(f"   Found {len(ports_agents)} sports agents")
             
             # Test routing for different query types
             test_queries = [
@@ -273,7 +274,7 @@ class CrossSystemWorkflowTester:
                 routing_results[query] = [
                     agent_info['agent_name'] for agent_info in suitable_agents
                 ]
-                print(f"   Query: '{query[:30]}...' -> {len(suitable_agents)} agents")
+                print(f"   Query: '{query[:30]}...' -> {len(uitable_agents)} agents")
             
             execution_time = time.time() - start_time
             self.performance_metrics['agent_discovery'] = execution_time
@@ -282,7 +283,7 @@ class CrossSystemWorkflowTester:
                 "test": "agent_discovery_and_routing",
                 "status": "passed",
                 "metrics": {
-                    "total_agents": len(sports_agents),
+                    "total_agents": len(ports_agents),
                     "routing_results": routing_results,
                     "execution_time": execution_time
                 }

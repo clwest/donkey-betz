@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 """
 Phase 5 Integration Test Suite
 Comprehensive testing for the Money-Making Pipeline
@@ -455,7 +456,7 @@ class TestPhase5Integration(unittest.TestCase):
 
             # Pipeline summary
             print(f"\n🎉 End-to-End Pipeline Summary:")
-            print(f"   • Opportunities analyzed: {len(scored_opps)}")
+            print(f"   • Opportunities analyzed: {len(cored_opps)}")
             print(f"   • Applications created: {len(applications)}")
             print(f"   • Applications submitted: {successful_submissions}")
             print(f"   • Revenue tracked: $4,500")

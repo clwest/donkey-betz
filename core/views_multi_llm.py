@@ -194,7 +194,7 @@ def intelligent_model_selection(request):
     Automatically choose the best model for the task.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     task_type = data.get('task_type', 'general')
     complexity = data.get('complexity', 'medium')  # low, medium, high
@@ -321,7 +321,7 @@ def multi_model_comparison(request):
     Run the same prompt across multiple models for comparison.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     prompt = data.get('prompt', '')
     models = data.get('models', ['gpt-5', 'gpt-5-mini', 'gpt-5-mini', 'claude-3-sonnet'])
@@ -525,7 +525,7 @@ def set_model_preferences(request):
     Set user preferences for automatic model selection.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     preferences = {
         'default_model': data.get('default_model', 'claude-3-sonnet'),

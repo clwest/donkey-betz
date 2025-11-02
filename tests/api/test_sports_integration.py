@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test script for multi-sport data integration
@@ -143,7 +144,7 @@ def test_odds_api():
         print_info("Testing Odds API sports...")
         sports = odds_api.get_sports()
         if sports:
-            print_success(f"Found {len(sports)} sports from Odds API")
+            print_success(f"Found {len(ports)} sports from Odds API")
             for sport in sports[:5]:  # Show first 5
                 print(f"  • {sport.get('title', 'N/A')} ({sport.get('key', 'N/A')})")
         else:

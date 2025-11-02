@@ -91,7 +91,7 @@ class ExtendedProfileView(View):
     def post(self, request):
         """Update user's extended profile"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             profile, created = ExtendedUserProfile.objects.get_or_create(user=request.user)
 
             # Update basic information
@@ -430,7 +430,7 @@ class JobApplicationsView(View):
     def post(self, request):
         """Create a new job application record"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             application = JobApplication.objects.create(
                 user=request.user,

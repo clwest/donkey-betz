@@ -50,7 +50,7 @@ We successfully extracted and integrated the complete Stable Diffusion image gen
 Already configured in `.env`:
 ```env
 STABILITY_KEY="sk-9DSt2cM3yZ7J6ALpna9rELqiA3X7ztatbc9BbAYWkaGsalpH"
-STABILITY_API_KEY="sk-9DSt2cM3yZ7J6ALpna9rELqiA3X7ztatbc9BbAYWkaGsalpH"
+STABILITY_API_KEY="REDACTED"
 STABILITY_BASE_URL="https://api.stability.ai/v2beta/"
 ```
 

@@ -134,7 +134,7 @@ def execute_agent(request, agent_name):
         # Parse request body
         if request.body:
             try:
-                data = json.loads(request.body)
+                data = json.loads(request.body or b"{}")
                 task = data.get('task', 'analyze')
             except json.JSONDecodeError:
                 task = 'analyze'

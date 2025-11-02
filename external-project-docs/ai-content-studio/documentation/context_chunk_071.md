@@ -1899,7 +1899,7 @@ connection = OBSConnection.objects.create(
     user=user,
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # 2. Create and manage scenes

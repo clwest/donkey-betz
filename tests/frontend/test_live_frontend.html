@@ -102,7 +102,7 @@
 
     <script>
         const API_URL = 'http://localhost:8000/api';
-        const TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        const os.environ["TOKEN"] = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
         
         const sportEmojis = {
             'nfl': '🏈',
@@ -141,7 +141,7 @@
             try {
                 const response = await fetch(`${API_URL}/sports/summary/`, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`
                     }
                 });
                 const data = await response.json();
@@ -163,7 +163,7 @@
             try {
                 const response = await fetch(`${API_URL}/sports/summary/`, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`,
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -192,7 +192,7 @@
             try {
                 const response = await fetch(`${API_URL}/sports/games/?status=live`, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`
                     }
                 });
                 const games = await response.json();
@@ -211,7 +211,7 @@
             try {
                 const response = await fetch(`${API_URL}/sports/games/trending/?limit=5`, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`
                     }
                 });
                 const games = await response.json();

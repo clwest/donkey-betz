@@ -29,13 +29,13 @@ DATABASE_URL="postgresql://user:pass@localhost/db"  # Use strong passwords
 REDIS_URL="redis://:password@localhost:6379"  # Enable Redis auth
 
 # API Keys (Keep these secret!)
-OPENAI_API_KEY="sk-..."  # OpenAI API key
-ANTHROPIC_API_KEY="sk-ant-..."  # Anthropic Claude API key
-POLYGON_API_KEY="your-polygon-key"  # Financial data API
+OPENAI_API_KEY="REDACTED"  # OpenAI API key
+ANTHROPIC_API_KEY="REDACTED"  # Anthropic Claude API key
+POLYGON_API_KEY="REDACTED"  # Financial data API
 STABILITY_KEY="sk-..."  # Stability AI for image generation
 
 # Database Security
-DB_PASSWORD="complex-secure-password-here"  # Use strong passwords
+DB_PASSWORD="REDACTED"  # Use strong passwords
 DB_HOST="localhost"  # Restrict to localhost in production
 ```
 

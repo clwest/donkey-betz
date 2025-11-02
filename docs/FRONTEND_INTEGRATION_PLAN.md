@@ -877,7 +877,7 @@ def self_awareness_report(request):
 def suggest_team_api(request):
     """Suggest optimal agent team for task"""
     import json
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}"))
     task = data.get('task', '')
 
     team = collaboration_optimizer.suggest_optimal_team(
@@ -892,7 +892,7 @@ def suggest_team_api(request):
 def execute_agent_api(request):
     """Execute agent and trigger learning"""
     import json
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}"))
     agent_name = data.get('agent')
     task = data.get('task')
 

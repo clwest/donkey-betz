@@ -1,0 +1,635 @@
+# 🗺️ Unified Donkey Betz — System Map
+
+## 📂 Directory Structure
+```
+📄 SYSTEM_MAP.md
+📂 __pycache__/
+  📄 agent_reality_checker.cpython-311.pyc
+  📄 analyze_agent_readiness.cpython-311.pyc
+  📄 analyze_external_docs.cpython-311.pyc
+  📄 analyze_markdown_quality.cpython-311.pyc
+  📄 audit_api_endpoints.cpython-311.pyc
+  📄 audit_database_mock_data.cpython-311.pyc
+  📄 audit_websocket_consumers.cpython-311.pyc
+  📄 clean_unified_docs.cpython-311.pyc
+  📄 create_missing_agents.cpython-311.pyc
+  📄 create_specialized_agents_session16.cpython-311.pyc
+  📄 deduplicate_external_docs.cpython-311.pyc
+  📄 deploy_combat_sports_spiders.cpython-311.pyc
+  📄 deploy_content_enhancement_spiders.cpython-311.pyc
+  📄 deploy_content_monetization_spiders.cpython-311.pyc
+  📄 deploy_content_spiders.cpython-311.pyc
+  📄 deploy_freelance_spiders.cpython-311.pyc
+  📄 deploy_horse_racing_spiders.cpython-311.pyc
+  📄 deploy_legal_spiders.cpython-311.pyc
+  📄 deploy_medium_gumroad_spiders.cpython-311.pyc
+  📄 deploy_production_spiders.cpython-311.pyc
+  📄 deploy_spiders_direct.cpython-311.pyc
+  📄 deploy_sports_sentiment_spiders.cpython-311.pyc
+  📄 deploy_technical_spiders.cpython-311.pyc
+  📄 enhanced_intelligent_routing.cpython-311.pyc
+  📄 fast_enhanced_routing.cpython-311.pyc
+  📄 feed_docs_to_self_dev_agent.cpython-311.pyc
+  📄 fetch_and_save_real_opportunities.cpython-311.pyc
+  📄 find_agents_without_data.cpython-311.pyc
+  📄 fix_database_tables.cpython-311.pyc
+  📄 generate_mock_opportunities.cpython-311.pyc
+  📄 import_external_docs.cpython-311.pyc
+  📄 ingest_system_documentation.cpython-311.pyc
+  📄 intelligent_routing.cpython-311.pyc
+  📄 monitor_spider_deployment.cpython-311.pyc
+  📄 overnight_learning_test.cpython-311-pytest-8.4.2.pyc
+  📄 overnight_learning_test.cpython-311.pyc
+  📄 populate_real_opportunities.cpython-311.pyc
+  📄 populate_real_spider_data.cpython-311.pyc
+  📄 quick_populate_opportunities.cpython-311.pyc
+  📄 replace_with_real_spider_data.cpython-311.pyc
+  📄 review_overnight_results.cpython-311.pyc
+  📄 route_functional_agents.cpython-311.pyc
+  📄 route_remaining_agents.cpython-311.pyc
+  📄 secure_secrets.cpython-311.pyc
+  📄 simple_spider_deploy.cpython-311.pyc
+  📄 standardize_gpt5_params.cpython-311.pyc
+  📄 test_agent_execution.cpython-311-pytest-8.4.2.pyc
+  📄 test_agent_execution.cpython-311.pyc
+  📄 test_agent_execution_sync.cpython-311-pytest-8.4.2.pyc
+  📄 test_agent_execution_sync.cpython-311.pyc
+  📄 test_ai_nexus_websocket.cpython-311-pytest-8.4.2.pyc
+  📄 test_ai_nexus_websocket.cpython-311.pyc
+  📄 test_authenticated_flow.cpython-311-pytest-8.4.2.pyc
+  📄 test_authenticated_flow.cpython-311.pyc
+  📄 test_autonomous_self_development.cpython-311-pytest-8.4.2.pyc
+  📄 test_autonomous_self_development.cpython-311.pyc
+  📄 test_docs_system.cpython-311-pytest-8.4.2.pyc
+  📄 test_docs_system.cpython-311.pyc
+  📄 test_fixes_quick.cpython-311-pytest-8.4.2.pyc
+  📄 test_fixes_quick.cpython-311.pyc
+  📄 test_frontend_real_data.cpython-311-pytest-8.4.2.pyc
+  📄 test_frontend_real_data.cpython-311.pyc
+  📄 test_gpt5_reasoning.cpython-311-pytest-8.4.2.pyc
+  📄 test_gpt5_reasoning.cpython-311.pyc
+  📄 test_income_builder_data_quality.cpython-311-pytest-8.4.2.pyc
+  📄 test_income_builder_data_quality.cpython-311.pyc
+  📄 test_learning_context_injection.cpython-311-pytest-8.4.2.pyc
+  📄 test_learning_context_injection.cpython-311.pyc
+  📄 test_personalization_complete.cpython-311-pytest-8.4.2.pyc
+  📄 test_personalization_complete.cpython-311.pyc
+  📄 test_spider_deployment.cpython-311-pytest-8.4.2.pyc
+  📄 test_spider_deployment.cpython-311.pyc
+  📄 test_spider_learning_bridge.cpython-311-pytest-8.4.2.pyc
+  📄 test_spider_learning_bridge.cpython-311.pyc
+  📄 test_spider_persistence.cpython-311-pytest-8.4.2.pyc
+  📄 test_spider_persistence.cpython-311.pyc
+  📄 test_sports_spider_fix.cpython-311-pytest-8.4.2.pyc
+  📄 test_sports_spider_fix.cpython-311.pyc
+  📄 test_tool_integration.cpython-311-pytest-8.4.2.pyc
+  📄 test_tool_integration.cpython-311.pyc
+  📄 upload_unified_docs.cpython-311.pyc
+  📄 websocket_diagnostics_full.cpython-311.pyc
+📄 agent_reality_checker.py
+📄 analyze_agent_readiness.py
+📄 analyze_external_docs.py
+📄 analyze_markdown_quality.py
+📄 audit_api_endpoints.py
+📄 audit_database_mock_data.py
+📄 audit_websocket_consumers.py
+📄 backup.sh
+📄 check_services.sh
+📄 clean_unified_docs.py
+📄 create_missing_agents.py
+📄 create_specialized_agents_session16.py
+📄 deduplicate_external_docs.py
+📄 deploy.sh
+📄 deploy_combat_sports_spiders.py
+📄 deploy_content_enhancement_spiders.py
+📄 deploy_content_monetization_spiders.py
+📄 deploy_content_spiders.py
+📄 deploy_freelance_spiders.py
+📄 deploy_horse_racing_spiders.py
+📄 deploy_legal_spiders.py
+📄 deploy_medium_gumroad_spiders.py
+📄 deploy_production_spiders.py
+📄 deploy_spiders_direct.py
+📄 deploy_sports_sentiment_spiders.py
+📄 deploy_technical_spiders.py
+📂 deployment/
+  📄 deploy_docker.sh
+  📄 deploy_heroku.sh
+  📄 deploy_vercel.sh
+📄 enhanced_intelligent_routing.py
+📄 fast_enhanced_routing.py
+📄 feed_docs_to_self_dev_agent.py
+📄 fetch_and_save_real_opportunities.py
+📄 find_agents_without_data.py
+📄 fix_database_tables.py
+📂 fixes/
+  📂 __pycache__/
+    📄 clean_frontend_restart.cpython-311.pyc
+    📄 fix_react_errors.cpython-311.pyc
+    📄 implement_frontend_components.cpython-311.pyc
+    📄 quick_fix.cpython-311.pyc
+  📄 clean_frontend_restart.py
+  📄 fix_react_errors.py
+  📄 implement_frontend_components.py
+  📄 quick_fix.py
+📄 generate_mock_opportunities.py
+📄 health-check.sh
+📄 import_external_docs.py
+📄 ingest_system_documentation.py
+📄 init-postgres.sql
+📄 intelligent_routing.py
+📄 launch_ai_training.sh
+📄 launch_demo.sh
+📄 monitor_learning.sh
+📄 monitor_spider_deployment.py
+📄 overnight_learning_test.py
+📄 populate_real_opportunities.py
+📄 populate_real_spider_data.py
+📄 quick_populate_opportunities.py
+📄 replace_with_real_spider_data.py
+📄 reset_redis.sh
+📂 review/
+  📄 generate_system_map.py
+  📄 repo_review_with_ollama.py
+📄 review_overnight_results.py
+📄 route_functional_agents.py
+📄 route_remaining_agents.py
+📄 secure_secrets.py
+📂 setup/
+  📂 __pycache__/
+    📄 deploy_comprehensive_spider_army.cpython-311.pyc
+    📄 frontend_rebuild_agent_system.cpython-311.pyc
+    📄 implement_frontend.cpython-311.pyc
+    📄 populate_real_data_simple.cpython-311.pyc
+    📄 update_makefile.cpython-311.pyc
+  📄 deploy_comprehensive_spider_army.py
+  📄 frontend_rebuild_agent_system.py
+  📄 implement_frontend.py
+  📄 populate_real_data_simple.py
+  📄 setup_frontend.sh
+  📄 update_makefile.py
+📄 simple_spider_deploy.py
+📄 standardize_gpt5_params.py
+📄 start_all_services.sh
+📄 start_celery.sh
+📄 start_master_demo.sh
+📄 start_overnight_learning.sh
+📄 stop_overnight_learning.sh
+📄 test_agent_execution.py
+📄 test_agent_execution_sync.py
+📄 test_ai_nexus_websocket.py
+📄 test_authenticated_flow.py
+📄 test_autonomous_self_development.py
+📄 test_docs_system.py
+📄 test_fixes_quick.py
+📄 test_frontend_real_data.py
+📄 test_gpt5_reasoning.py
+📄 test_income_builder_data_quality.py
+📄 test_learning_context_injection.py
+📄 test_personalization_complete.py
+📄 test_spider_deployment.py
+📄 test_spider_learning_bridge.py
+📄 test_spider_persistence.py
+📄 test_sports_spider_fix.py
+📄 test_tool_integration.py
+📂 testing/
+  📂 __pycache__/
+    📄 backend_frontend_diagnostic.cpython-311.pyc
+    📄 test_action_plan.cpython-311-pytest-8.4.2.pyc
+    📄 test_action_plan.cpython-311.pyc
+    📄 test_action_plan_to_advisor_flow.cpython-311-pytest-8.4.2.pyc
+    📄 test_action_plan_to_advisor_flow.cpython-311.pyc
+    📄 test_activated_systems.cpython-311-pytest-8.4.2.pyc
+    📄 test_activated_systems.cpython-311.pyc
+    📄 test_agent_connectivity.cpython-311-pytest-8.4.2.pyc
+    📄 test_agent_connectivity.cpython-311.pyc
+    📄 test_agent_functionality.cpython-311-pytest-8.4.2.pyc
+    📄 test_agent_functionality.cpython-311.pyc
+    📄 test_agent_money_making_platform.cpython-311-pytest-8.4.2.pyc
+    📄 test_agent_money_making_platform.cpython-311.pyc
+    📄 test_agent_orchestration.cpython-311-pytest-8.4.2.pyc
+    📄 test_agent_orchestration.cpython-311.pyc
+    📄 test_agent_reality.cpython-311-pytest-8.4.2.pyc
+    📄 test_agent_reality.cpython-311.pyc
+    📄 test_agent_system.cpython-311-pytest-8.4.2.pyc
+    📄 test_agent_system.cpython-311.pyc
+    📄 test_agents_count.cpython-311-pytest-8.4.2.pyc
+    📄 test_agents_count.cpython-311.pyc
+    📄 test_ai_assistant_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_ai_assistant_integration.cpython-311.pyc
+    📄 test_ai_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_ai_integration.cpython-311.pyc
+    📄 test_ai_job_application.cpython-311-pytest-8.4.2.pyc
+    📄 test_ai_job_application.cpython-311.pyc
+    📄 test_ai_job_system_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_ai_job_system_integration.cpython-311.pyc
+    📄 test_all_agents.cpython-311-pytest-8.4.2.pyc
+    📄 test_all_agents.cpython-311.pyc
+    📄 test_all_opportunities.cpython-311-pytest-8.4.2.pyc
+    📄 test_all_opportunities.cpython-311.pyc
+    📄 test_assistant_capabilities.cpython-311-pytest-8.4.2.pyc
+    📄 test_assistant_capabilities.cpython-311.pyc
+    📄 test_assistant_connection.cpython-311.pyc
+    📄 test_assistant_error.cpython-311-pytest-8.4.2.pyc
+    📄 test_assistant_error.cpython-311.pyc
+    📄 test_automation_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_automation_simple.cpython-311.pyc
+    📄 test_bridge_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_bridge_simple.cpython-311.pyc
+    📄 test_categorized_opportunities_flow.cpython-311-pytest-8.4.2.pyc
+    📄 test_categorized_opportunities_flow.cpython-311.pyc
+    📄 test_code_agents.cpython-311-pytest-8.4.2.pyc
+    📄 test_code_agents.cpython-311.pyc
+    📄 test_command_center.cpython-311-pytest-8.4.2.pyc
+    📄 test_command_center.cpython-311.pyc
+    📄 test_command_center_correct.cpython-311-pytest-8.4.2.pyc
+    📄 test_command_center_correct.cpython-311.pyc
+    📄 test_complete_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_complete_integration.cpython-311.pyc
+    📄 test_complete_system_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_complete_system_integration.cpython-311.pyc
+    📄 test_content_api_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_content_api_simple.cpython-311.pyc
+    📄 test_content_studio_bridge.cpython-311-pytest-8.4.2.pyc
+    📄 test_content_studio_bridge.cpython-311.pyc
+    📄 test_core_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_core_integration.cpython-311.pyc
+    📄 test_decision_command_e2e.cpython-311-pytest-8.4.2.pyc
+    📄 test_decision_command_e2e.cpython-311.pyc
+    📄 test_decision_command_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_decision_command_integration.cpython-311.pyc
+    📄 test_dev_endpoints.cpython-311-pytest-8.4.2.pyc
+    📄 test_dev_endpoints.cpython-311.pyc
+    📄 test_dynamic_advisor.cpython-311-pytest-8.4.2.pyc
+    📄 test_dynamic_advisor.cpython-311.pyc
+    📄 test_e2e_handoff.cpython-311-pytest-8.4.2.pyc
+    📄 test_e2e_handoff.cpython-311.pyc
+    📄 test_enhanced_assistant.cpython-311-pytest-8.4.2.pyc
+    📄 test_enhanced_assistant.cpython-311.pyc
+    📄 test_execution_pipeline.cpython-311-pytest-8.4.2.pyc
+    📄 test_execution_pipeline.cpython-311.pyc
+    📄 test_file_generation.cpython-311-pytest-8.4.2.pyc
+    📄 test_file_generation.cpython-311.pyc
+    📄 test_file_viewer_api.cpython-311-pytest-8.4.2.pyc
+    📄 test_file_viewer_api.cpython-311.pyc
+    📄 test_final_agent_platform.cpython-311-pytest-8.4.2.pyc
+    📄 test_final_agent_platform.cpython-311.pyc
+    📄 test_final_platform_awareness.cpython-311-pytest-8.4.2.pyc
+    📄 test_final_platform_awareness.cpython-311.pyc
+    📄 test_frontend_connectivity.cpython-311-pytest-8.4.2.pyc
+    📄 test_frontend_connectivity.cpython-311.pyc
+    📄 test_full_system_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_full_system_integration.cpython-311.pyc
+    📄 test_gpt5_compatibility.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_compatibility.cpython-311.pyc
+    📄 test_gpt5_config.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_config.cpython-311.pyc
+    📄 test_gpt5_correct_params.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_correct_params.cpython-311.pyc
+    📄 test_gpt5_debug.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_debug.cpython-311.pyc
+    📄 test_gpt5_endpoints.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_endpoints.cpython-311.pyc
+    📄 test_gpt5_mini.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_mini.cpython-311.pyc
+    📄 test_gpt5_mini_optimized.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_mini_optimized.cpython-311.pyc
+    📄 test_gpt5_mini_params.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_mini_params.cpython-311.pyc
+    📄 test_gpt5_models.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_models.cpython-311.pyc
+    📄 test_gpt5_quick.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_quick.cpython-311.pyc
+    📄 test_gpt5_response_structure.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_response_structure.cpython-311.pyc
+    📄 test_gpt5_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_gpt5_simple.cpython-311.pyc
+    📄 test_image_generation.cpython-311-pytest-8.4.2.pyc
+    📄 test_image_generation.cpython-311.pyc
+    📄 test_income_builder.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder.cpython-311.pyc
+    📄 test_income_builder_ai.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_ai.cpython-311.pyc
+    📄 test_income_builder_direct.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_direct.cpython-311.pyc
+    📄 test_income_builder_fixed.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_fixed.cpython-311.pyc
+    📄 test_income_builder_flow.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_flow.cpython-311.pyc
+    📄 test_income_builder_import.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_import.cpython-311.pyc
+    📄 test_income_builder_real_tools.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_real_tools.cpython-311.pyc
+    📄 test_income_builder_ws.cpython-311-pytest-8.4.2.pyc
+    📄 test_income_builder_ws.cpython-311.pyc
+    📄 test_integrated_assistant.cpython-311-pytest-8.4.2.pyc
+    📄 test_integrated_assistant.cpython-311.pyc
+    📄 test_intelligence_endpoint.cpython-311-pytest-8.4.2.pyc
+    📄 test_intelligence_endpoint.cpython-311.pyc
+    📄 test_interview_system.cpython-311-pytest-8.4.2.pyc
+    📄 test_interview_system.cpython-311.pyc
+    📄 test_job_workflow.cpython-311-pytest-8.4.2.pyc
+    📄 test_job_workflow.cpython-311.pyc
+    📄 test_main_orchestrator.cpython-311-pytest-8.4.2.pyc
+    📄 test_main_orchestrator.cpython-311.pyc
+    📄 test_memory.cpython-311-pytest-8.4.2.pyc
+    📄 test_memory.cpython-311.pyc
+    📄 test_memory_enhanced_pipeline.cpython-311-pytest-8.4.2.pyc
+    📄 test_memory_enhanced_pipeline.cpython-311.pyc
+    📄 test_ml_job_matching.cpython-311-pytest-8.4.2.pyc
+    📄 test_ml_job_matching.cpython-311.pyc
+    📄 test_model_availability.cpython-311-pytest-8.4.2.pyc
+    📄 test_model_availability.cpython-311.pyc
+    📄 test_neural_orchestra_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_neural_orchestra_simple.cpython-311.pyc
+    📄 test_new_agent_execution.cpython-311-pytest-8.4.2.pyc
+    📄 test_new_agent_execution.cpython-311.pyc
+    📄 test_new_spiders.cpython-311-pytest-8.4.2.pyc
+    📄 test_new_spiders.cpython-311.pyc
+    📄 test_openai_key.cpython-311-pytest-8.4.2.pyc
+    📄 test_openai_key.cpython-311.pyc
+    📄 test_persistence_deployment.cpython-311-pytest-8.4.2.pyc
+    📄 test_persistence_deployment.cpython-311.pyc
+    📄 test_persistence_reality.cpython-311-pytest-8.4.2.pyc
+    📄 test_persistence_reality.cpython-311.pyc
+    📄 test_personal_assistant_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_personal_assistant_integration.cpython-311.pyc
+    📄 test_phase3_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_phase3_integration.cpython-311.pyc
+    📄 test_plan_persistence.cpython-311-pytest-8.4.2.pyc
+    📄 test_plan_persistence.cpython-311.pyc
+    📄 test_platform_awareness.cpython-311-pytest-8.4.2.pyc
+    📄 test_platform_awareness.cpython-311.pyc
+    📄 test_platform_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_platform_integration.cpython-311.pyc
+    📄 test_platform_unification.cpython-311-pytest-8.4.2.pyc
+    📄 test_platform_unification.cpython-311.pyc
+    📄 test_production_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_production_simple.cpython-311.pyc
+    📄 test_progressive_results.cpython-311-pytest-8.4.2.pyc
+    📄 test_progressive_results.cpython-311.pyc
+    📄 test_real_agent_execution.cpython-311-pytest-8.4.2.pyc
+    📄 test_real_agent_execution.cpython-311.pyc
+    📄 test_real_ai_pipeline.cpython-311-pytest-8.4.2.pyc
+    📄 test_real_ai_pipeline.cpython-311.pyc
+    📄 test_real_data_flow.cpython-311-pytest-8.4.2.pyc
+    📄 test_real_data_flow.cpython-311.pyc
+    📄 test_real_data_verification.cpython-311-pytest-8.4.2.pyc
+    📄 test_real_data_verification.cpython-311.pyc
+    📄 test_real_system.cpython-311-pytest-8.4.2.pyc
+    📄 test_real_system.cpython-311.pyc
+    📄 test_real_tool_execution.cpython-311-pytest-8.4.2.pyc
+    📄 test_real_tool_execution.cpython-311.pyc
+    📄 test_reality_direct.cpython-311-pytest-8.4.2.pyc
+    📄 test_reality_direct.cpython-311.pyc
+    📄 test_reality_engine.cpython-311-pytest-8.4.2.pyc
+    📄 test_reality_engine.cpython-311.pyc
+    📄 test_realtime_fix.cpython-311-pytest-8.4.2.pyc
+    📄 test_realtime_fix.cpython-311.pyc
+    📄 test_reddit_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_reddit_integration.cpython-311.pyc
+    📄 test_revenue_activation.cpython-311-pytest-8.4.2.pyc
+    📄 test_revenue_activation.cpython-311.pyc
+    📄 test_revenue_automation_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_revenue_automation_integration.cpython-311.pyc
+    📄 test_revenue_automation_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_revenue_automation_simple.cpython-311.pyc
+    📄 test_revenue_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_revenue_integration.cpython-311.pyc
+    📄 test_sd_with_key.cpython-311-pytest-8.4.2.pyc
+    📄 test_sd_with_key.cpython-311.pyc
+    📄 test_simple_agents.cpython-311-pytest-8.4.2.pyc
+    📄 test_simple_agents.cpython-311.pyc
+    📄 test_simple_endpoint.cpython-311-pytest-8.4.2.pyc
+    📄 test_simple_endpoint.cpython-311.pyc
+    📄 test_simple_spider.cpython-311-pytest-8.4.2.pyc
+    📄 test_simple_spider.cpython-311.pyc
+    📄 test_single_spider.cpython-311-pytest-8.4.2.pyc
+    📄 test_single_spider.cpython-311.pyc
+    📄 test_spider_agent_bridge.cpython-311-pytest-8.4.2.pyc
+    📄 test_spider_agent_bridge.cpython-311.pyc
+    📄 test_stable_diffusion.cpython-311-pytest-8.4.2.pyc
+    📄 test_stable_diffusion.cpython-311.pyc
+    📄 test_stripe_integration.cpython-311-pytest-8.4.2.pyc
+    📄 test_stripe_integration.cpython-311.pyc
+    📄 test_styles_api.cpython-311-pytest-8.4.2.pyc
+    📄 test_styles_api.cpython-311.pyc
+    📄 test_system_bridge.cpython-311-pytest-8.4.2.pyc
+    📄 test_system_bridge.cpython-311.pyc
+    📄 test_system_completion.cpython-311-pytest-8.4.2.pyc
+    📄 test_system_completion.cpython-311.pyc
+    📄 test_system_connectivity.cpython-311-pytest-8.4.2.pyc
+    📄 test_system_connectivity.cpython-311.pyc
+    📄 test_system_sync.cpython-311-pytest-8.4.2.pyc
+    📄 test_system_sync.cpython-311.pyc
+    📄 test_task_delegation.cpython-311-pytest-8.4.2.pyc
+    📄 test_task_delegation.cpython-311.pyc
+    📄 test_task_parsing.cpython-311-pytest-8.4.2.pyc
+    📄 test_task_parsing.cpython-311.pyc
+    📄 test_ultimate_platform_connection.cpython-311-pytest-8.4.2.pyc
+    📄 test_ultimate_platform_connection.cpython-311.pyc
+    📄 test_unified_backend.cpython-311-pytest-8.4.2.pyc
+    📄 test_unified_backend.cpython-311.pyc
+    📄 test_unified_job_income.cpython-311-pytest-8.4.2.pyc
+    📄 test_unified_job_income.cpython-311.pyc
+    📄 test_unified_platform.cpython-311-pytest-8.4.2.pyc
+    📄 test_unified_platform.cpython-311.pyc
+    📄 test_universal_llm_system.cpython-311-pytest-8.4.2.pyc
+    📄 test_universal_llm_system.cpython-311.pyc
+    📄 test_updated_platform_awareness.cpython-311-pytest-8.4.2.pyc
+    📄 test_updated_platform_awareness.cpython-311.pyc
+    📄 test_websocket.cpython-311-pytest-8.4.2.pyc
+    📄 test_websocket.cpython-311.pyc
+    📄 test_websocket_connection.cpython-311-pytest-8.4.2.pyc
+    📄 test_websocket_connection.cpython-311.pyc
+    📄 test_websocket_data_flow.cpython-311-pytest-8.4.2.pyc
+    📄 test_websocket_data_flow.cpython-311.pyc
+    📄 test_websocket_fixed.cpython-311-pytest-8.4.2.pyc
+    📄 test_websocket_fixed.cpython-311.pyc
+    📄 test_websocket_port.cpython-311-pytest-8.4.2.pyc
+    📄 test_websocket_port.cpython-311.pyc
+    📄 test_websocket_simple.cpython-311-pytest-8.4.2.pyc
+    📄 test_websocket_simple.cpython-311.pyc
+    📄 test_workflow_verification.cpython-311-pytest-8.4.2.pyc
+    📄 test_workflow_verification.cpython-311.pyc
+    📄 test_ws_connection.cpython-311-pytest-8.4.2.pyc
+    📄 test_ws_connection.cpython-311.pyc
+    📄 test_ws_data.cpython-311-pytest-8.4.2.pyc
+    📄 test_ws_data.cpython-311.pyc
+    📄 test_ws_income_builder.cpython-311-pytest-8.4.2.pyc
+    📄 test_ws_income_builder.cpython-311.pyc
+  📄 agent_reality_report.json
+  📄 agent_tools_validation_report.json
+  📄 backend_frontend_connection_report_20250920_100621.json
+  📄 backend_frontend_diagnostic.py
+  📄 connectivity_report_20250915_160423.json
+  📄 content_studio_bridge_test_report.json
+  📄 handoff_diagnostic_report.json
+  📄 implementation_depth_report.json
+  📄 integration_report_20250915_160235.json
+  📄 integration_report_20250915_224139.json
+  📄 integration_report_20250916_221922.json
+  📄 integration_test_results.json
+  📄 platform_unification_deployment_report_20250915_233653.json
+  📄 platform_unification_deployment_report_20250915_233709.json
+  📄 reality_report.json
+  📄 reality_report_20250916_161840.json
+  📄 revenue_demo_report_20250915_163503.json
+  📄 revenue_demo_report_20250915_163508.json
+  📄 spider_connection_audit_report.json
+  📄 system_completion_report.json
+  📄 test_action_plan.py
+  📄 test_action_plan_to_advisor_flow.py
+  📄 test_activated_systems.py
+  📄 test_agent_connectivity.py
+  📄 test_agent_functionality.py
+  📄 test_agent_money_making_platform.py
+  📄 test_agent_orchestration.py
+  📄 test_agent_reality.py
+  📄 test_agent_system.py
+  📄 test_agents_count.py
+  📄 test_ai_assistant_integration.py
+  📄 test_ai_integration.py
+  📄 test_ai_job_application.py
+  📄 test_ai_job_system_integration.py
+  📄 test_all_agents.py
+  📄 test_all_opportunities.py
+  📄 test_assistant_capabilities.py
+  📄 test_assistant_connection.py
+  📄 test_assistant_error.py
+  📄 test_automation_simple.py
+  📄 test_bridge_simple.py
+  📄 test_categorized_opportunities_flow.py
+  📄 test_code_agents.py
+  📄 test_command_center.py
+  📄 test_command_center_correct.py
+  📄 test_complete_integration.py
+  📄 test_complete_system_integration.py
+  📄 test_content_api_simple.py
+  📄 test_content_studio_bridge.py
+  📄 test_core_integration.py
+  📄 test_decision_command_e2e.py
+  📄 test_decision_command_integration.py
+  📄 test_dev_endpoints.py
+  📄 test_dynamic_advisor.py
+  📄 test_e2e_handoff.py
+  📄 test_enhanced_assistant.py
+  📄 test_execution_pipeline.py
+  📄 test_file_generation.py
+  📄 test_file_viewer_api.py
+  📄 test_final_agent_platform.py
+  📄 test_final_platform_awareness.py
+  📄 test_frontend_connectivity.py
+  📄 test_full_system_integration.py
+  📄 test_gpt5_compatibility.py
+  📄 test_gpt5_config.py
+  📄 test_gpt5_correct_params.py
+  📄 test_gpt5_debug.py
+  📄 test_gpt5_endpoints.py
+  📄 test_gpt5_mini.py
+  📄 test_gpt5_mini_optimized.py
+  📄 test_gpt5_mini_params.py
+  📄 test_gpt5_models.py
+  📄 test_gpt5_quick.py
+  📄 test_gpt5_response_structure.py
+  📄 test_gpt5_simple.py
+  📄 test_image_generation.py
+  📄 test_income_builder.py
+  📄 test_income_builder_ai.py
+  📄 test_income_builder_direct.py
+  📄 test_income_builder_fixed.py
+  📄 test_income_builder_flow.py
+  📄 test_income_builder_import.py
+  📄 test_income_builder_real_tools.py
+  📄 test_income_builder_ws.py
+  📄 test_integrated_assistant.py
+  📄 test_intelligence_endpoint.py
+  📄 test_interview_system.py
+  📄 test_job_workflow.py
+  📄 test_main_orchestrator.py
+  📄 test_memory.py
+  📄 test_memory_enhanced_pipeline.py
+  📄 test_ml_job_matching.py
+  📄 test_model_availability.py
+  📄 test_neural_orchestra_simple.py
+  📄 test_new_agent_execution.py
+  📄 test_new_spiders.py
+  📄 test_openai_key.py
+  📄 test_persistence_deployment.py
+  📄 test_persistence_reality.py
+  📄 test_personal_assistant_integration.py
+  📄 test_phase3_integration.py
+  📄 test_plan_persistence.py
+  📄 test_platform_awareness.py
+  📄 test_platform_integration.py
+  📄 test_platform_unification.py
+  📄 test_production_simple.py
+  📄 test_progressive_results.py
+  📄 test_real_agent_execution.py
+  📄 test_real_ai_pipeline.py
+  📄 test_real_data_flow.py
+  📄 test_real_data_verification.py
+  📄 test_real_system.py
+  📄 test_real_tool_execution.py
+  📄 test_reality_direct.py
+  📄 test_reality_engine.py
+  📄 test_realtime_fix.py
+  📄 test_reddit_integration.py
+  📄 test_revenue_activation.py
+  📄 test_revenue_automation_integration.py
+  📄 test_revenue_automation_simple.py
+  📄 test_revenue_integration.py
+  📄 test_sd_with_key.py
+  📄 test_simple_agents.py
+  📄 test_simple_endpoint.py
+  📄 test_simple_spider.py
+  📄 test_single_spider.py
+  📄 test_spider_agent_bridge.py
+  📄 test_stable_diffusion.py
+  📄 test_stripe_integration.py
+  📄 test_styles_api.py
+  📄 test_system_bridge.py
+  📄 test_system_completion.py
+  📄 test_system_connectivity.py
+  📄 test_system_sync.py
+  📄 test_task_delegation.py
+  📄 test_task_parsing.py
+  📄 test_ultimate_platform_connection.py
+  📄 test_unified_backend.py
+  📄 test_unified_job_income.py
+  📄 test_unified_platform.py
+  📄 test_universal_llm_system.py
+  📄 test_updated_platform_awareness.py
+  📄 test_websocket.py
+  📄 test_websocket_connection.py
+  📄 test_websocket_data_flow.py
+  📄 test_websocket_fixed.py
+  📄 test_websocket_port.py
+  📄 test_websocket_simple.py
+  📄 test_workflow_verification.py
+  📄 test_ws_connection.py
+  📄 test_ws_data.py
+  📄 test_ws_income_builder.py
+  📄 unified_backend_test_results.json
+  📄 websocket_audit_report_20250915_180513.json
+  📄 websocket_diagnostic_report_20250915_124842.json
+  📄 websocket_integration_test_report.json
+  📄 workflow_scenario_test_results.json
+📄 upload_unified_docs.py
+📄 websocket_diagnostics_full.py
+```
+
+## 📚 Docs Index
+
+## 🚦 Current Priorities (from README)
+- Register 2 missing spiders
+- Load 11 orphaned agents
+- Connect revenue attribution
+- Verify learning bridges
+- Consolidate orchestration
+
+## 🤖 Ollama Integration TODOs
+- Confirm `OPENAI_BASE_URL` env setup for Ollama
+- Run repo review with `qwen2.5:14b-instruct`
+- Write adapter layer for `ollama_chat`
+- Validate local completions on repo files

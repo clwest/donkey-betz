@@ -1229,7 +1229,7 @@ DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${DATE}.sql.gz"
 
 # Dump and compress
-PGPASSWORD="${DB_PASSWORD}" pg_dump \
+PGPASSWORD="REDACTED" pg_dump \
     -h localhost \
     -U ${DB_USER} \
     -d ${DB_NAME} \
@@ -4617,7 +4617,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'
+EMAIL_HOST_PASSWORD = 'REDACTED'
 DEFAULT_FROM_EMAIL = 'UKF Alerts <alerts@example.com>'
 ```
 
@@ -6682,7 +6682,7 @@ from obs_studio.models import OBSConnection
 
 # Update with your actual password
 conn = OBSConnection.objects.first()
-conn.password = "your_secure_password"
+conn.password = "REDACTED"
 conn.save()
 ```
 
@@ -6700,7 +6700,7 @@ import asyncio
 import obsws_python as obs
 
 async def test_connection():
-    cl = obs.ReqClient(host='localhost', port=4455, password='your_secure_password')
+    cl = obs.ReqClient(host='localhost', port=4455, password='REDACTED')
     
     # Get version
     version = cl.get_version()

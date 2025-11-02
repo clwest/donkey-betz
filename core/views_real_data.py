@@ -62,7 +62,7 @@ def get_agent_registry(request):
 def execute_agent(request):
     """Simulate agent execution"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
     except:
         data = {}
 

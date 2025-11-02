@@ -26,7 +26,7 @@ class NewProjectView(View):
 
     async def post(self, request):
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             project_idea = data.get('idea', 'Build a web application')
             project_name = data.get('project_name')
@@ -147,7 +147,7 @@ class ProjectAssignAgentView(View):
 
     async def post(self, request, project_id):
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             agent_id = data.get('agent_id')
             improvement_type = data.get('improvement_type', 'enhance')

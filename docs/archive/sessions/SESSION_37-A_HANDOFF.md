@@ -712,7 +712,7 @@ def create_revenue(request):
     POST /api/revenue/create/
     """
     try:
-        data = json.loads(request.body) if isinstance(request.body, bytes) else request.data
+        data = json.loads(request.body or b"{}")) if isinstance(request.body, bytes) else request.data
 
         # Get agent if specified
         agent = None
@@ -1129,7 +1129,7 @@ def quick_apply(request):
     import json
 
     try:
-        data = json.loads(request.body) if isinstance(request.body, bytes) else request.data
+        data = json.loads(request.body or b"{}")) if isinstance(request.body, bytes) else request.data
         opportunity_id = data.get('opportunity_id')
 
         # Get opportunity

@@ -186,7 +186,7 @@ def api_consult_advisor(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}"))
         advisor_id = data.get('advisor_id')
         question = data.get('question')
 

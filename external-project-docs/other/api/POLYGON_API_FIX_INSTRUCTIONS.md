@@ -10,7 +10,7 @@ There were TWO issues preventing Polygon API from working:
    - Both API keys were returning "Unknown API Key" error (invalid)
 
 2. **Quotes in .env File**:
-   - Had: `POLYGON_API_KEY="bpHUT4KfOxdoXNYEGa43JPBw97AHHDgD"`
+   - Had: `POLYGON_API_KEY="REDACTED"`
    - Fixed to: `POLYGON_API_KEY=bpHUT4KfOxdoXNYEGa43JPBw97AHHDgD` (no quotes)
 
 ## Solution Steps
@@ -30,7 +30,7 @@ unset POLYGON_API_KEY
 
 Option B - Update the system variable:
 ```bash
-export POLYGON_API_KEY='your_valid_api_key_here'
+export POLYGON_API_KEY='REDACTED'
 ```
 
 ### Step 3: Fix the .env File

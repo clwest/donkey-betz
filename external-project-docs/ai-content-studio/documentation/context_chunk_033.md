@@ -6656,7 +6656,7 @@ Found misleading references to DALL-E 3 in the UI:
 Both keys are configured in `.env`:
 ```bash
 STABILITY_KEY="sk-9DSt2cM3yZ7J6ALpna9rELqiA3X7ztatbc9BbAYWkaGsalpH"
-OPENAI_API_KEY="sk-proj-[...]"  # Present but not used for images
+OPENAI_API_KEY="REDACTED"  # Present but not used for images
 ```
 
 ### Service Priority

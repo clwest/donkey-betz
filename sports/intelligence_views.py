@@ -19,7 +19,7 @@ def analyze_intelligence(request):
     try:
         # Parse request body
         if request.body:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
         else:
             data = {}
 

@@ -1552,8 +1552,8 @@ API Calls: 3-5 per complete analysis
 **Impact:** System uses mock data instead of real-time data  
 **Solution:** 
 ```bash
-export ODDS_API_KEY="your_key"
-export SPORTRADAR_API_KEY="your_key"
+export ODDS_API_KEY="REDACTED"
+export SPORTRADAR_API_KEY="REDACTED"
 ```
 
 ### Issue 2: Database Migrations Not Run

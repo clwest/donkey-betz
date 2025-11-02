@@ -23,7 +23,7 @@ def create_advanced_workflow(request):
     Enhanced version with more sophisticated orchestration.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     workflow_name = data.get('name', 'Untitled Workflow')
     description = data.get('description', '')
@@ -79,7 +79,7 @@ def execute_advanced_workflow(request):
     Enhanced execution with conditional logic and error handling.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     workflow_id = data.get('workflow_id', '')
     input_parameters = data.get('input_parameters', {})
@@ -297,7 +297,7 @@ def create_workflow_from_template(request):
     Create workflow from template with customization.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     template_id = data.get('template_id', '')
     customizations = data.get('customizations', {})
@@ -417,7 +417,7 @@ def schedule_workflow(request):
     Schedule workflow for automated execution.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     workflow_id = data.get('workflow_id', '')
     schedule_type = data.get('schedule_type', 'once')  # once, daily, weekly, monthly, cron
@@ -455,7 +455,7 @@ def workflow_collaboration(request):
     Share and collaborate on workflows.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     workflow_id = data.get('workflow_id', '')
     action = data.get('action', 'share')  # share, invite, publish, fork

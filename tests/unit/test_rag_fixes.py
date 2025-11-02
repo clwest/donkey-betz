@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test the RAG fixes we just applied
@@ -130,7 +131,7 @@ def test_full_rag_assistant():
             
             print(f"   Message length: {len(message)}")
             print(f"   RAG used: {rag_used}")
-            print(f"   Sources found: {len(sources)}")
+            print(f"   Sources found: {len(ources)}")
             print(f"   Total embeddings: {total_embeddings:,}")
             
             if message and len(message.strip()) > 0:

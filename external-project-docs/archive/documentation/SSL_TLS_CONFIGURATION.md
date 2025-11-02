@@ -333,7 +333,7 @@ export SSL_EMAIL_RECIPIENT="admin@donkeybetz.com"
 export SMTP_SERVER="smtp.gmail.com"
 export SMTP_PORT="587"
 export SMTP_USERNAME="your-email@gmail.com"
-export SMTP_PASSWORD="your-app-password"
+export SMTP_PASSWORD="REDACTED"
 ```
 
 ### Alert Conditions

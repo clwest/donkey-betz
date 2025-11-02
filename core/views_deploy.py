@@ -130,7 +130,7 @@ def download_project(request, project_name):
 def deploy_project(request):
     """Deploy generated project (create Docker container, etc.)"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project_name = data.get('project_name', '')
         deploy_type = data.get('deploy_type', 'local')  # local, docker, cloud
 

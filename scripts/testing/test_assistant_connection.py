@@ -65,7 +65,7 @@ def test_django_view():
         user = User.objects.create_user(
             username='test_user',
             email='test@example.com',
-            password='testpass123'
+            password='REDACTED'
         )
 
     # Create request with self-awareness enabled
@@ -78,7 +78,7 @@ def test_django_view():
         content_type='application/json'
     )
     request.user = user
-    request.data = json.loads(request.body)
+    request.data = json.loads(request.body or b"{}")
 
     # Call the view
     try:

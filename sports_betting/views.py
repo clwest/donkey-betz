@@ -56,7 +56,7 @@ def api_place_bet(request):
     """API endpoint for placing bets"""
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             bet_type = data.get('type')
             game_id = data.get('game_id')
             amount = data.get('amount')
@@ -79,7 +79,7 @@ def api_ai_recommendation(request):
     """API endpoint for AI betting recommendations"""
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             game_id = data.get('game_id')
 
             # Generate AI recommendation (mock)

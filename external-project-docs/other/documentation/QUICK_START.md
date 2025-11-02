@@ -21,13 +21,13 @@ pip install -r requirements.txt
 ### 2. Set Environment Variables
 ```bash
 # Required for embedding generation and search
-export OPENAI_API_KEY="your-openai-key-here"
+export OPENAI_API_KEY="REDACTED"
 
 # Database connection (choose your platform)
 # For AI Content Studio:
 export DB_NAME="ai_content_studio"
 export DB_USER="postgres"
-export DB_PASSWORD="your-password"
+export DB_PASSWORD="REDACTED"
 export DB_HOST="localhost"
 export DB_PORT="5432"
 
@@ -237,7 +237,7 @@ psql -h localhost -U postgres -d your_database
 
 # Update environment variables
 export DB_NAME="correct_database_name"
-export DB_PASSWORD="correct_password"
+export DB_PASSWORD="REDACTED"
 ```
 
 ## 📈 Success Metrics

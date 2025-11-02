@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """Test the learning details API directly"""
 import redis
@@ -26,7 +27,7 @@ def get_learning_details():
 
         return {
             'solutions': solutions,
-            'total': len(solutions)
+            'total': len(olutions)
         }
     except Exception as e:
         return {'error': str(e)}

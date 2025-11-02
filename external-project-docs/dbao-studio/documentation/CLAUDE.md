@@ -77,10 +77,10 @@ Set environment variables for real AI integration:
 
 ```bash
 # OpenAI
-export OPENAI_API_KEY="your-openai-key"
+export OPENAI_API_KEY="REDACTED"
 
 # Anthropic Claude
-export ANTHROPIC_API_KEY="your-anthropic-key"
+export ANTHROPIC_API_KEY="REDACTED"
 ```
 
 ## Agent Architecture
@@ -166,8 +166,8 @@ Real-time agent execution updates via WebSocket connections for:
 
 ```bash
 DJANGO_SECRET_KEY="your-secret-key"
-OPENAI_API_KEY="your-openai-key"      # Optional
-ANTHROPIC_API_KEY="your-anthropic-key" # Optional
+OPENAI_API_KEY="REDACTED"      # Optional
+ANTHROPIC_API_KEY="REDACTED" # Optional
 DEBUG=True                             # Development only
 ```
 

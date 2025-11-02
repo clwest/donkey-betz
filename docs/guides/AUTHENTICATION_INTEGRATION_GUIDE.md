@@ -234,7 +234,7 @@ def api_execute_agent(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}"))
         agent_name = data.get('agent_name')
 
         # User is available as request.user (guaranteed by @login_required)

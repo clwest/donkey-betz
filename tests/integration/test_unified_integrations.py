@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 """
 Comprehensive Integration Tests for Unified Donkey Betz Platform
 

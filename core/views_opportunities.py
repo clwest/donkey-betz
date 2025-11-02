@@ -20,7 +20,7 @@ def quick_apply(request):
     Body: {"opportunity_id": "uuid"}
     """
     try:
-        data = json.loads(request.body) if isinstance(request.body, bytes) else request.data
+        data = json.loads(request.body or b"{}") if isinstance(request.body, bytes) else request.data
         opportunity_id = data.get('opportunity_id')
 
         # Get opportunity

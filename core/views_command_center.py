@@ -506,7 +506,7 @@ class ProfileExtendedView(View):
         """Update user profile"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             # Update user fields
             with transaction.atomic():
@@ -607,7 +607,7 @@ class AIConfigurationView(View):
         """Update user's AI configuration"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             with transaction.atomic():
                 # Update AI settings
@@ -712,7 +712,7 @@ class AgentAssignmentView(View):
         """Assign an agent to user"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             agent_name = data.get('agent_name')
 
             if not agent_name:
@@ -772,7 +772,7 @@ class CommandExecutionView(View):
         """Execute a command with user context"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             command_input = data.get('input', '')
             context = data.get('context', {})

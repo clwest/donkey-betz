@@ -178,7 +178,7 @@ def get_solution_detail(request, solution_id):
 def apply_solution(request, solution_id):
     """Apply a solution to user's context"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         solution = AgentSolution.objects.get(id=solution_id)
 
         # Update usage metrics
@@ -362,7 +362,7 @@ def get_learning_progress(request):
 def personalize_learning(request):
     """Get personalized learning recommendations based on user context"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         user_interests = data.get('interests', [])
         user_skills = data.get('skills', [])
         user_goals = data.get('goals', [])

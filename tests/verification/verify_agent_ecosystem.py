@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 import os
 import django
@@ -20,7 +21,7 @@ print(f"1. Total Active Agents: {total_agents}")
 
 # 2. Check agent specializations
 specializations = UnifiedAgentTemplate.objects.filter(is_active=True).values_list('specialization', flat=True).distinct()
-print(f"2. Specializations Available: {len(specializations)}")
+print(f"2. Specializations Available: {len(pecializations)}")
 for spec in sorted(specializations):
     count = UnifiedAgentTemplate.objects.filter(is_active=True, specialization=spec).count()
     print(f"   - {spec}: {count} agents")
@@ -90,7 +91,7 @@ for provider, count in sorted(provider_counts.items()):
 
 print(f"\n=== ECOSYSTEM HEALTH SUMMARY ===")
 print(f"Total Agents: {total_agents}")
-print(f"Specializations: {len(specializations)}")
+print(f"Specializations: {len(pecializations)}")
 print(f"LLM Providers: {len(provider_counts)}")
 print(f"Registry Status: {'✓ Active' if 'registry' in locals() else '✗ Missing'}")
 

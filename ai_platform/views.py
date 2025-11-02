@@ -59,7 +59,7 @@ def get_user_success_stories(request):
 def track_user_outcome(request):
     """Track a new user outcome"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
 
         # Track the outcome
         outcome_id = user_impact_tracker.track_user_outcome(data)

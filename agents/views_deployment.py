@@ -174,7 +174,7 @@ def deploy_agents_to_project(request):
     Deploy selected agents to a project
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project_id = data.get('project_id')
         agent_names = data.get('agents', [])
         deployment_strategy = data.get('strategy', 'sequential')
@@ -302,7 +302,7 @@ def create_integration_plan(request):
     Create an integration plan for agents and project
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project_id = data.get('project_id')
         selected_agents = data.get('agents', [])
         integration_goals = data.get('goals', [])
@@ -397,7 +397,7 @@ def execute_agent_on_project(request):
     Execute a specific agent on a project task
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project_id = data.get('project_id')
         agent_name = data.get('agent_name')
         task_description = data.get('task_description')

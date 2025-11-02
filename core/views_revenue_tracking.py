@@ -93,7 +93,7 @@ class TrackRevenueView(View):
     def post(self, request):
         """Create a new revenue record"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             # Create revenue record
             revenue = Revenue.objects.create(
@@ -152,7 +152,7 @@ class UpdateRevenueStatusView(View):
     def post(self, request, revenue_id):
         """Update revenue status"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             new_status = data.get('status')
 
             if not new_status:

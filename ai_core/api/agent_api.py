@@ -174,7 +174,7 @@ class AgentExecuteAPI(View):
     def post(self, request):
         """Execute an agent with given parameters"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             agent_name = data.get('agent')
             task = data.get('task', {})
 

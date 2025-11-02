@@ -1,3 +1,4 @@
+from .action_plan import ActionPlan
 """
 Models for Intelligence System - Action Plans and Execution
 """

@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Debug the empty RAG response issue
@@ -86,7 +87,7 @@ def test_rag_context_build():
         context, sources = rag_assistant.build_context(test_query)
         
         print(f"   Query: '{test_query}'")
-        print(f"   Sources found: {len(sources)}")
+        print(f"   Sources found: {len(ources)}")
         print(f"   Context length: {len(context) if context else 0}")
         
         if sources:
@@ -124,7 +125,7 @@ def test_full_rag_flow():
         message = "I am just trying to test out different parts of the system."
         context, sources = rag_assistant.build_context(message)
         
-        print(f"   Built context with {len(sources)} sources")
+        print(f"   Built context with {len(ources)} sources")
         
         # Build system prompt like the assistant does
         system_prompt = f"""You are {user.username}'s personal AI assistant.
@@ -152,7 +153,7 @@ User Question: {message}
 
 Please answer based on the context provided above, citing sources when relevant."""
         
-        print(f"   System prompt length: {len(system_prompt)}")
+        print(f"   System prompt length: {len(ystem_prompt)}")
         print(f"   Enhanced message length: {len(enhanced_message)}")
         print(f"   Enhanced message preview: {enhanced_message[:300]}...")
         

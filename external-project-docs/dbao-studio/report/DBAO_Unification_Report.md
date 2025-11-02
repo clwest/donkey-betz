@@ -174,7 +174,7 @@ from sdk.py.tools import create_dbao_sdk, DBAAOClientConfig
 
 sdk = create_dbao_sdk(DBAAOClientConfig(
     base_url="http://localhost:8000",
-    api_key="your-token-here"  # optional
+    api_key="REDACTED"  # optional
 ))
 
 # Health check

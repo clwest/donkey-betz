@@ -8,13 +8,13 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.urls import path, include
+from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-
-# Import unified v2 views (Session 22 UI Fresh Start)
-from core import views_unified_v2
+ 
+# Session 31: Removed views_unified_v2 import - consolidated to root routes
+# from core import views_unified_v2
 
 # Import advisor API views (Session 25)
 from core.views_advisor_api import advisor_consult, advisor_list, advisor_detail
@@ -127,12 +127,12 @@ from ai_core.api.autonomous_system_api import (
     AutonomousSystemResumeView
 )
 from core.views import (
-    platform_status, platform_info, record_metric, health_check,
+    platform_info, record_metric, health_check,
     blog_list, styles_list, prompting_settings, execute_agent,
     agent_executions_list, prompt_diagnostics_dashboard, prompt_diagnostics_analyses, prompt_diagnostics_templates,
     feedback_analytics, feedback_history, feedback_submit, prompting_stats,
     assistant_context, research_books, research_documents, prompting_test,
-    personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history
+    personal_knowledge_list, agents_discovery_stats, ebooks_list, voice_history, llm_chat, platform_status
 )
 from core.views_unified_intelligence import (
     unified_intelligence_dashboard, get_unified_intelligence_data,
@@ -338,20 +338,8 @@ from core.views_diagnostics import (
 )
 
 urlpatterns = [
-    # UNIFIED V2 - Session 22 UI Fresh Start (highest priority)
-    path('v2/', include(([
-        path('', views_unified_v2.DashboardView.as_view(), name='dashboard'),
-        path('assistant/', views_unified_v2.PersonalAssistantView.as_view(), name='personal_assistant'),
-        path('agents/', views_unified_v2.AgentMarketplaceView.as_view(), name='agent_marketplace'),
-        path('agents/<uuid:agent_id>/', views_unified_v2.AgentDetailView.as_view(), name='agent_detail'),
-        path('advisors/', views_unified_v2.AdvisorCouncilView.as_view(), name='advisor_council'),
-        path('advisors/<uuid:advisor_id>/', views_unified_v2.AdvisorDetailView.as_view(), name='advisor_detail'),
-        path('content/', views_unified_v2.ContentStudioView.as_view(), name='content_studio'),
-        path('intelligence/', views_unified_v2.IntelligenceHubView.as_view(), name='intelligence_hub'),
-        path('sportsbook/', views_unified_v2.SportsbookView.as_view(), name='sportsbook'),
-    ], 'unified_v2'), namespace='unified_v2')),
-
-    # UNIFIED FRONTEND - Primary routing (takes precedence)
+    # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
+    # Removed duplicate /v2/ namespace - see docs/debugging-sessions/SESSION_31_URL_CONSOLIDATION_PLAN.md
     path('', include('core.urls_unified')),  # Unified platform URLs
 
     # Legacy homepage (will be overridden by unified dashboard)
@@ -380,7 +368,7 @@ urlpatterns = [
     path('api/diagnostics/test-income-builder/', test_income_builder, name='diagnostics-test-income'),
     path('diagnostics/websocket-test/', websocket_test_page, name='diagnostics-websocket-test'),
     path('diagnostics/websockets/', WebSocketDiagnosticsView.as_view(), name='websocket-diagnostics'),
-
+    path("api/llm/chat/", llm_chat),
     # AI Building Products page (moved up to ensure it's matched first)
     path('ai-building-products/', ai_building_products, name='ai-building-products'),
 
@@ -982,7 +970,9 @@ urlpatterns = [
     path('api/partnership/opportunities/', views_partnership.partnership_opportunities_api, name='partnership-opportunities-api'),
     path('api/partnership/stats/', views_partnership.partnership_stats_api, name='partnership-stats-api'),
     path('api/partnership/health/', views_partnership.partnership_health_check, name='partnership-health'),
-
+    path('api/v1/', include('backend.auto_endpoints.urls')),
+    
+    # TEST ROUTE DONE HERE line 973
     # REST framework browsable API (development only)
     path('api-auth/', include('rest_framework.urls')),
 ]
@@ -998,3 +988,4 @@ except ImportError:
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns.append(path('health/', include('backend.auto_endpoints.urls')))  # public health

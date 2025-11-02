@@ -575,7 +575,7 @@ X-RateLimit-Reset: 1641700000
 ```python
 from unified_sdk import UnifiedClient
 
-client = UnifiedClient(api_key="your-key")
+client = UnifiedClient(api_key="REDACTED")
 
 # AI completion
 response = client.ai.get_completion(

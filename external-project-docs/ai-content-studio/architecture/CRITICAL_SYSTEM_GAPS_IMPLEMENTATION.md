@@ -462,7 +462,7 @@ class InputSanitizationMiddleware(MiddlewareMixin):
             # Sanitize JSON data
             if request.content_type == 'application/json':
                 try:
-                    body = json.loads(request.body.decode('utf-8'))
+                    body = json.loads(request.body or b"{}").decode('utf-8'))
                     sanitized_body = self.sanitize_dict(body)
                     request._body = json.dumps(sanitized_body).encode('utf-8')
                 except (json.JSONDecodeError, UnicodeDecodeError):
@@ -588,7 +588,7 @@ def require_api_signature(f):
             )
         
         try:
-            payload = json.loads(request.body)
+            payload = json.loads(request.body or b"{}"))
             secret_key = settings.API_SIGNATURE_SECRET
             
             if not APIKeyManager.verify_request_signature(payload, signature, secret_key):

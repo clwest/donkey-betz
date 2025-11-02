@@ -171,7 +171,7 @@ TEST_CREDENTIALS = {
 ```bash
 # Optional: Set test credentials via environment variables
 export LOAD_TEST_USERNAME="testuser"
-export LOAD_TEST_PASSWORD="testpass123"
+export LOAD_TEST_PASSWORD="REDACTED"
 export LOAD_TEST_EMAIL="test@example.com"
 ```
 
