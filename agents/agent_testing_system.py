@@ -370,7 +370,7 @@ class AgentTestingSystem:
 def run_agent_tests(request):
     """Run comprehensive agent tests via API"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
         max_concurrent = data.get('max_concurrent', 3)
         timeout_per_agent = data.get('timeout_per_agent', 30)
         test_specific = data.get('agents', [])  # Test specific agents only

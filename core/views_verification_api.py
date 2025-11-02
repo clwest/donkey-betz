@@ -20,7 +20,7 @@ from intelligence.learning_verification import verification_system
 def start_verification_session(request):
     """Start a new learning verification session"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         agent_id = data.get('agent_id')
         skill_domain = data.get('skill_domain', 'code_generation')
 
@@ -48,7 +48,7 @@ def start_verification_session(request):
 def run_baseline_test(request):
     """Run baseline capability test"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         session_id = data.get('session_id')
 
         if not session_id:
@@ -82,7 +82,7 @@ def run_baseline_test(request):
 def expose_learning_material(request):
     """Expose agent to learning material"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         session_id = data.get('session_id')
         learning_material = data.get('learning_material', {})
 
@@ -127,7 +127,7 @@ def expose_learning_material(request):
 def run_post_learning_test(request):
     """Run capability test after learning"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         session_id = data.get('session_id')
 
         if not session_id:
@@ -210,7 +210,7 @@ def list_verification_sessions(request):
 def run_quick_verification_demo(request):
     """Run a complete verification demo for testing"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         agent_id = data.get('agent_id', 'demo_agent_001')
         skill_domain = data.get('skill_domain', 'code_generation')
 

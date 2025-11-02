@@ -21,7 +21,7 @@ def trigger_learning_query(request):
     Trigger a learning query for an agent to learn about a new topic
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         query = data.get('query')
         agent_name = data.get('agent', None)
 

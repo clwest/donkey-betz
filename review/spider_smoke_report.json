@@ -1,0 +1,333 @@
+{
+  "summary": {
+    "total": 46,
+    "ok": 29,
+    "fail": 0,
+    "skip_abstract": 17,
+    "elapsed_s": 0.0
+  },
+  "results": [
+    {
+      "name": "angellist",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "behance",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "bloomberg_terminal",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "coingecko",
+      "status": "ok",
+      "class": "CoinGeckoSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "combat_sports",
+      "status": "ok",
+      "class": "CombatSportsSpider",
+      "time_s": 0.0002,
+      "error": null
+    },
+    {
+      "name": "courtlistener",
+      "status": "ok",
+      "class": "CourtListenerSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "devto",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "dribbble",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "etherscan",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "financial",
+      "status": "ok",
+      "class": "FinancialIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "findlaw",
+      "status": "ok",
+      "class": "FindLawSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "flexjobs",
+      "status": "ok",
+      "class": "FlexJobsIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "github_jobs",
+      "status": "ok",
+      "class": "TechCommunitySpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "gumroad",
+      "status": "ok",
+      "class": "GumroadIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "guru",
+      "status": "ok",
+      "class": "GuruIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "hackernews",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "hashnode",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "horse_racing",
+      "status": "ok",
+      "class": "HorseRacingSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "huggingface",
+      "status": "ok",
+      "class": "TechCommunitySpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "indiegogo",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "innovation",
+      "status": "ok",
+      "class": "InnovationTrackingSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "justia",
+      "status": "ok",
+      "class": "JustiaSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "kaggle",
+      "status": "ok",
+      "class": "TechCommunitySpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "kickstarter",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "kofi",
+      "status": "ok",
+      "class": "ContentMonetizationSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "lii",
+      "status": "ok",
+      "class": "LegalInformationInstituteSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "market_data",
+      "status": "ok",
+      "class": "MarketDataSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "medium",
+      "status": "ok",
+      "class": "MediumIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "news_harvester",
+      "status": "ok",
+      "class": "NewsHarvesterSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "ninetyninedesigns",
+      "status": "ok",
+      "class": "NinetyNineDesignsIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "opensea",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "patreon",
+      "status": "ok",
+      "class": "ContentMonetizationSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "peopleperhour",
+      "status": "ok",
+      "class": "PeoplePerHourIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "producthunt",
+      "status": "ok",
+      "class": "ContentMonetizationSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "remoteok",
+      "status": "ok",
+      "class": "RemoteOKIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "reuters_eikon",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "seekingalpha",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "skillshare",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "social_sentiment",
+      "status": "ok",
+      "class": "SocialSentimentSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "stackoverflow_jobs",
+      "status": "ok",
+      "class": "TechCommunitySpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "substack",
+      "status": "ok",
+      "class": "ContentMonetizationSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "teachable",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "toptal",
+      "status": "ok",
+      "class": "ToptalIntelligenceSpider",
+      "time_s": 0.0001,
+      "error": null
+    },
+    {
+      "name": "udemy",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "weworkremotely",
+      "status": "skip_abstract",
+      "class": "BaseIntelligenceSpider",
+      "time_s": 0.0,
+      "error": null
+    },
+    {
+      "name": "yahoo_finance",
+      "status": "ok",
+      "class": "YahooFinanceSpider",
+      "time_s": 0.0,
+      "error": null
+    }
+  ]
+}

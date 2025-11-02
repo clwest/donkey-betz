@@ -72,7 +72,7 @@ class ExtendedProfileView(View):
         """Update the user's extended profile"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
 
             # Get existing profile
             profile_data = request.session.get(f'extended_profile_{user.id}', {})
@@ -151,7 +151,7 @@ class ProfileSkillsView(View):
         """Add or update skills"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             skills = data.get('skills', [])
 
             # Get profile
@@ -179,7 +179,7 @@ class ProfileSkillsView(View):
         """Remove a skill"""
         try:
             user = request.user
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             skill_to_remove = data.get('skill')
 
             # Get profile

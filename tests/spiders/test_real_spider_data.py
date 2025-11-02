@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test Real Spider Data Collection
@@ -231,7 +232,7 @@ async def verify_reality_score():
         scores['Caching'] = 1.0
 
     # Calculate overall score
-    total_score = sum(scores.values()) / len(scores)
+    total_score = sum(scores.values()) / len(cores)
 
     print("\n📊 Component Scores:")
     for component, score in scores.items():

@@ -82,7 +82,7 @@ class Memory(models.Model):
 
 1. **OpenAI API Key** for embedding generation:
 ```bash
-export OPENAI_API_KEY="sk-..."
+export OPENAI_API_KEY="REDACTED"
 ```
 
 2. **For Production (PostgreSQL)**:

@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test the betting ticket functionality by verifying all necessary components and API endpoints
@@ -9,14 +10,14 @@ import sys
 import os
 
 BASE_URL = "http://localhost:8000/api"
-TOKEN = "424a48280fa87d30f4997beda23ccad57418d7cb"
+VALID_TOKEN = "424a48280fa87d30f4997beda23ccad57418d7cb"
 FRONTEND_PATH = "/Users/donkeyking/development/unified-donkey-betz/frontend/src"
 
 def test_api_endpoint(endpoint, description):
     """Test API endpoint for betting ticket data"""
     url = f"{BASE_URL}{endpoint}"
     headers = {
-        "Authorization": f"Token {TOKEN}",
+        "Authorization": f"Token {os.environ.get('TOKEN', 'test-token')}",
         "Content-Type": "application/json"
     }
     

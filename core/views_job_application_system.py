@@ -274,7 +274,7 @@ class QuickApplyView(View):
     def post(self, request):
         """Submit a quick application to a job opportunity"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             job_data = data.get('job_data', {})
 
             if not job_data.get('id'):
@@ -574,7 +574,7 @@ class ApplicationStatusView(View):
     def post(self, request, application_id):
         """Update application status"""
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             new_status = data.get('status')
             notes = data.get('notes', '')
             employer_response = data.get('employer_response', '')

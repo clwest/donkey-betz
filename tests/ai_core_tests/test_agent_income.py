@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 TEST AGENT INCOME - Quick test to verify agents work with platform knowledge
@@ -93,5 +94,5 @@ if __name__ == "__main__":
 
     if success:
         print("\n🚀 NEXT STEP: Set your API key and run activate_income_now.py")
-        print("   export REPLICATE_API_KEY='your_stable_diffusion_key'")
+        print("   export REPLICATE_API_KEY='REDACTED'")
         print("   python activate_income_now.py")

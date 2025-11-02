@@ -187,7 +187,7 @@ def execute_spider(request):
     """Trigger a specific spider to run"""
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         spider_id = data.get('spider_id')
         spider_name = data.get('spider_name')
 

@@ -320,7 +320,7 @@ def get_unified_intelligence_data(request):
 def implement_insight(request):
     """Implement a consciousness insight - NOW WITH REAL EXECUTION"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         insight_id = data.get('insight_id')
         category = data.get('category')
         timestamp_val = data.get('timestamp')
@@ -442,7 +442,7 @@ def implement_insight(request):
 def investigate_behavior(request):
     """Investigate an emergent behavior"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         behavior_id = data.get('behavior_id')
         behavior_type = data.get('behavior_type')
         timestamp_val = data.get('timestamp')
@@ -488,7 +488,7 @@ def investigate_behavior(request):
 def approve_proposal(request):
     """Approve an AI proposal"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         proposal_id = data.get('proposal_id')
 
         logger.info(f"Approving proposal {proposal_id}")
@@ -519,7 +519,7 @@ def approve_proposal(request):
 def reject_proposal(request):
     """Reject an AI proposal"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         proposal_id = data.get('proposal_id')
         reason = data.get('reason', 'No reason provided')
 

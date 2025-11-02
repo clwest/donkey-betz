@@ -137,7 +137,7 @@ def execute_agent(request):
     logger.error("🔥 FIXED EXECUTE_AGENT FUNCTION CALLED!")
     
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     task_description = data.get('task_description', '')
     context = data.get('context', {})
@@ -269,7 +269,7 @@ def orchestrate_multi_agent_task(request):
     Orchestrate complex multi-agent workflows - migrated from DBAO
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     task_description = data.get('task_description', '')
     agent_sequence = data.get('agent_sequence', [])
@@ -310,7 +310,7 @@ def suggest_agent(request):
     AI-powered agent suggestion system - migrated from DBAO
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     task_description = data.get('task_description', '')
     
@@ -369,7 +369,7 @@ def route_task(request):
     Intelligent task routing without execution - migrated from DBAO
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     task_description = data.get('task_description', '')
     context = data.get('context', {})

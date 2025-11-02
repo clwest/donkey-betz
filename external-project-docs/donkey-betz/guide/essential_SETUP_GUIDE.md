@@ -214,7 +214,7 @@ obs_service = OBSWebSocketService(user.id)
 await obs_service.connect(
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # Start recording

@@ -141,7 +141,7 @@ PROJECTS = {
 def switch_project(request):
     """Switch the active project"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project = data.get('project', 'ecommerce')
 
         if project not in PROJECTS:
@@ -170,7 +170,7 @@ def switch_project(request):
 def build_project_module(request):
     """Build a new module for the active project"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project = data.get('project', request.session.get('active_project', 'ecommerce'))
 
         # Run the dynamic project builder
@@ -220,7 +220,7 @@ def build_project_module(request):
 def execute_latest_code(request):
     """Execute the latest generated code for a project with automatic error fixing"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project = data.get('project', request.session.get('active_project', 'ecommerce'))
         specific_file = data.get('file', None)  # Allow executing a specific file
 
@@ -516,7 +516,7 @@ def get_project_stats(request):
 def get_agent_suggestions(request):
     """Get AI agent suggestions for the current project"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project = data.get('project', request.session.get('active_project', 'ecommerce'))
         requested_agents = data.get('agents', None)  # Optional: specific agents to consult
 
@@ -559,7 +559,7 @@ def get_agent_suggestions(request):
 def apply_suggestion(request):
     """Apply a specific agent suggestion to the project code"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project = data.get('project', request.session.get('active_project', 'ecommerce'))
         agent_id = data.get('agent_id')
         suggestion_index = data.get('suggestion_index', 0)
@@ -638,7 +638,7 @@ def orchestrate_real_build(request):
     logger = logging.getLogger(__name__)
 
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project_type = data.get('project', 'ecommerce')
         raw_project_name = data.get('name', PROJECTS.get(project_type, {}).get('name', 'AI Project'))
 

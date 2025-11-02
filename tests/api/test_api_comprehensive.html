@@ -140,7 +140,7 @@
     <script>
         const API_BASE = 'http://localhost:8000';
         const FRONTEND_URL = 'http://localhost:3000';
-        const DEFAULT_TOKEN = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        const DEFAULT_os.environ["TOKEN"] = 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
         
         function log(message, type = 'info', details = null) {
             const div = document.createElement('div');
@@ -193,7 +193,7 @@
             try {
                 const healthResponse = await fetch(`${API_BASE}/api/v1/health/`, {
                     headers: {
-                        'Authorization': `Token ${DEFAULT_TOKEN}`
+                        'Authorization': `Token ${DEFAULT_os.environ.get('TOKEN', 'test-token')}`
                     }
                 });
                 if (healthResponse.ok) {
@@ -208,7 +208,7 @@
         
         async function testEndpoint(path, name, token = null) {
             const url = `${API_BASE}${path}`;
-            const authToken = token || localStorage.getItem('authToken') || DEFAULT_TOKEN;
+            const authToken = token || localStorage.getItem('authToken') || DEFAULT_os.environ.get('TOKEN', 'test-token');
             
             try {
                 const startTime = Date.now();
@@ -338,7 +338,7 @@
             log('=== Testing with Different Auth Tokens ===', 'info');
             
             const tokens = [
-                { token: DEFAULT_TOKEN, name: 'Default Token (chris)' },
+                { token: DEFAULT_os.environ.get('TOKEN', 'test-token'), name: 'Default Token (chris)' },
                 { token: localStorage.getItem('authToken'), name: 'LocalStorage Token' },
                 { token: 'invalid_token_12345', name: 'Invalid Token' },
                 { token: null, name: 'No Token' }

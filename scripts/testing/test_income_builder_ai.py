@@ -31,7 +31,7 @@ async def test_ai_integration():
     if not OPENAI_AVAILABLE:
         print("❌ OpenAI is NOT available - need to set OPENAI_API_KEY environment variable")
         print("\nTo enable AI content generation:")
-        print("export OPENAI_API_KEY='your-api-key-here'")
+        print("export OPENAI_API_KEY='REDACTED'")
         return False
     else:
         print("✅ OpenAI client is available and configured")
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     else:
         print("\n⚠️ AI integration needs configuration")
         print("\nRequired:")
-        print("export OPENAI_API_KEY='your-api-key-here'")
+        print("export OPENAI_API_KEY='REDACTED'")

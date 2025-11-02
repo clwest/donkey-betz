@@ -29,6 +29,56 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+# --- add these imports with your others ---
+import math
+from statistics import fmean
+
+# Optional, but best for accurate token counts
+try:
+    import tiktoken
+    _HAS_TIKTOKEN = True
+except Exception:
+    _HAS_TIKTOKEN = False
+
+
+def _get_tokenizer_for_embeddings(model_name: str):
+    """
+    OpenAI embedding models use cl100k_base.
+    If tiktoken isn't available, return None and we’ll fall back to a char heuristic.
+    """
+    if not _HAS_TIKTOKEN:
+        return None
+    try:
+        return tiktoken.get_encoding("cl100k_base")
+    except Exception:
+        return None
+
+
+def _chunk_text_for_embedding(text: str, model_name: str, max_tokens: int = 7500):
+    """
+    Yield text chunks each <= max_tokens (leaving headroom under 8192).
+    Uses tiktoken if present; otherwise ~4 chars ≈ 1 token heuristic.
+    """
+    tok = _get_tokenizer_for_embeddings(model_name)
+    if tok:
+        ids = tok.encode(text)
+        for i in range(0, len(ids), max_tokens):
+            yield tok.decode(ids[i:i + max_tokens])
+    else:
+        # Heuristic fallback: ~4 chars per token
+        approx_chars_per_token = 4
+        max_chars = max_tokens * approx_chars_per_token
+        for i in range(0, len(text), max_chars):
+            yield text[i:i + max_chars]
+
+
+def _l2_normalize(vec):
+    s = math.fsum(x * x for x in vec)
+    if s <= 0:
+        return vec
+    norm = math.sqrt(s)
+    return [x / norm for x in vec]
+
 
 class EmbeddingService:
     """
@@ -113,20 +163,33 @@ class EmbeddingService:
                 metadata={'model': model, 'error': str(e)}
             )
             raise
-
+    
     def _generate_openai_embedding(self, text: str, model: str) -> List[float]:
-        """Generate embedding using OpenAI API"""
+        """
+        Chunk long text to <= 7,500 tokens, embed each chunk, average, then L2-normalize.
+        This avoids 400 errors for inputs over the model's context window.
+        """
         try:
             import openai
             openai.api_key = settings.AI_PROVIDERS['OPENAI_API_KEY']
 
-            response = openai.embeddings.create(
-                model=model,
-                input=text,
-                encoding_format="float"
-            )
+            chunks = list(_chunk_text_for_embedding(text, model_name=model, max_tokens=7500))
+            if not chunks:
+                chunks = [""]
 
-            return response.data[0].embedding
+            vectors: List[List[float]] = []
+            for chunk in chunks:
+                resp = openai.embeddings.create(
+                    model=model,
+                    input=chunk,
+                    encoding_format="float",
+                )
+                vectors.append(resp.data[0].embedding)
+
+            # Average across chunks (dimension-stable) then normalize for cosine distance
+            dim = len(vectors[0])
+            avg = [fmean(v[i] for v in vectors) for i in range(dim)]
+            return _l2_normalize(avg)
 
         except ImportError:
             raise Exception("OpenAI package not installed")

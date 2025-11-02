@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 Verify embeddings are accessible and configure system to use them.
@@ -23,7 +24,7 @@ def get_db_connection():
         host='localhost',
         database='ai_unified_platform',
         user='ai_unified_user',
-        password='[REDACTED - HISTORICAL SECRET]',
+        password='REDACTED',
         cursor_factory=RealDictCursor
     )
 

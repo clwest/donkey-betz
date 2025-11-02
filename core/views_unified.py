@@ -290,7 +290,7 @@ class QuickApplyAPIView(View):
 
     def post(self, request):
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body or b"{}")
             opportunity_id = data.get('opportunity_id')
 
             # Import the real job submitter

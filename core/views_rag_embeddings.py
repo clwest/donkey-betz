@@ -24,7 +24,7 @@ def upload_document_for_rag(request):
     Enhanced version of existing document processing.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     document_type = data.get('document_type', 'text')
     content = data.get('content', '')
@@ -73,7 +73,7 @@ def semantic_search(request):
     Advanced RAG query with context ranking.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     query = data.get('query', '')
     max_results = data.get('max_results', 10)
@@ -121,7 +121,7 @@ def rag_generate(request):
     Combines semantic search with LLM generation.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     query = data.get('query', '')
     context_limit = data.get('context_limit', 5)
@@ -235,7 +235,7 @@ def create_knowledge_collection(request):
     Enhanced knowledge organization system.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     collection_name = data.get('name', 'Untitled Collection')
     description = data.get('description', '')
@@ -320,7 +320,7 @@ def advanced_rag_query(request):
     Advanced RAG query with multi-collection search and response synthesis.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     query = data.get('query', '')
     collection_ids = data.get('collection_ids', [])
@@ -385,7 +385,7 @@ def optimize_embeddings(request):
     Maintenance and optimization tools.
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     optimization_type = data.get('type', 'full')  # full, dedup, reindex
     target_collections = data.get('collections', [])

@@ -499,7 +499,7 @@ def test_runway_connection(request):
     elif request.method == 'POST':
         # Test text-to-video generation
         try:
-            data = request.data if hasattr(request, 'data') else json.loads(request.body)
+            data = request.data if hasattr(request, 'data') else json.loads(request.body or b"{}")
             prompt = data.get('prompt', 'A beautiful sunset over the ocean, cinematic')
             
             # Test with minimal parameters

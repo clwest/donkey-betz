@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Script to check what content is stored in the embeddings
@@ -146,7 +147,7 @@ def check_document_embeddings():
         sorted_patterns = sorted(content_patterns.items(), key=lambda x: x[1], reverse=True)
         for pattern, count in sorted_patterns:
             if count > 0:
-                percentage = (count / len(sample_chunks)) * 100
+                percentage = (count / len(ample_chunks)) * 100
                 print(f"   • {pattern}: {count} chunks ({percentage:.1f}%)")
     else:
         print("   No embedding chunks available for analysis")

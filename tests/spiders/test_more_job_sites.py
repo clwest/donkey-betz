@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test Additional Job Sites for Scraping Opportunities
@@ -295,7 +296,7 @@ async def test_additional_job_sites():
             by_type[site_type].append(result['name'])
 
     for site_type, sites in by_type.items():
-        print(f"\n🎯 {site_type.upper()} Sources ({len(sites)}):")
+        print(f"\n🎯 {site_type.upper()} Sources ({len(ites)}):")
         for site in sites:
             print(f"  ✅ {site}")
 

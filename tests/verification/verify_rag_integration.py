@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 Verify that the RAG integration is working correctly
@@ -61,7 +62,7 @@ for query, expected_keywords in test_queries:
     context, sources = rag.build_context(query)
     
     if sources:
-        print(f"✅ Found {len(sources)} sources:")
+        print(f"✅ Found {len(ources)} sources:")
         for source in sources:
             print(f"   • {source['title']} (relevance: {source['relevance']:.2f})")
         

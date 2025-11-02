@@ -28502,7 +28502,7 @@ class ProductAPITest(APITestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='REDACTED'
         )
         self.client.force_authenticate(user=self.user)
         self.category = Category.objects.create(name='Electronics')
@@ -33357,7 +33357,7 @@ class ProductAPITest(APITestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='REDACTED'
         )
         self.client.force_authenticate(user=self.user)
         self.category = Category.objects.create(name='Electronics')
@@ -37519,7 +37519,7 @@ obs_service = OBSWebSocketService(user.id)
 await obs_service.connect(
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # Start recording
@@ -42601,7 +42601,7 @@ obs_service = OBSWebSocketService(user.id)
 await obs_service.connect(
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # Start recording
@@ -43037,7 +43037,7 @@ obs_service = OBSWebSocketService(user.id)
 await obs_service.connect(
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # Start recording
@@ -222822,7 +222822,7 @@ Found misleading references to DALL-E 3 in the UI:
 Both keys are configured in `.env`:
 ```bash
 STABILITY_KEY="[REDACTED - HISTORICAL SECRET]"
-OPENAI_API_KEY="sk-proj-[...]"  # Present but not used for images
+OPENAI_API_KEY="REDACTED"  # Present but not used for images
 ```
 
 ### Service Priority
@@ -321089,7 +321089,7 @@ print(f'Progress: {agent.progress_percentage}%')
 - **PgBouncer Password**: MD5 hash of "secure_passwordmoveyourazz_user"
 - **Blog Storage**: Check both `AgentInstance.final_report` AND `AgentResult.content_text`
 - **Cleanup Task**: Runs every 15 minutes automatically via Celery Beat
-- **Test User**: username='testuser', password='testpass123'
+- **Test User**: username='testuser', password='REDACTED'
 
 ---
 
@@ -426905,8 +426905,8 @@ curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
 cd /Users/donkeyking/development/ai-content-studio
 
 # 2. Set your API key (you already have this)
-export STABILITY_API_KEY="your-existing-key-here"
-export OPENAI_API_KEY="your-openai-key"
+export STABILITY_API_KEY="REDACTED"
+export OPENAI_API_KEY="REDACTED"
 
 # 3. Run the style test
 python test_image_styles.py
@@ -427056,8 +427056,8 @@ By end of Thursday, you should have:
 ```bash
 # Terminal 1: Start backend
 cd /Users/donkeyking/development/ai-content-studio
-export STABILITY_API_KEY="your-key"
-export OPENAI_API_KEY="your-key"
+export STABILITY_API_KEY="REDACTED"
+export OPENAI_API_KEY="REDACTED"
 python manage.py runserver
 
 # Terminal 2: Test API
@@ -458627,7 +458627,7 @@ connection = OBSConnection.objects.create(
     user=user,
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # 2. Create and manage scenes
@@ -464986,7 +464986,7 @@ connection = OBSConnection.objects.create(
     user=user,
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # 2. Create and manage scenes
@@ -486579,7 +486579,7 @@ connection = OBSConnection.objects.create(
     user=user,
     host='localhost',
     port=4455,
-    password='your_password'
+    password='REDACTED'
 )
 
 # 2. Create and manage scenes
@@ -496330,7 +496330,7 @@ DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${DATE}.sql.gz"
 
 # Dump and compress
-PGPASSWORD="${DB_PASSWORD}" pg_dump \
+PGPASSWORD="REDACTED" pg_dump \
     -h localhost \
     -U ${DB_USER} \
     -d ${DB_NAME} \
@@ -499718,7 +499718,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'your-email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'
+EMAIL_HOST_PASSWORD = 'REDACTED'
 DEFAULT_FROM_EMAIL = 'UKF Alerts <alerts@example.com>'
 ```
 
@@ -501783,7 +501783,7 @@ from obs_studio.models import OBSConnection
 
 # Update with your actual password
 conn = OBSConnection.objects.first()
-conn.password = "your_secure_password"
+conn.password = "REDACTED"
 conn.save()
 ```
 
@@ -501801,7 +501801,7 @@ import asyncio
 import obsws_python as obs
 
 async def test_connection():
-    cl = obs.ReqClient(host='localhost', port=4455, password='your_secure_password')
+    cl = obs.ReqClient(host='localhost', port=4455, password='REDACTED')
     
     # Get version
     version = cl.get_version()
@@ -506482,7 +506482,7 @@ from obs_studio.models import OBSConnection
 
 # Update with your actual password
 conn = OBSConnection.objects.first()
-conn.password = "your_secure_password"
+conn.password = "REDACTED"
 conn.save()
 ```
 
@@ -506500,7 +506500,7 @@ import asyncio
 import obsws_python as obs
 
 async def test_connection():
-    cl = obs.ReqClient(host='localhost', port=4455, password='your_secure_password')
+    cl = obs.ReqClient(host='localhost', port=4455, password='REDACTED')
     
     # Get version
     version = cl.get_version()
@@ -529560,7 +529560,7 @@ class Content(models.Model):
 ```python
 # Dead simple views
 def create_content(request):
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}"))
     content = studio.create_content(data)
     return JsonResponse({"content": content})
 ```
@@ -532256,7 +532256,7 @@ from obs_studio.models import OBSConnection
 
 # Update with your actual password
 conn = OBSConnection.objects.first()
-conn.password = "your_secure_password"
+conn.password = "REDACTED"
 conn.save()
 ```
 
@@ -532274,7 +532274,7 @@ import asyncio
 import obsws_python as obs
 
 async def test_connection():
-    cl = obs.ReqClient(host='localhost', port=4455, password='your_secure_password')
+    cl = obs.ReqClient(host='localhost', port=4455, password='REDACTED')
     
     # Get version
     version = cl.get_version()
@@ -538316,7 +538316,7 @@ router.register(r'agent-orchestra/deployments', DeploymentViewSet)
            self.user = User.objects.create_user(
                username='testuser',
                email='test@example.com',
-               password='testpass123'
+               password='REDACTED'
            )
            self.client.force_authenticate(user=self.user)
        

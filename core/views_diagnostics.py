@@ -430,7 +430,7 @@ def generate_recommendations(diagnostics):
 def test_spider_network(request):
     """Test endpoint to trigger spider network directly"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
         profile = data.get('profile', {
             'skills': ['Python', 'Django'],
             'skill_level': 'intermediate',
@@ -458,7 +458,7 @@ def test_spider_network(request):
 def test_income_builder(request):
     """Test endpoint to trigger income builder directly"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
 
         from ai_core.intelligence.income_builder import AIIncomeBuilder
         builder = AIIncomeBuilder()

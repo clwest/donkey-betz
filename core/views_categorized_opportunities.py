@@ -65,7 +65,7 @@ class CategorizedOpportunitiesView(View):
     async def post(self, request):
         """Trigger new categorization or refresh data"""
         try:
-            data = json.loads(request.body) if request.body else {}
+            data = json.loads(request.body or b"{}") if request.body else {}
 
             # Get search criteria from request
             search_criteria = data.get('search_criteria', {
@@ -108,7 +108,7 @@ class CategorizedOpportunitiesView(View):
 def select_opportunity(request):
     """Handle opportunity selection"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         opportunity_id = data.get('opportunity_id')
         category = data.get('category')
         action = data.get('action', 'apply')

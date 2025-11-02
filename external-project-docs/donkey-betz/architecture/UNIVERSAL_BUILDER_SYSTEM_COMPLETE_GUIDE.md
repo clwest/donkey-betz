@@ -437,7 +437,7 @@ class ProductAPITest(APITestCase):
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='REDACTED'
         )
         self.client.force_authenticate(user=self.user)
         self.category = Category.objects.create(name='Electronics')

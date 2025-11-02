@@ -157,7 +157,7 @@ def record_metric(request):
     Allows external systems to record metrics into the platform.
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         
         metric = PlatformMetrics.record_metric(
             name=data.get('name'),
@@ -1427,3 +1427,33 @@ def feedback_history(request):
         })
     
     return Response(results)
+
+from django.http import JsonResponse
+
+def platform_status(request):
+    # Minimal stub so urls can import it; expand later if you want
+    return JsonResponse({"ok": True, "status": "platform alive", "version": "stub"})
+
+# unified-donkey-betz/core/views/llm_api.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+from llm.base import ChatMessage
+from llm import router
+
+@csrf_exempt
+def llm_chat(request):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST only"}, status=405)
+
+    try:
+        body = json.loads(request.body or "{}")
+        provider = body.get("provider")            # optional: "ollama" | "openai" (ollama default)
+        model = body.get("model")                  # optional: override default model
+        messages = [ChatMessage(**m) for m in body.get("messages", [])]
+
+        content = router.chat(messages, provider=provider, model=model)
+        return JsonResponse({"ok": True, "provider": provider, "model": model, "content": content})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=502)

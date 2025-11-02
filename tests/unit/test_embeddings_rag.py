@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Test RAG with the migrated embeddings
@@ -83,7 +84,7 @@ def check_rag_system():
         context, sources = rag.build_context(query)
         
         if sources:
-            print(f"✅ RAG found {len(sources)} sources:")
+            print(f"✅ RAG found {len(ources)} sources:")
             for source in sources:
                 print(f"   • {source['title']} (relevance: {source['relevance']:.3f})")
             

@@ -72,7 +72,7 @@ def suggest_team_api(request):
     try:
         from core.self_development import collaboration_optimizer
 
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         task = data.get('task', '')
 
         if not task:
@@ -110,7 +110,7 @@ def suggest_team_api(request):
 def execute_agent_api(request):
     """Execute agent and trigger learning cycle"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         agent_name = data.get('agent')
         task = data.get('task')
 

@@ -55,8 +55,8 @@ curl -H "Authorization: Token 993f8273f70877e23b5c7d2f92ed30562a089fe3" \
 cd /Users/donkeyking/development/ai-content-studio
 
 # 2. Set your API key (you already have this)
-export STABILITY_API_KEY="your-existing-key-here"
-export OPENAI_API_KEY="your-openai-key"
+export STABILITY_API_KEY="REDACTED"
+export OPENAI_API_KEY="REDACTED"
 
 # 3. Run the style test
 python test_image_styles.py
@@ -206,8 +206,8 @@ By end of Thursday, you should have:
 ```bash
 # Terminal 1: Start backend
 cd /Users/donkeyking/development/ai-content-studio
-export STABILITY_API_KEY="your-key"
-export OPENAI_API_KEY="your-key"
+export STABILITY_API_KEY="REDACTED"
+export OPENAI_API_KEY="REDACTED"
 python manage.py runserver
 
 # Terminal 2: Test API

@@ -154,7 +154,7 @@ python context_builder.py ~/your-project/docs --chunks --chunk-size 50000 --outp
 pip install openai tiktoken rich python-dotenv
 
 # 2. Set your OpenAI API key (for AI analysis)
-export OPENAI_API_KEY='your-key-here'
+export OPENAI_API_KEY='REDACTED'
 
 # 3. Run analysis
 python documentation_analyzer.py ~/your-18-month-project/docs --use-ai

@@ -190,7 +190,7 @@ def debug_auth_token(request):
 
 ```bash
 # Move to environment variables or secret management
-export OPENAI_API_KEY="your-new-rotated-key"
+export OPENAI_API_KEY="REDACTED"
 export DATABASE_URL="postgresql://user:newpassword@host:port/db"
 ```
 

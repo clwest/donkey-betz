@@ -91,28 +91,32 @@ class ImageGenerationService:
         style: str = None,
         negative_prompt: str = None,
         num_images: int = 1,
-        quality: str = 'standard',
+        quality: str = 'balanced',
         cfg_scale: float = 7.0,
         steps: int = 30,
         **kwargs
     ) -> ImageGenerationResult:
         """
         Generate images based on text prompt
-        
+
         Args:
             prompt: Text description of the image
             provider: 'openai', 'stability', 'replicate', or 'auto'
-            model: Specific model to use (provider-dependent)
+            model: Specific Stability AI model ('sdxl', 'sd3', 'ultra', 'core') or None for auto
             size: Image size (e.g., '1024x1024', '512x512')
-            style: Visual style to apply
+            style: Visual style to apply (69 presets available!)
             negative_prompt: What to avoid in the image (Stable Diffusion)
             num_images: Number of images to generate
-            quality: 'standard' or 'hd' (OpenAI)
+            quality: Quality preset - 'fast', 'balanced', 'high', 'premium'
+                     fast = Core (3.5s, cost-effective)
+                     balanced = SDXL 1.0 (5.8s, very good)
+                     high = SD3 (8.7s, excellent)
+                     premium = Ultra (10.4s, flagship quality)
             cfg_scale: Classifier-free guidance scale (Stable Diffusion)
             steps: Number of inference steps (Stable Diffusion)
         """
         start_time = time.time()
-        
+
         # Auto-select provider based on availability (Stable Diffusion priority)
         if provider == 'auto':
             if self.stability_key:
@@ -126,11 +130,24 @@ class ImageGenerationService:
                     success=False,
                     error_message="No image generation providers available. Please configure API keys."
                 )
-        
+
+        # Map quality presets to Stability AI models
+        quality_to_model = {
+            'fast': 'core',        # Stable Image Core - 3.5s
+            'balanced': 'sdxl',    # SDXL 1.0 - 5.8s
+            'high': 'sd3',         # SD3 - 8.7s
+            'premium': 'ultra',    # Stable Image Ultra - 10.4s
+            'standard': 'balanced' # Alias for backward compatibility
+        }
+
+        # If quality preset is provided and no explicit model, use the mapping
+        if provider == 'stability' and not model:
+            model = quality_to_model.get(quality, 'balanced')
+
         # Apply style to prompt if provided
         if style:
             prompt = self._apply_style_to_prompt(prompt, style)
-        
+
         # Route to appropriate provider
         if provider == 'openai':
             return self._generate_with_openai(
@@ -138,7 +155,7 @@ class ImageGenerationService:
             )
         elif provider == 'stability':
             return self._generate_with_stability(
-                prompt, size, negative_prompt, cfg_scale, steps, num_images, start_time
+                prompt, size, negative_prompt, cfg_scale, steps, num_images, start_time, model
             )
         elif provider == 'replicate':
             return self._generate_with_replicate(
@@ -323,20 +340,65 @@ class ImageGenerationService:
         cfg_scale: float,
         steps: int,
         num_images: int,
-        start_time: float
+        start_time: float,
+        model: str = 'balanced'
     ) -> ImageGenerationResult:
-        """Generate images using Stability AI (Stable Diffusion)"""
+        """
+        Generate images using Stability AI
+
+        Supports 4 models:
+        - 'core' / 'fast': Stable Image Core (fastest, cost-effective)
+        - 'sdxl' / 'balanced': SDXL 1.0 (legacy, very good quality)
+        - 'sd3' / 'high': SD3 (latest base model, excellent quality)
+        - 'ultra' / 'premium': Stable Image Ultra (flagship, best quality)
+        """
         if not self.stability_key:
             return ImageGenerationResult(
                 success=False,
                 error_message="Stability AI API key not configured",
                 generation_time_ms=int((time.time() - start_time) * 1000)
             )
-        
+
+        # Map model aliases
+        model_map = {
+            'fast': 'core',
+            'balanced': 'sdxl',
+            'high': 'sd3',
+            'premium': 'ultra',
+            'standard': 'sdxl'
+        }
+        model = model_map.get(model, model)
+
+        # Route to appropriate model implementation
+        if model == 'sdxl':
+            return self._generate_with_sdxl(
+                prompt, size, negative_prompt, cfg_scale, steps, num_images, start_time
+            )
+        elif model in ['sd3', 'core', 'ultra']:
+            return self._generate_with_stable_image(
+                model, prompt, size, negative_prompt, num_images, start_time
+            )
+        else:
+            # Default to balanced (SDXL)
+            return self._generate_with_sdxl(
+                prompt, size, negative_prompt, cfg_scale, steps, num_images, start_time
+            )
+
+    def _generate_with_sdxl(
+        self,
+        prompt: str,
+        size: str,
+        negative_prompt: str,
+        cfg_scale: float,
+        steps: int,
+        num_images: int,
+        start_time: float
+    ) -> ImageGenerationResult:
+        """Generate images using SDXL 1.0 (JSON API)"""
         try:
             # Parse and adjust size for SDXL requirements
             width, height = map(int, size.split('x'))
-            
+
             # SDXL allowed dimensions
             sdxl_sizes = {
                 (512, 512): (1024, 1024),
@@ -351,82 +413,170 @@ class ImageGenerationService:
                 (832, 1216): (832, 1216),
                 (896, 1152): (896, 1152),
             }
-            
+
             # Find closest valid size
             if (width, height) not in sdxl_sizes.values():
-                # Default to 1024x1024 for most cases
                 if width <= 1024 and height <= 1024:
                     width, height = 1024, 1024
                 elif width > height:
                     width, height = 1344, 768
                 else:
                     width, height = 768, 1344
-            
-            # Stability AI API endpoint
+
             url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
-            
+
             headers = {
                 "Authorization": f"Bearer {self.stability_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             }
-            
+
             body = {
-                "text_prompts": [
-                    {
-                        "text": prompt,
-                        "weight": 1
-                    }
-                ],
+                "text_prompts": [{"text": prompt, "weight": 1}],
                 "cfg_scale": cfg_scale,
                 "height": height,
                 "width": width,
                 "samples": num_images,
                 "steps": steps
             }
-            
+
             if negative_prompt:
-                body["text_prompts"].append({
-                    "text": negative_prompt,
-                    "weight": -1
-                })
-            
+                body["text_prompts"].append({"text": negative_prompt, "weight": -1})
+
             response = requests.post(url, headers=headers, json=body)
-            
+
             if response.status_code != 200:
-                raise Exception(f"Stability AI error: {response.text}")
-            
+                raise Exception(f"SDXL error: {response.text}")
+
             data = response.json()
-            
-            # Extract base64 images and convert to URLs or save
+
+            # Extract base64 images
             images = []
             for artifact in data.get("artifacts", []):
                 if artifact.get("finishReason") == "SUCCESS":
                     base64_image = artifact.get("base64")
                     if base64_image:
-                        # For now, return as data URL
                         images.append(f"data:image/png;base64,{base64_image}")
-            
-            # Calculate approximate cost
-            cost = 0.002 * num_images  # Approximate cost per image
-            
+
             return ImageGenerationResult(
                 success=True,
                 images=images,
                 generation_time_ms=int((time.time() - start_time) * 1000),
                 provider_used='stability',
-                model_used='stable-diffusion-xl-1024-v1-0',
-                cost=cost,
+                model_used='sdxl-1.0',
+                cost=0.002 * num_images,
                 metadata={
-                    'size': size,
+                    'size': f"{width}x{height}",
                     'cfg_scale': cfg_scale,
                     'steps': steps,
                     'negative_prompt': negative_prompt
                 }
             )
-            
+
         except Exception as e:
-            logger.error(f"Stability AI image generation failed: {str(e)}")
+            logger.error(f"SDXL generation failed: {str(e)}")
+            return ImageGenerationResult(
+                success=False,
+                error_message=str(e),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                provider_used='stability'
+            )
+
+    def _generate_with_stable_image(
+        self,
+        model: str,
+        prompt: str,
+        size: str,
+        negative_prompt: str,
+        num_images: int,
+        start_time: float
+    ) -> ImageGenerationResult:
+        """
+        Generate images using Stable Image API (SD3, Core, Ultra)
+        Uses multipart/form-data format
+        """
+        try:
+            # Map models to endpoints
+            endpoints = {
+                'sd3': 'https://api.stability.ai/v2beta/stable-image/generate/sd3',
+                'core': 'https://api.stability.ai/v2beta/stable-image/generate/core',
+                'ultra': 'https://api.stability.ai/v2beta/stable-image/generate/ultra'
+            }
+
+            url = endpoints.get(model)
+            if not url:
+                raise ValueError(f"Unknown Stable Image model: {model}")
+
+            # Parse size to aspect ratio
+            width, height = map(int, size.split('x'))
+            if width == height:
+                aspect_ratio = "1:1"
+            elif width > height:
+                aspect_ratio = "16:9" if width / height > 1.5 else "4:3"
+            else:
+                aspect_ratio = "9:16" if height / width > 1.5 else "3:4"
+
+            headers = {
+                "authorization": f"Bearer {self.stability_key}",
+                "accept": "image/*"
+            }
+
+            # Build form data
+            payload = {
+                "prompt": prompt,
+                "output_format": "png",
+                "aspect_ratio": aspect_ratio
+            }
+
+            if negative_prompt:
+                payload["negative_prompt"] = negative_prompt
+
+            # Note: num_images > 1 may not be supported by all models
+            # We'll generate multiple times if needed
+            images = []
+            total_cost = 0
+
+            for _ in range(num_images):
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    files={"none": ''},  # Makes it multipart/form-data
+                    data=payload,
+                    timeout=60
+                )
+
+                if response.status_code != 200:
+                    raise Exception(f"{model.upper()} error ({response.status_code}): {response.text[:200]}")
+
+                # Response is raw image bytes
+                image_bytes = response.content
+                base64_image = base64.b64encode(image_bytes).decode('utf-8')
+                images.append(f"data:image/png;base64,{base64_image}")
+
+                # Approximate costs (adjust as needed)
+                model_costs = {
+                    'core': 0.003,   # Cost-effective
+                    'sd3': 0.0065,   # Standard
+                    'ultra': 0.008   # Premium
+                }
+                total_cost += model_costs.get(model, 0.005)
+
+            return ImageGenerationResult(
+                success=True,
+                images=images,
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                provider_used='stability',
+                model_used=model,
+                cost=total_cost,
+                metadata={
+                    'aspect_ratio': aspect_ratio,
+                    'negative_prompt': negative_prompt,
+                    'original_size': size
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Stable Image ({model}) generation failed: {str(e)}")
             return ImageGenerationResult(
                 success=False,
                 error_message=str(e),

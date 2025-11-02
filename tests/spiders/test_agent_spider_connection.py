@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 Test Agent-Spider Connection
@@ -97,7 +98,7 @@ async def test_spider_to_agent_flow():
         if queue_size > 0:
             sample = redis_client.lindex(queue_key, 0)
             if sample:
-                data = json.loads(sample)
+                data = json.loads(ample)
                 print(f"      Sample: {data.get('spider_name', 'unknown')} spider data")
 
     print("\n" + "=" * 60)

@@ -23,7 +23,7 @@ proposal_manager = ProposalManager()
 def approve_proposal(request):
     """Approve an AI proposal for execution"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         proposal_id = data.get('proposal_id')
 
         if not proposal_id:
@@ -101,7 +101,7 @@ def approve_proposal(request):
 def reject_proposal(request):
     """Reject an AI proposal"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         proposal_id = data.get('proposal_id')
         reason = data.get('reason', 'User rejected')
 
@@ -208,7 +208,7 @@ def get_proposals(request):
 def execute_proposal(request):
     """Manually execute an approved proposal"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         proposal_id = data.get('proposal_id')
 
         if not proposal_id:
@@ -258,7 +258,7 @@ def get_proposal_stats(request):
 def save_consciousness_proposals(request):
     """Save consciousness proposals to ProposalManager for persistence"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         proposals = data.get('proposals', [])
 
         if not proposals:

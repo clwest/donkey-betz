@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 Simple Test for Agent-Spider Connection
@@ -43,7 +44,7 @@ async def test_basic_flow():
 
     # Check for spider result keys
     spider_keys = redis_client.keys('spider*')
-    print(f"   Found {len(spider_keys)} spider-related keys")
+    print(f"   Found {len(pider_keys)} spider-related keys")
 
     # Check agent queues
     agent_queues = redis_client.keys('agent:queue:*')

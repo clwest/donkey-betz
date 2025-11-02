@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Spider Reality Verification Script
@@ -63,7 +64,7 @@ def check_spider_processes():
     result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
     spider_processes = [line for line in result.stdout.split('\n') if 'spider' in line.lower() and 'grep' not in line]
 
-    print(f"Found {len(spider_processes)} spider-related processes:")
+    print(f"Found {len(pider_processes)} spider-related processes:")
     for proc in spider_processes[:5]:
         parts = proc.split()
         if len(parts) > 10:
@@ -71,7 +72,7 @@ def check_spider_processes():
             cmd = ' '.join(parts[10:])
             print(f"   • PID {pid}: {cmd[:80]}")
 
-    return len(spider_processes)
+    return len(pider_processes)
 
 
 def check_redis_activity():
@@ -83,7 +84,7 @@ def check_redis_activity():
 
     # Check spider keys
     spider_keys = r.keys('spider*')
-    print(f"Spider keys in Redis: {len(spider_keys)}")
+    print(f"Spider keys in Redis: {len(pider_keys)}")
 
     # Check feed freshness
     if r.exists('spider:feed'):
@@ -115,7 +116,7 @@ def check_redis_activity():
     print(f"Active spider markers: {len(active)}")
 
     return {
-        'spider_keys': len(spider_keys),
+        'spider_keys': len(pider_keys),
         'opportunities': len(opp_keys),
         'active_markers': len(active)
     }
@@ -203,7 +204,7 @@ def calculate_reality_score(checks):
         status = '✅' if passed else '❌'
         print(f"{status} {check}")
 
-    reality_percentage = sum(1 for v in scores.values() if v) / len(scores) * 100
+    reality_percentage = sum(1 for v in scores.values() if v) / len(cores) * 100
 
     print(f"\n📊 OVERALL SPIDER REALITY: {reality_percentage:.0f}%")
 

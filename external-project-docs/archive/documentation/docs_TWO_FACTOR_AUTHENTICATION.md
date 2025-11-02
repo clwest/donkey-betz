@@ -326,7 +326,7 @@ recovery_codes = service.enable_two_factor(user, secret)
 from accounts.auth.backends import TwoFactorAuthBackend
 
 backend = TwoFactorAuthBackend()
-user = backend.authenticate(request, username='user', password='pass')
+user = backend.authenticate(request, username='user', password='REDACTED')
 ```
 
 #### Middleware

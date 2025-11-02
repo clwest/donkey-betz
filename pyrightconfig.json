@@ -1,0 +1,32 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "reportMissingImports": true,
+  "reportOptionalMemberAccess": "warning",
+  "reportOptionalSubscript": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownArgumentType": "warning",
+  "ignore": [
+    "tests/**"  // remove this once tests are adjusted; keeps editor usable meanwhile
+  ],
+  "pythonVersion": "3.11",
+  "extraPaths": ["."],
+    "include": ["backend"],
+    "exclude": [
+      "**/tests",
+      "**/migrations",
+      ".venv",
+      "venv_ml",
+      "node_modules",
+      "**/__pycache__",
+      "**/site-packages"
+    ],
+    "typeCheckingMode": "basic",
+    "reportMissingImports": false,
+    "reportMissingTypeStubs": false,
+    "venvPath": ".",
+    "venv": ".venv",
+    "pythonVersion": "3.11"
+  
+}
+

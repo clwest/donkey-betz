@@ -195,7 +195,7 @@ def track_usage(request):
     Track usage event - migrated from donkey_betz core
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     event_type = data.get('event_type')
     feature = data.get('feature')
@@ -223,7 +223,7 @@ def track_feature_usage(request):
     Track feature usage with detailed metrics - migrated from donkey_betz core
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     feature_name = data.get('feature_name')
     session_duration = data.get('session_duration', 0)
@@ -348,7 +348,7 @@ def update_budget(request):
     Update user budget limits - migrated from donkey_betz core
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     monthly_budget = data.get('monthly_budget', 0)
     alert_threshold = data.get('alert_threshold', 80)  # percentage

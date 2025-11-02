@@ -268,7 +268,7 @@ class LearningJourney:
 def start_learning_journey(request):
     """Start a new learning journey for the user"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         user_id = data.get('user_id', 'default_user')
         goals = data.get('goals', [])
         skills = data.get('skills', [])
@@ -360,7 +360,7 @@ def complete_journey_step(request, journey_id, step_id):
                 'error': 'Journey not found'
             }, status=404)
 
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         results = data.get('results', {})
 
         journey = ACTIVE_JOURNEYS[journey_id]

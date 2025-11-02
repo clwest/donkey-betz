@@ -52,7 +52,7 @@ class AgentWorkPlatformView(View):
         """Activate the agent work platform to start making money"""
         try:
             # Parse request data
-            data = json.loads(request.body) if request.body else {}
+            data = json.loads(request.body or b"{}") if request.body else {}
 
             logger.info("🚀 Activating Agent Work Platform...")
 
@@ -207,7 +207,7 @@ def agent_workforce_status(request):
 def assign_specific_job(request):
     """Manually assign a specific job to an agent"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         job_id = data.get('job_id')
         preferred_agent = data.get('agent_id')  # Optional
 

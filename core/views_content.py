@@ -39,7 +39,7 @@ def create_content(request):
     if hasattr(request, 'data'):
         data = request.data
     else:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
     
     content_type = data.get('content_type', 'text')
     prompt = data.get('prompt', '')
@@ -399,7 +399,7 @@ def generate_blog_post(request):
     Generate blog post - migrated from ai-content-studio blog system
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     topic = data.get('topic', '')
     tone = data.get('tone', 'professional')
@@ -698,7 +698,7 @@ def generate_social_media_post(request):
     Generate social media content - migrated from ai-content-studio social system
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     platform = data.get('platform', 'twitter')
     topic = data.get('topic', '')
@@ -772,7 +772,7 @@ def generate_video_script(request):
     Generate video script - migrated from ai-content-studio video system
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
     
     topic = data.get('topic', '')
     duration = data.get('duration', 60)  # seconds
@@ -822,7 +822,7 @@ def generate_email(request):
     Generate email content - Phase 4: Frontend Reality Fix
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
 
     purpose = data.get('purpose', 'general')
     recipient = data.get('recipient', 'customer')
@@ -910,7 +910,7 @@ def generate_podcast_script(request):
     Generate podcast episode script - Phase 4: Frontend Reality Fix
     """
     user = request.user
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}")
 
     topic = data.get('topic', '')
     duration = data.get('duration', 30)  # minutes

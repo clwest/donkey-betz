@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """Test proposal approval endpoint with authentication"""
 
@@ -9,7 +10,7 @@ BASE_URL = "http://localhost:8000"
 
 # Test credentials
 USERNAME = "admin"
-PASSWORD = "admin123"
+PASSWORD = "REDACTED"
 
 def test_proposal_approval():
     """Test the proposal approval endpoint with authentication"""

@@ -153,7 +153,7 @@ class StockAPITestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username='testuser',
-            password='testpass123'
+            password='REDACTED'
         )
         self.client.force_authenticate(user=self.user)
     

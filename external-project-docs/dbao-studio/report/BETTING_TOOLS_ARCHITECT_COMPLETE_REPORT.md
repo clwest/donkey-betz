@@ -869,10 +869,10 @@ ws://localhost:8000/ws/betting-tools/
 ### 1. MISSING ENVIRONMENT VARIABLES
 ```bash
 # Required API Keys - NOT CONFIGURED
-export ODDS_API_KEY="<needs_api_key_from_the-odds-api.com>"
-export POLYGON_API_KEY="<needs_api_key_from_polygon.io>"
-export ANTHROPIC_API_KEY="<needs_api_key_from_anthropic>"
-export OPENAI_API_KEY="<needs_api_key_from_openai>"
+export ODDS_API_KEY="REDACTED"
+export POLYGON_API_KEY="REDACTED"
+export ANTHROPIC_API_KEY="REDACTED"
+export OPENAI_API_KEY="REDACTED"
 
 # Database - NEEDS CONFIGURATION
 export DATABASE_URL="postgresql://user:pass@localhost/dbname"
@@ -1172,8 +1172,8 @@ pip install -r requirements.txt
 
 # 4. Set environment variables
 export DJANGO_SECRET_KEY="your-secret-key"
-export ODDS_API_KEY="your-odds-api-key"
-export POLYGON_API_KEY="your-polygon-api-key"
+export ODDS_API_KEY="REDACTED"
+export POLYGON_API_KEY="REDACTED"
 
 # 5. Run migrations
 python backend/manage.py migrate

@@ -92,7 +92,7 @@ def get_portfolio_projects(request):
 def create_portfolio_project(request):
     """Create a new portfolio project"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
         project_data = data.get('project')
 
         if not project_data:
@@ -212,7 +212,7 @@ def delete_portfolio_project(request, project_id):
 def export_portfolio_project(request, project_id):
     """Export portfolio project in various formats"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
         export_format = data.get('format', 'ZIP').upper()
 
         portfolio_dir = Path("portfolio_projects")

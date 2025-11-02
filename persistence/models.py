@@ -1,46 +1,64 @@
+from __future__ import annotations
+
 """
 Data Persistence Models for Unified Donkey Betz Platform
-
-Comprehensive data persistence infrastructure providing:
-- pgvector-enabled embedding storage
-- Shared agent memory and knowledge base
-- Spider data persistence and routing
-- Cross-platform document indexing
-- Agent collaboration protocols
 """
 
-import uuid
 import hashlib
-import json
 from decimal import Decimal
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+from datetime import timedelta
 
 from django.db import models
+from django.db.models import Q, Sum, Count
 from django.contrib.auth import get_user_model
-# Handle ArrayField compatibility
-try:
-    from django.contrib.postgres.fields import ArrayField
-    POSTGRES_AVAILABLE = True
-except ImportError:
-    # Fallback for SQLite - define a mock ArrayField
-    ArrayField = lambda base_field, **kwargs: models.JSONField(**kwargs)
 from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.db.models import Q, Avg, Count, Sum
-from django.conf import settings
 
-# Import pgvector if available, fallback gracefully
+# ---------------------------------------------------------------------
+# ArrayField fallback (keeps SQLite/dev workable)
+# ---------------------------------------------------------------------
 try:
-    from pgvector.django import VectorField
+    from django.contrib.postgres.fields import ArrayField as _PGArrayField  # type: ignore
+    ArrayField = _PGArrayField  # type: ignore
+    POSTGRES_AVAILABLE = True
+except Exception:
+    POSTGRES_AVAILABLE = False
+
+    # JSON fallback with same call-site shape
+    def ArrayField(base_field, **kwargs):  # type: ignore
+        return models.JSONField(**kwargs)
+
+# ---------------------------------------------------------------------
+# pgvector detection (VectorField, HnswIndex, CosineDistance)
+# ---------------------------------------------------------------------
+PGVECTOR_AVAILABLE = False
+try:
+    from pgvector.django import VectorField as _VectorField  # type: ignore
+    from pgvector.django import HnswIndex as _HnswIndex  # type: ignore
+    from pgvector.django import CosineDistance  # type: ignore
     PGVECTOR_AVAILABLE = True
-except ImportError:
-    # Fallback for development without pgvector
-    VectorField = models.JSONField
-    PGVECTOR_AVAILABLE = False
+except Exception:
+    # Fallbacks to keep the app running on environments without pgvector
+    class _VectorField(models.JSONField):  # type: ignore
+        """
+        JSON fallback. No ANN index or cosine ops—just storage.
+        """
+        def __init__(self, *args, **kwargs):
+            kwargs.pop("dimensions", None)  # ignore pgvector-only arg
+            super().__init__(*args, **kwargs)
+
+    class _HnswIndex(models.Index):  # type: ignore
+        """
+        Dummy index fallback so Meta.indexes doesn't break when pgvector is absent.
+        """
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+# Single aliases used throughout
+VectorField = _VectorField
+HnswIndex = _HnswIndex
 
 from core.models import UnifiedBaseModel
-
 User = get_user_model()
 
 
@@ -51,16 +69,17 @@ User = get_user_model()
 class UnifiedEmbedding(UnifiedBaseModel):
     """
     Unified embedding storage for all content types across the platform.
-
-    This model provides pgvector-enabled semantic search capabilities for:
-    - Agent knowledge and communications
-    - Spider-discovered opportunities and data
-    - Documents and content
-    - Code and system knowledge
-    - User interactions and patterns
     """
 
-    # Content identification
+    # Who/what produced it
+    creator_agent = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        default="system",
+        help_text="Agent that created this embedding (if applicable)",
+    )
+
     content_type = models.CharField(
         max_length=50,
         choices=[
@@ -76,31 +95,20 @@ class UnifiedEmbedding(UnifiedBaseModel):
             ('research_finding', 'Research Finding'),
         ],
         db_index=True,
-        help_text="Type of content this embedding represents"
+        help_text="Type of content this embedding represents",
     )
 
+    # NOTE: make sure service layer supplies a real UUID
     content_id = models.UUIDField(
         db_index=True,
-        help_text="UUID of the content object this embedding represents"
+        help_text="UUID of the content object this embedding represents",
     )
 
-    # Content text and metadata
-    content_text = models.TextField(
-        help_text="The actual text content that was embedded"
-    )
+    # Raw content
+    content_text = models.TextField(help_text="The actual text content that was embedded")
+    content_title = models.CharField(max_length=500, blank=True, help_text="Title/summary")
+    content_metadata = models.JSONField(default=dict, help_text="Additional metadata")
 
-    content_title = models.CharField(
-        max_length=500,
-        blank=True,
-        help_text="Title or summary of the content"
-    )
-
-    content_metadata = models.JSONField(
-        default=dict,
-        help_text="Additional metadata about the content"
-    )
-
-    # Embedding configuration
     embedding_model = models.CharField(
         max_length=100,
         default='text-embedding-3-small',
@@ -111,23 +119,16 @@ class UnifiedEmbedding(UnifiedBaseModel):
             ('sentence-transformer', 'Sentence Transformer'),
             ('local-model', 'Local Embedding Model'),
         ],
-        help_text="Model used to generate the embedding"
+        help_text="Model used to generate the embedding",
     )
 
-    # Vector storage - pgvector field with 1536 dimensions for OpenAI embeddings
-    if PGVECTOR_AVAILABLE:
-        embedding = VectorField(dimensions=1536)
-    else:
-        embedding = models.JSONField(
-            help_text="Embedding vector (JSON fallback when pgvector unavailable)"
-        )
-
+    # The actual vector. Nullable first so migrations don't block in new envs.
+    # Default dimension aligns with OpenAI text-embedding-3-small (1536).
     embedding_dimension = models.PositiveIntegerField(
-        default=1536,
-        help_text="Dimension of the embedding vector"
+        default=1536, help_text="Vector dimension"
     )
+    embedding = VectorField(dimensions=1536, null=True, blank=True)
 
-    # Source and creation info
     source_system = models.CharField(
         max_length=100,
         choices=[
@@ -139,13 +140,7 @@ class UnifiedEmbedding(UnifiedBaseModel):
             ('workflows', 'Workflow Engine'),
             ('self_awareness', 'Self-Awareness System'),
         ],
-        help_text="System that created this embedding"
-    )
-
-    creator_agent = models.CharField(
-        max_length=200,
-        blank=True,
-        help_text="Agent that created this embedding (if applicable)"
+        help_text="System that created this embedding",
     )
 
     creator_user = models.ForeignKey(
@@ -154,90 +149,27 @@ class UnifiedEmbedding(UnifiedBaseModel):
         blank=True,
         on_delete=models.SET_NULL,
         related_name='created_embeddings',
-        help_text="User that created this embedding (if applicable)"
+        help_text="User that created this embedding (if applicable)",
     )
 
-    # Importance and relevance scoring
-    importance_score = models.FloatField(
-        default=0.5,
-        help_text="Importance score (0.0-1.0) for ranking results"
-    )
+    importance_score = models.FloatField(default=0.5)
+    relevance_score = models.FloatField(default=0.5)
+    confidence_score = models.FloatField(default=0.5)
 
-    relevance_score = models.FloatField(
-        default=0.5,
-        help_text="Domain relevance score (0.0-1.0)"
-    )
+    access_count = models.PositiveIntegerField(default=0)
+    last_accessed = models.DateTimeField(null=True, blank=True)
+    search_count = models.PositiveIntegerField(default=0)
 
-    confidence_score = models.FloatField(
-        default=0.5,
-        help_text="Confidence in the content accuracy (0.0-1.0)"
-    )
+    generation_cost = models.DecimalField(max_digits=10, decimal_places=6, default=Decimal('0.000000'))
+    generation_time_ms = models.PositiveIntegerField(null=True, blank=True)
 
-    # Access and usage tracking
-    access_count = models.PositiveIntegerField(
-        default=0,
-        help_text="Number of times this embedding has been accessed"
-    )
+    content_hash = models.CharField(max_length=64, db_index=True, blank=True)
 
-    last_accessed = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Last time this embedding was accessed"
-    )
+    tags = ArrayField(models.CharField(max_length=100), default=list, blank=True)
+    category = models.CharField(max_length=100, blank=True)
 
-    search_count = models.PositiveIntegerField(
-        default=0,
-        help_text="Number of times this appeared in search results"
-    )
-
-    # Performance metrics
-    generation_cost = models.DecimalField(
-        max_digits=10,
-        decimal_places=6,
-        default=Decimal('0.000000'),
-        help_text="Cost to generate this embedding in USD"
-    )
-
-    generation_time_ms = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Time taken to generate embedding in milliseconds"
-    )
-
-    # Content hash for deduplication
-    content_hash = models.CharField(
-        max_length=64,
-        db_index=True,
-        blank=True,
-        help_text="SHA-256 hash of content for deduplication"
-    )
-
-    # Categorization and tagging
-    tags = ArrayField(
-        models.CharField(max_length=100),
-        default=list,
-        blank=True,
-        help_text="Tags for categorization and filtering"
-    )
-
-    category = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Primary category classification"
-    )
-
-    # Time-based filtering
-    content_timestamp = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Timestamp of the original content (if different from created_at)"
-    )
-
-    expires_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When this embedding should be considered stale"
-    )
+    content_timestamp = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         app_label = 'persistence'
@@ -251,77 +183,73 @@ class UnifiedEmbedding(UnifiedBaseModel):
             models.Index(fields=['-importance_score', '-created_at']),
             models.Index(fields=['category', 'content_type']),
             models.Index(fields=['expires_at']),
+            # Optional ANN index (only meaningful when pgvector is installed)
+            # For cosine search; you can tune m / ef_construction in a migration if desired.
+            *( [
+                HnswIndex(
+                    name='unified_embedding_hnsw_cosine',
+                    fields=['embedding'],
+                    opclasses=['vector_cosine_ops'],
+                    m=16,
+                    ef_construction=64,
+                    # The pgvector-django HnswIndex picks the operator class from the field
+                    # metric (cosine) implicitly. If you need explicit ops, add opclasses=['vector_cosine_ops'].
+                )
+            ] if PGVECTOR_AVAILABLE else [] ),
         ]
-        # Add vector index if pgvector is available
-        if PGVECTOR_AVAILABLE:
-            # This will be added via migration
-            pass
 
     def __str__(self):
-        return f"{self.content_type}: {self.content_title[:50] or self.content_text[:50]}..."
+        title = (self.content_title or self.content_text or '')[:50]
+        return f"{self.content_type}: {title}..."
 
     def save(self, *args, **kwargs):
-        # Generate content hash for deduplication
         if self.content_text and not self.content_hash:
-            self.content_hash = hashlib.sha256(
-                self.content_text.encode('utf-8')
-            ).hexdigest()
-
+            self.content_hash = hashlib.sha256(self.content_text.encode('utf-8')).hexdigest()
+        # Keep embedding_dimension in sync if a service passes a different length
+        if isinstance(self.embedding, (list, tuple)) and self.embedding and self.embedding_dimension != len(self.embedding):
+            self.embedding_dimension = len(self.embedding)
         super().save(*args, **kwargs)
 
     def increment_access(self):
-        """Increment access count and update last accessed time"""
         self.access_count += 1
         self.last_accessed = timezone.now()
         self.save(update_fields=['access_count', 'last_accessed'])
 
     def is_expired(self) -> bool:
-        """Check if this embedding has expired"""
-        if not self.expires_at:
-            return False
-        return timezone.now() > self.expires_at
+        return bool(self.expires_at and timezone.now() > self.expires_at)
 
     @classmethod
-    def search_similar(cls, query_embedding: List[float], content_types: List[str] = None,
-                      limit: int = 10, min_score: float = 0.0, filters: Dict = None):
+    def search_similar(
+        cls,
+        query_embedding: List[float],
+        content_types: Optional[List[str]] = None,
+        limit: int = 10,
+        min_score: float = 0.0,  # kept for API compatibility (cosine similarity threshold)
+        filters: Optional[Dict] = None,
+    ):
         """
-        Perform semantic similarity search using pgvector
+        Cosine similarity search via pgvector; graceful no-op when unavailable.
 
-        Args:
-            query_embedding: The query embedding vector
-            content_types: Filter by content types
-            limit: Maximum number of results
-            min_score: Minimum similarity score
-            filters: Additional filters
-
-        Returns:
-            QuerySet of similar embeddings ordered by similarity
+        Note: CosineDistance returns (1 - cosine_similarity) for normalized vectors.
+        If `min_score` is provided as *similarity*, we translate to distance threshold.
         """
         if not PGVECTOR_AVAILABLE:
-            # Fallback to text search when pgvector unavailable
             return cls.objects.none()
 
-        queryset = cls.objects.filter(is_active=True)
-
-        # Apply content type filter
+        qs = cls.objects.filter(is_active=True)
         if content_types:
-            queryset = queryset.filter(content_type__in=content_types)
-
-        # Apply additional filters
+            qs = qs.filter(content_type__in=content_types)
         if filters:
-            queryset = queryset.filter(**filters)
+            qs = qs.filter(**filters)
+        qs = qs.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
 
-        # Filter out expired embeddings
-        queryset = queryset.filter(
-            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        )
+        qs = qs.annotate(distance=CosineDistance('embedding', query_embedding))
 
-        # Order by vector similarity (cosine distance)
-        queryset = queryset.order_by(
-            cls.embedding.cosine_distance(query_embedding)
-        )
+        # If user supplies a similarity threshold in [0..1], filter by distance <= 1 - min_score
+        if min_score and 0.0 <= float(min_score) <= 1.0:
+            qs = qs.filter(distance__lte=1.0 - float(min_score))
 
-        return queryset[:limit]
+        return qs.order_by('distance')[:limit]
 
 
 # =============================================================================
@@ -331,25 +259,19 @@ class UnifiedEmbedding(UnifiedBaseModel):
 class AgentKnowledge(UnifiedBaseModel):
     """
     Shared knowledge base accessible to all agents for collaborative learning.
-
-    This enables agents to:
-    - Share discoveries and insights
-    - Learn from each other's experiences
-    - Build collective intelligence
-    - Avoid repeating failed approaches
     """
 
     # Agent and ownership
     agent_name = models.CharField(
         max_length=200,
         db_index=True,
-        help_text="Name of the agent that created this knowledge"
+        help_text="Name of the agent that created this knowledge",
     )
 
     agent_id = models.UUIDField(
         null=True,
         blank=True,
-        help_text="UUID of the specific agent execution instance"
+        help_text="UUID of the specific agent execution instance",
     )
 
     # Knowledge content
@@ -367,45 +289,45 @@ class AgentKnowledge(UnifiedBaseModel):
             ('optimization', 'Performance Optimization'),
             ('integration', 'System Integration Knowledge'),
         ],
-        help_text="Type of knowledge being shared"
+        help_text="Type of knowledge being shared",
     )
 
     title = models.CharField(
         max_length=255,
-        help_text="Clear, descriptive title for the knowledge"
+        help_text="Clear, descriptive title for the knowledge",
     )
 
     content = models.JSONField(
-        help_text="Structured knowledge content"
+        help_text="Structured knowledge content",
     )
 
     summary = models.TextField(
-        help_text="Human-readable summary of the knowledge"
+        help_text="Human-readable summary of the knowledge",
     )
 
     # Context and applicability
     context = models.JSONField(
         default=dict,
-        help_text="Context in which this knowledge is applicable"
+        help_text="Context in which this knowledge is applicable",
     )
 
     domain_tags = ArrayField(
         models.CharField(max_length=100),
         default=list,
-        help_text="Domain tags (sports, content, agents, etc.)"
+        help_text="Domain tags (sports, content, agents, etc.)",
     )
 
     applicable_agents = ArrayField(
         models.CharField(max_length=200),
         default=list,
         blank=True,
-        help_text="Specific agents this knowledge applies to (empty = all agents)"
+        help_text="Specific agents this knowledge applies to (empty = all agents)",
     )
 
     # Sharing and access control
     is_public = models.BooleanField(
         default=True,
-        help_text="Whether this knowledge is available to all agents"
+        help_text="Whether this knowledge is available to all agents",
     )
 
     access_level = models.CharField(
@@ -416,35 +338,35 @@ class AgentKnowledge(UnifiedBaseModel):
             ('restricted', 'Restricted Access'),
         ],
         default='read',
-        help_text="Access level for other agents"
+        help_text="Access level for other agents",
     )
 
     shared_with = ArrayField(
         models.CharField(max_length=200),
         default=list,
         blank=True,
-        help_text="Specific agents this knowledge is shared with"
+        help_text="Specific agents this knowledge is shared with",
     )
 
     # Quality and validation metrics
     confidence_score = models.FloatField(
         default=0.5,
-        help_text="Confidence in the accuracy of this knowledge (0.0-1.0)"
+        help_text="Confidence in the accuracy of this knowledge (0.0-1.0)",
     )
 
     validation_count = models.PositiveIntegerField(
         default=0,
-        help_text="Number of times this knowledge has been validated"
+        help_text="Number of times this knowledge has been validated",
     )
 
     success_rate = models.FloatField(
         default=0.0,
-        help_text="Success rate when this knowledge is applied"
+        help_text="Success rate when this knowledge is applied",
     )
 
     failure_count = models.PositiveIntegerField(
         default=0,
-        help_text="Number of times applying this knowledge failed"
+        help_text="Number of times applying this knowledge failed",
     )
 
     # Usage tracking
@@ -452,18 +374,18 @@ class AgentKnowledge(UnifiedBaseModel):
         models.CharField(max_length=200),
         default=list,
         blank=True,
-        help_text="Agents that have accessed this knowledge"
+        help_text="Agents that have accessed this knowledge",
     )
 
     usage_count = models.PositiveIntegerField(
         default=0,
-        help_text="Number of times this knowledge has been used"
+        help_text="Number of times this knowledge has been used",
     )
 
     last_used = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Last time this knowledge was used"
+        help_text="Last time this knowledge was used",
     )
 
     # Embedding for semantic search
@@ -473,7 +395,7 @@ class AgentKnowledge(UnifiedBaseModel):
         blank=True,
         on_delete=models.CASCADE,
         related_name='agent_knowledge',
-        help_text="Embedding for semantic search"
+        help_text="Embedding for semantic search",
     )
 
     # Related knowledge
@@ -481,7 +403,7 @@ class AgentKnowledge(UnifiedBaseModel):
         'self',
         blank=True,
         symmetrical=True,
-        help_text="Related knowledge entries"
+        help_text="Related knowledge entries",
     )
 
     superseded_by = models.ForeignKey(
@@ -490,7 +412,7 @@ class AgentKnowledge(UnifiedBaseModel):
         blank=True,
         on_delete=models.SET_NULL,
         related_name='supersedes',
-        help_text="Knowledge entry that supersedes this one"
+        help_text="Knowledge entry that supersedes this one",
     )
 
     class Meta:
@@ -520,10 +442,8 @@ class AgentKnowledge(UnifiedBaseModel):
         """Generate embedding for semantic search"""
         from .services import EmbeddingService
 
-        # Combine title, summary, and key content for embedding
         text_content = f"{self.title}\n\n{self.summary}"
         if isinstance(self.content, dict):
-            # Add key content fields
             for key in ['description', 'steps', 'solution', 'details']:
                 if key in self.content:
                     text_content += f"\n\n{self.content[key]}"
@@ -540,12 +460,11 @@ class AgentKnowledge(UnifiedBaseModel):
                     'knowledge_type': self.knowledge_type,
                     'domain_tags': self.domain_tags,
                     'agent_name': self.agent_name,
-                }
+                },
             )
             self.embedding = embedding
             self.save(update_fields=['embedding'])
         except Exception as e:
-            # Log error but don't fail the save
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Failed to generate embedding for AgentKnowledge {self.id}: {e}")
@@ -559,38 +478,29 @@ class AgentKnowledge(UnifiedBaseModel):
             self.accessed_by.append(agent_name)
 
         if success:
-            # Increase confidence based on successful usage
             self.validation_count += 1
             total_attempts = self.validation_count + self.failure_count
             self.success_rate = self.validation_count / total_attempts if total_attempts > 0 else 1.0
-
-            # Gradually increase confidence for successful applications
             self.confidence_score = min(1.0, self.confidence_score + 0.05)
         else:
             self.failure_count += 1
             total_attempts = self.validation_count + self.failure_count
             self.success_rate = self.validation_count / total_attempts if total_attempts > 0 else 0.0
-
-            # Decrease confidence for failures
             self.confidence_score = max(0.0, self.confidence_score - 0.1)
 
         self.save()
 
     @classmethod
-    def search_knowledge(cls, query: str, agent_name: str = None, knowledge_types: List[str] = None,
-                        domain_tags: List[str] = None, limit: int = 10):
+    def search_knowledge(
+        cls,
+        query: str,
+        agent_name: Optional[str] = None,
+        knowledge_types: Optional[List[str]] = None,
+        domain_tags: Optional[List[str]] = None,
+        limit: int = 10,
+    ):
         """
-        Search agent knowledge using semantic search
-
-        Args:
-            query: Search query
-            agent_name: Filter by specific agent
-            knowledge_types: Filter by knowledge types
-            domain_tags: Filter by domain tags
-            limit: Maximum number of results
-
-        Returns:
-            List of relevant knowledge entries
+        Search agent knowledge using semantic search with fallback to text search.
         """
         from .services import EmbeddingService
 
@@ -598,41 +508,35 @@ class AgentKnowledge(UnifiedBaseModel):
             embedding_service = EmbeddingService()
             query_embedding = embedding_service.generate_embedding_vector(query)
 
-            # Build filters
-            filters = {'is_public': True, 'is_active': True}
+            filters: Dict = {'is_public': True, 'is_active': True}
             if agent_name:
                 filters['agent_name'] = agent_name
             if knowledge_types:
                 filters['knowledge_type__in'] = knowledge_types
 
-            # Search embeddings
             similar_embeddings = UnifiedEmbedding.search_similar(
                 query_embedding=query_embedding,
                 content_types=['agent_knowledge'],
                 limit=limit,
-                filters=filters
+                filters=filters,
             )
 
-            # Get corresponding knowledge entries
             knowledge_ids = [emb.content_id for emb in similar_embeddings]
             knowledge_entries = cls.objects.filter(id__in=knowledge_ids, is_active=True)
 
-            # Apply domain tag filter if specified
             if domain_tags:
-                knowledge_entries = knowledge_entries.filter(
-                    domain_tags__overlap=domain_tags
-                )
+                knowledge_entries = knowledge_entries.filter(domain_tags__overlap=domain_tags)
 
-            # Preserve similarity order
             knowledge_dict = {str(k.id): k for k in knowledge_entries}
-            ordered_results = [knowledge_dict[str(emb.content_id)]
-                             for emb in similar_embeddings
-                             if str(emb.content_id) in knowledge_dict]
-
+            ordered_results = [
+                knowledge_dict[str(emb.content_id)]
+                for emb in similar_embeddings
+                if str(emb.content_id) in knowledge_dict
+            ]
             return ordered_results
 
-        except Exception as e:
-            # Fallback to text search
+        except Exception:
+            # Fallback to a simple text search
             queryset = cls.objects.filter(is_public=True, is_active=True)
             if agent_name:
                 queryset = queryset.filter(agent_name=agent_name)
@@ -641,13 +545,9 @@ class AgentKnowledge(UnifiedBaseModel):
             if domain_tags:
                 queryset = queryset.filter(domain_tags__overlap=domain_tags)
 
-            # Simple text search fallback
-            queryset = queryset.filter(
-                Q(title__icontains=query) |
-                Q(summary__icontains=query)
+            return list(
+                queryset.filter(Q(title__icontains=query) | Q(summary__icontains=query))[:limit]
             )
-
-            return list(queryset[:limit])
 
 
 class AgentCollaborationSession(UnifiedBaseModel):
@@ -657,16 +557,16 @@ class AgentCollaborationSession(UnifiedBaseModel):
 
     session_name = models.CharField(
         max_length=255,
-        help_text="Name of the collaboration session"
+        help_text="Name of the collaboration session",
     )
 
     participating_agents = ArrayField(
         models.CharField(max_length=200),
-        help_text="Agents participating in this session"
+        help_text="Agents participating in this session",
     )
 
     session_goal = models.TextField(
-        help_text="Goal or objective of the collaboration"
+        help_text="Goal or objective of the collaboration",
     )
 
     session_status = models.CharField(
@@ -677,24 +577,24 @@ class AgentCollaborationSession(UnifiedBaseModel):
             ('completed', 'Completed'),
             ('failed', 'Failed'),
         ],
-        default='active'
+        default='active',
     )
 
     shared_context = models.JSONField(
         default=dict,
-        help_text="Shared context and data between agents"
+        help_text="Shared context and data between agents",
     )
 
     results = models.JSONField(
         default=dict,
-        help_text="Results and outcomes of the collaboration"
+        help_text="Results and outcomes of the collaboration",
     )
 
     knowledge_generated = models.ManyToManyField(
         AgentKnowledge,
         blank=True,
         related_name='collaboration_sessions',
-        help_text="Knowledge generated during this session"
+        help_text="Knowledge generated during this session",
     )
 
     class Meta:
@@ -711,37 +611,31 @@ class AgentCollaborationSession(UnifiedBaseModel):
 class SpiderData(UnifiedBaseModel):
     """
     Persistent storage for all data discovered by spiders across platforms.
-
-    This ensures no spider discovery is ever lost and enables:
-    - Data routing to appropriate agents
-    - Opportunity scoring and ranking
-    - Revenue attribution and tracking
-    - Pattern recognition across platforms
     """
 
     # Spider identification
     spider_name = models.CharField(
         max_length=100,
         db_index=True,
-        help_text="Name of the spider that discovered this data"
+        help_text="Name of the spider that discovered this data",
     )
 
     spider_version = models.CharField(
         max_length=20,
         default='1.0.0',
-        help_text="Version of the spider"
+        help_text="Version of the spider",
     )
 
     spider_execution_id = models.UUIDField(
         null=True,
         blank=True,
-        help_text="UUID of the spider execution instance"
+        help_text="UUID of the spider execution instance",
     )
 
     # Source information
     source_url = models.URLField(
         max_length=2000,
-        help_text="URL where this data was discovered"
+        help_text="URL where this data was discovered",
     )
 
     source_platform = models.CharField(
@@ -767,32 +661,32 @@ class SpiderData(UnifiedBaseModel):
             ('angellist', 'AngelList'),
             ('other', 'Other Platform'),
         ],
-        help_text="Platform where this data was discovered"
+        help_text="Platform where this data was discovered",
     )
 
     source_metadata = models.JSONField(
         default=dict,
-        help_text="Additional metadata about the source"
+        help_text="Additional metadata about the source",
     )
 
     # Content data
     title = models.CharField(
         max_length=500,
-        help_text="Title or headline of the discovered content"
+        help_text="Title or headline of the discovered content",
     )
 
     content = models.TextField(
-        help_text="Raw content text discovered by spider"
+        help_text="Raw content text discovered by spider",
     )
 
     structured_data = models.JSONField(
         default=dict,
-        help_text="Structured data extracted from the content"
+        help_text="Structured data extracted from the content",
     )
 
     raw_html = models.TextField(
         blank=True,
-        help_text="Raw HTML content (if applicable)"
+        help_text="Raw HTML content (if applicable)",
     )
 
     # Classification and categorization
@@ -814,57 +708,57 @@ class SpiderData(UnifiedBaseModel):
             ('tool_discovery', 'Tool or Service Discovery'),
             ('learning_resource', 'Learning Resource'),
         ],
-        help_text="Type of data discovered"
+        help_text="Type of data discovered",
     )
 
     category = models.CharField(
         max_length=100,
         blank=True,
-        help_text="Specific category within the data type"
+        help_text="Specific category within the data type",
     )
 
     tags = ArrayField(
         models.CharField(max_length=100),
         default=list,
-        help_text="Tags for categorization and search"
+        help_text="Tags for categorization and search",
     )
 
     # Scoring and ranking
     relevance_score = models.FloatField(
         default=0.0,
-        help_text="Relevance score assigned by spider (0.0-1.0)"
+        help_text="Relevance score assigned by spider (0.0-1.0)",
     )
 
     opportunity_score = models.FloatField(
         default=0.0,
-        help_text="Opportunity/revenue potential score (0.0-1.0)"
+        help_text="Opportunity/revenue potential score (0.0-1.0)",
     )
 
     quality_score = models.FloatField(
         default=0.0,
-        help_text="Content quality score (0.0-1.0)"
+        help_text="Content quality score (0.0-1.0)",
     )
 
     urgency_score = models.FloatField(
         default=0.0,
-        help_text="Urgency score for time-sensitive opportunities (0.0-1.0)"
+        help_text="Urgency score for time-sensitive opportunities (0.0-1.0)",
     )
 
     # Processing status
     is_processed = models.BooleanField(
         default=False,
-        help_text="Whether this data has been processed by agents"
+        help_text="Whether this data has been processed by agents",
     )
 
     processed_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="When this data was processed"
+        help_text="When this data was processed",
     )
 
     processing_result = models.JSONField(
         default=dict,
-        help_text="Results of processing by agents"
+        help_text="Results of processing by agents",
     )
 
     # Agent routing
@@ -872,12 +766,12 @@ class SpiderData(UnifiedBaseModel):
         models.CharField(max_length=200),
         default=list,
         blank=True,
-        help_text="Agents this data has been routed to"
+        help_text="Agents this data has been routed to",
     )
 
     agent_responses = models.JSONField(
         default=list,
-        help_text="Responses from agents that processed this data"
+        help_text="Responses from agents that processed this data",
     )
 
     # Revenue tracking
@@ -885,7 +779,7 @@ class SpiderData(UnifiedBaseModel):
         max_digits=10,
         decimal_places=2,
         default=Decimal('0.00'),
-        help_text="Revenue generated from this discovery"
+        help_text="Revenue generated from this discovery",
     )
 
     revenue_potential = models.DecimalField(
@@ -893,7 +787,7 @@ class SpiderData(UnifiedBaseModel):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Estimated revenue potential"
+        help_text="Estimated revenue potential",
     )
 
     conversion_status = models.CharField(
@@ -906,7 +800,7 @@ class SpiderData(UnifiedBaseModel):
             ('failed', 'Failed to Convert'),
             ('expired', 'Opportunity Expired'),
         ],
-        default='discovered'
+        default='discovered',
     )
 
     # Embedding for search
@@ -916,7 +810,7 @@ class SpiderData(UnifiedBaseModel):
         blank=True,
         on_delete=models.CASCADE,
         related_name='spider_data',
-        help_text="Embedding for semantic search"
+        help_text="Embedding for semantic search",
     )
 
     # Duplicate detection
@@ -924,31 +818,31 @@ class SpiderData(UnifiedBaseModel):
         max_length=64,
         db_index=True,
         blank=True,
-        help_text="SHA-256 hash for duplicate detection"
+        help_text="SHA-256 hash for duplicate detection",
     )
 
     similar_discoveries = models.ManyToManyField(
         'self',
         blank=True,
         symmetrical=True,
-        help_text="Similar discoveries found by other spiders"
+        help_text="Similar discoveries found by other spiders",
     )
 
     # Time tracking
     discovered_at = models.DateTimeField(
         auto_now_add=True,
-        help_text="When this data was first discovered"
+        help_text="When this data was first discovered",
     )
 
     expires_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="When this opportunity expires"
+        help_text="When this opportunity expires",
     )
 
     last_updated_at = models.DateTimeField(
         auto_now=True,
-        help_text="Last time this data was updated"
+        help_text="Last time this data was updated",
     )
 
     class Meta:
@@ -972,9 +866,7 @@ class SpiderData(UnifiedBaseModel):
         # Generate content hash for duplicate detection
         if self.content and not self.content_hash:
             combined_content = f"{self.title}\n{self.content}"
-            self.content_hash = hashlib.sha256(
-                combined_content.encode('utf-8')
-            ).hexdigest()
+            self.content_hash = hashlib.sha256(combined_content.encode('utf-8')).hexdigest()
 
         is_new = self.pk is None
         super().save(*args, **kwargs)
@@ -987,7 +879,6 @@ class SpiderData(UnifiedBaseModel):
         """Generate embedding for semantic search"""
         from .services import EmbeddingService
 
-        # Combine title and content for embedding
         text_content = f"{self.title}\n\n{self.content}"
 
         try:
@@ -1004,7 +895,7 @@ class SpiderData(UnifiedBaseModel):
                     'spider_name': self.spider_name,
                     'opportunity_score': self.opportunity_score,
                     'relevance_score': self.relevance_score,
-                }
+                },
             )
             self.embedding = embedding
             self.save(update_fields=['embedding'])
@@ -1019,12 +910,11 @@ class SpiderData(UnifiedBaseModel):
             self.routed_to_agents.append(agent_name)
             self.save(update_fields=['routed_to_agents'])
 
-            # Create routing record
             SpiderDataRoute.objects.create(
                 spider_data=self,
                 target_agent=agent_name,
                 routing_reason=f"Routed based on {self.data_type} classification",
-                priority=priority
+                priority=priority,
             )
 
     def record_agent_response(self, agent_name: str, response: Dict):
@@ -1032,7 +922,7 @@ class SpiderData(UnifiedBaseModel):
         response_record = {
             'agent_name': agent_name,
             'timestamp': timezone.now().isoformat(),
-            'response': response
+            'response': response,
         }
         self.agent_responses.append(response_record)
 
@@ -1042,7 +932,7 @@ class SpiderData(UnifiedBaseModel):
 
         self.save(update_fields=['agent_responses', 'is_processed', 'processed_at'])
 
-    def update_conversion_status(self, status: str, revenue: Decimal = None):
+    def update_conversion_status(self, status: str, revenue: Optional[Decimal] = None):
         """Update conversion status and revenue"""
         self.conversion_status = status
         if revenue is not None:
@@ -1055,12 +945,10 @@ class SpiderData(UnifiedBaseModel):
         """Find similar spider discoveries using content hash and semantic search"""
         content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
 
-        # First check for exact content matches
         exact_matches = cls.objects.filter(content_hash=content_hash)
         if exact_matches.exists():
             return exact_matches
 
-        # Then use semantic search for similar content
         from .services import EmbeddingService
         try:
             embedding_service = EmbeddingService()
@@ -1070,7 +958,7 @@ class SpiderData(UnifiedBaseModel):
                 query_embedding=query_embedding,
                 content_types=['spider_data'],
                 limit=10,
-                min_score=threshold
+                min_score=threshold,
             )
 
             similar_ids = [emb.content_id for emb in similar_embeddings]
@@ -1088,16 +976,16 @@ class SpiderDataRoute(UnifiedBaseModel):
     spider_data = models.ForeignKey(
         SpiderData,
         on_delete=models.CASCADE,
-        related_name='routing_records'
+        related_name='routing_records',
     )
 
     target_agent = models.CharField(
         max_length=200,
-        help_text="Agent this data was routed to"
+        help_text="Agent this data was routed to",
     )
 
     routing_reason = models.TextField(
-        help_text="Reason for routing to this agent"
+        help_text="Reason for routing to this agent",
     )
 
     priority = models.CharField(
@@ -1108,7 +996,7 @@ class SpiderDataRoute(UnifiedBaseModel):
             ('high', 'High Priority'),
             ('urgent', 'Urgent'),
         ],
-        default='normal'
+        default='normal',
     )
 
     status = models.CharField(
@@ -1119,18 +1007,18 @@ class SpiderDataRoute(UnifiedBaseModel):
             ('completed', 'Completed'),
             ('failed', 'Failed'),
         ],
-        default='pending'
+        default='pending',
     )
 
     agent_response = models.JSONField(
         null=True,
         blank=True,
-        help_text="Response from the agent"
+        help_text="Response from the agent",
     )
 
     processed_at = models.DateTimeField(
         null=True,
-        blank=True
+        blank=True,
     )
 
     class Meta:
@@ -1151,12 +1039,6 @@ class SpiderDataRoute(UnifiedBaseModel):
 class RevenueTracker(UnifiedBaseModel):
     """
     Track actual revenue generation from all platform activities.
-
-    This model provides real revenue data persistence for:
-    - Spider-discovered opportunities that convert to income
-    - Agent-generated content that produces revenue
-    - Workflow executions that create value
-    - User interactions that generate income
     """
 
     # Revenue identification
@@ -1175,50 +1057,50 @@ class RevenueTracker(UnifiedBaseModel):
             ('data_licensing', 'Data Licensing'),
         ],
         db_index=True,
-        help_text="Source system that generated this revenue"
+        help_text="Source system that generated this revenue",
     )
 
     # Financial data
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        help_text="Revenue amount in USD"
+        help_text="Revenue amount in USD",
     )
 
     currency = models.CharField(
         max_length=3,
         default='USD',
-        help_text="Currency code (ISO 4217)"
+        help_text="Currency code (ISO 4217)",
     )
 
     # Source tracking
     source_id = models.UUIDField(
         null=True,
         blank=True,
-        help_text="ID of the source object that generated this revenue"
+        help_text="ID of the source object that generated this revenue",
     )
 
     source_agent = models.CharField(
         max_length=200,
         blank=True,
-        help_text="Agent that contributed to this revenue"
+        help_text="Agent that contributed to this revenue",
     )
 
     source_spider = models.CharField(
         max_length=100,
         blank=True,
-        help_text="Spider that discovered the opportunity"
+        help_text="Spider that discovered the opportunity",
     )
 
     # Revenue details
     description = models.TextField(
-        help_text="Description of how this revenue was generated"
+        help_text="Description of how this revenue was generated",
     )
 
     transaction_id = models.CharField(
         max_length=200,
         blank=True,
-        help_text="External transaction ID (PayPal, Stripe, etc.)"
+        help_text="External transaction ID (PayPal, Stripe, etc.)",
     )
 
     verification_status = models.CharField(
@@ -1231,14 +1113,14 @@ class RevenueTracker(UnifiedBaseModel):
             ('settled', 'Settled'),
         ],
         default='pending',
-        help_text="Status of revenue verification"
+        help_text="Status of revenue verification",
     )
 
     # Attribution and conversion tracking
     opportunity_id = models.UUIDField(
         null=True,
         blank=True,
-        help_text="Related opportunity that led to this revenue"
+        help_text="Related opportunity that led to this revenue",
     )
 
     conversion_rate = models.DecimalField(
@@ -1246,13 +1128,13 @@ class RevenueTracker(UnifiedBaseModel):
         decimal_places=4,
         null=True,
         blank=True,
-        help_text="Conversion rate from opportunity to revenue"
+        help_text="Conversion rate from opportunity to revenue",
     )
 
     conversion_time = models.DurationField(
         null=True,
         blank=True,
-        help_text="Time from opportunity discovery to revenue conversion"
+        help_text="Time from opportunity discovery to revenue conversion",
     )
 
     # Performance metrics
@@ -1261,7 +1143,7 @@ class RevenueTracker(UnifiedBaseModel):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Return on investment percentage"
+        help_text="Return on investment percentage",
     )
 
     confidence_score = models.DecimalField(
@@ -1269,30 +1151,30 @@ class RevenueTracker(UnifiedBaseModel):
         decimal_places=3,
         null=True,
         blank=True,
-        help_text="Confidence in revenue attribution (0.0-1.0)"
+        help_text="Confidence in revenue attribution (0.0-1.0)",
     )
 
     # Time tracking
     earned_at = models.DateTimeField(
-        help_text="When the revenue was actually earned"
+        help_text="When the revenue was actually earned",
     )
 
     reported_at = models.DateTimeField(
         auto_now_add=True,
-        help_text="When the revenue was recorded in the system"
+        help_text="When the revenue was recorded in the system",
     )
 
     # Metadata and context
     metadata = models.JSONField(
         default=dict,
-        help_text="Additional revenue context and metadata"
+        help_text="Additional revenue context and metadata",
     )
 
     tags = ArrayField(
         models.CharField(max_length=50),
         default=list,
         blank=True,
-        help_text="Tags for categorizing revenue"
+        help_text="Tags for categorizing revenue",
     )
 
     class Meta:
@@ -1314,7 +1196,7 @@ class RevenueTracker(UnifiedBaseModel):
 
     @classmethod
     def record_revenue(cls, amount: Decimal, source: str, description: str,
-                      agent: str = None, spider: str = None, **kwargs):
+                       agent: Optional[str] = None, spider: Optional[str] = None, **kwargs):
         """
         Record new revenue with proper attribution.
         """
@@ -1325,11 +1207,11 @@ class RevenueTracker(UnifiedBaseModel):
             source_agent=agent,
             source_spider=spider,
             earned_at=timezone.now(),
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
-    def get_total_revenue(cls, days: int = None, source: str = None):
+    def get_total_revenue(cls, days: Optional[int] = None, source: Optional[str] = None):
         """
         Get total revenue with optional filters.
         """
@@ -1350,14 +1232,16 @@ class RevenueTracker(UnifiedBaseModel):
         Get revenue breakdown by agent for the last N days.
         """
         since = timezone.now() - timedelta(days=days)
-        return cls.objects.filter(
-            earned_at__gte=since,
-            verification_status='verified',
-            source_agent__isnull=False
-        ).values('source_agent').annotate(
-            total=Sum('amount'),
-            count=Count('id')
-        ).order_by('-total')
+        return (
+            cls.objects.filter(
+                earned_at__gte=since,
+                verification_status='verified',
+                source_agent__isnull=False,
+            )
+            .values('source_agent')
+            .annotate(total=Sum('amount'), count=Count('id'))
+            .order_by('-total')
+        )
 
     @classmethod
     def get_revenue_by_spider(cls, days: int = 30):
@@ -1365,14 +1249,16 @@ class RevenueTracker(UnifiedBaseModel):
         Get revenue breakdown by spider for the last N days.
         """
         since = timezone.now() - timedelta(days=days)
-        return cls.objects.filter(
-            earned_at__gte=since,
-            verification_status='verified',
-            source_spider__isnull=False
-        ).values('source_spider').annotate(
-            total=Sum('amount'),
-            count=Count('id')
-        ).order_by('-total')
+        return (
+            cls.objects.filter(
+                earned_at__gte=since,
+                verification_status='verified',
+                source_spider__isnull=False,
+            )
+            .values('source_spider')
+            .annotate(total=Sum('amount'), count=Count('id'))
+            .order_by('-total')
+        )
 
 
 # =============================================================================
@@ -1386,7 +1272,7 @@ class DataPersistenceMetrics(UnifiedBaseModel):
 
     metric_name = models.CharField(
         max_length=100,
-        help_text="Name of the metric"
+        help_text="Name of the metric",
     )
 
     metric_type = models.CharField(
@@ -1396,11 +1282,11 @@ class DataPersistenceMetrics(UnifiedBaseModel):
             ('gauge', 'Gauge'),
             ('histogram', 'Histogram'),
             ('timer', 'Timer'),
-        ]
+        ],
     )
 
     metric_value = models.FloatField(
-        help_text="Numeric value of the metric"
+        help_text="Numeric value of the metric",
     )
 
     subsystem = models.CharField(
@@ -1413,17 +1299,15 @@ class DataPersistenceMetrics(UnifiedBaseModel):
             ('collaboration', 'Agent Collaboration'),
             ('routing', 'Data Routing'),
             ('performance', 'System Performance'),
-        ]
+        ],
     )
 
     metadata = models.JSONField(
         default=dict,
-        help_text="Additional metric metadata"
+        help_text="Additional metric metadata",
     )
 
-    timestamp = models.DateTimeField(
-        auto_now_add=True
-    )
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         app_label = 'persistence'
@@ -1436,13 +1320,19 @@ class DataPersistenceMetrics(UnifiedBaseModel):
         ]
 
     @classmethod
-    def record_metric(cls, name: str, value: float, metric_type: str = 'gauge',
-                     subsystem: str = 'performance', metadata: Dict = None):
+    def record_metric(
+        cls,
+        name: str,
+        value: float,
+        metric_type: str = 'gauge',
+        subsystem: str = 'performance',
+        metadata: Optional[Dict] = None,
+    ):
         """Record a new metric value"""
         return cls.objects.create(
             metric_name=name,
             metric_value=value,
             metric_type=metric_type,
             subsystem=subsystem,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )

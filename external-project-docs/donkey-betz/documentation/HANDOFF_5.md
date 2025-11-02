@@ -55,7 +55,7 @@ class Content(models.Model):
 ```python
 # Dead simple views
 def create_content(request):
-    data = json.loads(request.body)
+    data = json.loads(request.body or b"{}"))
     content = studio.create_content(data)
     return JsonResponse({"content": content})
 ```

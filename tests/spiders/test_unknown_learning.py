@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 Test Agent Learning on Unknown Topics
@@ -173,14 +174,14 @@ def test_unknown_topic_learning():
             if learning_result:
                 learning_results.append({
                     'topic': topic_info['topic'],
-                    'spider_sources': len(spider_data),
+                    'spider_sources': len(pider_data),
                     'learned_insights': learning_result['learned_insights'],
                     'tokens_used': learning_result['tokens_used']
                 })
 
                 # Update dashboard with learning data
                 r.hset(f"learning:topic:{i}", mapping={
-                    "spider_sources": len(spider_data),
+                    "spider_sources": len(pider_data),
                     "learning_tokens": learning_result['tokens_used'],
                     "status": "learning_complete"
                 })
@@ -194,7 +195,7 @@ def test_unknown_topic_learning():
                     "total_cost": (current_tokens + learning_result['tokens_used']) / 1000000 * 0.375
                 })
 
-                print(f"   📚 Learned from {len(spider_data)} sources")
+                print(f"   📚 Learned from {len(pider_data)} sources")
                 print(f"   🧠 New insights: {learning_result['learned_insights'][:100]}...")
 
         time.sleep(1)

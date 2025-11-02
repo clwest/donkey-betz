@@ -386,8 +386,8 @@ The next agent assignment should focus on achieving these milestones:
 ```bash
 # Required environment variables
 DJANGO_SECRET_KEY="your-secret-key"
-OPENAI_API_KEY="your-openai-key"      # For production
-ANTHROPIC_API_KEY="your-anthropic-key" # Optional
+OPENAI_API_KEY="REDACTED"      # For production
+ANTHROPIC_API_KEY="REDACTED" # Optional
 REDIS_URL="redis://localhost:6379"
 DATABASE_URL="sqlite:///db.sqlite3"    # Or PostgreSQL for production
 DEBUG=False                             # Production setting

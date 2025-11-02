@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """
 Quick test of RAG functionality
@@ -41,7 +42,7 @@ for query in test_queries:
     sources = rag.search_documents(query)
     
     if sources:
-        print(f"✅ Found {len(sources)} documents:")
+        print(f"✅ Found {len(ources)} documents:")
         for source in sources:
             print(f"   • {source['title']}")
             print(f"     {source['content'][:100]}...")

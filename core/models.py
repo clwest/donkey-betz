@@ -17,6 +17,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator, MaxValueValidator
 import json
 
+import hashlib
+import math
+import random
+
+EMBEDDING_DIM = 1536  # keep this aligned with your pgvector column
 
 class UnifiedBaseModel(models.Model):
     """
@@ -1019,27 +1024,21 @@ class JobApplication(UnifiedBaseModel):
 
         learning.save()
 
-    def _generate_placeholder_embedding(self, content):
+    def _generate_placeholder_embedding(self, content: str):
         """
-        Generate a simple placeholder embedding
-        TODO: Replace with actual embedding service integration
+        Generate a deterministic 1536-dim placeholder embedding and L2-normalize it.
+        Safe to replace later with a real provider (OpenAI, Cohere, local, etc.).
         """
-        import hashlib
-        # Create a deterministic but distributed vector based on content
-        hash_obj = hashlib.sha256(content.encode())
-        hash_bytes = hash_obj.digest()
+        # Seed a PRNG from content so it's deterministic per content string
+        h = hashlib.sha256(content.encode()).digest()
+        rnd = random.Random(h)
 
-        # Convert to list of floats normalized to [-1, 1]
-        embedding = []
-        for i in range(min(128, len(hash_bytes))):
-            # Normalize byte value (0-255) to (-1, 1)
-            embedding.append((hash_bytes[i] / 127.5) - 1.0)
+        vec = [rnd.uniform(-1.0, 1.0) for _ in range(EMBEDDING_DIM)]
 
-        # Pad to 128 dimensions if needed
-        while len(embedding) < 128:
-            embedding.append(0.0)
-
-        return embedding[:128]
+        # L2-normalize for cosine distance
+        norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+        vec = [x / norm for x in vec]
+        return vec
 
     class Meta:
         verbose_name = "Job Application"
@@ -2355,4 +2354,4 @@ class UserAgentLearning(UnifiedBaseModel):
             learning.confidence_score = confidence
             learning.save()
 
-        return learningfrom core.models_engagement_metrics import EngagementMetrics, OpportunityInteraction
+        return learning

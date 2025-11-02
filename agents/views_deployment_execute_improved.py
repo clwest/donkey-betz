@@ -31,7 +31,7 @@ def execute_agents_improved(request):
     - real: Actual agent execution with LLM calls
     """
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or b"{}")
         project_id = data.get('project_id')
         project_type = data.get('project_type', 'ecommerce')
         project_description = data.get('project_description', '')

@@ -361,8 +361,8 @@ python backend/manage.py init_agents --force
 ```bash
 # Issue: Generic responses instead of calculations
 # Resolution: Configure OpenAI or Anthropic API keys
-export OPENAI_API_KEY="your-api-key"
-export ANTHROPIC_API_KEY="your-api-key"
+export OPENAI_API_KEY="REDACTED"
+export ANTHROPIC_API_KEY="REDACTED"
 ```
 
 #### Database Connection Issues

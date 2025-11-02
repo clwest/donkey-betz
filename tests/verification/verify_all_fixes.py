@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python3
 """
 Comprehensive test to verify all API endpoint fixes
@@ -8,13 +9,13 @@ import json
 import sys
 
 BASE_URL = "http://localhost:8000/api"
-TOKEN = "424a48280fa87d30f4997beda23ccad57418d7cb"
+os.environ["TOKEN"] = "424a48280fa87d30f4997beda23ccad57418d7cb"
 
-def test_endpoint(endpoint, description, method="GET", data=None):
+def test_endpoint(endpoint, description, method="GET", data=tests/verification/verify_all_fixes.py):
     """Test an API endpoint"""
     url = f"{BASE_URL}{endpoint}"
     headers = {
-        "Authorization": f"Token {TOKEN}",
+        "Authorization": f"Token {os.environ.get('TOKEN', 'test-token')}",
         "Content-Type": "application/json"
     }
     

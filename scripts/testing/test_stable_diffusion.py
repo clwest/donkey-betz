@@ -152,7 +152,7 @@ def main():
         print("✅ STABILITY_API_KEY is set")
     else:
         print("❌ STABILITY_API_KEY not found in environment")
-        print("   Set it with: export STABILITY_API_KEY='your-key-here'")
+        print("   Set it with: export STABILITY_API_KEY='REDACTED'")
 
     # Run tests
     test_provider_priority()

@@ -329,7 +329,7 @@ def real_income_opportunities(request):
 def analyze_real_opportunities(request):
     """Analyze real opportunities based on user profile"""
     try:
-        data = json.loads(request.body) if request.body else {}
+        data = json.loads(request.body or b"{}") if request.body else {}
         user_skills = data.get('skills', ['python', 'javascript', 'ai'])
         skill_level = data.get('skill_level', 'intermediate')
 

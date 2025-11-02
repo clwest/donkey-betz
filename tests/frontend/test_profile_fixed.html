@@ -62,7 +62,7 @@
 
     <script>
         const API_BASE = 'http://localhost:8000';
-        const TOKEN = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
+        const os.environ["TOKEN"] = '993f8273f70877e23b5c7d2f92ed30562a089fe3';
 
         async function testProfile() {
             const resultDiv = document.getElementById('profile-result');
@@ -70,7 +70,7 @@
             try {
                 const response = await fetch(`${API_BASE}/api/profile/`, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`
                     }
                 });
 
@@ -125,7 +125,7 @@
             try {
                 const response = await fetch(`${API_BASE}/api/profile/stats/`, {
                     headers: {
-                        'Authorization': `Token ${TOKEN}`
+                        'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`
                     }
                 });
 

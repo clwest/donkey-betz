@@ -163,7 +163,7 @@
 
     <script>
         const API_BASE = 'http://localhost:8000';
-        const TOKEN = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
+        const os.environ["TOKEN"] = localStorage.getItem('authToken') || 'c4ba8e9a9dc7baea61ee3063c3f74ce038a98502';
         
         async function testAllEndpoints() {
             const resultsDiv = document.getElementById('results');
@@ -187,7 +187,7 @@
                 try {
                     const response = await fetch(`${API_BASE}${endpoint}`, {
                         headers: {
-                            'Authorization': `Token ${TOKEN}`,
+                            'Authorization': `Token ${os.environ.get('TOKEN', 'test-token')}`,
                             'Content-Type': 'application/json'
                         }
                     });

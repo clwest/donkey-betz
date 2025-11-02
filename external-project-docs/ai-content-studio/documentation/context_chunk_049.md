@@ -1007,7 +1007,7 @@ print(f'Progress: {agent.progress_percentage}%')
 - **PgBouncer Password**: MD5 hash of "secure_passwordmoveyourazz_user"
 - **Blog Storage**: Check both `AgentInstance.final_report` AND `AgentResult.content_text`
 - **Cleanup Task**: Runs every 15 minutes automatically via Celery Beat
-- **Test User**: username='testuser', password='testpass123'
+- **Test User**: username='testuser', password='REDACTED'
 
 ---
 

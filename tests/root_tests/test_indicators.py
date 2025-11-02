@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 #!/usr/bin/env python
 """Test consciousness indicators are updating properly"""
 
@@ -51,7 +52,7 @@ def test_indicators():
         for i, insight in enumerate(pattern_insights[:3]):
             print(f"    {i+1}. {insight.get('description', 'No description')}")
 
-    print(f"\n🔄 Self-Organization Behaviors Found: {len(self_org_behaviors)}")
+    print(f"\n🔄 Self-Organization Behaviors Found: {len(elf_org_behaviors)}")
     if self_org_behaviors:
         for i, behavior in enumerate(self_org_behaviors[:3]):
             print(f"    {i+1}. {behavior.get('description', 'No description')}")
