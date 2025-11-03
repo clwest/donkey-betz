@@ -470,6 +470,11 @@
                     🎭 Workflow
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab">
+                    🎬 Video
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -1502,7 +1507,7 @@
                                                 <option value="erase">Erase Object</option>
                                                 <option value="inpaint">Inpaint (Fill Area)</option>
                                                 <option value="outpaint">Outpaint (Extend)</option>
-                                                <option value="remove_bg">Remove Background</option>
+                                                <option value="remove_background">Remove Background</option>
                                             </optgroup>
                                             <optgroup label="📈 Upscale">
                                                 <option value="upscale_fast">Fast Upscale (4x)</option>
@@ -1510,8 +1515,8 @@
                                                 <option value="upscale_creative">Creative Upscale</option>
                                             </optgroup>
                                             <optgroup label="🎭 Control">
-                                                <option value="control_sketch">Sketch to Image</option>
-                                                <option value="control_structure">Structure Transfer</option>
+                                                <option value="sketch">Sketch to Image</option>
+                                                <option value="structure">Structure Transfer</option>
                                             </optgroup>
                                         </select>
                                         <button type="button" class="btn btn-cyan" onclick="addOperationToWorkflow()">
@@ -1602,6 +1607,268 @@
             </div>
             <!-- END WORKFLOW TAB -->
 
+            <!-- WORKFLOW MASK EDITOR MODAL (Session 42 - Custom Modal) -->
+            <style>
+                /* Visual feedback for radio button mode selection */
+                #workflowDrawModeErase:checked + label {
+                    background: #dc3545 !important;
+                    border: 2px solid #00d9ff !important;
+                    box-shadow: 0 0 10px rgba(0, 217, 255, 0.5) !important;
+                    transform: scale(1.05);
+                }
+                #workflowDrawModeEraser:checked + label {
+                    background: #6c757d !important;
+                    border: 2px solid #00d9ff !important;
+                    box-shadow: 0 0 10px rgba(0, 217, 255, 0.5) !important;
+                    transform: scale(1.05);
+                }
+                label[for="workflowDrawModeErase"],
+                label[for="workflowDrawModeEraser"] {
+                    transition: all 0.2s ease;
+                    border: 2px solid transparent;
+                }
+            </style>
+            <div id="workflowMaskEditorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
+                <div style="max-width: 1400px; margin: 0 auto; background: #1a1a1a; border: 2px solid #00d9ff; border-radius: 8px; box-shadow: 0 10px 40px rgba(0, 217, 255, 0.3);">
+                    <!-- Header -->
+                    <div style="padding: 20px 30px; border-bottom: 1px solid #00d9ff; display: flex; justify-content: space-between; align-items: center;">
+                        <h5 style="color: #00d9ff; margin: 0; font-size: 1.5rem;">🎨 <span id="workflowMaskEditorLabel">Edit Mask</span></h5>
+                        <button onclick="cancelWorkflowMask()" style="background: transparent; border: none; color: #fff; font-size: 2rem; cursor: pointer; padding: 0; width: 40px; height: 40px; line-height: 40px;">&times;</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div style="padding: 30px;">
+                        <div style="display: flex; gap: 30px;">
+                            <!-- Canvas Area (70%) -->
+                            <div style="flex: 0 0 70%;">
+                                <div style="background: #2a2a2a; border: 2px solid #ffd700; border-radius: 4px; padding: 20px; text-align: center; position: relative;">
+                                    <canvas id="workflowMaskCanvas" style="max-width: 100%; border: 2px solid #00d9ff; cursor: crosshair;"></canvas>
+                                    <canvas id="workflowMaskOverlay" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; pointer-events: none;"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Drawing Tools (30%) -->
+                            <div style="flex: 0 0 30%;">
+                                <!-- Tools Card -->
+                                <div style="background: #2a2a2a; border: 2px solid #ffd700; border-radius: 4px; padding: 20px; margin-bottom: 20px;">
+                                    <h6 style="color: #00d9ff; margin-bottom: 20px;">🖌️ Drawing Tools</h6>
+
+                                    <!-- Brush Size -->
+                                    <div style="margin-bottom: 20px;">
+                                        <label style="color: #ffd700; font-size: 0.9rem; display: block; margin-bottom: 5px;">Brush Size: <span id="workflowBrushSizeValue">20</span>px</label>
+                                        <input type="range" id="workflowBrushSize" min="5" max="100" value="20" oninput="document.getElementById('workflowBrushSizeValue').textContent = this.value" style="width: 100%;">
+                                    </div>
+
+                                    <!-- Tool Mode -->
+                                    <div style="margin-bottom: 20px;">
+                                        <label style="color: #ffd700; font-size: 0.9rem; display: block; margin-bottom: 5px;">Mode:</label>
+                                        <div style="display: flex; gap: 10px;">
+                                            <input type="radio" name="workflowDrawMode" id="workflowDrawModeErase" value="erase" checked style="display: none;">
+                                            <label for="workflowDrawModeErase" style="flex: 1; padding: 8px; background: #dc3545; color: white; border-radius: 4px; text-align: center; cursor: pointer; font-size: 0.85rem;">✏️ Draw Mask</label>
+
+                                            <input type="radio" name="workflowDrawMode" id="workflowDrawModeEraser" value="eraser" style="display: none;">
+                                            <label for="workflowDrawModeEraser" style="flex: 1; padding: 8px; background: #6c757d; color: white; border-radius: 4px; text-align: center; cursor: pointer; font-size: 0.85rem;">🧹 Eraser</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Opacity -->
+                                    <div style="margin-bottom: 20px;">
+                                        <label style="color: #ffd700; font-size: 0.9rem; display: block; margin-bottom: 5px;">Mask Opacity: <span id="workflowMaskOpacityValue">50</span>%</label>
+                                        <input type="range" id="workflowMaskOpacity" min="10" max="100" value="50" oninput="updateWorkflowMaskOpacity(this.value)" style="width: 100%;">
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        <button onclick="clearWorkflowMask()" style="padding: 10px; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                                            🗑️ Clear Mask
+                                        </button>
+                                        <button onclick="undoWorkflowMask()" id="workflowUndoBtn" disabled style="padding: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                                            ↶ Undo
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Instructions Card -->
+                                <div style="background: #2a2a2a; border: 2px solid #00d9ff; border-radius: 4px; padding: 20px;">
+                                    <h6 style="color: #00d9ff; margin-bottom: 10px;">📖 Instructions:</h6>
+                                    <ul style="color: #aaa; font-size: 0.85rem; margin: 0; padding-left: 20px;">
+                                        <li>Draw over areas you want to <span id="maskOperationName">modify</span></li>
+                                        <li>Use eraser to remove unwanted marks</li>
+                                        <li>Adjust brush size for precision</li>
+                                        <li>Click Save when done</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="padding: 20px 30px; border-top: 1px solid #00d9ff; display: flex; justify-content: flex-end; gap: 15px;">
+                        <button onclick="cancelWorkflowMask()" style="padding: 10px 30px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;">Cancel</button>
+                        <button onclick="saveWorkflowMask()" style="padding: 10px 30px; background: #00d9ff; color: #000; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold;">💾 Save Mask</button>
+                    </div>
+                </div>
+            </div>
+            <!-- END WORKFLOW MASK EDITOR MODAL -->
+
+            <!-- VIDEO TAB (Session 41: Runway ML Integration) -->
+            <div class="tab-pane fade" id="video" role="tabpanel">
+                <h3 class="mb-4">🎬 AI Video Generation</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info mb-4">
+                    <strong>✨ Create AI Videos with Runway ML</strong><br>
+                    Generate videos from text descriptions or animate your images!<br>
+                    <small class="text-muted">Credits available: 4,070 (~40-80 videos)</small>
+                </div>
+
+                <!-- Video Generation Mode Tabs -->
+                <ul class="nav nav-pills mb-4" id="videoModeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="text-video-pill" data-bs-toggle="pill" data-bs-target="#text-video" type="button" role="tab">
+                            📝 Text-to-Video
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="image-video-pill" data-bs-toggle="pill" data-bs-target="#image-video" type="button" role="tab">
+                            🖼️ Image-to-Video
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="videoModeContent">
+                    <!-- TEXT-TO-VIDEO -->
+                    <div class="tab-pane fade show active" id="text-video" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan mb-3">📝 Describe Your Video</h5>
+
+                                        <!-- Prompt -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Video Description</label>
+                                            <textarea id="videoPrompt" class="form-control" rows="4" placeholder="A majestic eagle soaring through clouds at sunset..."></textarea>
+                                        </div>
+
+                                        <!-- Duration -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Duration</label>
+                                            <select id="videoDuration" class="form-select">
+                                                <option value="5">5 seconds</option>
+                                                <option value="10">10 seconds</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Generate Button -->
+                                        <button type="button" class="btn btn-cyan btn-lg w-100" onclick="generateTextToVideo()">
+                                            🎬 Generate Video
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <!-- Video Result -->
+                                <div id="textVideoResult" class="card bg-dark border-cyan" style="display: none;">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-success">✅ Video Ready!</h5>
+                                        <div id="textVideoPlayer"></div>
+                                        <button type="button" class="btn btn-cyan mt-3 w-100" onclick="downloadVideo('text')">
+                                            📥 Download
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Processing Status -->
+                                <div id="textVideoStatus" class="card bg-dark border-cyan" style="display: none;">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">⏳ Processing...</h5>
+                                        <div class="progress mb-2">
+                                            <div id="textVideoProgress" class="progress-bar bg-cyan" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <p id="textVideoStatusText" class="mb-0">Starting...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IMAGE-TO-VIDEO -->
+                    <div class="tab-pane fade" id="image-video" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan mb-3">🖼️ Animate Your Image</h5>
+
+                                        <!-- Image Selection -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Select Image</label>
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectImageFromGalleryForVideo()">
+                                                    📊 From Gallery
+                                                </button>
+                                            </div>
+
+                                            <!-- Image Preview -->
+                                            <div id="videoImagePreview" style="display: none;" class="mt-2">
+                                                <img id="videoImagePreviewImg" class="img-fluid rounded border border-cyan" style="max-height: 200px;">
+                                            </div>
+                                        </div>
+
+                                        <!-- Motion Prompt -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Camera Movement</label>
+                                            <textarea id="motionPrompt" class="form-control" rows="3" placeholder="Camera slowly zooms in..."></textarea>
+                                        </div>
+
+                                        <!-- Duration -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Duration</label>
+                                            <select id="imageVideoDuration" class="form-select">
+                                                <option value="5">5 seconds</option>
+                                                <option value="10">10 seconds</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Generate Button -->
+                                        <button type="button" class="btn btn-cyan btn-lg w-100" onclick="generateImageToVideo()" id="imageToVideoBtn" disabled>
+                                            🎬 Animate
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <!-- Video Result -->
+                                <div id="imageVideoResult" class="card bg-dark border-cyan" style="display: none;">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-success">✅ Video Ready!</h5>
+                                        <div id="imageVideoPlayer"></div>
+                                        <button type="button" class="btn btn-cyan mt-3 w-100" onclick="downloadVideo('image')">
+                                            📥 Download
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Processing Status -->
+                                <div id="imageVideoStatus" class="card bg-dark border-cyan" style="display: none;">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">⏳ Processing...</h5>
+                                        <div class="progress mb-2">
+                                            <div id="imageVideoProgress" class="progress-bar bg-cyan" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <p id="imageVideoStatusText" class="mb-0">Starting...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END VIDEO TAB -->
+
         </div>
         <!-- END TAB CONTENT -->
     </div>
@@ -1628,6 +1895,29 @@
                 }
             }
             return null;
+        }
+
+        // Authenticated Fetch Helper
+        async function authenticatedFetch(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            };
+
+            // Merge options
+            const mergedOptions = {
+                ...defaultOptions,
+                ...options,
+                headers: {
+                    ...defaultOptions.headers,
+                    ...(options.headers || {})
+                }
+            };
+
+            return fetch(url, mergedOptions);
         }
 
         // Update Quality Info
@@ -3490,12 +3780,12 @@
             erase: { name: 'Erase Object', icon: '🗑️', requiresInput: true },
             inpaint: { name: 'Inpaint', icon: '🖌️', requiresInput: true },
             outpaint: { name: 'Outpaint', icon: '📐', requiresInput: true },
-            remove_bg: { name: 'Remove Background', icon: '🔲', requiresInput: true },
+            remove_background: { name: 'Remove Background', icon: '🔲', requiresInput: true },
             upscale_fast: { name: 'Fast Upscale (4x)', icon: '📈', requiresInput: true },
             upscale_conservative: { name: 'Conservative (4K)', icon: '🏔️', requiresInput: true },
             upscale_creative: { name: 'Creative Upscale', icon: '🎨', requiresInput: true },
-            control_sketch: { name: 'Sketch to Image', icon: '✏️', requiresInput: true },
-            control_structure: { name: 'Structure Transfer', icon: '🏗️', requiresInput: true }
+            sketch: { name: 'Sketch to Image', icon: '✏️', requiresInput: true },
+            structure: { name: 'Structure Transfer', icon: '🏗️', requiresInput: true }
         };
 
         // Load templates from localStorage on page load
@@ -3845,6 +4135,137 @@
             }
         }
 
+        // Get configuration HTML for operation
+        function getOperationConfigHTML(step) {
+            const operation = step.operation;
+            let configHTML = '';
+
+            switch(operation) {
+                case 'generate':
+                    configHTML = `
+                        <div class="mt-2 p-2 bg-dark rounded">
+                            <label class="form-label small text-cyan">Prompt:</label>
+                            <textarea class="form-control form-control-sm" rows="2"
+                                placeholder="Describe the image to generate..."
+                                onchange="updateStepConfig('${step.id}', 'prompt', this.value)">${step.config.prompt || ''}</textarea>
+                        </div>
+                    `;
+                    break;
+
+                case 'recolor':
+                    configHTML = `
+                        <div class="mt-2 p-2 bg-dark rounded">
+                            <label class="form-label small text-cyan">Search for (what to recolor):</label>
+                            <input type="text" class="form-control form-control-sm mb-2"
+                                placeholder="e.g., car, shirt, sky..."
+                                value="${step.config.search_prompt || ''}"
+                                onchange="updateStepConfig('${step.id}', 'search_prompt', this.value)">
+                            <label class="form-label small text-cyan">Change to (new color/style):</label>
+                            <input type="text" class="form-control form-control-sm"
+                                placeholder="e.g., red, blue, golden..."
+                                value="${step.config.prompt || ''}"
+                                onchange="updateStepConfig('${step.id}', 'prompt', this.value)">
+                        </div>
+                    `;
+                    break;
+
+                case 'erase':
+                    const eraseMaskPreview = step.config.maskData ?
+                        `<div class="mt-2"><img src="${step.config.maskData}" style="max-width: 100px; border: 1px solid #00d9ff;" alt="Mask preview"></div>` : '';
+                    configHTML = `
+                        <div class="mt-2 p-2 bg-dark rounded">
+                            <button type="button" class="btn btn-sm btn-outline-cyan w-100" onclick="openWorkflowMaskEditor('${step.id}', 'erase')">
+                                🎨 ${step.config.maskData ? 'Edit' : 'Draw'} Mask
+                            </button>
+                            ${eraseMaskPreview}
+                            <small class="text-muted d-block mt-2">Draw over areas to erase</small>
+                        </div>
+                    `;
+                    break;
+
+                case 'inpaint':
+                    const inpaintMaskPreview = step.config.maskData ?
+                        `<div class="mt-2"><img src="${step.config.maskData}" style="max-width: 100px; border: 1px solid #00d9ff;" alt="Mask preview"></div>` : '';
+                    configHTML = `
+                        <div class="mt-2 p-2 bg-dark rounded">
+                            <label class="form-label small text-cyan">What to fill the area with:</label>
+                            <input type="text" class="form-control form-control-sm mb-2"
+                                placeholder="e.g., grass, water, sky..."
+                                value="${step.config.prompt || ''}"
+                                onchange="updateStepConfig('${step.id}', 'prompt', this.value)">
+                            <button type="button" class="btn btn-sm btn-outline-cyan w-100" onclick="openWorkflowMaskEditor('${step.id}', 'inpaint')">
+                                🎨 ${step.config.maskData ? 'Edit' : 'Draw'} Mask
+                            </button>
+                            ${inpaintMaskPreview}
+                            <small class="text-muted d-block mt-2">Draw over areas to regenerate</small>
+                        </div>
+                    `;
+                    break;
+
+                case 'outpaint':
+                    configHTML = `
+                        <div class="mt-2 p-2 bg-dark rounded">
+                            <label class="form-label small text-cyan">What to extend with:</label>
+                            <input type="text" class="form-control form-control-sm mb-2"
+                                placeholder="e.g., more landscape, ocean, sky..."
+                                value="${step.config.prompt || ''}"
+                                onchange="updateStepConfig('${step.id}', 'prompt', this.value)">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="${step.id}_left"
+                                    ${step.config.left ? 'checked' : ''}
+                                    onchange="updateStepConfig('${step.id}', 'left', this.checked)">
+                                <label class="form-check-label small" for="${step.id}_left">← Left</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="${step.id}_right"
+                                    ${step.config.right ? 'checked' : ''}
+                                    onchange="updateStepConfig('${step.id}', 'right', this.checked)">
+                                <label class="form-check-label small" for="${step.id}_right">Right →</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="${step.id}_up"
+                                    ${step.config.up ? 'checked' : ''}
+                                    onchange="updateStepConfig('${step.id}', 'up', this.checked)">
+                                <label class="form-check-label small" for="${step.id}_up">↑ Up</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="${step.id}_down"
+                                    ${step.config.down ? 'checked' : ''}
+                                    onchange="updateStepConfig('${step.id}', 'down', this.checked)">
+                                <label class="form-check-label small" for="${step.id}_down">Down ↓</label>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'sketch':
+                case 'structure':
+                    configHTML = `
+                        <div class="mt-2 p-2 bg-dark rounded">
+                            <label class="form-label small text-cyan">Prompt:</label>
+                            <input type="text" class="form-control form-control-sm"
+                                placeholder="Describe the desired output..."
+                                value="${step.config.prompt || ''}"
+                                onchange="updateStepConfig('${step.id}', 'prompt', this.value)">
+                            <small class="text-muted">Note: Will use input image as ${operation === 'sketch' ? 'sketch' : 'structure'} guide</small>
+                        </div>
+                    `;
+                    break;
+            }
+
+            return configHTML;
+        }
+
+        // Update step configuration
+        function updateStepConfig(stepId, key, value) {
+            const step = workflowState.steps.find(s => s.id === stepId);
+            if (step) {
+                if (!step.config) step.config = {};
+                step.config[key] = value;
+                console.log(`🔧 Updated config for ${step.name}:`, step.config);
+            }
+        }
+
         // Render workflow steps
         function renderWorkflowSteps() {
             const container = document.getElementById('workflowSteps');
@@ -3863,6 +4284,9 @@
             workflowState.steps.forEach((step, index) => {
                 const stepCard = document.createElement('div');
                 stepCard.className = 'workflow-step-card card bg-secondary mb-2 p-2';
+
+                const configHTML = getOperationConfigHTML(step);
+
                 stepCard.innerHTML = `
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center gap-2">
@@ -3881,6 +4305,7 @@
                             </button>
                         </div>
                     </div>
+                    ${configHTML}
                 `;
                 container.appendChild(stepCard);
             });
@@ -3980,6 +4405,379 @@
             });
         }
 
+        // ========== WORKFLOW MASK EDITOR (Session 42) ==========
+
+        // Mask editor state
+        let workflowMaskEditor = {
+            currentStepId: null,
+            currentOperation: null,
+            canvas: null,
+            ctx: null,
+            maskCanvas: null,
+            maskCtx: null,
+            isDrawing: false,
+            brushSize: 20,
+            maskOpacity: 0.5,
+            maskHistory: [],
+            sourceImage: null
+        };
+
+        // Open mask editor modal
+        async function openWorkflowMaskEditor(stepId, operation) {
+            console.log(`🎨 Opening mask editor for step ${stepId}, operation: ${operation}`);
+
+            try {
+                // Store current context
+                workflowMaskEditor.currentStepId = stepId;
+                workflowMaskEditor.currentOperation = operation;
+
+                console.log('🔍 Step 1: Context stored');
+
+                // Update modal title
+                const operationName = operation === 'erase' ? 'erase' : 'inpaint';
+                document.getElementById('maskOperationName').textContent = operationName;
+                document.getElementById('workflowMaskEditorLabel').textContent = `🎨 Edit Mask - ${operation === 'erase' ? 'Erase' : 'Inpaint'}`;
+
+                console.log('🔍 Step 2: Title updated');
+
+                // Get the image to work with (either from previous step or selected image)
+                const inputImageUrl = await getWorkflowInputImageUrl(stepId);
+                console.log('🔍 Step 3: Got input image URL:', inputImageUrl);
+
+                if (!inputImageUrl) {
+                    showWorkflowStatus('⚠️ Please select an image first', 'warning');
+                    return;
+                }
+
+                // Load image and initialize canvas
+                console.log('🔍 Step 4: Initializing canvas...');
+                await initializeWorkflowMaskCanvas(inputImageUrl, stepId);
+                console.log('🔍 Step 5: Canvas initialized!');
+
+                // Show modal (custom inline style approach)
+                const modal = document.getElementById('workflowMaskEditorModal');
+                console.log('🔍 Step 6: Got modal element:', modal);
+
+                if (!modal) {
+                    console.error('❌ Modal element not found!');
+                    return;
+                }
+
+                modal.style.display = 'block';
+                console.log('✅ Step 7: Modal displayed!');
+
+            } catch (error) {
+                console.error('❌ Error opening mask editor:', error);
+                showWorkflowStatus(`❌ Error: ${error.message}`, 'danger');
+            }
+        }
+
+        // Get input image URL for current step
+        async function getWorkflowInputImageUrl(stepId) {
+            const stepIndex = workflowState.steps.findIndex(s => s.id === stepId);
+
+            // If this is the first step, use the input image
+            if (stepIndex === 0) {
+                // inputImage is an object with {url, source, info} - return just the URL
+                return workflowState.inputImage?.url || workflowState.inputImage;
+            }
+
+            // Otherwise, we would need the result from the previous step
+            // For now, use the input image (in real execution, this would use step results)
+            return workflowState.inputImage?.url || workflowState.inputImage;
+        }
+
+        // Initialize mask canvas with image
+        async function initializeWorkflowMaskCanvas(imageUrl, stepId) {
+            console.log('🖼️ initializeWorkflowMaskCanvas called with:', imageUrl);
+
+            const canvas = document.getElementById('workflowMaskCanvas');
+            console.log('🖼️ Got canvas element:', canvas);
+
+            if (!canvas) {
+                throw new Error('Canvas element workflowMaskCanvas not found');
+            }
+
+            const ctx = canvas.getContext('2d');
+            console.log('🖼️ Got canvas context:', ctx);
+
+            // Load image
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            console.log('🖼️ Created Image object, loading:', imageUrl);
+
+            await new Promise((resolve, reject) => {
+                img.onload = () => {
+                    console.log('🖼️ Image loaded successfully!', img.width, 'x', img.height);
+
+                    // Set canvas size to match image
+                    const maxWidth = 800;
+                    const maxHeight = 600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height = (maxWidth / width) * height;
+                        width = maxWidth;
+                    }
+                    if (height > maxHeight) {
+                        width = (maxHeight / height) * width;
+                        height = maxHeight;
+                    }
+
+                    console.log('🖼️ Setting canvas size to:', width, 'x', height);
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // Draw image
+                    ctx.drawImage(img, 0, 0, width, height);
+                    console.log('🖼️ Image drawn on canvas');
+
+                    // Store reference
+                    workflowMaskEditor.canvas = canvas;
+                    workflowMaskEditor.ctx = ctx;
+                    workflowMaskEditor.sourceImage = img;
+
+                    // Initialize mask canvas (separate canvas for transparency)
+                    console.log('🖼️ Initializing mask overlay...');
+                    initializeMaskOverlay(width, height, stepId);
+
+                    // Setup drawing event listeners
+                    console.log('🖼️ Setting up drawing events...');
+                    setupMaskDrawingEvents();
+
+                    console.log('✅ Canvas fully initialized!');
+                    resolve();
+                };
+
+                img.onerror = (error) => {
+                    console.error('❌ Image failed to load:', error);
+                    reject(new Error(`Failed to load image: ${imageUrl}`));
+                };
+
+                img.src = imageUrl;
+            });
+        }
+
+        // Initialize mask overlay canvas
+        function initializeMaskOverlay(width, height, stepId) {
+            const overlayCanvas = document.getElementById('workflowMaskOverlay');
+            const overlayCtx = overlayCanvas.getContext('2d');
+
+            overlayCanvas.width = width;
+            overlayCanvas.height = height;
+
+            workflowMaskEditor.maskCanvas = overlayCanvas;
+            workflowMaskEditor.maskCtx = overlayCtx;
+
+            // Load existing mask if any
+            const step = workflowState.steps.find(s => s.id === stepId);
+            if (step && step.config.maskData) {
+                const maskImg = new Image();
+                maskImg.onload = () => {
+                    overlayCtx.drawImage(maskImg, 0, 0, width, height);
+                };
+                maskImg.src = step.config.maskData;
+            } else {
+                // Clear mask
+                overlayCtx.clearRect(0, 0, width, height);
+            }
+
+            // Save initial state
+            workflowMaskEditor.maskHistory = [overlayCtx.getImageData(0, 0, width, height)];
+        }
+
+        // Setup drawing event listeners
+        function setupMaskDrawingEvents() {
+            const canvas = workflowMaskEditor.canvas;
+
+            canvas.onmousedown = startDrawingWorkflowMask;
+            canvas.onmousemove = drawWorkflowMask;
+            canvas.onmouseup = stopDrawingWorkflowMask;
+            canvas.onmouseleave = stopDrawingWorkflowMask;
+
+            // Touch events for mobile
+            canvas.ontouchstart = (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            };
+
+            canvas.ontouchmove = (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            };
+
+            canvas.ontouchend = (e) => {
+                e.preventDefault();
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            };
+        }
+
+        // Start drawing
+        function startDrawingWorkflowMask(e) {
+            workflowMaskEditor.isDrawing = true;
+            const rect = workflowMaskEditor.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const maskCtx = workflowMaskEditor.maskCtx;
+            maskCtx.beginPath();
+            maskCtx.moveTo(x, y);
+        }
+
+        // Draw on mask
+        function drawWorkflowMask(e) {
+            if (!workflowMaskEditor.isDrawing) return;
+
+            const rect = workflowMaskEditor.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const maskCtx = workflowMaskEditor.maskCtx;
+            const brushSize = parseInt(document.getElementById('workflowBrushSize').value);
+            const drawMode = document.querySelector('input[name="workflowDrawMode"]:checked').value;
+
+            maskCtx.lineWidth = brushSize;
+            maskCtx.lineCap = 'round';
+            maskCtx.lineJoin = 'round';
+
+            if (drawMode === 'erase') {
+                // Draw red mask
+                maskCtx.globalCompositeOperation = 'source-over';
+                maskCtx.strokeStyle = `rgba(255, 0, 0, ${workflowMaskEditor.maskOpacity})`;
+            } else {
+                // Eraser mode
+                maskCtx.globalCompositeOperation = 'destination-out';
+            }
+
+            maskCtx.lineTo(x, y);
+            maskCtx.stroke();
+            maskCtx.beginPath();
+            maskCtx.moveTo(x, y);
+        }
+
+        // Stop drawing
+        function stopDrawingWorkflowMask() {
+            if (workflowMaskEditor.isDrawing) {
+                workflowMaskEditor.isDrawing = false;
+
+                // Save state for undo
+                const maskCtx = workflowMaskEditor.maskCtx;
+                const width = workflowMaskEditor.maskCanvas.width;
+                const height = workflowMaskEditor.maskCanvas.height;
+                workflowMaskEditor.maskHistory.push(maskCtx.getImageData(0, 0, width, height));
+
+                // Enable undo button
+                document.getElementById('workflowUndoBtn').disabled = workflowMaskEditor.maskHistory.length <= 1;
+            }
+        }
+
+        // Save mask to step config
+        function saveWorkflowMask() {
+            const maskCanvas = workflowMaskEditor.maskCanvas;
+
+            // Create a clean black/white mask canvas
+            const cleanMask = document.createElement('canvas');
+            cleanMask.width = maskCanvas.width;
+            cleanMask.height = maskCanvas.height;
+            const cleanCtx = cleanMask.getContext('2d');
+
+            // Draw mask as white on black background
+            cleanCtx.fillStyle = 'black';
+            cleanCtx.fillRect(0, 0, cleanMask.width, cleanMask.height);
+
+            // Convert red mask to white
+            const imageData = workflowMaskEditor.maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                // If pixel has any red (mask), make it white
+                if (data[i] > 0) {
+                    data[i] = 255;     // R
+                    data[i + 1] = 255; // G
+                    data[i + 2] = 255; // B
+                    data[i + 3] = 255; // A
+                }
+            }
+
+            cleanCtx.putImageData(imageData, 0, 0);
+
+            // Convert to base64
+            const maskData = cleanMask.toDataURL('image/png');
+
+            // Save to step config
+            const step = workflowState.steps.find(s => s.id === workflowMaskEditor.currentStepId);
+            if (step) {
+                if (!step.config) step.config = {};
+                step.config.maskData = maskData;
+                console.log(`💾 Mask saved for step ${step.name}`);
+
+                // Re-render workflow steps to show mask preview
+                renderWorkflowSteps();
+
+                showWorkflowStatus(`✅ Mask saved for ${step.name}`, 'success');
+            }
+
+            // Close modal (custom inline style approach)
+            document.getElementById('workflowMaskEditorModal').style.display = 'none';
+        }
+
+        // Cancel mask editing
+        function cancelWorkflowMask() {
+            console.log('❌ Mask editing cancelled');
+            workflowMaskEditor.currentStepId = null;
+            workflowMaskEditor.currentOperation = null;
+
+            // Hide modal (custom inline style approach)
+            document.getElementById('workflowMaskEditorModal').style.display = 'none';
+        }
+
+        // Clear mask
+        function clearWorkflowMask() {
+            const maskCtx = workflowMaskEditor.maskCtx;
+            const width = workflowMaskEditor.maskCanvas.width;
+            const height = workflowMaskEditor.maskCanvas.height;
+
+            maskCtx.clearRect(0, 0, width, height);
+
+            // Save state
+            workflowMaskEditor.maskHistory = [maskCtx.getImageData(0, 0, width, height)];
+            document.getElementById('workflowUndoBtn').disabled = true;
+
+            console.log('🗑️ Mask cleared');
+        }
+
+        // Undo last stroke
+        function undoWorkflowMask() {
+            if (workflowMaskEditor.maskHistory.length > 1) {
+                workflowMaskEditor.maskHistory.pop();
+                const previousState = workflowMaskEditor.maskHistory[workflowMaskEditor.maskHistory.length - 1];
+
+                const maskCtx = workflowMaskEditor.maskCtx;
+                maskCtx.putImageData(previousState, 0, 0);
+
+                document.getElementById('workflowUndoBtn').disabled = workflowMaskEditor.maskHistory.length <= 1;
+                console.log('↶ Undo applied');
+            }
+        }
+
+        // Update mask opacity
+        function updateWorkflowMaskOpacity(value) {
+            workflowMaskEditor.maskOpacity = value / 100;
+            document.getElementById('workflowMaskOpacityValue').textContent = value;
+        }
+
         // ========== WORKFLOW EXECUTION ==========
 
         // Execute workflow
@@ -4068,26 +4866,43 @@
         async function executeWorkflowStep(step, inputImageUrl) {
             console.log(`Executing: ${step.operation} with input: ${inputImageUrl ? 'Yes' : 'No'}`);
 
-            // This is a simplified execution - in reality, you would call the appropriate API endpoint
-            // For now, we'll simulate execution with the existing API endpoints
+            try {
+                // Call the real workflow execution API (Session 41: Real API Integration)
+                const response = await authenticatedFetch('/api/workflow/execute/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        operation: step.operation,
+                        inputImageUrl: inputImageUrl,
+                        config: step.config || {}
+                    })
+                });
 
-            // NOTE: Since we don't have a unified workflow execution endpoint,
-            // we'll return a mock success for demonstration purposes
-            // In production, you would need to:
-            // 1. Create a backend endpoint: /api/workflow/execute/
-            // 2. Pass the step configuration and input image
-            // 3. Return the result image URL
+                const data = await response.json();
 
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    // Simulate success - in production this would be a real API call
-                    resolve({
+                if (data.success) {
+                    return {
                         success: true,
-                        imageUrl: inputImageUrl || '/static/images/placeholder.png',
-                        message: `${step.name} completed`
-                    });
-                }, 1500); // Simulate processing time
-            });
+                        imageUrl: data.image_url,
+                        message: `${step.name} completed successfully`
+                    };
+                } else {
+                    return {
+                        success: false,
+                        error: data.error || 'Operation failed',
+                        message: `${step.name} failed`
+                    };
+                }
+            } catch (error) {
+                console.error(`❌ Workflow step error:`, error);
+                return {
+                    success: false,
+                    error: error.message,
+                    message: `${step.name} failed`
+                };
+            }
         }
 
         // Update workflow progress
@@ -4234,6 +5049,211 @@
         }
 
         // END FEATURE 13: COMPOSITE WORKFLOW
+
+        // ==================================================
+        // FEATURE 14: VIDEO GENERATION (Session 41)
+        // ==================================================
+
+        // Video State
+        let videoState = {
+            selectedImage: null,  // For image-to-video
+            currentTaskId: null,  // Task ID for polling
+            currentMode: 'text'   // 'text' or 'image'
+        };
+
+        // Text-to-Video Generation
+        async function generateTextToVideo() {
+            const prompt = document.getElementById('videoPrompt').value.trim();
+            const duration = parseInt(document.getElementById('videoDuration').value);
+
+            if (!prompt) {
+                alert('Please enter a video description');
+                return;
+            }
+
+            // Show processing UI
+            document.getElementById('textVideoResult').style.display = 'none';
+            document.getElementById('textVideoStatus').style.display = 'block';
+            document.getElementById('textVideoProgress').style.width = '10%';
+            document.getElementById('textVideoStatusText').textContent = 'Generating video...';
+
+            try {
+                const response = await authenticatedFetch('/api/video/text-to-video/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        duration: duration,
+                        quality: 'gen3a_turbo'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    videoState.currentTaskId = data.task_id;
+                    videoState.currentMode = 'text';
+                    pollVideoStatus(data.task_id, 'text');
+                } else {
+                    throw new Error(data.error || 'Failed to generate video');
+                }
+            } catch (error) {
+                console.error('Video generation error:', error);
+                document.getElementById('textVideoStatus').style.display = 'none';
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Image-to-Video Generation
+        async function generateImageToVideo() {
+            const motion = document.getElementById('motionPrompt').value.trim();
+            const duration = parseInt(document.getElementById('imageVideoDuration').value);
+
+            if (!videoState.selectedImage) {
+                alert('Please select an image first');
+                return;
+            }
+
+            if (!motion) {
+                alert('Please describe the camera movement');
+                return;
+            }
+
+            // Show processing UI
+            document.getElementById('imageVideoResult').style.display = 'none';
+            document.getElementById('imageVideoStatus').style.display = 'block';
+            document.getElementById('imageVideoProgress').style.width = '10%';
+            document.getElementById('imageVideoStatusText').textContent = 'Animating image...';
+
+            try {
+                const response = await authenticatedFetch('/api/video/image-to-video/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_url: videoState.selectedImage,
+                        motion_prompt: motion,
+                        duration: duration,
+                        quality: 'gen3a_turbo'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    videoState.currentTaskId = data.task_id;
+                    videoState.currentMode = 'image';
+                    pollVideoStatus(data.task_id, 'image');
+                } else {
+                    throw new Error(data.error || 'Failed to generate video');
+                }
+            } catch (error) {
+                console.error('Video generation error:', error);
+                document.getElementById('imageVideoStatus').style.display = 'none';
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Poll video generation status
+        async function pollVideoStatus(taskId, mode) {
+            const statusDiv = document.getElementById(`${mode}VideoStatus`);
+            const progressBar = document.getElementById(`${mode}VideoProgress`);
+            const statusText = document.getElementById(`${mode}VideoStatusText`);
+            const resultDiv = document.getElementById(`${mode}VideoResult`);
+            const playerDiv = document.getElementById(`${mode}VideoPlayer`);
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/video/status/${taskId}/`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        progressBar.style.width = '100%';
+                        statusDiv.style.display = 'none';
+
+                        // Show video player
+                        playerDiv.innerHTML = `
+                            <video controls class="w-100 rounded border border-cyan">
+                                <source src="${data.video_url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        `;
+                        resultDiv.style.display = 'block';
+
+                        // Store video URL for download
+                        resultDiv.dataset.videoUrl = data.video_url;
+
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        statusDiv.style.display = 'none';
+                        alert('Video generation failed: ' + (data.error || 'Unknown error'));
+
+                    } else {
+                        // Update progress
+                        const progress = data.progress || 30;
+                        progressBar.style.width = progress + '%';
+                        statusText.textContent = data.message || 'Processing...';
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    statusDiv.style.display = 'none';
+                    alert('Error checking video status: ' + error.message);
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        // Select image from gallery for video
+        function selectImageFromGalleryForVideo() {
+            // Reuse the existing gallery modal logic
+            fetch('/api/images/history/', {
+                headers: {'X-CSRFToken': getCsrfToken()}
+            })
+            .then(response => response.json())
+            .then(data => {
+                const images = data.images || [];
+                if (images.length === 0) {
+                    alert('No images in gallery. Generate some images first!');
+                    return;
+                }
+
+                // Simple prompt selection (you can make this fancier later)
+                const imageList = images.slice(0, 10).map((img, idx) =>
+                    `${idx + 1}. ${img.image_type} (${img.created_at})`
+                ).join('\n');
+
+                const selection = prompt(`Select an image (1-${Math.min(10, images.length)}):\n\n${imageList}`);
+                const index = parseInt(selection) - 1;
+
+                if (index >= 0 && index < images.length) {
+                    const selectedImg = images[index];
+                    videoState.selectedImage = selectedImg.url;
+
+                    // Show preview
+                    document.getElementById('videoImagePreviewImg').src = selectedImg.url;
+                    document.getElementById('videoImagePreview').style.display = 'block';
+                    document.getElementById('imageToVideoBtn').disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading gallery:', error);
+                alert('Failed to load gallery');
+            });
+        }
+
+        // Download video
+        function downloadVideo(mode) {
+            const resultDiv = document.getElementById(`${mode}VideoResult`);
+            const videoUrl = resultDiv.dataset.videoUrl;
+
+            if (videoUrl) {
+                const link = document.createElement('a');
+                link.href = videoUrl;
+                link.download = `video_${Date.now()}.mp4`;
+                link.click();
+            }
+        }
+
+        // END FEATURE 14: VIDEO GENERATION
     </script>
 </body>
 </html>
