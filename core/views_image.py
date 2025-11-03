@@ -1898,3 +1898,673 @@ def control_structure(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ========================================
+# WORKFLOW EXECUTION (Session 41: Real API Integration)
+# ========================================
+
+@csrf_exempt
+@api_view(['POST'])
+def execute_workflow_step(request):
+    """
+    Execute a single workflow step by routing to the appropriate operation.
+
+    Expected JSON request body:
+    {
+        "operation": "upscale_fast" | "upscale_conservative" | "upscale_creative" |
+                     "remove_background" | "recolor" | "erase" | "inpaint" |
+                     "outpaint" | "sketch" | "structure" | "generate",
+        "inputImageUrl": "url_to_image" (required for all except generate),
+        "config": {
+            // Operation-specific parameters
+            "prompt": "...",           // for generate, recolor, inpaint, outpaint, sketch, structure
+            "search_prompt": "...",    // for recolor
+            "select_prompt": "...",    // for recolor
+            "creativity": 0.5,         // for outpaint
+            "direction": "up",         // for outpaint
+            "control_strength": 0.7,   // for sketch, structure
+            // ... etc
+        }
+    }
+
+    Returns: {success: true, imageUrl: "url_to_result_image"}
+    """
+    try:
+        # Parse JSON request (DRF already parses request.body for us)
+        data = request.data
+        operation = data.get('operation', '').strip().lower()
+        input_image_url = data.get('inputImageUrl', '').strip()
+        config = data.get('config', {})
+
+        logger.info(f"🎭 Workflow step execution: {operation}")
+
+        # Validate operation
+        valid_operations = [
+            'upscale_fast', 'upscale_conservative', 'upscale_creative',
+            'remove_background', 'recolor', 'erase', 'inpaint', 'outpaint',
+            'sketch', 'structure', 'generate'
+        ]
+
+        if operation not in valid_operations:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid operation: {operation}'
+            }, status=400)
+
+        # Download input image if URL provided (all operations except generate need this)
+        image_file = None
+        if input_image_url and operation != 'generate':
+            try:
+                # Download image from URL
+                if input_image_url.startswith('http'):
+                    img_response = requests.get(input_image_url, timeout=10)
+                    img_response.raise_for_status()
+                    image_data = img_response.content
+                elif input_image_url.startswith('/media/'):
+                    # Local file - read from filesystem
+                    local_path = os.path.join(settings.MEDIA_ROOT, input_image_url.replace('/media/', ''))
+                    with open(local_path, 'rb') as f:
+                        image_data = f.read()
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Invalid image URL format'
+                    }, status=400)
+
+                # Check and resize if needed (Stability AI limits: 10MiB file size, 1,048,576 pixels)
+                # Note: Different operations have different limits, using most conservative (1024x1024)
+                from PIL import Image
+                import io
+
+                max_size_bytes = 10 * 1024 * 1024  # 10MiB
+                max_pixels = 1_048_576  # 1024x1024 (most conservative limit across all operations)
+
+                # Open image to check dimensions
+                img = Image.open(io.BytesIO(image_data))
+                width, height = img.size
+                total_pixels = width * height
+
+                logger.info(f"📏 Original image: {width}x{height} = {total_pixels:,} pixels, {len(image_data):,} bytes")
+
+                # Check if we need to resize due to pixel count
+                needs_resize = False
+                if total_pixels > max_pixels:
+                    # Calculate scale factor to fit within pixel limit
+                    scale_factor = (max_pixels / total_pixels) ** 0.5
+                    new_width = int(width * scale_factor)
+                    new_height = int(height * scale_factor)
+
+                    logger.info(f"⚠️ Too many pixels ({total_pixels:,}), resizing to {new_width}x{new_height}")
+
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    needs_resize = True
+
+                # Check if we need to resize due to file size
+                if needs_resize or len(image_data) > max_size_bytes:
+                    logger.info(f"⚠️ Optimizing image size...")
+
+                    # Save with optimization
+                    quality = 85
+                    img_bytes = io.BytesIO()
+                    img.save(img_bytes, format='PNG', optimize=True, quality=quality)
+                    image_data = img_bytes.getvalue()
+
+                    # If still too large, reduce quality iteratively
+                    while len(image_data) > max_size_bytes and quality > 60:
+                        quality -= 10
+                        img_bytes = io.BytesIO()
+                        img.save(img_bytes, format='PNG', optimize=True, quality=quality)
+                        image_data = img_bytes.getvalue()
+
+                    logger.info(f"✅ Optimized image to {len(image_data):,} bytes (quality={quality})")
+
+                # Create a file-like object
+                from django.core.files.uploadedfile import InMemoryUploadedFile
+
+                image_io = io.BytesIO(image_data)
+                image_file = InMemoryUploadedFile(
+                    image_io,
+                    field_name='image',
+                    name=f'workflow_input_{uuid.uuid4().hex[:8]}.png',
+                    content_type='image/png',
+                    size=len(image_data),
+                    charset=None
+                )
+
+                logger.info(f"✅ Downloaded input image: {len(image_data):,} bytes")
+
+            except Exception as e:
+                logger.error(f"❌ Failed to download input image: {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to download input image: {str(e)}'
+                }, status=500)
+
+        # Route to appropriate operation
+        if operation == 'upscale_fast':
+            # Call Stability AI directly
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Call API
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/upscale/fast'
+
+                # Prepare image data
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {'image': ('image.png', img_bytes.read(), 'image/png')}
+                data = {'output_format': 'png'}
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'upscaled_fast_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    # Save to history
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='upscaled_fast',
+                        prompt='Fast Upscale (4x)'
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Fast upscale failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'upscale_conservative':
+            # Call Stability AI directly
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Call API
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/upscale/conservative'
+
+                # Prepare image data
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {'image': ('image.png', img_bytes.read(), 'image/png')}
+                data = {'output_format': 'png'}
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'upscaled_conservative_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    # Save to history
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='upscaled_conservative',
+                        prompt='Conservative Upscale (4K)'
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Conservative upscale failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'upscale_creative':
+            # Call Stability AI directly
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Call API
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/upscale/creative'
+
+                # Prepare image data
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {'image': ('image.png', img_bytes.read(), 'image/png')}
+                data = {
+                    'output_format': 'png',
+                    'prompt': config.get('prompt', 'enhance quality, add details, improve clarity')
+                }
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'application/json'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    # Creative upscale is async - poll for result
+                    import time
+                    result_data = response.json()
+                    generation_id = result_data.get('id')
+
+                    result_url = f"https://api.stability.ai/v2beta/stable-image/upscale/creative/result/{generation_id}"
+
+                    for attempt in range(30):
+                        time.sleep(2)
+                        result_response = requests.get(
+                            result_url,
+                            headers={'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+                        )
+
+                        if result_response.status_code == 200:
+                            filename = f'upscaled_creative_{uuid.uuid4().hex[:8]}.png'
+                            filepath = os.path.join('generated_images', request.user.username, filename)
+                            saved_path = default_storage.save(filepath, ContentFile(result_response.content))
+                            image_url = default_storage.url(saved_path)
+
+                            # Save to history
+                            from content.models import ImageHistory
+                            ImageHistory.objects.create(
+                                user=request.user,
+                                filename=filename,
+                                file_path=saved_path,
+                                image_type='upscaled_creative',
+                                prompt=config.get('prompt', 'enhance quality')
+                            )
+
+                            return JsonResponse({'success': True, 'image_url': image_url})
+
+                    return JsonResponse({'success': False, 'error': 'Timeout waiting for creative upscale'}, status=500)
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Creative upscale failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'remove_background':
+            # Call Stability AI directly
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/edit/remove-background'
+
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {'image': ('image.png', img_bytes.read(), 'image/png')}
+                data = {'output_format': 'png'}
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'removed_bg_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='background_removed',
+                        prompt='Remove Background'
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Remove background failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'recolor':
+            # Recolor uses automatic object detection
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Validate required config
+                if not config:
+                    config = {}
+
+                search_prompt = config.get('search_prompt', '').strip()
+                prompt = config.get('prompt', '').strip()
+
+                # Provide helpful defaults if empty
+                if not search_prompt:
+                    search_prompt = 'object'
+                if not prompt:
+                    prompt = 'red color'
+
+                logger.info(f"🎨 Recolor: '{search_prompt}' → '{prompt}'")
+
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/edit/search-and-recolor'
+
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {'image': ('image.png', img_bytes.read(), 'image/png')}
+                data = {
+                    'prompt': prompt,
+                    'search_prompt': search_prompt,
+                    'select_prompt': config.get('select_prompt', search_prompt),
+                    'output_format': 'png'
+                }
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'recolored_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='recolored',
+                        prompt=f"Recolor {config.get('search_prompt', 'object')} to {config.get('prompt', 'red')}"
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Recolor failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'outpaint':
+            # Outpaint uses direction parameters
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Validate config
+                if not config:
+                    config = {}
+
+                # Check if at least one direction is selected
+                has_direction = any([
+                    config.get('left'),
+                    config.get('right'),
+                    config.get('up'),
+                    config.get('down')
+                ])
+
+                if not has_direction:
+                    # Default to extending right
+                    logger.info("⚠️ No direction specified, defaulting to right")
+                    config['right'] = True
+
+                logger.info(f"📐 Outpaint directions: L={config.get('left')} R={config.get('right')} U={config.get('up')} D={config.get('down')}")
+
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/edit/outpaint'
+
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {'image': ('image.png', img_bytes.read(), 'image/png')}
+                data = {
+                    'output_format': 'png',
+                    'creativity': config.get('creativity', 0.5)
+                }
+
+                # Add prompt if provided
+                prompt = config.get('prompt', '').strip()
+                if prompt:
+                    data['prompt'] = prompt
+
+                # Add direction parameters (in pixels, max 2000 per side)
+                if config.get('left'):
+                    data['left'] = 500
+                if config.get('right'):
+                    data['right'] = 500
+                if config.get('up'):
+                    data['up'] = 500
+                if config.get('down'):
+                    data['down'] = 500
+
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'outpainted_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='outpainted',
+                        prompt=config.get('prompt', 'Extend image')
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Outpaint failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'erase':
+            # Erase object using mask from workflow
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Check for mask data
+                mask_data = config.get('maskData', '').strip()
+                if not mask_data:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Missing mask. Please draw areas to erase.'
+                    }, status=400)
+
+                # Decode base64 mask
+                import base64
+                if 'base64,' in mask_data:
+                    mask_data = mask_data.split('base64,')[1]
+                mask_bytes = base64.b64decode(mask_data)
+
+                # Create file-like object for mask
+                mask_io = io.BytesIO(mask_bytes)
+                mask_file = InMemoryUploadedFile(
+                    mask_io,
+                    field_name='mask',
+                    name='mask.png',
+                    content_type='image/png',
+                    size=len(mask_bytes),
+                    charset=None
+                )
+
+                # Call API
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/edit/erase'
+
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {
+                    'image': ('image.png', img_bytes.read(), 'image/png'),
+                    'mask': ('mask.png', mask_file.read(), 'image/png')
+                }
+                data = {'output_format': 'png'}
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'erased_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    # Save to history
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='erased',
+                        prompt='Erase Object'
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Erase failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation == 'inpaint':
+            # Inpaint using mask and prompt from workflow
+            try:
+                from PIL import Image
+                img = Image.open(image_file)
+
+                # Check for mask data
+                mask_data = config.get('maskData', '').strip()
+                if not mask_data:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Missing mask. Please draw areas to inpaint.'
+                    }, status=400)
+
+                # Check for prompt
+                prompt = config.get('prompt', '').strip()
+                if not prompt:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Missing prompt. What should we fill the area with?'
+                    }, status=400)
+
+                # Decode base64 mask
+                import base64
+                if 'base64,' in mask_data:
+                    mask_data = mask_data.split('base64,')[1]
+                mask_bytes = base64.b64decode(mask_data)
+
+                # Create file-like object for mask
+                mask_io = io.BytesIO(mask_bytes)
+                mask_file = InMemoryUploadedFile(
+                    mask_io,
+                    field_name='mask',
+                    name='mask.png',
+                    content_type='image/png',
+                    size=len(mask_bytes),
+                    charset=None
+                )
+
+                # Call API
+                stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+                url = 'https://api.stability.ai/v2beta/stable-image/edit/inpaint'
+
+                import io
+                img_bytes = io.BytesIO()
+                img.save(img_bytes, format='PNG')
+                img_bytes.seek(0)
+
+                files = {
+                    'image': ('image.png', img_bytes.read(), 'image/png'),
+                    'mask': ('mask.png', mask_file.read(), 'image/png')
+                }
+                data = {
+                    'prompt': prompt,
+                    'output_format': 'png'
+                }
+                headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
+
+                response = requests.post(url, headers=headers, files=files, data=data)
+
+                if response.status_code == 200:
+                    filename = f'inpainted_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(response.content))
+                    image_url = default_storage.url(saved_path)
+
+                    # Save to history
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='inpainted',
+                        prompt=prompt
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({'success': False, 'error': response.text}, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Inpaint failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation in ['sketch', 'structure', 'generate']:
+            # These operations need separate implementations
+            return JsonResponse({
+                'success': False,
+                'error': f'Operation "{operation}" requires different implementation. Please use the dedicated tab.'
+            }, status=400)
+
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Operation not implemented: {operation}'
+            }, status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON in request body'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ Workflow step execution error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
