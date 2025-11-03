@@ -261,12 +261,13 @@ from core.views_content import (
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
-    video_gallery, save_video_to_gallery, test_runway_connection
+    video_gallery, save_video_to_gallery, test_runway_connection,
+    get_video_history, toggle_video_favorite, delete_video
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
-    control_sketch, control_structure
+    control_sketch, control_structure, execute_workflow_step
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -778,6 +779,10 @@ urlpatterns = [
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
     path('api/v1/video/save/', save_video_to_gallery, name='save-video'),
     path('api/v1/video/test-runway/', test_runway_connection, name='test-runway'),
+    # Video History endpoints (Session 44: Video Gallery)
+    path('api/v1/video/history/', get_video_history, name='video-history'),
+    path('api/v1/video/history/<int:video_id>/favorite/', toggle_video_favorite, name='toggle-video-favorite'),
+    path('api/v1/video/history/<int:video_id>/', delete_video, name='delete-video'),
 
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
@@ -803,6 +808,9 @@ urlpatterns = [
     # Image-to-Image Control (Session 38: Feature 11)
     path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),
     path('api/stability/control/structure/', control_structure, name='stability-control-structure'),
+
+    # Workflow Execution (Session 41: Real API Integration)
+    path('api/workflow/execute/', execute_workflow_step, name='workflow-execute-step'),
 
     path('api/v1/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),

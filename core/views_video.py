@@ -16,8 +16,9 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from content.models import ContentGeneration
+from content.models import ContentGeneration, VideoHistory, ImageHistory
 from content.video_provider import runway_provider
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,12 @@ def text_to_video(request):
             }, status=400)
         
         # Extract parameters with defaults
-        duration = int(data.get('duration', 5))
-        quality = data.get('quality', 'gen3a_turbo')
+        duration = int(data.get('duration', 4))  # Changed default to 4 for veo3.1 models
+        quality = data.get('quality', 'veo3.1_fast')  # Updated default model
         style = data.get('style', 'realistic')
         enhance_prompt = data.get('enhance_prompt', True)
         enhancement_level = data.get('enhancement_level', 'advanced')
+        ratio = data.get('ratio', '1920:1080')  # Default landscape ratio
         
         # Additional options
         kwargs = {}
@@ -76,6 +78,7 @@ def text_to_video(request):
             style=style,
             enhance_prompt=enhance_prompt,
             enhancement_level=enhancement_level,
+            ratio=ratio,  # Pass ratio parameter
             **kwargs
         )
         
@@ -139,7 +142,11 @@ def image_to_video(request):
         # Validate required fields
         image_url = data.get('image_url', '').strip()
         image_id = data.get('image_id')
-        
+
+        logger.info(f"🎬 [IMAGE-TO-VIDEO] Received request")
+        logger.info(f"   image_url: {image_url}")
+        logger.info(f"   image_id: {image_id}")
+
         if not image_url and not image_id:
             return JsonResponse({
                 'success': False,
@@ -170,9 +177,10 @@ def image_to_video(request):
         
         # Extract parameters with defaults
         duration = int(data.get('duration', 5))
-        quality = data.get('quality', 'gen3a_turbo')
+        quality = data.get('quality', 'gen4_turbo')  # Updated default model for image-to-video
         enhance_prompt = data.get('enhance_prompt', True)
         enhancement_level = data.get('enhancement_level', 'advanced')
+        ratio = data.get('ratio', '1280:720')  # Default ratio for gen4_turbo
         
         # Additional options
         kwargs = {}
@@ -187,14 +195,24 @@ def image_to_video(request):
             kwargs['voiceover_style'] = data.get('voiceover_style', 'narrative')
         
         # Generate video using RunwayML
+        logger.info(f"🎬 [IMAGE-TO-VIDEO] Calling runway_provider.image_to_video()")
+        logger.info(f"   image_url: {image_url}")
+        logger.info(f"   motion_prompt: {motion_prompt}")
+        logger.info(f"   duration: {duration}")
+        logger.info(f"   quality: {quality}")
+        logger.info(f"   ratio: {ratio}")
+
         result = runway_provider.image_to_video(
             image_url=image_url,
             motion_prompt=motion_prompt,
             duration=duration,
             quality=quality,
             enhance_prompt=enhance_prompt,
+            ratio=ratio,  # Pass ratio parameter
             **kwargs
         )
+
+        logger.info(f"🎬 [IMAGE-TO-VIDEO] runway_provider result: success={result.success}, error={result.error_message}")
         
         if not result.success:
             return JsonResponse({
@@ -273,6 +291,47 @@ def check_video_status(request, task_id):
                 metadata['actual_duration'] = result.duration
                 content.metadata = metadata
                 content.save()
+
+                # Save to VideoHistory for gallery
+                video_type = metadata.get('type', 'text_to_video')
+                model_used = metadata.get('quality', 'veo3.1_fast')
+
+                # Try to find source image if image-to-video
+                source_image = None
+                if video_type == 'image_to_video' and metadata.get('image_id'):
+                    try:
+                        source_image = ImageHistory.objects.get(id=metadata['image_id'])
+                    except ImageHistory.DoesNotExist:
+                        pass
+
+                # Check if VideoHistory already exists for this task
+                video_history, created = VideoHistory.objects.get_or_create(
+                    user=request.user,
+                    video_id=task_id,
+                    defaults={
+                        'video_url': result.video_url,
+                        'thumbnail_url': result.thumbnail_url or '',
+                        'video_type': video_type,
+                        'prompt': content.prompt,
+                        'parameters': metadata,
+                        'model_used': model_used,
+                        'duration': result.duration,
+                        'ratio': metadata.get('ratio', ''),
+                        'status': 'completed',
+                        'source_image': source_image,
+                        'generation_completed': timezone.now()
+                    }
+                )
+
+                # Update if already exists
+                if not created:
+                    video_history.video_url = result.video_url
+                    video_history.thumbnail_url = result.thumbnail_url or ''
+                    video_history.status = 'completed'
+                    video_history.generation_completed = timezone.now()
+                    video_history.save()
+
+                logger.info(f"✅ Video saved to gallery: {video_history.id}")
             elif result.status == 'failed':
                 content.status = 'failed'
                 metadata = content.metadata or {}
@@ -422,6 +481,143 @@ def video_gallery(request):
         
     except Exception as e:
         logger.error(f"Video gallery error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_video_history(request):
+    """
+    Get user's video generation history from VideoHistory model.
+    Supports filtering, sorting, and pagination.
+    """
+    try:
+        # Get query parameters
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+        video_type = request.GET.get('type')  # text_to_video or image_to_video
+        model = request.GET.get('model')
+        status = request.GET.get('status', 'completed')  # Default to completed only
+        is_favorite = request.GET.get('favorite')
+        sort_by = request.GET.get('sort', '-created_at')  # Default newest first
+
+        # Build query
+        queryset = VideoHistory.objects.filter(user=request.user)
+
+        # Apply filters
+        if video_type:
+            queryset = queryset.filter(video_type=video_type)
+        if model:
+            queryset = queryset.filter(model_used=model)
+        if status:
+            queryset = queryset.filter(status=status)
+        if is_favorite:
+            queryset = queryset.filter(is_favorite=(is_favorite.lower() == 'true'))
+
+        # Apply sorting
+        queryset = queryset.order_by(sort_by)
+
+        # Get total count
+        total_count = queryset.count()
+
+        # Apply pagination
+        videos = queryset[offset:offset + limit]
+
+        # Format response
+        video_list = []
+        for video in videos:
+            video_list.append({
+                'id': video.id,
+                'video_id': video.video_id,
+                'video_url': video.video_url,
+                'thumbnail_url': video.thumbnail_url,
+                'video_type': video.video_type,
+                'prompt': video.prompt,
+                'model_used': video.model_used,
+                'duration': video.duration,
+                'ratio': video.ratio,
+                'status': video.status,
+                'is_favorite': video.is_favorite,
+                'view_count': video.view_count,
+                'download_count': video.download_count,
+                'created_at': video.created_at.isoformat(),
+                'generation_time_seconds': video.generation_time_seconds,
+                'source_image_id': video.source_image.id if video.source_image else None,
+                'tags': video.tags,
+                'user_notes': video.user_notes,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'videos': video_list,
+            'total_count': total_count,
+            'has_more': (offset + limit) < total_count,
+            'offset': offset,
+            'limit': limit
+        })
+
+    except Exception as e:
+        logger.error(f"Get video history error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_video_favorite(request, video_id):
+    """
+    Toggle favorite status for a video.
+    """
+    try:
+        video = VideoHistory.objects.get(id=video_id, user=request.user)
+        video.is_favorite = not video.is_favorite
+        video.save()
+
+        return JsonResponse({
+            'success': True,
+            'is_favorite': video.is_favorite
+        })
+
+    except VideoHistory.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Video not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Toggle favorite error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_video(request, video_id):
+    """
+    Delete a video from history.
+    """
+    try:
+        video = VideoHistory.objects.get(id=video_id, user=request.user)
+        video.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Video deleted successfully'
+        })
+
+    except VideoHistory.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Video not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Delete video error: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)
