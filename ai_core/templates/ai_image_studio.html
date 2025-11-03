@@ -653,7 +653,15 @@
                     <div class="col-md-6">
                         <div class="card p-4">
                             <h5 class="mb-3">📤 Upload Image</h5>
-                            <input type="file" class="form-control mb-3" id="editImageInput" accept="image/*">
+                            <div class="d-flex gap-2 mb-3">
+                                <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectEditImageFromGallery()">
+                                    📊 Select from Gallery
+                                </button>
+                                <button type="button" class="btn btn-outline-cyan btn-sm" onclick="document.getElementById('editImageInput').click()">
+                                    📤 Upload New
+                                </button>
+                            </div>
+                            <input type="file" class="form-control mb-3" id="editImageInput" accept="image/*" style="display: none;">
                             <div id="editImagePreview" class="text-center" style="display: none;">
                                 <img id="editImageDisplay" src="" alt="Preview" style="max-width: 100%; max-height: 450px; border-radius: 10px;">
                                 <p class="text-muted mt-2" id="editImageName"></p>
@@ -1385,6 +1393,30 @@
             <!-- END COMPARE TAB -->
 
             <!-- CUSTOM WORKFLOW GALLERY MODAL (Simple, non-Bootstrap) -->
+            <!-- CUSTOM EDIT GALLERY MODAL -->
+            <div id="editGalleryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
+                <div style="max-width: 1400px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #00d9ff; padding-bottom: 20px;">
+                        <h3 style="color: #00d9ff; margin: 0; font-size: 24px;">🖼️ Select Image to Edit</h3>
+                        <button onclick="closeEditGalleryModal()" style="background: transparent; border: 2px solid #00d9ff; color: #00d9ff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">✕ Close</button>
+                    </div>
+
+                    <!-- Gallery Grid -->
+                    <div id="editGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                        <!-- Images will be loaded here -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="editGalleryEmpty" style="display: none; text-align: center; padding: 60px 20px; color: #888;">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">No images found</h4>
+                        <p style="font-size: 16px;">Generate some images first!</p>
+                    </div>
+                </div>
+            </div>
+            <!-- END CUSTOM EDIT GALLERY MODAL -->
+
+            <!-- CUSTOM WORKFLOW GALLERY MODAL -->
             <div id="workflowGalleryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
                 <div style="max-width: 1400px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
                     <!-- Header -->
@@ -3602,6 +3634,140 @@
             showWorkflowStatus('✅ Input image selected', 'success');
 
             console.log('✅ [WORKFLOW] Input image set successfully!');
+        }
+
+        // ========== EDIT IMAGE GALLERY SELECTION ==========
+
+        // Gallery selection for edit functionality
+        function selectEditImageFromGallery() {
+            console.log('🔍 [EDIT] Opening custom gallery modal');
+
+            const modal = document.getElementById('editGalleryModal');
+            if (!modal) {
+                console.error('❌ [EDIT] Custom gallery modal not found!');
+                return;
+            }
+
+            // Simply show the modal
+            modal.style.display = 'block';
+            console.log('✅ [EDIT] Custom modal displayed');
+
+            // Load gallery images
+            fetch('/api/images/history/', {
+                headers: {'X-CSRFToken': getCsrfToken()}
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 [EDIT] API response:', data);
+
+                const grid = document.getElementById('editGalleryGrid');
+                const emptyState = document.getElementById('editGalleryEmpty');
+
+                if (data.success && data.images && data.images.length > 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'none';
+
+                    console.log('🖼️ [EDIT] Rendering', data.images.length, 'images...');
+
+                    data.images.forEach((img) => {
+                        if (!img.url) return;
+
+                        const imageCard = document.createElement('div');
+                        imageCard.style.cssText = 'position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid #333; transition: all 0.2s;';
+                        imageCard.onmouseover = () => imageCard.style.borderColor = '#00d9ff';
+                        imageCard.onmouseout = () => imageCard.style.borderColor = '#333';
+
+                        imageCard.innerHTML = `
+                            <img src="${img.url}" style="width: 100%; height: 200px; object-fit: cover; display: block;" alt="Gallery Image">
+                            <div style="padding: 8px; background: #222; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #888;">${img.image_type || 'generated'}</p>
+                            </div>
+                        `;
+
+                        imageCard.onclick = () => {
+                            console.log('👆 [EDIT] Image selected:', img.url);
+                            setEditImageFromGallery(img.url, img.image_type || 'gallery');
+                            closeEditGalleryModal();
+                        };
+
+                        grid.appendChild(imageCard);
+                    });
+
+                    console.log('✅ [EDIT] All images rendered!');
+                } else {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('💥 [EDIT] Error loading gallery:', error);
+            });
+        }
+
+        // Close custom edit gallery modal
+        function closeEditGalleryModal() {
+            const modal = document.getElementById('editGalleryModal');
+            if (modal) {
+                modal.style.display = 'none';
+                console.log('🚪 [EDIT] Custom modal closed');
+            }
+        }
+
+        // Set edit image from gallery
+        async function setEditImageFromGallery(url, imageName) {
+            console.log('🖼️ [EDIT] Setting image from gallery:', url);
+
+            try {
+                // Fetch the image as a blob
+                const response = await fetch(url);
+                const blob = await response.blob();
+
+                // Create a File object from the blob
+                const file = new File([blob], imageName + '.png', { type: blob.type });
+
+                // Set global variables
+                uploadedImageFile = file;
+
+                // Create FileReader for base64
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    uploadedImageBase64 = event.target.result;
+
+                    // Update main preview
+                    document.getElementById('editImageDisplay').src = event.target.result;
+                    document.getElementById('editImageName').textContent = imageName;
+                    document.getElementById('editImagePreview').style.display = 'block';
+
+                    // Update Outpaint preview
+                    document.getElementById('outpaintDisplay').src = event.target.result;
+                    document.getElementById('outpaintPreview').style.display = 'block';
+                    document.getElementById('outpaintPlaceholder').style.display = 'none';
+
+                    // Update Recolor canvas
+                    const recolorDisplay = document.getElementById('recolorDisplay');
+                    if (recolorDisplay) {
+                        recolorDisplay.src = event.target.result;
+                        document.getElementById('recolorPreview').style.display = 'block';
+                        document.getElementById('recolorPlaceholder').style.display = 'none';
+                    }
+
+                    // Enable editing tools
+                    document.getElementById('editingToolsDisabled').style.display = 'none';
+                    document.getElementById('editingToolsEnabled').style.display = 'block';
+
+                    // Initialize canvases
+                    setTimeout(() => {
+                        initializeCanvas('erase');
+                        initializeCanvas('inpaint');
+                    }, 100);
+
+                    console.log('✅ [EDIT] Image loaded successfully from gallery!');
+                };
+                reader.readAsDataURL(file);
+
+            } catch (error) {
+                console.error('❌ [EDIT] Error loading image from gallery:', error);
+            }
         }
 
         // ========== WORKFLOW STEPS MANAGEMENT ==========
