@@ -950,10 +950,28 @@
                                     </div>
                                 </div>
 
+                                <!-- Example Prompts Helper -->
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">💡 Example Prompts</label>
+                                    <select class="form-select form-select-sm bg-dark text-light border-secondary" id="sketchExamples">
+                                        <option value="">-- Choose an example to get started --</option>
+                                        <option value="A realistic portrait of a person with detailed facial features, professional photography">Portrait - Realistic</option>
+                                        <option value="A majestic dragon with detailed scales, wings spread, fantasy art style">Fantasy Creature - Dragon</option>
+                                        <option value="A cozy cottage in a forest, detailed architecture, warm lighting, concept art">Architecture - Cottage</option>
+                                        <option value="A futuristic city skyline with flying cars, neon lights, cyberpunk style">Sci-Fi City</option>
+                                        <option value="A serene landscape with mountains and a lake, detailed nature, golden hour lighting">Landscape - Nature</option>
+                                        <option value="A vintage car from the 1950s, detailed chrome and curves, classic photography">Vehicle - Vintage Car</option>
+                                        <option value="A cute cartoon character with big eyes, colorful, children's book illustration">Character - Cartoon</option>
+                                        <option value="A detailed mechanical robot with gears and circuits, steampunk aesthetic">Robot - Steampunk</option>
+                                    </select>
+                                    <small class="text-muted">Select an example or write your own below</small>
+                                </div>
+
                                 <!-- Prompt -->
                                 <div class="mb-3">
                                     <label for="sketchPrompt" class="form-label text-muted">Prompt</label>
                                     <textarea class="form-control bg-dark text-light border-secondary" id="sketchPrompt" rows="2" placeholder="Describe what you want the sketch to become..."></textarea>
+                                    <small class="text-muted">💡 Tip: Be specific! Include details like lighting, style, mood, and quality descriptors.</small>
                                 </div>
 
                                 <!-- Control Strength -->
@@ -1002,11 +1020,32 @@
                                     <img id="structurePreviewImg" style="width: 100%; max-width: 500px; border-radius: 4px; display: block; margin: 0 auto;">
                                 </div>
 
+                                <!-- Style Templates Helper -->
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">🎨 Style Templates</label>
+                                    <select class="form-select form-select-sm bg-dark text-light border-secondary" id="structureExamples">
+                                        <option value="">-- Choose a style transformation --</option>
+                                        <option value="anime style, vibrant colors, detailed line art, Studio Ghibli aesthetic">Anime / Studio Ghibli</option>
+                                        <option value="oil painting, impressionist style, visible brush strokes, artistic">Oil Painting - Impressionist</option>
+                                        <option value="watercolor painting, soft colors, paper texture, artistic illustration">Watercolor Painting</option>
+                                        <option value="cyberpunk style, neon lights, dark atmosphere, futuristic city">Cyberpunk / Neon</option>
+                                        <option value="pencil sketch, detailed line work, hand-drawn illustration, black and white">Pencil Sketch</option>
+                                        <option value="pixel art, 8-bit style, retro gaming aesthetic, detailed pixels">Pixel Art / Retro</option>
+                                        <option value="comic book style, bold lines, halftone dots, pop art aesthetic">Comic Book / Pop Art</option>
+                                        <option value="stained glass, colorful, mosaic style, church window aesthetic">Stained Glass</option>
+                                        <option value="baroque painting, dramatic lighting, classical art style, museum quality">Baroque / Classical Art</option>
+                                        <option value="low poly 3D, geometric shapes, minimalist, modern digital art">Low Poly 3D</option>
+                                        <option value="vaporwave aesthetic, pastel colors, retro 80s/90s style, dreamy">Vaporwave / Synthwave</option>
+                                        <option value="steampunk style, Victorian era, brass and gears, industrial">Steampunk</option>
+                                    </select>
+                                    <small class="text-muted">Select a style or write your own below</small>
+                                </div>
+
                                 <!-- Prompt -->
                                 <div class="mb-3">
                                     <label for="structurePrompt" class="form-label text-muted">Transformation Prompt</label>
                                     <textarea class="form-control bg-dark text-light border-secondary" id="structurePrompt" rows="2" placeholder="E.g., 'anime style', 'watercolor painting', 'cyberpunk city'..."></textarea>
-                                    <small class="text-muted">Describe the style or transformation you want</small>
+                                    <small class="text-muted">💡 Tip: Describe the overall style, mood, and artistic direction. The structure of your image will be preserved!</small>
                                 </div>
 
                                 <!-- Control Strength -->
@@ -2563,6 +2602,23 @@
         // Structure strength slider update
         document.getElementById('structureStrength').addEventListener('input', function() {
             document.getElementById('structureStrengthValue').textContent = this.value;
+        });
+
+        // EXAMPLE PROMPTS - Populate prompt fields when user selects an example
+        document.getElementById('sketchExamples').addEventListener('change', function() {
+            if (this.value) {
+                document.getElementById('sketchPrompt').value = this.value;
+                // Reset dropdown to placeholder
+                this.selectedIndex = 0;
+            }
+        });
+
+        document.getElementById('structureExamples').addEventListener('change', function() {
+            if (this.value) {
+                document.getElementById('structurePrompt').value = this.value;
+                // Reset dropdown to placeholder
+                this.selectedIndex = 0;
+            }
         });
 
         // STRUCTURE IMAGE UPLOAD PREVIEW
