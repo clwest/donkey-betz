@@ -1755,8 +1755,9 @@
                                         <div class="mb-3">
                                             <label class="form-label">Duration</label>
                                             <select id="videoDuration" class="form-select">
-                                                <option value="5">5 seconds</option>
-                                                <option value="10">10 seconds</option>
+                                                <option value="4" selected>4 seconds (Fast)</option>
+                                                <option value="6">6 seconds</option>
+                                                <option value="8">8 seconds (Long)</option>
                                             </select>
                                         </div>
 
@@ -5078,13 +5079,14 @@
             document.getElementById('textVideoStatusText').textContent = 'Generating video...';
 
             try {
-                const response = await authenticatedFetch('/api/video/text-to-video/', {
+                const response = await authenticatedFetch('/api/v1/video/text-to-video/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt: prompt,
                         duration: duration,
-                        quality: 'gen3a_turbo'
+                        quality: 'veo3.1_fast',
+                        ratio: '1920:1080'
                     })
                 });
 
@@ -5126,14 +5128,15 @@
             document.getElementById('imageVideoStatusText').textContent = 'Animating image...';
 
             try {
-                const response = await authenticatedFetch('/api/video/image-to-video/', {
+                const response = await authenticatedFetch('/api/v1/video/image-to-video/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         image_url: videoState.selectedImage,
                         motion_prompt: motion,
                         duration: duration,
-                        quality: 'gen3a_turbo'
+                        quality: 'gen4_turbo',
+                        ratio: '1280:720'
                     })
                 });
 
@@ -5163,7 +5166,7 @@
 
             const pollInterval = setInterval(async () => {
                 try {
-                    const response = await authenticatedFetch(`/api/video/status/${taskId}/`);
+                    const response = await authenticatedFetch(`/api/v1/video/status/${taskId}/`);
                     const data = await response.json();
 
                     if (data.status === 'completed') {
