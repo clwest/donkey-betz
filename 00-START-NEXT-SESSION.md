@@ -16,6 +16,7 @@
 - ✅ **Templates:** Save and load workflow templates
 - ✅ **Sequential Execution:** Watch progress for each step
 - ✅ **Custom Modal:** Solved browser caching issues!
+- ✅ **Upload & Edit Enhancement:** Gallery selection added (Nov 3, post-Session 40)
 
 **Access:** http://localhost:8000/ai-studio/
 
