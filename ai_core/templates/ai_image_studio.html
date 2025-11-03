@@ -2468,26 +2468,26 @@
         // SKETCH CANVAS INITIALIZATION
         const sketchCanvas = document.getElementById('sketchCanvas');
         const sketchCtx = sketchCanvas.getContext('2d');
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
+        let sketchIsDrawing = false;
+        let sketchLastX = 0;
+        let sketchLastY = 0;
 
         // Initialize canvas with white background
         sketchCtx.fillStyle = 'white';
         sketchCtx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
 
         // Drawing functions
-        function startDrawing(e) {
-            isDrawing = true;
+        function startSketchDrawing(e) {
+            sketchIsDrawing = true;
             const rect = sketchCanvas.getBoundingClientRect();
             const scaleX = sketchCanvas.width / rect.width;
             const scaleY = sketchCanvas.height / rect.height;
-            lastX = (e.clientX - rect.left) * scaleX;
-            lastY = (e.clientY - rect.top) * scaleY;
+            sketchLastX = (e.clientX - rect.left) * scaleX;
+            sketchLastY = (e.clientY - rect.top) * scaleY;
         }
 
-        function draw(e) {
-            if (!isDrawing) return;
+        function drawSketch(e) {
+            if (!sketchIsDrawing) return;
 
             const rect = sketchCanvas.getBoundingClientRect();
             const scaleX = sketchCanvas.width / rect.width;
@@ -2496,26 +2496,26 @@
             const currentY = (e.clientY - rect.top) * scaleY;
 
             sketchCtx.beginPath();
-            sketchCtx.moveTo(lastX, lastY);
+            sketchCtx.moveTo(sketchLastX, sketchLastY);
             sketchCtx.lineTo(currentX, currentY);
             sketchCtx.strokeStyle = document.getElementById('sketchColor').value;
             sketchCtx.lineWidth = document.getElementById('sketchBrushSize').value;
             sketchCtx.lineCap = 'round';
             sketchCtx.stroke();
 
-            lastX = currentX;
-            lastY = currentY;
+            sketchLastX = currentX;
+            sketchLastY = currentY;
         }
 
-        function stopDrawing() {
-            isDrawing = false;
+        function stopSketchDrawing() {
+            sketchIsDrawing = false;
         }
 
         // Canvas event listeners
-        sketchCanvas.addEventListener('mousedown', startDrawing);
-        sketchCanvas.addEventListener('mousemove', draw);
-        sketchCanvas.addEventListener('mouseup', stopDrawing);
-        sketchCanvas.addEventListener('mouseleave', stopDrawing);
+        sketchCanvas.addEventListener('mousedown', startSketchDrawing);
+        sketchCanvas.addEventListener('mousemove', drawSketch);
+        sketchCanvas.addEventListener('mouseup', stopSketchDrawing);
+        sketchCanvas.addEventListener('mouseleave', stopSketchDrawing);
 
         // Touch support for mobile
         sketchCanvas.addEventListener('touchstart', (e) => {
