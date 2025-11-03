@@ -256,14 +256,16 @@ from core.views_content import (
     generate_video_script, content_templates, import_file_to_memory, supported_file_formats,
     gallery_videos, gallery_list, content_library, podcasts_list,
     # Phase 4: Frontend Reality Fix
-    generate_email, generate_podcast_script
+    generate_email, generate_podcast_script,
+    ai_image_studio  # Session 32: New AI Image Studio interface
 )
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
     video_gallery, save_video_to_gallery, test_runway_connection
 )
 from core.views_image import (
-    gallery_generate, test_image_generation
+    gallery_generate, test_image_generation, optimize_image_prompt,
+    image_history, toggle_favorite, delete_image
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -351,6 +353,7 @@ urlpatterns = [
     # Main dashboard pages
     path('ai-nexus/', login_required(lambda request: render(request, 'ai_nexus.html')), name='ai-nexus'),
     path('content-studio/', login_required(lambda request: render(request, 'content_studio.html')), name='content-studio'),
+    path('ai-studio/', ai_image_studio, name='ai-image-studio'),  # Session 32: New AI Image Studio
     path('ai-production-hub/', login_required(lambda request: render(request, 'ai_production_hub.html')), name='ai-production-hub'),
     path('command/', login_required(lambda request: render(request, 'command_center.html')), name='command-center'),
     path('diagnostics/', login_required(lambda request: render(request, 'diagnostic_dashboard.html')), name='diagnostics'),
@@ -777,7 +780,22 @@ urlpatterns = [
 
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
+    path('api/v1/gallery/optimize-prompt/', optimize_image_prompt, name='optimize-image-prompt'),  # Session 32: Intelligent prompting
     path('api/v1/gallery/test/', test_image_generation, name='test-image-generation'),
+
+    # Image Editing endpoints (Session 35: Image Editing UI)
+    path('api/stability/remove-background/', lambda r: __import__('core.views_image', fromlist=['remove_background']).remove_background(r), name='stability-remove-background'),
+    path('api/stability/recolor/', lambda r: __import__('core.views_image', fromlist=['recolor_image']).recolor_image(r), name='stability-recolor'),
+    path('api/stability/upscale/', lambda r: __import__('core.views_image', fromlist=['upscale_image']).upscale_image(r), name='stability-upscale'),
+    path('api/stability/erase/', lambda r: __import__('core.views_image', fromlist=['erase_object']).erase_object(r), name='stability-erase'),
+    path('api/stability/inpaint/', lambda r: __import__('core.views_image', fromlist=['inpaint_image']).inpaint_image(r), name='stability-inpaint'),
+    path('api/stability/outpaint/', lambda r: __import__('core.views_image', fromlist=['outpaint_image']).outpaint_image(r), name='stability-outpaint'),
+
+    # Image History / Gallery endpoints (Session 36: Feature 9)
+    path('api/images/history/', image_history, name='image-history'),
+    path('api/images/<uuid:image_id>/favorite/', toggle_favorite, name='toggle-favorite'),
+    path('api/images/<uuid:image_id>/delete/', delete_image, name='delete-image'),
+
     path('api/v1/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),
     path('api/v1/gallery/list/', gallery_list, name='gallery-list'),
