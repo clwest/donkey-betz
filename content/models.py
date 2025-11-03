@@ -1576,3 +1576,186 @@ class Feedback(UnifiedBaseModel):
     def is_neutral(self):
         """Check if feedback is neutral (3 stars)"""
         return self.overall_rating == 3
+
+class ImageHistory(UnifiedBaseModel):
+    """
+    Track all AI-generated and edited images for user gallery
+    """
+    
+    # User identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='image_history',
+        help_text="User who created/edited this image"
+    )
+    
+    # Image identification
+    filename = models.CharField(
+        max_length=255,
+        help_text="Stored filename"
+    )
+    
+    file_path = models.CharField(
+        max_length=500,
+        help_text="Full path to image file in storage"
+    )
+    
+    thumbnail = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to thumbnail version"
+    )
+    
+    # Image classification
+    image_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('generated', 'AI Generated'),
+            ('erased', 'Object Erased'),
+            ('inpainted', 'Inpainted/Smart Fill'),
+            ('outpainted', 'Outpainted/Extended'),
+            ('upscaled_fast', 'Upscaled (Fast 4x)'),
+            ('upscaled_conservative', 'Upscaled (Conservative 4K)'),
+            ('upscaled_creative', 'Upscaled (Creative)'),
+            ('recolored', 'Recolored'),
+            ('background_removed', 'Background Removed'),
+            ('sketch_control', 'Sketch to Image'),
+            ('structure_control', 'Structure Transfer'),
+        ],
+        help_text="Type of operation that created this image"
+    )
+    
+    # Generation/editing parameters
+    prompt = models.TextField(
+        blank=True,
+        help_text="Prompt used for generation or editing"
+    )
+    
+    parameters = models.JSONField(
+        default=dict,
+        help_text="Complete parameters used (style, model, settings, etc.)"
+    )
+    
+    # Model information
+    model_used = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=[
+            ('core', 'Stability Core'),
+            ('sdxl', 'Stability SDXL'),
+            ('sd3', 'Stability SD3'),
+            ('ultra', 'Stability Ultra'),
+        ],
+        help_text="AI model used for generation"
+    )
+    
+    style = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Style preset used (e.g., Pixar, Photographic, etc.)"
+    )
+    
+    # Image metadata
+    image_width = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Image width in pixels"
+    )
+    
+    image_height = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Image height in pixels"
+    )
+    
+    file_size_bytes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="File size in bytes"
+    )
+    
+    # Lineage tracking for composite workflows
+    parent_image = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='child_images',
+        help_text="Parent image if this is an edit of another image"
+    )
+    
+    # Usage tracking
+    download_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times downloaded"
+    )
+    
+    view_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times viewed"
+    )
+    
+    is_favorite = models.BooleanField(
+        default=False,
+        help_text="User marked as favorite"
+    )
+    
+    # User notes
+    user_notes = models.TextField(
+        blank=True,
+        help_text="User's personal notes about this image"
+    )
+    
+    tags = models.JSONField(
+        default=list,
+        help_text="User-defined tags for organization"
+    )
+    
+    class Meta:
+        verbose_name = "Image History"
+        verbose_name_plural = "Image History"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['image_type']),
+            models.Index(fields=['model_used']),
+            models.Index(fields=['style']),
+            models.Index(fields=['is_favorite']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.image_type} - {self.filename}"
+    
+    def get_full_url(self):
+        """Get full URL for the image"""
+        return default_storage.url(self.file_path)
+    
+    def get_thumbnail_url(self):
+        """Get thumbnail URL or fallback to full image"""
+        if self.thumbnail:
+            return default_storage.url(self.thumbnail)
+        return self.get_full_url()
+    
+    def increment_view_count(self):
+        """Increment view counter"""
+        self.view_count += 1
+        self.save(update_fields=['view_count'])
+    
+    def increment_download_count(self):
+        """Increment download counter"""
+        self.download_count += 1
+        self.save(update_fields=['download_count'])
+    
+    def get_lineage(self):
+        """Get full lineage of edits (parent chain)"""
+        lineage = []
+        current = self.parent_image
+        while current:
+            lineage.append(current)
+            current = current.parent_image
+        return lineage
+    
+    def get_descendants(self):
+        """Get all child images (edits made from this image)"""
+        return ImageHistory.objects.filter(parent_image=self)

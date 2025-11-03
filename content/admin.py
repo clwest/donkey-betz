@@ -11,7 +11,8 @@ from django.utils.safestring import mark_safe
 
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
-    ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics
+    ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
+    ImageHistory
 )
 
 
@@ -274,3 +275,109 @@ class ContentAnalyticsAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         # Analytics are automatically generated
         return False
+
+
+@admin.register(ImageHistory)
+class ImageHistoryAdmin(admin.ModelAdmin):
+    """Admin interface for image history (Session 36: Feature 9)"""
+
+    list_display = [
+        'thumbnail_preview', 'filename', 'image_type', 'model_used', 'style',
+        'user_name', 'dimensions', 'file_size_display', 'is_favorite',
+        'view_count', 'download_count', 'created_at'
+    ]
+    list_filter = [
+        'image_type', 'model_used', 'style', 'is_favorite',
+        'is_active', 'created_at'
+    ]
+    search_fields = ['filename', 'prompt', 'user_notes', 'tags']
+    readonly_fields = [
+        'thumbnail_display', 'image_display', 'id', 'filename', 'file_path',
+        'image_width', 'image_height', 'file_size_bytes',
+        'view_count', 'download_count', 'created_at', 'updated_at'
+    ]
+
+    fieldsets = (
+        ('Image Information', {
+            'fields': ('thumbnail_display', 'filename', 'file_path', 'image_type')
+        }),
+        ('Generation/Edit Parameters', {
+            'fields': ('prompt', 'model_used', 'style', 'parameters')
+        }),
+        ('Image Metadata', {
+            'fields': ('image_width', 'image_height', 'file_size_bytes')
+        }),
+        ('User Organization', {
+            'fields': ('user', 'is_favorite', 'user_notes', 'tags')
+        }),
+        ('Lineage', {
+            'fields': ('parent_image',),
+            'classes': ('collapse',)
+        }),
+        ('Usage Statistics', {
+            'fields': ('view_count', 'download_count'),
+            'classes': ('collapse',)
+        }),
+        ('System', {
+            'fields': ('id', 'is_active', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def user_name(self, obj):
+        return obj.user.username
+    user_name.short_description = 'User'
+
+    def dimensions(self, obj):
+        if obj.image_width and obj.image_height:
+            return f"{obj.image_width}×{obj.image_height}"
+        return "N/A"
+    dimensions.short_description = 'Dimensions'
+
+    def file_size_display(self, obj):
+        if obj.file_size_bytes:
+            mb = obj.file_size_bytes / (1024 * 1024)
+            if mb >= 1:
+                return f"{mb:.2f} MB"
+            else:
+                kb = obj.file_size_bytes / 1024
+                return f"{kb:.1f} KB"
+        return "N/A"
+    file_size_display.short_description = 'File Size'
+
+    def thumbnail_preview(self, obj):
+        if obj.thumbnail:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
+                obj.get_thumbnail_url()
+            )
+        elif obj.file_path:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
+                obj.get_full_url()
+            )
+        return "No image"
+    thumbnail_preview.short_description = 'Preview'
+
+    def thumbnail_display(self, obj):
+        if obj.thumbnail:
+            return format_html(
+                '<img src="{}" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />',
+                obj.get_thumbnail_url()
+            )
+        elif obj.file_path:
+            return format_html(
+                '<img src="{}" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />',
+                obj.get_full_url()
+            )
+        return "No thumbnail"
+    thumbnail_display.short_description = 'Thumbnail'
+
+    def image_display(self, obj):
+        if obj.file_path:
+            return format_html(
+                '<img src="{}" style="max-width: 600px; border-radius: 8px;" />',
+                obj.get_full_url()
+            )
+        return "No image"
+    image_display.short_description = 'Full Image'
