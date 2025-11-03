@@ -419,6 +419,11 @@
                     📊 Gallery
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="compare-tab" data-bs-toggle="tab" data-bs-target="#compare" type="button" role="tab">
+                    ⚖️ Compare
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -1202,6 +1207,136 @@
                 </div>
             </div>
             <!-- END GALLERY TAB -->
+
+            <!-- COMPARE TAB -->
+            <div class="tab-pane fade" id="compare" role="tabpanel">
+                <h3 class="mb-4">⚖️ Before/After Comparison</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info mb-4">
+                    <h5 class="alert-heading">📖 How to Use:</h5>
+                    <ol class="mb-2">
+                        <li>Select a "Before" image (original) from your gallery</li>
+                        <li>Select an "After" image (edited version)</li>
+                        <li>Use the slider to reveal before/after by dragging</li>
+                        <li>Use ← → arrow keys to move the slider</li>
+                    </ol>
+                    <small class="text-muted">💡 Tip: This works great with edited images like upscales, recolors, or background removals!</small>
+                </div>
+
+                <!-- Image Selection Section -->
+                <div class="row mb-4">
+                    <!-- Before Image Selection -->
+                    <div class="col-md-6">
+                        <div class="card bg-dark border-cyan">
+                            <div class="card-header bg-dark border-cyan-bright">
+                                <h5 class="mb-0 text-cyan-bright">📸 Before (Original)</h5>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-cyan w-100 mb-3" id="selectBeforeBtn">
+                                    🔍 Select from Gallery
+                                </button>
+                                <div id="beforePreview" class="text-center" style="display: none;">
+                                    <img id="beforeImage" src="" alt="Before" class="img-fluid" style="max-height: 200px; border: 2px solid var(--cyan); border-radius: 8px;">
+                                    <p class="text-muted small mt-2" id="beforeInfo">Ready to compare</p>
+                                </div>
+                                <div id="beforeEmpty" class="text-center text-muted py-3">
+                                    <p>No image selected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- After Image Selection -->
+                    <div class="col-md-6">
+                        <div class="card bg-dark border-cyan">
+                            <div class="card-header bg-dark border-cyan-bright">
+                                <h5 class="mb-0 text-cyan-bright">✨ After (Edited)</h5>
+                            </div>
+                            <div class="card-body">
+                                <button class="btn btn-outline-cyan w-100 mb-3" id="selectAfterBtn">
+                                    🔍 Select from Gallery
+                                </button>
+                                <div id="afterPreview" class="text-center" style="display: none;">
+                                    <img id="afterImage" src="" alt="After" class="img-fluid" style="max-height: 200px; border: 2px solid var(--cyan); border-radius: 8px;">
+                                    <p class="text-muted small mt-2" id="afterInfo">Ready to compare</p>
+                                </div>
+                                <div id="afterEmpty" class="text-center text-muted py-3">
+                                    <p>No image selected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Display -->
+                <div id="comparisonContainer" style="display: none;">
+                    <div class="card bg-dark border-cyan">
+                        <div class="card-header bg-dark border-cyan-bright d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 text-cyan-bright">🔄 Comparison View</h5>
+                            <div>
+                                <span class="badge bg-secondary me-2">Use ← → to move slider</span>
+                                <button class="btn btn-sm btn-outline-danger" id="clearComparisonBtn">
+                                    🗑️ Clear
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Comparison Container -->
+                            <div class="position-relative" style="max-width: 100%; margin: 0 auto; overflow: hidden; border-radius: 8px;">
+                                <!-- Container for both images -->
+                                <div id="comparisonImages" class="position-relative" style="width: 100%; aspect-ratio: 16/9; background: #000;">
+                                    <!-- After Image (Full) -->
+                                    <img id="comparisonAfter" src="" alt="After" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; display: block;">
+
+                                    <!-- Before Image (Clipped) -->
+                                    <div id="beforeContainer" style="position: absolute; top: 0; left: 0; width: 50%; height: 100%; overflow: hidden;">
+                                        <img id="comparisonBefore" src="" alt="Before" style="width: 200%; height: 100%; object-fit: contain; display: block;">
+                                    </div>
+
+                                    <!-- Slider Handle -->
+                                    <div id="sliderHandle" style="position: absolute; top: 0; left: 50%; width: 4px; height: 100%; background: var(--cyan-bright); cursor: ew-resize; z-index: 10; box-shadow: 0 0 10px var(--cyan);">
+                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: var(--cyan-bright); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 15px var(--cyan);">
+                                            ⇔
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Labels -->
+                            <div class="d-flex justify-content-between mt-3">
+                                <span class="badge bg-secondary">📸 Before (Original)</span>
+                                <span class="badge bg-success">✨ After (Edited)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gallery Selection Modal -->
+                <div id="gallerySelectionModal" class="modal" tabindex="-1" style="display: none;">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content bg-dark text-light">
+                            <div class="modal-header border-cyan">
+                                <h5 class="modal-title text-cyan-bright" id="galleryModalTitle">Select Image</h5>
+                                <button type="button" class="btn-close btn-close-white" id="closeGalleryModal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="gallerySelectionGrid" class="row g-3">
+                                    <!-- Images will be loaded here -->
+                                </div>
+                                <div id="galleryModalEmpty" class="text-center py-5" style="display: none;">
+                                    <h4 class="text-muted">No images found</h4>
+                                    <p>Generate some images first!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="compareStatus" class="mt-3"></div>
+            </div>
+            <!-- END COMPARE TAB -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -2784,6 +2919,286 @@
         }
 
         // END FEATURE 11: IMAGE-TO-IMAGE CONTROL
+
+        // ====================================================================
+        // FEATURE 12: BEFORE/AFTER COMPARISON
+        // ====================================================================
+
+        // Comparison state
+        let comparisonState = {
+            beforeImage: null,
+            afterImage: null,
+            selectingFor: null, // 'before' or 'after'
+            sliderPosition: 50 // percentage
+        };
+
+        // Status message for comparison
+        function showCompareStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('compareStatus');
+            const alertClass = type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info';
+            statusDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+
+            if (type === 'success') {
+                setTimeout(() => statusDiv.innerHTML = '', 5000);
+            }
+        }
+
+        // Select Before Image Button
+        document.getElementById('selectBeforeBtn').addEventListener('click', function() {
+            comparisonState.selectingFor = 'before';
+            openGallerySelection('Select Before (Original) Image');
+        });
+
+        // Select After Image Button
+        document.getElementById('selectAfterBtn').addEventListener('click', function() {
+            comparisonState.selectingFor = 'after';
+            openGallerySelection('Select After (Edited) Image');
+        });
+
+        // Open Gallery Selection Modal
+        async function openGallerySelection(title) {
+            console.log('🔍 Opening gallery selection:', title);
+            document.getElementById('galleryModalTitle').textContent = title;
+            document.getElementById('gallerySelectionModal').style.display = 'block';
+
+            try {
+                console.log('📡 Fetching gallery data...');
+                const response = await fetch('/api/images/history/', {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                console.log('📥 Response status:', response.status);
+                const data = await response.json();
+                console.log('📊 API response:', data);
+
+                const grid = document.getElementById('gallerySelectionGrid');
+                const emptyState = document.getElementById('galleryModalEmpty');
+
+                // Check for success
+                if (data.success) {
+                    console.log('✅ Success! Images count:', data.images?.length);
+                    if (data.images && data.images.length > 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'none';
+
+                    data.images.forEach(img => {
+                        // Skip images without valid URLs
+                        if (!img.url) return;
+
+                        const card = document.createElement('div');
+                        card.className = 'col-md-3 col-sm-4 col-6';
+
+                        const innerCard = document.createElement('div');
+                        innerCard.className = 'card bg-dark border-secondary hover-cyan';
+                        innerCard.style.cursor = 'pointer';
+                        innerCard.dataset.imageUrl = img.url;
+                        innerCard.dataset.imageType = img.image_type || 'generated';
+                        innerCard.dataset.imagePrompt = img.prompt || 'Generated image';
+
+                        innerCard.innerHTML = `
+                            <img src="${img.url}" class="card-img-top" alt="Gallery Image" style="height: 150px; object-fit: cover;">
+                            <div class="card-body p-2">
+                                <p class="card-text small text-muted mb-0">${img.image_type || 'generated'}</p>
+                            </div>
+                        `;
+
+                        // Add click event
+                        innerCard.addEventListener('click', function() {
+                            selectComparisonImage(
+                                this.dataset.imageUrl,
+                                this.dataset.imageType,
+                                this.dataset.imagePrompt
+                            );
+                        });
+
+                        card.appendChild(innerCard);
+                        grid.appendChild(card);
+                        console.log('✅ Added image card:', img.url);
+                    });
+                    } else {
+                        // No images found
+                        console.log('⚠️ No images in response');
+                        grid.innerHTML = '';
+                        emptyState.style.display = 'block';
+                    }
+                } else {
+                    // API returned error
+                    console.error('❌ API error:', data.error || 'Unknown error');
+                    showCompareStatus(`❌ ${data.error?.message || 'Failed to load gallery'}`, 'error');
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('💥 Gallery loading error:', error);
+                showCompareStatus('❌ Error loading gallery', 'error');
+            }
+        }
+
+        // Select Image from Gallery
+        function selectComparisonImage(imageUrl, imageType, prompt) {
+            // Validate inputs
+            if (!imageUrl) {
+                showCompareStatus('❌ Invalid image URL', 'error');
+                return;
+            }
+
+            // Ensure defaults for optional fields
+            imageType = imageType || 'generated';
+            prompt = prompt || 'Generated image';
+
+            if (comparisonState.selectingFor === 'before') {
+                comparisonState.beforeImage = { url: imageUrl, type: imageType, prompt: prompt };
+                document.getElementById('beforeImage').src = imageUrl;
+                const displayPrompt = prompt.length > 50 ? prompt.substring(0, 50) + '...' : prompt;
+                document.getElementById('beforeInfo').textContent = `${imageType}: ${displayPrompt}`;
+                document.getElementById('beforePreview').style.display = 'block';
+                document.getElementById('beforeEmpty').style.display = 'none';
+                showCompareStatus('✅ Before image selected!', 'success');
+            } else if (comparisonState.selectingFor === 'after') {
+                comparisonState.afterImage = { url: imageUrl, type: imageType, prompt: prompt };
+                document.getElementById('afterImage').src = imageUrl;
+                const displayPrompt = prompt.length > 50 ? prompt.substring(0, 50) + '...' : prompt;
+                document.getElementById('afterInfo').textContent = `${imageType}: ${displayPrompt}`;
+                document.getElementById('afterPreview').style.display = 'block';
+                document.getElementById('afterEmpty').style.display = 'none';
+                showCompareStatus('✅ After image selected!', 'success');
+            }
+
+            // Close modal
+            closeGallerySelectionModal();
+
+            // If both images selected, show comparison
+            if (comparisonState.beforeImage && comparisonState.afterImage) {
+                initializeComparison();
+            }
+        }
+
+        // Close Gallery Selection Modal
+        document.getElementById('closeGalleryModal').addEventListener('click', closeGallerySelectionModal);
+
+        function closeGallerySelectionModal() {
+            document.getElementById('gallerySelectionModal').style.display = 'none';
+        }
+
+        // Initialize Comparison View
+        function initializeComparison() {
+            // Set images
+            document.getElementById('comparisonBefore').src = comparisonState.beforeImage.url;
+            document.getElementById('comparisonAfter').src = comparisonState.afterImage.url;
+
+            // Show comparison container
+            document.getElementById('comparisonContainer').style.display = 'block';
+
+            // Reset slider to center
+            comparisonState.sliderPosition = 50;
+            updateSliderPosition(50);
+
+            showCompareStatus('🎉 Comparison ready! Drag the slider or use ← → arrow keys', 'success');
+
+            // Scroll to comparison
+            document.getElementById('comparisonContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Update Slider Position
+        function updateSliderPosition(percentage) {
+            comparisonState.sliderPosition = Math.max(0, Math.min(100, percentage));
+
+            const beforeContainer = document.getElementById('beforeContainer');
+            const sliderHandle = document.getElementById('sliderHandle');
+            const beforeImage = document.getElementById('comparisonBefore');
+
+            beforeContainer.style.width = `${comparisonState.sliderPosition}%`;
+            sliderHandle.style.left = `${comparisonState.sliderPosition}%`;
+
+            // Adjust the before image width to maintain proper scaling
+            // Width should be inverse of the clip percentage to show the full image
+            const imageWidth = (100 / comparisonState.sliderPosition) * 100;
+            beforeImage.style.width = `${imageWidth}%`;
+        }
+
+        // Slider Dragging
+        const comparisonImages = document.getElementById('comparisonImages');
+        const sliderHandle = document.getElementById('sliderHandle');
+        let isDragging = false;
+
+        sliderHandle.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+
+            const rect = comparisonImages.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = (x / rect.width) * 100;
+
+            updateSliderPosition(percentage);
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+
+        // Touch support for mobile
+        sliderHandle.addEventListener('touchstart', function(e) {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+
+            const touch = e.touches[0];
+            const rect = comparisonImages.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const percentage = (x / rect.width) * 100;
+
+            updateSliderPosition(percentage);
+        });
+
+        document.addEventListener('touchend', function() {
+            isDragging = false;
+        });
+
+        // Keyboard Shortcuts (Arrow Keys)
+        document.addEventListener('keydown', function(e) {
+            // Only work when comparison is visible and tab is active
+            const compareTab = document.getElementById('compare');
+            if (!compareTab.classList.contains('active')) return;
+            if (!comparisonState.beforeImage || !comparisonState.afterImage) return;
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                updateSliderPosition(comparisonState.sliderPosition - 2);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                updateSliderPosition(comparisonState.sliderPosition + 2);
+            }
+        });
+
+        // Clear Comparison
+        document.getElementById('clearComparisonBtn').addEventListener('click', function() {
+            comparisonState = {
+                beforeImage: null,
+                afterImage: null,
+                selectingFor: null,
+                sliderPosition: 50
+            };
+
+            // Reset UI
+            document.getElementById('beforePreview').style.display = 'none';
+            document.getElementById('beforeEmpty').style.display = 'block';
+            document.getElementById('afterPreview').style.display = 'none';
+            document.getElementById('afterEmpty').style.display = 'block';
+            document.getElementById('comparisonContainer').style.display = 'none';
+
+            showCompareStatus('🗑️ Comparison cleared. Select new images to compare.', 'info');
+        });
+
+        // END FEATURE 12: BEFORE/AFTER COMPARISON
     </script>
 </body>
 </html>
