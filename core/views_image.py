@@ -1678,3 +1678,223 @@ def batch_download_images(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# SESSION 38: FEATURE 11 - IMAGE-TO-IMAGE CONTROL
+# =============================================================================
+
+def control_sketch(request):
+    """
+    Convert a sketch into a refined image using Stability AI Control Sketch.
+
+    Expected request: Form data with:
+    - 'image': sketch image file (can be hand-drawn or canvas generated)
+    - 'prompt': text description of desired result
+    - 'control_strength': float 0-1 (how much to follow sketch, default 0.7)
+    - 'negative_prompt': optional negative prompt
+
+    Returns: {success: true, image_url: 'url_to_generated_image'}
+    """
+    try:
+        # Validate inputs
+        if 'image' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No sketch image provided'
+            }, status=400)
+
+        sketch_file = request.FILES['image']
+        prompt = request.POST.get('prompt', '').strip()
+        control_strength = float(request.POST.get('control_strength', 0.7))
+        negative_prompt = request.POST.get('negative_prompt', '').strip()
+
+        if not prompt:
+            return JsonResponse({
+                'success': False,
+                'error': 'Prompt is required'
+            }, status=400)
+
+        # Get API key
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+
+        if not stability_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'Stability AI API key not configured'
+            }, status=500)
+
+        logger.info(f"🎨 Control Sketch request: {prompt} (strength: {control_strength})")
+
+        # Call Stability AI control/sketch endpoint
+        url = "https://api.stability.ai/v2beta/stable-image/control/sketch"
+
+        files = {
+            'image': (sketch_file.name, sketch_file.read(), sketch_file.content_type or 'image/png')
+        }
+
+        data = {
+            'prompt': prompt,
+            'control_strength': control_strength,
+            'output_format': 'png'
+        }
+
+        if negative_prompt:
+            data['negative_prompt'] = negative_prompt
+
+        headers = {
+            'Authorization': f'Bearer {stability_key}',
+            'Accept': 'image/*'
+        }
+
+        response = requests.post(url, headers=headers, files=files, data=data)
+
+        if response.status_code == 200:
+            # Save the generated image
+            filename = f'sketch_control_{uuid.uuid4().hex[:8]}.png'
+            filepath = os.path.join('generated_images', filename)
+
+            saved_path = default_storage.save(filepath, ContentFile(response.content))
+            image_url = default_storage.url(saved_path)
+
+            logger.info(f"✅ Sketch control complete - saved to {saved_path}")
+
+            # Save to history
+            save_to_history(
+                user=request.user,
+                file_path=saved_path,
+                image_type='sketch_control',
+                prompt=prompt,
+                parameters={
+                    'operation': 'control_sketch',
+                    'control_strength': control_strength,
+                    'negative_prompt': negative_prompt
+                }
+            )
+
+            return JsonResponse({
+                'success': True,
+                'image_url': image_url
+            })
+        else:
+            error_msg = response.text
+            logger.error(f"❌ Stability AI error: {error_msg}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Stability AI error: {error_msg}'
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Control sketch error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def control_structure(request):
+    """
+    Transform an image while maintaining its structure using Stability AI Control Structure.
+
+    Expected request: Form data with:
+    - 'image': reference image file (structure will be preserved)
+    - 'prompt': text description of desired style/transformation
+    - 'control_strength': float 0-1 (how much to follow structure, default 0.7)
+    - 'negative_prompt': optional negative prompt
+
+    Returns: {success: true, image_url: 'url_to_generated_image'}
+    """
+    try:
+        # Validate inputs
+        if 'image' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No reference image provided'
+            }, status=400)
+
+        ref_image = request.FILES['image']
+        prompt = request.POST.get('prompt', '').strip()
+        control_strength = float(request.POST.get('control_strength', 0.7))
+        negative_prompt = request.POST.get('negative_prompt', '').strip()
+
+        if not prompt:
+            return JsonResponse({
+                'success': False,
+                'error': 'Prompt is required'
+            }, status=400)
+
+        # Get API key
+        stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
+
+        if not stability_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'Stability AI API key not configured'
+            }, status=500)
+
+        logger.info(f"🏗️ Control Structure request: {prompt} (strength: {control_strength})")
+
+        # Call Stability AI control/structure endpoint
+        url = "https://api.stability.ai/v2beta/stable-image/control/structure"
+
+        files = {
+            'image': (ref_image.name, ref_image.read(), ref_image.content_type or 'image/png')
+        }
+
+        data = {
+            'prompt': prompt,
+            'control_strength': control_strength,
+            'output_format': 'png'
+        }
+
+        if negative_prompt:
+            data['negative_prompt'] = negative_prompt
+
+        headers = {
+            'Authorization': f'Bearer {stability_key}',
+            'Accept': 'image/*'
+        }
+
+        response = requests.post(url, headers=headers, files=files, data=data)
+
+        if response.status_code == 200:
+            # Save the generated image
+            filename = f'structure_control_{uuid.uuid4().hex[:8]}.png'
+            filepath = os.path.join('generated_images', filename)
+
+            saved_path = default_storage.save(filepath, ContentFile(response.content))
+            image_url = default_storage.url(saved_path)
+
+            logger.info(f"✅ Structure control complete - saved to {saved_path}")
+
+            # Save to history
+            save_to_history(
+                user=request.user,
+                file_path=saved_path,
+                image_type='structure_control',
+                prompt=prompt,
+                parameters={
+                    'operation': 'control_structure',
+                    'control_strength': control_strength,
+                    'negative_prompt': negative_prompt
+                }
+            )
+
+            return JsonResponse({
+                'success': True,
+                'image_url': image_url
+            })
+        else:
+            error_msg = response.text
+            logger.error(f"❌ Stability AI error: {error_msg}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Stability AI error: {error_msg}'
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Control structure error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
