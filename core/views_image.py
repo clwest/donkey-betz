@@ -13,12 +13,15 @@ import os
 import logging
 import requests
 import uuid
+import json
+import zipfile
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from rest_framework.decorators import api_view, permission_classes
@@ -1543,6 +1546,134 @@ def delete_image(request, image_id):
         }, status=404)
     except Exception as e:
         logger.error(f"❌ Delete image error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ========================================
+# BATCH DOWNLOAD (Session 37: Feature 10)
+# ========================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def batch_download_images(request):
+    """
+    Download multiple images as a ZIP file.
+
+    Expects JSON: { "image_ids": ["uuid1", "uuid2", ...] }
+
+    Returns ZIP file containing:
+    - All selected images
+    - metadata.json with image information
+    """
+    try:
+        from content.models import ImageHistory
+
+        image_ids = request.data.get('image_ids', [])
+
+        if not image_ids:
+            return Response({
+                'success': False,
+                'error': 'No images selected'
+            }, status=400)
+
+        # Fetch images for this user only
+        images = ImageHistory.objects.filter(
+            id__in=image_ids,
+            user=request.user
+        ).order_by('-created_at')
+
+        if not images.exists():
+            return Response({
+                'success': False,
+                'error': 'No images found'
+            }, status=404)
+
+        logger.info(f"📦 Creating ZIP with {images.count()} images for {request.user.username}")
+
+        # Create ZIP file in memory
+        zip_buffer = BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+
+            # Metadata for JSON file
+            metadata = {
+                'downloaded_at': datetime.now().isoformat(),
+                'total_images': images.count(),
+                'images': []
+            }
+
+            # Add each image to ZIP
+            for idx, img in enumerate(images, 1):
+                try:
+                    # Get file from storage
+                    if not default_storage.exists(img.file_path):
+                        logger.warning(f"⚠️ File not found: {img.file_path}")
+                        continue
+
+                    # Read file data
+                    logger.info(f"📂 Reading file: {img.file_path}")
+                    with default_storage.open(img.file_path, 'rb') as f:
+                        image_data = f.read()
+
+                    # Create unique filename
+                    file_ext = os.path.splitext(img.filename)[1] or '.png'
+                    safe_filename = f"{idx:03d}_{img.image_type}_{img.id}{file_ext}"
+
+                    # Add to ZIP
+                    zip_file.writestr(safe_filename, image_data)
+                    logger.info(f"✅ Added {safe_filename} to ZIP ({len(image_data)} bytes)")
+
+                    # Build metadata entry with safe defaults
+                    try:
+                        metadata_entry = {
+                            'filename': safe_filename,
+                            'original_filename': img.filename or 'unknown.png',
+                            'image_type': img.image_type or 'unknown',
+                            'prompt': img.prompt or '',
+                            'model_used': img.model_used or '',
+                            'style': img.style or '',
+                            'dimensions': f"{img.image_width or 0}x{img.image_height or 0}",
+                            'file_size_bytes': img.file_size_bytes or 0,
+                            'created_at': img.created_at.isoformat() if img.created_at else '',
+                            'is_favorite': bool(img.is_favorite),
+                            'tags': img.tags or '',
+                            'parameters': img.parameters if img.parameters else {}
+                        }
+                        metadata['images'].append(metadata_entry)
+                        logger.info(f"📝 Added metadata for {safe_filename}")
+                    except Exception as meta_error:
+                        logger.error(f"❌ Error building metadata for {img.id}: {meta_error}", exc_info=True)
+                        # Add simplified metadata entry
+                        metadata['images'].append({
+                            'filename': safe_filename,
+                            'image_type': str(img.image_type),
+                            'error': 'Metadata partially unavailable'
+                        })
+
+                except Exception as e:
+                    logger.error(f"❌ Error processing image {img.id}: {e}", exc_info=True)
+                    continue
+
+            # Add metadata.json
+            metadata_json = json.dumps(metadata, indent=2)
+            zip_file.writestr('metadata.json', metadata_json)
+            logger.info("✅ Added metadata.json to ZIP")
+
+        # Prepare response
+        zip_buffer.seek(0)
+
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="images_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+
+        logger.info(f"🎉 ZIP created successfully with {images.count()} images")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Batch download error: {str(e)}")
         return Response({
             'success': False,
             'error': str(e)
