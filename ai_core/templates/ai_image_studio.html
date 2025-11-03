@@ -211,16 +211,21 @@
         .image-select-checkbox {
             accent-color: var(--cyan) !important;
             transform: scale(1.2);
+            filter: contrast(1.5) brightness(1.1);
+            -webkit-appearance: checkbox;
+            appearance: checkbox;
         }
 
         .image-select-checkbox:checked {
             background-color: var(--cyan) !important;
             border-color: var(--cyan-bright) !important;
             box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+            filter: contrast(1.8) brightness(1.2);
         }
 
         .image-select-checkbox:hover {
             box-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+            filter: contrast(1.6) brightness(1.15);
         }
 
         /* Selected card styling */
@@ -2078,8 +2083,8 @@
                 <div class="card h-100 image-card" id="card-${img.id}" data-image-id="${img.id}">
                     <div style="position: relative;">
                         <img src="${img.url}" class="card-img-top" alt="${img.filename}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImageFullsize('${img.url}', '${img.prompt || img.filename}')">
-                        <div style="position: absolute; top: 8px; left: 8px; z-index: 10; background: rgba(255,255,255,0.9); border-radius: 4px; padding: 4px;">
-                            <input type="checkbox" class="form-check-input image-select-checkbox" data-image-id="${img.id}" data-image-url="${img.url}" data-image-data='${JSON.stringify(img).replace(/'/g, "&apos;")}' style="width: 28px; height: 28px; cursor: pointer; border: 3px solid #333;">
+                        <div style="position: absolute; top: 8px; left: 8px; z-index: 10; background: rgba(255,255,255,0.95); border-radius: 6px; padding: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                            <input type="checkbox" class="form-check-input image-select-checkbox" data-image-id="${img.id}" data-image-url="${img.url}" data-image-data='${JSON.stringify(img).replace(/'/g, "&apos;")}' style="width: 32px; height: 32px; cursor: pointer; border: 2px solid #444; margin: 0;">
                         </div>
                     </div>
                     <div class="card-body p-2">
