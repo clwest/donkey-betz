@@ -12,7 +12,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
     ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
-    ImageHistory
+    ImageHistory, VideoHistory
 )
 
 
@@ -381,3 +381,98 @@ class ImageHistoryAdmin(admin.ModelAdmin):
             )
         return "No image"
     image_display.short_description = 'Full Image'
+
+
+@admin.register(VideoHistory)
+class VideoHistoryAdmin(admin.ModelAdmin):
+    """Admin interface for video history (Session 44: Video Gallery)"""
+
+    list_display = [
+        'video_preview', 'video_id', 'video_type', 'model_used',
+        'user_name', 'duration_display', 'ratio', 'status',
+        'is_favorite', 'view_count', 'download_count', 'created_at'
+    ]
+    list_filter = [
+        'video_type', 'model_used', 'status', 'is_favorite',
+        'is_active', 'created_at'
+    ]
+    search_fields = ['video_id', 'prompt', 'user_notes', 'tags']
+    readonly_fields = [
+        'video_player', 'thumbnail_display', 'id', 'video_id',
+        'video_url', 'thumbnail_url', 'duration', 'ratio',
+        'view_count', 'download_count', 'generation_time_seconds',
+        'generation_started', 'generation_completed', 'created_at', 'updated_at'
+    ]
+
+    fieldsets = (
+        ('Video Information', {
+            'fields': ('video_player', 'thumbnail_display', 'video_id', 'video_url', 'thumbnail_url', 'video_type', 'status')
+        }),
+        ('Generation Parameters', {
+            'fields': ('prompt', 'model_used', 'parameters')
+        }),
+        ('Video Metadata', {
+            'fields': ('duration', 'ratio', 'video_width', 'video_height', 'file_size_bytes')
+        }),
+        ('User Organization', {
+            'fields': ('user', 'is_favorite', 'user_notes', 'tags')
+        }),
+        ('Source', {
+            'fields': ('source_image',),
+            'classes': ('collapse',)
+        }),
+        ('Usage Statistics', {
+            'fields': ('view_count', 'download_count'),
+            'classes': ('collapse',)
+        }),
+        ('Generation Timing', {
+            'fields': ('generation_started', 'generation_completed', 'generation_time_seconds'),
+            'classes': ('collapse',)
+        }),
+        ('System', {
+            'fields': ('id', 'is_active', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def user_name(self, obj):
+        return obj.user.username
+    user_name.short_description = 'User'
+
+    def duration_display(self, obj):
+        if obj.duration:
+            return f"{obj.duration}s"
+        return "N/A"
+    duration_display.short_description = 'Duration'
+
+    def video_preview(self, obj):
+        if obj.thumbnail_url:
+            return format_html(
+                '<img src="{}" style="width: 80px; height: 45px; object-fit: cover; border-radius: 4px;" />',
+                obj.thumbnail_url
+            )
+        return "No thumbnail"
+    video_preview.short_description = 'Preview'
+
+    def thumbnail_display(self, obj):
+        if obj.thumbnail_url:
+            return format_html(
+                '<img src="{}" style="max-width: 400px; max-height: 225px; border-radius: 8px;" />',
+                obj.thumbnail_url
+            )
+        return "No thumbnail"
+    thumbnail_display.short_description = 'Thumbnail'
+
+    def video_player(self, obj):
+        if obj.video_url:
+            return format_html(
+                '''
+                <video controls style="max-width: 800px; border-radius: 8px;">
+                    <source src="{}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                ''',
+                obj.video_url
+            )
+        return "No video"
+    video_player.short_description = 'Video Player'

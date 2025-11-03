@@ -1711,6 +1711,29 @@
             </div>
             <!-- END WORKFLOW MASK EDITOR MODAL -->
 
+            <!-- CUSTOM VIDEO GALLERY MODAL (Session 44: Non-Bootstrap solution for image-to-video) -->
+            <div id="videoGalleryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
+                <div style="max-width: 1400px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #00d9ff; padding-bottom: 20px;">
+                        <h3 style="color: #00d9ff; margin: 0; font-size: 24px;">🎬 Select Image for Video Generation</h3>
+                        <button onclick="closeVideoGalleryModal()" style="background: transparent; border: 2px solid #00d9ff; color: #00d9ff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">✕ Close</button>
+                    </div>
+
+                    <!-- Gallery Grid -->
+                    <div id="videoGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                        <!-- Images will be loaded here -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="videoGalleryEmpty" style="display: none; text-align: center; padding: 60px 20px; color: #888;">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">No images found</h4>
+                        <p style="font-size: 16px;">Generate some images first!</p>
+                    </div>
+                </div>
+            </div>
+            <!-- END CUSTOM VIDEO GALLERY MODAL -->
+
             <!-- VIDEO TAB (Session 41: Runway ML Integration) -->
             <div class="tab-pane fade" id="video" role="tabpanel">
                 <h3 class="mb-4">🎬 AI Video Generation</h3>
@@ -1732,6 +1755,11 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="image-video-pill" data-bs-toggle="pill" data-bs-target="#image-video" type="button" role="tab">
                             🖼️ Image-to-Video
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="video-gallery-pill" data-bs-toggle="pill" data-bs-target="#video-gallery" type="button" role="tab" onclick="loadVideoGallery()">
+                            📹 Gallery
                         </button>
                     </li>
                 </ul>
@@ -1864,6 +1892,52 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- VIDEO GALLERY -->
+                    <div class="tab-pane fade" id="video-gallery" role="tabpanel">
+                        <!-- Filter Controls -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <select id="videoGalleryTypeFilter" class="form-select" onchange="loadVideoGallery()">
+                                    <option value="">All Types</option>
+                                    <option value="text_to_video">Text-to-Video</option>
+                                    <option value="image_to_video">Image-to-Video</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="videoGallerySortFilter" class="form-select" onchange="loadVideoGallery()">
+                                    <option value="-created_at">Newest First</option>
+                                    <option value="created_at">Oldest First</option>
+                                    <option value="-view_count">Most Viewed</option>
+                                    <option value="-download_count">Most Downloaded</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-cyan w-100" onclick="loadVideoGallery(true)">
+                                    ⭐ Favorites Only
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-cyan w-100" onclick="loadVideoGallery()">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Video Grid -->
+                        <div id="videoGalleryGrid" class="row g-3">
+                            <div class="col-12 text-center text-muted py-5">
+                                <p>Loading videos...</p>
+                            </div>
+                        </div>
+
+                        <!-- Load More -->
+                        <div id="videoGalleryLoadMore" class="text-center mt-4" style="display: none;">
+                            <button class="btn btn-outline-cyan" onclick="loadMoreVideos()">
+                                Load More Videos
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -5205,42 +5279,95 @@
             }, 3000); // Poll every 3 seconds
         }
 
-        // Select image from gallery for video
+        // Select image from gallery for video (Session 44: Custom modal implementation)
         function selectImageFromGalleryForVideo() {
-            // Reuse the existing gallery modal logic
+            console.log('🔍 [VIDEO] Opening custom gallery modal');
+
+            const modal = document.getElementById('videoGalleryModal');
+            if (!modal) {
+                console.error('❌ [VIDEO] Custom gallery modal not found!');
+                alert('Gallery modal not found');
+                return;
+            }
+
+            // Show the modal (all styles are inline in HTML)
+            modal.style.display = 'block';
+            console.log('✅ [VIDEO] Custom modal displayed');
+
+            // Load gallery images
             fetch('/api/images/history/', {
                 headers: {'X-CSRFToken': getCsrfToken()}
             })
             .then(response => response.json())
             .then(data => {
-                const images = data.images || [];
-                if (images.length === 0) {
-                    alert('No images in gallery. Generate some images first!');
-                    return;
-                }
+                console.log('📊 [VIDEO] API response:', data);
 
-                // Simple prompt selection (you can make this fancier later)
-                const imageList = images.slice(0, 10).map((img, idx) =>
-                    `${idx + 1}. ${img.image_type} (${img.created_at})`
-                ).join('\n');
+                const grid = document.getElementById('videoGalleryGrid');
+                const emptyState = document.getElementById('videoGalleryEmpty');
 
-                const selection = prompt(`Select an image (1-${Math.min(10, images.length)}):\n\n${imageList}`);
-                const index = parseInt(selection) - 1;
+                if (data.success && data.images && data.images.length > 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'none';
 
-                if (index >= 0 && index < images.length) {
-                    const selectedImg = images[index];
-                    videoState.selectedImage = selectedImg.url;
+                    console.log('🖼️ [VIDEO] Rendering', data.images.length, 'images...');
 
-                    // Show preview
-                    document.getElementById('videoImagePreviewImg').src = selectedImg.url;
-                    document.getElementById('videoImagePreview').style.display = 'block';
-                    document.getElementById('imageToVideoBtn').disabled = false;
+                    data.images.forEach((img) => {
+                        if (!img.url) return;
+
+                        const imageCard = document.createElement('div');
+                        imageCard.style.cssText = 'position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid #333; transition: all 0.2s;';
+                        imageCard.onmouseover = () => imageCard.style.borderColor = '#00d9ff';
+                        imageCard.onmouseout = () => imageCard.style.borderColor = '#333';
+
+                        imageCard.innerHTML = `
+                            <img src="${img.url}" style="width: 100%; height: 200px; object-fit: cover; display: block;" alt="Gallery Image">
+                            <div style="padding: 8px; background: #222; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #888;">${img.image_type || 'generated'}</p>
+                            </div>
+                        `;
+
+                        imageCard.onclick = () => {
+                            console.log('👆 [VIDEO] Image selected:', img.url);
+
+                            // Update videoState
+                            videoState.selectedImage = img.url;
+
+                            // Show preview
+                            document.getElementById('videoImagePreviewImg').src = img.url;
+                            document.getElementById('videoImagePreview').style.display = 'block';
+                            document.getElementById('imageToVideoBtn').disabled = false;
+
+                            console.log('✅ [VIDEO] Image set for video generation');
+
+                            // Close modal
+                            closeVideoGalleryModal();
+                        };
+
+                        grid.appendChild(imageCard);
+                    });
+
+                    console.log('✅ [VIDEO] Gallery rendered successfully');
+                } else {
+                    // Show empty state
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    console.log('⚠️ [VIDEO] No images found in gallery');
                 }
             })
             .catch(error => {
-                console.error('Error loading gallery:', error);
-                alert('Failed to load gallery');
+                console.error('❌ [VIDEO] Error loading gallery:', error);
+                alert('Failed to load gallery: ' + error.message);
             });
+        }
+
+        // Close video gallery modal
+        function closeVideoGalleryModal() {
+            console.log('🔒 [VIDEO] Closing custom gallery modal');
+            const modal = document.getElementById('videoGalleryModal');
+            if (modal) {
+                modal.style.display = 'none';
+                console.log('✅ [VIDEO] Modal closed');
+            }
         }
 
         // Download video
@@ -5254,6 +5381,208 @@
                 link.download = `video_${Date.now()}.mp4`;
                 link.click();
             }
+        }
+
+        // VIDEO GALLERY FUNCTIONS (Session 44)
+        let videoGalleryOffset = 0;
+        const videoGalleryLimit = 12;
+        let videoGalleryState = {
+            favoritesOnly: false
+        };
+
+        async function loadVideoGallery(favoritesOnly = false) {
+            console.log('📹 Loading video gallery...');
+            videoGalleryOffset = 0;
+            videoGalleryState.favoritesOnly = favoritesOnly;
+
+            const typeFilter = document.getElementById('videoGalleryTypeFilter').value;
+            const sortFilter = document.getElementById('videoGallerySortFilter').value;
+
+            const params = new URLSearchParams({
+                limit: videoGalleryLimit,
+                offset: videoGalleryOffset,
+                sort: sortFilter
+            });
+
+            if (typeFilter) params.append('type', typeFilter);
+            if (favoritesOnly) params.append('favorite', 'true');
+
+            try {
+                const response = await authenticatedFetch(`/api/v1/video/history/?${params}`);
+                const data = await response.json();
+
+                const grid = document.getElementById('videoGalleryGrid');
+                const loadMoreBtn = document.getElementById('videoGalleryLoadMore');
+
+                if (data.success && data.videos && data.videos.length > 0) {
+                    grid.innerHTML = '';
+
+                    data.videos.forEach(video => {
+                        const videoCard = createVideoCard(video);
+                        grid.appendChild(videoCard);
+                    });
+
+                    // Show load more if there are more videos
+                    if (data.has_more) {
+                        loadMoreBtn.style.display = 'block';
+                    } else {
+                        loadMoreBtn.style.display = 'none';
+                    }
+                } else {
+                    grid.innerHTML = `
+                        <div class="col-12 text-center text-muted py-5">
+                            <h5>No videos yet</h5>
+                            <p>Generate your first video to see it here!</p>
+                        </div>
+                    `;
+                    loadMoreBtn.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading video gallery:', error);
+                document.getElementById('videoGalleryGrid').innerHTML = `
+                    <div class="col-12 text-center text-danger py-5">
+                        <p>Error loading videos. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadMoreVideos() {
+            videoGalleryOffset += videoGalleryLimit;
+
+            const typeFilter = document.getElementById('videoGalleryTypeFilter').value;
+            const sortFilter = document.getElementById('videoGallerySortFilter').value;
+
+            const params = new URLSearchParams({
+                limit: videoGalleryLimit,
+                offset: videoGalleryOffset,
+                sort: sortFilter
+            });
+
+            if (typeFilter) params.append('type', typeFilter);
+            if (videoGalleryState.favoritesOnly) params.append('favorite', 'true');
+
+            try {
+                const response = await authenticatedFetch(`/api/v1/video/history/?${params}`);
+                const data = await response.json();
+
+                const grid = document.getElementById('videoGalleryGrid');
+                const loadMoreBtn = document.getElementById('videoGalleryLoadMore');
+
+                if (data.success && data.videos && data.videos.length > 0) {
+                    data.videos.forEach(video => {
+                        const videoCard = createVideoCard(video);
+                        grid.appendChild(videoCard);
+                    });
+
+                    // Update load more button visibility
+                    if (data.has_more) {
+                        loadMoreBtn.style.display = 'block';
+                    } else {
+                        loadMoreBtn.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading more videos:', error);
+            }
+        }
+
+        function createVideoCard(video) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 col-lg-3';
+
+            const typeEmoji = video.video_type === 'text_to_video' ? '📝' : '🖼️';
+            const favoriteIcon = video.is_favorite ? '⭐' : '☆';
+
+            col.innerHTML = `
+                <div class="card bg-dark border-cyan h-100">
+                    <div class="position-relative" style="cursor: pointer;" onclick="playVideoInModal('${video.id}')">
+                        ${video.thumbnail_url ?
+                            `<img src="${video.thumbnail_url}" class="card-img-top" style="height: 150px; object-fit: cover;">` :
+                            `<div class="d-flex align-items-center justify-center bg-secondary" style="height: 150px;">
+                                <span class="text-white">🎬</span>
+                            </div>`
+                        }
+                        <div class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 px-2 py-1 rounded-start">
+                            <small>${video.duration}s</small>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <small class="text-muted">${typeEmoji} ${video.video_type.replace('_', '-')}</small>
+                            <small class="text-muted">${video.model_used}</small>
+                        </div>
+                        <p class="card-text small mb-2" style="height: 40px; overflow: hidden; text-overflow: ellipsis;">
+                            ${video.prompt.substring(0, 60)}${video.prompt.length > 60 ? '...' : ''}
+                        </p>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); toggleVideoFavorite('${video.id}', this)">
+                                ${favoriteIcon}
+                            </button>
+                            <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); downloadVideoFromGallery('${video.video_url}')">
+                                📥
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger flex-fill" onclick="event.stopPropagation(); deleteVideoFromGallery('${video.id}')">
+                                🗑️
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            👁️ ${video.view_count} | 📥 ${video.download_count}
+                        </small>
+                    </div>
+                </div>
+            `;
+
+            return col;
+        }
+
+        async function toggleVideoFavorite(videoId, button) {
+            try {
+                const response = await authenticatedFetch(`/api/v1/video/history/${videoId}/favorite/`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    button.textContent = data.is_favorite ? '⭐' : '☆';
+                    console.log('✅ Favorite toggled');
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                alert('Failed to update favorite status');
+            }
+        }
+
+        async function deleteVideoFromGallery(videoId) {
+            if (!confirm('Are you sure you want to delete this video?')) return;
+
+            try {
+                const response = await authenticatedFetch(`/api/v1/video/history/${videoId}/`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Video deleted');
+                    loadVideoGallery(videoGalleryState.favoritesOnly);
+                }
+            } catch (error) {
+                console.error('Error deleting video:', error);
+                alert('Failed to delete video');
+            }
+        }
+
+        function downloadVideoFromGallery(videoUrl) {
+            const link = document.createElement('a');
+            link.href = videoUrl;
+            link.download = `video_${Date.now()}.mp4`;
+            link.click();
+        }
+
+        function playVideoInModal(videoId) {
+            // TODO: Implement video player modal (future enhancement)
+            console.log('Play video:', videoId);
+            alert('Video player modal coming soon! For now, click download to view the video.');
         }
 
         // END FEATURE 14: VIDEO GENERATION

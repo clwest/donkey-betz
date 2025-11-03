@@ -1759,3 +1759,197 @@ class ImageHistory(UnifiedBaseModel):
     def get_descendants(self):
         """Get all child images (edits made from this image)"""
         return ImageHistory.objects.filter(parent_image=self)
+
+
+class VideoHistory(UnifiedBaseModel):
+    """
+    Track all AI-generated videos for user gallery
+    """
+
+    # User identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='video_history',
+        help_text="User who created this video"
+    )
+
+    # Video identification
+    video_id = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Runway ML task/video ID"
+    )
+
+    video_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        help_text="URL to the generated video file"
+    )
+
+    thumbnail_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        help_text="URL to video thumbnail"
+    )
+
+    # Video classification
+    video_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('text_to_video', 'Text to Video'),
+            ('image_to_video', 'Image to Video'),
+        ],
+        help_text="Type of video generation"
+    )
+
+    # Generation parameters
+    prompt = models.TextField(
+        help_text="Prompt used for video generation"
+    )
+
+    parameters = models.JSONField(
+        default=dict,
+        help_text="Complete parameters used (model, duration, ratio, etc.)"
+    )
+
+    # Model information
+    model_used = models.CharField(
+        max_length=50,
+        choices=[
+            ('veo3.1_fast', 'Runway Veo 3.1 Fast'),
+            ('veo3.1', 'Runway Veo 3.1'),
+            ('gen4_turbo', 'Runway Gen-4 Turbo'),
+        ],
+        help_text="AI model used for generation"
+    )
+
+    # Video metadata
+    duration = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Video duration in seconds"
+    )
+
+    ratio = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Aspect ratio (e.g., 1920:1080)"
+    )
+
+    video_width = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Video width in pixels"
+    )
+
+    video_height = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Video height in pixels"
+    )
+
+    file_size_bytes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="File size in bytes"
+    )
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='processing',
+        help_text="Generation status"
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if generation failed"
+    )
+
+    # Source image for image-to-video
+    source_image = models.ForeignKey(
+        ImageHistory,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='generated_videos',
+        help_text="Source image if this is image-to-video"
+    )
+
+    # Usage tracking
+    download_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times downloaded"
+    )
+
+    view_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times viewed"
+    )
+
+    is_favorite = models.BooleanField(
+        default=False,
+        help_text="User marked as favorite"
+    )
+
+    # User notes
+    user_notes = models.TextField(
+        blank=True,
+        help_text="User's personal notes about this video"
+    )
+
+    tags = models.JSONField(
+        default=list,
+        help_text="User-defined tags for organization"
+    )
+
+    # Generation timing
+    generation_started = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When video generation started"
+    )
+
+    generation_completed = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When video generation completed"
+    )
+
+    generation_time_seconds = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Total generation time in seconds"
+    )
+
+    class Meta:
+        verbose_name = "Video History"
+        verbose_name_plural = "Video History"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['video_type']),
+            models.Index(fields=['model_used']),
+            models.Index(fields=['status']),
+            models.Index(fields=['is_favorite']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.video_type} - {self.video_id}"
+
+    def increment_view_count(self):
+        """Increment view counter"""
+        self.view_count += 1
+        self.save(update_fields=['view_count'])
+
+    def increment_download_count(self):
+        """Increment download counter"""
+        self.download_count += 1
+        self.save(update_fields=['download_count'])
