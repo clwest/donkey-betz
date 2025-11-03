@@ -265,7 +265,8 @@ from core.views_video import (
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
-    image_history, toggle_favorite, delete_image, batch_download_images
+    image_history, toggle_favorite, delete_image, batch_download_images,
+    control_sketch, control_structure
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -798,6 +799,10 @@ urlpatterns = [
 
     # Batch Download (Session 37: Feature 10)
     path('api/images/batch-download/', batch_download_images, name='batch-download-images'),
+
+    # Image-to-Image Control (Session 38: Feature 11)
+    path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),
+    path('api/stability/control/structure/', control_structure, name='stability-control-structure'),
 
     path('api/v1/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),

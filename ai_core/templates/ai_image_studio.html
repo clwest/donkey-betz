@@ -410,6 +410,11 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="control-tab" data-bs-toggle="tab" data-bs-target="#control" type="button" role="tab">
+                    🎭 Control
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab">
                     📊 Gallery
                 </button>
@@ -910,6 +915,134 @@
                 </div>
             </div>
             <!-- END RECOLOR TAB -->
+
+            <!-- CONTROL TAB (Session 38: Feature 11) -->
+            <div class="tab-pane fade" id="control" role="tabpanel">
+                <h3 class="mb-4">🎭 Image-to-Image Control</h3>
+                <p class="text-muted mb-4">Transform sketches into refined images or reimagine photos in different styles while preserving structure.</p>
+
+                <!-- Two columns: Sketch | Structure -->
+                <div class="row">
+                    <!-- SKETCH TO IMAGE -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card bg-dark border-cyan">
+                            <div class="card-header bg-dark border-cyan-bright">
+                                <h5 class="mb-0 text-cyan-bright">✏️ Sketch to Image</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-3">Draw a sketch and AI will turn it into a refined image</p>
+
+                                <!-- Canvas Container -->
+                                <div class="mb-3" style="border: 2px solid var(--cyan); border-radius: 8px; padding: 10px; background: #1a1a1a;">
+                                    <canvas id="sketchCanvas" width="500" height="500" style="width: 100%; max-width: 500px; border: 1px solid #444; border-radius: 4px; background: white; cursor: crosshair; display: block; margin: 0 auto;"></canvas>
+                                </div>
+
+                                <!-- Drawing Tools -->
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">Drawing Tools</label>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button class="btn btn-sm btn-outline-light" id="sketchClearBtn">
+                                            🗑️ Clear
+                                        </button>
+                                        <input type="color" id="sketchColor" value="#000000" class="form-control form-control-sm" style="width: 60px;" title="Pen Color">
+                                        <input type="range" id="sketchBrushSize" min="1" max="20" value="3" class="form-range" style="width: 120px;" title="Brush Size">
+                                        <span class="text-muted small align-self-center">Size: <span id="brushSizeDisplay">3</span>px</span>
+                                    </div>
+                                </div>
+
+                                <!-- Prompt -->
+                                <div class="mb-3">
+                                    <label for="sketchPrompt" class="form-label text-muted">Prompt</label>
+                                    <textarea class="form-control bg-dark text-light border-secondary" id="sketchPrompt" rows="2" placeholder="Describe what you want the sketch to become..."></textarea>
+                                </div>
+
+                                <!-- Control Strength -->
+                                <div class="mb-3">
+                                    <label for="sketchStrength" class="form-label text-muted">
+                                        Control Strength: <span id="sketchStrengthValue">0.7</span>
+                                    </label>
+                                    <input type="range" class="form-range" id="sketchStrength" min="0" max="1" step="0.1" value="0.7">
+                                    <small class="text-muted">Higher = Follow sketch more closely</small>
+                                </div>
+
+                                <!-- Negative Prompt -->
+                                <div class="mb-3">
+                                    <label for="sketchNegativePrompt" class="form-label text-muted">Negative Prompt (Optional)</label>
+                                    <input type="text" class="form-control bg-dark text-light border-secondary" id="sketchNegativePrompt" placeholder="Things to avoid...">
+                                </div>
+
+                                <!-- Generate Button -->
+                                <button class="btn btn-primary w-100" id="sketchGenerateBtn">
+                                    ✨ Generate from Sketch
+                                </button>
+
+                                <!-- Status -->
+                                <div id="sketchStatus" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STRUCTURE CONTROL -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card bg-dark border-cyan">
+                            <div class="card-header bg-dark border-cyan-bright">
+                                <h5 class="mb-0 text-cyan-bright">🏗️ Structure Control</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-3">Transform an image while preserving its composition</p>
+
+                                <!-- Image Upload -->
+                                <div class="mb-3">
+                                    <label for="structureImage" class="form-label text-muted">Upload Reference Image</label>
+                                    <input type="file" class="form-control bg-dark text-light border-secondary" id="structureImage" accept="image/*">
+                                </div>
+
+                                <!-- Image Preview -->
+                                <div id="structurePreview" class="mb-3" style="display: none; border: 2px solid var(--cyan); border-radius: 8px; padding: 10px; background: #1a1a1a;">
+                                    <img id="structurePreviewImg" style="width: 100%; max-width: 500px; border-radius: 4px; display: block; margin: 0 auto;">
+                                </div>
+
+                                <!-- Prompt -->
+                                <div class="mb-3">
+                                    <label for="structurePrompt" class="form-label text-muted">Transformation Prompt</label>
+                                    <textarea class="form-control bg-dark text-light border-secondary" id="structurePrompt" rows="2" placeholder="E.g., 'anime style', 'watercolor painting', 'cyberpunk city'..."></textarea>
+                                    <small class="text-muted">Describe the style or transformation you want</small>
+                                </div>
+
+                                <!-- Control Strength -->
+                                <div class="mb-3">
+                                    <label for="structureStrength" class="form-label text-muted">
+                                        Control Strength: <span id="structureStrengthValue">0.7</span>
+                                    </label>
+                                    <input type="range" class="form-range" id="structureStrength" min="0" max="1" step="0.1" value="0.7">
+                                    <small class="text-muted">Higher = Preserve structure more</small>
+                                </div>
+
+                                <!-- Negative Prompt -->
+                                <div class="mb-3">
+                                    <label for="structureNegativePrompt" class="form-label text-muted">Negative Prompt (Optional)</label>
+                                    <input type="text" class="form-control bg-dark text-light border-secondary" id="structureNegativePrompt" placeholder="Things to avoid...">
+                                </div>
+
+                                <!-- Generate Button -->
+                                <button class="btn btn-primary w-100" id="structureGenerateBtn" disabled>
+                                    ✨ Transform Image
+                                </button>
+
+                                <!-- Status -->
+                                <div id="structureStatus" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="controlResults" class="mt-4" style="display: none;">
+                    <h5 class="mb-3">✨ Generated Results</h5>
+                    <div id="controlGallery" class="row"></div>
+                </div>
+            </div>
+            <!-- END CONTROL TAB -->
 
             <!-- GALLERY TAB (Session 36: Feature 9) -->
             <div class="tab-pane fade" id="gallery" role="tabpanel">
@@ -2327,6 +2460,274 @@
         });
 
         // END BATCH DOWNLOAD FUNCTIONALITY
+
+        // ==========================================================================
+        // SESSION 38: FEATURE 11 - IMAGE-TO-IMAGE CONTROL
+        // ==========================================================================
+
+        // SKETCH CANVAS INITIALIZATION
+        const sketchCanvas = document.getElementById('sketchCanvas');
+        const sketchCtx = sketchCanvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Initialize canvas with white background
+        sketchCtx.fillStyle = 'white';
+        sketchCtx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
+
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = sketchCanvas.getBoundingClientRect();
+            const scaleX = sketchCanvas.width / rect.width;
+            const scaleY = sketchCanvas.height / rect.height;
+            lastX = (e.clientX - rect.left) * scaleX;
+            lastY = (e.clientY - rect.top) * scaleY;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const rect = sketchCanvas.getBoundingClientRect();
+            const scaleX = sketchCanvas.width / rect.width;
+            const scaleY = sketchCanvas.height / rect.height;
+            const currentX = (e.clientX - rect.left) * scaleX;
+            const currentY = (e.clientY - rect.top) * scaleY;
+
+            sketchCtx.beginPath();
+            sketchCtx.moveTo(lastX, lastY);
+            sketchCtx.lineTo(currentX, currentY);
+            sketchCtx.strokeStyle = document.getElementById('sketchColor').value;
+            sketchCtx.lineWidth = document.getElementById('sketchBrushSize').value;
+            sketchCtx.lineCap = 'round';
+            sketchCtx.stroke();
+
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Canvas event listeners
+        sketchCanvas.addEventListener('mousedown', startDrawing);
+        sketchCanvas.addEventListener('mousemove', draw);
+        sketchCanvas.addEventListener('mouseup', stopDrawing);
+        sketchCanvas.addEventListener('mouseleave', stopDrawing);
+
+        // Touch support for mobile
+        sketchCanvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            sketchCanvas.dispatchEvent(mouseEvent);
+        });
+
+        sketchCanvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            sketchCanvas.dispatchEvent(mouseEvent);
+        });
+
+        sketchCanvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            sketchCanvas.dispatchEvent(mouseEvent);
+        });
+
+        // Clear canvas button
+        document.getElementById('sketchClearBtn').addEventListener('click', function() {
+            sketchCtx.fillStyle = 'white';
+            sketchCtx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
+        });
+
+        // Brush size display update
+        document.getElementById('sketchBrushSize').addEventListener('input', function() {
+            document.getElementById('brushSizeDisplay').textContent = this.value;
+        });
+
+        // Sketch strength slider update
+        document.getElementById('sketchStrength').addEventListener('input', function() {
+            document.getElementById('sketchStrengthValue').textContent = this.value;
+        });
+
+        // Structure strength slider update
+        document.getElementById('structureStrength').addEventListener('input', function() {
+            document.getElementById('structureStrengthValue').textContent = this.value;
+        });
+
+        // STRUCTURE IMAGE UPLOAD PREVIEW
+        let structureImageFile = null;
+
+        document.getElementById('structureImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                structureImageFile = file;
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('structurePreviewImg').src = event.target.result;
+                    document.getElementById('structurePreview').style.display = 'block';
+                    document.getElementById('structureGenerateBtn').disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // SKETCH GENERATE HANDLER
+        document.getElementById('sketchGenerateBtn').addEventListener('click', async function() {
+            const prompt = document.getElementById('sketchPrompt').value.trim();
+
+            if (!prompt) {
+                showControlStatus('Please enter a prompt describing what you want to create', 'error', 'sketch');
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+            showControlStatus('🎨 Converting your sketch to an image...', 'info', 'sketch');
+
+            try {
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => sketchCanvas.toBlob(resolve, 'image/png'));
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('image', blob, 'sketch.png');
+                formData.append('prompt', prompt);
+                formData.append('control_strength', document.getElementById('sketchStrength').value);
+                const negPrompt = document.getElementById('sketchNegativePrompt').value.trim();
+                if (negPrompt) {
+                    formData.append('negative_prompt', negPrompt);
+                }
+
+                const response = await fetch('/api/stability/control/sketch/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.image_url) {
+                    showControlStatus('✅ Sketch generated successfully!', 'success', 'sketch');
+                    displayControlResult(data.image_url, 'Sketch to Image', prompt);
+                } else {
+                    showControlStatus(`❌ Error: ${data.error || 'Unknown error'}`, 'error', 'sketch');
+                }
+
+            } catch (error) {
+                console.error('Sketch generation error:', error);
+                showControlStatus(`❌ Error: ${error.message}`, 'error', 'sketch');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '✨ Generate from Sketch';
+            }
+        });
+
+        // STRUCTURE GENERATE HANDLER
+        document.getElementById('structureGenerateBtn').addEventListener('click', async function() {
+            const prompt = document.getElementById('structurePrompt').value.trim();
+
+            if (!prompt) {
+                showControlStatus('Please enter a transformation prompt', 'error', 'structure');
+                return;
+            }
+
+            if (!structureImageFile) {
+                showControlStatus('Please upload a reference image first', 'error', 'structure');
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Transforming...';
+            showControlStatus('🏗️ Transforming your image...', 'info', 'structure');
+
+            try {
+                // Create form data
+                const formData = new FormData();
+                formData.append('image', structureImageFile);
+                formData.append('prompt', prompt);
+                formData.append('control_strength', document.getElementById('structureStrength').value);
+                const negPrompt = document.getElementById('structureNegativePrompt').value.trim();
+                if (negPrompt) {
+                    formData.append('negative_prompt', negPrompt);
+                }
+
+                const response = await fetch('/api/stability/control/structure/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.image_url) {
+                    showControlStatus('✅ Image transformed successfully!', 'success', 'structure');
+                    displayControlResult(data.image_url, 'Structure Control', prompt);
+                } else {
+                    showControlStatus(`❌ Error: ${data.error || 'Unknown error'}`, 'error', 'structure');
+                }
+
+            } catch (error) {
+                console.error('Structure control error:', error);
+                showControlStatus(`❌ Error: ${error.message}`, 'error', 'structure');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '✨ Transform Image';
+            }
+        });
+
+        // Helper function to show status messages
+        function showControlStatus(message, type, section) {
+            const statusDiv = document.getElementById(section + 'Status');
+            const alertClass = type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info';
+            statusDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+        }
+
+        // Helper function to display results
+        function displayControlResult(imageUrl, title, description) {
+            const resultsDiv = document.getElementById('controlResults');
+            const gallery = document.getElementById('controlGallery');
+
+            resultsDiv.style.display = 'block';
+
+            const card = document.createElement('div');
+            card.className = 'col-md-6 mb-3';
+            card.innerHTML = `
+                <div class="card bg-dark border-cyan">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-cyan-bright">${title}</h5>
+                        <img src="${imageUrl}" alt="${title}" style="max-width: 100%; border-radius: 10px; margin: 10px 0; cursor: pointer;" onclick="viewImageFullsize('${imageUrl}', '${description}')">
+                        <p class="card-text text-muted small mb-2">${description}</p>
+                        <a href="${imageUrl}" download="${title}.png" class="btn btn-sm btn-outline-light">
+                            💾 Download
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            gallery.appendChild(card);
+
+            // Scroll to results
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // END FEATURE 11: IMAGE-TO-IMAGE CONTROL
     </script>
 </body>
 </html>
