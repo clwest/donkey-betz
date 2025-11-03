@@ -207,6 +207,33 @@
             color: #fca5a5;
         }
 
+        /* Checkbox styling for batch selection */
+        .image-select-checkbox {
+            accent-color: var(--cyan) !important;
+            transform: scale(1.2);
+        }
+
+        .image-select-checkbox:checked {
+            background-color: var(--cyan) !important;
+            border-color: var(--cyan-bright) !important;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+        }
+
+        .image-select-checkbox:hover {
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Selected card styling */
+        .image-card.selected {
+            border: 4px solid var(--cyan) !important;
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.8) !important;
+            transform: scale(1.02);
+        }
+
+        .image-card.selected img {
+            opacity: 0.95;
+        }
+
         .badge {
             padding: 8px 15px;
             font-size: 0.9rem;
@@ -883,6 +910,27 @@
             <div class="tab-pane fade" id="gallery" role="tabpanel">
                 <h3 class="mb-4">📊 Image Gallery</h3>
                 <p class="text-muted">Browse all your generated and edited images</p>
+
+                <!-- BATCH SELECTION CONTROLS (Session 37: Feature 10) -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex gap-2 align-items-center">
+                            <button class="btn btn-outline-primary btn-sm" id="selectAllBtn">
+                                ☑️ Select All
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" id="deselectAllBtn">
+                                ☐ Deselect All
+                            </button>
+                            <button class="btn btn-success" id="downloadSelectedBtn" disabled>
+                                📦 Download Selected (<span id="selectedCount">0</span>)
+                            </button>
+                            <span class="text-muted ms-2" id="selectionHint" style="display: none;">
+                                <small>💡 Select images to download them as a ZIP file</small>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- END BATCH SELECTION CONTROLS -->
 
                 <!-- Filters and Sort -->
                 <div class="row mb-4">
@@ -2027,8 +2075,13 @@
             const typeEmoji = getTypeEmoji(img.image_type);
 
             col.innerHTML = `
-                <div class="card h-100">
-                    <img src="${img.url}" class="card-img-top" alt="${img.filename}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImageFullsize('${img.url}', '${img.prompt || img.filename}')">
+                <div class="card h-100 image-card" id="card-${img.id}" data-image-id="${img.id}">
+                    <div style="position: relative;">
+                        <img src="${img.url}" class="card-img-top" alt="${img.filename}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImageFullsize('${img.url}', '${img.prompt || img.filename}')">
+                        <div style="position: absolute; top: 8px; left: 8px; z-index: 10; background: rgba(255,255,255,0.9); border-radius: 4px; padding: 4px;">
+                            <input type="checkbox" class="form-check-input image-select-checkbox" data-image-id="${img.id}" data-image-url="${img.url}" data-image-data='${JSON.stringify(img).replace(/'/g, "&apos;")}' style="width: 28px; height: 28px; cursor: pointer; border: 3px solid #333;">
+                        </div>
+                    </div>
                     <div class="card-body p-2">
                         <small class="text-muted">${typeEmoji} ${img.image_type.replace('_', ' ')}</small>
                         ${img.prompt ? `<p class="card-text small mb-1" title="${img.prompt}">${img.prompt.substring(0, 50)}${img.prompt.length > 50 ? '...' : ''}</p>` : ''}
@@ -2141,6 +2194,134 @@
             modal.onclick = () => modal.remove();
             document.body.appendChild(modal);
         }
+
+        // ========================================
+        // BATCH DOWNLOAD FUNCTIONALITY (Session 37: Feature 10)
+        // ========================================
+
+        let selectedImages = new Set();
+
+        function updateSelectionUI() {
+            const count = selectedImages.size;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('downloadSelectedBtn').disabled = count === 0;
+
+            // Show/hide hint
+            if (count === 0) {
+                document.getElementById('selectionHint').style.display = 'inline';
+            } else {
+                document.getElementById('selectionHint').style.display = 'none';
+            }
+        }
+
+        // Event delegation for checkbox clicks
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('image-select-checkbox')) {
+                const imageId = e.target.dataset.imageId;
+                const imageData = JSON.parse(e.target.dataset.imageData);
+                const card = document.getElementById(`card-${imageId}`);
+
+                if (e.target.checked) {
+                    selectedImages.add(imageData);
+                    // Add visual selection to card
+                    if (card) card.classList.add('selected');
+                } else {
+                    // Remove by ID
+                    selectedImages.forEach(img => {
+                        if (img.id === imageId) {
+                            selectedImages.delete(img);
+                        }
+                    });
+                    // Remove visual selection from card
+                    if (card) card.classList.remove('selected');
+                }
+
+                updateSelectionUI();
+            }
+        });
+
+        // Select All button
+        document.getElementById('selectAllBtn').addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.image-select-checkbox');
+            checkboxes.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    const imageData = JSON.parse(checkbox.dataset.imageData);
+                    selectedImages.add(imageData);
+                    // Add visual selection to card
+                    const card = document.getElementById(`card-${imageData.id}`);
+                    if (card) card.classList.add('selected');
+                }
+            });
+            updateSelectionUI();
+        });
+
+        // Deselect All button
+        document.getElementById('deselectAllBtn').addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.image-select-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            selectedImages.clear();
+            // Remove visual selection from all cards
+            document.querySelectorAll('.image-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            updateSelectionUI();
+        });
+
+        // Download Selected button
+        document.getElementById('downloadSelectedBtn').addEventListener('click', async function() {
+            if (selectedImages.size === 0) return;
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating ZIP...';
+
+            try {
+                const imageIds = Array.from(selectedImages).map(img => img.id);
+
+                const response = await fetch('/api/images/batch-download/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ image_ids: imageIds })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create ZIP file');
+                }
+
+                // Get the blob
+                const blob = await response.blob();
+
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `images_${new Date().getTime()}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                // Show success message
+                alert(`✅ Successfully downloaded ${selectedImages.size} images!`);
+
+                // Clear selection
+                document.getElementById('deselectAllBtn').click();
+
+            } catch (error) {
+                console.error('Batch download error:', error);
+                alert('❌ Error creating ZIP file: ' + error.message);
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '📦 Download Selected (<span id="selectedCount">0</span>)';
+            }
+        });
+
+        // END BATCH DOWNLOAD FUNCTIONALITY
     </script>
 </body>
 </html>

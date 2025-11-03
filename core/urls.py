@@ -265,7 +265,7 @@ from core.views_video import (
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
-    image_history, toggle_favorite, delete_image
+    image_history, toggle_favorite, delete_image, batch_download_images
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -795,6 +795,9 @@ urlpatterns = [
     path('api/images/history/', image_history, name='image-history'),
     path('api/images/<uuid:image_id>/favorite/', toggle_favorite, name='toggle-favorite'),
     path('api/images/<uuid:image_id>/delete/', delete_image, name='delete-image'),
+
+    # Batch Download (Session 37: Feature 10)
+    path('api/images/batch-download/', batch_download_images, name='batch-download-images'),
 
     path('api/v1/memory/import-file/', import_file_to_memory, name='import-file'),
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),
