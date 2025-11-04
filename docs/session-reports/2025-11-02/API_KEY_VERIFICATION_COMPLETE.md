@@ -208,23 +208,26 @@ Your Runway ML account has **4,070 credits** remaining!
 
 ```bash
 # Reddit (FIXED)
-REDDIT_CLIENT_ID="xL8X2FtglotuPWTjtPLdpw"      # Updated
-REDDIT_CLIENT_SECRET="[REDACTED - HISTORICAL SECRET]"  # Updated
-REDDIT_PASSWORD="[REDACTED - HISTORICAL SECRET]"              # New password
+REDDIT_CLIENT_ID="[REDACTED]"      # Updated
+REDDIT_CLIENT_SECRET="[REDACTED]"  # Updated
+REDDIT_PASSWORD="[REDACTED]"       # New password
 
 # Runway ML (FIXED - endpoint updated in code)
-RUNWAY_API_KEY="key_5fe43609bf90ece612d42f5418399c410f974b846337f9e13fa5b08261bfb6ef45b9835b084bd21fa64029007178a5e5fbd770cf9b0efb8cb8443ec69d62ef6c"
+RUNWAY_API_KEY="[REDACTED]"
 # Note: Key was valid, just needed correct API endpoint
 
 # Polygon (FIXED)
-POLYGON_API_KEY=_MjKKp0hx6yvZL0VMNdTe2UwQhmtocvq  # Regenerated
+POLYGON_API_KEY="[REDACTED]"  # Regenerated
 
 # Etherscan (FIXED - endpoint updated in code)
-ETHERSCAN_API_KEY="[REDACTED - HISTORICAL SECRET]"  # Regenerated
+ETHERSCAN_API_KEY="[REDACTED]"  # Regenerated
 # Note: Migrated from V1 to V2 API
 
 # GitHub (FIXED)
-GITHUB_TOKEN="[REDACTED - HISTORICAL SECRET]"  # Regenerated
+GITHUB_TOKEN="[REDACTED]"  # Regenerated
+
+# ⚠️ SECURITY NOTE: API keys have been redacted from this documentation.
+# Actual keys are stored in .env file which is git-ignored.
 ```
 
 ---
