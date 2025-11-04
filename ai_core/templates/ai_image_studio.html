@@ -2292,10 +2292,109 @@
                                                 <label class="form-label">Reference Video (Optional)</label>
                                             <!-- Gallery Selection for Reference Video -->
                                             <div class="mb-3">
-                                                <button type="button" class="btn btn-outline-cyan w-100" onclick="openVideoGalleryFor('cpRef')">
+                                                <button type="button" class="btn btn-outline-cyan w-100 mb-2" onclick="openVideoGalleryFor('cpRef')">
                                                     📹 Select Reference from Video Gallery
                                                 </button>
-                                                <small class="text-muted">Or upload a new reference video below</small>
+                                                <button type="button" class="btn btn-outline-success w-100" onclick="startWebcamRecording()">
+                                                    🎥 Record with Webcam
+                                                </button>
+                                                <small class="text-muted d-block mt-2">Or upload a new reference video below</small>
+                                            </div>
+
+                                            <!-- Webcam Recording UI -->
+                                            <div id="webcamRecordingUI" style="display: none;" class="mb-3">
+                                                <div class="card bg-dark border-success">
+                                                    <div class="card-header bg-dark border-success d-flex justify-content-between align-items-center">
+                                                        <small class="text-success mb-0">🎥 Webcam Recording</small>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="stopWebcamRecording(false)">
+                                                            ✕ Cancel
+                                                        </button>
+                                                    </div>
+                                                    <div class="card-body p-2">
+                                                        <!-- Camera Preview -->
+                                                        <div id="webcamPreviewContainer" style="display: none;">
+                                                            <!-- Video preview with face positioning guide -->
+                                                            <div style="position: relative;">
+                                                                <video id="webcamPreview" autoplay muted playsinline class="w-100 rounded mb-2" style="max-height: 400px; object-fit: cover; transform: scaleX(-1);"></video>
+                                                                <!-- Face positioning guide overlay -->
+                                                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                                                                    <div style="border: 3px dashed rgba(0, 255, 255, 0.5); border-radius: 50%; width: 250px; height: 350px;"></div>
+                                                                </div>
+                                                                <!-- Tips overlay -->
+                                                                <div style="position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px;">
+                                                                    <div class="text-white" style="font-size: 0.85em;">
+                                                                        <strong class="text-cyan">📸 Face Positioning Tips:</strong>
+                                                                        <ul class="mb-0 mt-1" style="font-size: 0.9em; padding-left: 20px;">
+                                                                            <li>Position your face inside the oval guide</li>
+                                                                            <li>Face should fill 40-50% of the frame</li>
+                                                                            <li>Use good lighting - face well-lit</li>
+                                                                            <li>Look directly at camera</li>
+                                                                            <li>Make clear facial expressions</li>
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-center mb-2">
+                                                                <button type="button" class="btn btn-success btn-lg" onclick="startRecording()" id="startRecordBtn">
+                                                                    ▶️ Start Recording (15s)
+                                                                </button>
+                                                            </div>
+                                                            <div class="alert alert-info mb-0" style="font-size: 0.9em;">
+                                                                <strong>🎥 Recording Quality:</strong> HD (1920x1080) • 15 seconds max • 3-second countdown before start
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Recording in Progress -->
+                                                        <div id="recordingInProgress" style="display: none;">
+                                                            <!-- Video preview with recording overlay -->
+                                                            <div style="position: relative;">
+                                                                <video id="webcamRecording" autoplay muted playsinline class="w-100 rounded mb-2"
+                                                                       style="max-height: 400px; object-fit: cover; transform: scaleX(-1);"></video>
+                                                                <!-- Face positioning guide (visible during recording) -->
+                                                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                                                                    <div style="border: 3px dashed rgba(0, 255, 255, 0.3); border-radius: 50%; width: 250px; height: 350px;"></div>
+                                                                </div>
+                                                                <!-- Recording indicator overlay -->
+                                                                <div style="position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px;">
+                                                                    <div class="text-center">
+                                                                        <h4 class="text-danger mb-2">
+                                                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                                                            ⏺ RECORDING
+                                                                        </h4>
+                                                                        <p class="mb-1 text-white">Time remaining: <span id="recordingTimer" class="text-cyan fw-bold">15s</span></p>
+                                                                        <p class="mb-0 text-muted" style="font-size: 0.85em;">Keep your face in the oval guide</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-center">
+                                                                <button type="button" class="btn btn-outline-danger" onclick="stopRecordingEarly()">
+                                                                    ⏹ Stop Early
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Countdown -->
+                                                        <div id="recordingCountdown" style="display: none;">
+                                                            <div class="text-center p-5">
+                                                                <h1 class="display-1 text-warning fw-bold" id="countdownNumber">3</h1>
+                                                                <p class="text-muted">Get ready...</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Recorded Video Preview -->
+                                                        <div id="recordedVideoPreview" style="display: none;">
+                                                            <video id="recordedVideo" controls class="w-100 rounded mb-2" style="max-height: 300px;"></video>
+                                                            <div class="text-center">
+                                                                <button type="button" class="btn btn-success me-2" onclick="useRecordedVideo()">
+                                                                    ✅ Use This Video
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-warning" onclick="reRecordVideo()">
+                                                                    🔄 Re-record
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <!-- Hidden input to store selected reference video URL -->
@@ -2927,6 +3026,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCsrfToken()
                     },
+                    credentials: 'same-origin',  // CRITICAL: Send session cookie for authentication
                     body: JSON.stringify(formData)
                 });
 
@@ -6541,6 +6641,217 @@
             console.log('🔄 Restarted both videos');
         }
         // END VIDEO COMPARISON FUNCTIONS
+
+        // WEBCAM RECORDING FUNCTIONS (Session 51: Character Performance webcam recording)
+        let webcamStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordedVideoBlob = null;
+        let recordingTimer = null;
+        let recordingTimeRemaining = 15; // 15 seconds max (increased for better face detection)
+
+        async function startWebcamRecording() {
+            console.log('🎥 Starting webcam recording...');
+
+            try {
+                // Request webcam access with HD resolution
+                webcamStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                });
+
+                // Show the UI
+                document.getElementById('webcamRecordingUI').style.display = 'block';
+                document.getElementById('webcamPreviewContainer').style.display = 'block';
+
+                // Set video source
+                const preview = document.getElementById('webcamPreview');
+                preview.srcObject = webcamStream;
+
+                console.log('✅ Webcam initialized');
+            } catch (err) {
+                console.error('❌ Webcam error:', err);
+                alert('Could not access webcam: ' + err.message);
+            }
+        }
+
+        function stopWebcamRecording(save = false) {
+            console.log('🛑 Stopping webcam...');
+
+            // Stop all tracks
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+            }
+
+            // Stop media recorder if active
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            // Clear timers
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+
+            // Hide UI
+            document.getElementById('webcamRecordingUI').style.display = 'none';
+            document.getElementById('webcamPreviewContainer').style.display = 'none';
+            document.getElementById('recordingCountdown').style.display = 'none';
+            document.getElementById('recordingInProgress').style.display = 'none';
+            document.getElementById('recordedVideoPreview').style.display = 'none';
+
+            // Clear recorded data if not saving
+            if (!save) {
+                recordedChunks = [];
+                recordedVideoBlob = null;
+            }
+        }
+
+        async function startRecording() {
+            console.log('▶️ Starting recording with countdown...');
+
+            // Hide preview, show countdown
+            document.getElementById('webcamPreviewContainer').style.display = 'none';
+            document.getElementById('recordingCountdown').style.display = 'block';
+
+            // 3-second countdown
+            let countdown = 3;
+            const countdownEl = document.getElementById('countdownNumber');
+
+            const countdownInterval = setInterval(() => {
+                countdownEl.textContent = countdown;
+                countdown--;
+
+                if (countdown < 0) {
+                    clearInterval(countdownInterval);
+                    actuallyStartRecording();
+                }
+            }, 1000);
+        }
+
+        function actuallyStartRecording() {
+            console.log('🎬 Recording started!');
+
+            // Hide countdown, show recording UI
+            document.getElementById('recordingCountdown').style.display = 'none';
+            document.getElementById('recordingInProgress').style.display = 'block';
+
+            // Set webcam stream to recording video element
+            const recordingVideo = document.getElementById('webcamRecording');
+            recordingVideo.srcObject = webcamStream;
+
+            // Initialize MediaRecorder
+            recordedChunks = [];
+            recordingTimeRemaining = 15;
+
+            try {
+                mediaRecorder = new MediaRecorder(webcamStream, {
+                    mimeType: 'video/webm;codecs=vp9'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    console.log('🎬 Recording stopped, processing video...');
+                    processRecordedVideo();
+                };
+
+                mediaRecorder.start();
+
+                // Update timer every second
+                recordingTimer = setInterval(() => {
+                    recordingTimeRemaining--;
+                    document.getElementById('recordingTimer').textContent = recordingTimeRemaining + 's';
+
+                    if (recordingTimeRemaining <= 0) {
+                        stopRecordingEarly();
+                    }
+                }, 1000);
+
+            } catch (err) {
+                console.error('❌ MediaRecorder error:', err);
+                alert('Could not start recording: ' + err.message);
+                stopWebcamRecording(false);
+            }
+        }
+
+        function stopRecordingEarly() {
+            console.log('⏹ Stopping recording early...');
+
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        function processRecordedVideo() {
+            console.log('🎞️ Processing recorded video...');
+
+            // Create blob from recorded chunks
+            recordedVideoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+
+            // Show preview
+            const preview = document.getElementById('recordedVideo');
+            preview.src = URL.createObjectURL(recordedVideoBlob);
+
+            // Hide recording UI, show preview
+            document.getElementById('recordingInProgress').style.display = 'none';
+            document.getElementById('recordedVideoPreview').style.display = 'block';
+
+            console.log('✅ Video ready for preview');
+        }
+
+        function useRecordedVideo() {
+            console.log('✅ Using recorded video...');
+
+            // Create a File object from the blob
+            const videoFile = new File([recordedVideoBlob], 'recorded-reference.webm', {
+                type: 'video/webm'
+            });
+
+            // Create a DataTransfer to set file input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(videoFile);
+
+            // Set the file input
+            const fileInput = document.getElementById('cpReferenceVideo');
+            fileInput.files = dataTransfer.files;
+
+            // Close webcam UI
+            stopWebcamRecording(true);
+
+            // Show confirmation
+            alert('✅ Recorded video ready! You can now generate your character performance.');
+
+            console.log('✅ Recorded video set as reference video');
+        }
+
+        function reRecordVideo() {
+            console.log('🔄 Re-recording video...');
+
+            // Reset and show webcam again
+            document.getElementById('recordedVideoPreview').style.display = 'none';
+            document.getElementById('webcamPreviewContainer').style.display = 'block';
+
+            // Clear previous recording
+            recordedChunks = [];
+            recordedVideoBlob = null;
+        }
+        // END WEBCAM RECORDING FUNCTIONS
 
         async function downloadCurrentVideo() {
             console.log('🎯 downloadCurrentVideo() CALLED - START');
