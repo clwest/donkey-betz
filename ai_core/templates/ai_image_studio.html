@@ -497,6 +497,11 @@
                     🎬 Video
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab">
+                    🎵 Audio
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -2009,6 +2014,291 @@
                 </div>
             </div>
             <!-- END VIDEO TAB -->
+
+            <!-- AUDIO TAB (Session 48: Phase 3 - Audio UI) -->
+            <div class="tab-pane fade" id="audio" role="tabpanel">
+                <h3 class="mb-4">🎵 AI Audio Generation</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info">
+                    <strong>🎵 Audio Features:</strong>
+                    Generate speech, create sound effects, dub audio to different languages, convert voices, and isolate vocals!
+                </div>
+
+                <!-- Audio Mode Selection -->
+                <ul class="nav nav-pills mb-4" id="audioModeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="text-speech-tab" data-bs-toggle="tab" data-bs-target="#text-speech" type="button" role="tab">
+                            🗣️ Text-to-Speech
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="text-sound-tab" data-bs-toggle="tab" data-bs-target="#text-sound" type="button" role="tab">
+                            🔊 Text-to-Sound
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="voice-dubbing-tab" data-bs-toggle="tab" data-bs-target="#voice-dubbing" type="button" role="tab">
+                            🌍 Voice Dubbing
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="speech-speech-tab" data-bs-toggle="tab" data-bs-target="#speech-speech" type="button" role="tab">
+                            🎙️ Speech-to-Speech
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="voice-isolation-tab" data-bs-toggle="tab" data-bs-target="#voice-isolation" type="button" role="tab">
+                            🎧 Voice Isolation
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="audioModeContent">
+                    <!-- TEXT-TO-SPEECH -->
+                    <div class="tab-pane fade show active" id="text-speech" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h4 class="card-title text-cyan">🗣️ Text-to-Speech</h4>
+                                        <p class="text-muted mb-4">Generate natural-sounding speech from text</p>
+
+                                        <form id="textToSpeechForm">
+                                            <!-- Text Input -->
+                                            <div class="mb-3">
+                                                <label for="ttsText" class="form-label">Text to Speak</label>
+                                                <textarea class="form-control bg-dark text-light border-cyan"
+                                                          id="ttsText"
+                                                          rows="5"
+                                                          placeholder="Enter text to convert to speech..."
+                                                          required></textarea>
+                                            </div>
+
+                                            <!-- Voice Selection -->
+                                            <div class="mb-3">
+                                                <label for="ttsVoice" class="form-label">Voice</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="ttsVoice">
+                                                    <option value="Rachel">Rachel (Female, Natural)</option>
+                                                    <option value="Maya">Maya (Female, Warm)</option>
+                                                    <option value="Ella">Ella (Female, Clear)</option>
+                                                    <option value="Lisa">Lisa (Female, Friendly)</option>
+                                                    <option value="James">James (Male, Natural)</option>
+                                                    <option value="Benjamin">Benjamin (Male, Warm)</option>
+                                                    <option value="Noah">Noah (Male, Clear)</option>
+                                                    <option value="Vincent">Vincent (Male, Deep)</option>
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                🗣️ Generate Speech
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">🎵 Generated Audio</h5>
+                                        <div id="ttsResult"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TEXT-TO-SOUND -->
+                    <div class="tab-pane fade" id="text-sound" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h4 class="card-title text-cyan">🔊 Text-to-Sound</h4>
+                                        <p class="text-muted mb-4">Create sound effects from descriptions</p>
+
+                                        <form id="textToSoundForm">
+                                            <!-- Sound Description -->
+                                            <div class="mb-3">
+                                                <label for="soundDescription" class="form-label">Sound Description</label>
+                                                <textarea class="form-control bg-dark text-light border-cyan"
+                                                          id="soundDescription"
+                                                          rows="3"
+                                                          placeholder="Describe the sound effect you want to create..."
+                                                          required></textarea>
+                                                <small class="text-muted">Example: "Ocean waves crashing on a beach" or "City traffic with honking cars"</small>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                🔊 Create Sound Effect
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">🔊 Generated Sound</h5>
+                                        <div id="soundResult"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VOICE DUBBING -->
+                    <div class="tab-pane fade" id="voice-dubbing" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h4 class="card-title text-cyan">🌍 Voice Dubbing</h4>
+                                        <p class="text-muted mb-4">Translate and dub audio to different languages</p>
+
+                                        <form id="voiceDubbingForm">
+                                            <!-- Audio Upload -->
+                                            <div class="mb-3">
+                                                <label for="dubbingAudioFile" class="form-label">Audio File</label>
+                                                <input type="file"
+                                                       class="form-control bg-dark text-light border-cyan"
+                                                       id="dubbingAudioFile"
+                                                       accept="audio/*"
+                                                       required>
+                                            </div>
+
+                                            <!-- Target Language -->
+                                            <div class="mb-3">
+                                                <label for="targetLanguage" class="form-label">Target Language</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="targetLanguage">
+                                                    <option value="es">Spanish (Español)</option>
+                                                    <option value="fr">French (Français)</option>
+                                                    <option value="de">German (Deutsch)</option>
+                                                    <option value="it">Italian (Italiano)</option>
+                                                    <option value="pt">Portuguese (Português)</option>
+                                                    <option value="ja">Japanese (日本語)</option>
+                                                    <option value="ko">Korean (한국어)</option>
+                                                    <option value="zh">Chinese (中文)</option>
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                🌍 Dub Audio
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">🌍 Dubbed Audio</h5>
+                                        <div id="dubbingResult"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SPEECH-TO-SPEECH -->
+                    <div class="tab-pane fade" id="speech-speech" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h4 class="card-title text-cyan">🎙️ Speech-to-Speech</h4>
+                                        <p class="text-muted mb-4">Convert voice to a different voice</p>
+
+                                        <form id="speechToSpeechForm">
+                                            <!-- Audio Upload -->
+                                            <div class="mb-3">
+                                                <label for="stsAudioFile" class="form-label">Audio File</label>
+                                                <input type="file"
+                                                       class="form-control bg-dark text-light border-cyan"
+                                                       id="stsAudioFile"
+                                                       accept="audio/*"
+                                                       required>
+                                            </div>
+
+                                            <!-- Target Voice -->
+                                            <div class="mb-3">
+                                                <label for="stsTargetVoice" class="form-label">Target Voice</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="stsTargetVoice">
+                                                    <option value="Rachel">Rachel (Female, Natural)</option>
+                                                    <option value="Maya">Maya (Female, Warm)</option>
+                                                    <option value="Ella">Ella (Female, Clear)</option>
+                                                    <option value="Lisa">Lisa (Female, Friendly)</option>
+                                                    <option value="James">James (Male, Natural)</option>
+                                                    <option value="Benjamin">Benjamin (Male, Warm)</option>
+                                                    <option value="Noah">Noah (Male, Clear)</option>
+                                                    <option value="Vincent">Vincent (Male, Deep)</option>
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                🎙️ Convert Voice
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">🎙️ Converted Audio</h5>
+                                        <div id="stsResult"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VOICE ISOLATION -->
+                    <div class="tab-pane fade" id="voice-isolation" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h4 class="card-title text-cyan">🎧 Voice Isolation</h4>
+                                        <p class="text-muted mb-4">Remove background noise and isolate voice</p>
+
+                                        <form id="voiceIsolationForm">
+                                            <!-- Audio Upload -->
+                                            <div class="mb-3">
+                                                <label for="isolationAudioFile" class="form-label">Audio File</label>
+                                                <input type="file"
+                                                       class="form-control bg-dark text-light border-cyan"
+                                                       id="isolationAudioFile"
+                                                       accept="audio/*"
+                                                       required>
+                                                <small class="text-muted">Note: Audio must be at least 4.6 seconds long</small>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                🎧 Isolate Voice
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-cyan">🎧 Isolated Audio</h5>
+                                        <div id="isolationResult"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END AUDIO TAB -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -5854,6 +6144,237 @@
         });
 
         // END FEATURE 14: VIDEO GENERATION
+
+        // ====================================================================
+        // AUDIO TAB JAVASCRIPT (Session 48: Phase 3)
+        // ====================================================================
+
+        // TEXT-TO-SPEECH
+        document.getElementById('textToSpeechForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const text = document.getElementById('ttsText').value;
+            const voice = document.getElementById('ttsVoice').value;
+            const resultDiv = document.getElementById('ttsResult');
+
+            resultDiv.innerHTML = '<div class="alert alert-info">🎵 Generating speech...</div>';
+
+            try {
+                const response = await authenticatedFetch('/api/v1/audio/text-to-speech/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, voice })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    // Poll for completion
+                    pollAudioTask(data.task_id, resultDiv, 'Speech');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to generate speech'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // TEXT-TO-SOUND
+        document.getElementById('textToSoundForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const description = document.getElementById('soundDescription').value;
+            const resultDiv = document.getElementById('soundResult');
+
+            resultDiv.innerHTML = '<div class="alert alert-info">🔊 Creating sound effect...</div>';
+
+            try {
+                const response = await authenticatedFetch('/api/v1/audio/text-to-sound/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    pollAudioTask(data.task_id, resultDiv, 'Sound Effect');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to create sound'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // VOICE DUBBING
+        document.getElementById('voiceDubbingForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const audioFile = document.getElementById('dubbingAudioFile').files[0];
+            const targetLanguage = document.getElementById('targetLanguage').value;
+            const resultDiv = document.getElementById('dubbingResult');
+
+            if (!audioFile) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">⚠️ Please select an audio file</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="alert alert-info">🌍 Uploading and dubbing audio...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioFile);
+                formData.append('target_language', targetLanguage);
+
+                const response = await authenticatedFetch('/api/v1/audio/voice-dubbing/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    pollAudioTask(data.task_id, resultDiv, 'Dubbed Audio');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to dub audio'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // SPEECH-TO-SPEECH
+        document.getElementById('speechToSpeechForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const audioFile = document.getElementById('stsAudioFile').files[0];
+            const targetVoice = document.getElementById('stsTargetVoice').value;
+            const resultDiv = document.getElementById('stsResult');
+
+            if (!audioFile) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">⚠️ Please select an audio file</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="alert alert-info">🎙️ Converting voice...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioFile);
+                formData.append('target_voice', targetVoice);
+
+                const response = await authenticatedFetch('/api/v1/audio/speech-to-speech/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    pollAudioTask(data.task_id, resultDiv, 'Converted Audio');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to convert voice'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // VOICE ISOLATION
+        document.getElementById('voiceIsolationForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const audioFile = document.getElementById('isolationAudioFile').files[0];
+            const resultDiv = document.getElementById('isolationResult');
+
+            if (!audioFile) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">⚠️ Please select an audio file</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="alert alert-info">🎧 Isolating voice...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioFile);
+
+                const response = await authenticatedFetch('/api/v1/audio/voice-isolation/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    pollAudioTask(data.task_id, resultDiv, 'Isolated Audio');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to isolate voice'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // Audio Task Polling Helper
+        async function pollAudioTask(taskId, resultDiv, label) {
+            const maxAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+            let attempts = 0;
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/v1/audio/status/${taskId}/`);
+                    const data = await response.json();
+
+                    attempts++;
+
+                    if (data.status === 'completed' && data.audio_url) {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success mb-3">
+                                ✅ ${label} generated successfully!
+                            </div>
+                            <audio controls class="w-100 mb-3">
+                                <source src="${data.audio_url}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            <a href="${data.audio_url}" download class="btn btn-outline-light btn-sm">
+                                📥 Download Audio
+                            </a>
+                        `;
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${label} generation failed: ${data.error_message || 'Unknown error'}</div>`;
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `<div class="alert alert-warning">⏱️ Task timed out. Please check status manually.</div>`;
+                    } else {
+                        // Still processing
+                        const progress = data.progress || 0;
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-info">
+                                ⏳ Generating ${label}... ${progress}%
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                         role="progressbar"
+                                         style="width: ${progress}%"
+                                         aria-valuenow="${progress}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error checking status: ${error.message}</div>`;
+                }
+            }, 2000); // Poll every 2 seconds
+        }
+
+        // ====================================================================
+        // END AUDIO TAB JAVASCRIPT
+        // ====================================================================
     </script>
 </body>
 </html>

@@ -262,7 +262,8 @@ from core.views_content import (
 from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
     video_gallery, save_video_to_gallery, test_runway_connection,
-    get_video_history, toggle_video_favorite, delete_video
+    get_video_history, toggle_video_favorite, delete_video, increment_video_view,
+    increment_video_download
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
@@ -781,8 +782,18 @@ urlpatterns = [
     path('api/v1/video/test-runway/', test_runway_connection, name='test-runway'),
     # Video History endpoints (Session 44: Video Gallery)
     path('api/v1/video/history/', get_video_history, name='video-history'),
-    path('api/v1/video/history/<int:video_id>/favorite/', toggle_video_favorite, name='toggle-video-favorite'),
-    path('api/v1/video/history/<int:video_id>/', delete_video, name='delete-video'),
+    path('api/v1/video/history/<str:video_id>/favorite/', toggle_video_favorite, name='toggle-video-favorite'),
+    path('api/v1/video/history/<str:video_id>/view/', increment_video_view, name='increment-video-view'),
+    path('api/v1/video/history/<str:video_id>/download/', increment_video_download, name='increment-video-download'),
+    path('api/v1/video/history/<str:video_id>/', delete_video, name='delete-video'),
+    
+    # Audio Generation endpoints (Session 48: Phase 3)
+    path('api/v1/audio/text-to-speech/', lambda r: __import__('core.views_audio', fromlist=['text_to_speech']).text_to_speech(r), name='audio-text-to-speech'),
+    path('api/v1/audio/text-to-sound/', lambda r: __import__('core.views_audio', fromlist=['text_to_sound']).text_to_sound(r), name='audio-text-to-sound'),
+    path('api/v1/audio/voice-dubbing/', lambda r: __import__('core.views_audio', fromlist=['voice_dubbing']).voice_dubbing(r), name='audio-voice-dubbing'),
+    path('api/v1/audio/speech-to-speech/', lambda r: __import__('core.views_audio', fromlist=['speech_to_speech']).speech_to_speech(r), name='audio-speech-to-speech'),
+    path('api/v1/audio/voice-isolation/', lambda r: __import__('core.views_audio', fromlist=['voice_isolation']).voice_isolation(r), name='audio-voice-isolation'),
+    path('api/v1/audio/status/<str:task_id>/', lambda r, task_id: __import__('core.views_audio', fromlist=['check_audio_status']).check_audio_status(r, task_id), name='audio-status'),
 
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
