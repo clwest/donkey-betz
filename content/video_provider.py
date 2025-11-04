@@ -35,7 +35,8 @@ class RunwayMLProvider:
     """RunwayML video generation provider"""
     
     def __init__(self):
-        self.api_key = getattr(settings, 'RUNWAY_API_KEY', '')
+        # Get API key from EXTERNAL_API_KEYS (correct location in settings)
+        self.api_key = settings.EXTERNAL_API_KEYS.get('RUNWAY_API_KEY', '') if hasattr(settings, 'EXTERNAL_API_KEYS') else getattr(settings, 'RUNWAY_API_KEY', '')
         self.api_base = "https://api.dev.runwayml.com/v1"  # Correct API endpoint
         self.mock_mode = getattr(settings, 'RUNWAY_MOCK_MODE', False)  # Disable mock mode - use real API
         self.headers = {
@@ -1274,12 +1275,72 @@ class RunwayMLProvider:
     def _prepare_video(self, video_input: str) -> str:
         """Prepare video for API (convert to URL or base64 if needed)"""
 
-        # If it's already a URL
-        if video_input.startswith('http'):
+        # If it's already a data URI
+        if video_input.startswith('data:video'):
             return video_input
 
-        # If it's a local file path, we'll need to upload it or convert to base64
-        # For now, assume it's a URL or will be handled by caller
+        # Check if it's a local media path (relative or full URL)
+        is_local_media = (
+            video_input.startswith('/media/') or  # Relative path
+            'localhost' in video_input or          # Localhost URL
+            '127.0.0.1' in video_input or         # 127.0.0.1 URL
+            (video_input.startswith('http') and '/media/' in video_input)  # Any URL with /media/
+        )
+
+        if is_local_media:
+            # This is a local media file - convert to file path and base64
+            try:
+                from django.conf import settings
+                import os
+                from urllib.parse import urlparse, unquote
+
+                # Extract path - handle both relative paths and URLs
+                if video_input.startswith('http'):
+                    parsed = urlparse(video_input)
+                    url_path = unquote(parsed.path)
+                else:
+                    url_path = video_input
+
+                # Remove /media/ prefix if present
+                if url_path.startswith('/media/'):
+                    url_path = url_path[7:]  # Remove '/media/' prefix
+
+                # Build full file path
+                file_path = os.path.join(settings.MEDIA_ROOT, url_path)
+
+                if not os.path.exists(file_path):
+                    logger.error(f"Local video file not found: {file_path}")
+                    return video_input
+
+                # Read video file and convert to base64
+                with open(file_path, 'rb') as f:
+                    video_data = f.read()
+                    video_base64 = base64.b64encode(video_data).decode('utf-8')
+
+                    # Determine MIME type based on file extension
+                    ext = os.path.splitext(file_path)[1].lower()
+                    mime_types = {
+                        '.mp4': 'video/mp4',
+                        '.webm': 'video/webm',
+                        '.mov': 'video/quicktime',
+                        '.avi': 'video/x-msvideo'
+                    }
+                    mime_type = mime_types.get(ext, 'video/mp4')
+
+                    # Return data URI
+                    data_uri = f"data:{mime_type};base64,{video_base64}"
+                    logger.info(f"✅ Converted local video to base64 data URI ({len(video_data)} bytes)")
+                    return data_uri
+
+            except Exception as e:
+                logger.error(f"Failed to convert local video to base64: {e}")
+                return video_input
+
+        # If it's already a remote HTTPS URL, return as-is
+        if video_input.startswith('https://'):
+            return video_input
+
+        # Otherwise return as-is (might be a runway:// URI or other format)
         return video_input
 
 

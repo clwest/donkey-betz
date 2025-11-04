@@ -302,15 +302,19 @@
             color: #000 !important;
         }
 
-        /* Larger canvas workspace */
-        #eraseCanvas, #inpaintCanvas {
-            min-width: 600px !important;
-            min-height: 450px !important;
+        /* Larger canvas workspace (Session 51: Responsive) */
+        #eraseCanvas, #inpaintCanvas, #sketchCanvas {
+            min-width: min(800px, 90vw) !important;
+            min-height: min(600px, 70vh) !important;
+            max-width: 900px !important;
+            margin: 0 auto;
         }
 
         #editImageDisplay {
-            max-width: 600px !important;
-            max-height: 450px !important;
+            max-width: min(800px, 90vw) !important;
+            max-height: 600px !important;
+            margin: 0 auto;
+            display: block;
         }
 
         .canvas-container {
@@ -418,6 +422,82 @@
         .nav, .nav-tabs, .nav-pills, .navbar,
         .nav-link, .nav-item, button, a {
             pointer-events: auto !important;
+        }
+
+        /* ===== RESPONSIVE FULL-WIDTH LAYOUT (Session 51) ===== */
+        /* Full-width content area for better space utilization */
+        .content-full-width {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Responsive canvas sizing - adapts to screen */
+        .responsive-canvas {
+            max-width: min(900px, 90vw);
+            margin: 0 auto;
+            display: block;
+        }
+
+        /* Controls panel - organized below content */
+        .controls-panel {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        /* Responsive gallery grids for all screen sizes */
+        @media (max-width: 768px) {
+            /* Mobile phones */
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+                gap: 15px !important;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            /* Tablets */
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+                gap: 18px !important;
+            }
+        }
+
+        @media (min-width: 1025px) and (max-width: 1600px) {
+            /* Laptops (MacBook 13", 14", 16") */
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+                gap: 20px !important;
+            }
+        }
+
+        @media (min-width: 1601px) {
+            /* Large desktop monitors */
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+                gap: 22px !important;
+            }
+        }
+
+        /* Make all containers full-width by default */
+        .row > [class*="col-lg-6"],
+        .row > [class*="col-md-6"] {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        /* Organize controls in horizontal rows when space available */
+        @media (min-width: 768px) {
+            .controls-row {
+                display: flex;
+                gap: 15px;
+                flex-wrap: wrap;
+            }
+            .controls-row > * {
+                flex: 1;
+                min-width: 200px;
+            }
         }
     </style>
 </head>

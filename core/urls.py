@@ -263,7 +263,8 @@ from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
     video_gallery, save_video_to_gallery, test_runway_connection,
     get_video_history, toggle_video_favorite, delete_video, increment_video_view,
-    increment_video_download
+    increment_video_download, video_to_video_endpoint, video_upscale_endpoint,
+    character_performance_endpoint
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
@@ -775,6 +776,10 @@ urlpatterns = [
     # Video Generation endpoints (RunwayML)
     path('api/v1/video/text-to-video/', text_to_video, name='text-to-video'),
     path('api/v1/video/image-to-video/', image_to_video, name='image-to-video'),
+    # Session 49: New video endpoints
+    path('api/v1/video/video-to-video/', video_to_video_endpoint, name='video-to-video'),
+    path('api/v1/video/upscale/', video_upscale_endpoint, name='video-upscale'),
+    path('api/v1/video/character-performance/', character_performance_endpoint, name='character-performance'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
     path('api/v1/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
