@@ -461,7 +461,7 @@ class RunwayMLProvider:
         duration: int = 4,
         quality: str = "gen4_aleph",
         reference_images: list = None,
-        ratio: str = "1920:1080",
+        ratio: str = "1280:720",  # Valid ratio for gen4_aleph (changed from 1920:1080)
         **kwargs
     ) -> VideoGenerationResult:
         """
@@ -715,9 +715,12 @@ class RunwayMLProvider:
         try:
             # Prepare request payload
             payload = {
-                "text": text,
-                "voice": voice,
-                "modelId": model
+                "promptText": text,  # Changed from "text" to "promptText"
+                "voice": {  # Voice needs to be an object with type discriminator
+                    "type": "default",  # Required type discriminator (try "default" instead of "preset")
+                    "name": voice
+                },
+                "model": model  # Changed from "modelId" to "model"
             }
 
             # Add optional parameters
@@ -785,7 +788,7 @@ class RunwayMLProvider:
         try:
             # Prepare request payload
             payload = {
-                "text": prompt,
+                "promptText": prompt,  # Changed from "text" to "promptText"
                 "duration": duration,
                 "model": "eleven_text_to_sound_v2"
             }
@@ -854,15 +857,25 @@ class RunwayMLProvider:
             # Prepare image input
             image_data = self._prepare_image(image_url)
 
-            # Prepare request payload
+            # Prepare request payload with proper structure
+            # API expects "character" object with type and uri, and "reference" object (always required)
             payload = {
                 "model": "act_two",
-                "promptImage": image_data
+                "character": {
+                    "type": "image",  # Required type discriminator
+                    "uri": image_data  # Changed from imageUri to uri
+                },
+                "reference": {  # Always required, even if no driving video
+                    "type": "video" if driving_video_url else "image"
+                }
             }
 
-            # Add driving video if provided
+            # Add driving video URI if provided
             if driving_video_url:
-                payload['drivingVideoUri'] = self._prepare_video(driving_video_url)
+                payload['reference']['uri'] = self._prepare_video(driving_video_url)
+            else:
+                # Use the character image as reference if no driving video
+                payload['reference']['uri'] = image_data
 
             # Add prompt if provided
             if prompt:
