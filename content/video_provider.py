@@ -715,12 +715,12 @@ class RunwayMLProvider:
         try:
             # Prepare request payload
             payload = {
-                "promptText": text,  # Changed from "text" to "promptText"
-                "voice": {  # Voice needs to be an object with type discriminator
-                    "type": "default",  # Required type discriminator (try "default" instead of "preset")
-                    "name": voice
+                "promptText": text,
+                "voice": {
+                    "type": "runway-preset",  # Correct type discriminator from API docs!
+                    "presetId": voice  # Changed from "name" to "presetId"
                 },
-                "model": model  # Changed from "modelId" to "model"
+                "model": model
             }
 
             # Add optional parameters
@@ -1025,6 +1025,227 @@ class RunwayMLProvider:
 
         except Exception as e:
             logger.error(f"RunwayML get credit usage error: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+
+    def voice_dubbing(
+        self,
+        audio_url: str,
+        target_lang: str = "en",
+        disable_voice_cloning: bool = False,
+        drop_background_audio: bool = False,
+        num_speakers: int = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Dub audio content to a target language
+
+        Args:
+            audio_url: URL or data URI of the audio file
+            target_lang: Target language code (e.g., "es" for Spanish, "fr" for French)
+            disable_voice_cloning: Whether to use generic voice instead of cloning
+            drop_background_audio: Whether to remove background audio
+            num_speakers: Number of speakers (auto-detected if not provided)
+
+        Returns:
+            Dict with success status and task_id
+        """
+
+        if not self.api_key:
+            return {
+                "success": False,
+                "error_message": "RunwayML API key not configured"
+            }
+
+        try:
+            # Prepare request payload
+            payload = {
+                "audioUri": audio_url,
+                "targetLang": target_lang,
+                "model": "eleven_voice_dubbing"
+            }
+
+            # Add optional parameters
+            if disable_voice_cloning is not None:
+                payload['disableVoiceCloning'] = disable_voice_cloning
+            if drop_background_audio is not None:
+                payload['dropBackgroundAudio'] = drop_background_audio
+            if num_speakers is not None:
+                payload['numSpeakers'] = num_speakers
+
+            logger.info(f"📤 [RUNWAY] Sending voice dubbing request")
+
+            # Submit request
+            response = requests.post(
+                f"{self.api_base}/voice_dubbing",
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+
+            logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
+
+            if response.status_code != 200:
+                return {
+                    "success": False,
+                    "error_message": f"Voice dubbing failed ({response.status_code}): {response.text}"
+                }
+
+            data = response.json()
+            task_id = data.get('id')
+
+            return {
+                "success": True,
+                "task_id": task_id,
+                "estimated_time": 30  # Estimated processing time
+            }
+
+        except Exception as e:
+            logger.error(f"RunwayML voice dubbing error: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+
+    def voice_isolation(
+        self,
+        audio_url: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Isolate voice from background audio
+        Audio duration must be > 4.6s and < 3600s
+
+        Args:
+            audio_url: URL or data URI of the audio file
+
+        Returns:
+            Dict with success status and task_id
+        """
+
+        if not self.api_key:
+            return {
+                "success": False,
+                "error_message": "RunwayML API key not configured"
+            }
+
+        try:
+            # Prepare request payload
+            payload = {
+                "audioUri": audio_url,
+                "model": "eleven_voice_isolation"
+            }
+
+            logger.info(f"📤 [RUNWAY] Sending voice isolation request")
+
+            # Submit request
+            response = requests.post(
+                f"{self.api_base}/voice_isolation",
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+
+            logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
+
+            if response.status_code != 200:
+                return {
+                    "success": False,
+                    "error_message": f"Voice isolation failed ({response.status_code}): {response.text}"
+                }
+
+            data = response.json()
+            task_id = data.get('id')
+
+            return {
+                "success": True,
+                "task_id": task_id,
+                "estimated_time": 20  # Estimated processing time
+            }
+
+        except Exception as e:
+            logger.error(f"RunwayML voice isolation error: {str(e)}")
+            return {
+                "success": False,
+                "error_message": str(e)
+            }
+
+    def speech_to_speech(
+        self,
+        media_url: str,
+        media_type: str,  # "audio" or "video"
+        voice: str = "Rachel",
+        remove_background_noise: bool = False,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Convert speech from one voice to another in audio or video
+
+        Args:
+            media_url: URL or data URI of the audio/video file
+            media_type: Type of media ("audio" or "video")
+            voice: Preset voice ID to use (e.g., "Rachel", "Maya")
+            remove_background_noise: Whether to remove background noise
+
+        Returns:
+            Dict with success status and task_id
+        """
+
+        if not self.api_key:
+            return {
+                "success": False,
+                "error_message": "RunwayML API key not configured"
+            }
+
+        try:
+            # Prepare request payload
+            payload = {
+                "media": {
+                    "type": media_type,
+                    "uri": media_url
+                },
+                "voice": {
+                    "type": "runway-preset",
+                    "presetId": voice
+                },
+                "model": "eleven_multilingual_sts_v2"
+            }
+
+            # Add optional parameters
+            if remove_background_noise is not None:
+                payload['removeBackgroundNoise'] = remove_background_noise
+
+            logger.info(f"📤 [RUNWAY] Sending speech-to-speech request")
+
+            # Submit request
+            response = requests.post(
+                f"{self.api_base}/speech_to_speech",
+                headers=self.headers,
+                json=payload,
+                timeout=30
+            )
+
+            logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
+
+            if response.status_code != 200:
+                return {
+                    "success": False,
+                    "error_message": f"Speech-to-speech failed ({response.status_code}): {response.text}"
+                }
+
+            data = response.json()
+            task_id = data.get('id')
+
+            return {
+                "success": True,
+                "task_id": task_id,
+                "estimated_time": 25  # Estimated processing time
+            }
+
+        except Exception as e:
+            logger.error(f"RunwayML speech-to-speech error: {str(e)}")
             return {
                 "success": False,
                 "error_message": str(e)
