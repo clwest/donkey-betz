@@ -994,3 +994,303 @@ def test_runway_connection(request):
                 'success': False,
                 'error': str(e)
             }, status=500)
+
+# ====================================================================
+# NEW VIDEO ENDPOINTS (Session 49)
+# ====================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def video_to_video_endpoint(request):
+    """
+    POST /api/v1/video/video-to-video/
+    Transform existing video with AI
+
+    Form Data:
+        - video: video file
+        - mode: 'extend' or 'interpolate'
+        - prompt: optional transformation description
+        - duration: 4, 6, or 8 seconds
+    """
+    try:
+        # Get gallery video URL or uploaded video
+        gallery_video_url = request.POST.get('video_url', '').strip()
+        video_file = request.FILES.get('video')
+        mode = request.POST.get('mode', 'extend')
+        prompt = request.POST.get('prompt', '')
+        duration = int(request.POST.get('duration', 6))
+
+        # Check if video source is provided (gallery URL or file upload)
+        if not gallery_video_url and not video_file:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Video file or gallery video is required'
+            }, status=400)
+
+        logger.info(f"🎬 Video-to-Video request: mode={mode}, duration={duration}s")
+
+        # Use gallery video URL or save uploaded video temporarily
+        if gallery_video_url:
+            logger.info(f"📹 Using video from gallery: {gallery_video_url}")
+            video_url = gallery_video_url
+            file_path = None
+        else:
+            logger.info(f"📤 Uploading new video file")
+            file_name = f"temp_v2v_{video_file.name}"
+            file_path = default_storage.save(file_name, ContentFile(video_file.read()))
+            video_url = request.build_absolute_uri(default_storage.url(file_path))
+
+        # Call Runway ML provider
+        result = runway_provider.video_to_video(
+            video_url=video_url,
+            prompt=prompt or f"Video transformation with {mode} mode",
+            duration=duration,
+            quality="gen4_aleph",
+            ratio="1280:720"
+        )
+
+        # Clean up temp file (if we created one)
+        if file_path:
+            try:
+                default_storage.delete(file_path)
+            except:
+                pass
+
+        # Save to history if successful
+        if result.success and result.task_id:
+            VideoHistory.objects.create(
+                video_id=result.task_id,
+                user=request.user if request.user.is_authenticated else None,
+                video_type='video_to_video',
+                prompt=prompt or f"{mode} mode transformation",
+                duration=duration,
+                model_used=getattr(result, 'model_used', 'gen4_aleph'),
+                ratio="1280:720",
+                status='pending'
+            )
+
+        return JsonResponse({
+            'success': result.success,
+            'task_id': result.task_id if result.success else None,
+            'status': result.status,
+            'error_message': result.error_message if not result.success else None,
+            'message': 'Video-to-video generation started successfully' if result.success else 'Failed to start generation'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Video-to-video error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def video_upscale_endpoint(request):
+    """
+    POST /api/v1/video/upscale/
+    Upscale video to 4K resolution
+
+    Form Data:
+        - video: video file
+        - prompt: video description
+        - quality: 'standard' or 'high'
+    """
+    try:
+        # Get gallery video URL or uploaded video
+        gallery_video_url = request.POST.get('video_url', '').strip()
+        video_file = request.FILES.get('video')
+        prompt = request.POST.get('prompt', '')
+        quality = request.POST.get('quality', 'high')
+
+        # Check if video source is provided (gallery URL or file upload)
+        if not gallery_video_url and not video_file:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Video file or gallery video is required'
+            }, status=400)
+
+        if not prompt:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Prompt description is required for upscaling'
+            }, status=400)
+
+        logger.info(f"⬆️ Video Upscale request: quality={quality}")
+
+        # Use gallery video URL or save uploaded video temporarily
+        if gallery_video_url:
+            logger.info(f"📹 Using video from gallery: {gallery_video_url}")
+            video_url = gallery_video_url
+            file_path = None
+        else:
+            logger.info(f"📤 Uploading new video file")
+            file_name = f"temp_upscale_{video_file.name}"
+            file_path = default_storage.save(file_name, ContentFile(video_file.read()))
+            video_url = request.build_absolute_uri(default_storage.url(file_path))
+
+        # Call Runway ML provider
+        result = runway_provider.video_upscale(
+            video_url=video_url
+        )
+
+        # Clean up temp file (if we created one)
+        if file_path:
+            try:
+                default_storage.delete(file_path)
+            except:
+                pass
+
+        # Save to history if successful
+        if result.success and result.task_id:
+            VideoHistory.objects.create(
+                video_id=result.task_id,
+                user=request.user if request.user.is_authenticated else None,
+                video_type='upscale_video',
+                prompt=prompt,
+                model_used=getattr(result, 'model_used', 'upscale_v1'),
+                ratio="3840:2160",  # 4K
+                status='pending'
+            )
+
+        return JsonResponse({
+            'success': result.success,
+            'task_id': result.task_id if result.success else None,
+            'status': result.status,
+            'error_message': result.error_message if not result.success else None,
+            'message': 'Video upscaling started successfully' if result.success else 'Failed to start upscaling'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Video upscale error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def character_performance_endpoint(request):
+    """
+    POST /api/v1/video/character-performance/
+    Animate character portrait with reference video
+
+    Form Data:
+        - image: portrait image file
+        - reference_video: optional reference performance video
+        - prompt: performance description
+        - stabilization: 'none', 'standard', or 'high'
+        - duration: 4, 6, or 8 seconds
+    """
+    try:
+        # Get gallery URLs or uploaded files
+        gallery_image_url = request.POST.get('image_url', '').strip()
+        gallery_video_url = request.POST.get('video_url', '').strip()
+        image_file = request.FILES.get('image')
+        reference_video = request.FILES.get('reference_video')
+        prompt = request.POST.get('prompt', '')
+        stabilization = request.POST.get('stabilization', 'standard')
+        duration = int(request.POST.get('duration', 6))
+
+        # Check if image source is provided (gallery URL or file upload)
+        if not gallery_image_url and not image_file:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Portrait image or gallery image is required'
+            }, status=400)
+
+        if not prompt:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Performance description is required'
+            }, status=400)
+
+        logger.info(f"🎭 Character Performance request: stabilization={stabilization}, duration={duration}s")
+
+        # Use gallery image URL or save uploaded image temporarily
+        if gallery_image_url:
+            logger.info(f"🖼️ Using image from gallery: {gallery_image_url}")
+            image_url = gallery_image_url
+            image_path = None
+        else:
+            logger.info(f"📤 Uploading new image file")
+            image_name = f"temp_cp_image_{image_file.name}"
+            image_path = default_storage.save(image_name, ContentFile(image_file.read()))
+            image_url = request.build_absolute_uri(default_storage.url(image_path))
+
+        # Use gallery reference video URL or save uploaded reference video if provided
+        reference_video_url = None
+        reference_video_path = None
+        if gallery_video_url:
+            logger.info(f"📹 Using reference video from gallery: {gallery_video_url}")
+            reference_video_url = gallery_video_url
+            reference_video_path = None
+        elif reference_video:
+            logger.info(f"📤 Uploading new reference video file")
+            ref_name = f"temp_cp_ref_{reference_video.name}"
+            reference_video_path = default_storage.save(ref_name, ContentFile(reference_video.read()))
+            reference_video_url = request.build_absolute_uri(default_storage.url(reference_video_path))
+
+        # If no reference video provided, return error
+        if not reference_video_url:
+            # Character performance requires a reference video
+            # Clean up temp files
+            if image_path:
+                try:
+                    default_storage.delete(image_path)
+                except:
+                    pass
+
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Reference video is required for character performance. Please upload or select a 3-30 second video of a person performing.'
+            }, status=400)
+
+        # Call Runway ML provider
+        result = runway_provider.character_performance(
+            image_url=image_url,
+            reference_video_url=reference_video_url,
+            prompt=prompt,
+            body_control=True,
+            expression_intensity=3,
+            ratio="1280:720"
+        )
+
+        # Clean up temp files (if we created any)
+        try:
+            if image_path:
+                default_storage.delete(image_path)
+            if reference_video_path:
+                default_storage.delete(reference_video_path)
+        except:
+            pass
+
+        # Save to history if successful
+        if result.success and result.task_id:
+            VideoHistory.objects.create(
+                video_id=result.task_id,
+                user=request.user if request.user.is_authenticated else None,
+                video_type='character_performance',
+                prompt=prompt,
+                duration=duration,
+                model_used=getattr(result, 'model_used', 'gen4_character'),
+                ratio="1280:720",
+                status='pending'
+            )
+
+        return JsonResponse({
+            'success': result.success,
+            'task_id': result.task_id if result.success else None,
+            'status': result.status,
+            'error_message': result.error_message if not result.success else None,
+            'message': 'Character performance started successfully' if result.success else 'Failed to start generation'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Character performance error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)
