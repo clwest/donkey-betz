@@ -1306,3 +1306,28 @@ def podcasts_list(request):
         'podcasts': podcasts,
         'total_count': len(podcasts)
     })
+
+
+# ========================================
+# AI IMAGE STUDIO VIEW (Session 32+)
+# ========================================
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def ai_image_studio(request):
+    """
+    Render the AI Image Studio interface.
+
+    Provides access to all 13 Stability AI features + video generation:
+    - Text-to-Image generation (4 models)
+    - Image editing (5 tools)
+    - Image upscaling (3 methods)
+    - Image gallery & batch download
+    - Image-to-image control
+    - Before/after comparison
+    - Composite workflows
+    - Video generation (Runway ML)
+    """
+    return render(request, 'ai_image_studio.html')

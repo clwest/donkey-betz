@@ -18,6 +18,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -1228,10 +1230,12 @@ def character_performance_endpoint(request):
             reference_video_url = gallery_video_url
             reference_video_path = None
         elif reference_video:
-            logger.info(f"📤 Uploading new reference video file")
-            ref_name = f"temp_cp_ref_{reference_video.name}"
-            reference_video_path = default_storage.save(ref_name, ContentFile(reference_video.read()))
+            # Save uploaded reference video (will be converted to base64 by video_provider)
+            logger.info(f"📤 Uploading reference video: {reference_video.name}")
+            ref_file_name = f"reference_{reference_video.name}"
+            reference_video_path = default_storage.save(ref_file_name, ContentFile(reference_video.read()))
             reference_video_url = request.build_absolute_uri(default_storage.url(reference_video_path))
+            logger.info(f"✅ Reference video saved: {reference_video_url} (will be converted to base64 for RunwayML)")
 
         # If no reference video provided, return error
         if not reference_video_url:

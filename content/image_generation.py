@@ -61,7 +61,8 @@ class ImageGenerationService:
         # Get API keys from settings - check AI_PROVIDERS dict first
         if hasattr(settings, 'AI_PROVIDERS'):
             self.openai_key = settings.AI_PROVIDERS.get('OPENAI_API_KEY', '')
-            self.stability_key = settings.AI_PROVIDERS.get('STABILITY_API_KEY', '')
+            # Stability key is in EXTERNAL_API_KEYS, not AI_PROVIDERS
+            self.stability_key = settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY', '') if hasattr(settings, 'EXTERNAL_API_KEYS') else ''
             self.replicate_key = settings.AI_PROVIDERS.get('REPLICATE_API_KEY', '')
         else:
             # Fallback to direct attributes
