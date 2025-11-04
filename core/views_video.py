@@ -7,6 +7,11 @@ Handles video generation requests using RunwayML Gen-3 Alpha.
 import json
 import logging
 from typing import Dict, Any
+import requests
+from io import BytesIO
+from PIL import Image
+import tempfile
+import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -21,6 +26,143 @@ from content.video_provider import runway_provider
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+
+
+def resize_image_for_runway(image_url: str, max_size_mb: int = 5, max_dimension: int = 1920) -> str:
+    """
+    Download and resize image to meet RunwayML's size requirements.
+    Saves resized image to Django media storage and returns new URL.
+    """
+    try:
+        logger.info(f"🔍 Checking image: {image_url[:100]}...")
+
+        # Handle both absolute URLs and relative media paths
+        if image_url.startswith('/media/') or image_url.startswith('media/'):
+            # Local media file - read from disk
+            from django.conf import settings
+            import os
+
+            # Remove /media/ prefix if present
+            file_path = image_url.lstrip('/')
+            if file_path.startswith('media/'):
+                file_path = file_path[6:]  # Remove 'media/'
+
+            full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+            logger.info(f"📂 Reading local file: {full_path}")
+
+            with open(full_path, 'rb') as f:
+                image_data = f.read()
+
+            img = Image.open(BytesIO(image_data))
+            original_format = img.format or 'PNG'
+        else:
+            # Remote URL - download it
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            image_data = response.content
+
+            img = Image.open(BytesIO(image_data))
+            original_format = img.format or 'PNG'
+
+        # Check if image needs resizing
+        needs_resize = False
+        width, height = img.size
+
+        # Check file size
+        original_size_mb = len(image_data) / (1024 * 1024)
+        if original_size_mb > max_size_mb:
+            needs_resize = True
+            logger.info(f"📦 Image too large: {original_size_mb:.2f}MB > {max_size_mb}MB")
+
+        # Check dimensions
+        if width > max_dimension or height > max_dimension:
+            needs_resize = True
+            logger.info(f"📏 Image dimensions too large: {width}x{height}")
+
+        if not needs_resize:
+            logger.info(f"✅ Image already meets requirements: {original_size_mb:.2f}MB, {width}x{height}")
+            return image_url
+
+        # Resize image maintaining aspect ratio
+        if width > height:
+            new_width = min(width, max_dimension)
+            new_height = int(height * (new_width / width))
+        else:
+            new_height = min(height, max_dimension)
+            new_width = int(width * (new_height / height))
+
+        logger.info(f"🔄 Resizing image: {width}x{height} → {new_width}x{new_height}")
+
+        # Convert RGBA to RGB if necessary
+        if img.mode == 'RGBA':
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            img = background
+        elif img.mode not in ('RGB', 'L'):
+            img = img.convert('RGB')
+
+        # Resize with high-quality resampling
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # Save to BytesIO with compression
+        output = BytesIO()
+        quality = 85
+
+        # Try different quality levels to get under max_size_mb
+        for attempt in range(3):
+            output.seek(0)
+            output.truncate()
+            img.save(output, 'JPEG', quality=quality, optimize=True)
+
+            final_size_mb = len(output.getvalue()) / (1024 * 1024)
+
+            if final_size_mb <= max_size_mb:
+                break
+
+            quality -= 10
+            logger.info(f"🔄 Reducing quality to {quality}% (size: {final_size_mb:.2f}MB)")
+
+        output.seek(0)
+        final_size_mb = len(output.getvalue()) / (1024 * 1024)
+        logger.info(f"✅ Resized image: {final_size_mb:.2f}MB, {new_width}x{new_height}, quality={quality}%")
+
+        # Save to Django media storage
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        import hashlib
+        from datetime import datetime
+
+        # Generate unique filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        hash_suffix = hashlib.md5(image_url.encode()).hexdigest()[:8]
+        filename = f"video_resized/{timestamp}_{hash_suffix}.jpg"
+
+        # Save file
+        saved_path = default_storage.save(filename, ContentFile(output.getvalue()))
+
+        # Get full URL
+        if hasattr(default_storage, 'url'):
+            resized_url = default_storage.url(saved_path)
+        else:
+            # Fallback to local media URL
+            from django.conf import settings
+            resized_url = f"{settings.MEDIA_URL}{saved_path}"
+            # Make it absolute
+            if not resized_url.startswith('http'):
+                # Get the current site URL from settings or construct it
+                site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+                resized_url = f"{site_url}{resized_url}"
+
+        logger.info(f"💾 Saved resized image to: {saved_path}")
+        logger.info(f"🔗 New URL: {resized_url}")
+
+        return resized_url
+
+    except Exception as e:
+        logger.error(f"❌ Image resize error: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return image_url  # Fall back to original
 
 
 @api_view(['POST'])
@@ -174,7 +316,17 @@ def image_to_video(request):
                     'success': False,
                     'error': 'Image not found'
                 }, status=404)
-        
+
+        # CRITICAL: Resize image if too large for RunwayML (max 5MB recommended)
+        logger.info(f"🔍 Checking image size for RunwayML compatibility...")
+        try:
+            resized_url = resize_image_for_runway(image_url, max_size_mb=5, max_dimension=1920)
+            if resized_url != image_url:
+                logger.info(f"✅ Using resized image")
+                image_url = resized_url  # Actually use the resized image!
+        except Exception as resize_error:
+            logger.warning(f"⚠️  Image resize failed: {resize_error}, using original")
+
         # Extract parameters with defaults
         duration = int(data.get('duration', 5))
         quality = data.get('quality', 'gen4_turbo')  # Updated default model for image-to-video
@@ -529,6 +681,19 @@ def get_video_history(request):
         # Format response
         video_list = []
         for video in videos:
+            # Try to get source image URL from source_image ForeignKey
+            source_image_url = None
+            if video.source_image:
+                source_image_url = video.source_image.file_path
+            else:
+                # Fallback: check ContentGeneration metadata for source_image URL
+                try:
+                    content = ContentGeneration.objects.get(metadata__task_id=video.video_id)
+                    if content.metadata:
+                        source_image_url = content.metadata.get('source_image')
+                except ContentGeneration.DoesNotExist:
+                    pass
+
             video_list.append({
                 'id': video.id,
                 'video_id': video.video_id,
@@ -546,6 +711,7 @@ def get_video_history(request):
                 'created_at': video.created_at.isoformat(),
                 'generation_time_seconds': video.generation_time_seconds,
                 'source_image_id': video.source_image.id if video.source_image else None,
+                'source_image_url': source_image_url,
                 'tags': video.tags,
                 'user_notes': video.user_notes,
             })
@@ -572,9 +738,15 @@ def get_video_history(request):
 def toggle_video_favorite(request, video_id):
     """
     Toggle favorite status for a video.
+
+    Accepts either integer ID or video_id (UUID)
     """
     try:
-        video = VideoHistory.objects.get(id=video_id, user=request.user)
+        # Try to find by video_id (UUID) first, then by id (integer)
+        try:
+            video = VideoHistory.objects.get(video_id=video_id, user=request.user)
+        except VideoHistory.DoesNotExist:
+            video = VideoHistory.objects.get(id=video_id, user=request.user)
         video.is_favorite = not video.is_favorite
         video.save()
 
@@ -596,19 +768,85 @@ def toggle_video_favorite(request, video_id):
         }, status=500)
 
 
-@api_view(['DELETE'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_video(request, video_id):
     """
-    Delete a video from history.
+    GET: Get video details
+    DELETE: Delete a video from history
+
+    Accepts either integer ID or video_id (UUID)
     """
     try:
-        video = VideoHistory.objects.get(id=video_id, user=request.user)
-        video.delete()
+        # Try to find by video_id (UUID) first, then by id (integer)
+        try:
+            video = VideoHistory.objects.get(video_id=video_id, user=request.user)
+        except VideoHistory.DoesNotExist:
+            video = VideoHistory.objects.get(id=video_id, user=request.user)
+
+        if request.method == 'GET':
+            # Return video details
+            return JsonResponse({
+                'success': True,
+                'video': {
+                    'id': video.id,
+                    'video_id': video.video_id,
+                    'video_url': video.video_url,
+                    'thumbnail_url': video.thumbnail_url,
+                    'video_type': video.video_type,
+                    'prompt': video.prompt,
+                    'model_used': video.model_used,
+                    'duration': video.duration,
+                    'ratio': video.ratio,
+                    'status': video.status,
+                    'is_favorite': video.is_favorite,
+                    'view_count': video.view_count,
+                    'download_count': video.download_count,
+                    'created_at': video.created_at.isoformat(),
+                }
+            })
+
+        elif request.method == 'DELETE':
+            # Delete video
+            video.delete()
+            return JsonResponse({
+                'success': True,
+                'message': 'Video deleted successfully'
+            })
+
+    except VideoHistory.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Video not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Video operation error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def increment_video_download(request, video_id):
+    """
+    Increment download count for a video
+
+    Accepts either integer ID or video_id (UUID)
+    """
+    try:
+        # Try to find by video_id (UUID) first, then by id (integer)
+        try:
+            video = VideoHistory.objects.get(video_id=video_id, user=request.user)
+        except VideoHistory.DoesNotExist:
+            video = VideoHistory.objects.get(id=video_id, user=request.user)
+        video.download_count += 1
+        video.save()
 
         return JsonResponse({
             'success': True,
-            'message': 'Video deleted successfully'
+            'download_count': video.download_count
         })
 
     except VideoHistory.DoesNotExist:
@@ -617,7 +855,42 @@ def delete_video(request, video_id):
             'error': 'Video not found'
         }, status=404)
     except Exception as e:
-        logger.error(f"Delete video error: {str(e)}")
+        logger.error(f"Increment download error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def increment_video_view(request, video_id):
+    """
+    Increment view count for a video
+
+    Accepts either integer ID or video_id (UUID)
+    """
+    try:
+        # Try to find by video_id (UUID) first, then by id (integer)
+        try:
+            video = VideoHistory.objects.get(video_id=video_id, user=request.user)
+        except VideoHistory.DoesNotExist:
+            video = VideoHistory.objects.get(id=video_id, user=request.user)
+        video.view_count += 1
+        video.save()
+
+        return JsonResponse({
+            'success': True,
+            'view_count': video.view_count
+        })
+
+    except VideoHistory.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Video not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Increment view error: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)

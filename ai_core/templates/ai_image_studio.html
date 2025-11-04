@@ -5,7 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>🚨 CACHE BROKEN! 🚨 AI Image Studio</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>✅ VIDEO GALLERY FIXED v3.0 ✅ AI Image Studio</title>
+    <!-- Cache Buster: 2025-11-03-17:10:00 - Fixed duplicate ID issue -->
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -320,6 +324,9 @@
         .nav-tabs {
             border-bottom: 3px solid var(--cyan);
             margin-bottom: 2rem;
+            position: relative;
+            z-index: 1000;
+            pointer-events: auto;
         }
 
         .nav-tabs .nav-link {
@@ -331,6 +338,7 @@
             transition: all 0.3s ease;
             background: rgba(15, 23, 42, 0.5);
             margin-right: 5px;
+            pointer-events: auto;
         }
 
         .nav-tabs .nav-link:hover {
@@ -368,12 +376,14 @@
             z-index: 9999 !important;
             overflow-y: auto !important;
             padding: 20px !important;
+            pointer-events: none !important;
         }
 
         #gallerySelectionModal.show {
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
+            pointer-events: auto !important;
         }
 
         #gallerySelectionModal .modal-dialog {
@@ -396,6 +406,18 @@
             transform: scale(1.05);
             border-color: var(--cyan) !important;
             box-shadow: 0 8px 20px rgba(6, 182, 212, 0.4);
+        }
+
+        /* CRITICAL FIX: Ensure all hidden modals don't block clicks */
+        [style*="display: none"],
+        [style*="display:none"] {
+            pointer-events: none !important;
+        }
+
+        /* Ensure navigation elements are always clickable */
+        .nav, .nav-tabs, .nav-pills, .navbar,
+        .nav-link, .nav-item, button, a {
+            pointer-events: auto !important;
         }
     </style>
 </head>
@@ -1721,18 +1743,62 @@
                     </div>
 
                     <!-- Gallery Grid -->
-                    <div id="videoGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                    <div id="videoGalleryModalGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
                         <!-- Images will be loaded here -->
                     </div>
 
                     <!-- Empty State -->
-                    <div id="videoGalleryEmpty" style="display: none; text-align: center; padding: 60px 20px; color: #888;">
+                    <div id="videoGalleryModalEmpty" style="display: none; text-align: center; padding: 60px 20px; color: #888;">
                         <h4 style="font-size: 22px; margin-bottom: 10px;">No images found</h4>
                         <p style="font-size: 16px;">Generate some images first!</p>
                     </div>
                 </div>
             </div>
             <!-- END CUSTOM VIDEO GALLERY MODAL -->
+
+            <!-- VIDEO PLAYER MODAL -->
+            <div id="videoPlayerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999999; overflow-y: auto; padding: 20px;">
+                <div style="max-width: 1200px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #00d9ff; padding-bottom: 15px;">
+                        <h3 style="color: #00d9ff; margin: 0; font-size: 24px;">🎬 <span id="videoPlayerTitle">Video Player</span></h3>
+                        <button onclick="closeVideoPlayer()" style="background: transparent; border: 2px solid #00d9ff; color: #00d9ff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">✕ Close</button>
+                    </div>
+
+                    <!-- Video Player -->
+                    <div style="background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                        <video id="videoPlayerElement" controls style="width: 100%; max-height: 70vh; display: block;">
+                            <source id="videoPlayerSource" src="" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+
+                    <!-- Video Info -->
+                    <div id="videoPlayerInfo" style="color: #ccc;">
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #00d9ff;">Prompt:</strong>
+                            <p id="videoPlayerPrompt" style="margin: 5px 0; font-size: 14px;"></p>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">
+                            <div><strong style="color: #00d9ff;">Type:</strong> <span id="videoPlayerType"></span></div>
+                            <div><strong style="color: #00d9ff;">Model:</strong> <span id="videoPlayerModel"></span></div>
+                            <div><strong style="color: #00d9ff;">Duration:</strong> <span id="videoPlayerDuration"></span>s</div>
+                            <div><strong style="color: #00d9ff;">Ratio:</strong> <span id="videoPlayerRatio"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="display: flex; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
+                        <button type="button" id="videoPlayerDownloadBtn" onclick="downloadCurrentVideo(); return false;" class="btn btn-cyan flex-fill">
+                            📥 Download Video
+                        </button>
+                        <button type="button" id="videoPlayerFavoriteBtn" onclick="toggleCurrentVideoFavorite(); return false;" class="btn btn-outline-cyan flex-fill">
+                            ⭐ Favorite
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- END VIDEO PLAYER MODAL -->
 
             <!-- VIDEO TAB (Session 41: Runway ML Integration) -->
             <div class="tab-pane fade" id="video" role="tabpanel">
@@ -1758,7 +1824,7 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="video-gallery-pill" data-bs-toggle="pill" data-bs-target="#video-gallery" type="button" role="tab" onclick="loadVideoGallery()">
+                        <button class="nav-link" id="video-gallery-pill" data-bs-toggle="pill" data-bs-target="#video-gallery" type="button" role="tab">
                             📹 Gallery
                         </button>
                     </li>
@@ -5302,8 +5368,8 @@
             .then(data => {
                 console.log('📊 [VIDEO] API response:', data);
 
-                const grid = document.getElementById('videoGalleryGrid');
-                const emptyState = document.getElementById('videoGalleryEmpty');
+                const grid = document.getElementById('videoGalleryModalGrid');
+                const emptyState = document.getElementById('videoGalleryModalEmpty');
 
                 if (data.success && data.images && data.images.length > 0) {
                     grid.innerHTML = '';
@@ -5408,18 +5474,27 @@
             if (favoritesOnly) params.append('favorite', 'true');
 
             try {
+                console.log('📹 Fetching from:', `/api/v1/video/history/?${params}`);
                 const response = await authenticatedFetch(`/api/v1/video/history/?${params}`);
+                console.log('📹 Response status:', response.status);
                 const data = await response.json();
+                console.log('📹 Response data:', data);
 
                 const grid = document.getElementById('videoGalleryGrid');
                 const loadMoreBtn = document.getElementById('videoGalleryLoadMore');
 
                 if (data.success && data.videos && data.videos.length > 0) {
+                    console.log('📹 Found', data.videos.length, 'videos');
+                    console.log('📹 Grid element:', grid);
+                    console.log('📹 Video data:', data.videos);
                     grid.innerHTML = '';
 
                     data.videos.forEach(video => {
+                        console.log('📹 Creating card for video:', video);
                         const videoCard = createVideoCard(video);
+                        console.log('📹 Created card:', videoCard);
                         grid.appendChild(videoCard);
+                        console.log('📹 Card appended to grid');
                     });
 
                     // Show load more if there are more videos
@@ -5429,6 +5504,7 @@
                         loadMoreBtn.style.display = 'none';
                     }
                 } else {
+                    console.log('📹 No videos found or data.success is false:', { success: data.success, videoCount: data.videos?.length });
                     grid.innerHTML = `
                         <div class="col-12 text-center text-muted py-5">
                             <h5>No videos yet</h5>
@@ -5438,10 +5514,12 @@
                     loadMoreBtn.style.display = 'none';
                 }
             } catch (error) {
-                console.error('Error loading video gallery:', error);
+                console.error('❌ Error loading video gallery:', error);
+                console.error('Error details:', error.message, error.stack);
                 document.getElementById('videoGalleryGrid').innerHTML = `
                     <div class="col-12 text-center text-danger py-5">
-                        <p>Error loading videos. Please try again.</p>
+                        <p>Error loading videos: ${error.message}</p>
+                        <p class="small">Check console for details</p>
                     </div>
                 `;
             }
@@ -5494,13 +5572,17 @@
             const typeEmoji = video.video_type === 'text_to_video' ? '📝' : '🖼️';
             const favoriteIcon = video.is_favorite ? '⭐' : '☆';
 
+            // Determine what image to show
+            const thumbnailSrc = video.thumbnail_url || (video.source_image_url || '');
+            const hasImage = thumbnailSrc.length > 0;
+
             col.innerHTML = `
                 <div class="card bg-dark border-cyan h-100">
                     <div class="position-relative" style="cursor: pointer;" onclick="playVideoInModal('${video.id}')">
-                        ${video.thumbnail_url ?
-                            `<img src="${video.thumbnail_url}" class="card-img-top" style="height: 150px; object-fit: cover;">` :
+                        ${hasImage ?
+                            `<img src="${thumbnailSrc}" class="card-img-top" style="height: 150px; object-fit: cover;">` :
                             `<div class="d-flex align-items-center justify-center bg-secondary" style="height: 150px;">
-                                <span class="text-white">🎬</span>
+                                <span class="text-white fs-1">🎬</span>
                             </div>`
                         }
                         <div class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 px-2 py-1 rounded-start">
@@ -5519,7 +5601,7 @@
                             <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); toggleVideoFavorite('${video.id}', this)">
                                 ${favoriteIcon}
                             </button>
-                            <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); downloadVideoFromGallery('${video.video_url}')">
+                            <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); downloadVideoFromGallery('${video.id}', '${video.video_url}')">
                                 📥
                             </button>
                             <button class="btn btn-sm btn-outline-danger flex-fill" onclick="event.stopPropagation(); deleteVideoFromGallery('${video.id}')">
@@ -5572,18 +5654,204 @@
             }
         }
 
-        function downloadVideoFromGallery(videoUrl) {
-            const link = document.createElement('a');
-            link.href = videoUrl;
-            link.download = `video_${Date.now()}.mp4`;
-            link.click();
+        async function downloadVideoFromGallery(videoId, videoUrl) {
+            console.log('📥 Downloading video from gallery:', videoId);
+
+            try {
+                // Track download count
+                console.log('📊 Tracking download for video:', videoId);
+                const trackingResponse = await authenticatedFetch(`/api/v1/video/history/${videoId}/download/`, {
+                    method: 'POST'
+                });
+                const trackingData = await trackingResponse.json();
+                console.log('📊 Download tracked:', trackingData);
+
+                // Fetch video as blob to work around CORS restrictions
+                console.log('📥 Fetching video blob from:', videoUrl);
+                const videoResponse = await fetch(videoUrl);
+                const videoBlob = await videoResponse.blob();
+
+                // Create blob URL and download
+                const blobUrl = URL.createObjectURL(videoBlob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `video_${videoId}.mp4`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Clean up blob URL
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+
+                console.log('✅ Video download initiated:', videoId);
+
+                // Refresh gallery to show updated download count
+                loadVideoGallery();
+            } catch (error) {
+                console.error('❌ Error downloading video:', error);
+                alert('Failed to download video. Please try again.');
+            }
         }
 
-        function playVideoInModal(videoId) {
-            // TODO: Implement video player modal (future enhancement)
-            console.log('Play video:', videoId);
-            alert('Video player modal coming soon! For now, click download to view the video.');
+        // Global variable to store current video being played
+        let currentPlayingVideo = null;
+
+        async function playVideoInModal(videoId) {
+            console.log('🎬 Loading video:', videoId);
+
+            try {
+                // Fetch video details from API
+                const response = await authenticatedFetch(`/api/v1/video/history/${videoId}/`);
+                const data = await response.json();
+
+                if (!data.success || !data.video) {
+                    alert('Failed to load video');
+                    return;
+                }
+
+                const video = data.video;
+                currentPlayingVideo = video;
+
+                // Update modal content
+                document.getElementById('videoPlayerTitle').textContent = video.video_type.replace('_', ' ').toUpperCase();
+                document.getElementById('videoPlayerSource').src = video.video_url;
+                document.getElementById('videoPlayerPrompt').textContent = video.prompt;
+                document.getElementById('videoPlayerType').textContent = video.video_type.replace('_', '-');
+                document.getElementById('videoPlayerModel').textContent = video.model_used;
+                document.getElementById('videoPlayerDuration').textContent = video.duration;
+                document.getElementById('videoPlayerRatio').textContent = video.ratio || 'N/A';
+
+                // Update favorite button
+                document.getElementById('videoPlayerFavoriteBtn').innerHTML =
+                    video.is_favorite ? '⭐ Unfavorite' : '☆ Favorite';
+
+                // Load and play video
+                const videoElement = document.getElementById('videoPlayerElement');
+                videoElement.load();
+
+                // Show modal
+                document.getElementById('videoPlayerModal').style.display = 'block';
+                document.getElementById('videoPlayerModal').style.pointerEvents = 'auto';
+
+                // Increment view count
+                await authenticatedFetch(`/api/v1/video/history/${videoId}/view/`, {
+                    method: 'POST'
+                });
+
+                console.log('✅ Video player opened');
+            } catch (error) {
+                console.error('Error loading video:', error);
+                alert('Failed to load video. Please try again.');
+            }
         }
+
+        function closeVideoPlayer() {
+            const modal = document.getElementById('videoPlayerModal');
+            const videoElement = document.getElementById('videoPlayerElement');
+
+            // Pause video
+            videoElement.pause();
+
+            // Hide modal
+            modal.style.display = 'none';
+            modal.style.pointerEvents = 'none';
+
+            currentPlayingVideo = null;
+            console.log('✅ Video player closed');
+        }
+
+        async function downloadCurrentVideo() {
+            console.log('🎯 downloadCurrentVideo() CALLED - START');
+
+            if (!currentPlayingVideo) {
+                console.log('❌ No currentPlayingVideo - exiting');
+                return;
+            }
+
+            console.log('✅ currentPlayingVideo exists:', currentPlayingVideo);
+
+            try {
+                // Show downloading message
+                const downloadBtn = document.getElementById('videoPlayerDownloadBtn');
+                console.log('✅ Found download button:', downloadBtn);
+
+                const originalText = downloadBtn.innerHTML;
+                downloadBtn.innerHTML = '⏳ Downloading...';
+                downloadBtn.disabled = true;
+                console.log('✅ Button updated to "Downloading..."');
+
+                // Increment download count
+                console.log('📊 Tracking download for video:', currentPlayingVideo.id);
+                const trackingResponse = await authenticatedFetch(`/api/v1/video/history/${currentPlayingVideo.id}/download/`, {
+                    method: 'POST'
+                });
+                const trackingData = await trackingResponse.json();
+                console.log('📊 Download tracked:', trackingData);
+
+                // Fetch video as blob to work around CORS restrictions
+                console.log('📥 Fetching video blob from:', currentPlayingVideo.video_url);
+                const videoResponse = await fetch(currentPlayingVideo.video_url);
+                const videoBlob = await videoResponse.blob();
+
+                // Create blob URL and download
+                const blobUrl = URL.createObjectURL(videoBlob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `video_${currentPlayingVideo.id}.mp4`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Clean up blob URL
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+
+                console.log('✅ Video download initiated:', currentPlayingVideo.id);
+
+                // Restore button
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            } catch (error) {
+                console.error('❌ Error downloading video:', error);
+                alert('Failed to download video. Please try again.');
+
+                // Restore button
+                const downloadBtn = document.getElementById('videoPlayerDownloadBtn');
+                downloadBtn.innerHTML = '📥 Download Video';
+                downloadBtn.disabled = false;
+            }
+        }
+
+        async function toggleCurrentVideoFavorite() {
+            if (!currentPlayingVideo) return;
+
+            try {
+                const response = await authenticatedFetch(`/api/v1/video/history/${currentPlayingVideo.id}/favorite/`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    currentPlayingVideo.is_favorite = data.is_favorite;
+                    document.getElementById('videoPlayerFavoriteBtn').innerHTML =
+                        data.is_favorite ? '⭐ Unfavorite' : '☆ Favorite';
+                    console.log('✅ Favorite toggled');
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                alert('Failed to update favorite status');
+            }
+        }
+
+        // Bootstrap tab event for Video Gallery - load when tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoGalleryTab = document.getElementById('video-gallery-pill');
+            if (videoGalleryTab) {
+                videoGalleryTab.addEventListener('shown.bs.tab', function (event) {
+                    console.log('📹 Video Gallery tab shown - loading videos...');
+                    loadVideoGallery();
+                });
+            }
+        });
 
         // END FEATURE 14: VIDEO GENERATION
     </script>
