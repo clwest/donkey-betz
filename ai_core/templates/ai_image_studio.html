@@ -1804,6 +1804,61 @@
                 </div>
             </div>
             <!-- END VIDEO PLAYER MODAL -->
+
+            <!-- VIDEO COMPARISON MODAL (Session 50: Before/After comparison for upscale) -->
+            <div id="videoComparisonModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999999; overflow-y: auto; padding: 20px;">
+                <div style="max-width: 1600px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #00d9ff; padding-bottom: 15px;">
+                        <h3 style="color: #00d9ff; margin: 0; font-size: 24px;">🔍 Before / After Comparison</h3>
+                        <button onclick="closeVideoComparison()" style="background: transparent; border: 2px solid #00d9ff; color: #00d9ff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">✕ Close</button>
+                    </div>
+
+                    <!-- Side-by-Side Players -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <!-- Before (Original) -->
+                        <div>
+                            <div style="background: #333; padding: 8px; border-radius: 6px 6px 0 0; text-align: center;">
+                                <strong style="color: #ff6b6b;">📹 BEFORE (Original)</strong>
+                            </div>
+                            <video id="comparisonVideoBefore" controls style="width: 100%; border-radius: 0 0 6px 6px; display: block; background: #000;">
+                                <source src="" type="video/mp4">
+                            </video>
+                        </div>
+
+                        <!-- After (Upscaled) -->
+                        <div>
+                            <div style="background: #333; padding: 8px; border-radius: 6px 6px 0 0; text-align: center;">
+                                <strong style="color: #51cf66;">✨ AFTER (Upscaled)</strong>
+                            </div>
+                            <video id="comparisonVideoAfter" controls style="width: 100%; border-radius: 0 0 6px 6px; display: block; background: #000;">
+                                <source src="" type="video/mp4">
+                            </video>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <button onclick="syncPlayComparison()" class="btn btn-cyan me-2">▶️ Play Both</button>
+                        <button onclick="syncPauseComparison()" class="btn btn-outline-cyan me-2">⏸️ Pause Both</button>
+                        <button onclick="syncRestartComparison()" class="btn btn-outline-cyan">🔄 Restart Both</button>
+                    </div>
+
+                    <!-- Comparison Info -->
+                    <div id="comparisonInfo" style="background: #222; padding: 15px; border-radius: 6px; color: #888;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Original:</strong> <span id="comparisonBeforeInfo">-</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Upscaled:</strong> <span id="comparisonAfterInfo">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END VIDEO COMPARISON MODAL -->
+
             <!-- VIDEO SELECTION MODAL (for video-to-video, upscale, character-performance) -->
             <div id="videoSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
                 <div style="max-width: 1400px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
@@ -6406,6 +6461,87 @@
             console.log('✅ Video player closed');
         }
 
+        // VIDEO COMPARISON FUNCTIONS (Session 50: Before/After comparison)
+        function openVideoComparison(beforeUrl, afterUrl, beforeInfo = '', afterInfo = '') {
+            console.log('🔍 Opening video comparison:', { beforeUrl, afterUrl });
+
+            const modal = document.getElementById('videoComparisonModal');
+            const beforeVideo = document.getElementById('comparisonVideoBefore');
+            const afterVideo = document.getElementById('comparisonVideoAfter');
+            const beforeInfoEl = document.getElementById('comparisonBeforeInfo');
+            const afterInfoEl = document.getElementById('comparisonAfterInfo');
+
+            // Set video sources
+            beforeVideo.querySelector('source').src = beforeUrl;
+            afterVideo.querySelector('source').src = afterUrl;
+
+            // Load videos
+            beforeVideo.load();
+            afterVideo.load();
+
+            // Set info text
+            beforeInfoEl.textContent = beforeInfo || beforeUrl.split('/').pop();
+            afterInfoEl.textContent = afterInfo || afterUrl.split('/').pop();
+
+            // Show modal
+            modal.style.display = 'block';
+
+            console.log('✅ Video comparison modal opened');
+        }
+
+        function closeVideoComparison() {
+            const modal = document.getElementById('videoComparisonModal');
+            const beforeVideo = document.getElementById('comparisonVideoBefore');
+            const afterVideo = document.getElementById('comparisonVideoAfter');
+
+            // Pause both videos
+            beforeVideo.pause();
+            afterVideo.pause();
+
+            // Hide modal
+            modal.style.display = 'none';
+
+            console.log('✅ Video comparison closed');
+        }
+
+        function syncPlayComparison() {
+            const beforeVideo = document.getElementById('comparisonVideoBefore');
+            const afterVideo = document.getElementById('comparisonVideoAfter');
+
+            // Start both videos
+            beforeVideo.play().catch(err => console.error('Before video play error:', err));
+            afterVideo.play().catch(err => console.error('After video play error:', err));
+
+            console.log('▶️ Playing both videos');
+        }
+
+        function syncPauseComparison() {
+            const beforeVideo = document.getElementById('comparisonVideoBefore');
+            const afterVideo = document.getElementById('comparisonVideoAfter');
+
+            // Pause both videos
+            beforeVideo.pause();
+            afterVideo.pause();
+
+            console.log('⏸️ Paused both videos');
+        }
+
+        function syncRestartComparison() {
+            const beforeVideo = document.getElementById('comparisonVideoBefore');
+            const afterVideo = document.getElementById('comparisonVideoAfter');
+
+            // Reset to beginning
+            beforeVideo.currentTime = 0;
+            afterVideo.currentTime = 0;
+
+            // Play both
+            beforeVideo.play().catch(err => console.error('Before video play error:', err));
+            afterVideo.play().catch(err => console.error('After video play error:', err));
+
+            console.log('🔄 Restarted both videos');
+        }
+        // END VIDEO COMPARISON FUNCTIONS
+
         async function downloadCurrentVideo() {
             console.log('🎯 downloadCurrentVideo() CALLED - START');
 
@@ -6651,8 +6787,11 @@
                         </div>
                     `;
 
+                    // Capture original video URL for comparison
+                    const originalVideoUrl = galleryVideoUrl || (videoFile ? URL.createObjectURL(videoFile) : null);
+
                     // Poll for completion
-                    pollUpscaleStatus(data.task_id);
+                    pollUpscaleStatus(data.task_id, originalVideoUrl);
                 } else {
                     resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to start upscaling'}</div>`;
                 }
@@ -6663,7 +6802,7 @@
         });
 
         // Poll video upscale status
-        async function pollUpscaleStatus(taskId) {
+        async function pollUpscaleStatus(taskId, originalVideoUrl = null) {
             const resultDiv = document.getElementById('upscaleVideoResult');
 
             const pollInterval = setInterval(async () => {
@@ -6673,13 +6812,30 @@
 
                     if (data.status === 'completed') {
                         clearInterval(pollInterval);
-                        resultDiv.innerHTML = `
+
+                        // Build result HTML with optional compare button
+                        let resultHTML = `
                             <div class="alert alert-success">✅ Video upscaled to 4K!</div>
                             <video controls class="w-100 rounded border border-cyan">
                                 <source src="${data.video_url}" type="video/mp4">
                             </video>
-                            <a href="${data.video_url}" download class="btn btn-outline-light btn-sm mt-2">📥 Download</a>
+                            <div class="mt-2">
+                                <a href="${data.video_url}" download class="btn btn-outline-light btn-sm me-2">📥 Download</a>
                         `;
+
+                        // Add Compare button if we have original video
+                        if (originalVideoUrl) {
+                            resultHTML += `
+                                <button
+                                    onclick="openVideoComparison('${originalVideoUrl}', '${data.video_url}', 'Original', 'Upscaled 4K')"
+                                    class="btn btn-cyan btn-sm">
+                                    🔍 Compare Before/After
+                                </button>
+                            `;
+                        }
+
+                        resultHTML += '</div>';
+                        resultDiv.innerHTML = resultHTML;
                     } else if (data.status === 'failed') {
                         clearInterval(pollInterval);
                         resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed: ${data.error || 'Unknown error'}</div>`;
