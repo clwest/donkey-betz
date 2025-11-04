@@ -3020,13 +3020,8 @@
                     num_images: 1
                 };
 
-                const response = await fetch('/api/v1/gallery/generate/', {
+                const response = await authenticatedFetch('/api/v1/gallery/generate/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    credentials: 'same-origin',  // CRITICAL: Send session cookie for authentication
                     body: JSON.stringify(formData)
                 });
 
