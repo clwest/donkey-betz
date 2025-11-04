@@ -515,70 +515,83 @@
             </div>
         </div>
 
-        <!-- Tabbed Navigation -->
+        <!-- Tabbed Navigation with Visual Grouping -->
         <ul class="nav nav-tabs" id="studioTabs" role="tablist">
+            <!-- Generation Tools -->
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab">
-                    ✨ Generate
+                <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab" title="Generate images from text prompts">
+                    🎨 Generate
+                </button>
+            </li>
+
+            <!-- Editing Tools Group -->
+            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" title="Upload and edit images">
+                    📤 Upload
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">
-                    📤 Upload & Edit
+                <button class="nav-link" id="erase-tab" data-bs-toggle="tab" data-bs-target="#erase" type="button" role="tab" title="Remove objects from images">
+                    🧹 Erase
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="erase-tab" data-bs-toggle="tab" data-bs-target="#erase" type="button" role="tab">
-                    🖌️ Erase Object
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="inpaint-tab" data-bs-toggle="tab" data-bs-target="#inpaint" type="button" role="tab">
+                <button class="nav-link" id="inpaint-tab" data-bs-toggle="tab" data-bs-target="#inpaint" type="button" role="tab" title="Fill and regenerate areas">
                     🎨 Inpaint
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="outpaint-tab" data-bs-toggle="tab" data-bs-target="#outpaint" type="button" role="tab">
+                <button class="nav-link" id="outpaint-tab" data-bs-toggle="tab" data-bs-target="#outpaint" type="button" role="tab" title="Extend image borders">
                     📐 Outpaint
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="upscale-tab" data-bs-toggle="tab" data-bs-target="#upscale" type="button" role="tab">
-                    📈 Upscale
+                <button class="nav-link" id="recolor-tab" data-bs-toggle="tab" data-bs-target="#recolor" type="button" role="tab" title="Change object colors">
+                    🖌️ Recolor
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="recolor-tab" data-bs-toggle="tab" data-bs-target="#recolor" type="button" role="tab">
-                    🎨 Recolor
+                <button class="nav-link" id="upscale-tab" data-bs-toggle="tab" data-bs-target="#upscale" type="button" role="tab" title="Increase resolution">
+                    ⬆️ Upscale
                 </button>
             </li>
+
+            <!-- Advanced Tools Group -->
+            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="control-tab" data-bs-toggle="tab" data-bs-target="#control" type="button" role="tab">
+                <button class="nav-link" id="control-tab" data-bs-toggle="tab" data-bs-target="#control" type="button" role="tab" title="Sketch and structure control">
                     🎭 Control
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab">
-                    📊 Gallery
+                <button class="nav-link" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow" type="button" role="tab" title="Multi-step operations">
+                    🔄 Workflow
+                </button>
+            </li>
+
+            <!-- Gallery & History Group -->
+            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab" title="Browse image history">
+                    📁 Gallery
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="compare-tab" data-bs-toggle="tab" data-bs-target="#compare" type="button" role="tab">
+                <button class="nav-link" id="compare-tab" data-bs-toggle="tab" data-bs-target="#compare" type="button" role="tab" title="Before/After comparison">
                     ⚖️ Compare
                 </button>
             </li>
+
+            <!-- Media Generation Group -->
+            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow" type="button" role="tab">
-                    🎭 Workflow
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab">
+                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" title="Generate and edit videos">
                     🎬 Video
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab">
+                <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" title="Generate and transform audio">
                     🎵 Audio
                 </button>
             </li>
@@ -3113,6 +3126,9 @@
 
                     showStatus('✅ Image generated successfully!', 'success');
                     displayImages(data, originalPrompt, finalPrompt, wasEnhanced);
+
+                    // Refresh Gallery to show the newly generated image
+                    loadGallery();
                 } else {
                     throw new Error(data.error || 'Generation failed');
                 }
@@ -7902,6 +7918,483 @@
 
         // ====================================================================
         // END AUDIO TAB JAVASCRIPT
+        // ====================================================================
+
+        // ====================================================================
+        // AI ASSISTANT - MARKET DIFFERENTIATOR 🤖
+        // ====================================================================
+
+        class AIAssistant {
+            constructor() {
+                this.isOpen = false;
+                this.context = this.getCurrentContext();
+                this.conversation = [];
+                this.setupUI();
+                this.setupEventListeners();
+            }
+
+            getCurrentContext() {
+                // Detect which tab is active
+                const activeTab = document.querySelector('.nav-link.active');
+                if (activeTab) {
+                    const tabId = activeTab.id.replace('-tab', '');
+                    return tabId;
+                }
+                return 'general';
+            }
+
+            setupUI() {
+                // Create floating button and panel HTML
+                const assistantHTML = `
+                    <!-- AI Assistant Floating Button -->
+                    <button id="aiAssistantToggle" class="btn btn-primary rounded-circle shadow-lg"
+                            style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050; font-size: 24px;"
+                            title="Open AI Assistant">
+                        🤖
+                    </button>
+
+                    <!-- AI Assistant Panel -->
+                    <div id="aiAssistantPanel" class="shadow-lg"
+                         style="position: fixed; bottom: 100px; right: 30px; width: 400px; max-height: 600px;
+                                background: rgba(15, 23, 42, 0.98); border: 2px solid rgba(6, 182, 212, 0.5);
+                                border-radius: 16px; z-index: 1049; display: none; overflow: hidden;">
+
+                        <!-- Header -->
+                        <div class="d-flex justify-content-between align-items-center p-3 border-bottom"
+                             style="border-color: rgba(6, 182, 212, 0.3) !important; background: rgba(6, 182, 212, 0.1);">
+                            <div>
+                                <h5 class="mb-0" style="color: #06b6d4;">🤖 AI Assistant</h5>
+                                <small class="text-muted">Your intelligent creative partner</small>
+                            </div>
+                            <button id="aiAssistantClose" class="btn btn-sm btn-outline-light">✕</button>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="p-3 border-bottom" style="border-color: rgba(6, 182, 212, 0.3) !important; background: rgba(15, 23, 42, 0.5);">
+                            <small class="text-muted d-block mb-2">💡 Quick Actions:</small>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-sm btn-outline-info quick-action" data-action="help">❓ Help</button>
+                                <button class="btn btn-sm btn-outline-info quick-action" data-action="logo">🎨 Create Logo</button>
+                                <button class="btn btn-sm btn-outline-info quick-action" data-action="social">📱 Social Pack</button>
+                                <button class="btn btn-sm btn-outline-info quick-action" data-action="upscale">⬆️ Upscale</button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages -->
+                        <div id="aiChatMessages" class="p-3" style="max-height: 350px; overflow-y: auto;">
+                            <div class="alert alert-info mb-2" style="font-size: 14px;">
+                                👋 Hi! I'm your AI assistant. I can help you:
+                                <ul class="mb-0 mt-2" style="font-size: 13px;">
+                                    <li>Generate images, videos, and audio</li>
+                                    <li>Create professional workflows</li>
+                                    <li>Edit and enhance your content</li>
+                                    <li>Answer questions about features</li>
+                                </ul>
+                                <small class="text-muted mt-2 d-block">Try: "Create a logo for my coffee shop"</small>
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="p-3 border-top" style="border-color: rgba(6, 182, 212, 0.3) !important; background: rgba(15, 23, 42, 0.8);">
+                            <div class="input-group">
+                                <input type="text" id="aiAssistantInput" class="form-control"
+                                       placeholder="Ask me anything..." style="background: rgba(30, 41, 59, 0.8); border-color: rgba(6, 182, 212, 0.3); color: white;">
+                                <button class="btn btn-primary" id="aiAssistantSend" type="button">
+                                    ➤ Send
+                                </button>
+                            </div>
+                            <small class="text-muted d-block mt-2" style="font-size: 11px;">
+                                Powered by Claude 3.5 Sonnet • Press Enter to send
+                            </small>
+                        </div>
+                    </div>
+                `;
+
+                // Insert into document
+                document.body.insertAdjacentHTML('beforeend', assistantHTML);
+            }
+
+            setupEventListeners() {
+                // Toggle button
+                document.getElementById('aiAssistantToggle').addEventListener('click', () => {
+                    this.toggle();
+                });
+
+                // Close button
+                document.getElementById('aiAssistantClose').addEventListener('click', () => {
+                    this.close();
+                });
+
+                // Send button
+                document.getElementById('aiAssistantSend').addEventListener('click', () => {
+                    this.sendMessage();
+                });
+
+                // Enter key to send
+                document.getElementById('aiAssistantInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+
+                // Quick actions
+                document.querySelectorAll('.quick-action').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const action = e.target.dataset.action;
+                        this.handleQuickAction(action);
+                    });
+                });
+
+                // Update context when tab changes
+                document.querySelectorAll('.nav-link').forEach(tab => {
+                    tab.addEventListener('shown.bs.tab', () => {
+                        this.context = this.getCurrentContext();
+                    });
+                });
+            }
+
+            toggle() {
+                this.isOpen = !this.isOpen;
+                const panel = document.getElementById('aiAssistantPanel');
+                panel.style.display = this.isOpen ? 'block' : 'none';
+
+                // Focus input when opening
+                if (this.isOpen) {
+                    setTimeout(() => {
+                        document.getElementById('aiAssistantInput').focus();
+                    }, 100);
+                }
+            }
+
+            close() {
+                this.isOpen = false;
+                document.getElementById('aiAssistantPanel').style.display = 'none';
+            }
+
+            async sendMessage() {
+                const input = document.getElementById('aiAssistantInput');
+                const message = input.value.trim();
+
+                if (!message) return;
+
+                // Clear input
+                input.value = '';
+
+                // Add user message to chat
+                this.addMessage('user', message);
+
+                // Show typing indicator
+                const typingId = this.addMessage('assistant', '💭 Thinking...', true);
+
+                try {
+                    // Call AI backend
+                    const response = await this.callAI(message);
+
+                    // Remove typing indicator
+                    this.removeMessage(typingId);
+
+                    // Add AI response with metadata (includes prompt if available)
+                    this.addMessage('assistant', response.message, false, {
+                        prompt: response.prompt || response.params?.prompt
+                    });
+
+                    // Execute action if needed
+                    if (response.action) {
+                        await this.executeAction(response.action, response.params);
+                    }
+
+                } catch (error) {
+                    this.removeMessage(typingId);
+                    this.addMessage('assistant', `❌ Sorry, I encountered an error: ${error.message}`);
+                }
+            }
+
+            addMessage(role, content, isTemporary = false, metadata = {}) {
+                const messagesDiv = document.getElementById('aiChatMessages');
+                const messageId = 'msg-' + Date.now();
+
+                // Check if content looks like a prompt (for AI messages)
+                const isPromptMessage = role === 'assistant' && (
+                    content.includes('prompt') ||
+                    content.includes('generate') ||
+                    content.length > 100
+                );
+
+                // Build action buttons for AI messages
+                let actionButtons = '';
+                if (role === 'assistant' && !isTemporary) {
+                    actionButtons = `
+                        <div class="mt-2 d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-light copy-btn"
+                                    data-content="${content.replace(/"/g, '&quot;')}"
+                                    style="font-size: 11px; padding: 2px 8px;"
+                                    title="Copy message">
+                                📋 Copy
+                            </button>
+                            ${metadata.prompt ? `
+                                <button class="btn btn-sm btn-outline-info use-prompt-btn"
+                                        data-prompt="${metadata.prompt.replace(/"/g, '&quot;')}"
+                                        style="font-size: 11px; padding: 2px 8px;"
+                                        title="Use this prompt">
+                                    ✨ Use This
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                const messageHTML = `
+                    <div id="${messageId}" class="mb-2 ${role === 'user' ? 'text-end' : ''}" ${isTemporary ? 'data-temporary="true"' : ''}>
+                        <div class="d-inline-block p-2 rounded" style="max-width: 80%; background: ${role === 'user' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(100, 116, 139, 0.2)'}; font-size: 14px; position: relative;">
+                            ${role === 'user' ? '👤' : '🤖'} ${content}
+                            ${actionButtons}
+                        </div>
+                    </div>
+                `;
+
+                messagesDiv.insertAdjacentHTML('beforeend', messageHTML);
+
+                // Add event listeners for action buttons
+                if (role === 'assistant' && !isTemporary) {
+                    // Copy button
+                    const copyBtn = document.querySelector(`#${messageId} .copy-btn`);
+                    if (copyBtn) {
+                        copyBtn.addEventListener('click', async (e) => {
+                            const content = e.target.dataset.content;
+                            await navigator.clipboard.writeText(content);
+
+                            // Visual feedback
+                            const originalText = e.target.innerHTML;
+                            e.target.innerHTML = '✅ Copied!';
+                            e.target.classList.add('btn-success');
+                            e.target.classList.remove('btn-outline-light');
+
+                            setTimeout(() => {
+                                e.target.innerHTML = originalText;
+                                e.target.classList.remove('btn-success');
+                                e.target.classList.add('btn-outline-light');
+                            }, 2000);
+                        });
+                    }
+
+                    // Use prompt button
+                    const useBtn = document.querySelector(`#${messageId} .use-prompt-btn`);
+                    if (useBtn) {
+                        useBtn.addEventListener('click', (e) => {
+                            const prompt = e.target.dataset.prompt;
+
+                            // Switch to generate tab
+                            document.getElementById('generate-tab').click();
+
+                            // Fill in the prompt
+                            setTimeout(() => {
+                                const promptField = document.getElementById('prompt');
+                                if (promptField) {
+                                    promptField.value = prompt;
+
+                                    // Visual feedback
+                                    this.addMessage('assistant', '✅ Prompt filled in! Ready to generate.');
+
+                                    // Scroll to prompt field
+                                    promptField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                } else {
+                                    this.addMessage('assistant', '⚠️ Could not find prompt field. Please try manually.');
+                                }
+                            }, 300);
+                        });
+                    }
+                }
+
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                return messageId;
+            }
+
+            removeMessage(messageId) {
+                const msg = document.getElementById(messageId);
+                if (msg) msg.remove();
+            }
+
+            async callAI(message) {
+                // Parse user intent and call appropriate endpoint
+                const intent = this.parseIntent(message);
+
+                if (intent.type === 'generate_image') {
+                    return {
+                        message: `I'll generate that image for you! Let me use:\n\n"${intent.prompt}"\n\n💡 Click "✨ Use This" to fill the generate form!`,
+                        action: 'generate_image',
+                        params: { prompt: intent.prompt, style: intent.style || 'photorealistic' },
+                        prompt: intent.prompt  // For copy/use buttons
+                    };
+                } else if (intent.type === 'help') {
+                    return this.getHelpResponse(intent.topic);
+                } else if (intent.type === 'workflow') {
+                    return {
+                        message: `Starting the "${intent.workflow}" workflow for you!`,
+                        action: 'run_workflow',
+                        params: { workflow: intent.workflow, ...intent.params }
+                    };
+                } else {
+                    // General AI response using optimize-prompt endpoint
+                    const response = await authenticatedFetch('/api/v1/gallery/optimize-prompt/', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            prompt: message,
+                            style: 'photorealistic',
+                            quality: 'balanced',
+                            ai_mode: 'assistant'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.enhanced_prompt) {
+                        return {
+                            message: `I understand! Here's an enhanced version:\n\n"${data.enhanced_prompt.substring(0, 200)}${data.enhanced_prompt.length > 200 ? '...' : ''}"\n\n💡 Click "✨ Use This" to fill the generate form!`,
+                            prompt: data.enhanced_prompt  // Full prompt for copy/use
+                        };
+                    } else {
+                        return {
+                            message: 'I can help you with images, videos, audio, and more! What would you like to create?'
+                        };
+                    }
+                }
+            }
+
+            parseIntent(message) {
+                const lower = message.toLowerCase();
+
+                // Generate image intent
+                if (lower.includes('generate') || lower.includes('create image') || lower.includes('make') || lower.includes('draw')) {
+                    return {
+                        type: 'generate_image',
+                        prompt: message.replace(/(generate|create|make|draw|image|picture)/gi, '').trim()
+                    };
+                }
+
+                // Help intent
+                if (lower.includes('help') || lower.includes('how') || lower.includes('what')) {
+                    return {
+                        type: 'help',
+                        topic: this.context
+                    };
+                }
+
+                // Workflow intents
+                if (lower.includes('logo')) {
+                    return {
+                        type: 'workflow',
+                        workflow: 'logo',
+                        params: { theme: message }
+                    };
+                }
+
+                if (lower.includes('social') || lower.includes('instagram') || lower.includes('twitter')) {
+                    return {
+                        type: 'workflow',
+                        workflow: 'social_pack'
+                    };
+                }
+
+                return { type: 'general', message };
+            }
+
+            getHelpResponse(topic) {
+                const helpTexts = {
+                    generate: {
+                        message: `📝 **Generate Tab Help:**
+
+                        1. Enter your prompt (e.g., "sunset over mountains")
+                        2. Select a style from the dropdown (69 options!)
+                        3. Choose quality (Fast/Balanced/High/Premium)
+                        4. Click ✨ Enhance Prompt for AI improvements
+                        5. Click 🎨 Generate Image
+
+                        💡 Tip: Use the "Enhance Prompt" button for professional results!`
+                    },
+                    gallery: {
+                        message: `📁 **Gallery Help:**
+
+                        - View all your generated images
+                        - Filter by type, model, style
+                        - ⭐ Favorite images
+                        - 📥 Download or 🗑️ Delete
+                        - Select multiple for batch operations
+                        - Click on any image to view full-size
+
+                        💡 Tip: Use the Compare tab to see before/after!`
+                    },
+                    general: {
+                        message: `🤖 **AI Assistant Help:**
+
+                        I can help you with:
+                        - Generating images, videos, and audio
+                        - Editing and enhancing content
+                        - Creating professional workflows
+                        - Answering questions about features
+
+                        Just ask me naturally! For example:
+                        - "Create a logo for my startup"
+                        - "How do I remove backgrounds?"
+                        - "Make a social media pack"
+
+                        💡 Use the Quick Actions buttons above!`
+                    }
+                };
+
+                return helpTexts[topic] || helpTexts.general;
+            }
+
+            async handleQuickAction(action) {
+                switch (action) {
+                    case 'help':
+                        this.addMessage('assistant', this.getHelpResponse(this.context).message);
+                        break;
+                    case 'logo':
+                        this.addMessage('assistant', '🎨 Let\'s create a professional logo! What\'s your company/shop name?');
+                        break;
+                    case 'social':
+                        this.addMessage('assistant', '📱 I\'ll create a social media pack! What\'s the main theme or subject?');
+                        break;
+                    case 'upscale':
+                        this.addMessage('assistant', '⬆️ To upscale an image, go to the 📁 Gallery tab, select an image, and click the upscale option. Or upload an image in the ⬆️ Upscale tab!');
+                        break;
+                }
+            }
+
+            async executeAction(action, params) {
+                switch (action) {
+                    case 'generate_image':
+                        // Switch to generate tab
+                        document.getElementById('generate-tab').click();
+                        // Fill in the prompt
+                        setTimeout(() => {
+                            const promptField = document.getElementById('prompt');
+                            if (promptField) {
+                                promptField.value = params.prompt;
+                                this.addMessage('assistant', '✅ I\'ve filled in the prompt! Now click "Generate Image" button or I can do it for you. Should I generate it?');
+                                promptField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            } else {
+                                this.addMessage('assistant', '⚠️ Could not find prompt field. Please try manually.');
+                            }
+                        }, 500);
+                        break;
+
+                    case 'run_workflow':
+                        this.addMessage('assistant', `⚙️ Workflow "${params.workflow}" would execute here. (Full implementation in next phase)`);
+                        break;
+                }
+            }
+        }
+
+        // Initialize AI Assistant when page loads
+        let aiAssistant;
+        window.addEventListener('DOMContentLoaded', () => {
+            aiAssistant = new AIAssistant();
+            console.log('🤖 AI Assistant initialized!');
+        });
+
+        // ====================================================================
+        // END AI ASSISTANT
         // ====================================================================
     </script>
 </body>
