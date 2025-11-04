@@ -1804,6 +1804,28 @@
                 </div>
             </div>
             <!-- END VIDEO PLAYER MODAL -->
+            <!-- VIDEO SELECTION MODAL (for video-to-video, upscale, character-performance) -->
+            <div id="videoSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.90); z-index: 99999; overflow-y: auto; padding: 40px;">
+                <div style="max-width: 1400px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #00d9ff; padding-bottom: 20px;">
+                        <h3 style="color: #00d9ff; margin: 0; font-size: 24px;">🎬 Select Video from Gallery</h3>
+                        <button onclick="closeVideoSelectionModal()" style="background: transparent; border: 2px solid #00d9ff; color: #00d9ff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">✕ Close</button>
+                    </div>
+
+                    <!-- Gallery Grid -->
+                    <div id="videoSelectionModalGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                        <!-- Videos will be loaded here -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="videoSelectionModalEmpty" style="display: none; text-align: center; padding: 60px 20px; color: #888;">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">No videos found</h4>
+                        <p style="font-size: 16px;">Generate some videos first!</p>
+                    </div>
+                </div>
+            </div>
+            <!-- END VIDEO SELECTION MODAL -->
 
             <!-- VIDEO TAB (Session 41: Runway ML Integration) -->
             <div class="tab-pane fade" id="video" role="tabpanel">
@@ -1827,6 +1849,21 @@
                         <button class="nav-link" id="image-video-pill" data-bs-toggle="pill" data-bs-target="#image-video" type="button" role="tab">
                             🖼️ Image-to-Video
                         </button>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="video-to-video-pill" data-bs-toggle="pill" data-bs-target="#video-to-video" type="button" role="tab">
+                            🎬 Video-to-Video
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="upscale-video-pill" data-bs-toggle="pill" data-bs-target="#upscale-video" type="button" role="tab">
+                            ⬆️ Upscale Video
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="character-performance-pill" data-bs-toggle="pill" data-bs-target="#character-performance" type="button" role="tab">
+                            🎭 Character Performance
+                        </button>
+                    </li>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="video-gallery-pill" data-bs-toggle="pill" data-bs-target="#video-gallery" type="button" role="tab">
@@ -1967,6 +2004,318 @@
                     </div>
 
                     <!-- VIDEO GALLERY -->
+                    <!-- Video-to-Video Panel -->
+                    <div class="tab-pane fade" id="video-to-video" role="tabpanel">
+                        <div class="row">
+                            <!-- Left Column: Form -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-header bg-dark border-cyan">
+                                        <h5 class="mb-0">🎬 Video-to-Video</h5>
+                                        <p class="small text-muted mb-0">Extend or interpolate your video with AI</p>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="videoToVideoForm">
+                                            <!-- Video Upload -->
+                                            <!-- Gallery Selection -->
+                                            <div class="mb-3">
+                                                <button type="button" class="btn btn-outline-cyan w-100" onclick="openVideoGalleryFor('v2v')">
+                                                    📹 Select from Video Gallery
+                                                </button>
+                                                <small class="text-muted">Or upload a new video below</small>
+                                            </div>
+
+                                            <!-- Hidden input to store selected video URL -->
+                                            <input type="hidden" id="v2vSelectedVideoUrl">
+
+                                            <!-- Selected Video Preview -->
+                                            <div id="v2vVideoPreview" style="display: none;" class="mb-3">
+                                                <div class="card bg-dark border-cyan">
+                                                    <div class="card-body p-2">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <small class="text-cyan">📹 Selected from Gallery:</small>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedVideo('v2v')">
+                                                                ✕ Clear
+                                                            </button>
+                                                        </div>
+                                                        <video id="v2vVideoPreviewPlayer" controls class="w-100 rounded" style="max-height: 150px;">
+                                                            <source src="" type="video/mp4">
+                                                        </video>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Upload Video</label>
+                                                <input type="file" class="form-control bg-dark text-light border-cyan" id="v2vVideoFile" accept="video/*" required>
+                                                <small class="text-muted">Supported: MP4, MOV, WebM</small>
+                                            </div>
+
+                                            <!-- Mode Selection -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Mode</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="v2vMode">
+                                                    <option value="extend">Extend Duration</option>
+                                                    <option value="interpolate">Interpolate (Smooth Motion)</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Prompt (Optional) -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Prompt (Optional)</label>
+                                                <textarea class="form-control bg-dark text-light border-cyan" id="v2vPrompt" rows="2" placeholder="Describe how to modify the video..."></textarea>
+                                            </div>
+
+                                            <!-- Duration -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Duration (seconds)</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="v2vDuration">
+                                                    <option value="4">4 seconds</option>
+                                                    <option value="6" selected>6 seconds</option>
+                                                    <option value="8">8 seconds</option>
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-cyan w-100">
+                                                🎬 Generate Video
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Result -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-header bg-dark border-cyan">
+                                        <h5 class="mb-0">Result</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="v2vResult" class="text-center">
+                                            <p class="text-muted">Your generated video will appear here</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Upscale Panel -->
+                    <div class="tab-pane fade" id="upscale-video" role="tabpanel">
+                        <div class="row">
+                            <!-- Left Column: Form -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-header bg-dark border-cyan">
+                                        <h5 class="mb-0">⬆️ Upscale Video</h5>
+                                        <p class="small text-muted mb-0">Enhance your video to 4K quality</p>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="upscaleVideoForm">
+                                            <!-- Video Upload -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Upload Video</label>
+                                            <!-- Gallery Selection -->
+                                            <div class="mb-3">
+                                                <button type="button" class="btn btn-outline-cyan w-100" onclick="openVideoGalleryFor('upscale')">
+                                                    📹 Select from Video Gallery
+                                                </button>
+                                                <small class="text-muted">Or upload a new video below</small>
+                                            </div>
+
+                                            <!-- Hidden input to store selected video URL -->
+                                            <input type="hidden" id="upscaleSelectedVideoUrl">
+
+                                            <!-- Selected Video Preview -->
+                                            <div id="upscaleVideoPreview" style="display: none;" class="mb-3">
+                                                <div class="card bg-dark border-cyan">
+                                                    <div class="card-body p-2">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <small class="text-cyan">📹 Selected from Gallery:</small>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedVideo('upscale')">
+                                                                ✕ Clear
+                                                            </button>
+                                                        </div>
+                                                        <video id="upscaleVideoPreviewPlayer" controls class="w-100 rounded" style="max-height: 150px;">
+                                                            <source src="" type="video/mp4">
+                                                        </video>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                                <input type="file" class="form-control bg-dark text-light border-cyan" id="upscaleVideoFile" accept="video/*" required>
+                                                <small class="text-muted">Max 720p input, outputs to 2160p (4K)</small>
+                                            </div>
+
+                                            <!-- Prompt -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Prompt</label>
+                                                <textarea class="form-control bg-dark text-light border-cyan" id="upscalePrompt" rows="3" placeholder="Describe the video content for better upscaling..." required></textarea>
+                                                <small class="text-muted">Helps AI understand and enhance the video</small>
+                                            </div>
+
+                                            <!-- Quality Settings -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Enhancement Level</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="upscaleQuality">
+                                                    <option value="standard">Standard (Faster)</option>
+                                                    <option value="high" selected>High Quality</option>
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-cyan w-100">
+                                                ⬆️ Upscale Video
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Result -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-header bg-dark border-cyan">
+                                        <h5 class="mb-0">Result</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="upscaleVideoResult" class="text-center">
+                                            <p class="text-muted">Your upscaled video will appear here</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Character Performance Panel -->
+                    <div class="tab-pane fade" id="character-performance" role="tabpanel">
+                        <div class="row">
+                            <!-- Left Column: Form -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-header bg-dark border-cyan">
+                                        <h5 class="mb-0">🎭 Character Performance</h5>
+                                        <p class="small text-muted mb-0">Animate portrait with reference video</p>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="characterPerformanceForm">
+                                            <!-- Portrait Image Upload -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Portrait Image</label>
+                                            <!-- Gallery Selection for Portrait Image -->
+                                            <div class="mb-3">
+                                                <button type="button" class="btn btn-outline-cyan w-100" onclick="openImageGalleryFor('cp')">
+                                                    🖼️ Select Portrait from Image Gallery
+                                                </button>
+                                                <small class="text-muted">Or upload a new portrait below</small>
+                                            </div>
+
+                                            <!-- Hidden input to store selected image URL -->
+                                            <input type="hidden" id="cpSelectedImageUrl">
+
+                                            <!-- Selected Image Preview -->
+                                            <div id="cpImagePreview" style="display: none;" class="mb-3">
+                                                <div class="card bg-dark border-cyan">
+                                                    <div class="card-body p-2">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <small class="text-cyan">🖼️ Selected from Image Gallery:</small>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedImage('cp')">
+                                                                ✕ Clear
+                                                            </button>
+                                                        </div>
+                                                        <img id="cpImagePreviewImg" src="" class="w-100 rounded" style="max-height: 150px; object-fit: cover;" alt="Selected Portrait">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                                <input type="file" class="form-control bg-dark text-light border-cyan" id="cpImageFile" accept="image/*" required>
+                                                <small class="text-muted">Face/character to animate</small>
+                                            </div>
+
+                                            <!-- Reference Video Upload -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Reference Video (Optional)</label>
+                                            <!-- Gallery Selection for Reference Video -->
+                                            <div class="mb-3">
+                                                <button type="button" class="btn btn-outline-cyan w-100" onclick="openVideoGalleryFor('cpRef')">
+                                                    📹 Select Reference from Video Gallery
+                                                </button>
+                                                <small class="text-muted">Or upload a new reference video below</small>
+                                            </div>
+
+                                            <!-- Hidden input to store selected reference video URL -->
+                                            <input type="hidden" id="cpRefSelectedVideoUrl">
+
+                                            <!-- Selected Reference Video Preview -->
+                                            <div id="cpRefVideoPreview" style="display: none;" class="mb-3">
+                                                <div class="card bg-dark border-cyan">
+                                                    <div class="card-body p-2">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <small class="text-cyan">📹 Selected Reference from Gallery:</small>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedVideo('cpRef')">
+                                                                ✕ Clear
+                                                            </button>
+                                                        </div>
+                                                        <video id="cpRefVideoPreviewPlayer" controls class="w-100 rounded" style="max-height: 150px;">
+                                                            <source src="" type="video/mp4">
+                                                        </video>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                                <input type="file" class="form-control bg-dark text-light border-cyan" id="cpReferenceVideo" accept="video/*">
+                                                <small class="text-muted">Motion/performance to apply</small>
+                                            </div>
+
+                                            <!-- Prompt -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Prompt</label>
+                                                <textarea class="form-control bg-dark text-light border-cyan" id="cpPrompt" rows="2" placeholder="Describe the performance or action..." required></textarea>
+                                            </div>
+
+                                            <!-- Stabilization Mode -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Stabilization</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="cpStabilization">
+                                                    <option value="none">None</option>
+                                                    <option value="standard" selected>Standard</option>
+                                                    <option value="high">High (More stable)</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Duration -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Duration (seconds)</label>
+                                                <select class="form-select bg-dark text-light border-cyan" id="cpDuration">
+                                                    <option value="4">4 seconds</option>
+                                                    <option value="6" selected>6 seconds</option>
+                                                    <option value="8">8 seconds</option>
+                                                </select>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-cyan w-100">
+                                                🎭 Generate Performance
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Result -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-cyan">
+                                    <div class="card-header bg-dark border-cyan">
+                                        <h5 class="mb-0">Result</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="cpResult" class="text-center">
+                                            <p class="text-muted">Your character performance will appear here</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="tab-pane fade" id="video-gallery" role="tabpanel">
                         <!-- Filter Controls -->
                         <div class="row mb-3">
@@ -2330,11 +2679,18 @@
 
         // Authenticated Fetch Helper
         async function authenticatedFetch(url, options = {}) {
+            const defaultHeaders = {
+                'X-CSRFToken': getCsrfToken()
+            };
+
+            // Only add Content-Type header if body is not FormData
+            // (FormData sets its own Content-Type with boundary)
+            if (!(options.body instanceof FormData)) {
+                defaultHeaders['Content-Type'] = 'application/json';
+            }
+
             const defaultOptions = {
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'Content-Type': 'application/json'
-                },
+                headers: defaultHeaders,
                 credentials: 'same-origin'
             };
 
@@ -2343,7 +2699,7 @@
                 ...defaultOptions,
                 ...options,
                 headers: {
-                    ...defaultOptions.headers,
+                    ...defaultHeaders,
                     ...(options.headers || {})
                 }
             };
@@ -6145,6 +6501,636 @@
 
         // END FEATURE 14: VIDEO GENERATION
 
+
+        // ====================================================================
+        // NEW VIDEO ENDPOINTS (Session 49)
+        // ====================================================================
+
+        // Video-to-Video Form Handler
+        document.getElementById('videoToVideoForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const videoFile = document.getElementById('v2vVideoFile').files[0];
+            const galleryVideoUrl = document.getElementById('v2vSelectedVideoUrl')?.value;
+            const mode = document.getElementById('v2vMode').value;
+            const prompt = document.getElementById('v2vPrompt').value;
+            const duration = parseInt(document.getElementById('v2vDuration').value);
+            const resultDiv = document.getElementById('v2vResult');
+
+            // Check if EITHER file upload OR gallery selection exists
+            if (!videoFile && !galleryVideoUrl) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">❌ Please select a video file or choose from gallery</div>';
+                return;
+            }
+
+
+            try {
+            // Show uploading state
+            resultDiv.innerHTML = '<div class="alert alert-info">📤 Processing video...</div>';
+                // Add video source (file OR gallery URL)
+                const formData = new FormData();
+                if (videoFile) {
+                    formData.append('video', videoFile);
+                } else if (galleryVideoUrl) {
+                    formData.append('video_url', galleryVideoUrl);
+                }
+                formData.append('mode', mode);
+                if (prompt) formData.append('prompt', prompt);
+                formData.append('duration', duration);
+
+                const response = await authenticatedFetch('/api/v1/video/video-to-video/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            ⏳ Processing video (${mode})...<br>
+                            <small>Task ID: ${data.task_id}</small>
+                        </div>
+                    `;
+
+                    // Poll for completion
+                    pollV2VStatus(data.task_id);
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to start video processing'}</div>`;
+                }
+            } catch (error) {
+                console.error('Video-to-video error:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed to process video: ${error.message}</div>`;
+            }
+        });
+
+        // Poll video-to-video status
+        async function pollV2VStatus(taskId) {
+            const resultDiv = document.getElementById('v2vResult');
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/v1/video/status/${taskId}/`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success">✅ Video-to-video completed!</div>
+                            <video controls class="w-100 rounded border border-cyan">
+                                <source src="${data.video_url}" type="video/mp4">
+                            </video>
+                            <a href="${data.video_url}" download class="btn btn-outline-light btn-sm mt-2">📥 Download</a>
+                        `;
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed: ${data.error || 'Unknown error'}</div>`;
+                    } else {
+                        const progress = data.progress || 30;
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-info">
+                                ⏳ Processing... ${progress}%
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                         style="width: ${progress}%" role="progressbar"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+                }
+            }, 2000);
+        }
+
+        // Video Upscaling Form Handler
+        document.getElementById('upscaleVideoForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const videoFile = document.getElementById('upscaleVideoFile').files[0];
+            const prompt = document.getElementById('upscalePrompt').value.trim();
+            const quality = document.getElementById('upscaleQuality').value;
+            const resultDiv = document.getElementById('upscaleVideoResult');
+
+            // Check if EITHER file upload OR gallery selection exists
+            const galleryVideoUrl = document.getElementById('upscaleSelectedVideoUrl')?.value;
+            if (!videoFile && !galleryVideoUrl) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">❌ Please select a video file or choose from gallery</div>';
+                return;
+            }
+
+            if (!prompt) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">❌ Please provide a description</div>';
+                return;
+            }
+
+            try {
+                // Add video source (file OR gallery URL)
+                const formData = new FormData();
+                if (videoFile) {
+                    formData.append('video', videoFile);
+                } else if (galleryVideoUrl) {
+                    formData.append('video_url', galleryVideoUrl);
+                }
+                formData.append('prompt', prompt);
+                formData.append('quality', quality);
+
+                const response = await authenticatedFetch('/api/v1/video/upscale/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            ⏳ Upscaling to 4K... This may take a few minutes<br>
+                            <small>Task ID: ${data.task_id}</small>
+                        </div>
+                    `;
+
+                    // Poll for completion
+                    pollUpscaleStatus(data.task_id);
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to start upscaling'}</div>`;
+                }
+            } catch (error) {
+                console.error('Video upscale error:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed to upscale: ${error.message}</div>`;
+            }
+        });
+
+        // Poll video upscale status
+        async function pollUpscaleStatus(taskId) {
+            const resultDiv = document.getElementById('upscaleVideoResult');
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/v1/video/status/${taskId}/`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success">✅ Video upscaled to 4K!</div>
+                            <video controls class="w-100 rounded border border-cyan">
+                                <source src="${data.video_url}" type="video/mp4">
+                            </video>
+                            <a href="${data.video_url}" download class="btn btn-outline-light btn-sm mt-2">📥 Download</a>
+                        `;
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed: ${data.error || 'Unknown error'}</div>`;
+                    } else {
+                        const progress = data.progress || 30;
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-info">
+                                ⏳ Upscaling... ${progress}%
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                         style="width: ${progress}%" role="progressbar"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+                }
+            }, 2000);
+        }
+
+        // Character Performance Form Handler
+        document.getElementById('characterPerformanceForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const imageFile = document.getElementById('cpImageFile').files[0];
+            const referenceVideo = document.getElementById('cpReferenceVideo').files[0];
+            const prompt = document.getElementById('cpPrompt').value.trim();
+            const stabilization = document.getElementById('cpStabilization').value;
+            const duration = parseInt(document.getElementById('cpDuration').value);
+            const resultDiv = document.getElementById('cpResult');
+
+            // Check if EITHER file upload OR gallery selection exists for image
+            const galleryImageUrl = document.getElementById('cpSelectedImageUrl')?.value;
+            if (!imageFile && !galleryImageUrl) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">❌ Please select a portrait image or choose from gallery</div>';
+                return;
+            }
+
+            if (!prompt) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">❌ Please provide a performance description</div>';
+                return;
+            }
+
+            try {
+                // Add image source (file OR gallery URL)
+                const galleryReferenceVideoUrl = document.getElementById('cpRefSelectedVideoUrl')?.value;
+                const formData = new FormData();
+                
+                // Add portrait image (file or gallery URL)
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                } else if (galleryImageUrl) {
+                    formData.append('image_url', galleryImageUrl);
+                }
+                
+                // Add reference video (file or gallery URL) - both optional
+                if (referenceVideo) {
+                    formData.append('reference_video', referenceVideo);
+                } else if (galleryReferenceVideoUrl) {
+                    formData.append('video_url', galleryReferenceVideoUrl);
+                }
+
+                formData.append('prompt', prompt);
+                formData.append('stabilization', stabilization);
+                formData.append('duration', duration);
+
+                const response = await authenticatedFetch('/api/v1/video/character-performance/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.task_id) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            ⏳ Generating character performance...<br>
+                            <small>Animating portrait with AI</small><br>
+                            <small>Task ID: ${data.task_id}</small>
+                        </div>
+                    `;
+
+                    // Poll for completion
+                    pollCPStatus(data.task_id);
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error_message || 'Failed to start character performance'}</div>`;
+                }
+            } catch (error) {
+                console.error('Character performance error:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed to generate performance: ${error.message}</div>`;
+            }
+        });
+
+        // Poll character performance status
+        async function pollCPStatus(taskId) {
+            const resultDiv = document.getElementById('cpResult');
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/v1/video/status/${taskId}/`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success">✅ Character performance completed!</div>
+                            <video controls class="w-100 rounded border border-cyan">
+                                <source src="${data.video_url}" type="video/mp4">
+                            </video>
+                            <a href="${data.video_url}" download class="btn btn-outline-light btn-sm mt-2">📥 Download</a>
+                        `;
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        resultDiv.innerHTML = `<div class="alert alert-danger">❌ Failed: ${data.error || 'Unknown error'}</div>`;
+                    } else {
+                        const progress = data.progress || 30;
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-info">
+                                ⏳ Animating portrait... ${progress}%
+                                <div class="progress mt-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                         style="width: ${progress}%" role="progressbar"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ Error: ${error.message}</div>`;
+                }
+            }, 2000);
+        }
+
+        // ====================================================================
+        // ====================================================================
+        // GALLERY SELECTION FOR NEW VIDEO ENDPOINTS (Session 49)
+        // ====================================================================
+
+        // State for selected videos/images
+        let gallerySelectedVideos = {
+            v2v: null,           // Video-to-Video selected video URL
+            upscale: null,       // Upscale selected video URL
+            cpRef: null          // Character Performance reference video URL
+        };
+
+        let gallerySelectedImages = {
+            cp: null             // Character Performance portrait image URL
+        };
+
+        // Open video gallery modal for selecting videos
+        function openVideoGalleryFor(endpoint) {
+            console.log(`🎬 [GALLERY] Opening video gallery for: ${endpoint}`);
+
+            const modal = document.getElementById('videoSelectionModal');
+            if (!modal) {
+                console.error('❌ [GALLERY] Video selection modal not found!');
+                alert('Video selection modal not found');
+                return;
+            }
+
+            // Show the modal
+            modal.style.display = 'block';
+            console.log('✅ [GALLERY] Modal displayed');
+
+            // Store which endpoint called this (for later selection)
+            modal.dataset.endpoint = endpoint;
+
+            // Load videos from gallery
+            fetch('/api/v1/video/history/?limit=50', {
+                headers: {'X-CSRFToken': getCsrfToken()}
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 [GALLERY] API response:', data);
+
+                const grid = document.getElementById('videoSelectionModalGrid');
+                const emptyState = document.getElementById('videoSelectionModalEmpty');
+
+                if (data.success && data.videos && data.videos.length > 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'none';
+
+                    console.log('🎬 [GALLERY] Rendering', data.videos.length, 'videos...');
+
+                    data.videos.forEach((video) => {
+                        if (!video.video_url) return;
+
+                        const videoCard = document.createElement('div');
+                        videoCard.style.cssText = 'position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid #333; transition: all 0.2s;';
+                        videoCard.onmouseover = () => videoCard.style.borderColor = '#00d9ff';
+                        videoCard.onmouseout = () => videoCard.style.borderColor = '#333';
+
+                        videoCard.innerHTML = `
+                            <video style="width: 100%; height: 200px; object-fit: cover; display: block;" muted>
+                                <source src="${video.video_url}" type="video/mp4">
+                            </video>
+                            <div style="padding: 8px; background: #222; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #888;">${video.video_type || 'generated'}</p>
+                                ${video.prompt ? `<p style="margin: 4px 0 0; font-size: 11px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${video.prompt}</p>` : ''}
+                            </div>
+                        `;
+
+                        // Play preview on hover
+                        const videoElement = videoCard.querySelector('video');
+                        videoCard.onmouseover = () => {
+                            videoCard.style.borderColor = '#00d9ff';
+                            videoElement.play().catch(() => {});
+                        };
+                        videoCard.onmouseout = () => {
+                            videoCard.style.borderColor = '#333';
+                            videoElement.pause();
+                            videoElement.currentTime = 0;
+                        };
+
+                        videoCard.onclick = () => {
+                            console.log('👆 [GALLERY] Video selected:', video.video_url);
+                            selectVideoFromGallery(video.video_url, endpoint);
+                            closeVideoSelectionModal();
+                        };
+
+                        grid.appendChild(videoCard);
+                    });
+
+                    console.log('✅ [GALLERY] Gallery rendered successfully');
+                } else {
+                    // Show empty state
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    console.log('⚠️ [GALLERY] No videos found in gallery');
+                }
+            })
+            .catch(error => {
+                console.error('❌ [GALLERY] Error loading videos:', error);
+                alert('Failed to load video gallery: ' + error.message);
+            });
+        }
+
+        // Select video from gallery
+        function selectVideoFromGallery(videoUrl, endpoint) {
+            console.log(`✅ [GALLERY] Selecting video for ${endpoint}:`, videoUrl);
+
+            // Store selected video URL
+            gallerySelectedVideos[endpoint] = videoUrl;
+
+            // Update hidden input
+            const hiddenInput = document.getElementById(`${endpoint}SelectedVideoUrl`);
+            if (hiddenInput) {
+                hiddenInput.value = videoUrl;
+            }
+
+            // Show preview
+            const preview = document.getElementById(`${endpoint}VideoPreview`);
+            const player = document.getElementById(`${endpoint}VideoPreviewPlayer`);
+
+            if (preview && player) {
+                const source = player.querySelector('source');
+                source.src = videoUrl;
+                player.load();
+                preview.style.display = 'block';
+                console.log('✅ [GALLERY] Preview shown for', endpoint);
+            }
+
+            // Make file upload optional (remove required attribute)
+            const fileInput = document.getElementById(`${endpoint}VideoFile`) ||
+                              document.getElementById('upscaleVideoFile') ||
+                              document.getElementById('cpReferenceVideo');
+            if (fileInput) {
+                fileInput.removeAttribute('required');
+                console.log('✅ [GALLERY] File upload made optional');
+            }
+        }
+
+        // Clear selected video
+        function clearSelectedVideo(endpoint) {
+            console.log(`🗑️ [GALLERY] Clearing selected video for ${endpoint}`);
+
+            // Clear state
+            gallerySelectedVideos[endpoint] = null;
+
+            // Clear hidden input
+            const hiddenInput = document.getElementById(`${endpoint}SelectedVideoUrl`);
+            if (hiddenInput) {
+                hiddenInput.value = '';
+            }
+
+            // Hide preview
+            const preview = document.getElementById(`${endpoint}VideoPreview`);
+            if (preview) {
+                preview.style.display = 'none';
+            }
+
+            // Make file upload required again
+            const fileInput = document.getElementById(`${endpoint}VideoFile`) ||
+                              document.getElementById('upscaleVideoFile') ||
+                              document.getElementById('cpReferenceVideo');
+            if (fileInput) {
+                fileInput.setAttribute('required', 'required');
+                console.log('✅ [GALLERY] File upload made required again');
+            }
+        }
+
+        // Close video selection modal
+        function closeVideoSelectionModal() {
+            console.log('🔒 [GALLERY] Closing video selection modal');
+            const modal = document.getElementById('videoSelectionModal');
+            if (modal) {
+                modal.style.display = 'none';
+                console.log('✅ [GALLERY] Modal closed');
+            }
+        }
+
+        // Open image gallery for character performance portrait
+        function openImageGalleryFor(endpoint) {
+            console.log(`🖼️ [GALLERY] Opening image gallery for: ${endpoint}`);
+
+            // Use existing videoGalleryModal (which shows images for image-to-video)
+            const modal = document.getElementById('videoGalleryModal');
+            if (!modal) {
+                console.error('❌ [GALLERY] Image gallery modal not found!');
+                alert('Image gallery modal not found');
+                return;
+            }
+
+            // Show the modal
+            modal.style.display = 'block';
+            console.log('✅ [GALLERY] Modal displayed');
+
+            // Store which endpoint called this
+            modal.dataset.endpoint = endpoint;
+
+            // Load images from gallery
+            fetch('/api/images/history/', {
+                headers: {'X-CSRFToken': getCsrfToken()}
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 [GALLERY] API response:', data);
+
+                const grid = document.getElementById('videoGalleryModalGrid');
+                const emptyState = document.getElementById('videoGalleryModalEmpty');
+
+                if (data.success && data.images && data.images.length > 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'none';
+
+                    console.log('🖼️ [GALLERY] Rendering', data.images.length, 'images...');
+
+                    data.images.forEach((img) => {
+                        if (!img.url) return;
+
+                        const imageCard = document.createElement('div');
+                        imageCard.style.cssText = 'position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid #333; transition: all 0.2s;';
+                        imageCard.onmouseover = () => imageCard.style.borderColor = '#00d9ff';
+                        imageCard.onmouseout = () => imageCard.style.borderColor = '#333';
+
+                        imageCard.innerHTML = `
+                            <img src="${img.url}" style="width: 100%; height: 200px; object-fit: cover; display: block;" alt="Gallery Image">
+                            <div style="padding: 8px; background: #222; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #888;">${img.image_type || 'generated'}</p>
+                            </div>
+                        `;
+
+                        imageCard.onclick = () => {
+                            console.log('👆 [GALLERY] Image selected:', img.url);
+                            selectImageFromGallery(img.url, endpoint);
+                            closeVideoGalleryModal();
+                        };
+
+                        grid.appendChild(imageCard);
+                    });
+
+                    console.log('✅ [GALLERY] Gallery rendered successfully');
+                } else {
+                    // Show empty state
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    console.log('⚠️ [GALLERY] No images found in gallery');
+                }
+            })
+            .catch(error => {
+                console.error('❌ [GALLERY] Error loading gallery:', error);
+                alert('Failed to load gallery: ' + error.message);
+            });
+        }
+
+        // Select image from gallery
+        function selectImageFromGallery(imageUrl, endpoint) {
+            console.log(`✅ [GALLERY] Selecting image for ${endpoint}:`, imageUrl);
+
+            // Store selected image URL
+            gallerySelectedImages[endpoint] = imageUrl;
+
+            // Update hidden input
+            const hiddenInput = document.getElementById(`${endpoint}SelectedImageUrl`);
+            if (hiddenInput) {
+                hiddenInput.value = imageUrl;
+            }
+
+            // Show preview
+            const preview = document.getElementById(`${endpoint}ImagePreview`);
+            const img = document.getElementById(`${endpoint}ImagePreviewImg`);
+
+            if (preview && img) {
+                img.src = imageUrl;
+                preview.style.display = 'block';
+                console.log('✅ [GALLERY] Preview shown for', endpoint);
+            }
+
+            // Make file upload optional (remove required attribute)
+            const fileInput = document.getElementById(`${endpoint}ImageFile`);
+            if (fileInput) {
+                fileInput.removeAttribute('required');
+                console.log('✅ [GALLERY] File upload made optional');
+            }
+        }
+
+        // Clear selected image
+        function clearSelectedImage(endpoint) {
+            console.log(`🗑️ [GALLERY] Clearing selected image for ${endpoint}`);
+
+            // Clear state
+            gallerySelectedImages[endpoint] = null;
+
+            // Clear hidden input
+            const hiddenInput = document.getElementById(`${endpoint}SelectedImageUrl`);
+            if (hiddenInput) {
+                hiddenInput.value = '';
+            }
+
+            // Hide preview
+            const preview = document.getElementById(`${endpoint}ImagePreview`);
+            if (preview) {
+                preview.style.display = 'none';
+            }
+
+            // Make file upload required again
+            const fileInput = document.getElementById(`${endpoint}ImageFile`);
+            if (fileInput) {
+                fileInput.setAttribute('required', 'required');
+                console.log('✅ [GALLERY] File upload made required again');
+            }
+        }
+
+        // ====================================================================
+        // END GALLERY SELECTION (Session 49)
+        // ====================================================================
+
+        // END NEW VIDEO ENDPOINTS (Session 49)
+        // ====================================================================
         // ====================================================================
         // AUDIO TAB JAVASCRIPT (Session 48: Phase 3)
         // ====================================================================
