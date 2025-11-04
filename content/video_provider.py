@@ -788,14 +788,14 @@ class RunwayMLProvider:
         try:
             # Prepare request payload
             payload = {
-                "promptText": prompt,  # Changed from "text" to "promptText"
+                "promptText": prompt,
                 "duration": duration,
                 "model": "eleven_text_to_sound_v2"
             }
 
             # Add optional parameters
-            if kwargs.get('prompt_influence'):
-                payload['promptInfluence'] = kwargs['prompt_influence']
+            if kwargs.get('loop') is not None:
+                payload['loop'] = kwargs['loop']  # Whether sound should loop seamlessly
 
             logger.info(f"📤 [RUNWAY] Sending text-to-sound request")
 
@@ -834,17 +834,26 @@ class RunwayMLProvider:
     def character_performance(
         self,
         image_url: str,
-        driving_video_url: str = None,
+        reference_video_url: str,  # REQUIRED - must be a video of person performing (3-30s)
         prompt: str = "",
+        body_control: bool = True,
+        expression_intensity: int = 3,
+        ratio: str = "1280:720",
         **kwargs
     ) -> VideoGenerationResult:
         """
         Animate character from image using RunwayML Act Two
 
+        The reference video must show a person performing the desired actions/expressions.
+        Video must be 3-30 seconds in duration.
+
         Args:
-            image_url: URL or path to character image
-            driving_video_url: Optional driving video for performance
+            image_url: URL or path to character image (can also be a video)
+            reference_video_url: REQUIRED video of person performing (3-30 seconds)
             prompt: Text description of desired performance
+            body_control: Enable body movements and gestures (default: True)
+            expression_intensity: 1-5, larger = more intense expressions (default: 3)
+            ratio: Output video resolution (default: "1280:720")
         """
 
         if not self.api_key:
@@ -853,29 +862,40 @@ class RunwayMLProvider:
                 error_message="RunwayML API key not configured"
             )
 
-        try:
-            # Prepare image input
-            image_data = self._prepare_image(image_url)
+        if not reference_video_url:
+            return VideoGenerationResult(
+                success=False,
+                error_message="reference_video_url is required - must be a video of a person performing (3-30 seconds)"
+            )
 
-            # Prepare request payload with proper structure
-            # API expects "character" object with type and uri, and "reference" object (always required)
+        try:
+            # Prepare character input (can be image or video)
+            character_data = self._prepare_image(image_url)  # Works for images
+            character_type = "image"  # Default to image
+
+            # If it's a video URL, use video type
+            if image_url.endswith(('.mp4', '.mov', '.avi', '.webm')):
+                character_data = self._prepare_video(image_url)
+                character_type = "video"
+
+            # Prepare reference video (REQUIRED - must be video of person performing)
+            reference_video_data = self._prepare_video(reference_video_url)
+
+            # Prepare request payload with proper structure from API docs
             payload = {
                 "model": "act_two",
                 "character": {
-                    "type": "image",  # Required type discriminator
-                    "uri": image_data  # Changed from imageUri to uri
+                    "type": character_type,  # Can be "image" or "video"
+                    "uri": character_data
                 },
-                "reference": {  # Always required, even if no driving video
-                    "type": "video" if driving_video_url else "image"
-                }
+                "reference": {
+                    "type": "video",  # MUST be "video" (person performing, 3-30s)
+                    "uri": reference_video_data
+                },
+                "bodyControl": body_control,
+                "expressionIntensity": expression_intensity,
+                "ratio": ratio
             }
-
-            # Add driving video URI if provided
-            if driving_video_url:
-                payload['reference']['uri'] = self._prepare_video(driving_video_url)
-            else:
-                # Use the character image as reference if no driving video
-                payload['reference']['uri'] = image_data
 
             # Add prompt if provided
             if prompt:
