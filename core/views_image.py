@@ -15,6 +15,7 @@ import requests
 import uuid
 import json
 import zipfile
+import base64
 from io import BytesIO
 from datetime import datetime
 from pathlib import Path
@@ -1933,8 +1934,8 @@ def execute_workflow_step(request):
     try:
         # Parse JSON request (DRF already parses request.body for us)
         data = request.data
-        operation = data.get('operation', '').strip().lower()
-        input_image_url = data.get('inputImageUrl', '').strip()
+        operation = (data.get('operation') or '').strip().lower()
+        input_image_url = (data.get('inputImageUrl') or '').strip()
         config = data.get('config', {})
 
         logger.info(f"🎭 Workflow step execution: {operation}")
@@ -1966,6 +1967,16 @@ def execute_workflow_step(request):
                     local_path = os.path.join(settings.MEDIA_ROOT, input_image_url.replace('/media/', ''))
                     with open(local_path, 'rb') as f:
                         image_data = f.read()
+                elif input_image_url.startswith('data:image'):
+                    # Data URI - extract base64 data
+                    if 'base64,' in input_image_url:
+                        base64_data = input_image_url.split('base64,')[1]
+                        image_data = base64.b64decode(base64_data)
+                    else:
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Invalid data URI format'
+                        }, status=400)
                 else:
                     return JsonResponse({
                         'success': False,
@@ -2105,7 +2116,13 @@ def execute_workflow_step(request):
                 img_bytes.seek(0)
 
                 files = {'image': ('image.png', img_bytes.read(), 'image/png')}
-                data = {'output_format': 'png'}
+
+                # Conservative upscale requires a prompt
+                prompt = config.get('prompt', 'High quality image, detailed, sharp')
+                data = {
+                    'output_format': 'png',
+                    'prompt': prompt
+                }
                 headers = {'Authorization': f'Bearer {stability_key}', 'Accept': 'image/*'}
 
                 response = requests.post(url, headers=headers, files=files, data=data)
@@ -2402,7 +2419,6 @@ def execute_workflow_step(request):
                     }, status=400)
 
                 # Decode base64 mask
-                import base64
                 if 'base64,' in mask_data:
                     mask_data = mask_data.split('base64,')[1]
                 mask_bytes = base64.b64decode(mask_data)
@@ -2483,7 +2499,6 @@ def execute_workflow_step(request):
                     }, status=400)
 
                 # Decode base64 mask
-                import base64
                 if 'base64,' in mask_data:
                     mask_data = mask_data.split('base64,')[1]
                 mask_bytes = base64.b64decode(mask_data)
@@ -2544,7 +2559,80 @@ def execute_workflow_step(request):
                 logger.error(f"❌ Inpaint failed: {e}")
                 return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-        elif operation in ['sketch', 'structure', 'generate']:
+        elif operation == 'generate':
+            # Generate image from prompt
+            try:
+                from content.image_generation import ImageGenerationService
+
+                prompt = config.get('prompt', '')
+                if not prompt:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Prompt is required for generate operation'
+                    }, status=400)
+
+                # Get configuration
+                style = config.get('style', '')
+                quality = config.get('quality', 'balanced')  # fast, balanced, high, premium
+                negative_prompt = config.get('negative_prompt', '')
+
+                # Map quality to model
+                quality_map = {
+                    'fast': 'core',
+                    'balanced': 'sdxl',
+                    'high': 'sd3',
+                    'premium': 'ultra'
+                }
+                model = quality_map.get(quality, 'sdxl')
+
+                logger.info(f"🎨 Generating image: prompt='{prompt[:50]}...', model={model}, style={style}")
+
+                # Generate image
+                generator = ImageGenerationService()
+                result = generator.generate_image(
+                    prompt=prompt,
+                    model=model,
+                    style=style,
+                    negative_prompt=negative_prompt,
+                    aspect_ratio='1:1'
+                )
+
+                if result.success and result.images:
+                    # Save the generated image
+                    # Extract base64 data from data URI (format: "data:image/png;base64,...")
+                    data_uri = result.images[0]
+                    if 'base64,' in data_uri:
+                        base64_data = data_uri.split('base64,')[1]
+                    else:
+                        base64_data = data_uri
+                    image_data = base64.b64decode(base64_data)
+                    filename = f'generated_{uuid.uuid4().hex[:8]}.png'
+                    filepath = os.path.join('generated_images', request.user.username, filename)
+                    saved_path = default_storage.save(filepath, ContentFile(image_data))
+                    image_url = default_storage.url(saved_path)
+
+                    # Save to history
+                    from content.models import ImageHistory
+                    ImageHistory.objects.create(
+                        user=request.user,
+                        filename=filename,
+                        file_path=saved_path,
+                        image_type='generated',
+                        prompt=prompt
+                    )
+
+                    return JsonResponse({'success': True, 'image_url': image_url})
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': result.error_message or 'Generation failed'
+                    }, status=500)
+
+            except Exception as e:
+                logger.error(f"❌ Generate failed: {e}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        elif operation in ['sketch', 'structure']:
             # These operations need separate implementations
             return JsonResponse({
                 'success': False,
