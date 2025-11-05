@@ -1001,6 +1001,52 @@
                                 required
                             ></textarea>
                             <small class="text-muted d-block mt-2">💡 Auto-enhances when you select a style and click Generate!</small>
+
+                            <!-- Prompt Quality Indicator -->
+                            <div id="promptQuality" class="mt-2 d-none">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge" id="promptQualityBadge">Analyzing...</span>
+                                    <small id="promptQualityText" style="color: #fcd34d;"></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ✨ PROMPT ASSISTANT ✨ -->
+                        <div id="promptAssistant" class="mb-3" style="display: none;">
+                            <div class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(245, 158, 11, 0.08)); border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 12px; backdrop-filter: blur(10px);">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0" style="color: #fbbf24; font-weight: 700;">✨ Prompt Assistant</h6>
+                                        <button class="btn btn-sm btn-outline-light" id="closePromptAssistant" style="padding: 2px 8px;">✕</button>
+                                    </div>
+
+                                    <!-- Suggestions -->
+                                    <div id="promptSuggestions" class="mb-2">
+                                        <small class="d-block mb-2" style="color: #fcd34d; font-weight: 600;">💡 Quick Improvements:</small>
+                                        <div id="suggestionsList" style="font-size: 12px; color: white;"></div>
+                                    </div>
+
+                                    <!-- Quick Templates -->
+                                    <div class="mb-2">
+                                        <small class="d-block mb-2" style="color: #fcd34d; font-weight: 600;">🎨 Quick Templates:</small>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <button class="btn btn-sm btn-outline-light prompt-template" data-template="portrait" style="font-size: 11px; padding: 3px 8px;">👤 Portrait</button>
+                                            <button class="btn btn-sm btn-outline-light prompt-template" data-template="landscape" style="font-size: 11px; padding: 3px 8px;">🏔️ Landscape</button>
+                                            <button class="btn btn-sm btn-outline-light prompt-template" data-template="logo" style="font-size: 11px; padding: 3px 8px;">🎨 Logo</button>
+                                            <button class="btn btn-sm btn-outline-light prompt-template" data-template="product" style="font-size: 11px; padding: 3px 8px;">📦 Product</button>
+                                            <button class="btn btn-sm btn-outline-light prompt-template" data-template="character" style="font-size: 11px; padding: 3px 8px;">🦸 Character</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- AI Improve Button -->
+                                    <div class="d-grid">
+                                        <button class="btn btn-primary btn-sm" id="improvePromptBtn">
+                                            <span id="improvePromptSpinner" class="spinner-border spinner-border-sm me-1" style="display: none;"></span>
+                                            ✨ Improve My Prompt with AI
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Negative Prompt -->
@@ -9589,6 +9635,262 @@
 
         // ====================================================================
         // END AI ASSISTANT
+        // ====================================================================
+
+        // ====================================================================
+        // PROMPT ASSISTANT (Session 53: Phase B)
+        // ====================================================================
+
+        class PromptAssistant {
+            constructor() {
+                this.promptField = document.getElementById('prompt');
+                this.assistantPanel = document.getElementById('promptAssistant');
+                this.qualityIndicator = document.getElementById('promptQuality');
+                this.templates = {
+                    portrait: "Professional portrait of [subject], studio lighting, sharp focus, detailed facial features, warm colors, shallow depth of field",
+                    landscape: "Stunning landscape photograph of [location], golden hour lighting, vibrant colors, dramatic clouds, wide angle, highly detailed",
+                    logo: "Minimalist modern logo design for [brand name], clean lines, professional, memorable, vector graphics, simple color palette",
+                    product: "Product photography of [product], clean white background, studio lighting, professional commercial photo, high resolution, centered",
+                    character: "Full body character design of [character description], dynamic pose, detailed costume, fantasy art style, dramatic lighting"
+                };
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Show assistant when user starts typing
+                this.promptField.addEventListener('input', () => {
+                    this.onPromptChange();
+                });
+
+                // Focus event - show assistant
+                this.promptField.addEventListener('focus', () => {
+                    if (this.promptField.value.trim().length > 0) {
+                        this.show();
+                    }
+                });
+
+                // Template buttons
+                document.querySelectorAll('.prompt-template').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const template = e.target.dataset.template;
+                        this.applyTemplate(template);
+                    });
+                });
+
+                // Close button
+                document.getElementById('closePromptAssistant')?.addEventListener('click', () => {
+                    this.hide();
+                });
+
+                // Improve prompt button
+                document.getElementById('improvePromptBtn')?.addEventListener('click', () => {
+                    this.improvePrompt();
+                });
+            }
+
+            onPromptChange() {
+                const prompt = this.promptField.value.trim();
+
+                if (prompt.length === 0) {
+                    this.hide();
+                    this.hideQualityIndicator();
+                    return;
+                }
+
+                // Show assistant
+                this.show();
+
+                // Analyze prompt quality
+                this.analyzePromptQuality(prompt);
+
+                // Generate suggestions
+                this.generateSuggestions(prompt);
+            }
+
+            analyzePromptQuality(prompt) {
+                const length = prompt.length;
+                const wordCount = prompt.split(/\s+/).length;
+
+                let quality = 'poor';
+                let badge = 'bg-danger';
+                let text = '';
+
+                if (length < 20) {
+                    quality = 'poor';
+                    badge = 'bg-danger';
+                    text = 'Too short - add more details!';
+                } else if (length < 50) {
+                    quality = 'fair';
+                    badge = 'bg-warning';
+                    text = 'Could use more detail';
+                } else if (length < 100) {
+                    quality = 'good';
+                    badge = 'bg-info';
+                    text = 'Good prompt!';
+                } else {
+                    quality = 'excellent';
+                    badge = 'bg-success';
+                    text = 'Excellent detail!';
+                }
+
+                const qualityBadge = document.getElementById('promptQualityBadge');
+                const qualityText = document.getElementById('promptQualityText');
+
+                if (qualityBadge && qualityText) {
+                    qualityBadge.className = `badge ${badge}`;
+                    qualityBadge.textContent = quality.toUpperCase();
+                    qualityText.textContent = `${wordCount} words, ${length} characters - ${text}`;
+                    this.qualityIndicator.classList.remove('d-none');
+                }
+            }
+
+            generateSuggestions(prompt) {
+                const suggestions = [];
+                const lower = prompt.toLowerCase();
+
+                // Check for common missing elements
+                if (!lower.match(/\b(lighting|light|lit)\b/)) {
+                    suggestions.push("• Consider adding lighting details (e.g., 'studio lighting', 'natural light', 'dramatic lighting')");
+                }
+
+                if (!lower.match(/\b(detailed|sharp|focus|quality|resolution)\b/)) {
+                    suggestions.push("• Add quality descriptors (e.g., 'highly detailed', 'sharp focus', 'high quality')");
+                }
+
+                if (!lower.match(/\b(color|colours|tone|hue)\b/) && !lower.match(/\b(black and white|monochrome)\b/)) {
+                    suggestions.push("• Specify colors or tones (e.g., 'vibrant colors', 'warm tones', 'cool palette')");
+                }
+
+                if (!lower.match(/\b(style|art|artistic)\b/)) {
+                    suggestions.push("• Choose an art style from the dropdown above or mention it (e.g., 'photorealistic', 'digital art')");
+                }
+
+                if (lower.length < 30) {
+                    suggestions.push("• Add more descriptive details about your subject");
+                }
+
+                // Display suggestions
+                const suggestionsList = document.getElementById('suggestionsList');
+                if (suggestionsList) {
+                    if (suggestions.length === 0) {
+                        suggestionsList.innerHTML = '<small style="color: #10b981;">✅ Your prompt looks great!</small>';
+                    } else {
+                        suggestionsList.innerHTML = suggestions.slice(0, 3).join('<br>');
+                    }
+                }
+            }
+
+            applyTemplate(templateName) {
+                const template = this.templates[templateName];
+                if (template) {
+                    // If prompt is empty or very short, replace it
+                    if (this.promptField.value.trim().length < 10) {
+                        this.promptField.value = template;
+                    } else {
+                        // Otherwise, ask if they want to replace
+                        if (confirm('Replace your current prompt with this template?')) {
+                            this.promptField.value = template;
+                        }
+                    }
+
+                    // Trigger change event
+                    this.promptField.dispatchEvent(new Event('input'));
+
+                    // Focus and select placeholder text
+                    this.promptField.focus();
+                    const placeholderMatch = template.match(/\[([^\]]+)\]/);
+                    if (placeholderMatch) {
+                        const placeholderStart = template.indexOf('[');
+                        const placeholderEnd = template.indexOf(']') + 1;
+                        this.promptField.setSelectionRange(placeholderStart, placeholderEnd);
+                    }
+                }
+            }
+
+            async improvePrompt() {
+                const prompt = this.promptField.value.trim();
+
+                if (prompt.length === 0) {
+                    alert('Please enter a prompt first!');
+                    return;
+                }
+
+                const spinner = document.getElementById('improvePromptSpinner');
+                const btn = document.getElementById('improvePromptBtn');
+                const originalText = btn.innerHTML;
+
+                // Show loading state
+                spinner.style.display = 'inline-block';
+                btn.disabled = true;
+                btn.innerHTML = spinner.outerHTML + ' Improving...';
+
+                try {
+                    // Get selected style for context
+                    const style = document.getElementById('style')?.value || 'photorealistic';
+
+                    // Call AI to improve prompt
+                    const response = await authenticatedFetch('/api/v1/gallery/optimize-prompt/', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            style: style,
+                            quality: 'balanced',
+                            ai_mode: 'enhance'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.enhanced_prompt) {
+                        // Show before/after
+                        const improvement = data.enhanced_prompt;
+
+                        // Ask user if they want to use improved version
+                        const useIt = confirm(
+                            `Original:\n"${prompt}"\n\n` +
+                            `Improved:\n"${improvement}"\n\n` +
+                            `Use the improved version?`
+                        );
+
+                        if (useIt) {
+                            this.promptField.value = improvement;
+                            this.promptField.dispatchEvent(new Event('input'));
+                        }
+                    } else {
+                        alert('Sorry, could not improve prompt. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Prompt improvement error:', error);
+                    alert('Error improving prompt: ' + error.message);
+                } finally {
+                    // Reset button
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+
+            show() {
+                this.assistantPanel.style.display = 'block';
+            }
+
+            hide() {
+                this.assistantPanel.style.display = 'none';
+            }
+
+            hideQualityIndicator() {
+                this.qualityIndicator.classList.add('d-none');
+            }
+        }
+
+        // Initialize Prompt Assistant when page loads
+        let promptAssistant;
+        window.addEventListener('DOMContentLoaded', () => {
+            promptAssistant = new PromptAssistant();
+            console.log('✨ Prompt Assistant initialized!');
+        });
+
+        // ====================================================================
+        // END PROMPT ASSISTANT
         // ====================================================================
 
         // ====================================================================
