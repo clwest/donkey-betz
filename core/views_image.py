@@ -3179,3 +3179,53 @@ def unified_gallery(request):
         return Response({
             'error': str(e)
         }, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_featured_examples(request):
+    """
+    Get curated featured examples for the Examples Gallery
+    Session 56: Phase A Task 2
+    Returns diverse, high-quality images showcasing platform capabilities
+    """
+    try:
+        from content.models import ImageHistory
+        from django.db.models import Q
+
+        # Get diverse examples - ONLY generated images (Session 56: Bug fix)
+        # Edited images (upscale, remove bg, etc.) have operation names as prompts,
+        # not useful for "Try This Prompt" feature
+        examples = []
+
+        # Strategy: Get up to 12 recent generated images with variety
+        # Prioritize diverse models and styles to showcase platform capabilities
+        examples = ImageHistory.objects.filter(
+            user=request.user,
+            image_type='generated'  # ONLY show generated images!
+        ).order_by('-created_at')[:12]
+
+        # Format response
+        formatted_examples = []
+        for img in examples:
+            formatted_examples.append({
+                'id': str(img.id),
+                'url': img.file_path if img.file_path.startswith('http') else f'/media/{img.file_path}',
+                'prompt': img.prompt or f'{img.image_type.replace("_", " ").title()}',
+                'image_type': img.image_type,
+                'model_used': img.model_used or 'sdxl',
+                'style': img.style or '',
+                'created_at': img.created_at.isoformat()
+            })
+
+        logger.info(f"✨ Returning {len(formatted_examples)} featured examples")
+        return Response({
+            'examples': formatted_examples,
+            'count': len(formatted_examples)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error loading featured examples: {str(e)}")
+        return Response({
+            'error': str(e),
+            'examples': []
+        }, status=500)
