@@ -756,6 +756,236 @@
         .unified-gallery-card video {
             pointer-events: auto;
         }
+
+        /* ===============================================
+           ONBOARDING SYSTEM STYLES (Session 55)
+           =============================================== */
+
+        .onboarding-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .onboarding-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .onboarding-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+        }
+
+        .onboarding-content {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+            border: 3px solid var(--goldenrod);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            box-shadow:
+                0 0 60px rgba(251, 191, 36, 0.5),
+                0 20px 60px rgba(0, 0, 0, 0.8);
+            animation: modalSlideIn 0.4s ease-out;
+        }
+
+        .onboarding-content.center {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .onboarding-content.left {
+            top: 50%;
+            right: 100px;
+            transform: translateY(-50%);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .onboarding-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--goldenrod);
+            padding-bottom: 1rem;
+        }
+
+        .onboarding-header h3 {
+            color: var(--goldenrod);
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+        }
+
+        .onboarding-skip {
+            background: none;
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            font-size: 2rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .onboarding-skip:hover {
+            background: var(--danger);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .onboarding-body {
+            margin-bottom: 2rem;
+        }
+
+        .onboarding-body p {
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .onboarding-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .onboarding-progress {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .onboarding-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-onboarding-primary,
+        .btn-onboarding-secondary {
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-onboarding-primary {
+            background: linear-gradient(135deg, var(--goldenrod), var(--goldenrod-dark));
+            color: var(--dark);
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+        }
+
+        .btn-onboarding-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.6);
+        }
+
+        .btn-onboarding-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 2px solid var(--cyan);
+        }
+
+        .btn-onboarding-secondary:hover {
+            background: rgba(6, 182, 212, 0.2);
+            border-color: var(--cyan-bright);
+        }
+
+        /* Highlight effect for targeted elements */
+        .onboarding-highlight {
+            position: relative;
+            z-index: 10000;
+            box-shadow:
+                0 0 0 4px var(--goldenrod),
+                0 0 40px rgba(251, 191, 36, 0.8),
+                0 0 100px rgba(251, 191, 36, 0.4);
+            animation: highlightPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes highlightPulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 0 4px var(--goldenrod),
+                    0 0 40px rgba(251, 191, 36, 0.8),
+                    0 0 100px rgba(251, 191, 36, 0.4);
+            }
+            50% {
+                box-shadow:
+                    0 0 0 6px var(--goldenrod-dark),
+                    0 0 60px rgba(251, 191, 36, 1),
+                    0 0 120px rgba(251, 191, 36, 0.6);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .onboarding-content {
+                max-width: 90%;
+                padding: 1.5rem;
+            }
+
+            .onboarding-content.left {
+                right: auto;
+                left: 50%;
+                transform: translate(-50%, -50%) !important;
+            }
+
+            .onboarding-header h3 {
+                font-size: 1.4rem;
+            }
+
+            .onboarding-body p {
+                font-size: 1rem;
+            }
+
+            .onboarding-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .onboarding-buttons {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1701,6 +1931,27 @@
             <div class="tab-pane fade" id="image-gallery-pane" role="tabpanel">
                 <h3 class="mb-4">📊 Image Gallery</h3>
                 <p class="text-muted">Browse all your generated and edited images</p>
+
+                <!-- EXAMPLE GALLERY (Session 56: Phase A Task 2) -->
+                <div class="mb-5" id="examplesSection">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">✨ Featured Examples</h4>
+                        <button class="btn btn-sm btn-outline-secondary" id="toggleExamplesBtn">
+                            <span id="toggleExamplesIcon">▼</span> <span id="toggleExamplesText">Hide</span>
+                        </button>
+                    </div>
+
+                    <div id="examplesGrid" class="row g-3">
+                        <!-- Examples will be loaded here dynamically -->
+                        <div class="col-12 text-center py-4">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">Loading examples...</span>
+                            </div>
+                            <p class="text-muted mt-2">Loading featured examples...</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- END EXAMPLE GALLERY -->
 
                 <!-- BATCH SELECTION CONTROLS (Session 37: Feature 10) -->
                 <div class="row mb-4">
@@ -4562,6 +4813,7 @@
         // Load gallery when pill is clicked
         document.getElementById('image-gallery-pill').addEventListener('click', function() {
             loadGallery();
+            loadExamples(); // Load examples (Session 56: Phase A Task 2)
         });
 
         // Apply filters button
@@ -4586,6 +4838,110 @@
             galleryOffset += galleryLimit;
             loadGallery(true); // append = true
         });
+
+        // Load Examples Gallery (Session 56: Phase A Task 2)
+        async function loadExamples() {
+            try {
+                const response = await authenticatedFetch('/api/images/examples/');
+                const data = await response.json();
+
+                const examplesGrid = document.getElementById('examplesGrid');
+                if (data.examples && data.examples.length > 0) {
+                    examplesGrid.innerHTML = data.examples.map(img => `
+                        <div class="col-md-3 col-sm-4 col-6">
+                            <div class="card bg-dark border-warning h-100" style="border-width: 2px;">
+                                <img src="${img.url}" class="card-img-top" alt="Example" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="window.open('${img.url}', '_blank')">
+                                <div class="card-body p-2">
+                                    <p class="card-text small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.2; max-height: 3.6em; overflow: hidden;">
+                                        ${img.prompt || 'No prompt'}
+                                    </p>
+                                    <button class="btn btn-sm btn-warning w-100" onclick="tryThisPrompt('${escapeJs(img.prompt || '')}', '${img.model_used || 'sdxl'}')">
+                                        ✨ Try This Prompt
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    examplesGrid.innerHTML = '<div class="col-12"><p class="text-center text-muted">No examples available yet. Generate some images to see them here!</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading examples:', error);
+                document.getElementById('examplesGrid').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <strong>Unable to load examples.</strong> ${error.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Toggle examples visibility
+        document.getElementById('toggleExamplesBtn').addEventListener('click', function() {
+            const grid = document.getElementById('examplesGrid');
+            const icon = document.getElementById('toggleExamplesIcon');
+            const text = document.getElementById('toggleExamplesText');
+
+            if (grid.style.display === 'none') {
+                grid.style.display = '';
+                icon.textContent = '▼';
+                text.textContent = 'Hide';
+            } else {
+                grid.style.display = 'none';
+                icon.textContent = '▶';
+                text.textContent = 'Show';
+            }
+        });
+
+        // Try This Prompt function
+        function tryThisPrompt(prompt, model) {
+            console.log('🎯 Try This Prompt clicked!', { prompt: prompt?.substring(0, 50), model });
+
+            // Switch to Generate tab (Bootstrap 5 uses button elements, not anchors)
+            const generateTab = document.querySelector('#generate-pill');
+            console.log('📍 Generate tab found:', !!generateTab);
+            if (generateTab) {
+                generateTab.click();
+                console.log('🔄 Switched to Generate tab');
+            }
+
+            // Fill in the prompt and model with longer delay for tab switch
+            setTimeout(() => {
+                const promptField = document.getElementById('prompt');
+                console.log('📝 Prompt field found:', !!promptField);
+                if (promptField) {
+                    promptField.value = prompt;
+                    console.log('✅ Prompt filled:', prompt?.substring(0, 50));
+                }
+
+                // Map model names to quality values
+                const modelToQuality = {
+                    'core': 'fast',
+                    'sdxl': 'balanced',
+                    'sd3': 'high',
+                    'ultra': 'ultra'
+                };
+
+                // Select the quality (model)
+                const qualityField = document.getElementById('quality');
+                console.log('⚙️ Quality field found:', !!qualityField);
+                if (qualityField && model) {
+                    const qualityValue = modelToQuality[model] || 'balanced';
+                    qualityField.value = qualityValue;
+                    console.log('✅ Quality set to:', qualityValue);
+                }
+
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 300);
+        }
+
+        // Escape JavaScript strings for onclick handlers
+        function escapeJs(str) {
+            if (!str) return '';
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+        }
 
         async function loadGallery(append = false) {
             try {
@@ -6895,6 +7251,94 @@
             if (modal) modal.remove();
         }
 
+        // Gallery picker for workflows (Session 56: Phase A - Gallery Integration)
+        let selectedGalleryImage = null;
+
+        async function openGalleryForWorkflow() {
+            console.log('📊 Opening gallery picker for workflow...');
+
+            try {
+                // Fetch recent images (type=images plural, not image singular!)
+                const response = await authenticatedFetch('/api/v1/gallery/all/?type=images&limit=12');
+                const data = await response.json();
+
+                if (!data.results || data.results.length === 0) {
+                    alert('No images in gallery yet! Generate some images first.');
+                    return;
+                }
+
+                // Create gallery picker modal
+                const pickerHTML = `
+                    <div id="galleryPickerModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                         background: rgba(0, 0, 0, 0.9); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;">
+                        <div style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px);
+                             border: 3px solid rgba(251, 191, 36, 0.5); border-radius: 20px; padding: 2rem;
+                             max-width: 900px; width: 100%; max-height: 80vh; overflow-y: auto;">
+                            <h3 style="color: #fbbf24; margin-bottom: 1.5rem;">📊 Select Image from Gallery</h3>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                ${data.results.map(img => `
+                                    <div onclick="selectGalleryImage('${img.url}', '${img.id}')"
+                                         style="cursor: pointer; border: 2px solid transparent; border-radius: 10px; overflow: hidden; transition: all 0.3s;"
+                                         onmouseover="this.style.borderColor='#fbbf24'"
+                                         onmouseout="this.style.borderColor='transparent'">
+                                        <img src="${img.url}" style="width: 100%; height: 150px; object-fit: cover; display: block;">
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <button onclick="closeGalleryPicker()"
+                                    style="width: 100%; padding: 0.75rem; background: rgba(239, 68, 68, 0.2);
+                                    border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 10px; color: #ef4444;
+                                    font-weight: 600; cursor: pointer;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', pickerHTML);
+            } catch (error) {
+                console.error('❌ Error loading gallery:', error);
+                alert('Failed to load gallery. Please try again.');
+            }
+        }
+
+        function selectGalleryImage(url, id) {
+            console.log('✅ Selected gallery image:', { url, id });
+
+            // Store selection
+            selectedGalleryImage = { url, id };
+
+            // Show preview
+            const preview = document.getElementById('workflowGalleryPreview');
+            const previewImg = document.getElementById('workflowGalleryPreviewImg');
+            if (preview && previewImg) {
+                previewImg.src = url;
+                preview.style.display = 'block';
+            }
+
+            // Clear file input since we're using gallery instead
+            const fileInput = document.getElementById('workflowModalUpload');
+            if (fileInput) fileInput.value = '';
+
+            // Close picker
+            closeGalleryPicker();
+        }
+
+        function closeGalleryPicker() {
+            const modal = document.getElementById('galleryPickerModal');
+            if (modal) modal.remove();
+        }
+
+        function clearWorkflowGallerySelection() {
+            console.log('🗑️ Clearing gallery selection');
+            selectedGalleryImage = null;
+
+            const preview = document.getElementById('workflowGalleryPreview');
+            if (preview) preview.style.display = 'none';
+        }
+
         // Execute pre-built workflow with user input
         async function executePrebuiltWorkflow(workflowType) {
             const modal = document.getElementById('workflowPromptModal');
@@ -6911,8 +7355,9 @@
                 return;
             }
 
-            if (uploadInput && !uploadedFile) {
-                alert('Please upload an image!');
+            // Check if we need an image (either uploaded OR from gallery)
+            if (uploadInput && !uploadedFile && !selectedGalleryImage) {
+                alert('Please upload an image or select one from the gallery!');
                 return;
             }
 
@@ -6997,6 +7442,23 @@
                     await executeWorkflow();
                 };
                 reader.readAsDataURL(uploadedFile);
+            } else if (selectedGalleryImage) {
+                // Using gallery image
+                console.log('📊 Using gallery image for workflow:', selectedGalleryImage);
+                workflowState.inputImage = { url: selectedGalleryImage.url };
+                document.getElementById('workflowInputImage').src = selectedGalleryImage.url;
+                document.getElementById('workflowInputPreview').style.display = 'block';
+                document.getElementById('workflowInputEmpty').style.display = 'none';
+
+                // Add steps to workflow
+                workflowState.steps = steps;
+                renderWorkflowSteps();
+
+                // Execute
+                await executeWorkflow();
+
+                // Clear selection for next workflow
+                selectedGalleryImage = null;
             } else {
                 // No upload needed, just add steps and execute
                 workflowState.steps = steps;
@@ -7172,12 +7634,46 @@
         // Show final workflow result
         function showFinalWorkflowResult(imageUrl) {
             const container = document.getElementById('workflowFinalImage');
-            container.innerHTML = `
-                <img src="${imageUrl}" class="img-fluid rounded border border-cyan" alt="Final result">
-                <p class="text-muted mt-2">
-                    <small>Total steps: ${workflowState.steps.length} | Completed: ${workflowState.stepResults.length}</small>
-                </p>
-            `;
+
+            // Check if this is a multi-generation workflow (all steps are 'generate' operations)
+            const allGenerate = workflowState.stepResults.every(result =>
+                result.step && result.step.operation === 'generate'
+            );
+
+            // If multi-generation workflow with 2+ results, show all in a grid
+            if (allGenerate && workflowState.stepResults.length >= 2) {
+                const gridHTML = workflowState.stepResults.map((result, index) => {
+                    const styleName = result.step.config?.style || 'default';
+                    const displayName = styleName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+                    return `
+                        <div style="text-align: center;">
+                            <img src="${result.imageUrl}"
+                                 style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px;
+                                        border: 2px solid #06b6d4; margin-bottom: 0.5rem;"
+                                 alt="Result ${index + 1}">
+                            <p style="color: #06b6d4; font-weight: 600; margin: 0; font-size: 0.9rem;">${displayName}</p>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                        ${gridHTML}
+                    </div>
+                    <p class="text-muted mt-2 text-center">
+                        <small>Generated ${workflowState.stepResults.length} variations | Total steps: ${workflowState.steps.length}</small>
+                    </p>
+                `;
+            } else {
+                // Single result or transformation workflow - show final image only
+                container.innerHTML = `
+                    <img src="${imageUrl}" class="img-fluid rounded border border-cyan" alt="Final result">
+                    <p class="text-muted mt-2">
+                        <small>Total steps: ${workflowState.steps.length} | Completed: ${workflowState.stepResults.length}</small>
+                    </p>
+                `;
+            }
 
             document.getElementById('workflowFinalResult').style.display = 'block';
 
@@ -10639,6 +11135,235 @@
 
         // ====================================================================
         // END UNIFIED GALLERY
+        // ====================================================================
+
+        // ====================================================================
+        // ONBOARDING SYSTEM
+        // ====================================================================
+
+        class OnboardingTour {
+            constructor() {
+                this.currentStep = 0;
+                this.steps = [
+                    {
+                        title: "Welcome to Donkey Betz AI Studio! 🎨",
+                        message: "Create professional images, videos, and audio with AI. Let's take a quick tour!",
+                        target: null,
+                        position: "center"
+                    },
+                    {
+                        title: "Image Generation 🖼️",
+                        message: "Generate stunning images with 4 AI models and 69 style presets. Start here!",
+                        target: "#generate-pane",
+                        position: "center",
+                        tab: "images",
+                        subtab: "generate-pane"
+                    },
+                    {
+                        title: "AI Workflows 🔄",
+                        message: "Use pre-built workflows like Logo Creator, Portrait Enhancer, and Style Explorer for one-click professional results.",
+                        target: "#workflow-pane",
+                        position: "center",
+                        tab: "images",
+                        subtab: "workflow-pane"
+                    },
+                    {
+                        title: "Image Gallery 📊",
+                        message: "All your creations are saved here. Search, filter, favorite, and download your work.",
+                        target: "#image-gallery-pane",
+                        position: "center",
+                        tab: "images",
+                        subtab: "image-gallery-pane"
+                    },
+                    {
+                        title: "Video Generation 🎬",
+                        message: "Create professional videos from text or images using Runway ML.",
+                        target: "#video",
+                        position: "center",
+                        tab: "video"
+                    },
+                    {
+                        title: "Audio Generation 🎵",
+                        message: "Generate voice, music, and sound effects with AI.",
+                        target: "#audio",
+                        position: "center",
+                        tab: "audio"
+                    },
+                    {
+                        title: "AI Assistant 🤖",
+                        message: "Click the 🤖 button anytime for help. The AI Assistant understands natural language and can guide you through any feature!",
+                        target: "#ai-assistant-btn",
+                        position: "left"
+                    },
+                    {
+                        title: "Ready to Create! ✨",
+                        message: "You're all set! Start by generating your first image. Need help? Just click the 🤖 button.",
+                        target: null,
+                        position: "center"
+                    }
+                ];
+            }
+
+            start() {
+                // Check if user has seen onboarding
+                if (localStorage.getItem('onboarding_completed') === 'true') {
+                    return;
+                }
+
+                this.currentStep = 0;
+                this.showStep();
+            }
+
+            showStep() {
+                const step = this.steps[this.currentStep];
+
+                // Switch to appropriate tab if needed
+                if (step.tab) {
+                    const tabButton = document.querySelector(`button[data-bs-target="#${step.tab}"]`);
+                    if (tabButton) {
+                        tabButton.click();
+
+                        // Wait for tab transition
+                        setTimeout(() => {
+                            if (step.subtab) {
+                                const subtabButton = document.querySelector(`button[data-bs-target="#${step.subtab}"]`);
+                                if (subtabButton) {
+                                    subtabButton.click();
+                                }
+                            }
+                            this.displayModal(step);
+                        }, 300);
+                        return;
+                    }
+                }
+
+                this.displayModal(step);
+            }
+
+            displayModal(step) {
+                // Remove existing modal
+                const existing = document.getElementById('onboarding-modal');
+                if (existing) {
+                    existing.remove();
+                }
+
+                // Create modal
+                const modal = document.createElement('div');
+                modal.id = 'onboarding-modal';
+                modal.className = 'onboarding-modal';
+                modal.innerHTML = `
+                    <div class="onboarding-overlay"></div>
+                    <div class="onboarding-content ${step.position}">
+                        <div class="onboarding-header">
+                            <h3>${step.title}</h3>
+                            <button class="onboarding-skip" onclick="onboarding.skip()">×</button>
+                        </div>
+                        <div class="onboarding-body">
+                            <p>${step.message}</p>
+                        </div>
+                        <div class="onboarding-footer">
+                            <div class="onboarding-progress">
+                                Step ${this.currentStep + 1} of ${this.steps.length}
+                            </div>
+                            <div class="onboarding-buttons">
+                                ${this.currentStep > 0 ? '<button class="btn-onboarding-secondary" onclick="onboarding.previous()">← Back</button>' : ''}
+                                ${this.currentStep < this.steps.length - 1
+                                    ? '<button class="btn-onboarding-primary" onclick="onboarding.next()">Next →</button>'
+                                    : '<button class="btn-onboarding-primary" onclick="onboarding.finish()">Get Started! ✨</button>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Highlight target element
+                if (step.target) {
+                    const target = document.querySelector(step.target);
+                    if (target) {
+                        target.classList.add('onboarding-highlight');
+
+                        // Scroll to target
+                        setTimeout(() => {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                    }
+                }
+
+                // Fade in
+                setTimeout(() => {
+                    modal.classList.add('show');
+                }, 10);
+            }
+
+            next() {
+                this.removeHighlight();
+                if (this.currentStep < this.steps.length - 1) {
+                    this.currentStep++;
+                    this.showStep();
+                }
+            }
+
+            previous() {
+                this.removeHighlight();
+                if (this.currentStep > 0) {
+                    this.currentStep--;
+                    this.showStep();
+                }
+            }
+
+            finish() {
+                localStorage.setItem('onboarding_completed', 'true');
+                this.close();
+            }
+
+            skip() {
+                if (confirm('Skip the tour? You can always restart it from the help menu.')) {
+                    localStorage.setItem('onboarding_completed', 'true');
+                    this.close();
+                }
+            }
+
+            close() {
+                this.removeHighlight();
+                const modal = document.getElementById('onboarding-modal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.remove(), 300);
+                }
+            }
+
+            removeHighlight() {
+                document.querySelectorAll('.onboarding-highlight').forEach(el => {
+                    el.classList.remove('onboarding-highlight');
+                });
+            }
+
+            reset() {
+                localStorage.removeItem('onboarding_completed');
+                this.currentStep = 0;
+                this.start();
+            }
+        }
+
+        // Initialize onboarding
+        const onboarding = new OnboardingTour();
+
+        // Start onboarding when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait a bit for page to settle
+            setTimeout(() => {
+                onboarding.start();
+            }, 1000);
+        });
+
+        // Add restart onboarding function (can be called from console or help menu)
+        window.restartOnboarding = function() {
+            onboarding.reset();
+        };
+
+        // ====================================================================
+        // END ONBOARDING SYSTEM
         // ====================================================================
     </script>
 </body>
