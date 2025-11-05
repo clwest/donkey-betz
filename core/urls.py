@@ -270,7 +270,10 @@ from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
     control_sketch, control_structure, execute_workflow_step, unified_gallery, unified_batch_download, unified_toggle_favorite,
-    track_image_view, track_image_download
+    track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
+    list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
+    list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
+    start_workflow_execution, complete_workflow_execution
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -823,6 +826,23 @@ urlpatterns = [
 
     # Batch Download (Session 37: Feature 10)
     path('api/images/batch-download/', batch_download_images, name='batch-download-images'),
+
+    # Featured Examples (Session 56: Phase A Task 2)
+    path('api/images/examples/', get_featured_examples, name='featured-examples'),
+
+    # Intelligent Prompt Improvement (Session 56: Phase B.1)
+    path('api/workflows/improve-prompt/', improve_workflow_prompt, name='improve-workflow-prompt'),
+
+    # Workflow History & Favorites (Session 57: Phase B.2)
+    path('api/workflows/execution/start/', start_workflow_execution, name='start-workflow-execution'),
+    path('api/workflows/execution/<int:workflow_id>/complete/', complete_workflow_execution, name='complete-workflow-execution'),
+    path('api/workflows/history/', list_workflow_history, name='list-workflow-history'),
+    path('api/workflows/history/<int:workflow_id>/', get_workflow_history, name='get-workflow-history'),
+    path('api/workflows/history/<int:workflow_id>/toggle-favorite/', toggle_workflow_favorite, name='toggle-workflow-favorite'),
+    path('api/workflows/history/<int:workflow_id>/rerun/', rerun_workflow, name='rerun-workflow'),
+    path('api/workflows/favorites/', list_workflow_favorites, name='list-workflow-favorites'),
+    path('api/workflows/favorites/save/', save_workflow_favorite, name='save-workflow-favorite'),
+    path('api/workflows/favorites/<int:favorite_id>/delete/', delete_workflow_favorite, name='delete-workflow-favorite'),
 
     # Image-to-Image Control (Session 38: Feature 11)
     path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),

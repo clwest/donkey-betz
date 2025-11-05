@@ -16,6 +16,7 @@ import uuid
 import json
 import zipfile
 import base64
+from openai import OpenAI
 from io import BytesIO
 from datetime import datetime
 from pathlib import Path
@@ -3228,4 +3229,701 @@ def get_featured_examples(request):
         return Response({
             'error': str(e),
             'examples': []
+        }, status=500)
+
+
+# ========================================
+# INTELLIGENT PROMPT IMPROVEMENT (Session 56: Phase B.1)
+# ========================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def improve_workflow_prompt(request):
+    """
+    Improve user's workflow prompt using AI intelligence
+    Session 56: Phase B.1 - Intelligent Workflow Prompting
+
+    Takes a user's simple prompt and workflow type, returns an optimized
+    prompt that will generate better results for that specific workflow.
+
+    Example:
+        Input: "Light Work Handyman services" (Logo Creator)
+        Output: "Professional logo for 'Light Work' handyman services..."
+    """
+    try:
+        user_prompt = request.data.get('prompt', '').strip()
+        workflow_type = request.data.get('workflow_type', '').lower()
+
+        # Normalize workflow type: convert hyphens to underscores
+        workflow_type = workflow_type.replace('-', '_')
+
+        if not user_prompt:
+            return Response({
+                'error': 'Prompt is required'
+            }, status=400)
+
+        if not workflow_type:
+            return Response({
+                'error': 'Workflow type is required'
+            }, status=400)
+
+        # Workflow-specific system prompts
+        WORKFLOW_CONTEXTS = {
+            'logo_creator': {
+                'context': 'logo design for businesses and brands',
+                'instructions': """You are a professional logo designer. The user has provided a business name or concept.
+
+Your task: Transform their input into a detailed logo design prompt that will generate a GRAPHIC LOGO ICON, not a photograph or realistic scene.
+
+CRITICAL REQUIREMENTS:
+- Generate a LOGO ICON/SYMBOL, not a photo of people or objects
+- Think: Nike swoosh, Apple apple, donkey head icon - NOT "person working" or "room with lights"
+- Use SYMBOLIC, ICONIC, GRAPHIC DESIGN language
+- Emphasize flat design, vector art style, or minimalist icon aesthetic
+- AVOID requesting text/lettering (AI cannot render text accurately)
+- Focus on the visual mark/symbol only
+
+Consider:
+- Business name and any wordplay or meaning (translate to visual metaphor/icon)
+- Industry/trade (what symbolic icon represents this?)
+- Design elements (abstract shapes, stylized icons, geometric patterns)
+- Color psychology for the industry (2-3 colors max)
+- Design style (flat, minimalist, modern, geometric, mascot)
+- Overall aesthetic (clean, bold, memorable, scalable)
+
+ALWAYS include phrases like: "logo icon", "graphic symbol", "flat design", "vector art", "minimalist emblem"
+NEVER use: "photograph", "realistic", "person working", "room with"
+
+Format your response as a single, clear prompt suitable for AI image generation.
+Keep it under 200 words but include all key details."""
+            },
+            'portrait_enhancer': {
+                'context': 'professional portrait photography',
+                'instructions': """You are a professional portrait photographer. The user wants to create a high-quality portrait.
+
+Your task: Transform their input into a detailed portrait prompt that will generate professional, polished results.
+
+Consider:
+- Subject description (person, profession, mood)
+- Lighting (studio, natural, dramatic, soft)
+- Background (neutral, blurred, contextual)
+- Camera settings implied (shallow depth of field, sharp focus)
+- Professional quality indicators (high resolution, well-lit, polished)
+- Pose and expression appropriate for the context
+
+Format your response as a single, clear prompt suitable for AI image generation."""
+            },
+            'social_media_pack': {
+                'context': 'social media content creation',
+                'instructions': """You are a social media content strategist. The user wants to create engaging social media visuals.
+
+Your task: Transform their input into a prompt that will generate eye-catching, platform-appropriate content.
+
+Consider:
+- Platform expectations (Instagram, Facebook, Twitter aesthetics)
+- Visual hierarchy and composition
+- Color vibrancy and contrast
+- Subject clarity and appeal
+- Trending visual styles
+- Brand consistency if applicable
+
+Format your response as a single, clear prompt suitable for AI image generation."""
+            },
+            'product_mockup': {
+                'context': 'product photography and presentation',
+                'instructions': """You are a product photographer. The user wants to showcase a product professionally.
+
+Your task: Transform their input into a prompt that will generate professional product mockups.
+
+Consider:
+- Product type and key features to highlight
+- Composition and angle (hero shot, lifestyle, detail)
+- Background (clean, contextual, lifestyle)
+- Lighting (studio, natural, dramatic)
+- Context (hand holding, on surface, in use)
+- Professional e-commerce quality
+
+Format your response as a single, clear prompt suitable for AI image generation."""
+            },
+            'creative_upscale': {
+                'context': 'image enhancement and upscaling',
+                'instructions': """You are an image enhancement specialist. The user wants to guide how their image should be enhanced.
+
+Your task: Transform their input into clear enhancement directions.
+
+Consider:
+- What details should be emphasized
+- What artistic style to enhance toward
+- What quality improvements to prioritize (sharpness, color, detail)
+- What mood or atmosphere to maintain/enhance
+- Technical quality targets (resolution, clarity, color accuracy)
+
+Format your response as a single, clear prompt suitable for AI image enhancement."""
+            },
+            'style_explorer': {
+                'context': 'artistic style exploration and variation',
+                'instructions': """You are an art director exploring creative possibilities. The user wants to see their concept in multiple styles.
+
+Your task: Transform their input into a rich, detailed prompt that will generate interesting variations.
+
+Consider:
+- Core concept/subject clarity
+- Visual elements that work across styles
+- Compositional strength
+- Color palette flexibility
+- Detail level that shows style differences
+- Artistic merit and visual interest
+
+Format your response as a single, clear prompt suitable for AI image generation."""
+            }
+        }
+
+        # Get workflow context
+        workflow_context = WORKFLOW_CONTEXTS.get(workflow_type)
+        if not workflow_context:
+            return Response({
+                'error': f'Unknown workflow type: {workflow_type}'
+            }, status=400)
+
+        # Call OpenAI GPT-5 for prompt improvement (Session 56: Phase B.1, Session 57: Fixed to use Responses API)
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        logger.info(f"✨ Improving prompt for {workflow_type}: '{user_prompt[:50]}...'")
+
+        # Use the new Responses API with GPT-5 (not Chat Completions API)
+        response = client.responses.create(
+            model="gpt-5",
+            instructions=workflow_context['instructions'],
+            input=f"User's prompt: {user_prompt}\n\nPlease transform this into an optimized {workflow_context['context']} prompt."
+        )
+
+        logger.info(f"🔍 OpenAI Response: {response}")
+        logger.info(f"🔍 Output text length: {len(response.output_text) if hasattr(response, 'output_text') else 'NO OUTPUT_TEXT'}")
+
+        improved_prompt = response.output_text if hasattr(response, 'output_text') else None
+        if not improved_prompt:
+            logger.error(f"❌ OpenAI returned empty content! Full response: {response}")
+            improved_prompt = f"ERROR: OpenAI returned no content. Using original prompt: {user_prompt}"
+
+        improved_prompt = improved_prompt.strip()
+        logger.info(f"✅ Improved prompt generated ({len(improved_prompt)} chars): {improved_prompt[:100]}...")
+
+        return Response({
+            'original_prompt': user_prompt,
+            'improved_prompt': improved_prompt,
+            'workflow_type': workflow_type,
+            'explanation': f'Optimized for {workflow_context["context"]}'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error improving prompt: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+# ========================================
+# WORKFLOW HISTORY & FAVORITES (Session 57: Phase B.2)
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_workflow_history(request):
+    """
+    List user's workflow execution history
+    Session 57: Phase B.2 - Workflow History & Favorites
+
+    Query parameters:
+    - limit: Number of results (default: 10)
+    - offset: Pagination offset (default: 0)
+    - workflow_type: Filter by workflow type (optional)
+    - status: Filter by status (optional)
+    - favorites_only: Show only favorites (optional, default: false)
+    """
+    try:
+        from content.models import WorkflowHistory
+
+        user = request.user
+        limit = int(request.GET.get('limit', 10))
+        offset = int(request.GET.get('offset', 0))
+        workflow_type = request.GET.get('workflow_type', '').strip()
+        status = request.GET.get('status', '').strip()
+        favorites_only = request.GET.get('favorites_only', 'false').lower() == 'true'
+
+        # Build query
+        queryset = WorkflowHistory.objects.filter(user=user)
+
+        if workflow_type:
+            queryset = queryset.filter(workflow_type=workflow_type)
+
+        if status:
+            queryset = queryset.filter(status=status)
+
+        if favorites_only:
+            queryset = queryset.filter(is_favorite=True)
+
+        # Get total count
+        total_count = queryset.count()
+
+        # Paginate
+        workflows = queryset[offset:offset+limit]
+
+        # Serialize
+        results = []
+        for workflow in workflows:
+            results.append({
+                'id': workflow.id,
+                'workflow_type': workflow.workflow_type,
+                'workflow_name': workflow.workflow_name,
+                'prompt': workflow.prompt,
+                'improved_prompt': workflow.improved_prompt,
+                'status': workflow.status,
+                'execution_time': workflow.execution_time,
+                'result_count': workflow.result_count,
+                'result_images': workflow.result_images,
+                'is_favorite': workflow.is_favorite,
+                'rerun_count': workflow.rerun_count,
+                'created_at': workflow.created_at.isoformat(),
+                'config': workflow.config,
+            })
+
+        return Response({
+            'workflows': results,
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error listing workflow history: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_workflow_history(request, workflow_id):
+    """
+    Get specific workflow execution details
+    Session 57: Phase B.2 - Workflow History & Favorites
+    """
+    try:
+        from content.models import WorkflowHistory
+
+        workflow = WorkflowHistory.objects.get(
+            id=workflow_id,
+            user=request.user
+        )
+
+        return Response({
+            'id': workflow.id,
+            'workflow_type': workflow.workflow_type,
+            'workflow_name': workflow.workflow_name,
+            'prompt': workflow.prompt,
+            'improved_prompt': workflow.improved_prompt,
+            'config': workflow.config,
+            'input_image_id': workflow.input_image_id,
+            'execution_time': workflow.execution_time,
+            'status': workflow.status,
+            'error_message': workflow.error_message,
+            'result_images': workflow.result_images,
+            'result_count': workflow.result_count,
+            'is_favorite': workflow.is_favorite,
+            'rerun_count': workflow.rerun_count,
+            'user_notes': workflow.user_notes,
+            'tags': workflow.tags,
+            'created_at': workflow.created_at.isoformat(),
+        })
+
+    except WorkflowHistory.DoesNotExist:
+        return Response({
+            'error': 'Workflow not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error getting workflow: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_workflow_favorite(request, workflow_id):
+    """
+    Toggle workflow favorite status
+    Session 57: Phase B.2 - Workflow History & Favorites
+    """
+    try:
+        from content.models import WorkflowHistory
+
+        workflow = WorkflowHistory.objects.get(
+            id=workflow_id,
+            user=request.user
+        )
+
+        # Toggle favorite
+        workflow.is_favorite = not workflow.is_favorite
+        workflow.save(update_fields=['is_favorite'])
+
+        return Response({
+            'success': True,
+            'is_favorite': workflow.is_favorite,
+            'workflow_id': workflow.id
+        })
+
+    except WorkflowHistory.DoesNotExist:
+        return Response({
+            'error': 'Workflow not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error toggling favorite: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_workflow_favorite(request):
+    """
+    Save workflow as a named favorite
+    Session 57: Phase B.2 - Workflow History & Favorites
+
+    Expected JSON:
+    {
+        "workflow_id": 123,
+        "name": "My Logo Style",
+        "description": "Custom description (optional)",
+        "category": "Logos (optional)"
+    }
+    """
+    try:
+        from content.models import WorkflowHistory, WorkflowFavorite
+
+        workflow_id = request.data.get('workflow_id')
+        name = request.data.get('name', '').strip()
+        description = request.data.get('description', '').strip()
+        category = request.data.get('category', '').strip()
+
+        if not workflow_id or not name:
+            return Response({
+                'error': 'workflow_id and name are required'
+            }, status=400)
+
+        # Get workflow
+        workflow = WorkflowHistory.objects.get(
+            id=workflow_id,
+            user=request.user
+        )
+
+        # Create or update favorite
+        favorite, created = WorkflowFavorite.objects.get_or_create(
+            user=request.user,
+            workflow_history=workflow,
+            defaults={
+                'name': name,
+                'description': description,
+                'category': category,
+            }
+        )
+
+        if not created:
+            # Update existing
+            favorite.name = name
+            favorite.description = description
+            favorite.category = category
+            favorite.save()
+
+        # Mark workflow as favorite
+        if not workflow.is_favorite:
+            workflow.is_favorite = True
+            workflow.save(update_fields=['is_favorite'])
+
+        return Response({
+            'success': True,
+            'favorite_id': favorite.id,
+            'created': created
+        })
+
+    except WorkflowHistory.DoesNotExist:
+        return Response({
+            'error': 'Workflow not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error saving favorite: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_workflow_favorites(request):
+    """
+    List user's favorite workflows
+    Session 57: Phase B.2 - Workflow History & Favorites
+    """
+    try:
+        from content.models import WorkflowFavorite
+
+        favorites = WorkflowFavorite.objects.filter(
+            user=request.user
+        ).select_related('workflow_history')
+
+        results = []
+        for favorite in favorites:
+            workflow = favorite.workflow_history
+            results.append({
+                'favorite_id': favorite.id,
+                'name': favorite.name,
+                'description': favorite.description,
+                'category': favorite.category,
+                'use_count': favorite.use_count,
+                'last_used_at': favorite.last_used_at.isoformat() if favorite.last_used_at else None,
+                'created_at': favorite.created_at.isoformat(),
+                'workflow': {
+                    'id': workflow.id,
+                    'workflow_type': workflow.workflow_type,
+                    'workflow_name': workflow.workflow_name,
+                    'prompt': workflow.prompt,
+                    'improved_prompt': workflow.improved_prompt,
+                    'config': workflow.config,
+                    'result_images': workflow.result_images,
+                    'execution_time': workflow.execution_time,
+                }
+            })
+
+        return Response({
+            'favorites': results,
+            'total_count': len(results)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error listing favorites: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_workflow_favorite(request, favorite_id):
+    """
+    Delete a workflow favorite
+    Session 57: Phase B.2 - Workflow History & Favorites
+    """
+    try:
+        from content.models import WorkflowFavorite
+
+        favorite = WorkflowFavorite.objects.get(
+            id=favorite_id,
+            user=request.user
+        )
+
+        workflow_id = favorite.workflow_history.id
+        favorite.delete()
+
+        # Check if workflow has any other favorites
+        from content.models import WorkflowHistory
+        workflow = WorkflowHistory.objects.get(id=workflow_id)
+        has_other_favorites = WorkflowFavorite.objects.filter(
+            workflow_history=workflow
+        ).exists()
+
+        # Unmark workflow as favorite if no other favorites exist
+        if not has_other_favorites and workflow.is_favorite:
+            workflow.is_favorite = False
+            workflow.save(update_fields=['is_favorite'])
+
+        return Response({
+            'success': True,
+            'favorite_id': favorite_id
+        })
+
+    except WorkflowFavorite.DoesNotExist:
+        return Response({
+            'error': 'Favorite not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error deleting favorite: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rerun_workflow(request, workflow_id):
+    """
+    Re-run a previous workflow with same configuration
+    Session 57: Phase B.2 - Workflow History & Favorites
+
+    Optional JSON body:
+    {
+        "use_favorite_id": 123  // If re-running from favorite
+    }
+    """
+    try:
+        from content.models import WorkflowHistory, WorkflowFavorite
+
+        # Get original workflow
+        workflow = WorkflowHistory.objects.get(
+            id=workflow_id,
+            user=request.user
+        )
+
+        # Increment rerun count
+        workflow.increment_rerun_count()
+
+        # If re-running from favorite, increment favorite use count
+        favorite_id = request.data.get('use_favorite_id')
+        if favorite_id:
+            try:
+                favorite = WorkflowFavorite.objects.get(
+                    id=favorite_id,
+                    user=request.user
+                )
+                favorite.increment_use_count()
+            except WorkflowFavorite.DoesNotExist:
+                pass  # Non-critical error
+
+        # Return workflow configuration for frontend to re-execute
+        return Response({
+            'success': True,
+            'workflow_type': workflow.workflow_type,
+            'workflow_name': workflow.workflow_name,
+            'prompt': workflow.improved_prompt or workflow.prompt,
+            'config': workflow.config,
+            'input_image_id': workflow.input_image_id,
+        })
+
+    except WorkflowHistory.DoesNotExist:
+        return Response({
+            'error': 'Workflow not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error rerunning workflow: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_workflow_execution(request):
+    """
+    Create workflow history record when workflow execution starts
+    Session 57: Phase B.2 - Workflow History & Favorites
+
+    Expected JSON:
+    {
+        "workflow_type": "logo_creator",
+        "workflow_name": "Logo Creator",
+        "prompt": "User's prompt",
+        "improved_prompt": "AI-improved prompt (optional)",
+        "config": {...},  // Workflow configuration
+        "input_image_id": 123  // Optional
+    }
+
+    Returns: {"workflow_history_id": 123}
+    """
+    try:
+        from content.models import WorkflowHistory
+
+        workflow_type = request.data.get('workflow_type', '').strip()
+        workflow_name = request.data.get('workflow_name', '').strip()
+        prompt = request.data.get('prompt', '').strip()
+        improved_prompt = request.data.get('improved_prompt', '').strip()
+        config = request.data.get('config', {})
+        input_image_id = request.data.get('input_image_id')
+
+        if not workflow_type or not workflow_name:
+            return Response({
+                'error': 'workflow_type and workflow_name are required'
+            }, status=400)
+
+        # Create workflow history record
+        workflow_history = WorkflowHistory.objects.create(
+            user=request.user,
+            workflow_type=workflow_type,
+            workflow_name=workflow_name,
+            prompt=prompt,
+            improved_prompt=improved_prompt,
+            config=config,
+            input_image_id=input_image_id,
+            status='running'
+        )
+
+        logger.info(f"✅ Started tracking workflow execution: {workflow_history.id} ({workflow_name})")
+
+        return Response({
+            'success': True,
+            'workflow_history_id': workflow_history.id
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error starting workflow execution: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def complete_workflow_execution(request, workflow_id):
+    """
+    Update workflow history record when workflow completes
+    Session 57: Phase B.2 - Workflow History & Favorites
+
+    Expected JSON:
+    {
+        "status": "completed" | "failed",
+        "execution_time": 12.5,  // seconds
+        "result_images": ["url1", "url2"],  // For completed
+        "error_message": "Error details"  // For failed
+    }
+    """
+    try:
+        from content.models import WorkflowHistory
+
+        workflow = WorkflowHistory.objects.get(
+            id=workflow_id,
+            user=request.user
+        )
+
+        status = request.data.get('status', '').strip().lower()
+        execution_time = float(request.data.get('execution_time', 0))
+
+        if status == 'completed':
+            result_images = request.data.get('result_images', [])
+            workflow.mark_completed(execution_time, result_images)
+            logger.info(f"✅ Completed workflow execution: {workflow.id} ({workflow.workflow_name}) - {len(result_images)} results")
+
+        elif status == 'failed':
+            error_message = request.data.get('error_message', 'Unknown error')
+            workflow.mark_failed(error_message)
+            workflow.execution_time = execution_time
+            workflow.save(update_fields=['execution_time'])
+            logger.error(f"❌ Failed workflow execution: {workflow.id} ({workflow.workflow_name}) - {error_message}")
+
+        else:
+            return Response({
+                'error': 'status must be "completed" or "failed"'
+            }, status=400)
+
+        return Response({
+            'success': True,
+            'workflow_history_id': workflow.id,
+            'status': workflow.status
+        })
+
+    except WorkflowHistory.DoesNotExist:
+        return Response({
+            'error': 'Workflow not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error completing workflow execution: {str(e)}")
+        return Response({
+            'error': str(e)
         }, status=500)
