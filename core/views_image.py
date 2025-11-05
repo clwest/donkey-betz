@@ -2662,6 +2662,333 @@ def execute_workflow_step(request):
 # UNIFIED GALLERY API (Session 53: Phase 2)
 # ========================================
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unified_batch_download(request):
+    """
+    Download multiple items (images, videos, audio) as a ZIP file.
+
+    Expects JSON: {
+        "items": [
+            {"id": "uuid1", "type": "image"},
+            {"id": "uuid2", "type": "video"},
+            ...
+        ]
+    }
+
+    Returns ZIP file containing:
+    - All selected media files
+    - metadata.json with information about all items
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory
+        from django.http import HttpResponse
+        import zipfile
+        from io import BytesIO
+        import os
+
+        items = request.data.get('items', [])
+
+        if not items:
+            return Response({
+                'success': False,
+                'error': 'No items selected'
+            }, status=400)
+
+        logger.info(f"📦 Creating unified ZIP with {len(items)} items for {request.user.username}")
+
+        # Separate items by type
+        image_ids = [item['id'] for item in items if item['type'] == 'image']
+        video_ids = [item['id'] for item in items if item['type'] == 'video']
+
+        # Fetch all items for this user only
+        images = ImageHistory.objects.filter(
+            id__in=image_ids,
+            user=request.user
+        ).order_by('-created_at')
+
+        videos = VideoHistory.objects.filter(
+            id__in=video_ids,
+            user=request.user,
+            status='completed'
+        ).order_by('-created_at')
+
+        total_items = images.count() + videos.count()
+
+        if total_items == 0:
+            return Response({
+                'success': False,
+                'error': 'No items found'
+            }, status=404)
+
+        logger.info(f"📦 Found {images.count()} images and {videos.count()} videos")
+
+        # Create ZIP file in memory
+        zip_buffer = BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+
+            # Metadata for JSON file
+            metadata = {
+                'downloaded_at': datetime.now().isoformat(),
+                'total_items': total_items,
+                'total_images': images.count(),
+                'total_videos': videos.count(),
+                'items': []
+            }
+
+            item_counter = 1
+
+            # Add images to ZIP
+            for img in images:
+                try:
+                    # Get file from storage
+                    if not default_storage.exists(img.file_path):
+                        logger.warning(f"⚠️ File not found: {img.file_path}")
+                        continue
+
+                    # Read file data
+                    with default_storage.open(img.file_path, 'rb') as f:
+                        image_data = f.read()
+
+                    # Create unique filename
+                    file_ext = os.path.splitext(img.filename)[1] or '.png'
+                    safe_filename = f"{item_counter:03d}_image_{img.image_type}_{img.id}{file_ext}"
+
+                    # Add to ZIP
+                    zip_file.writestr(safe_filename, image_data)
+                    logger.info(f"✅ Added {safe_filename} to ZIP ({len(image_data)} bytes)")
+
+                    # Add metadata
+                    metadata['items'].append({
+                        'filename': safe_filename,
+                        'type': 'image',
+                        'image_type': img.image_type or 'unknown',
+                        'prompt': img.prompt or '',
+                        'model_used': img.model_used or '',
+                        'style': img.style or '',
+                        'dimensions': f"{img.image_width or 0}x{img.image_height or 0}",
+                        'file_size_bytes': img.file_size_bytes or 0,
+                        'created_at': img.created_at.isoformat() if img.created_at else '',
+                        'is_favorite': bool(img.is_favorite),
+                        'parameters': img.parameters if img.parameters else {}
+                    })
+
+                    item_counter += 1
+
+                except Exception as e:
+                    logger.error(f"❌ Error processing image {img.id}: {e}")
+                    continue
+
+            # Add videos to ZIP
+            for video in videos:
+                try:
+                    # Videos are stored by URL, need to download them
+                    import requests
+
+                    # Download video
+                    response = requests.get(video.video_url, timeout=60)
+                    response.raise_for_status()
+                    video_data = response.content
+
+                    # Create unique filename
+                    file_ext = '.mp4'  # Runway videos are MP4
+                    safe_filename = f"{item_counter:03d}_video_{video.video_type}_{video.id}{file_ext}"
+
+                    # Add to ZIP
+                    zip_file.writestr(safe_filename, video_data)
+                    logger.info(f"✅ Added {safe_filename} to ZIP ({len(video_data)} bytes)")
+
+                    # Add metadata
+                    metadata['items'].append({
+                        'filename': safe_filename,
+                        'type': 'video',
+                        'video_type': video.video_type or 'unknown',
+                        'prompt': video.prompt or '',
+                        'model_used': video.model_used or '',
+                        'duration': video.duration,
+                        'ratio': video.ratio or '',
+                        'dimensions': f"{video.dimensions}" if video.dimensions else '',
+                        'file_size_bytes': len(video_data),
+                        'created_at': video.created_at.isoformat() if video.created_at else '',
+                        'is_favorite': bool(video.is_favorite),
+                        'parameters': video.parameters if video.parameters else {}
+                    })
+
+                    item_counter += 1
+
+                except Exception as e:
+                    logger.error(f"❌ Error processing video {video.id}: {e}")
+                    continue
+
+            # Add metadata.json
+            metadata_json = json.dumps(metadata, indent=2)
+            zip_file.writestr('metadata.json', metadata_json)
+            logger.info("✅ Added metadata.json to ZIP")
+
+        # Prepare response
+        zip_buffer.seek(0)
+
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="donkey_betz_content_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+
+        logger.info(f"🎉 Unified ZIP created successfully with {total_items} items")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Unified batch download error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unified_toggle_favorite(request):
+    """
+    Toggle favorite status for any media type (image, video, audio).
+
+    Expects JSON: {
+        "id": "uuid",
+        "type": "image" | "video" | "audio"
+    }
+
+    Returns: {
+        "success": true,
+        "is_favorite": true/false
+    }
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory
+
+        item_id = request.data.get('id')
+        item_type = request.data.get('type')
+
+        if not item_id or not item_type:
+            return Response({
+                'success': False,
+                'error': 'Missing id or type'
+            }, status=400)
+
+        # Toggle favorite based on type
+        if item_type == 'image':
+            try:
+                item = ImageHistory.objects.get(id=item_id, user=request.user)
+                item.is_favorite = not item.is_favorite
+                item.save()
+
+                logger.info(f"{'⭐' if item.is_favorite else '☆'} Image {item_id} favorite: {item.is_favorite}")
+
+                return Response({
+                    'success': True,
+                    'is_favorite': item.is_favorite
+                })
+
+            except ImageHistory.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Image not found'
+                }, status=404)
+
+        elif item_type == 'video':
+            try:
+                item = VideoHistory.objects.get(id=item_id, user=request.user)
+                item.is_favorite = not item.is_favorite
+                item.save()
+
+                logger.info(f"{'⭐' if item.is_favorite else '☆'} Video {item_id} favorite: {item.is_favorite}")
+
+                return Response({
+                    'success': True,
+                    'is_favorite': item.is_favorite
+                })
+
+            except VideoHistory.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Video not found'
+                }, status=404)
+
+        else:
+            return Response({
+                'success': False,
+                'error': f'Unsupported type: {item_type}'
+            }, status=400)
+
+    except Exception as e:
+        logger.error(f"❌ Unified toggle favorite error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def track_image_view(request, image_id):
+    """
+    Track when a user views an image in fullsize.
+
+    URL: POST /api/images/view/<uuid>/
+    """
+    try:
+        image = ImageHistory.objects.get(id=image_id, user=request.user)
+        image.view_count += 1
+        image.save(update_fields=['view_count'])
+
+        logger.info(f"✅ Image view tracked: {image_id} (total: {image.view_count})")
+
+        return Response({
+            'success': True,
+            'view_count': image.view_count
+        })
+    except ImageHistory.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Image not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Track image view error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def track_image_download(request, image_id):
+    """
+    Track when a user downloads an image.
+
+    URL: POST /api/images/download/<uuid>/
+    """
+    try:
+        image = ImageHistory.objects.get(id=image_id, user=request.user)
+        image.download_count += 1
+        image.save(update_fields=['download_count'])
+
+        logger.info(f"✅ Image download tracked: {image_id} (total: {image.download_count})")
+
+        return Response({
+            'success': True,
+            'download_count': image.download_count
+        })
+    except ImageHistory.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Image not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Track image download error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def unified_gallery(request):

@@ -269,7 +269,8 @@ from core.views_video import (
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
-    control_sketch, control_structure, execute_workflow_step, unified_gallery
+    control_sketch, control_structure, execute_workflow_step, unified_gallery, unified_batch_download, unified_toggle_favorite,
+    track_image_view, track_image_download
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -817,6 +818,8 @@ urlpatterns = [
     path('api/images/history/', image_history, name='image-history'),
     path('api/images/<uuid:image_id>/favorite/', toggle_favorite, name='toggle-favorite'),
     path('api/images/<uuid:image_id>/delete/', delete_image, name='delete-image'),
+    path('api/images/view/<uuid:image_id>/', track_image_view, name='track-image-view'),  # Session 53: Track views
+    path('api/images/download/<uuid:image_id>/', track_image_download, name='track-image-download'),  # Session 53: Track downloads
 
     # Batch Download (Session 37: Feature 10)
     path('api/images/batch-download/', batch_download_images, name='batch-download-images'),
@@ -833,8 +836,10 @@ urlpatterns = [
     path('api/v1/gallery/list/', gallery_list, name='gallery-list'),
     path('api/v1/gallery/videos/', gallery_videos, name='gallery-videos'),
 
-    # Unified Gallery API (Session 53: Phase 2)
+    # Unified Gallery API (Session 53: Phase 2 & 3)
     path('api/v1/gallery/all/', unified_gallery, name='unified-gallery'),
+    path('api/v1/gallery/batch-download/', unified_batch_download, name='unified-batch-download'),
+    path('api/v1/gallery/toggle-favorite/', unified_toggle_favorite, name='unified-toggle-favorite'),
     path('api/v1/content/library/', content_library, name='content-library'),
     path('api/v1/podcasts/', podcasts_list, name='podcasts-list'),
     
