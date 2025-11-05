@@ -2512,6 +2512,64 @@
 
                 <!-- Status Messages -->
                 <div id="workflowStatus" class="mt-3"></div>
+
+                <!-- Divider -->
+                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
+
+                <!-- WORKFLOW HISTORY SECTION (Session 57: Phase B.2) -->
+                <div class="mb-5">
+                    <h4 class="mb-3" style="color: #fbbf24;">📜 Workflow History</h4>
+                    <p class="text-muted mb-4">Your recent workflow executions. Re-run any workflow with one click!</p>
+
+                    <!-- History Filter Controls -->
+                    <div class="d-flex gap-2 mb-3">
+                        <select id="historyWorkflowTypeFilter" class="form-select" style="max-width: 200px;" onchange="loadWorkflowHistory()">
+                            <option value="">All Workflows</option>
+                            <option value="logo_creator">Logo Creator</option>
+                            <option value="portrait_enhancer">Portrait Enhancer</option>
+                            <option value="style_explorer">Style Explorer</option>
+                            <option value="social_media_pack">Social Media Pack</option>
+                            <option value="product_mockup">Product Mockup</option>
+                            <option value="creative_upscale">Creative Upscale</option>
+                        </select>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="loadWorkflowHistory(true)">
+                            ⭐ Favorites Only
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm ms-auto" onclick="loadWorkflowHistory()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <!-- History List -->
+                    <div id="workflowHistoryList">
+                        <div class="text-center text-muted py-5">
+                            <p class="mb-2">Loading workflow history...</p>
+                            <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
+
+                <!-- WORKFLOW FAVORITES SECTION (Session 57: Phase B.2) -->
+                <div class="mb-5">
+                    <h4 class="mb-3" style="color: #fbbf24;">⭐ Favorite Workflows</h4>
+                    <p class="text-muted mb-4">Save your best workflows for quick access anytime.</p>
+
+                    <!-- Favorites List -->
+                    <div id="workflowFavoritesList">
+                        <div class="text-center text-muted py-5">
+                            <p class="mb-2">Loading favorites...</p>
+                            <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <!-- END WORKFLOW PANE -->
                 </div>
@@ -7220,6 +7278,29 @@
                                           style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
                                           border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
                                           font-family: inherit; resize: vertical;"></textarea>
+
+                                <!-- Improve Prompt Button (Session 56: Phase B.1) -->
+                                <button type="button" onclick="improveWorkflowPrompt('${workflowType}')"
+                                        id="improvePromptBtn"
+                                        style="margin-top: 0.75rem; padding: 0.5rem 1rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(109, 40, 217, 0.2));
+                                        border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 8px; color: #a78bfa;
+                                        font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                    ✨ Improve My Prompt
+                                </button>
+
+                                <!-- Improved Prompt Display (Session 56: Phase B.1) -->
+                                <div id="improvedPromptDisplay" style="display: none; margin-top: 1rem; padding: 1rem;
+                                     background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.3);
+                                     border-radius: 10px;">
+                                    <div style="color: #a78bfa; font-weight: 600; margin-bottom: 0.5rem;">🎯 Improved Prompt:</div>
+                                    <div id="improvedPromptText" style="color: #fcd34d; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;"></div>
+                                    <button type="button" onclick="useImprovedPrompt()"
+                                            style="padding: 0.5rem 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+                                            border: 2px solid rgba(16, 185, 129, 0.5); border-radius: 8px; color: #10b981;
+                                            font-weight: 600; cursor: pointer;">
+                                        ✅ Use This Prompt
+                                    </button>
+                                </div>
                             </div>
                         ` : ''}
 
@@ -7339,6 +7420,532 @@
             if (preview) preview.style.display = 'none';
         }
 
+        // ========================================
+        // INTELLIGENT PROMPT IMPROVEMENT (Session 56: Phase B.1)
+        // ========================================
+
+        let improvedPromptCache = null;
+
+        async function improveWorkflowPrompt(workflowType) {
+            console.log('✨ Improving prompt for workflow:', workflowType);
+
+            const promptTextarea = document.getElementById('workflowModalPrompt');
+            const improveBtn = document.getElementById('improvePromptBtn');
+            const displayDiv = document.getElementById('improvedPromptDisplay');
+
+            if (!promptTextarea) {
+                console.error('❌ Prompt textarea not found');
+                return;
+            }
+
+            const userPrompt = promptTextarea.value.trim();
+            if (!userPrompt) {
+                alert('Please enter a prompt first!');
+                return;
+            }
+
+            // Show loading state
+            improveBtn.disabled = true;
+            improveBtn.innerHTML = '⏳ Improving...';
+
+            try {
+                // Call backend API
+                const response = await authenticatedFetch('/api/workflows/improve-prompt/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: userPrompt,
+                        workflow_type: workflowType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to improve prompt');
+                }
+
+                console.log('✅ Full API Response:', data);
+                console.log('✅ Improved prompt received:', data.improved_prompt ? data.improved_prompt.substring(0, 100) + '...' : 'NO IMPROVED PROMPT!');
+
+                // Cache the improved prompt
+                improvedPromptCache = data.improved_prompt;
+
+                // Display improved prompt with defensive null checks
+                const improvedTextDiv = document.getElementById('improvedPromptText');
+                if (!improvedTextDiv) {
+                    console.error('❌ improvedPromptText element not found!');
+                    alert('UI error: Could not display improved prompt. Please close and reopen the workflow.');
+                    return;
+                }
+
+                if (!displayDiv) {
+                    console.error('❌ improvedPromptDisplay element not found!');
+                    alert('UI error: Could not display improved prompt. Please close and reopen the workflow.');
+                    return;
+                }
+
+                improvedTextDiv.textContent = data.improved_prompt;
+                displayDiv.style.display = 'block';
+
+                // Scroll to show improved prompt
+                displayDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (error) {
+                console.error('❌ Error improving prompt:', error);
+                alert(`Failed to improve prompt: ${error.message}`);
+            } finally {
+                // Reset button
+                improveBtn.disabled = false;
+                improveBtn.innerHTML = '✨ Improve My Prompt';
+            }
+        }
+
+        function useImprovedPrompt() {
+            console.log('✅ Using improved prompt');
+
+            const promptTextarea = document.getElementById('workflowModalPrompt');
+            const displayDiv = document.getElementById('improvedPromptDisplay');
+
+            if (!promptTextarea || !improvedPromptCache) {
+                console.error('❌ Cannot apply improved prompt');
+                return;
+            }
+
+            // Apply improved prompt
+            promptTextarea.value = improvedPromptCache;
+
+            // Hide improved prompt display
+            displayDiv.style.display = 'none';
+
+            // Clear cache
+            improvedPromptCache = null;
+
+            // Show success feedback
+            const improveBtn = document.getElementById('improvePromptBtn');
+            improveBtn.innerHTML = '✅ Prompt Improved!';
+            improveBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            improveBtn.style.color = '#10b981';
+
+            setTimeout(() => {
+                improveBtn.innerHTML = '✨ Improve My Prompt';
+                improveBtn.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                improveBtn.style.color = '#a78bfa';
+            }, 2000);
+        }
+
+        // ========== WORKFLOW HISTORY & FAVORITES (Session 57: Phase B.2) ==========
+
+        // Global tracking state
+        let currentWorkflowTracking = null;
+
+        // Load workflow history from API
+        async function loadWorkflowHistory(favoritesOnly = false) {
+            console.log('📜 Loading workflow history...');
+
+            const listContainer = document.getElementById('workflowHistoryList');
+            const filterSelect = document.getElementById('historyWorkflowTypeFilter');
+
+            // Show loading
+            listContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <p class="mb-2">Loading workflow history...</p>
+                    <div class="spinner-border spinner-border-sm text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const workflowType = filterSelect ? filterSelect.value : '';
+                const params = new URLSearchParams({ limit: '20' });
+                if (workflowType) params.append('workflow_type', workflowType);
+                if (favoritesOnly) params.append('favorites_only', 'true');
+
+                const response = await authenticatedFetch(`/api/workflows/history/?${params}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load history');
+                }
+
+                displayWorkflowHistory(data.workflows);
+
+            } catch (error) {
+                console.error('❌ Error loading history:', error);
+                listContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <p class="mb-0">Failed to load workflow history: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display workflow history items
+        function displayWorkflowHistory(workflows) {
+            const listContainer = document.getElementById('workflowHistoryList');
+
+            if (!workflows || workflows.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <p class="mb-0">No workflow history yet. Execute a workflow to see it here!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="row g-3">';
+
+            workflows.forEach(workflow => {
+                const date = new Date(workflow.created_at);
+                const timeAgo = getTimeAgo(date);
+                const statusBadge = workflow.status === 'completed' ?
+                    '<span class="badge bg-success">✓ Completed</span>' :
+                    workflow.status === 'failed' ?
+                    '<span class="badge bg-danger">✗ Failed</span>' :
+                    '<span class="badge bg-warning">⏳ Running</span>';
+
+                const favoriteIcon = workflow.is_favorite ? '⭐' : '☆';
+                const favoriteClass = workflow.is_favorite ? 'text-warning' : 'text-muted';
+
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.2);">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 style="color: #fbbf24;">${workflow.workflow_name}</h6>
+                                    <button class="btn btn-sm ${favoriteClass}" onclick="toggleWorkflowFavorite(${workflow.id})" title="Toggle favorite">
+                                        ${favoriteIcon}
+                                    </button>
+                                </div>
+
+                                <p class="small text-muted mb-2">${workflow.prompt.substring(0, 100)}${workflow.prompt.length > 100 ? '...' : ''}</p>
+
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    ${statusBadge}
+                                    <small class="text-muted">${timeAgo}</small>
+                                </div>
+
+                                ${workflow.result_count > 0 ? `
+                                    <div class="mb-3" style="display: grid; grid-template-columns: repeat(${Math.min(workflow.result_count, 3)}, 1fr); gap: 4px;">
+                                        ${workflow.result_images.slice(0, 3).map(img => `
+                                            <img src="${img}" class="img-fluid rounded" style="max-height: 80px; object-fit: cover;">
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+
+                                <div class="d-flex gap-2">
+                                    ${workflow.status === 'completed' ? `
+                                        <button class="btn btn-sm btn-outline-success" onclick="rerunWorkflow(${workflow.id})">
+                                            🔄 Re-run
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="saveWorkflowAsFavorite(${workflow.id}, '${workflow.workflow_name}')">
+                                            💾 Save
+                                        </button>
+                                    ` : ''}
+                                    <small class="text-success ms-auto">⏱️ ${workflow.execution_time.toFixed(1)}s</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            listContainer.innerHTML = html;
+        }
+
+        // Load workflow favorites from API
+        async function loadWorkflowFavorites() {
+            console.log('⭐ Loading workflow favorites...');
+
+            const listContainer = document.getElementById('workflowFavoritesList');
+
+            // Show loading
+            listContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <p class="mb-2">Loading favorites...</p>
+                    <div class="spinner-border spinner-border-sm text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await authenticatedFetch('/api/workflows/favorites/');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load favorites');
+                }
+
+                displayWorkflowFavorites(data.favorites);
+
+            } catch (error) {
+                console.error('❌ Error loading favorites:', error);
+                listContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <p class="mb-0">Failed to load favorites: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display workflow favorites
+        function displayWorkflowFavorites(favorites) {
+            const listContainer = document.getElementById('workflowFavoritesList');
+
+            if (!favorites || favorites.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <p class="mb-0">No favorites yet. Save your best workflows to access them quickly!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="row g-3">';
+
+            favorites.forEach(favorite => {
+                const workflow = favorite.workflow;
+                const useCount = favorite.use_count || 0;
+                const lastUsed = favorite.last_used_at ? getTimeAgo(new Date(favorite.last_used_at)) : 'Never';
+
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05)); border: 2px solid rgba(251, 191, 36, 0.4);">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 style="color: #fbbf24;">⭐ ${favorite.name}</h6>
+                                    <button class="btn btn-sm text-danger" onclick="deleteWorkflowFavorite(${favorite.favorite_id})" title="Delete favorite">
+                                        🗑️
+                                    </button>
+                                </div>
+
+                                ${favorite.description ? `<p class="small text-muted mb-2">${favorite.description}</p>` : ''}
+
+                                <p class="small mb-2" style="color: #fcd34d;">${workflow.workflow_name}</p>
+                                <p class="small text-muted mb-3">${workflow.prompt.substring(0, 80)}${workflow.prompt.length > 80 ? '...' : ''}</p>
+
+                                ${workflow.result_images && workflow.result_images.length > 0 ? `
+                                    <div class="mb-3" style="display: grid; grid-template-columns: repeat(${Math.min(workflow.result_images.length, 3)}, 1fr); gap: 4px;">
+                                        ${workflow.result_images.slice(0, 3).map(img => `
+                                            <img src="${img}" class="img-fluid rounded" style="max-height: 80px; object-fit: cover;">
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+
+                                <div class="mb-2">
+                                    <small class="text-muted">Used ${useCount} times • Last used: ${lastUsed}</small>
+                                </div>
+
+                                <button class="btn btn-warning btn-sm w-100" onclick="rerunFavoriteWorkflow(${workflow.id}, ${favorite.favorite_id})">
+                                    ✨ Use This Workflow
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            listContainer.innerHTML = html;
+        }
+
+        // Toggle workflow favorite status
+        async function toggleWorkflowFavorite(workflowId) {
+            try {
+                const response = await authenticatedFetch(`/api/workflows/history/${workflowId}/toggle-favorite/`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to toggle favorite');
+                }
+
+                console.log('✅ Toggled favorite:', data);
+
+                // Reload history to update UI
+                loadWorkflowHistory();
+
+            } catch (error) {
+                console.error('❌ Error toggling favorite:', error);
+                alert(`Failed to toggle favorite: ${error.message}`);
+            }
+        }
+
+        // Save workflow as named favorite
+        async function saveWorkflowAsFavorite(workflowId, workflowName) {
+            const name = prompt(`Name this favorite workflow:`, `My ${workflowName}`);
+            if (!name) return;
+
+            const description = prompt('Add a description (optional):');
+
+            try {
+                const response = await authenticatedFetch('/api/workflows/favorites/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workflow_id: workflowId,
+                        name: name,
+                        description: description || ''
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to save favorite');
+                }
+
+                console.log('✅ Saved favorite:', data);
+                alert('✅ Workflow saved to favorites!');
+
+                // Reload both history and favorites
+                loadWorkflowHistory();
+                loadWorkflowFavorites();
+
+            } catch (error) {
+                console.error('❌ Error saving favorite:', error);
+                alert(`Failed to save favorite: ${error.message}`);
+            }
+        }
+
+        // Delete workflow favorite
+        async function deleteWorkflowFavorite(favoriteId) {
+            if (!confirm('Remove this workflow from favorites?')) return;
+
+            try {
+                const response = await authenticatedFetch(`/api/workflows/favorites/${favoriteId}/delete/`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to delete favorite');
+                }
+
+                console.log('✅ Deleted favorite:', data);
+
+                // Reload favorites
+                loadWorkflowFavorites();
+
+            } catch (error) {
+                console.error('❌ Error deleting favorite:', error);
+                alert(`Failed to delete favorite: ${error.message}`);
+            }
+        }
+
+        // Re-run a workflow from history
+        async function rerunWorkflow(workflowId) {
+            try {
+                const response = await authenticatedFetch(`/api/workflows/history/${workflowId}/rerun/`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to rerun workflow');
+                }
+
+                console.log('🔄 Re-running workflow:', data);
+
+                // Switch to workflows tab
+                const workflowTab = document.querySelector('[data-bs-target="#workflow"]');
+                if (workflowTab) {
+                    workflowTab.click();
+                    setTimeout(() => {
+                        document.getElementById('workflow').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+
+                // TODO: Actually execute the workflow with the returned config
+                alert('🔄 Workflow configuration loaded. Click Execute to run it again!');
+
+            } catch (error) {
+                console.error('❌ Error rerunning workflow:', error);
+                alert(`Failed to rerun workflow: ${error.message}`);
+            }
+        }
+
+        // Re-run a favorite workflow
+        async function rerunFavoriteWorkflow(workflowId, favoriteId) {
+            try {
+                const response = await authenticatedFetch(`/api/workflows/history/${workflowId}/rerun/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ use_favorite_id: favoriteId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to rerun workflow');
+                }
+
+                console.log('✨ Re-running favorite workflow:', data);
+
+                // Switch to workflows tab
+                const workflowTab = document.querySelector('[data-bs-target="#workflow"]');
+                if (workflowTab) {
+                    workflowTab.click();
+                    setTimeout(() => {
+                        document.getElementById('workflow').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+
+                // Load favorites to update use count
+                loadWorkflowFavorites();
+
+                alert('✨ Favorite workflow loaded. Execute to run it!');
+
+            } catch (error) {
+                console.error('❌ Error rerunning favorite:', error);
+                alert(`Failed to rerun favorite: ${error.message}`);
+            }
+        }
+
+        // Helper: Get time ago string
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            const intervals = {
+                year: 31536000,
+                month: 2592000,
+                week: 604800,
+                day: 86400,
+                hour: 3600,
+                minute: 60
+            };
+
+            for (const [name, secondsInInterval] of Object.entries(intervals)) {
+                const interval = Math.floor(seconds / secondsInInterval);
+                if (interval >= 1) {
+                    return `${interval} ${name}${interval > 1 ? 's' : ''} ago`;
+                }
+            }
+
+            return 'Just now';
+        }
+
+        // Load history and favorites on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load when switching to workflows tab
+            const workflowTab = document.querySelector('[data-bs-target="#workflow"]');
+            if (workflowTab) {
+                workflowTab.addEventListener('shown.bs.tab', () => {
+                    loadWorkflowHistory();
+                    loadWorkflowFavorites();
+                });
+            }
+        });
+
+        // ========== END WORKFLOW HISTORY & FAVORITES ==========
+
         // Execute pre-built workflow with user input
         async function executePrebuiltWorkflow(workflowType) {
             const modal = document.getElementById('workflowPromptModal');
@@ -7424,6 +8031,25 @@
                 };
             });
 
+            // Store workflow tracking metadata (Session 57: Phase B.2)
+            const workflowNames = {
+                'logo-creator': 'Logo Creator',
+                'social-media-pack': 'Social Media Pack',
+                'portrait-enhancer': 'Portrait Enhancer',
+                'product-mockup': 'Product Mockup',
+                'style-explorer': 'Style Explorer',
+                'creative-upscale': 'Creative Upscale'
+            };
+
+            workflowState.trackingInfo = {
+                workflowType: workflowType.replace('-', '_'),  // Convert to underscore format
+                workflowName: workflowNames[workflowType] || workflowType,
+                prompt: userPrompt,
+                improvedPrompt: improvedPromptCache || '',  // Use improved prompt if exists
+                config: { steps: steps.map(s => ({ operation: s.operation, config: s.config })) },
+                inputImageId: selectedGalleryImage ? selectedGalleryImage.id : null
+            };
+
             // If upload needed, handle image first
             if (uploadedFile) {
                 console.log('📤 Uploading image for workflow...');
@@ -7491,6 +8117,25 @@
             workflowState.isExecuting = true;
             workflowState.currentStepIndex = 0;
             workflowState.stepResults = [];
+            workflowState.startTime = Date.now();  // Track execution time
+
+            // Start workflow tracking (Session 57: Phase B.2)
+            if (workflowState.trackingInfo) {
+                try {
+                    const trackingResponse = await authenticatedFetch('/api/workflows/execution/start/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(workflowState.trackingInfo)
+                    });
+                    const trackingData = await trackingResponse.json();
+                    if (trackingResponse.ok) {
+                        workflowState.workflowHistoryId = trackingData.workflow_history_id;
+                        console.log('✅ Started tracking workflow:', workflowState.workflowHistoryId);
+                    }
+                } catch (error) {
+                    console.error('⚠️ Failed to start tracking (non-critical):', error);
+                }
+            }
 
             // Show progress container
             document.getElementById('workflowProgressContainer').style.display = 'block';
@@ -7540,6 +8185,25 @@
                     showWorkflowStatus(`❌ Error in step ${i + 1} (${step.name}): ${error.message}`, 'error');
                     workflowState.isExecuting = false;
                     document.getElementById('executeWorkflowBtn').disabled = false;
+
+                    // Complete tracking with error (Session 57: Phase B.2)
+                    if (workflowState.workflowHistoryId) {
+                        try {
+                            const executionTime = (Date.now() - workflowState.startTime) / 1000;
+                            await authenticatedFetch(`/api/workflows/execution/${workflowState.workflowHistoryId}/complete/`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    status: 'failed',
+                                    execution_time: executionTime,
+                                    error_message: `Failed at step ${i + 1} (${step.name}): ${error.message}`
+                                })
+                            });
+                        } catch (trackingError) {
+                            console.error('⚠️ Failed to complete tracking (non-critical):', trackingError);
+                        }
+                    }
+
                     return;
                 }
             }
@@ -7548,6 +8212,31 @@
             updateWorkflowProgress(100, 'Workflow complete! 🎉');
             workflowState.isExecuting = false;
             document.getElementById('executeWorkflowBtn').disabled = false;
+
+            // Complete tracking with success (Session 57: Phase B.2)
+            if (workflowState.workflowHistoryId) {
+                try {
+                    const executionTime = (Date.now() - workflowState.startTime) / 1000;
+                    const resultImages = workflowState.stepResults.map(r => r.imageUrl);
+                    await authenticatedFetch(`/api/workflows/execution/${workflowState.workflowHistoryId}/complete/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: 'completed',
+                            execution_time: executionTime,
+                            result_images: resultImages
+                        })
+                    });
+                    console.log('✅ Workflow tracking completed successfully');
+
+                    // Reload history and favorites to show the new workflow
+                    setTimeout(() => {
+                        loadWorkflowHistory();
+                    }, 1000);
+                } catch (trackingError) {
+                    console.error('⚠️ Failed to complete tracking (non-critical):', trackingError);
+                }
+            }
 
             // Show final result
             showFinalWorkflowResult(currentImage);
