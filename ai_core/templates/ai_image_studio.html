@@ -36,92 +36,237 @@
         }
 
         .studio-header {
-            background: linear-gradient(135deg, #0891b2, #0e7490);
-            padding: 2rem;
-            border-radius: 15px;
+            background: linear-gradient(135deg, #0891b2, #0e7490, #6366f1);
+            padding: 3rem 2rem;
+            border-radius: 20px;
             margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(6, 182, 212, 0.4);
-            border: 2px solid var(--cyan);
+            box-shadow: 0 20px 60px rgba(6, 182, 212, 0.5), 0 0 100px rgba(251, 191, 36, 0.3);
+            border: 3px solid var(--cyan);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .studio-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shine 8s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
         }
 
         .studio-header h1, .studio-header p {
             color: #ffffff;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .donkey-brand {
+            color: #fbbf24;
+            text-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5);
+            animation: glow-pulse 3s ease-in-out infinite;
+            font-size: 4rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { text-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5); }
+            50% { text-shadow: 0 0 50px rgba(251, 191, 36, 1), 0 4px 12px rgba(0, 0, 0, 0.6); }
+        }
+
+        @keyframes logo-glow {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 8px 20px rgba(0, 0, 0, 0.5);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(251, 191, 36, 1), 0 10px 30px rgba(0, 0, 0, 0.6);
+                transform: scale(1.02);
+            }
+        }
+
+        .tagline {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-style: italic;
+            color: #fcd34d;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            letter-spacing: 1px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .ai-assistant-badge {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #000;
+            font-weight: 800;
+            font-size: 1.1rem;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            box-shadow: 0 8px 25px rgba(251, 191, 36, 0.6);
+            display: inline-block;
+            border: 2px solid #fcd34d;
+        }
+
+        .feature-count {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 50px;
+            padding: 0.5rem 1.2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .power-badge {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .card {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(6, 182, 212, 0.3);
-            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             transition: all 0.3s ease;
             color: var(--text-primary);
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            border-color: var(--cyan);
-            box-shadow: 0 12px 40px rgba(6, 182, 212, 0.3);
+            transform: translateY(-3px);
+            border-color: rgba(251, 191, 36, 0.6);
+            box-shadow: 0 12px 40px rgba(251, 191, 36, 0.2);
         }
 
         .card h3 {
-            color: var(--cyan-bright);
+            color: #fbbf24;
             font-weight: 700;
-            text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        .card h4 {
+            color: var(--cyan-bright);
+            font-weight: 600;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--goldenrod), var(--goldenrod-dark));
-            border: 2px solid var(--goldenrod);
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border: 2px solid #fcd34d;
             color: #000;
             padding: 12px 30px;
-            font-weight: 700;
+            font-weight: 800;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.5);
+            border-radius: 10px;
         }
 
         .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 25px rgba(251, 191, 36, 0.6);
-            background: linear-gradient(135deg, #fcd34d, var(--goldenrod));
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(251, 191, 36, 0.7);
+            background: linear-gradient(135deg, #fcd34d, #fbbf24);
+            border-color: #fbbf24;
             color: #000;
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(251, 191, 36, 0.5);
         }
 
         .btn-outline-light {
-            border: 2px solid var(--cyan);
-            color: var(--cyan-bright);
-            background: transparent;
-            font-weight: 600;
+            border: 2px solid #fbbf24;
+            color: #fcd34d;
+            background: rgba(251, 191, 36, 0.1);
+            font-weight: 700;
+            border-radius: 10px;
+            transition: all 0.3s ease;
         }
 
         .btn-outline-light:hover {
-            background: var(--cyan);
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-color: #fcd34d;
             color: #000;
+            box-shadow: 0 4px 20px rgba(251, 191, 36, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(6, 182, 212, 0.2);
+            border: 2px solid var(--cyan);
+            color: var(--cyan-bright);
+            font-weight: 700;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--cyan);
             border-color: var(--cyan-bright);
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.5);
         }
 
         .form-label {
-            color: var(--cyan-bright);
-            font-weight: 600;
+            color: #fcd34d;
+            font-weight: 700;
             font-size: 1.05rem;
             margin-bottom: 0.75rem;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .form-control, .form-select {
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid rgba(6, 182, 212, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 191, 36, 0.3);
             color: var(--text-primary);
             border-radius: 10px;
             padding: 12px;
             font-size: 1rem;
+            transition: all 0.3s ease;
         }
 
         .form-control:focus, .form-select:focus {
-            background: rgba(15, 23, 42, 0.95);
-            border-color: var(--cyan);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 0.2rem rgba(251, 191, 36, 0.25);
             color: var(--text-primary);
-            box-shadow: 0 0 0 0.3rem rgba(6, 182, 212, 0.3);
         }
 
         .form-control::placeholder {
@@ -153,14 +298,16 @@
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-            transition: transform 0.3s ease;
-            border: 2px solid rgba(6, 182, 212, 0.3);
+            transition: all 0.3s ease;
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
 
         .image-card:hover {
-            transform: scale(1.02);
-            border-color: var(--cyan);
-            box-shadow: 0 15px 40px rgba(6, 182, 212, 0.4);
+            transform: translateY(-5px);
+            border-color: #fbbf24;
+            box-shadow: 0 15px 40px rgba(251, 191, 36, 0.4);
         }
 
         .image-card img {
@@ -504,14 +651,103 @@
 <body>
     <div class="container py-5">
         <!-- Header -->
-        <div class="studio-header text-center">
-            <h1 class="display-4 fw-bold mb-3">🎨 AI Image Studio</h1>
-            <p class="lead mb-0">Powered by Stability AI - 13 Premium Features</p>
-            <div class="mt-3">
-                <span class="badge bg-success me-2">4 Generation Models</span>
-                <span class="badge bg-info me-2">69 Style Presets</span>
-                <span class="badge bg-warning text-dark me-2">5 Editing Tools</span>
-                <span class="badge bg-danger">3 Upscaling Methods</span>
+        <div class="studio-header">
+            <div class="text-center mb-4">
+                <!-- Donkey Logo -->
+                <div class="mb-3" style="position: relative; z-index: 1;">
+                    <img src="{% static 'images/donkey-logo.png' %}"
+                         alt="Donkey Betz - Adventure Donkey Logo"
+                         style="width: 200px; height: 200px;
+                                object-fit: cover;
+                                object-position: center center;
+                                border-radius: 50%;
+                                border: 5px solid #fbbf24;
+                                box-shadow: 0 0 40px rgba(251, 191, 36, 0.9), 0 10px 30px rgba(0, 0, 0, 0.6);
+                                animation: logo-glow 3s ease-in-out infinite;">
+                </div>
+
+                <!-- Main Brand -->
+                <h1 class="donkey-brand mb-2">
+                    DONKEY BETZ
+                </h1>
+
+                <!-- Tagline -->
+                <p class="tagline mb-3">
+                    "Always Bet on the Donkey"
+                </p>
+
+                <!-- Subtitle -->
+                <h2 class="h3 text-white fw-bold mb-3" style="position: relative; z-index: 1;">
+                    AI Content Studio
+                </h2>
+
+                <!-- Power Stack -->
+                <div class="mb-4">
+                    <span class="power-badge me-2">⚡ Stability AI</span>
+                    <span class="power-badge me-2">🎬 Runway ML</span>
+                    <span class="power-badge">🤖 Claude AI</span>
+                </div>
+            </div>
+
+            <!-- Feature Showcase Cards -->
+            <div class="row g-3 mb-4" style="position: relative; z-index: 1;">
+                <!-- Images Column -->
+                <div class="col-md-4">
+                    <div class="feature-card text-center">
+                        <span class="feature-icon">🎨</span>
+                        <div class="feature-count" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); border-color: #a78bfa;">
+                            13 IMAGE TOOLS
+                        </div>
+                        <div class="mt-2">
+                            <small class="d-block text-light mb-1">4 Generation Models</small>
+                            <small class="d-block text-light mb-1">69 Style Presets</small>
+                            <small class="d-block text-light mb-1">5 Editing Tools</small>
+                            <small class="d-block text-light">3 Upscaling Methods</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Column -->
+                <div class="col-md-4">
+                    <div class="feature-card text-center">
+                        <span class="feature-icon">🎬</span>
+                        <div class="feature-count" style="background: linear-gradient(135deg, #ec4899, #f43f5e); border-color: #f472b6;">
+                            10 VIDEO TOOLS
+                        </div>
+                        <div class="mt-2">
+                            <small class="d-block text-light mb-1">Text-to-Video</small>
+                            <small class="d-block text-light mb-1">Image-to-Video</small>
+                            <small class="d-block text-light mb-1">Character Performance</small>
+                            <small class="d-block text-light">Video Upscaling</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Column -->
+                <div class="col-md-4">
+                    <div class="feature-card text-center">
+                        <span class="feature-icon">🎵</span>
+                        <div class="feature-count" style="background: linear-gradient(135deg, #06b6d4, #0891b2); border-color: #22d3ee;">
+                            5 AUDIO TOOLS
+                        </div>
+                        <div class="mt-2">
+                            <small class="d-block text-light mb-1">Text-to-Speech</small>
+                            <small class="d-block text-light mb-1">Voice Dubbing</small>
+                            <small class="d-block text-light mb-1">Speech-to-Speech</small>
+                            <small class="d-block text-light">Sound Effects</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Assistant Callout -->
+            <div class="text-center" style="position: relative; z-index: 1;">
+                <div class="ai-assistant-badge">
+                    🤖 NEW: AI ASSISTANT - Just Ask, We'll Create It
+                </div>
+                <div class="mt-2">
+                    <small class="text-light d-block">Natural Language Commands • Context-Aware Help • One-Click Workflows</small>
+                </div>
             </div>
         </div>
 
@@ -693,6 +929,7 @@
                                     <option value="pixar">Pixar ⭐</option>
                                     <option value="studio-ghibli">Studio Ghibli</option>
                                     <option value="dreamworks">DreamWorks</option>
+                                    <option value="south-park">South Park</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -7956,27 +8193,27 @@
                     <!-- AI Assistant Panel -->
                     <div id="aiAssistantPanel" class="shadow-lg"
                          style="position: fixed; bottom: 100px; right: 30px; width: 400px; max-height: 600px;
-                                background: rgba(15, 23, 42, 0.98); border: 2px solid rgba(6, 182, 212, 0.5);
-                                border-radius: 16px; z-index: 1049; display: none; overflow: hidden;">
+                                background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border: 3px solid rgba(251, 191, 36, 0.5);
+                                border-radius: 20px; z-index: 1049; display: none; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 191, 36, 0.3);">
 
                         <!-- Header -->
                         <div class="d-flex justify-content-between align-items-center p-3 border-bottom"
-                             style="border-color: rgba(6, 182, 212, 0.3) !important; background: rgba(6, 182, 212, 0.1);">
+                             style="border-color: rgba(251, 191, 36, 0.3) !important; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));">
                             <div>
-                                <h5 class="mb-0" style="color: #06b6d4;">🤖 AI Assistant</h5>
-                                <small class="text-muted">Your intelligent creative partner</small>
+                                <h5 class="mb-0" style="color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); font-weight: 800;">🤖 AI Assistant</h5>
+                                <small style="color: #fcd34d;">Your intelligent creative partner</small>
                             </div>
                             <button id="aiAssistantClose" class="btn btn-sm btn-outline-light">✕</button>
                         </div>
 
                         <!-- Quick Actions -->
-                        <div class="p-3 border-bottom" style="border-color: rgba(6, 182, 212, 0.3) !important; background: rgba(15, 23, 42, 0.5);">
-                            <small class="text-muted d-block mb-2">💡 Quick Actions:</small>
+                        <div class="p-3 border-bottom" style="border-color: rgba(251, 191, 36, 0.3) !important; background: rgba(255, 255, 255, 0.03);">
+                            <small class="d-block mb-2" style="color: #fcd34d; font-weight: 700;">💡 Quick Actions:</small>
                             <div class="d-flex flex-wrap gap-2">
-                                <button class="btn btn-sm btn-outline-info quick-action" data-action="help">❓ Help</button>
-                                <button class="btn btn-sm btn-outline-info quick-action" data-action="logo">🎨 Create Logo</button>
-                                <button class="btn btn-sm btn-outline-info quick-action" data-action="social">📱 Social Pack</button>
-                                <button class="btn btn-sm btn-outline-info quick-action" data-action="upscale">⬆️ Upscale</button>
+                                <button class="btn btn-sm btn-outline-light quick-action" data-action="help">❓ Help</button>
+                                <button class="btn btn-sm btn-outline-light quick-action" data-action="logo">🎨 Create Logo</button>
+                                <button class="btn btn-sm btn-outline-light quick-action" data-action="social">📱 Social Pack</button>
+                                <button class="btn btn-sm btn-outline-light quick-action" data-action="upscale">⬆️ Upscale</button>
                             </div>
                         </div>
 
@@ -7995,15 +8232,15 @@
                         </div>
 
                         <!-- Input Area -->
-                        <div class="p-3 border-top" style="border-color: rgba(6, 182, 212, 0.3) !important; background: rgba(15, 23, 42, 0.8);">
+                        <div class="p-3 border-top" style="border-color: rgba(251, 191, 36, 0.3) !important; background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(245, 158, 11, 0.08));">
                             <div class="input-group">
                                 <input type="text" id="aiAssistantInput" class="form-control"
-                                       placeholder="Ask me anything..." style="background: rgba(30, 41, 59, 0.8); border-color: rgba(6, 182, 212, 0.3); color: white;">
+                                       placeholder="Ask me anything..." style="background: rgba(255, 255, 255, 0.05); border-color: rgba(251, 191, 36, 0.3); color: white;">
                                 <button class="btn btn-primary" id="aiAssistantSend" type="button">
                                     ➤ Send
                                 </button>
                             </div>
-                            <small class="text-muted d-block mt-2" style="font-size: 11px;">
+                            <small class="d-block mt-2" style="font-size: 11px; color: #fcd34d;">
                                 Powered by Claude 3.5 Sonnet • Press Enter to send
                             </small>
                         </div>
