@@ -5609,82 +5609,95 @@
         // Slider Dragging
         const comparisonImages = document.getElementById('comparisonImages');
         const sliderHandle = document.getElementById('sliderHandle');
-        let isDragging = false;
 
-        sliderHandle.addEventListener('mousedown', function(e) {
-            isDragging = true;
-            e.preventDefault();
-        });
+        // Only set up slider if elements exist
+        if (sliderHandle && comparisonImages) {
+            let isDragging = false;
 
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-
-            const rect = comparisonImages.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const percentage = (x / rect.width) * 100;
-
-            updateSliderPosition(percentage);
-        });
-
-        document.addEventListener('mouseup', function() {
-            isDragging = false;
-        });
-
-        // Touch support for mobile
-        sliderHandle.addEventListener('touchstart', function(e) {
-            isDragging = true;
-            e.preventDefault();
-        });
-
-        document.addEventListener('touchmove', function(e) {
-            if (!isDragging) return;
-
-            const touch = e.touches[0];
-            const rect = comparisonImages.getBoundingClientRect();
-            const x = touch.clientX - rect.left;
-            const percentage = (x / rect.width) * 100;
-
-            updateSliderPosition(percentage);
-        });
-
-        document.addEventListener('touchend', function() {
-            isDragging = false;
-        });
-
-        // Keyboard Shortcuts (Arrow Keys)
-        document.addEventListener('keydown', function(e) {
-            // Only work when comparison is visible and tab is active
-            const compareTab = document.getElementById('compare');
-            if (!compareTab.classList.contains('active')) return;
-            if (!comparisonState.beforeImage || !comparisonState.afterImage) return;
-
-            if (e.key === 'ArrowLeft') {
+            sliderHandle.addEventListener('mousedown', function(e) {
+                isDragging = true;
                 e.preventDefault();
-                updateSliderPosition(comparisonState.sliderPosition - 2);
-            } else if (e.key === 'ArrowRight') {
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+
+                const rect = comparisonImages.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = (x / rect.width) * 100;
+
+                updateSliderPosition(percentage);
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+
+            // Touch support for mobile
+            sliderHandle.addEventListener('touchstart', function(e) {
+                isDragging = true;
                 e.preventDefault();
-                updateSliderPosition(comparisonState.sliderPosition + 2);
-            }
-        });
+            });
+
+            document.addEventListener('touchmove', function(e) {
+                if (!isDragging) return;
+
+                const touch = e.touches[0];
+                const rect = comparisonImages.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const percentage = (x / rect.width) * 100;
+
+                updateSliderPosition(percentage);
+            });
+
+            document.addEventListener('touchend', function() {
+                isDragging = false;
+            });
+
+            // Keyboard Shortcuts (Arrow Keys)
+            document.addEventListener('keydown', function(e) {
+                // Only work when comparison is visible and tab is active
+                const compareTab = document.getElementById('compare');
+                if (!compareTab || !compareTab.classList.contains('active')) return;
+                if (!comparisonState.beforeImage || !comparisonState.afterImage) return;
+
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    updateSliderPosition(comparisonState.sliderPosition - 2);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    updateSliderPosition(comparisonState.sliderPosition + 2);
+                }
+            });
+        } // Close if (sliderHandle && comparisonImages)
 
         // Clear Comparison
-        document.getElementById('clearComparisonBtn').addEventListener('click', function() {
-            comparisonState = {
-                beforeImage: null,
-                afterImage: null,
-                selectingFor: null,
-                sliderPosition: 50
-            };
+        const clearComparisonBtn = document.getElementById('clearComparisonBtn');
+        if (clearComparisonBtn) {
+            clearComparisonBtn.addEventListener('click', function() {
+                comparisonState = {
+                    beforeImage: null,
+                    afterImage: null,
+                    selectingFor: null,
+                    sliderPosition: 50
+                };
 
-            // Reset UI
-            document.getElementById('beforePreview').style.display = 'none';
-            document.getElementById('beforeEmpty').style.display = 'block';
-            document.getElementById('afterPreview').style.display = 'none';
-            document.getElementById('afterEmpty').style.display = 'block';
-            document.getElementById('comparisonContainer').style.display = 'none';
+                // Reset UI
+                const beforePreview = document.getElementById('beforePreview');
+                const beforeEmpty = document.getElementById('beforeEmpty');
+                const afterPreview = document.getElementById('afterPreview');
+                const afterEmpty = document.getElementById('afterEmpty');
+                const comparisonContainer = document.getElementById('comparisonContainer');
 
-            showCompareStatus('🗑️ Comparison cleared. Select new images to compare.', 'info');
-        });
+                if (beforePreview) beforePreview.style.display = 'none';
+                if (beforeEmpty) beforeEmpty.style.display = 'block';
+                if (afterPreview) afterPreview.style.display = 'none';
+                if (afterEmpty) afterEmpty.style.display = 'block';
+                if (comparisonContainer) comparisonContainer.style.display = 'none';
+
+                showCompareStatus('🗑️ Comparison cleared. Select new images to compare.', 'info');
+            });
+        }
 
         // END FEATURE 12: BEFORE/AFTER COMPARISON
 
