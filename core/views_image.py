@@ -2656,3 +2656,199 @@ def execute_workflow_step(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ========================================
+# UNIFIED GALLERY API (Session 53: Phase 2)
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def unified_gallery(request):
+    """
+    Unified gallery endpoint combining images, videos, and audio.
+
+    Query parameters:
+    - type: Filter by media type (all/images/videos/audio) - default: all
+    - favorite: Filter favorites (true/false)
+    - search: Search term (searches in prompts)
+    - sort_by: Sort field (-created_at, created_at, -view_count, etc.) - default: -created_at
+    - limit: Max results (default: 20)
+    - offset: Pagination offset (default: 0)
+
+    Returns:
+    {
+        "count": 100,
+        "next": null,
+        "previous": null,
+        "results": [
+            {
+                "id": "uuid",
+                "type": "image" | "video" | "audio",
+                "url": "...",
+                "thumbnail_url": "...",
+                "prompt": "...",
+                "created_at": "...",
+                "is_favorite": true/false,
+                "view_count": 10,
+                "download_count": 5,
+                "model_used": "...",
+                "parameters": {...},
+                // Type-specific fields
+                "image_type": "generated" (for images),
+                "video_type": "text_to_video" (for videos),
+                ...
+            }
+        ]
+    }
+    """
+    try:
+        from content.models import ImageHistory, VideoHistory
+        from django.db.models import Q
+
+        user = request.user
+
+        # Get query parameters
+        media_type = request.query_params.get('type', 'all').lower()
+        is_favorite = request.query_params.get('favorite')
+        search_term = request.query_params.get('search', '').strip()
+        sort_by = request.query_params.get('sort_by', '-created_at')
+        limit = int(request.query_params.get('limit', 20))
+        offset = int(request.query_params.get('offset', 0))
+
+        # Collect results from different media types
+        all_items = []
+
+        # Fetch images if requested
+        if media_type in ['all', 'images']:
+            image_queryset = ImageHistory.objects.filter(user=user)
+
+            # Apply filters
+            if is_favorite is not None:
+                image_queryset = image_queryset.filter(is_favorite=is_favorite.lower() == 'true')
+
+            if search_term:
+                image_queryset = image_queryset.filter(
+                    Q(prompt__icontains=search_term) |
+                    Q(user_notes__icontains=search_term)
+                )
+
+            # Convert to unified format
+            for img in image_queryset:
+                all_items.append({
+                    'id': str(img.id),
+                    'type': 'image',
+                    'url': img.get_full_url(),
+                    'thumbnail_url': img.get_thumbnail_url(),
+                    'prompt': img.prompt,
+                    'created_at': img.created_at,
+                    'is_favorite': img.is_favorite,
+                    'view_count': img.view_count,
+                    'download_count': img.download_count,
+                    'model_used': img.model_used,
+                    'parameters': img.parameters,
+                    # Image-specific fields
+                    'image_type': img.image_type,
+                    'style': img.style,
+                    'width': img.image_width,
+                    'height': img.image_height,
+                    'filename': img.filename,
+                    'user_notes': img.user_notes,
+                    'tags': img.tags,
+                })
+
+        # Fetch videos if requested
+        if media_type in ['all', 'videos']:
+            video_queryset = VideoHistory.objects.filter(user=user, status='completed')
+
+            # Apply filters
+            if is_favorite is not None:
+                video_queryset = video_queryset.filter(is_favorite=is_favorite.lower() == 'true')
+
+            if search_term:
+                video_queryset = video_queryset.filter(
+                    Q(prompt__icontains=search_term) |
+                    Q(user_notes__icontains=search_term)
+                )
+
+            # Convert to unified format
+            for video in video_queryset:
+                all_items.append({
+                    'id': str(video.id),
+                    'type': 'video',
+                    'url': video.video_url,
+                    'thumbnail_url': video.thumbnail_url or video.video_url,
+                    'prompt': video.prompt,
+                    'created_at': video.created_at,
+                    'is_favorite': video.is_favorite,
+                    'view_count': video.view_count,
+                    'download_count': video.download_count,
+                    'model_used': video.model_used,
+                    'parameters': video.parameters,
+                    # Video-specific fields
+                    'video_type': video.video_type,
+                    'duration': video.duration,
+                    'ratio': video.ratio,
+                    'video_id': video.video_id,
+                    'user_notes': video.user_notes,
+                    'tags': video.tags,
+                })
+
+        # TODO: Add audio when AudioHistory model is created
+        # if media_type in ['all', 'audio']:
+        #     audio_queryset = AudioHistory.objects.filter(user=user)
+        #     ...
+
+        # Sort all items
+        reverse = sort_by.startswith('-')
+        sort_field = sort_by.lstrip('-')
+
+        all_items.sort(
+            key=lambda x: x.get(sort_field, ''),
+            reverse=reverse
+        )
+
+        # Get total count before pagination
+        total_count = len(all_items)
+
+        # Apply pagination
+        paginated_items = all_items[offset:offset + limit]
+
+        # Convert datetime objects to ISO format strings
+        for item in paginated_items:
+            if isinstance(item['created_at'], datetime):
+                item['created_at'] = item['created_at'].isoformat()
+
+        # Build pagination URLs
+        base_url = request.build_absolute_uri(request.path)
+        next_url = None
+        previous_url = None
+
+        if offset + limit < total_count:
+            next_offset = offset + limit
+            next_url = f"{base_url}?type={media_type}&limit={limit}&offset={next_offset}"
+            if is_favorite:
+                next_url += f"&favorite={is_favorite}"
+            if search_term:
+                next_url += f"&search={search_term}"
+
+        if offset > 0:
+            previous_offset = max(0, offset - limit)
+            previous_url = f"{base_url}?type={media_type}&limit={limit}&offset={previous_offset}"
+            if is_favorite:
+                previous_url += f"&favorite={is_favorite}"
+            if search_term:
+                previous_url += f"&search={search_term}"
+
+        return Response({
+            'count': total_count,
+            'next': next_url,
+            'previous': previous_url,
+            'results': paginated_items
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Unified gallery error: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)

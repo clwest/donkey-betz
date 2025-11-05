@@ -263,13 +263,12 @@ from core.views_video import (
     text_to_video, image_to_video, check_video_status, get_video_detail,
     video_gallery, save_video_to_gallery, test_runway_connection,
     get_video_history, toggle_video_favorite, delete_video, increment_video_view,
-    increment_video_download, video_to_video_endpoint, video_upscale_endpoint,
-    character_performance_endpoint
+    increment_video_download
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
-    control_sketch, control_structure, execute_workflow_step, unified_gallery
+    control_sketch, control_structure, execute_workflow_step
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -776,10 +775,6 @@ urlpatterns = [
     # Video Generation endpoints (RunwayML)
     path('api/v1/video/text-to-video/', text_to_video, name='text-to-video'),
     path('api/v1/video/image-to-video/', image_to_video, name='image-to-video'),
-    # Session 49: New video endpoints
-    path('api/v1/video/video-to-video/', video_to_video_endpoint, name='video-to-video'),
-    path('api/v1/video/upscale/', video_upscale_endpoint, name='video-upscale'),
-    path('api/v1/video/character-performance/', character_performance_endpoint, name='character-performance'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
     path('api/v1/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
@@ -791,14 +786,6 @@ urlpatterns = [
     path('api/v1/video/history/<str:video_id>/view/', increment_video_view, name='increment-video-view'),
     path('api/v1/video/history/<str:video_id>/download/', increment_video_download, name='increment-video-download'),
     path('api/v1/video/history/<str:video_id>/', delete_video, name='delete-video'),
-    
-    # Audio Generation endpoints (Session 48: Phase 3)
-    path('api/v1/audio/text-to-speech/', lambda r: __import__('core.views_audio', fromlist=['text_to_speech']).text_to_speech(r), name='audio-text-to-speech'),
-    path('api/v1/audio/text-to-sound/', lambda r: __import__('core.views_audio', fromlist=['text_to_sound']).text_to_sound(r), name='audio-text-to-sound'),
-    path('api/v1/audio/voice-dubbing/', lambda r: __import__('core.views_audio', fromlist=['voice_dubbing']).voice_dubbing(r), name='audio-voice-dubbing'),
-    path('api/v1/audio/speech-to-speech/', lambda r: __import__('core.views_audio', fromlist=['speech_to_speech']).speech_to_speech(r), name='audio-speech-to-speech'),
-    path('api/v1/audio/voice-isolation/', lambda r: __import__('core.views_audio', fromlist=['voice_isolation']).voice_isolation(r), name='audio-voice-isolation'),
-    path('api/v1/audio/status/<str:task_id>/', lambda r, task_id: __import__('core.views_audio', fromlist=['check_audio_status']).check_audio_status(r, task_id), name='audio-status'),
 
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
@@ -832,9 +819,6 @@ urlpatterns = [
     path('api/v1/memory/supported-formats/', supported_file_formats, name='supported-formats'),
     path('api/v1/gallery/list/', gallery_list, name='gallery-list'),
     path('api/v1/gallery/videos/', gallery_videos, name='gallery-videos'),
-
-    # Unified Gallery API (Session 53: Phase 2)
-    path('api/v1/gallery/all/', unified_gallery, name='unified-gallery'),
     path('api/v1/content/library/', content_library, name='content-library'),
     path('api/v1/podcasts/', podcasts_list, name='podcasts-list'),
     
