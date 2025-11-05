@@ -516,6 +516,67 @@
             min-height: 500px;
         }
 
+        /* Remove min-height from parent tabs that contain nested navigation */
+        #images,
+        #video,
+        #audio {
+            min-height: auto !important;
+        }
+
+        /* Nested Pills Styling (for Images, Video, Audio sub-navigation) */
+        .nav-pills {
+            background: rgba(15, 23, 42, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid rgba(251, 191, 36, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .nav-pills .nav-link {
+            color: var(--text-secondary);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: rgba(15, 23, 42, 0.3);
+            margin: 0 5px 5px 0;
+        }
+
+        .nav-pills .nav-link:hover {
+            color: var(--cyan-bright);
+            background: rgba(6, 182, 212, 0.2);
+            border-color: var(--cyan);
+            transform: translateY(-2px);
+        }
+
+        .nav-pills .nav-link.active {
+            color: #000;
+            background: linear-gradient(135deg, var(--cyan), var(--cyan-bright));
+            border-color: var(--cyan-bright);
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+
+        /* Nested tab-content styling */
+        #imageModeContent,
+        #videoModeContent,
+        #audioModeContent {
+            background: rgba(15, 23, 42, 0.3);
+            border: 2px solid rgba(6, 182, 212, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            min-height: auto;
+        }
+
+        /* Remove min-height from nested panes to prevent excess spacing */
+        #imageModeContent .tab-pane,
+        #videoModeContent .tab-pane,
+        #audioModeContent .tab-pane {
+            min-height: auto !important;
+        }
+
         /* Gallery Selection Modal Overlay */
         #gallerySelectionModal {
             position: fixed !important;
@@ -753,90 +814,110 @@
 
         <!-- Tabbed Navigation with Visual Grouping -->
         <ul class="nav nav-tabs" id="studioTabs" role="tablist">
-            <!-- Generation Tools -->
+            <!-- Images (Grouped) -->
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab" title="Generate images from text prompts">
-                    🎨 Generate
+                <button class="nav-link active" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab" title="AI Image Generation & Editing">
+                    🎨 Images
                 </button>
             </li>
 
-            <!-- Editing Tools Group -->
-            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
+            <!-- Video (Grouped) -->
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" title="Upload and edit images">
-                    📤 Upload
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="erase-tab" data-bs-toggle="tab" data-bs-target="#erase" type="button" role="tab" title="Remove objects from images">
-                    🧹 Erase
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="inpaint-tab" data-bs-toggle="tab" data-bs-target="#inpaint" type="button" role="tab" title="Fill and regenerate areas">
-                    🎨 Inpaint
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="outpaint-tab" data-bs-toggle="tab" data-bs-target="#outpaint" type="button" role="tab" title="Extend image borders">
-                    📐 Outpaint
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="recolor-tab" data-bs-toggle="tab" data-bs-target="#recolor" type="button" role="tab" title="Change object colors">
-                    🖌️ Recolor
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="upscale-tab" data-bs-toggle="tab" data-bs-target="#upscale" type="button" role="tab" title="Increase resolution">
-                    ⬆️ Upscale
-                </button>
-            </li>
-
-            <!-- Advanced Tools Group -->
-            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="control-tab" data-bs-toggle="tab" data-bs-target="#control" type="button" role="tab" title="Sketch and structure control">
-                    🎭 Control
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow" type="button" role="tab" title="Multi-step operations">
-                    🔄 Workflow
-                </button>
-            </li>
-
-            <!-- Gallery & History Group -->
-            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab" title="Browse image history">
-                    📁 Gallery
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="compare-tab" data-bs-toggle="tab" data-bs-target="#compare" type="button" role="tab" title="Before/After comparison">
-                    ⚖️ Compare
-                </button>
-            </li>
-
-            <!-- Media Generation Group -->
-            <li class="nav-item px-2 text-muted small" style="display: flex; align-items: center; pointer-events: none;">|</li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" title="Generate and edit videos">
+                <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" title="AI Video Generation">
                     🎬 Video
                 </button>
             </li>
+
+            <!-- Audio (Grouped) -->
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" title="Generate and transform audio">
+                <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio" type="button" role="tab" title="AI Audio Generation">
                     🎵 Audio
+                </button>
+            </li>
+
+            <!-- All Gallery (Unified) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="all-gallery-tab" data-bs-toggle="tab" data-bs-target="#all-gallery" type="button" role="tab" title="Browse all content (images, videos, audio)">
+                    📊 All Gallery
                 </button>
             </li>
         </ul>
 
         <!-- Tab Content -->
         <div class="tab-content" id="studioTabContent">
-            <!-- GENERATE TAB -->
-            <div class="tab-pane fade show active" id="generate" role="tabpanel">
+            <!-- IMAGES TAB (Parent) -->
+            <div class="tab-pane fade show active" id="images" role="tabpanel">
+                <h3 class="mb-4">🎨 AI Image Studio</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info mb-4">
+                    <strong>✨ Create & Edit AI Images</strong><br>
+                    Generate images from text, edit with advanced tools, and browse your gallery!<br>
+                    <small class="text-muted">Models: Core, SDXL, SD3, Ultra | 69 Style Presets Available</small>
+                </div>
+
+                <!-- Image Operation Tabs (Nested Pills) -->
+                <ul class="nav nav-pills mb-4" id="imageModeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="generate-pill" data-bs-toggle="pill" data-bs-target="#generate-pane" type="button" role="tab">
+                            🎨 Generate
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="upload-pill" data-bs-toggle="pill" data-bs-target="#upload-pane" type="button" role="tab">
+                            📤 Upload
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="erase-pill" data-bs-toggle="pill" data-bs-target="#erase-pane" type="button" role="tab">
+                            🧹 Erase
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="inpaint-pill" data-bs-toggle="pill" data-bs-target="#inpaint-pane" type="button" role="tab">
+                            🎨 Inpaint
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="outpaint-pill" data-bs-toggle="pill" data-bs-target="#outpaint-pane" type="button" role="tab">
+                            📐 Outpaint
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="recolor-pill" data-bs-toggle="pill" data-bs-target="#recolor-pane" type="button" role="tab">
+                            🖌️ Recolor
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="upscale-pill" data-bs-toggle="pill" data-bs-target="#upscale-pane" type="button" role="tab">
+                            ⬆️ Upscale
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="control-pill" data-bs-toggle="pill" data-bs-target="#control-pane" type="button" role="tab">
+                            🎭 Control
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="workflow-pill" data-bs-toggle="pill" data-bs-target="#workflow-pane" type="button" role="tab">
+                            🔄 Workflow
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="image-gallery-pill" data-bs-toggle="pill" data-bs-target="#image-gallery-pane" type="button" role="tab">
+                            📁 Gallery
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="compare-pill" data-bs-toggle="pill" data-bs-target="#compare-pane" type="button" role="tab">
+                            ⚖️ Compare
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="imageModeContent">
+                    <!-- GENERATE PANE (was GENERATE TAB) -->
+                    <div class="tab-pane fade show active" id="generate-pane" role="tabpanel">
                 <div class="row">
                     <div class="col-lg-6">
                         <h3 class="mb-4">✨ Generate Image</h3>
@@ -1006,10 +1087,10 @@
                 </div>
                 </div>
             </div>
-            <!-- END GENERATE TAB -->
+            <!-- END GENERATE PANE -->
 
-            <!-- UPLOAD & EDIT TAB -->
-            <div class="tab-pane fade" id="upload" role="tabpanel">
+            <!-- UPLOAD & EDIT PANE -->
+            <div class="tab-pane fade" id="upload-pane" role="tabpanel">
                 <h3 class="mb-4">📤 Upload & Quick Edit</h3>
                 <div class="row">
                     <div class="col-md-6">
@@ -1060,10 +1141,10 @@
                 <!-- Editing Status -->
                 <div id="editingStatus"></div>
             </div>
-            <!-- END UPLOAD & EDIT TAB -->
+            <!-- END UPLOAD & EDIT PANE -->
 
-            <!-- ERASE OBJECT TAB -->
-            <div class="tab-pane fade" id="erase" role="tabpanel">
+            <!-- ERASE OBJECT PANE -->
+            <div class="tab-pane fade" id="erase-pane" role="tabpanel">
                 <h3 class="mb-4">🖌️ Erase Object</h3>
                 <p class="text-muted">Draw over objects you want to remove from the image</p>
 
@@ -1109,10 +1190,10 @@
                     <div id="eraseGallery" class="row"></div>
                 </div>
             </div>
-            <!-- END ERASE TAB -->
+            <!-- END ERASE PANE -->
 
-            <!-- INPAINT TAB -->
-            <div class="tab-pane fade" id="inpaint" role="tabpanel">
+            <!-- INPAINT PANE -->
+            <div class="tab-pane fade" id="inpaint-pane" role="tabpanel">
                 <h3 class="mb-4">🎨 Inpaint (Smart Fill)</h3>
                 <p class="text-muted">Draw a mask and describe what to generate in that area</p>
 
@@ -1162,10 +1243,10 @@
                     <div id="inpaintGallery" class="row"></div>
                 </div>
             </div>
-            <!-- END INPAINT TAB -->
+            <!-- END INPAINT PANE -->
 
-            <!-- OUTPAINT TAB -->
-            <div class="tab-pane fade" id="outpaint" role="tabpanel">
+            <!-- OUTPAINT PANE -->
+            <div class="tab-pane fade" id="outpaint-pane" role="tabpanel">
                 <h3 class="mb-4">📐 Outpaint (Extend Canvas)</h3>
                 <p class="text-muted">Extend the image beyond its edges up to 2000px</p>
 
@@ -1228,10 +1309,10 @@
                     <div id="outpaintGallery" class="row"></div>
                 </div>
             </div>
-            <!-- END OUTPAINT TAB -->
+            <!-- END OUTPAINT PANE -->
 
-            <!-- UPSCALE TAB -->
-            <div class="tab-pane fade" id="upscale" role="tabpanel">
+            <!-- UPSCALE PANE -->
+            <div class="tab-pane fade" id="upscale-pane" role="tabpanel">
                 <h3 class="mb-4">📈 Upscale Image</h3>
                 <p class="text-muted">Increase resolution with AI-powered upscaling</p>
 
@@ -1277,10 +1358,10 @@
                     <div id="upscaleGallery" class="row"></div>
                 </div>
             </div>
-            <!-- END UPSCALE TAB -->
+            <!-- END UPSCALE PANE -->
 
-            <!-- RECOLOR TAB -->
-            <div class="tab-pane fade" id="recolor" role="tabpanel">
+            <!-- RECOLOR PANE -->
+            <div class="tab-pane fade" id="recolor-pane" role="tabpanel">
                 <h3 class="mb-4">🎨 Recolor Object</h3>
                 <p class="text-muted">Search for an object and change its color</p>
 
@@ -1335,10 +1416,10 @@
                     <div id="recolorGallery" class="row"></div>
                 </div>
             </div>
-            <!-- END RECOLOR TAB -->
+            <!-- END RECOLOR PANE -->
 
-            <!-- CONTROL TAB (Session 38: Feature 11) -->
-            <div class="tab-pane fade" id="control" role="tabpanel">
+            <!-- CONTROL PANE (Session 38: Feature 11) -->
+            <div class="tab-pane fade" id="control-pane" role="tabpanel">
                 <h3 class="mb-4">🎭 Image-to-Image Control</h3>
                 <p class="text-muted mb-4">Transform sketches into refined images or reimagine photos in different styles while preserving structure.</p>
 
@@ -1430,14 +1511,31 @@
                             <div class="card-body">
                                 <p class="text-muted small mb-3">Transform an image while preserving its composition</p>
 
-                                <!-- Image Upload -->
+                                <!-- Image Selection -->
                                 <div class="mb-3">
-                                    <label for="structureImage" class="form-label text-muted">Upload Reference Image</label>
-                                    <input type="file" class="form-control bg-dark text-light border-secondary" id="structureImage" accept="image/*">
+                                    <label class="form-label text-muted">Select Reference Image</label>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectStructureImageFromGallery()">
+                                            📊 From Gallery
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('structureImage').click()">
+                                            📤 Upload Image
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Select from gallery or upload a new image</small>
+
+                                    <!-- Hidden file input -->
+                                    <input type="file" class="form-control bg-dark text-light border-secondary" id="structureImage" accept="image/*" style="display: none;">
                                 </div>
 
                                 <!-- Image Preview -->
                                 <div id="structurePreview" class="mb-3" style="display: none; border: 2px solid var(--cyan); border-radius: 8px; padding: 10px; background: #1a1a1a;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-success" id="structureImageSource">📤 Uploaded Image</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearStructureImage()">
+                                            ✕ Clear
+                                        </button>
+                                    </div>
                                     <img id="structurePreviewImg" style="width: 100%; max-width: 500px; border-radius: 4px; display: block; margin: 0 auto;">
                                 </div>
 
@@ -1502,10 +1600,10 @@
                     <div id="controlGallery" class="row"></div>
                 </div>
             </div>
-            <!-- END CONTROL TAB -->
+            <!-- END CONTROL PANE -->
 
-            <!-- GALLERY TAB (Session 36: Feature 9) -->
-            <div class="tab-pane fade" id="gallery" role="tabpanel">
+            <!-- IMAGE GALLERY PANE (Session 36: Feature 9) -->
+            <div class="tab-pane fade" id="image-gallery-pane" role="tabpanel">
                 <h3 class="mb-4">📊 Image Gallery</h3>
                 <p class="text-muted">Browse all your generated and edited images</p>
 
@@ -1622,10 +1720,10 @@
                     <p>Start generating images in the Generate tab!</p>
                 </div>
             </div>
-            <!-- END GALLERY TAB -->
+            <!-- END IMAGE GALLERY PANE -->
 
-            <!-- COMPARE TAB -->
-            <div class="tab-pane fade" id="compare" role="tabpanel">
+            <!-- COMPARE PANE -->
+            <div class="tab-pane fade" id="compare-pane" role="tabpanel">
                 <h3 class="mb-4">⚖️ Before/After Comparison</h3>
 
                 <!-- Instructions -->
@@ -1649,12 +1747,21 @@
                                 <h5 class="mb-0 text-cyan-bright">📸 Before (Original)</h5>
                             </div>
                             <div class="card-body">
-                                <button class="btn btn-outline-cyan w-100 mb-3" id="selectBeforeBtn">
-                                    🔍 Select from Gallery
-                                </button>
+                                <div class="d-flex gap-2 mb-3">
+                                    <button class="btn btn-outline-cyan flex-fill" id="selectBeforeBtn">
+                                        🔍 From Gallery
+                                    </button>
+                                    <button class="btn btn-outline-success flex-fill" onclick="document.getElementById('beforeUpload').click()">
+                                        📤 Upload
+                                    </button>
+                                </div>
+                                <input type="file" id="beforeUpload" accept="image/*" style="display: none;" onchange="handleBeforeUpload(event)">
                                 <div id="beforePreview" class="text-center" style="display: none;">
                                     <img id="beforeImage" src="" alt="Before" class="img-fluid" style="max-height: 200px; border: 2px solid var(--cyan); border-radius: 8px;">
                                     <p class="text-muted small mt-2" id="beforeInfo">Ready to compare</p>
+                                    <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearBeforeImage()">
+                                        ✕ Clear
+                                    </button>
                                 </div>
                                 <div id="beforeEmpty" class="text-center text-muted py-3">
                                     <p>No image selected</p>
@@ -1670,12 +1777,21 @@
                                 <h5 class="mb-0 text-cyan-bright">✨ After (Edited)</h5>
                             </div>
                             <div class="card-body">
-                                <button class="btn btn-outline-cyan w-100 mb-3" id="selectAfterBtn">
-                                    🔍 Select from Gallery
-                                </button>
+                                <div class="d-flex gap-2 mb-3">
+                                    <button class="btn btn-outline-cyan flex-fill" id="selectAfterBtn">
+                                        🔍 From Gallery
+                                    </button>
+                                    <button class="btn btn-outline-success flex-fill" onclick="document.getElementById('afterUpload').click()">
+                                        📤 Upload
+                                    </button>
+                                </div>
+                                <input type="file" id="afterUpload" accept="image/*" style="display: none;" onchange="handleAfterUpload(event)">
                                 <div id="afterPreview" class="text-center" style="display: none;">
                                     <img id="afterImage" src="" alt="After" class="img-fluid" style="max-height: 200px; border: 2px solid var(--cyan); border-radius: 8px;">
                                     <p class="text-muted small mt-2" id="afterInfo">Ready to compare</p>
+                                    <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearAfterImage()">
+                                        ✕ Clear
+                                    </button>
                                 </div>
                                 <div id="afterEmpty" class="text-center text-muted py-3">
                                     <p>No image selected</p>
@@ -1752,7 +1868,7 @@
                 <!-- Status Messages -->
                 <div id="compareStatus" class="mt-3"></div>
             </div>
-            <!-- END COMPARE TAB -->
+            <!-- END COMPARE PANE -->
 
             <!-- CUSTOM WORKFLOW GALLERY MODAL (Simple, non-Bootstrap) -->
             <!-- CUSTOM EDIT GALLERY MODAL -->
@@ -1801,21 +1917,110 @@
             </div>
             <!-- END CUSTOM WORKFLOW GALLERY MODAL -->
 
-            <!-- WORKFLOW TAB -->
-            <div class="tab-pane fade" id="workflow" role="tabpanel">
-                <h3 class="mb-4">🎭 Composite Workflow</h3>
+            <!-- WORKFLOW PANE -->
+            <div class="tab-pane fade" id="workflow-pane" role="tabpanel">
+                <h3 class="mb-4">🔄 AI Workflows</h3>
 
-                <!-- Instructions -->
-                <div class="alert alert-info mb-4">
-                    <h5 class="alert-heading">📖 How to Use:</h5>
-                    <ol class="mb-2">
-                        <li>Select or upload an input image</li>
-                        <li>Add operations to your workflow (upscale, recolor, remove background, etc.)</li>
-                        <li>Reorder steps by dragging if needed</li>
-                        <li>Save as template for reuse (optional)</li>
-                        <li>Execute workflow and see results at each step</li>
-                    </ol>
-                    <p class="mb-0"><strong>💡 Pro Tip:</strong> Common workflows: Generate → Upscale → Remove BG, or Upload → Recolor → Inpaint</p>
+                <!-- PRE-BUILT WORKFLOWS SECTION -->
+                <div class="mb-5">
+                    <h4 class="mb-3" style="color: #fbbf24;">⚡ Quick Start Templates</h4>
+                    <p class="text-muted mb-4">Professional workflows ready to use with one click. Perfect for common tasks!</p>
+
+                    <div class="row g-3 mb-4">
+                        <!-- Logo Creator -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('logo-creator')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">🎨 Logo Creator</h5>
+                                    <p class="text-muted small mb-3">Generate → Upscale 4x → Remove BG</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Branding, icons, app logos</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~15 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Social Media Pack -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('social-media-pack')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">📱 Social Media Pack</h5>
+                                    <p class="text-muted small mb-3">Generate → 3 style variations</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Instagram, profiles, content</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~25 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Portrait Enhancer -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('portrait-enhancer')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">🖼️ Portrait Enhancer</h5>
+                                    <p class="text-muted small mb-3">Generate → Upscale 4K</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Headshots, avatars, profiles</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~12 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Mockup -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('product-mockup')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">📦 Product Mockup</h5>
+                                    <p class="text-muted small mb-3">Remove BG → Generate scene → Upscale</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> E-commerce, presentations</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~20 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Style Explorer -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('style-explorer')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">🎭 Style Explorer</h5>
+                                    <p class="text-muted small mb-3">Generate in 5 different styles</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Finding the right look</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~30 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Creative Upscale -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('creative-upscale')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">✨ Creative Upscale</h5>
+                                    <p class="text-muted small mb-3">Upload → Creative upscale → Download</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Enhancing existing images</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~45 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
+
+                <!-- CUSTOM WORKFLOW BUILDER -->
+                <div>
+                    <h4 class="mb-3" style="color: #fbbf24;">🛠️ Custom Workflow Builder</h4>
+                    <p class="text-muted mb-4">Build your own multi-step workflow for advanced automation.</p>
+
+                    <!-- Instructions -->
+                    <div class="alert mb-4" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); color: #fcd34d;">
+                        <h5 class="alert-heading" style="color: #fbbf24;">📖 How to Use:</h5>
+                        <ol class="mb-2">
+                            <li>Select or upload an input image</li>
+                            <li>Add operations to your workflow (upscale, recolor, remove background, etc.)</li>
+                            <li>Reorder steps by dragging if needed</li>
+                            <li>Save as template for reuse (optional)</li>
+                            <li>Execute workflow and see results at each step</li>
+                        </ol>
+                        <p class="mb-0"><strong>💡 Pro Tip:</strong> Common workflows: Generate → Upscale → Remove BG, or Upload → Recolor → Inpaint</p>
+                    </div>
                 </div>
 
                 <div class="row">
@@ -1962,7 +2167,10 @@
                 <!-- Status Messages -->
                 <div id="workflowStatus" class="mt-3"></div>
             </div>
-            <!-- END WORKFLOW TAB -->
+            <!-- END WORKFLOW PANE -->
+                </div>
+            </div>
+            <!-- END IMAGES TAB (Parent) -->
 
             <!-- WORKFLOW MASK EDITOR MODAL (Session 42 - Custom Modal) -->
             <style>
@@ -2234,6 +2442,7 @@
                         <button class="nav-link" id="image-video-pill" data-bs-toggle="pill" data-bs-target="#image-video" type="button" role="tab">
                             🖼️ Image-to-Video
                         </button>
+                    </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="video-to-video-pill" data-bs-toggle="pill" data-bs-target="#video-to-video" type="button" role="tab">
                             🎬 Video-to-Video
@@ -2248,7 +2457,6 @@
                         <button class="nav-link" id="character-performance-pill" data-bs-toggle="pill" data-bs-target="#character-performance" type="button" role="tab">
                             🎭 Character Performance
                         </button>
-                    </li>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="video-gallery-pill" data-bs-toggle="pill" data-bs-target="#video-gallery" type="button" role="tab">
@@ -2331,10 +2539,23 @@
                                                 <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectImageFromGalleryForVideo()">
                                                     📊 From Gallery
                                                 </button>
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="document.getElementById('i2vImageUpload').click()">
+                                                    📤 Upload Image
+                                                </button>
                                             </div>
+                                            <small class="text-muted">Select from gallery or upload a new image</small>
+
+                                            <!-- Hidden file input -->
+                                            <input type="file" id="i2vImageUpload" accept="image/*" style="display: none;" onchange="handleI2VImageUpload(event)">
 
                                             <!-- Image Preview -->
                                             <div id="videoImagePreview" style="display: none;" class="mt-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <small class="text-success" id="i2vImageSource">📤 Uploaded Image</small>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearI2VImage()">
+                                                        ✕ Clear
+                                                    </button>
+                                                </div>
                                                 <img id="videoImagePreviewImg" class="img-fluid rounded border border-cyan" style="max-height: 200px;">
                                             </div>
                                         </div>
@@ -3132,6 +3353,32 @@
                 </div>
             </div>
             <!-- END AUDIO TAB -->
+
+            <!-- ALL GALLERY TAB (Unified) -->
+            <div class="tab-pane fade" id="all-gallery" role="tabpanel">
+                <h3 class="mb-4">📊 All Content Gallery</h3>
+
+                <div class="alert alert-info mb-4">
+                    <strong>🎨 Unified Content Browser</strong><br>
+                    Browse all your creations in one place - images, videos, and audio!<br>
+                    <small class="text-muted">Full implementation coming in Phase 2 & 3</small>
+                </div>
+
+                <div class="text-center py-5">
+                    <h4 class="text-cyan">🚧 Under Construction</h4>
+                    <p class="text-muted">The unified gallery is being built! Check back soon.</p>
+                    <p class="text-muted mt-3">
+                        <strong>Coming Features:</strong><br>
+                        • Search all content by prompt<br>
+                        • Filter by type (Images/Videos/Audio)<br>
+                        • Batch download operations<br>
+                        • Favorites across all media types<br>
+                        • Timeline view of all creations<br>
+                        • Advanced filtering (model, style, date range)
+                    </p>
+                </div>
+            </div>
+            <!-- END ALL GALLERY TAB -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -4102,8 +4349,8 @@
         let galleryLimit = 20;
         let galleryTotal = 0;
 
-        // Load gallery when tab is clicked
-        document.getElementById('gallery-tab').addEventListener('click', function() {
+        // Load gallery when pill is clicked
+        document.getElementById('image-gallery-pill').addEventListener('click', function() {
             loadGallery();
         });
 
@@ -4580,24 +4827,118 @@
             }
         });
 
-        // STRUCTURE IMAGE UPLOAD PREVIEW
+        // STRUCTURE IMAGE UPLOAD PREVIEW (Updated Session 53: Phase 1 Fix)
         let structureImageFile = null;
+        let structureImageUrl = null;
 
         document.getElementById('structureImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 structureImageFile = file;
+                structureImageUrl = null; // Clear any gallery selection
 
                 // Show preview
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     document.getElementById('structurePreviewImg').src = event.target.result;
+                    document.getElementById('structureImageSource').textContent = '📤 Uploaded Image: ' + file.name;
                     document.getElementById('structurePreview').style.display = 'block';
                     document.getElementById('structureGenerateBtn').disabled = false;
                 };
                 reader.readAsDataURL(file);
             }
         });
+
+        // Select Structure Image from Gallery (Session 53: Phase 1 Fix)
+        function selectStructureImageFromGallery() {
+            console.log('🔍 [STRUCTURE] Opening gallery modal');
+
+            const modal = document.getElementById('editGalleryModal');
+            if (!modal) {
+                console.error('❌ [STRUCTURE] Gallery modal not found!');
+                alert('Gallery modal not found');
+                return;
+            }
+
+            // Show the modal
+            modal.style.display = 'block';
+
+            // Load gallery images
+            fetch('/api/images/history/', {
+                headers: {'X-CSRFToken': getCsrfToken()}
+            })
+            .then(response => response.json())
+            .then(data => {
+                const grid = document.getElementById('editGalleryGrid');
+                const emptyState = document.getElementById('editGalleryEmpty');
+
+                if (data.success && data.images && data.images.length > 0) {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'none';
+
+                    data.images.forEach((img) => {
+                        if (!img.url) return;
+
+                        const imageCard = document.createElement('div');
+                        imageCard.style.cssText = 'position: relative; cursor: pointer; border-radius: 8px; overflow: hidden; border: 2px solid #333; transition: all 0.2s;';
+                        imageCard.onmouseover = () => imageCard.style.borderColor = '#00d9ff';
+                        imageCard.onmouseout = () => imageCard.style.borderColor = '#333';
+
+                        imageCard.innerHTML = `
+                            <img src="${img.url}" style="width: 100%; height: 200px; object-fit: cover; display: block;">
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 8px; color: white; font-size: 12px;">
+                                ${img.image_type || 'Image'}
+                            </div>
+                        `;
+
+                        imageCard.onclick = () => {
+                            console.log('👆 [STRUCTURE] Image selected:', img.url);
+
+                            // Update structure state
+                            structureImageUrl = img.url;
+                            structureImageFile = null; // Clear any uploaded file
+
+                            // Show preview
+                            document.getElementById('structurePreviewImg').src = img.url;
+                            document.getElementById('structureImageSource').textContent = '📊 From Gallery';
+                            document.getElementById('structurePreview').style.display = 'block';
+                            document.getElementById('structureGenerateBtn').disabled = false;
+
+                            console.log('✅ [STRUCTURE] Image set for structure control');
+
+                            // Close modal
+                            closeEditGalleryModal();
+                        };
+
+                        grid.appendChild(imageCard);
+                    });
+                } else {
+                    grid.innerHTML = '';
+                    emptyState.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('❌ [STRUCTURE] Error loading gallery:', error);
+                alert('Failed to load gallery: ' + error.message);
+            });
+        }
+
+        // Clear Structure Image Selection (Session 53: Phase 1 Fix)
+        function clearStructureImage() {
+            structureImageFile = null;
+            structureImageUrl = null;
+
+            // Reset file input
+            document.getElementById('structureImage').value = '';
+
+            // Hide preview
+            document.getElementById('structurePreview').style.display = 'none';
+
+            // Disable generate button
+            document.getElementById('structureGenerateBtn').disabled = true;
+
+            console.log('🗑️ [STRUCTURE] Image selection cleared');
+        }
 
         // SKETCH GENERATE HANDLER
         document.getElementById('sketchGenerateBtn').addEventListener('click', async function() {
@@ -4661,8 +5002,8 @@
                 return;
             }
 
-            if (!structureImageFile) {
-                showControlStatus('Please upload a reference image first', 'error', 'structure');
+            if (!structureImageFile && !structureImageUrl) {
+                showControlStatus('Please select or upload a reference image first', 'error', 'structure');
                 return;
             }
 
@@ -4673,7 +5014,17 @@
             try {
                 // Create form data
                 const formData = new FormData();
-                formData.append('image', structureImageFile);
+
+                // Handle both file upload and gallery URL (Session 53: Phase 1 Fix)
+                if (structureImageFile) {
+                    formData.append('image', structureImageFile);
+                } else if (structureImageUrl) {
+                    // For gallery images, fetch and convert to blob
+                    const imageResponse = await fetch(structureImageUrl);
+                    const imageBlob = await imageResponse.blob();
+                    formData.append('image', imageBlob, 'gallery_image.png');
+                }
+
                 formData.append('prompt', prompt);
                 formData.append('control_strength', document.getElementById('structureStrength').value);
                 const negPrompt = document.getElementById('structureNegativePrompt').value.trim();
@@ -4909,6 +5260,104 @@
             modal.style.opacity = '0';
             modal.classList.remove('show');
             console.log('❌ [MODAL] Gallery modal closed');
+        }
+
+        // Handle Before Image Upload (Session 53: Phase 1 Fix)
+        function handleBeforeUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('📤 [BEFORE] Image uploaded:', file.name);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Store image
+                comparisonState.beforeImage = {
+                    url: e.target.result,
+                    type: 'uploaded',
+                    prompt: file.name
+                };
+
+                // Show preview
+                document.getElementById('beforeImage').src = e.target.result;
+                document.getElementById('beforeInfo').textContent = '📤 Uploaded: ' + file.name;
+                document.getElementById('beforePreview').style.display = 'block';
+                document.getElementById('beforeEmpty').style.display = 'none';
+
+                // Check if we can start comparison
+                if (comparisonState.beforeImage && comparisonState.afterImage) {
+                    initializeComparison();
+                }
+
+                console.log('✅ [BEFORE] Image uploaded and ready');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle After Image Upload (Session 53: Phase 1 Fix)
+        function handleAfterUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('📤 [AFTER] Image uploaded:', file.name);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Store image
+                comparisonState.afterImage = {
+                    url: e.target.result,
+                    type: 'uploaded',
+                    prompt: file.name
+                };
+
+                // Show preview
+                document.getElementById('afterImage').src = e.target.result;
+                document.getElementById('afterInfo').textContent = '📤 Uploaded: ' + file.name;
+                document.getElementById('afterPreview').style.display = 'block';
+                document.getElementById('afterEmpty').style.display = 'none';
+
+                // Check if we can start comparison
+                if (comparisonState.beforeImage && comparisonState.afterImage) {
+                    initializeComparison();
+                }
+
+                console.log('✅ [AFTER] Image uploaded and ready');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Clear Before Image (Session 53: Phase 1 Fix)
+        function clearBeforeImage() {
+            comparisonState.beforeImage = null;
+
+            // Reset file input
+            document.getElementById('beforeUpload').value = '';
+
+            // Hide preview
+            document.getElementById('beforePreview').style.display = 'none';
+            document.getElementById('beforeEmpty').style.display = 'block';
+
+            // Hide comparison if active
+            document.getElementById('comparisonContainer').style.display = 'none';
+
+            console.log('🗑️ [BEFORE] Image cleared');
+        }
+
+        // Clear After Image (Session 53: Phase 1 Fix)
+        function clearAfterImage() {
+            comparisonState.afterImage = null;
+
+            // Reset file input
+            document.getElementById('afterUpload').value = '';
+
+            // Hide preview
+            document.getElementById('afterPreview').style.display = 'none';
+            document.getElementById('afterEmpty').style.display = 'block';
+
+            // Hide comparison if active
+            document.getElementById('comparisonContainer').style.display = 'none';
+
+            console.log('🗑️ [AFTER] Image cleared');
         }
 
         // Initialize Comparison View
@@ -6048,6 +6497,291 @@
             document.getElementById('workflowMaskOpacityValue').textContent = value;
         }
 
+        // ========== PRE-BUILT WORKFLOWS ==========
+
+        // Load pre-built workflow templates
+        async function loadPrebuiltWorkflow(workflowType) {
+            console.log(`🔄 Loading pre-built workflow: ${workflowType}`);
+
+            // Clear existing workflow
+            clearWorkflow();
+
+            // Show a modal for prompt input (where needed)
+            const workflows = {
+                'logo-creator': {
+                    name: '🎨 Logo Creator',
+                    steps: [
+                        { operation: 'generate', prompt: '' },
+                        { operation: 'upscale_fast', prompt: 'N/A' },
+                        { operation: 'remove_background', prompt: 'N/A' }
+                    ],
+                    needsPrompt: true,
+                    promptPlaceholder: 'Describe your logo (e.g., "Modern tech company logo with circuit board pattern")',
+                    estimatedTime: '15'
+                },
+                'social-media-pack': {
+                    name: '📱 Social Media Pack',
+                    steps: [
+                        { operation: 'generate', prompt: '', style: 'digital-art' },
+                        { operation: 'generate', prompt: '', style: 'anime' },
+                        { operation: 'generate', prompt: '', style: 'photographic' }
+                    ],
+                    needsPrompt: true,
+                    promptPlaceholder: 'Describe the image (e.g., "Portrait of a confident entrepreneur")',
+                    estimatedTime: '25'
+                },
+                'portrait-enhancer': {
+                    name: '🖼️ Portrait Enhancer',
+                    steps: [
+                        { operation: 'generate', prompt: '' },
+                        { operation: 'upscale_conservative', prompt: 'N/A' }
+                    ],
+                    needsPrompt: true,
+                    promptPlaceholder: 'Describe the portrait (e.g., "Professional headshot of businesswoman")',
+                    estimatedTime: '12'
+                },
+                'product-mockup': {
+                    name: '📦 Product Mockup',
+                    steps: [
+                        { operation: 'remove_background', prompt: 'N/A' },
+                        { operation: 'generate', prompt: 'Modern minimalist studio with soft lighting and clean background' },
+                        { operation: 'upscale_fast', prompt: 'N/A' }
+                    ],
+                    needsPrompt: false,
+                    needsUpload: true,
+                    estimatedTime: '20'
+                },
+                'style-explorer': {
+                    name: '🎭 Style Explorer',
+                    steps: [
+                        { operation: 'generate', prompt: '', style: 'photographic' },
+                        { operation: 'generate', prompt: '', style: 'anime' },
+                        { operation: 'generate', prompt: '', style: '3d-model' },
+                        { operation: 'generate', prompt: '', style: 'digital-art' },
+                        { operation: 'generate', prompt: '', style: 'cinematic' }
+                    ],
+                    needsPrompt: true,
+                    promptPlaceholder: 'Describe what you want to explore (e.g., "A dragon on mountain peak")',
+                    estimatedTime: '30'
+                },
+                'creative-upscale': {
+                    name: '✨ Creative Upscale',
+                    steps: [
+                        { operation: 'upscale_creative', prompt: '' }
+                    ],
+                    needsPrompt: false,
+                    needsUpload: true,
+                    promptPlaceholder: 'Describe enhancements (optional)',
+                    estimatedTime: '45'
+                }
+            };
+
+            const workflow = workflows[workflowType];
+            if (!workflow) {
+                console.error('❌ Unknown workflow type:', workflowType);
+                return;
+            }
+
+            // Show prompt modal
+            showWorkflowPromptModal(workflow, workflowType);
+        }
+
+        // Show modal to get user input for workflow
+        function showWorkflowPromptModal(workflow, workflowType) {
+            // Create modal HTML
+            const modalHTML = `
+                <div id="workflowPromptModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                     background: rgba(0, 0, 0, 0.8); z-index: 2000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px);
+                         border: 3px solid rgba(251, 191, 36, 0.5); border-radius: 20px; padding: 2rem;
+                         max-width: 600px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);">
+                        <h3 style="color: #fbbf24; margin-bottom: 1rem;">${workflow.name}</h3>
+                        <p style="color: #fcd34d; margin-bottom: 1.5rem;">This workflow will complete in ~${workflow.estimatedTime} seconds</p>
+
+                        ${workflow.needsUpload ? `
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem;">📤 Choose Image:</label>
+
+                                <!-- File Upload -->
+                                <input type="file" id="workflowModalUpload" accept="image/*"
+                                       style="width: 100%; padding: 0.5rem; background: rgba(255, 255, 255, 0.1);
+                                       border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                       margin-bottom: 0.75rem;">
+
+                                <!-- OR separator -->
+                                <div style="text-align: center; color: #fcd34d; margin: 0.75rem 0; font-weight: 600;">- OR -</div>
+
+                                <!-- Gallery Selection Button -->
+                                <button type="button" onclick="openGalleryForWorkflow()"
+                                        style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+                                        border: 2px solid rgba(251, 191, 36, 0.5); border-radius: 10px; color: #fbbf24;
+                                        font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                                    📊 Select from Gallery
+                                </button>
+
+                                <!-- Gallery Preview -->
+                                <div id="workflowGalleryPreview" style="display: none; margin-top: 1rem; text-align: center;">
+                                    <img id="workflowGalleryPreviewImg" style="max-width: 100%; max-height: 200px; border-radius: 10px;
+                                         border: 2px solid #fbbf24; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);">
+                                    <button type="button" onclick="clearWorkflowGallerySelection()"
+                                            style="display: block; width: 100%; margin-top: 0.5rem; padding: 0.5rem;
+                                            background: rgba(239, 68, 68, 0.2); border: 2px solid rgba(239, 68, 68, 0.5);
+                                            border-radius: 8px; color: #ef4444; font-weight: 600; cursor: pointer;">
+                                        🗑️ Clear Selection
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${workflow.needsPrompt ? `
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem;">✍️ Prompt:</label>
+                                <textarea id="workflowModalPrompt" rows="4"
+                                          placeholder="${workflow.promptPlaceholder}"
+                                          style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                          border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                          font-family: inherit; resize: vertical;"></textarea>
+                            </div>
+                        ` : ''}
+
+                        <div style="display: flex; gap: 1rem;">
+                            <button onclick="executePrebuiltWorkflow('${workflowType}')"
+                                    style="flex: 1; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #fbbf24, #f59e0b);
+                                    border: 2px solid #fcd34d; border-radius: 10px; color: #000; font-weight: 800;
+                                    cursor: pointer; transition: all 0.3s;">
+                                ▶️ Start Workflow
+                            </button>
+                            <button onclick="closeWorkflowPromptModal()"
+                                    style="padding: 0.75rem 1.5rem; background: rgba(239, 68, 68, 0.2);
+                                    border: 2px solid rgba(239, 68, 68, 0.5); border-radius: 10px; color: #ef4444;
+                                    font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add to body
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Close prompt modal
+        function closeWorkflowPromptModal() {
+            const modal = document.getElementById('workflowPromptModal');
+            if (modal) modal.remove();
+        }
+
+        // Execute pre-built workflow with user input
+        async function executePrebuiltWorkflow(workflowType) {
+            const modal = document.getElementById('workflowPromptModal');
+            const promptInput = document.getElementById('workflowModalPrompt');
+            const uploadInput = document.getElementById('workflowModalUpload');
+
+            // Get user input
+            const userPrompt = promptInput ? promptInput.value.trim() : '';
+            const uploadedFile = uploadInput ? uploadInput.files[0] : null;
+
+            // Validation
+            if (promptInput && !userPrompt) {
+                alert('Please enter a prompt!');
+                return;
+            }
+
+            if (uploadInput && !uploadedFile) {
+                alert('Please upload an image!');
+                return;
+            }
+
+            // Close modal
+            closeWorkflowPromptModal();
+
+            // Switch to workflow tab
+            const workflowTab = document.querySelector('[data-bs-target="#workflow"]');
+            if (workflowTab) {
+                workflowTab.click();
+                // Scroll to workflow content
+                setTimeout(() => {
+                    document.getElementById('workflow').scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+
+            // Build workflow based on type
+            const workflowTemplates = {
+                'logo-creator': [
+                    { operation: 'generate', config: { prompt: userPrompt } },
+                    { operation: 'upscale_fast', config: {} },
+                    { operation: 'remove_background', config: {} }
+                ],
+                'social-media-pack': [
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'digital-art' } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'anime' } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'photographic' } }
+                ],
+                'portrait-enhancer': [
+                    { operation: 'generate', config: { prompt: userPrompt } },
+                    { operation: 'upscale_conservative', config: { prompt: userPrompt } }
+                ],
+                'product-mockup': [
+                    { operation: 'remove_background', config: {} },
+                    { operation: 'upscale_fast', config: {} }
+                ],
+                'style-explorer': [
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'photographic' } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'anime' } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: '3d-model' } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'digital-art' } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'cinematic' } }
+                ],
+                'creative-upscale': [
+                    { operation: 'upscale_creative', config: { prompt: userPrompt || 'enhance quality and details' } }
+                ]
+            };
+
+            const stepTemplates = workflowTemplates[workflowType];
+            if (!stepTemplates) {
+                console.error('❌ Unknown workflow:', workflowType);
+                return;
+            }
+
+            // Convert templates to proper step objects with id, name, icon
+            const steps = stepTemplates.map((template, index) => {
+                const metadata = operationMetadata[template.operation];
+                return {
+                    id: `step_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`,
+                    operation: template.operation,
+                    name: metadata.name,
+                    icon: metadata.icon,
+                    config: template.config
+                };
+            });
+
+            // If upload needed, handle image first
+            if (uploadedFile) {
+                console.log('📤 Uploading image for workflow...');
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    workflowState.inputImage = e.target.result;
+                    document.getElementById('workflowInputImage').src = e.target.result;
+                    document.getElementById('workflowInputPreview').style.display = 'block';
+                    document.getElementById('workflowInputEmpty').style.display = 'none';
+
+                    // Add steps to workflow
+                    workflowState.steps = steps;
+                    renderWorkflowSteps();
+
+                    // Execute
+                    await executeWorkflow();
+                };
+                reader.readAsDataURL(uploadedFile);
+            } else {
+                // No upload needed, just add steps and execute
+                workflowState.steps = steps;
+                renderWorkflowSteps();
+                await executeWorkflow();
+            }
+        }
+
         // ========== WORKFLOW EXECUTION ==========
 
         // Execute workflow
@@ -6081,7 +6815,10 @@
             // Disable execute button
             document.getElementById('executeWorkflowBtn').disabled = true;
 
-            let currentImage = workflowState.inputImage ? workflowState.inputImage.url : null;
+            // Get initial input image (can be string data URI or object with url)
+            let currentImage = workflowState.inputImage
+                ? (typeof workflowState.inputImage === 'string' ? workflowState.inputImage : workflowState.inputImage.url)
+                : null;
 
             // Execute each step sequentially
             for (let i = 0; i < workflowState.steps.length; i++) {
@@ -6145,7 +6882,7 @@
                     },
                     body: JSON.stringify({
                         operation: step.operation,
-                        inputImageUrl: inputImageUrl,
+                        inputImageUrl: inputImageUrl || '',  // ← Fix: ensure string not null
                         config: step.config || {}
                     })
                 });
@@ -6526,9 +7263,11 @@
 
                             // Update videoState
                             videoState.selectedImage = img.url;
+                            videoState.uploadedFile = null; // Clear any uploaded file
 
                             // Show preview
                             document.getElementById('videoImagePreviewImg').src = img.url;
+                            document.getElementById('i2vImageSource').textContent = '📊 From Gallery';
                             document.getElementById('videoImagePreview').style.display = 'block';
                             document.getElementById('imageToVideoBtn').disabled = false;
 
@@ -6563,6 +7302,54 @@
                 modal.style.display = 'none';
                 console.log('✅ [VIDEO] Modal closed');
             }
+        }
+
+        // Handle Image Upload for Image-to-Video (Session 53: Phase 1 Fix)
+        function handleI2VImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('📤 [I2V] Image uploaded:', file.name);
+
+            // Read file and create preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Store image data URL in videoState
+                videoState.selectedImage = e.target.result;
+                videoState.uploadedFile = file;
+
+                // Show preview
+                const preview = document.getElementById('videoImagePreview');
+                const previewImg = document.getElementById('videoImagePreviewImg');
+                const sourceLabel = document.getElementById('i2vImageSource');
+
+                previewImg.src = e.target.result;
+                sourceLabel.textContent = '📤 Uploaded Image: ' + file.name;
+                preview.style.display = 'block';
+
+                // Enable generate button
+                document.getElementById('imageToVideoBtn').disabled = false;
+
+                console.log('✅ [I2V] Image preview loaded, generate button enabled');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Clear Image Selection for Image-to-Video
+        function clearI2VImage() {
+            videoState.selectedImage = null;
+            videoState.uploadedFile = null;
+
+            // Reset file input
+            document.getElementById('i2vImageUpload').value = '';
+
+            // Hide preview
+            document.getElementById('videoImagePreview').style.display = 'none';
+
+            // Disable generate button
+            document.getElementById('imageToVideoBtn').disabled = true;
+
+            console.log('🗑️ [I2V] Image selection cleared');
         }
 
         // Download video
@@ -8420,8 +9207,11 @@
                         useBtn.addEventListener('click', (e) => {
                             const prompt = e.target.dataset.prompt;
 
-                            // Switch to generate tab
-                            document.getElementById('generate-tab').click();
+                            // Switch to Images tab, then generate pill
+                            document.getElementById('images-tab').click();
+                            setTimeout(() => {
+                                document.getElementById('generate-pill').click();
+                            }, 50);
 
                             // Fill in the prompt
                             setTimeout(() => {
@@ -8601,8 +9391,11 @@
             async executeAction(action, params) {
                 switch (action) {
                     case 'generate_image':
-                        // Switch to generate tab
-                        document.getElementById('generate-tab').click();
+                        // Switch to Images tab, then generate pill
+                        document.getElementById('images-tab').click();
+                        setTimeout(() => {
+                            document.getElementById('generate-pill').click();
+                        }, 50);
                         // Fill in the prompt
                         setTimeout(() => {
                             const promptField = document.getElementById('prompt');
