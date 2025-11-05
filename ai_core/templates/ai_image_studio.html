@@ -719,11 +719,23 @@
             transform: scale(1.02);
         }
 
+        .unified-checkbox-label {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 6px;
+            display: inline-block;
+            transition: background 0.2s ease;
+        }
+
+        .unified-checkbox-label:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
         .unified-item-checkbox {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             cursor: pointer;
-            z-index: 10;
+            margin: 0;
         }
 
         .unified-favorite-btn {
@@ -738,6 +750,11 @@
         .unified-gallery-card .card-img-top {
             height: 200px;
             object-fit: cover;
+        }
+
+        /* Prevent video controls from interfering with checkbox */
+        .unified-gallery-card video {
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -3482,6 +3499,48 @@
                         Next →
                     </button>
                 </div>
+
+                <!-- UNIFIED CONTENT VIEWER MODAL -->
+                <div id="unifiedContentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999999; overflow-y: auto; padding: 20px;">
+                    <div style="max-width: 1200px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px; border: 2px solid #00d9ff;">
+                        <!-- Header -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #00d9ff; padding-bottom: 15px;">
+                            <h3 style="color: #00d9ff; margin: 0; font-size: 24px;"><span id="unifiedModalIcon">🖼️</span> <span id="unifiedModalTitle">Content Viewer</span></h3>
+                            <button onclick="closeUnifiedModal()" style="background: transparent; border: 2px solid #00d9ff; color: #00d9ff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">✕ Close</button>
+                        </div>
+
+                        <!-- Content Display Area -->
+                        <div id="unifiedModalContent" style="background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                            <!-- Image or Video will be inserted here -->
+                        </div>
+
+                        <!-- Content Info -->
+                        <div id="unifiedModalInfo" style="color: #ccc;">
+                            <div style="margin-bottom: 15px;">
+                                <strong style="color: #00d9ff;">Prompt:</strong>
+                                <p id="unifiedModalPrompt" style="margin: 5px 0; font-size: 14px;"></p>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">
+                                <div><strong style="color: #00d9ff;">Type:</strong> <span id="unifiedModalType"></span></div>
+                                <div><strong style="color: #00d9ff;">Model:</strong> <span id="unifiedModalModel"></span></div>
+                                <div><strong style="color: #00d9ff;">Created:</strong> <span id="unifiedModalDate"></span></div>
+                                <div id="unifiedModalSizeContainer" style="display: none;"><strong style="color: #00d9ff;">Size:</strong> <span id="unifiedModalSize"></span></div>
+                                <div id="unifiedModalDurationContainer" style="display: none;"><strong style="color: #00d9ff;">Duration:</strong> <span id="unifiedModalDuration"></span>s</div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="display: flex; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
+                            <button type="button" id="unifiedModalDownloadBtn" onclick="downloadUnifiedModalItem(); return false;" class="btn btn-cyan flex-fill">
+                                📥 Download
+                            </button>
+                            <button type="button" id="unifiedModalFavoriteBtn" onclick="toggleUnifiedModalFavorite(); return false;" class="btn btn-outline-cyan flex-fill">
+                                ⭐ Favorite
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- END UNIFIED CONTENT VIEWER MODAL -->
             </div>
             <!-- END ALL GALLERY TAB -->
 
@@ -9543,7 +9602,7 @@
             total: 0,
             nextUrl: null,
             previousUrl: null,
-            selectedItems: new Set()
+            selectedItems: new Map()  // Map of itemId -> {id, type} for cross-page selection
         };
 
         // Load Unified Gallery
@@ -9658,17 +9717,18 @@
 
             return `
                 <div class="card h-100 unified-gallery-card ${selectedClass}" data-item-id="${item.id}">
-                    <!-- Selection Checkbox -->
-                    <div class="position-absolute top-0 start-0 m-2">
+                    <!-- Selection Checkbox with Larger Clickable Area -->
+                    <label class="position-absolute top-0 start-0 m-2 unified-checkbox-label" style="z-index: 100; cursor: pointer;">
                         <input type="checkbox" class="form-check-input unified-item-checkbox"
                                data-item-id="${item.id}"
                                data-item-type="${item.type}"
                                data-item-url="${item.url}"
-                               ${isSelected ? 'checked' : ''}>
-                    </div>
+                               ${isSelected ? 'checked' : ''}
+                               style="width: 24px; height: 24px; cursor: pointer;">
+                    </label>
 
                     <!-- Media Type Badge -->
-                    <div class="position-absolute top-0 end-0 m-2">
+                    <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
                         <span class="badge bg-dark">${typeEmoji} ${item.type}</span>
                     </div>
 
@@ -9691,6 +9751,11 @@
                                 <a href="${item.url}" download class="btn btn-sm btn-outline-primary">
                                     📥
                                 </a>
+                                <button class="btn btn-sm btn-outline-danger unified-delete-btn"
+                                        data-item-id="${item.id}"
+                                        data-item-type="${item.type}">
+                                    🗑️
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -9741,21 +9806,39 @@
             `;
         }
 
-        // Handle Selection Changes
+        // Handle Selection Changes (preserves selections across pages)
         function updateUnifiedSelection() {
-            const checkboxes = document.querySelectorAll('.unified-item-checkbox:checked');
-            unifiedGalleryState.selectedItems.clear();
+            // DON'T clear the Map - we want to preserve selections across pages
+            // Instead, sync the Map with the current page's checkboxes
+            const currentPageCheckboxes = document.querySelectorAll('.unified-item-checkbox');
 
-            checkboxes.forEach(cb => {
-                unifiedGalleryState.selectedItems.add(cb.dataset.itemId);
+            currentPageCheckboxes.forEach(cb => {
+                const itemId = cb.dataset.itemId;
+                const itemType = cb.dataset.itemType;
+                if (cb.checked) {
+                    unifiedGalleryState.selectedItems.set(itemId, {id: itemId, type: itemType});
+                } else {
+                    unifiedGalleryState.selectedItems.delete(itemId);
+                }
             });
 
             const count = unifiedGalleryState.selectedItems.size;
-            document.getElementById('unifiedSelectedCount').textContent = count;
-            document.getElementById('unifiedDownloadSelectedBtn').disabled = count === 0;
-            document.getElementById('unifiedSelectionHint').style.display = count > 0 ? 'inline' : 'none';
 
-            // Update card highlighting
+            // Update count span (might not exist if button is showing "Downloaded!" message)
+            const countSpan = document.getElementById('unifiedSelectedCount');
+            if (countSpan) {
+                countSpan.textContent = count;
+            }
+
+            const downloadBtn = document.getElementById('unifiedDownloadSelectedBtn');
+            downloadBtn.disabled = count === 0;
+
+            const hint = document.getElementById('unifiedSelectionHint');
+            if (hint) {
+                hint.style.display = count > 0 ? 'inline' : 'none';
+            }
+
+            // Update card highlighting for currently visible cards
             document.querySelectorAll('.unified-gallery-card').forEach(card => {
                 const itemId = card.dataset.itemId;
                 if (unifiedGalleryState.selectedItems.has(itemId)) {
@@ -9841,10 +9924,72 @@
                 }
             });
 
-            // Download Selected (placeholder - to be implemented)
+            // Download Selected
             document.getElementById('unifiedDownloadSelectedBtn').addEventListener('click', async () => {
-                alert('Batch download will be implemented in next step!');
-                // TODO: Implement batch download across media types
+                if (unifiedGalleryState.selectedItems.size === 0) {
+                    alert('Please select items to download');
+                    return;
+                }
+
+                // Build items array from Map (works across all pages!)
+                const items = Array.from(unifiedGalleryState.selectedItems.values());
+
+                // Store button reference and original text BEFORE try block
+                const btn = document.getElementById('unifiedDownloadSelectedBtn');
+                const originalText = btn.innerHTML;
+
+                try {
+                    // Show loading state
+                    btn.disabled = true;
+                    btn.innerHTML = '⏳ Creating ZIP...';
+
+                    // Call batch download API
+                    const response = await fetch('/api/v1/gallery/batch-download/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({ items })
+                    });
+
+                    if (response.ok) {
+                        // Download the ZIP file
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `donkey_betz_content_${new Date().getTime()}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        // Show success
+                        btn.innerHTML = '✅ Downloaded!';
+                        setTimeout(() => {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }, 2000);
+
+                        // Clear ALL selections (across all pages) since we just downloaded everything
+                        unifiedGalleryState.selectedItems.clear();
+                        document.querySelectorAll('.unified-item-checkbox').forEach(cb => cb.checked = false);
+                        updateUnifiedSelection();
+
+                    } else {
+                        const data = await response.json();
+                        alert('Download failed: ' + (data.error || 'Unknown error'));
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+
+                } catch (error) {
+                    console.error('❌ Batch download error:', error);
+                    alert('Download failed: ' + error.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
             });
 
             // Favorite buttons (using event delegation)
@@ -9852,11 +9997,330 @@
                 if (e.target.classList.contains('unified-favorite-btn')) {
                     const itemId = e.target.dataset.itemId;
                     const itemType = e.target.dataset.itemType;
-                    // TODO: Implement unified favorite toggle
-                    console.log('Toggle favorite:', itemId, itemType);
+                    const button = e.target;
+
+                    try {
+                        // Optimistic UI update
+                        const currentIcon = button.textContent.trim();
+                        const newIcon = currentIcon === '⭐' ? '☆' : '⭐';
+                        button.textContent = newIcon;
+
+                        // Call API
+                        const response = await fetch('/api/v1/gallery/toggle-favorite/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                id: itemId,
+                                type: itemType
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Update button to reflect actual state
+                            button.textContent = data.is_favorite ? '⭐' : '☆';
+                            console.log(`✅ Favorite toggled: ${itemType} ${itemId} -> ${data.is_favorite}`);
+
+                            // If favorites filter is active, reload gallery
+                            if (document.getElementById('unifiedFilterFavorites').checked) {
+                                loadUnifiedGallery();
+                            }
+                        } else {
+                            // Revert on error
+                            button.textContent = currentIcon;
+                            console.error('❌ Favorite toggle failed:', data.error);
+                        }
+
+                    } catch (error) {
+                        // Revert on error
+                        const currentIcon = button.textContent.trim();
+                        button.textContent = currentIcon === '⭐' ? '☆' : '⭐';
+                        console.error('❌ Favorite toggle error:', error);
+                    }
+                }
+
+                // DELETE BUTTON HANDLER
+                if (e.target.classList.contains('unified-delete-btn')) {
+                    const itemId = e.target.dataset.itemId;
+                    const itemType = e.target.dataset.itemType;
+
+                    if (!confirm(`Are you sure you want to delete this ${itemType}?`)) {
+                        return;
+                    }
+
+                    try {
+                        const endpoint = itemType === 'image'
+                            ? `/api/images/${itemId}/delete/`
+                            : `/api/v1/video/history/${itemId}/`;
+
+                        const response = await fetch(endpoint, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRFToken': getCsrfToken()
+                            }
+                        });
+
+                        if (response.ok) {
+                            console.log(`✅ ${itemType} deleted: ${itemId}`);
+                            // Reload gallery to remove the deleted item
+                            loadUnifiedGallery();
+                        } else {
+                            const data = await response.json();
+                            alert(`Delete failed: ${data.error || 'Unknown error'}`);
+                        }
+                    } catch (error) {
+                        console.error('❌ Delete error:', error);
+                        alert('Delete failed: ' + error.message);
+                    }
+                }
+            });
+
+            // MODAL VIEWER: Click on image/video to open fullsize (not on buttons/checkboxes)
+            document.getElementById('unifiedGalleryGrid').addEventListener('click', async (e) => {
+                // Don't open modal if clicking on buttons, checkboxes, or their labels
+                if (e.target.classList.contains('unified-favorite-btn') ||
+                    e.target.classList.contains('unified-item-checkbox') ||
+                    e.target.classList.contains('btn') ||
+                    e.target.closest('.unified-checkbox-label') ||
+                    e.target.closest('.btn') ||
+                    e.target.tagName === 'A') {
+                    return;
+                }
+
+                // Find the card that was clicked
+                const card = e.target.closest('.unified-gallery-card');
+                if (!card) return;
+
+                const itemId = card.dataset.itemId;
+
+                // Find the item data from the current page
+                try {
+                    const mediaType = document.getElementById('unifiedFilterType').value;
+                    const sortBy = document.getElementById('unifiedSortBy').value;
+                    const searchTerm = document.getElementById('unifiedSearchInput').value.trim();
+                    const favoritesOnly = document.getElementById('unifiedFilterFavorites').checked;
+
+                    const params = new URLSearchParams({
+                        type: mediaType,
+                        sort_by: sortBy,
+                        limit: unifiedGalleryState.limit,
+                        offset: unifiedGalleryState.offset
+                    });
+
+                    if (searchTerm) params.append('search', searchTerm);
+                    if (favoritesOnly) params.append('favorite', 'true');
+
+                    const response = await fetch(`/api/v1/gallery/all/?${params}`, {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    });
+
+                    const data = await response.json();
+                    const item = data.results.find(i => i.id === itemId);
+
+                    if (item) {
+                        openUnifiedModal(item);
+                        // Track view
+                        trackItemView(itemId, item.type);
+                    }
+                } catch (error) {
+                    console.error('❌ Error opening modal:', error);
                 }
             });
         });
+
+        // Store current modal item for download/favorite actions
+        let currentUnifiedModalItem = null;
+
+        // Open Unified Content Modal
+        function openUnifiedModal(item) {
+            currentUnifiedModalItem = item;
+
+            const modal = document.getElementById('unifiedContentModal');
+            const contentArea = document.getElementById('unifiedModalContent');
+
+            // Set icon and title
+            const icons = { 'image': '🖼️', 'video': '🎬', 'audio': '🎵' };
+            document.getElementById('unifiedModalIcon').textContent = icons[item.type] || '📄';
+            document.getElementById('unifiedModalTitle').textContent = item.type.charAt(0).toUpperCase() + item.type.slice(1) + ' Viewer';
+
+            // Render media content
+            if (item.type === 'image') {
+                contentArea.innerHTML = `<img src="${item.url}" style="width: 100%; height: auto; display: block;">`;
+            } else if (item.type === 'video') {
+                contentArea.innerHTML = `
+                    <video controls autoplay style="width: 100%; max-height: 70vh; display: block;">
+                        <source src="${item.url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                `;
+            } else if (item.type === 'audio') {
+                contentArea.innerHTML = `
+                    <div style="padding: 40px; text-align: center;">
+                        <h1>🎵</h1>
+                        <audio controls autoplay style="width: 100%;">
+                            <source src="${item.url}">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </div>
+                `;
+            }
+
+            // Set info
+            document.getElementById('unifiedModalPrompt').textContent = item.prompt || 'No prompt';
+            document.getElementById('unifiedModalType').textContent = item.type;
+            document.getElementById('unifiedModalModel').textContent = item.model_used || 'Unknown';
+            document.getElementById('unifiedModalDate').textContent = new Date(item.created_at).toLocaleString();
+
+            // Show/hide type-specific fields
+            if (item.type === 'image' && item.width && item.height) {
+                document.getElementById('unifiedModalSizeContainer').style.display = 'block';
+                document.getElementById('unifiedModalSize').textContent = `${item.width}x${item.height}`;
+                document.getElementById('unifiedModalDurationContainer').style.display = 'none';
+            } else if (item.type === 'video' && item.duration) {
+                document.getElementById('unifiedModalDurationContainer').style.display = 'block';
+                document.getElementById('unifiedModalDuration').textContent = item.duration;
+                document.getElementById('unifiedModalSizeContainer').style.display = 'none';
+            } else {
+                document.getElementById('unifiedModalSizeContainer').style.display = 'none';
+                document.getElementById('unifiedModalDurationContainer').style.display = 'none';
+            }
+
+            // Update favorite button
+            const favoriteBtn = document.getElementById('unifiedModalFavoriteBtn');
+            favoriteBtn.textContent = item.is_favorite ? '⭐ Unfavorite' : '☆ Favorite';
+
+            // Show modal
+            modal.style.display = 'block';
+        }
+
+        // Close Unified Modal
+        function closeUnifiedModal() {
+            const modal = document.getElementById('unifiedContentModal');
+            const contentArea = document.getElementById('unifiedModalContent');
+
+            // Stop any playing media
+            const video = contentArea.querySelector('video');
+            const audio = contentArea.querySelector('audio');
+            if (video) video.pause();
+            if (audio) audio.pause();
+
+            modal.style.display = 'none';
+            currentUnifiedModalItem = null;
+        }
+
+        // Download from Modal
+        async function downloadUnifiedModalItem() {
+            if (!currentUnifiedModalItem) return;
+
+            const item = currentUnifiedModalItem;
+
+            try {
+                // Track download
+                await trackItemDownload(item.id, item.type);
+
+                // Trigger download
+                const a = document.createElement('a');
+                a.href = item.url;
+                a.download = `donkey_betz_${item.type}_${item.id}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                console.log(`✅ Downloaded ${item.type}: ${item.id}`);
+            } catch (error) {
+                console.error('❌ Download error:', error);
+                alert('Download failed: ' + error.message);
+            }
+        }
+
+        // Toggle Favorite from Modal
+        async function toggleUnifiedModalFavorite() {
+            if (!currentUnifiedModalItem) return;
+
+            const item = currentUnifiedModalItem;
+            const btn = document.getElementById('unifiedModalFavoriteBtn');
+            const originalText = btn.textContent;
+
+            try {
+                btn.disabled = true;
+                btn.textContent = '⏳ Updating...';
+
+                const response = await fetch('/api/v1/gallery/toggle-favorite/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        id: item.id,
+                        type: item.type
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    item.is_favorite = data.is_favorite;
+                    btn.textContent = data.is_favorite ? '⭐ Unfavorite' : '☆ Favorite';
+                    console.log(`✅ Favorite toggled: ${item.type} ${item.id} -> ${data.is_favorite}`);
+
+                    // Reload gallery to update the card
+                    loadUnifiedGallery();
+                } else {
+                    btn.textContent = originalText;
+                    alert('Failed to update favorite');
+                }
+
+                btn.disabled = false;
+            } catch (error) {
+                console.error('❌ Favorite toggle error:', error);
+                btn.textContent = originalText;
+                btn.disabled = false;
+                alert('Failed to update favorite: ' + error.message);
+            }
+        }
+
+        // Track Item View
+        async function trackItemView(itemId, itemType) {
+            try {
+                const endpoint = itemType === 'image'
+                    ? `/api/images/view/${itemId}/`
+                    : `/api/v1/video/history/${itemId}/view/`;
+
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                console.log(`✅ View tracked: ${itemType} ${itemId}`);
+            } catch (error) {
+                console.error('❌ View tracking error:', error);
+            }
+        }
+
+        // Track Item Download
+        async function trackItemDownload(itemId, itemType) {
+            try {
+                const endpoint = itemType === 'image'
+                    ? `/api/images/download/${itemId}/`
+                    : `/api/v1/video/history/${itemId}/download/`;
+
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                console.log(`✅ Download tracked: ${itemType} ${itemId}`);
+            } catch (error) {
+                console.error('❌ Download tracking error:', error);
+            }
+        }
 
         // ====================================================================
         // END UNIFIED GALLERY
