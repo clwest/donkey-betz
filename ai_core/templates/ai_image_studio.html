@@ -8623,6 +8623,13 @@
                 try {
                     console.log(`Executing step ${i + 1}: ${step.name}`);
 
+                    // Session 61: Inject improved_prompt into generate step if available
+                    if (step.operation === 'generate' && improvedPromptCache) {
+                        if (!step.config) step.config = {};
+                        step.config.improved_prompt = improvedPromptCache;
+                        console.log('✨ Using improved prompt for generation:', improvedPromptCache.substring(0, 100) + '...');
+                    }
+
                     // Execute the operation
                     const result = await executeWorkflowStep(step, currentImage);
 
