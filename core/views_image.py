@@ -2565,7 +2565,9 @@ def execute_workflow_step(request):
             try:
                 from content.image_generation import ImageGenerationService
 
-                prompt = config.get('prompt', '')
+                # Use improved_prompt if available, fallback to basic prompt
+                # Session 61: This ensures GPT-5 enhanced prompts are actually used!
+                prompt = config.get('improved_prompt') or config.get('prompt', '')
                 if not prompt:
                     return JsonResponse({
                         'success': False,
@@ -2576,6 +2578,13 @@ def execute_workflow_step(request):
                 style = config.get('style', '')
                 quality = config.get('quality', 'balanced')  # fast, balanced, high, premium
                 negative_prompt = config.get('negative_prompt', '')
+
+                # Session 61: Add strong negative prompts for logo generation to prevent text/brands
+                # If style indicates this is a logo, add logo-specific negative prompts
+                if style in ['vector', 'flat'] or 'logo' in prompt.lower():
+                    logo_negative = 'text, letters, words, typography, starbucks, nike, apple, brand names, existing logos, trademarks, copyrighted logos, photographic, realistic, people, crowds'
+                    negative_prompt = f'{logo_negative}, {negative_prompt}' if negative_prompt else logo_negative
+                    logger.info(f"🚫 Added logo-specific negative prompts to prevent text/brands")
 
                 # Map quality to model
                 quality_map = {
