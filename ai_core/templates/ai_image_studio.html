@@ -1134,6 +1134,13 @@
                     🎨 Portfolio
                 </button>
             </li>
+
+            <!-- Workflows (Session 62: Phase C.4 - Promoted to top level!) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="workflows-tab" data-bs-toggle="tab" data-bs-target="#workflows" type="button" role="tab" title="Execute AI workflows for content creation">
+                    🔄 Workflows
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -1191,11 +1198,7 @@
                             🎭 Control
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="workflow-pill" data-bs-toggle="pill" data-bs-target="#workflow-pane" type="button" role="tab">
-                            🔄 Workflow
-                        </button>
-                    </li>
+                    <!-- Session 62: Phase C.4 - Workflow pill removed, promoted to top-level tab! -->
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="image-gallery-pill" data-bs-toggle="pill" data-bs-target="#image-gallery-pane" type="button" role="tab">
                             📁 Gallery
@@ -2277,314 +2280,8 @@
             </div>
             <!-- END CUSTOM WORKFLOW GALLERY MODAL -->
 
-            <!-- WORKFLOW PANE -->
-            <div class="tab-pane fade" id="workflow-pane" role="tabpanel">
-                <h3 class="mb-4">🔄 AI Workflows</h3>
-
-                <!-- PRE-BUILT WORKFLOWS SECTION -->
-                <div class="mb-5">
-                    <h4 class="mb-3" style="color: #fbbf24;">⚡ Quick Start Templates</h4>
-                    <p class="text-muted mb-4">Professional workflows ready to use with one click. Perfect for common tasks!</p>
-
-                    <div class="row g-3 mb-4">
-                        <!-- Logo Creator -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('logo-creator')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">🎨 Logo Creator</h5>
-                                    <p class="text-muted small mb-3">Generate → Upscale 4x → Remove BG</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Branding, icons, app logos</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~15 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Social Media Pack -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('social-media-pack')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">📱 Social Media Pack</h5>
-                                    <p class="text-muted small mb-3">Generate → 3 style variations</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Instagram, profiles, content</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~25 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Portrait Enhancer -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('portrait-enhancer')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">🖼️ Portrait Enhancer</h5>
-                                    <p class="text-muted small mb-3">Generate → Upscale 4K</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Headshots, avatars, profiles</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~12 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Product Mockup -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('product-mockup')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">📦 Product Mockup</h5>
-                                    <p class="text-muted small mb-3">Remove BG → Generate scene → Upscale</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> E-commerce, presentations</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~20 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Style Explorer -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('style-explorer')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">🎭 Style Explorer</h5>
-                                    <p class="text-muted small mb-3">Generate in 5 different styles</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Finding the right look</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~30 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Creative Upscale -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('creative-upscale')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">✨ Creative Upscale</h5>
-                                    <p class="text-muted small mb-3">Upload → Creative upscale → Download</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Enhancing existing images</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~45 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Divider -->
-                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
-
-                <!-- CUSTOM WORKFLOW BUILDER -->
-                <div>
-                    <h4 class="mb-3" style="color: #fbbf24;">🛠️ Custom Workflow Builder</h4>
-                    <p class="text-muted mb-4">Build your own multi-step workflow for advanced automation.</p>
-
-                    <!-- Instructions -->
-                    <div class="alert mb-4" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); color: #fcd34d;">
-                        <h5 class="alert-heading" style="color: #fbbf24;">📖 How to Use:</h5>
-                        <ol class="mb-2">
-                            <li>Select or upload an input image</li>
-                            <li>Add operations to your workflow (upscale, recolor, remove background, etc.)</li>
-                            <li>Reorder steps by dragging if needed</li>
-                            <li>Save as template for reuse (optional)</li>
-                            <li>Execute workflow and see results at each step</li>
-                        </ol>
-                        <p class="mb-0"><strong>💡 Pro Tip:</strong> Common workflows: Generate → Upscale → Remove BG, or Upload → Recolor → Inpaint</p>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- LEFT COLUMN: Workflow Builder -->
-                    <div class="col-lg-6">
-                        <div class="card bg-dark border-cyan mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title text-cyan mb-3">🎬 Build Your Workflow</h5>
-
-                                <!-- 1. Input Image Selection -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>1️⃣ Input Image</strong></label>
-                                    <div class="d-flex gap-2 mb-2">
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectWorkflowImageFromGallery()">
-                                            📊 Select from Gallery
-                                        </button>
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="document.getElementById('workflowImageUpload').click()">
-                                            📤 Upload New
-                                        </button>
-                                    </div>
-                                    <input type="file" id="workflowImageUpload" accept="image/*" style="display: none;" onchange="handleWorkflowImageUpload(event)">
-
-                                    <!-- Image Preview -->
-                                    <div id="workflowInputPreview" style="display: none;" class="mt-2">
-                                        <div class="border border-cyan rounded p-2">
-                                            <img id="workflowInputImage" src="" alt="Input Image" class="img-fluid rounded" style="max-height: 200px;">
-                                            <p class="text-muted small mb-0 mt-2" id="workflowInputInfo">No image selected</p>
-                                        </div>
-                                    </div>
-                                    <div id="workflowInputEmpty" class="border border-secondary rounded p-3 text-center text-muted">
-                                        <p class="mb-0">No input image selected</p>
-                                    </div>
-                                </div>
-
-                                <!-- 2. Add Operations -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>2️⃣ Add Operations</strong></label>
-                                    <div class="d-flex gap-2">
-                                        <select id="operationSelect" class="form-select">
-                                            <option value="">Choose an operation...</option>
-                                            <optgroup label="✨ Generate">
-                                                <option value="generate">Generate Image (Text-to-Image)</option>
-                                            </optgroup>
-                                            <optgroup label="🎨 Edit">
-                                                <option value="recolor">Search & Recolor</option>
-                                                <option value="erase">Erase Object</option>
-                                                <option value="inpaint">Inpaint (Fill Area)</option>
-                                                <option value="outpaint">Outpaint (Extend)</option>
-                                                <option value="remove_background">Remove Background</option>
-                                            </optgroup>
-                                            <optgroup label="📈 Upscale">
-                                                <option value="upscale_fast">Fast Upscale (4x)</option>
-                                                <option value="upscale_conservative">Conservative Upscale (4K)</option>
-                                                <option value="upscale_creative">Creative Upscale</option>
-                                            </optgroup>
-                                            <optgroup label="🎭 Control">
-                                                <option value="sketch">Sketch to Image</option>
-                                                <option value="structure">Structure Transfer</option>
-                                            </optgroup>
-                                        </select>
-                                        <button type="button" class="btn btn-cyan" onclick="addOperationToWorkflow()">
-                                            ➕ Add
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- 3. Workflow Steps List -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>3️⃣ Workflow Steps</strong></label>
-                                    <div id="workflowSteps" class="border border-cyan rounded p-3">
-                                        <p class="text-muted text-center mb-0" id="workflowStepsEmpty">No operations added yet</p>
-                                    </div>
-                                </div>
-
-                                <!-- 4. Template Management -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>4️⃣ Templates (Optional)</strong></label>
-                                    <div class="d-flex gap-2">
-                                        <input type="text" id="workflowTemplateName" class="form-control" placeholder="Template name...">
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="saveWorkflowTemplate()">
-                                            💾 Save
-                                        </button>
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="loadWorkflowTemplate()">
-                                            📂 Load
-                                        </button>
-                                    </div>
-                                    <div id="savedTemplates" class="mt-2"></div>
-                                </div>
-
-                                <!-- 5. Execute Controls -->
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-success btn-lg flex-grow-1" onclick="executeWorkflow()" id="executeWorkflowBtn" disabled>
-                                        ▶️ Execute Workflow
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger" onclick="clearWorkflow()">
-                                        🗑️ Clear
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT COLUMN: Progress & Results -->
-                    <div class="col-lg-6">
-                        <div class="card bg-dark border-cyan mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title text-cyan mb-3">📊 Execution Progress</h5>
-
-                                <!-- Progress Tracker -->
-                                <div id="workflowProgressContainer" style="display: none;" class="mb-4">
-                                    <div class="progress mb-2" style="height: 30px;">
-                                        <div id="workflowProgressBar" class="progress-bar bg-cyan" role="progressbar" style="width: 0%">
-                                            <span id="workflowProgressText">0%</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-muted mb-0" id="workflowCurrentStep">Ready to execute...</p>
-                                </div>
-
-                                <!-- Step Results -->
-                                <div id="workflowStepResults" class="workflow-results">
-                                    <p class="text-muted text-center">Results will appear here after execution</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Final Result -->
-                        <div id="workflowFinalResult" style="display: none;" class="card bg-dark border-cyan">
-                            <div class="card-body">
-                                <h5 class="card-title text-success mb-3">✅ Workflow Complete!</h5>
-                                <div id="workflowFinalImage"></div>
-                                <div class="d-flex gap-2 mt-3">
-                                    <button type="button" class="btn btn-cyan" onclick="downloadWorkflowResult()">
-                                        📥 Download Final Result
-                                    </button>
-                                    <button type="button" class="btn btn-outline-cyan" onclick="viewWorkflowHistory()">
-                                        📜 View All Steps
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Status Messages -->
-                <div id="workflowStatus" class="mt-3"></div>
-
-                <!-- Divider -->
-                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
-
-                <!-- WORKFLOW HISTORY SECTION (Session 57: Phase B.2) -->
-                <div class="mb-5">
-                    <h4 class="mb-3" style="color: #fbbf24;">📜 Workflow History</h4>
-                    <p class="text-muted mb-4">Your recent workflow executions. Re-run any workflow with one click!</p>
-
-                    <!-- History Filter Controls -->
-                    <div class="d-flex gap-2 mb-3">
-                        <select id="historyWorkflowTypeFilter" class="form-select" style="max-width: 200px;" onchange="loadWorkflowHistory()">
-                            <option value="">All Workflows</option>
-                            <option value="logo_creator">Logo Creator</option>
-                            <option value="portrait_enhancer">Portrait Enhancer</option>
-                            <option value="style_explorer">Style Explorer</option>
-                            <option value="social_media_pack">Social Media Pack</option>
-                            <option value="product_mockup">Product Mockup</option>
-                            <option value="creative_upscale">Creative Upscale</option>
-                        </select>
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="loadWorkflowHistory(true)">
-                            ⭐ Favorites Only
-                        </button>
-                        <button type="button" class="btn btn-outline-success btn-sm ms-auto" onclick="loadWorkflowHistory()">
-                            🔄 Refresh
-                        </button>
-                    </div>
-
-                    <!-- History List -->
-                    <div id="workflowHistoryList">
-                        <div class="text-center text-muted py-5">
-                            <p class="mb-2">Loading workflow history...</p>
-                            <div class="spinner-border spinner-border-sm text-warning" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Divider -->
-                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
-
-                <!-- WORKFLOW FAVORITES SECTION (Session 57: Phase B.2) -->
-                <div class="mb-5">
-                    <h4 class="mb-3" style="color: #fbbf24;">⭐ Favorite Workflows</h4>
-                    <p class="text-muted mb-4">Save your best workflows for quick access anytime.</p>
-
-                    <!-- Favorites List -->
-                    <div id="workflowFavoritesList">
-                        <div class="text-center text-muted py-5">
-                            <p class="mb-2">Loading favorites...</p>
-                            <div class="spinner-border spinner-border-sm text-warning" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+            <!-- Session 62: Phase C.4 - Workflow pane removed, now a top-level tab! -->
+            <!-- Session 62: Phase C.4 - Workflow pane removed, now a top-level tab! -->
             <!-- END WORKFLOW PANE -->
                 </div>
             </div>
@@ -4332,6 +4029,315 @@
             </div>
             <!-- END PORTFOLIO TAB -->
 
+            <!-- WORKFLOWS TAB (Session 62: Phase C.4 - Promoted from Images pill to top-level tab!) -->
+            <div class="tab-pane fade" id="workflows" role="tabpanel">
+                <h3 class="mb-4">🔄 AI Workflows</h3>
+                <p class="text-muted mb-4">Execute professional AI workflows for images, videos, and audio. Perfect for projects, campaigns, and content creation!</p>
+
+                <!-- PRE-BUILT WORKFLOWS SECTION -->
+                <div class="mb-5">
+                    <h4 class="mb-3" style="color: #fbbf24;">⚡ Quick Start Templates</h4>
+                    <p class="text-muted mb-4">Professional workflows ready to use with one click. Perfect for common tasks!</p>
+
+                    <div class="row g-3 mb-4">
+                        <!-- Logo Creator -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('logo-creator')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">🎨 Logo Creator</h5>
+                                    <p class="text-muted small mb-3">Generate → Upscale 4x → Remove BG</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Branding, icons, app logos</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~15 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Social Media Pack -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('social-media-pack')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">📱 Social Media Pack</h5>
+                                    <p class="text-muted small mb-3">Generate → 3 style variations</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Instagram, profiles, content</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~25 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Portrait Enhancer -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('portrait-enhancer')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">🖼️ Portrait Enhancer</h5>
+                                    <p class="text-muted small mb-3">Generate → Upscale 4K</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Headshots, avatars, profiles</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~12 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Mockup -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('product-mockup')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">📦 Product Mockup</h5>
+                                    <p class="text-muted small mb-3">Remove BG → Generate scene → Upscale</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> E-commerce, presentations</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~20 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Style Explorer -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('style-explorer')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">🎭 Style Explorer</h5>
+                                    <p class="text-muted small mb-3">Generate in 5 different styles</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Finding the right look</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~30 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Creative Upscale -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('creative-upscale')">
+                                <div class="card-body">
+                                    <h5 style="color: #fbbf24;">✨ Creative Upscale</h5>
+                                    <p class="text-muted small mb-3">Upload → Creative upscale → Download</p>
+                                    <p class="small mb-0"><strong>Perfect for:</strong> Enhancing existing images</p>
+                                    <p class="small text-success mb-0 mt-2">⏱️ ~45 seconds</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
+
+                <!-- CUSTOM WORKFLOW BUILDER -->
+                <div>
+                    <h4 class="mb-3" style="color: #fbbf24;">🛠️ Custom Workflow Builder</h4>
+                    <p class="text-muted mb-4">Build your own multi-step workflow for advanced automation.</p>
+
+                    <!-- Instructions -->
+                    <div class="alert mb-4" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); color: #fcd34d;">
+                        <h5 class="alert-heading" style="color: #fbbf24;">📖 How to Use:</h5>
+                        <ol class="mb-2">
+                            <li>Select or upload an input image</li>
+                            <li>Add operations to your workflow (upscale, recolor, remove background, etc.)</li>
+                            <li>Reorder steps by dragging if needed</li>
+                            <li>Save as template for reuse (optional)</li>
+                            <li>Execute workflow and see results at each step</li>
+                        </ol>
+                        <p class="mb-0"><strong>💡 Pro Tip:</strong> Common workflows: Generate → Upscale → Remove BG, or Upload → Recolor → Inpaint</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- LEFT COLUMN: Workflow Builder -->
+                    <div class="col-lg-6">
+                        <div class="card bg-dark border-cyan mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title text-cyan mb-3">🎬 Build Your Workflow</h5>
+
+                                <!-- 1. Input Image Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label"><strong>1️⃣ Input Image</strong></label>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectWorkflowImageFromGallery()">
+                                            📊 Select from Gallery
+                                        </button>
+                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="document.getElementById('workflowImageUpload').click()">
+                                            📤 Upload New
+                                        </button>
+                                    </div>
+                                    <input type="file" id="workflowImageUpload" accept="image/*" style="display: none;" onchange="handleWorkflowImageUpload(event)">
+
+                                    <!-- Image Preview -->
+                                    <div id="workflowInputPreview" style="display: none;" class="mt-2">
+                                        <div class="border border-cyan rounded p-2">
+                                            <img id="workflowInputImage" src="" alt="Input Image" class="img-fluid rounded" style="max-height: 200px;">
+                                            <p class="text-muted small mb-0 mt-2" id="workflowInputInfo">No image selected</p>
+                                        </div>
+                                    </div>
+                                    <div id="workflowInputEmpty" class="border border-secondary rounded p-3 text-center text-muted">
+                                        <p class="mb-0">No input image selected</p>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Add Operations -->
+                                <div class="mb-4">
+                                    <label class="form-label"><strong>2️⃣ Add Operations</strong></label>
+                                    <div class="d-flex gap-2">
+                                        <select id="operationSelect" class="form-select">
+                                            <option value="">Choose an operation...</option>
+                                            <optgroup label="✨ Generate">
+                                                <option value="generate">Generate Image (Text-to-Image)</option>
+                                            </optgroup>
+                                            <optgroup label="🎨 Edit">
+                                                <option value="recolor">Search & Recolor</option>
+                                                <option value="erase">Erase Object</option>
+                                                <option value="inpaint">Inpaint (Fill Area)</option>
+                                                <option value="outpaint">Outpaint (Extend)</option>
+                                                <option value="remove_background">Remove Background</option>
+                                            </optgroup>
+                                            <optgroup label="📈 Upscale">
+                                                <option value="upscale_fast">Fast Upscale (4x)</option>
+                                                <option value="upscale_conservative">Conservative Upscale (4K)</option>
+                                                <option value="upscale_creative">Creative Upscale</option>
+                                            </optgroup>
+                                            <optgroup label="🎭 Control">
+                                                <option value="sketch">Sketch to Image</option>
+                                                <option value="structure">Structure Transfer</option>
+                                            </optgroup>
+                                        </select>
+                                        <button type="button" class="btn btn-cyan" onclick="addOperationToWorkflow()">
+                                            ➕ Add
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Workflow Steps List -->
+                                <div class="mb-4">
+                                    <label class="form-label"><strong>3️⃣ Workflow Steps</strong></label>
+                                    <div id="workflowSteps" class="border border-cyan rounded p-3">
+                                        <p class="text-muted text-center mb-0" id="workflowStepsEmpty">No operations added yet</p>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Template Management -->
+                                <div class="mb-4">
+                                    <label class="form-label"><strong>4️⃣ Templates (Optional)</strong></label>
+                                    <div class="d-flex gap-2">
+                                        <input type="text" id="workflowTemplateName" class="form-control" placeholder="Template name...">
+                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="saveWorkflowTemplate()">
+                                            💾 Save
+                                        </button>
+                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="loadWorkflowTemplate()">
+                                            📂 Load
+                                        </button>
+                                    </div>
+                                    <div id="savedTemplates" class="mt-2"></div>
+                                </div>
+
+                                <!-- 5. Execute Controls -->
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-success btn-lg flex-grow-1" onclick="executeWorkflow()" id="executeWorkflowBtn" disabled>
+                                        ▶️ Execute Workflow
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="clearWorkflow()">
+                                        🗑️ Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Progress & Results -->
+                    <div class="col-lg-6">
+                        <div class="card bg-dark border-cyan mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title text-cyan mb-3">📊 Execution Progress</h5>
+
+                                <!-- Progress Tracker -->
+                                <div id="workflowProgressContainer" style="display: none;" class="mb-4">
+                                    <div class="progress mb-2" style="height: 30px;">
+                                        <div id="workflowProgressBar" class="progress-bar bg-cyan" role="progressbar" style="width: 0%">
+                                            <span id="workflowProgressText">0%</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted mb-0" id="workflowCurrentStep">Ready to execute...</p>
+                                </div>
+
+                                <!-- Step Results -->
+                                <div id="workflowStepResults" class="workflow-results">
+                                    <p class="text-muted text-center">Results will appear here after execution</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Result -->
+                        <div id="workflowFinalResult" style="display: none;" class="card bg-dark border-cyan">
+                            <div class="card-body">
+                                <h5 class="card-title text-success mb-3">✅ Workflow Complete!</h5>
+                                <div id="workflowFinalImage"></div>
+                                <div class="d-flex gap-2 mt-3">
+                                    <button type="button" class="btn btn-cyan" onclick="downloadWorkflowResult()">
+                                        📥 Download Final Result
+                                    </button>
+                                    <button type="button" class="btn btn-outline-cyan" onclick="viewWorkflowHistory()">
+                                        📜 View All Steps
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="workflowStatus" class="mt-3"></div>
+
+                <!-- Divider -->
+                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
+
+                <!-- WORKFLOW HISTORY SECTION (Session 57: Phase B.2) -->
+                <div class="mb-5">
+                    <h4 class="mb-3" style="color: #fbbf24;">📜 Workflow History</h4>
+                    <p class="text-muted mb-4">Your recent workflow executions. Re-run any workflow with one click!</p>
+
+                    <!-- History Filter Controls -->
+                    <div class="d-flex gap-2 mb-3">
+                        <select id="historyWorkflowTypeFilter" class="form-select" style="max-width: 200px;" onchange="loadWorkflowHistory()">
+                            <option value="">All Workflows</option>
+                            <option value="logo_creator">Logo Creator</option>
+                            <option value="portrait_enhancer">Portrait Enhancer</option>
+                            <option value="style_explorer">Style Explorer</option>
+                            <option value="social_media_pack">Social Media Pack</option>
+                            <option value="product_mockup">Product Mockup</option>
+                            <option value="creative_upscale">Creative Upscale</option>
+                        </select>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="loadWorkflowHistory(true)">
+                            ⭐ Favorites Only
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm ms-auto" onclick="loadWorkflowHistory()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <!-- History List -->
+                    <div id="workflowHistoryList">
+                        <div class="text-center text-muted py-5">
+                            <p class="mb-2">Loading workflow history...</p>
+                            <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
+
+                <!-- WORKFLOW FAVORITES SECTION (Session 57: Phase B.2) -->
+                <div class="mb-5">
+                    <h4 class="mb-3" style="color: #fbbf24;">⭐ Favorite Workflows</h4>
+                    <p class="text-muted mb-4">Save your best workflows for quick access anytime.</p>
+
+                    <!-- Favorites List -->
+                    <div id="workflowFavoritesList">
+                        <div class="text-center text-muted py-5">
+                            <p class="mb-2">Loading favorites...</p>
+                            <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+
+            </div>
+            <!-- END WORKFLOWS TAB -->
+
         </div>
         <!-- END TAB CONTENT -->
     </div>
@@ -4373,7 +4379,7 @@
         }
 
         // Show notification helper
-        function showNotification(message, type = 'info') {
+        function showNotification(message, type = 'info', duration = 3000) {
             // Create a simple toast notification
             const toast = document.createElement('div');
             toast.className = `alert alert-${type}`;
@@ -4384,11 +4390,11 @@
             `;
             document.body.appendChild(toast);
 
-            // Auto-remove after 3 seconds
+            // Auto-remove after specified duration (default 3 seconds)
             setTimeout(() => {
                 toast.style.animation = 'slideOut 0.3s ease-out';
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, duration);
         }
 
         // Authenticated Fetch Helper
@@ -13896,19 +13902,29 @@
                     </table>
                 </div>
 
-                <!-- Workflows -->
+                <!-- Workflows (Session 62: Phase C.4 - Added Create New + Execute All) -->
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 style="color: #f59e0b;">Workflows (${project.workflows ? project.workflows.length : 0})</h5>
-                        <button class="btn btn-sm btn-success" onclick="openAddWorkflowModal('${project.id}')">
-                            ➕ Add Workflow
-                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-primary" onclick="createNewWorkflowForProject('${project.id}')" title="Create and execute a new workflow">
+                                ✨ Create New
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="openAddWorkflowModal('${project.id}')" title="Add existing workflow">
+                                ➕ Add Existing
+                            </button>
+                            ${project.workflows && project.workflows.length > 0 ? `
+                            <button class="btn btn-sm btn-warning" onclick="executeAllWorkflows('${project.id}')" title="Execute all workflows in sequence">
+                                ▶️ Run All
+                            </button>
+                            ` : ''}
+                        </div>
                     </div>
 
                     ${project.workflows && project.workflows.length > 0 ? `
                         <div class="list-group">
                             ${project.workflows.map(wf => `
-                                <div class="list-group-item list-group-item-dark mb-2">
+                                <div class="list-group-item list-group-item-dark mb-2" id="workflow-${wf.id}">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
                                             <h6 class="mb-1">${wf.workflow_name}</h6>
@@ -13920,7 +13936,10 @@
                                             <p class="mb-1 small">${wf.result_count || 0} results</p>
                                             ${wf.execution_time ? `<p class="mb-0 small">${wf.execution_time}s</p>` : ''}
                                         </div>
-                                        <div>
+                                        <div class="btn-group-vertical" style="gap: 0.25rem;">
+                                            <button class="btn btn-sm btn-primary" onclick="executeWorkflowFromProject('${project.id}', '${wf.workflow_history_id}')" title="Re-run this workflow">
+                                                ▶️
+                                            </button>
                                             <button class="btn btn-sm btn-danger" onclick="removeWorkflowFromProject('${project.id}', '${wf.id}')" title="Remove from project">
                                                 🗑️
                                             </button>
@@ -14257,6 +14276,211 @@
             showNotification(`Campaign template "${template.name}" loaded! Review and save to create project.`, 'info');
         }
 
+        // ====================================================================
+        // SESSION 62: PHASE C.4 - WORKFLOW EXECUTION FROM PROJECTS
+        // ====================================================================
+
+        /**
+         * Create and execute a new workflow for a project
+         * This allows "working from a clean slate" - create fresh workflows within project context
+         */
+        async function createNewWorkflowForProject(projectId) {
+            const project = projectManagement.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            // Show workflow selection modal
+            const workflowTypes = [
+                { id: 'logo-creator', name: '🎨 Logo Creator', desc: 'Design professional logos' },
+                { id: 'portrait-enhancer', name: '👤 Portrait Enhancer', desc: 'Professional portrait generation' },
+                { id: 'style-explorer', name: '🖌️ Style Explorer', desc: 'Try multiple artistic styles' },
+                { id: 'social-media-pack', name: '📱 Social Media Pack', desc: 'Platform-optimized content' },
+                { id: 'product-mockup', name: '📦 Product Mockup', desc: 'Product visualization' },
+                { id: 'creative-upscale', name: '⬆️ Creative Upscale', desc: 'AI-powered upscaling' }
+            ];
+
+            const html = `
+                <div class="modal fade" id="create-workflow-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #fbbf24;">
+                            <div class="modal-header" style="border-color: rgba(251, 191, 36, 0.3);">
+                                <h5 class="modal-title" style="color: #fbbf24;">✨ Create New Workflow for ${project.name}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted mb-3">Select a workflow type to create and execute:</p>
+                                <div class="row g-3">
+                                    ${workflowTypes.map(wf => `
+                                        <div class="col-md-6">
+                                            <div class="card" onclick="executeNewWorkflow('${projectId}', '${wf.id}')"
+                                                 style="cursor: pointer; background: #222; border: 1px solid #444; transition: all 0.2s;">
+                                                <div class="card-body">
+                                                    <h6 style="color: #fbbf24;">${wf.name}</h6>
+                                                    <p class="small text-muted mb-0">${wf.desc}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if present
+            document.getElementById('create-workflow-modal')?.remove();
+
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', html);
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('create-workflow-modal'));
+            modal.show();
+        }
+
+        /**
+         * Execute a new workflow of the selected type
+         */
+        async function executeNewWorkflow(projectId, workflowType) {
+            // Close modal properly
+            const modal = bootstrap.Modal.getInstance(document.getElementById('create-workflow-modal'));
+            if (modal) {
+                modal.hide();
+                // Remove modal backdrop
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+
+            // Wait for modal to close
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // Session 62: Phase C.4 - Switch to top-level Workflows tab (no longer nested in Images!)
+            const workflowsTab = document.getElementById('workflows-tab');
+            if (workflowsTab) {
+                workflowsTab.click();
+            }
+
+            // Wait for tab to switch
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Select the workflow type in the dropdown
+            const workflowSelect = document.getElementById('workflow-type-select');
+            if (workflowSelect) {
+                workflowSelect.value = workflowType;
+                workflowSelect.dispatchEvent(new Event('change'));
+            }
+
+            // Scroll to workflow forms
+            document.getElementById('workflow-forms')?.scrollIntoView({ behavior: 'smooth' });
+
+            // Show notification with longer duration
+            const workflowName = workflowType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            showNotification(`✅ Switched to ${workflowName} workflow. Fill the form and click "Improve Prompt" or "Generate"!`, 'success', 5000);
+        }
+
+        /**
+         * Re-execute an existing workflow from project
+         */
+        async function executeWorkflowFromProject(projectId, workflowHistoryId) {
+            const project = projectManagement.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            try {
+                // Fetch workflow history details
+                const response = await fetch(`/api/workflows/history/?limit=1000`);
+                const data = await response.json();
+                const workflow = data.workflows.find(w => w.id === workflowHistoryId);
+
+                if (!workflow) {
+                    showNotification('Workflow not found', 'danger');
+                    return;
+                }
+
+                // Show executing state
+                const workflowElem = document.getElementById(`workflow-${workflowHistoryId}`);
+                if (workflowElem) {
+                    workflowElem.style.opacity = '0.6';
+                    workflowElem.innerHTML += '<div class="text-center mt-2"><div class="spinner-border spinner-border-sm text-warning"></div> Executing...</div>';
+                }
+
+                // Re-execute the workflow
+                const config = workflow.workflow_config;
+                const results = [];
+
+                for (let i = 0; i < config.steps.length; i++) {
+                    const step = config.steps[i];
+
+                    // Call workflow execution endpoint
+                    const stepResponse = await fetch('/api/workflows/execute/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            workflow_type: workflow.workflow_type,
+                            step: step,
+                            previous_results: results
+                        })
+                    });
+
+                    const stepData = await stepResponse.json();
+                    if (stepData.success && stepData.result) {
+                        results.push(stepData.result);
+                    }
+                }
+
+                // Refresh project details
+                await viewProjectDetails(projectId);
+
+                showNotification(`Workflow "${workflow.workflow_name}" re-executed successfully!`, 'success');
+
+            } catch (error) {
+                console.error('Error executing workflow:', error);
+                showNotification('Error executing workflow: ' + error.message, 'danger');
+
+                // Restore workflow element
+                const workflowElem = document.getElementById(`workflow-${workflowHistoryId}`);
+                if (workflowElem) {
+                    workflowElem.style.opacity = '1';
+                }
+            }
+        }
+
+        /**
+         * Execute all workflows in the project sequentially
+         */
+        async function executeAllWorkflows(projectId) {
+            const project = projectManagement.projects.find(p => p.id === projectId);
+            if (!project || !project.workflows || project.workflows.length === 0) return;
+
+            if (!confirm(`Execute all ${project.workflows.length} workflows in sequence? This may take several minutes.`)) {
+                return;
+            }
+
+            showNotification('Starting sequential workflow execution...', 'info');
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const wf of project.workflows) {
+                try {
+                    await executeWorkflowFromProject(projectId, wf.workflow_history_id);
+                    successCount++;
+                } catch (error) {
+                    console.error(`Failed to execute workflow ${wf.workflow_name}:`, error);
+                    failCount++;
+                }
+            }
+
+            showNotification(`Completed! ${successCount} successful, ${failCount} failed.`, successCount > 0 ? 'success' : 'warning');
+
+            // Refresh project
+            await viewProjectDetails(projectId);
+        }
+
         // Make functions global for onclick handlers
         window.viewProjectDetails = viewProjectDetails;
         window.deleteProject = deleteProject;
@@ -14264,6 +14488,10 @@
         window.updateAddWorkflowButton = updateAddWorkflowButton;
         window.removeWorkflowFromProject = removeWorkflowFromProject;
         window.selectCampaign = selectCampaign;  // Session 62: Phase C.3
+        window.createNewWorkflowForProject = createNewWorkflowForProject;  // Session 62: Phase C.4
+        window.executeNewWorkflow = executeNewWorkflow;  // Session 62: Phase C.4
+        window.executeWorkflowFromProject = executeWorkflowFromProject;  // Session 62: Phase C.4
+        window.executeAllWorkflows = executeAllWorkflows;  // Session 62: Phase C.4
 
         // ====================================================================
         // END PROJECT MANAGEMENT SYSTEM
