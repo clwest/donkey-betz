@@ -1969,6 +1969,16 @@ class WorkflowHistory(UnifiedBaseModel):
         help_text="User who executed this workflow"
     )
 
+    # Session 62: Phase C.4 - Link workflows to projects for client management
+    project = models.ForeignKey(
+        'CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workflow_executions',
+        help_text="Optional project this workflow belongs to"
+    )
+
     # Workflow identification
     workflow_type = models.CharField(
         max_length=50,
