@@ -3268,6 +3268,7 @@ def improve_workflow_prompt(request):
             }, status=400)
 
         # Workflow-specific system prompts
+        # Session 61: Enhanced with examples, negative prompts, and success patterns
         WORKFLOW_CONTEXTS = {
             'logo_creator': {
                 'context': 'logo design for businesses and brands',
@@ -3282,6 +3283,31 @@ CRITICAL REQUIREMENTS:
 - Emphasize flat design, vector art style, or minimalist icon aesthetic
 - AVOID requesting text/lettering (AI cannot render text accurately)
 - Focus on the visual mark/symbol only
+
+EXAMPLES OF GOOD VS BAD PROMPTS:
+❌ Bad: "company logo"
+✅ Good: "minimalist vector logo of overlapping circles forming abstract 'M', navy blue and gold gradient, geometric design, clean lines, professional tech company branding, white background"
+
+❌ Bad: "Light Work logo"
+✅ Good: "modern logo icon of a light bulb with wrench incorporated, flat design style, navy blue and bright yellow colors, simple geometric shapes, suitable for handyman services branding, vector art"
+
+❌ Bad: "donkey logo for betting"
+✅ Good: "stylized donkey head icon, confident expression, sleek geometric shapes, navy blue and gold color scheme, minimalist modern design, mascot-style vector logo, professional sports branding"
+
+NEGATIVE PROMPTS (avoid these):
+- Photographic, realistic, 3D rendering
+- People, crowds, workers, staff
+- Text, letters, typography, words
+- Complex scenes, backgrounds, environments
+- Multiple objects or detailed illustrations
+
+STABILITY AI SUCCESS PATTERNS:
+- Specify "flat design", "vector art", "minimalist icon", "logo mark"
+- Use 2-3 colors maximum (specify exact colors or gradients)
+- Include geometric shapes, clean lines, simple forms
+- Mention "white background" or "transparent background"
+- Use industry-appropriate symbols (wrench=repair, lightbulb=ideas, etc.)
+- Keep composition simple and centered
 
 Consider:
 - Business name and any wordplay or meaning (translate to visual metaphor/icon)
@@ -3303,6 +3329,32 @@ Keep it under 200 words but include all key details."""
 
 Your task: Transform their input into a detailed portrait prompt that will generate professional, polished results.
 
+EXAMPLES OF GOOD VS BAD PROMPTS:
+❌ Bad: "headshot"
+✅ Good: "professional corporate headshot, business attire, studio lighting with soft key light and rim light, neutral gray background, shallow depth of field, confident friendly expression, sharp focus on eyes, 85mm lens perspective, high resolution"
+
+❌ Bad: "portrait of a woman"
+✅ Good: "elegant portrait of a professional woman in her 30s, natural confident expression, soft studio lighting with subtle fill, blurred bokeh background, sharp focus, professional quality, warm color tones, business casual attire"
+
+❌ Bad: "CEO photo"
+✅ Good: "executive portrait of confident CEO, tailored suit, modern office environment blurred in background, dramatic side lighting, sharp focus, professional quality, sophisticated composition, approachable expression"
+
+NEGATIVE PROMPTS (avoid these):
+- Distorted anatomy, extra limbs, deformed features
+- Harsh direct flash, unnatural lighting
+- Cluttered busy backgrounds
+- Low resolution, blurry, grainy
+- Awkward poses, forced expressions
+- Oversaturated colors, heavy filters
+
+STABILITY AI SUCCESS PATTERNS:
+- Specify lighting: "studio lighting", "soft natural light", "golden hour", "dramatic side lighting"
+- Mention depth of field: "shallow depth of field", "bokeh background", "blurred background"
+- Include camera details: "85mm lens", "portrait lens", "professional camera"
+- Quality markers: "high resolution", "sharp focus", "professional quality", "4K"
+- Composition: "centered composition", "rule of thirds", "headshot framing"
+- Expression: "confident", "friendly", "professional", "natural smile"
+
 Consider:
 - Subject description (person, profession, mood)
 - Lighting (studio, natural, dramatic, soft)
@@ -3318,6 +3370,32 @@ Format your response as a single, clear prompt suitable for AI image generation.
                 'instructions': """You are a social media content strategist. The user wants to create engaging social media visuals.
 
 Your task: Transform their input into a prompt that will generate eye-catching, platform-appropriate content.
+
+EXAMPLES OF GOOD VS BAD PROMPTS:
+❌ Bad: "food photo"
+✅ Good: "vibrant overhead food photography of colorful smoothie bowl topped with fresh berries and granola, natural daylight, Instagram aesthetic, bright colors, sharp focus, clean white background, appetizing composition"
+
+❌ Bad: "fitness post"
+✅ Good: "motivational fitness scene, athletic person mid-workout, dynamic action shot, energetic composition, vibrant colors with teal and orange tones, inspirational mood, Instagram square format, professional quality"
+
+❌ Bad: "product announcement"
+✅ Good: "sleek product showcase on gradient background, centered composition, modern minimalist aesthetic, vibrant brand colors, dramatic lighting, social media ready format, eye-catching visual hierarchy"
+
+NEGATIVE PROMPTS (avoid these):
+- Cluttered composition, too many elements
+- Dull muted colors, low contrast
+- Poor lighting, dark shadows
+- Blurry unfocused subjects
+- Generic stock photo look
+- Text-heavy designs (AI can't render text well)
+
+STABILITY AI SUCCESS PATTERNS:
+- Specify platform aesthetic: "Instagram aesthetic", "Pinterest-style", "Facebook-friendly"
+- Use vibrant colors: "vibrant colors", "bold contrast", "eye-catching palette"
+- Mention composition: "centered", "rule of thirds", "overhead shot", "flat lay"
+- Include lighting: "natural daylight", "bright lighting", "soft shadows"
+- Format hints: "square format", "vertical format", "social media ready"
+- Mood descriptors: "energetic", "inspiring", "professional", "fun", "elegant"
 
 Consider:
 - Platform expectations (Instagram, Facebook, Twitter aesthetics)
@@ -3335,6 +3413,32 @@ Format your response as a single, clear prompt suitable for AI image generation.
 
 Your task: Transform their input into a prompt that will generate professional product mockups.
 
+EXAMPLES OF GOOD VS BAD PROMPTS:
+❌ Bad: "coffee mug"
+✅ Good: "elegant ceramic coffee mug on white marble surface, soft natural lighting from left, minimalist composition, shallow depth of field, product photography, clean white background, professional e-commerce quality"
+
+❌ Bad: "phone case"
+✅ Good: "sleek phone case held in hand, modern lifestyle shot, blurred urban background, natural lighting, focus on product texture and design, professional product photography, premium quality"
+
+❌ Bad: "watch photo"
+✅ Good: "luxury wristwatch on dark wooden surface, dramatic side lighting creating subtle shadows, macro detail shot showing craftsmanship, black background, professional jewelry photography, high-end catalog quality"
+
+NEGATIVE PROMPTS (avoid these):
+- Cluttered backgrounds, distracting elements
+- Harsh shadows, uneven lighting
+- Unclear product features
+- Low resolution, poor focus
+- Awkward angles, unflattering views
+- Busy patterns competing with product
+
+STABILITY AI SUCCESS PATTERNS:
+- Specify surface: "white marble", "wooden table", "clean background", "floating on gradient"
+- Lighting direction: "soft natural light from left", "studio lighting", "dramatic side lighting"
+- Context options: "hand holding", "on surface", "lifestyle shot", "hero shot"
+- Background: "white background", "blurred background", "minimal background"
+- Quality markers: "product photography", "e-commerce quality", "professional", "high resolution"
+- Composition: "centered", "rule of thirds", "macro detail", "overhead view"
+
 Consider:
 - Product type and key features to highlight
 - Composition and angle (hero shot, lifestyle, detail)
@@ -3351,6 +3455,32 @@ Format your response as a single, clear prompt suitable for AI image generation.
 
 Your task: Transform their input into clear enhancement directions.
 
+EXAMPLES OF GOOD VS BAD PROMPTS:
+❌ Bad: "make it better"
+✅ Good: "enhance fine details and textures, improve sharpness and clarity, boost color vibrancy while maintaining natural tones, increase resolution to 4K, preserve original composition and style"
+
+❌ Bad: "fix this image"
+✅ Good: "enhance facial details and skin texture, improve lighting and shadow definition, sharpen focus on subject while maintaining soft background blur, upscale to high resolution, professional portrait quality"
+
+❌ Bad: "upscale"
+✅ Good: "creative upscaling with enhanced artistic details, add fine textures and intricate patterns, improve color depth and contrast, maintain original artistic style while adding painterly refinement, 4K resolution"
+
+NEGATIVE PROMPTS (avoid these):
+- Change original style completely
+- Add new elements or objects
+- Alter composition significantly
+- Over-saturate or distort colors
+- Remove important details
+- Change subject or mood
+
+STABILITY AI SUCCESS PATTERNS:
+- Specify preservation: "maintain original composition", "preserve artistic style", "keep color palette"
+- Enhancement targets: "enhance fine details", "improve sharpness", "boost clarity"
+- Quality goals: "4K resolution", "high resolution", "professional quality"
+- Texture emphasis: "add fine textures", "enhance surface details", "intricate patterns"
+- Color work: "improve color depth", "enhance vibrancy", "natural color balance"
+- Style continuity: "painterly refinement", "artistic enhancement", "stylistic consistency"
+
 Consider:
 - What details should be emphasized
 - What artistic style to enhance toward
@@ -3365,6 +3495,32 @@ Format your response as a single, clear prompt suitable for AI image enhancement
                 'instructions': """You are an art director exploring creative possibilities. The user wants to see their concept in multiple styles.
 
 Your task: Transform their input into a rich, detailed prompt that will generate interesting variations.
+
+EXAMPLES OF GOOD VS BAD PROMPTS:
+❌ Bad: "sunset"
+✅ Good: "dramatic sunset over mountain landscape, vibrant orange and purple sky with layered clouds, detailed mountain silhouettes in foreground, golden light rays breaking through clouds, epic composition, high detail, cinematic quality"
+
+❌ Bad: "forest scene"
+✅ Good: "enchanted forest with tall ancient trees, dappled sunlight filtering through canopy, moss-covered ground with small wildflowers, mystical atmosphere with soft fog, rich green tones, fantasy illustration style, detailed foliage"
+
+❌ Bad: "city view"
+✅ Good: "modern city skyline at dusk, illuminated skyscrapers reflecting in water, dynamic composition with leading lines, rich blue hour lighting with warm building lights, urban architecture, professional photography quality, detailed cityscape"
+
+NEGATIVE PROMPTS (avoid these):
+- Vague subjects, unclear focus
+- Minimal details, generic descriptions
+- Flat composition, no depth
+- Boring lighting, plain presentation
+- Lack of specific visual elements
+- No style direction or mood
+
+STABILITY AI SUCCESS PATTERNS:
+- Rich details: "detailed foliage", "intricate patterns", "fine textures", "layered elements"
+- Lighting descriptions: "dramatic lighting", "golden hour", "dappled sunlight", "atmospheric lighting"
+- Composition terms: "epic composition", "dynamic perspective", "leading lines", "rule of thirds"
+- Quality markers: "high detail", "professional quality", "cinematic", "photorealistic"
+- Mood and atmosphere: "mystical atmosphere", "energetic mood", "serene feeling", "dramatic tone"
+- Style hints: "illustration style", "photography quality", "painterly", "artistic rendering"
 
 Consider:
 - Core concept/subject clarity
