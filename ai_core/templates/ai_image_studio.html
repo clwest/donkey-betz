@@ -3924,10 +3924,13 @@
                     <small class="text-muted">Perfect for client work, campaigns, and creative collections</small>
                 </div>
 
-                <!-- Create New Project Button -->
-                <div class="mb-4">
+                <!-- Create New Project Buttons (Session 62: Phase C.3) -->
+                <div class="mb-4 d-flex gap-3">
                     <button id="create-project-btn" class="btn btn-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
                         ➕ Create New Project
+                    </button>
+                    <button id="campaign-planner-btn" class="btn btn-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                        🎯 Campaign Planner
                     </button>
                 </div>
 
@@ -4032,6 +4035,167 @@
                     </div>
                 </div>
 
+                <!-- Add Workflow Modal (Session 62: Phase C.1 Completion) -->
+                <div class="modal fade" id="add-workflow-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #10b981;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title">➕ Add Workflow to Project</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted mb-3">Select completed workflows to add to this project:</p>
+
+                                <!-- Loading State -->
+                                <div id="workflow-selector-loading" class="text-center py-4">
+                                    <div class="spinner-border text-success" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Loading workflows...</p>
+                                </div>
+
+                                <!-- Workflow List -->
+                                <div id="workflow-selector-list" style="display: none; max-height: 400px; overflow-y: auto;">
+                                    <!-- Workflows will be loaded here -->
+                                </div>
+
+                                <!-- Empty State -->
+                                <div id="workflow-selector-empty" style="display: none;" class="text-center py-4">
+                                    <p class="text-muted">No completed workflows found. Complete a workflow first!</p>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-success" id="confirm-add-workflow-btn" disabled>
+                                    ✅ Add Selected Workflows
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campaign Planner Modal (Session 62: Phase C.3) -->
+                <div class="modal fade" id="campaign-planner-modal" tabindex="-1">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #667eea;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title">🎯 Campaign Planner</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted mb-4">Choose a campaign template to create a project with pre-configured workflow recommendations:</p>
+
+                                <div class="row g-4">
+                                    <!-- Brand Launch Campaign -->
+                                    <div class="col-md-4">
+                                        <div class="card h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; cursor: pointer;" onclick="selectCampaign('brand-launch')">
+                                            <div class="card-body text-white">
+                                                <h4 class="card-title">🚀 Brand Launch</h4>
+                                                <p class="card-text mb-3">Complete branding package for new business launches</p>
+                                                <h6>Recommended Workflows:</h6>
+                                                <ul class="small">
+                                                    <li>Logo Creator (2-3 variations)</li>
+                                                    <li>Social Media Pack (profile images)</li>
+                                                    <li>Product Mockup (branding materials)</li>
+                                                </ul>
+                                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 3-5 days</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Client Portfolio Campaign -->
+                                    <div class="col-md-4">
+                                        <div class="card h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; cursor: pointer;" onclick="selectCampaign('client-portfolio')">
+                                            <div class="card-body text-white">
+                                                <h4 class="card-title">👤 Client Portfolio</h4>
+                                                <p class="card-text mb-3">Professional portrait series with consistent quality</p>
+                                                <h6>Recommended Workflows:</h6>
+                                                <ul class="small">
+                                                    <li>Portrait Enhancer (multiple shots)</li>
+                                                    <li>Creative Upscale (4K quality)</li>
+                                                    <li>Style Explorer (variations)</li>
+                                                </ul>
+                                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 2-3 days</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Content Series Campaign -->
+                                    <div class="col-md-4">
+                                        <div class="card h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; cursor: pointer;" onclick="selectCampaign('content-series')">
+                                            <div class="card-body text-white">
+                                                <h4 class="card-title">📸 Content Series</h4>
+                                                <p class="card-text mb-3">Cohesive content collection for social media</p>
+                                                <h6>Recommended Workflows:</h6>
+                                                <ul class="small">
+                                                    <li>Style Explorer (theme variations)</li>
+                                                    <li>Social Media Pack (consistent style)</li>
+                                                    <li>Creative Upscale (polish)</li>
+                                                </ul>
+                                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 1 week</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Marketing Materials Campaign -->
+                                    <div class="col-md-4">
+                                        <div class="card h-100" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border: none; cursor: pointer;" onclick="selectCampaign('marketing-materials')">
+                                            <div class="card-body text-white">
+                                                <h4 class="card-title">📢 Marketing Materials</h4>
+                                                <p class="card-text mb-3">Complete marketing asset package</p>
+                                                <h6>Recommended Workflows:</h6>
+                                                <ul class="small">
+                                                    <li>Product Mockup (ads & banners)</li>
+                                                    <li>Social Media Pack (campaigns)</li>
+                                                    <li>Logo Creator (brand elements)</li>
+                                                </ul>
+                                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 4-6 days</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Product Launch Campaign -->
+                                    <div class="col-md-4">
+                                        <div class="card h-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border: none; cursor: pointer;" onclick="selectCampaign('product-launch')">
+                                            <div class="card-body text-white">
+                                                <h4 class="card-title">🎁 Product Launch</h4>
+                                                <p class="card-text mb-3">Product introduction with marketing visuals</p>
+                                                <h6>Recommended Workflows:</h6>
+                                                <ul class="small">
+                                                    <li>Product Mockup (showcase)</li>
+                                                    <li>Social Media Pack (announcements)</li>
+                                                    <li>Creative Upscale (hero images)</li>
+                                                </ul>
+                                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> 3-4 days</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom Campaign -->
+                                    <div class="col-md-4">
+                                        <div class="card h-100" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border: none; cursor: pointer;" onclick="selectCampaign('custom')">
+                                            <div class="card-body text-white">
+                                                <h4 class="card-title">⚡ Custom Campaign</h4>
+                                                <p class="card-text mb-3">Build your own workflow sequence</p>
+                                                <h6>You Choose:</h6>
+                                                <ul class="small">
+                                                    <li>Select your own workflows</li>
+                                                    <li>Set custom goals</li>
+                                                    <li>Define your timeline</li>
+                                                </ul>
+                                                <p class="small mt-3 mb-0"><strong>Timeline:</strong> Flexible</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <!-- END PROJECTS TAB -->
 
@@ -4092,9 +4256,21 @@
                     </div>
                 </div>
 
-                <!-- Filters -->
+                <!-- Filters (Session 62: Phase C.2.1 - Added Search) -->
                 <div class="card mb-4">
                     <div class="card-body">
+                        <!-- Search Bar (Session 62: Phase C.2.1) -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="form-label">🔍 Search Portfolio</label>
+                                <input type="text" id="portfolio-search" class="form-control"
+                                       placeholder="Search by prompt, model, style, or filename..."
+                                       style="font-size: 16px; padding: 12px;">
+                                <small class="text-muted">Search across all images, videos, and audio in your portfolio</small>
+                            </div>
+                        </div>
+
+                        <!-- Filters Row -->
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">Filter by Project</label>
@@ -4134,6 +4310,13 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Export Section (Session 62: Phase C.2.2) -->
+                <div class="mb-4 text-end">
+                    <button id="export-portfolio-btn" class="btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        📥 Export Portfolio
+                    </button>
                 </div>
 
                 <!-- Portfolio Gallery -->
@@ -13717,7 +13900,7 @@
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 style="color: #f59e0b;">Workflows (${project.workflows ? project.workflows.length : 0})</h5>
-                        <button class="btn btn-sm btn-success" onclick="alert('Add workflow feature coming in Phase C.2!')">
+                        <button class="btn btn-sm btn-success" onclick="openAddWorkflowModal('${project.id}')">
                             ➕ Add Workflow
                         </button>
                     </div>
@@ -13727,15 +13910,20 @@
                             ${project.workflows.map(wf => `
                                 <div class="list-group-item list-group-item-dark mb-2">
                                     <div class="d-flex justify-content-between align-items-start">
-                                        <div>
+                                        <div class="flex-grow-1">
                                             <h6 class="mb-1">${wf.workflow_name}</h6>
                                             <p class="mb-1 small text-muted">${wf.workflow_type} - ${wf.status}</p>
                                             ${wf.notes ? `<p class="mb-0 small">${wf.notes}</p>` : ''}
                                         </div>
-                                        <div class="text-end">
+                                        <div class="text-end me-3">
                                             <p class="mb-1 small">Order: ${wf.order + 1}</p>
                                             <p class="mb-1 small">${wf.result_count || 0} results</p>
                                             ${wf.execution_time ? `<p class="mb-0 small">${wf.execution_time}s</p>` : ''}
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-danger" onclick="removeWorkflowFromProject('${project.id}', '${wf.id}')" title="Remove from project">
+                                                🗑️
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -13787,9 +13975,295 @@
             initProjectManagement();
         });
 
+        // Open add workflow modal (Session 62: Phase C.1 Completion)
+        async function openAddWorkflowModal(projectId) {
+            projectManagement.currentProjectId = projectId;
+
+            // Initialize modal
+            const modal = new bootstrap.Modal(document.getElementById('add-workflow-modal'));
+
+            // Show loading state
+            document.getElementById('workflow-selector-loading').style.display = 'block';
+            document.getElementById('workflow-selector-list').style.display = 'none';
+            document.getElementById('workflow-selector-empty').style.display = 'none';
+
+            modal.show();
+
+            try {
+                // Fetch completed workflows
+                const response = await fetch('/api/workflows/history/?status=completed&limit=100', {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.workflows && data.workflows.length > 0) {
+                    // Get current project's workflow IDs to exclude already added ones
+                    const project = projectManagement.projects.find(p => p.id === projectId);
+                    const existingWorkflowIds = project && project.workflows ?
+                        project.workflows.map(wf => wf.workflow_history_id) : [];
+
+                    // Filter out already added workflows
+                    const availableWorkflows = data.workflows.filter(wf =>
+                        !existingWorkflowIds.includes(wf.id)
+                    );
+
+                    if (availableWorkflows.length === 0) {
+                        document.getElementById('workflow-selector-loading').style.display = 'none';
+                        document.getElementById('workflow-selector-empty').innerHTML =
+                            '<p class="text-muted text-center py-4">All completed workflows are already in this project!</p>';
+                        document.getElementById('workflow-selector-empty').style.display = 'block';
+                        return;
+                    }
+
+                    // Render workflows
+                    const workflowList = document.getElementById('workflow-selector-list');
+                    workflowList.innerHTML = availableWorkflows.map(wf => {
+                        const workflowTypeEmoji = {
+                            'logo_creator': '🎨',
+                            'portrait_enhancer': '👤',
+                            'style_explorer': '🖌️',
+                            'social_media_pack': '📱',
+                            'product_mockup': '📦',
+                            'creative_upscale': '⬆️'
+                        }[wf.workflow_type] || '🔄';
+
+                        return `
+                            <div class="form-check p-3 mb-2" style="background: #2a2a2a; border-radius: 8px;">
+                                <input class="form-check-input workflow-checkbox" type="checkbox"
+                                       value="${wf.id}" id="wf-${wf.id}"
+                                       onchange="updateAddWorkflowButton()">
+                                <label class="form-check-label flex-grow-1" for="wf-${wf.id}" style="cursor: pointer;">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">${workflowTypeEmoji} ${wf.workflow_name}</h6>
+                                            <p class="mb-1 small text-muted">${wf.workflow_type.replace('_', ' ')}</p>
+                                            ${wf.prompt ? `<p class="mb-0 small text-truncate" style="max-width: 400px;">${wf.prompt}</p>` : ''}
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-success">${wf.result_count || 0} results</span>
+                                            ${wf.execution_time ? `<p class="mb-0 small text-muted">${wf.execution_time}s</p>` : ''}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        `;
+                    }).join('');
+
+                    document.getElementById('workflow-selector-loading').style.display = 'none';
+                    document.getElementById('workflow-selector-list').style.display = 'block';
+                } else {
+                    document.getElementById('workflow-selector-loading').style.display = 'none';
+                    document.getElementById('workflow-selector-empty').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading workflows:', error);
+                document.getElementById('workflow-selector-loading').style.display = 'none';
+                document.getElementById('workflow-selector-empty').innerHTML =
+                    '<p class="text-danger text-center py-4">Error loading workflows</p>';
+                document.getElementById('workflow-selector-empty').style.display = 'block';
+            }
+        }
+
+        // Update add workflow button state
+        function updateAddWorkflowButton() {
+            const checkboxes = document.querySelectorAll('.workflow-checkbox:checked');
+            const btn = document.getElementById('confirm-add-workflow-btn');
+            btn.disabled = checkboxes.length === 0;
+            btn.innerHTML = checkboxes.length > 0 ?
+                `✅ Add ${checkboxes.length} Workflow${checkboxes.length > 1 ? 's' : ''}` :
+                '✅ Add Selected Workflows';
+        }
+
+        // Add selected workflows to project
+        async function addWorkflowsToProject() {
+            const projectId = projectManagement.currentProjectId;
+            const checkboxes = document.querySelectorAll('.workflow-checkbox:checked');
+            const workflowIds = Array.from(checkboxes).map(cb => cb.value);
+
+            if (workflowIds.length === 0) {
+                showNotification('Please select at least one workflow', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('confirm-add-workflow-btn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Adding...';
+
+            try {
+                // Add each workflow to the project
+                for (const workflowId of workflowIds) {
+                    await fetch(`/api/creative-projects/${projectId}/workflows/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            workflow_history_id: workflowId
+                        })
+                    });
+                }
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('add-workflow-modal')).hide();
+
+                // Refresh project details
+                viewProjectDetails(projectId);
+
+                showNotification(`Successfully added ${workflowIds.length} workflow${workflowIds.length > 1 ? 's' : ''}!`, 'success');
+            } catch (error) {
+                console.error('Error adding workflows:', error);
+                showNotification('Error adding workflows to project', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Add Selected Workflows';
+            }
+        }
+
+        // Remove workflow from project
+        async function removeWorkflowFromProject(projectId, workflowId) {
+            if (!confirm('Remove this workflow from the project?')) return;
+
+            try {
+                const response = await fetch(`/api/creative-projects/${projectId}/workflows/${workflowId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Refresh project details
+                    viewProjectDetails(projectId);
+                    showNotification('Workflow removed from project', 'success');
+                } else {
+                    showNotification(result.error || 'Failed to remove workflow', 'danger');
+                }
+            } catch (error) {
+                console.error('Error removing workflow:', error);
+                showNotification('Error removing workflow from project', 'danger');
+            }
+        }
+
+        // Add event listener for confirm button
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('confirm-add-workflow-btn')?.addEventListener('click', addWorkflowsToProject);
+            // Session 62: Phase C.3 - Campaign Planner button
+            document.getElementById('campaign-planner-btn')?.addEventListener('click', openCampaignPlanner);
+        });
+
+        // ====================================================================
+        // CAMPAIGN PLANNER (Session 62: Phase C.3.1)
+        // ====================================================================
+
+        // Campaign templates with recommended workflows and goals
+        const campaignTemplates = {
+            'brand-launch': {
+                name: 'Brand Launch Campaign',
+                description: 'Complete branding package for new business launches',
+                goal: 'Create a cohesive brand identity with logo, social media assets, and marketing materials',
+                category: 'branding',
+                workflows: ['Logo Creator (2-3 variations)', 'Social Media Pack (profile images)', 'Product Mockup (branding materials)'],
+                estimatedDays: '3-5'
+            },
+            'client-portfolio': {
+                name: 'Client Portfolio Campaign',
+                description: 'Professional portrait series with consistent quality',
+                goal: 'Deliver high-quality portrait collection with multiple styles and variations',
+                category: 'portfolio',
+                workflows: ['Portrait Enhancer (multiple shots)', 'Creative Upscale (4K quality)', 'Style Explorer (variations)'],
+                estimatedDays: '2-3'
+            },
+            'content-series': {
+                name: 'Content Series Campaign',
+                description: 'Cohesive content collection for social media',
+                goal: 'Create a series of themed content pieces with consistent visual style',
+                category: 'content',
+                workflows: ['Style Explorer (theme variations)', 'Social Media Pack (consistent style)', 'Creative Upscale (polish)'],
+                estimatedDays: '7'
+            },
+            'marketing-materials': {
+                name: 'Marketing Materials Campaign',
+                description: 'Complete marketing asset package',
+                goal: 'Produce comprehensive marketing collateral for campaigns and promotions',
+                category: 'marketing',
+                workflows: ['Product Mockup (ads & banners)', 'Social Media Pack (campaigns)', 'Logo Creator (brand elements)'],
+                estimatedDays: '4-6'
+            },
+            'product-launch': {
+                name: 'Product Launch Campaign',
+                description: 'Product introduction with marketing visuals',
+                goal: 'Generate product showcase imagery and announcement materials for launch',
+                category: 'product',
+                workflows: ['Product Mockup (showcase)', 'Social Media Pack (announcements)', 'Creative Upscale (hero images)'],
+                estimatedDays: '3-4'
+            },
+            'custom': {
+                name: 'Custom Campaign',
+                description: 'Build your own workflow sequence',
+                goal: 'Define your own creative objectives and workflow plan',
+                category: 'custom',
+                workflows: [],
+                estimatedDays: 'Flexible'
+            }
+        };
+
+        // Open campaign planner modal
+        function openCampaignPlanner() {
+            const modal = new bootstrap.Modal(document.getElementById('campaign-planner-modal'));
+            modal.show();
+        }
+
+        // Select campaign template and create project
+        async function selectCampaign(campaignType) {
+            const template = campaignTemplates[campaignType];
+            if (!template) return;
+
+            // Close campaign planner modal
+            bootstrap.Modal.getInstance(document.getElementById('campaign-planner-modal'))?.hide();
+
+            // Pre-fill project form with template data
+            document.getElementById('project-modal-title').textContent = 'Create Campaign: ' + template.name;
+            document.getElementById('project-id').value = '';
+            document.getElementById('project-name').value = template.name;
+            document.getElementById('project-goal').value = template.goal;
+            document.getElementById('project-description').value =
+                `${template.description}\n\nRecommended Workflows:\n${template.workflows.map(w => '• ' + w).join('\n')}\n\nEstimated Timeline: ${template.estimatedDays} days`;
+            document.getElementById('project-category').value = template.category;
+            document.getElementById('project-status').value = 'planning';
+
+            // Set deadline (estimated days from now)
+            if (template.estimatedDays !== 'Flexible') {
+                const days = parseInt(template.estimatedDays.split('-')[1] || template.estimatedDays);
+                const deadline = new Date();
+                deadline.setDate(deadline.getDate() + days);
+                document.getElementById('project-deadline').value = deadline.toISOString().slice(0, 16);
+            }
+
+            // Add campaign tag
+            const currentTags = document.getElementById('project-tags').value;
+            const tags = currentTags ? currentTags + ', ' : '';
+            document.getElementById('project-tags').value = tags + 'campaign, ' + template.category;
+
+            // Open project modal
+            projectManagement.projectModal.show();
+
+            // Show notification
+            showNotification(`Campaign template "${template.name}" loaded! Review and save to create project.`, 'info');
+        }
+
         // Make functions global for onclick handlers
         window.viewProjectDetails = viewProjectDetails;
         window.deleteProject = deleteProject;
+        window.openAddWorkflowModal = openAddWorkflowModal;
+        window.updateAddWorkflowButton = updateAddWorkflowButton;
+        window.removeWorkflowFromProject = removeWorkflowFromProject;
+        window.selectCampaign = selectCampaign;  // Session 62: Phase C.3
 
         // ====================================================================
         // END PROJECT MANAGEMENT SYSTEM
@@ -13806,7 +14280,8 @@
             currentFilters: {
                 project_id: '',
                 content_type: '',
-                sort_by: '-created_at'
+                sort_by: '-created_at',
+                search: ''  // Session 62: Phase C.2.1 - Added search
             }
         };
 
@@ -13822,6 +14297,10 @@
                 }
                 if (portfolioSystem.currentFilters.sort_by) {
                     params.append('sort_by', portfolioSystem.currentFilters.sort_by);
+                }
+                // Session 62: Phase C.2.1 - Add search parameter
+                if (portfolioSystem.currentFilters.search) {
+                    params.append('search', portfolioSystem.currentFilters.search);
                 }
 
                 const response = await fetch(`/api/portfolio/?${params.toString()}`, {
@@ -13969,9 +14448,36 @@
             // Click media area to close
             document.getElementById(modalId + '-content').addEventListener('click', () => modal.remove());
 
-            // Download button
-            document.getElementById(modalId + '-download').addEventListener('click', () => {
-                window.open(item.content_url, '_blank');
+            // Download button (Session 62: Fixed to actually download)
+            document.getElementById(modalId + '-download').addEventListener('click', async () => {
+                try {
+                    // Fetch the content
+                    const response = await fetch(item.content_url);
+                    const blob = await response.blob();
+
+                    // Create download link
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    // Generate filename from item
+                    const extension = item.type === 'image' ? 'png' :
+                                    item.type === 'video' ? 'mp4' : 'mp3';
+                    const timestamp = new Date(item.created_at).toISOString().split('T')[0];
+                    a.download = `${item.operation_type || item.type}-${timestamp}.${extension}`;
+
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showNotification('Download started!', 'success');
+                } catch (error) {
+                    console.error('Download error:', error);
+                    // Fallback to opening in new tab if download fails
+                    window.open(item.content_url, '_blank');
+                    showNotification('Opening in new tab (direct download failed)', 'info');
+                }
             });
 
             // Close button
@@ -14011,23 +14517,26 @@
             }
         }
 
-        // Apply filters
+        // Apply filters (Session 62: Phase C.2.1 - Added search)
         document.getElementById('apply-portfolio-filters')?.addEventListener('click', function() {
             portfolioSystem.currentFilters.project_id = document.getElementById('portfolio-project-filter').value;
             portfolioSystem.currentFilters.content_type = document.getElementById('portfolio-type-filter').value;
             portfolioSystem.currentFilters.sort_by = document.getElementById('portfolio-sort').value;
+            portfolioSystem.currentFilters.search = document.getElementById('portfolio-search').value.trim();
             loadPortfolio();
         });
 
-        // Reset filters
+        // Reset filters (Session 62: Phase C.2.1 - Added search reset)
         document.getElementById('reset-portfolio-filters')?.addEventListener('click', function() {
             document.getElementById('portfolio-project-filter').value = '';
             document.getElementById('portfolio-type-filter').value = '';
             document.getElementById('portfolio-sort').value = '-created_at';
+            document.getElementById('portfolio-search').value = '';
             portfolioSystem.currentFilters = {
                 project_id: '',
                 content_type: '',
-                sort_by: '-created_at'
+                sort_by: '-created_at',
+                search: ''
             };
             loadPortfolio();
         });
@@ -14039,6 +14548,204 @@
                 loadPortfolio();
             }
         });
+
+        // Export portfolio as HTML (Session 62: Phase C.2.2)
+        function exportPortfolio() {
+            if (portfolioSystem.items.length === 0) {
+                showNotification('No items to export! Create some content first.', 'warning');
+                return;
+            }
+
+            const exportDate = new Date().toLocaleDateString();
+            const exportTime = new Date().toLocaleTimeString();
+            const username = document.querySelector('.text-warning')?.textContent || 'User';
+
+            // Build HTML content
+            let html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Portfolio - ${exportDate}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card h3 {
+            margin: 0;
+            font-size: 32px;
+            color: #667eea;
+        }
+        .stat-card p {
+            margin: 5px 0 0;
+            color: #666;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .item {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .item img, .item video {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .item-details {
+            padding: 15px;
+        }
+        .item-details h4 {
+            margin: 0 0 10px;
+            font-size: 14px;
+            color: #333;
+        }
+        .item-details p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-right: 5px;
+        }
+        .badge-image { background: #f093fb; color: white; }
+        .badge-video { background: #4facfe; color: white; }
+        .badge-audio { background: #43e97b; color: white; }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 AI Content Portfolio</h1>
+        <p style="font-size: 14px; opacity: 0.9; margin: 10px 0;">This is a standalone portfolio export from AI Content Studio</p>
+        <p><strong>Creator:</strong> ${username}</p>
+        <p><strong>Exported:</strong> ${exportDate} at ${exportTime}</p>
+        <p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">📊 Portfolio includes ${portfolioSystem.items.length} content items created with AI</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>${portfolioSystem.stats.total_items || 0}</h3>
+            <p>Total Items</p>
+        </div>
+        <div class="stat-card">
+            <h3>${portfolioSystem.stats.images || 0}</h3>
+            <p>Images</p>
+        </div>
+        <div class="stat-card">
+            <h3>${portfolioSystem.stats.videos || 0}</h3>
+            <p>Videos</p>
+        </div>
+        <div class="stat-card">
+            <h3>${portfolioSystem.stats.audio || 0}</h3>
+            <p>Audio Files</p>
+        </div>
+        <div class="stat-card">
+            <h3>${portfolioSystem.stats.favorites || 0}</h3>
+            <p>Favorites</p>
+        </div>
+        <div class="stat-card">
+            <h3>${portfolioSystem.stats.total_views || 0}</h3>
+            <p>Total Views</p>
+        </div>
+    </div>
+
+    <div class="gallery">
+`;
+
+            // Add each portfolio item
+            portfolioSystem.items.forEach(item => {
+                const typeClass = `badge-${item.type}`;
+                const mediaHtml = item.type === 'image' ?
+                    `<img src="${item.content_url}" alt="${item.prompt || 'AI Generated'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'300\\' height=\\'200\\'%3E%3Crect fill=\\'%23ddd\\' width=\\'300\\' height=\\'200\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' fill=\\'%23999\\'%3EImage%3C/text%3E%3C/svg%3E'">` :
+                    item.type === 'video' ?
+                    `<video src="${item.content_url}" poster="${item.thumbnail_url || ''}" controls></video>` :
+                    `<div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">🎵 Audio</div>`;
+
+                html += `
+        <div class="item">
+            ${mediaHtml}
+            <div class="item-details">
+                <span class="badge ${typeClass}">${item.type.toUpperCase()}</span>
+                ${item.is_favorite ? '<span class="badge" style="background: #ffc107; color: #000;">⭐ Favorite</span>' : ''}
+                <h4>${item.prompt || 'No prompt'}</h4>
+                <p><strong>Model:</strong> ${item.model || 'N/A'}</p>
+                ${item.style ? `<p><strong>Style:</strong> ${item.style}</p>` : ''}
+                <p><strong>Created:</strong> ${new Date(item.created_at).toLocaleDateString()}</p>
+                <p><strong>Views:</strong> ${item.view_count || 0} | <strong>Downloads:</strong> ${item.download_count || 0}</p>
+                ${item.projects && item.projects.length > 0 ?
+                    `<p><strong>Projects:</strong> ${item.projects.map(p => p.name).join(', ')}</p>` : ''}
+            </div>
+        </div>
+`;
+            });
+
+            html += `
+    </div>
+
+    <div class="footer">
+        <p>Generated with AI Content Studio • ${exportDate}</p>
+        <p>This portfolio contains ${portfolioSystem.items.length} AI-generated content items</p>
+    </div>
+</body>
+</html>
+`;
+
+            // Create blob and trigger download
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `AI-Portfolio-${exportDate.replace(/\//g, '-')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showNotification(`Portfolio exported! ${portfolioSystem.items.length} items saved to HTML file.`, 'success');
+        }
+
+        // Export button event listener
+        document.getElementById('export-portfolio-btn')?.addEventListener('click', exportPortfolio);
 
         // Make functions available globally for onclick handlers
         window.viewPortfolioItem = viewPortfolioItem;

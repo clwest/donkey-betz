@@ -149,8 +149,8 @@ from agents.views_instances import (
 from core.views_knowledge import (
     personal_knowledge_upload, personal_knowledge_delete, personal_knowledge_stats
 )
-# Import Intelligent Assistant with Agent Integration
-from core.views_assistant_intelligent import assistant_chat_intelligent as assistant_chat
+# Import Intelligent Assistant with Agent Integration (Session 58: Replaced with GPT-5 version from views_image)
+# from core.views_assistant_intelligent import assistant_chat_intelligent as assistant_chat
 from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats
 from core.auth_views_enhanced import (
     register_view, verify_email_view, login_enhanced_view,
@@ -273,7 +273,12 @@ from core.views_image import (
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
     list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
-    start_workflow_execution, complete_workflow_execution
+    start_workflow_execution, complete_workflow_execution, assistant_chat, get_user_preferences_api,
+    # Session 60: Phase C.1.2 - Project Management API
+    list_projects, create_project, get_project, update_project, delete_project,
+    add_workflow_to_project, remove_workflow_from_project,
+    # Session 61: Phase C.2.1 - Portfolio View API
+    get_portfolio
 )
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
@@ -617,8 +622,9 @@ urlpatterns = [
     path('api/v1/assistant/context/', assistant_context, name='assistant-context'),
     path('api/v1/assistant/chat/', assistant_chat, name='assistant-chat'),
 
-    # Personal AI Assistant endpoints (new learning system)
-    path('api/assistant/chat/', chat_with_assistant, name='personal-assistant-chat'),
+    # Personal AI Assistant endpoints (Session 58: Phase B.3 - Using GPT-5)
+    path('api/assistant/chat/', assistant_chat, name='personal-assistant-chat'),
+    path('api/assistant/preferences/', get_user_preferences_api, name='user-preferences'),  # Session 59: Phase B.4
     path('api/assistant/context/', get_assistant_context, name='personal-assistant-context'),
     path('api/assistant/learning/', get_learning_summary, name='personal-assistant-learning'),
 
@@ -835,7 +841,7 @@ urlpatterns = [
 
     # Workflow History & Favorites (Session 57: Phase B.2)
     path('api/workflows/execution/start/', start_workflow_execution, name='start-workflow-execution'),
-    path('api/workflows/execution/<int:workflow_id>/complete/', complete_workflow_execution, name='complete-workflow-execution'),
+    path('api/workflows/execution/<uuid:workflow_id>/complete/', complete_workflow_execution, name='complete-workflow-execution'),  # Session 58: Fixed to accept UUID
     path('api/workflows/history/', list_workflow_history, name='list-workflow-history'),
     path('api/workflows/history/<int:workflow_id>/', get_workflow_history, name='get-workflow-history'),
     path('api/workflows/history/<int:workflow_id>/toggle-favorite/', toggle_workflow_favorite, name='toggle-workflow-favorite'),
@@ -843,6 +849,18 @@ urlpatterns = [
     path('api/workflows/favorites/', list_workflow_favorites, name='list-workflow-favorites'),
     path('api/workflows/favorites/save/', save_workflow_favorite, name='save-workflow-favorite'),
     path('api/workflows/favorites/<int:favorite_id>/delete/', delete_workflow_favorite, name='delete-workflow-favorite'),
+
+    # Creative Project Management (Session 60: Phase C.1)
+    path('api/creative-projects/', list_projects, name='creative-projects-list'),
+    path('api/creative-projects/create/', create_project, name='creative-project-create'),
+    path('api/creative-projects/<uuid:project_id>/', get_project, name='creative-project-detail'),
+    path('api/creative-projects/<uuid:project_id>/update/', update_project, name='creative-project-update'),
+    path('api/creative-projects/<uuid:project_id>/delete/', delete_project, name='creative-project-delete'),
+    path('api/creative-projects/<uuid:project_id>/workflows/', add_workflow_to_project, name='creative-project-add-workflow'),
+    path('api/creative-projects/<uuid:project_id>/workflows/<int:workflow_id>/', remove_workflow_from_project, name='creative-project-remove-workflow'),
+
+    # Portfolio View (Session 61: Phase C.2.1)
+    path('api/portfolio/', get_portfolio, name='portfolio'),
 
     # Image-to-Image Control (Session 38: Feature 11)
     path('api/stability/control/sketch/', control_sketch, name='stability-control-sketch'),
