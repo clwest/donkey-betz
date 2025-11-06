@@ -6573,7 +6573,7 @@
                         <div style="font-size: 0.9rem; margin-bottom: 0.75rem;">
                             You usually run <strong>${nextName}</strong> after this!
                         </div>
-                        <button onclick="this.parentElement.remove(); useWorkflowTemplate('${nextWorkflow}', document.getElementById('workflowPrompt').value);"
+                        <button onclick="this.parentElement.remove(); loadPrebuiltWorkflow('${nextWorkflow}');"
                                 style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
                                        color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; width: 100%;
                                        font-weight: 600;">
