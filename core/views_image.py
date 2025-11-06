@@ -3809,6 +3809,296 @@ def rerun_workflow(request, workflow_id):
         }, status=500)
 
 
+# ========================================
+# USER PREFERENCE LEARNING (Session 59: Phase B.4)
+# ========================================
+
+def get_user_preferences(user):
+    """
+    Analyze user's workflow history to identify patterns and preferences
+    Session 59: Phase B.4 - Memory System Integration
+
+    Returns a dictionary with:
+    - favorite_workflow: Most frequently used workflow type
+    - favorite_styles: List of most commonly used styles
+    - successful_prompts: Prompts from favorited workflows
+    - total_workflows: Total number of workflows executed
+    - workflow_patterns: Common workflow sequences
+    - recent_activity: Last 5 workflows for context
+    """
+    from content.models import WorkflowHistory, WorkflowFavorite
+    from collections import Counter
+
+    # Get all workflow history for this user
+    history = WorkflowHistory.objects.filter(
+        user=user,
+        status='completed'  # Only count successful executions
+    ).order_by('-created_at')
+
+    total_count = history.count()
+
+    if total_count == 0:
+        return {
+            'has_history': False,
+            'total_workflows': 0,
+            'message': 'No workflow history yet - start creating to build your preferences!'
+        }
+
+    # Analyze workflow type preferences
+    workflow_counts = Counter(h.workflow_type for h in history)
+    favorite_workflow = workflow_counts.most_common(1)[0] if workflow_counts else None
+
+    # Analyze style preferences from config JSON
+    style_usage = Counter()
+    model_usage = Counter()
+
+    for h in history:
+        if h.config:
+            # Check for style in first step (usually generate)
+            steps = h.config.get('steps', [])
+            if steps and len(steps) > 0:
+                first_step = steps[0]
+                if isinstance(first_step, dict):
+                    step_config = first_step.get('config', {})
+                    if 'style' in step_config:
+                        style_usage[step_config['style']] += 1
+                    if 'model' in step_config:
+                        model_usage[step_config['model']] += 1
+
+    favorite_styles = [style for style, count in style_usage.most_common(3)]
+    favorite_models = [model for model, count in model_usage.most_common(2)]
+
+    # Find successful patterns (favorited workflows)
+    favorites = WorkflowFavorite.objects.filter(user=user).select_related('workflow_history')
+    successful_prompts = []
+
+    for fav in favorites[:5]:  # Top 5 favorites
+        wf = fav.workflow_history
+        if wf.improved_prompt:
+            successful_prompts.append({
+                'workflow_type': wf.workflow_type,
+                'prompt': wf.improved_prompt,
+                'use_count': fav.use_count
+            })
+        elif wf.prompt:
+            successful_prompts.append({
+                'workflow_type': wf.workflow_type,
+                'prompt': wf.prompt,
+                'use_count': fav.use_count
+            })
+
+    # Analyze workflow sequences (what user does after what)
+    recent_workflows = list(history[:20])  # Last 20 for pattern detection
+    sequences = []
+
+    for i in range(len(recent_workflows) - 1):
+        sequences.append({
+            'from': recent_workflows[i].workflow_type,
+            'to': recent_workflows[i+1].workflow_type
+        })
+
+    sequence_counts = Counter(f"{seq['from']}->{seq['to']}" for seq in sequences)
+    common_patterns = [pattern for pattern, count in sequence_counts.most_common(3) if count >= 2]
+
+    # Recent activity for context
+    recent_activity = [{
+        'workflow_type': h.workflow_type,
+        'workflow_name': h.workflow_name,
+        'created_at': h.created_at.isoformat(),
+        'execution_time': h.execution_time,
+        'result_count': h.result_count
+    } for h in recent_workflows[:5]]
+
+    return {
+        'has_history': True,
+        'total_workflows': total_count,
+        'favorite_workflow': {
+            'type': favorite_workflow[0],
+            'count': favorite_workflow[1],
+            'percentage': round((favorite_workflow[1] / total_count) * 100, 1)
+        } if favorite_workflow else None,
+        'favorite_styles': favorite_styles,
+        'favorite_models': favorite_models,
+        'successful_prompts': successful_prompts,
+        'common_patterns': common_patterns,
+        'recent_activity': recent_activity,
+        'favorites_count': favorites.count()
+    }
+
+
+# ========================================
+# AI ASSISTANT CHAT (Session 58: Phase B.3)
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_preferences_api(request):
+    """
+    Get user preferences and patterns from workflow history
+    Session 59: Phase B.4 - Memory System Integration
+
+    Returns user's favorite workflows, styles, patterns, and recent activity
+    for smart defaults and personalized recommendations.
+
+    Example response:
+    {
+        "has_history": true,
+        "favorite_workflow": {"type": "logo_creator", "count": 15, "percentage": 45.5},
+        "favorite_styles": ["vector", "minimalist", "photographic"],
+        "successful_prompts": [...],
+        "common_patterns": ["logo_creator->creative_upscale"]
+    }
+    """
+    try:
+        preferences = get_user_preferences(request.user)
+        return Response(preferences)
+    except Exception as e:
+        logger.error(f"❌ Error fetching user preferences: {str(e)}")
+        return Response({
+            'has_history': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assistant_chat(request):
+    """
+    AI Assistant chat endpoint using GPT-5
+    Session 58: Phase B.3 - Personal Assistant Integration
+    Session 59: Phase B.4 - Enhanced with user preference learning
+
+    Handles general conversational queries from the AI Assistant.
+    Fast, intelligent responses for questions about the platform,
+    creative advice, and general help.
+
+    Now includes personalized context based on user's workflow history!
+
+    Example:
+        Input: "What's the best way to create professional images?"
+        Output: Helpful advice from GPT-5 about image generation techniques
+                (personalized based on user's favorite workflows and styles)
+    """
+    try:
+        user_message = request.data.get('message', '').strip()
+        conversation_history = request.data.get('history', [])  # Optional for context
+
+        if not user_message:
+            return Response({
+                'error': 'Message is required'
+            }, status=400)
+
+        # Session 59: Phase B.4 - Get user preferences for personalized assistance
+        user_prefs = get_user_preferences(request.user)
+
+        # Build personalized system instructions based on user history
+        ASSISTANT_INSTRUCTIONS = """You are a helpful AI assistant for the Donkey Betz AI Studio platform.
+
+The platform provides:
+- **Image Generation**: 4 models (Core, SDXL, SD3, Ultra) with 69 style presets
+- **Image Editing**: Recolor, erase, inpaint, outpaint, remove background
+- **Image Upscaling**: Fast 4x, Conservative 4K, Creative upscale
+- **Video Generation**: Text-to-video and image-to-video (Runway ML)
+- **Audio Generation**: Voice synthesis, sound effects, music
+- **AI Workflows**: 6 professional templates (Logo Creator, Portrait Enhancer, Style Explorer, Social Media Pack, Product Mockup, Creative Upscale)
+
+Your role:
+- Answer questions about platform features and capabilities
+- Provide creative advice for image, video, and audio generation
+- Explain how to use different tools and workflows
+- Give tips for better prompts and results
+- Be friendly, concise, and helpful
+
+Keep responses under 200 words. Be conversational and practical."""
+
+        # Session 59: Add personalized context based on user preferences
+        if user_prefs.get('has_history'):
+            personalization = "\n\n**USER PREFERENCES & HISTORY:**\n"
+
+            # Favorite workflow
+            if user_prefs.get('favorite_workflow'):
+                fav = user_prefs['favorite_workflow']
+                workflow_name = fav['type'].replace('_', ' ').title()
+                personalization += f"- This user LOVES {workflow_name} ({fav['count']} times, {fav['percentage']}% of workflows)\n"
+
+            # Favorite styles
+            if user_prefs.get('favorite_styles'):
+                styles_str = ", ".join(user_prefs['favorite_styles'])
+                personalization += f"- Preferred styles: {styles_str}\n"
+
+            # Favorite models
+            if user_prefs.get('favorite_models'):
+                models_str = ", ".join(user_prefs['favorite_models'])
+                personalization += f"- Preferred models: {models_str}\n"
+
+            # Total experience
+            personalization += f"- Total workflows completed: {user_prefs['total_workflows']}\n"
+
+            # Favorites
+            if user_prefs.get('favorites_count', 0) > 0:
+                personalization += f"- Has saved {user_prefs['favorites_count']} favorite workflows\n"
+
+            # Common patterns
+            if user_prefs.get('common_patterns'):
+                patterns_str = ", ".join(user_prefs['common_patterns'][:2])
+                personalization += f"- Common workflow patterns: {patterns_str}\n"
+
+            # Recent activity
+            if user_prefs.get('recent_activity'):
+                recent = user_prefs['recent_activity'][0]
+                workflow_name = recent['workflow_name']
+                personalization += f"- Most recent: {workflow_name}\n"
+
+            personalization += "\nUSE THIS CONTEXT to give personalized, relevant advice. Mention their preferences when helpful!"
+
+            ASSISTANT_INSTRUCTIONS += personalization
+
+        # Build input with conversation history if provided
+        input_text = f"User question: {user_message}"
+
+        if conversation_history and len(conversation_history) > 0:
+            # Include last 3 messages for context
+            recent_history = conversation_history[-3:]
+            history_text = "\n".join([
+                f"{'User' if msg.get('role') == 'user' else 'Assistant'}: {msg.get('content', '')}"
+                for msg in recent_history
+            ])
+            input_text = f"Recent conversation:\n{history_text}\n\nCurrent question: {user_message}"
+
+        # Call OpenAI GPT-5 using Responses API (same as workflow improvement)
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        logger.info(f"💬 Assistant chat request from {request.user.username}: '{user_message[:50]}...'")
+
+        response = client.responses.create(
+            model="gpt-5",
+            instructions=ASSISTANT_INSTRUCTIONS,
+            input=input_text
+        )
+
+        assistant_response = response.output_text if hasattr(response, 'output_text') else None
+
+        if not assistant_response:
+            logger.error(f"❌ GPT-5 returned empty response")
+            assistant_response = "I apologize, but I encountered an issue generating a response. Please try rephrasing your question!"
+
+        assistant_response = assistant_response.strip()
+        logger.info(f"✅ Assistant response generated ({len(assistant_response)} chars)")
+
+        return Response({
+            'message': assistant_response,
+            'model': 'gpt-5',
+            'user_message': user_message
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error in assistant chat: {str(e)}")
+        return Response({
+            'error': 'Sorry, I encountered an error. Please try again!',
+            'details': str(e) if settings.DEBUG else None
+        }, status=500)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def start_workflow_execution(request):
@@ -3924,6 +4214,765 @@ def complete_workflow_execution(request, workflow_id):
         }, status=404)
     except Exception as e:
         logger.error(f"❌ Error completing workflow execution: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# SESSION 60: PHASE C.1.2 - PROJECT MANAGEMENT API ENDPOINTS
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_projects(request):
+    """
+    List all creative projects for current user
+    Session 60: Phase C.1.2 - Project Management API
+
+    GET /api/projects/
+
+    Returns:
+        {
+            "projects": [
+                {
+                    "id": "uuid",
+                    "name": "Brand Launch Campaign",
+                    "description": "...",
+                    "goal": "...",
+                    "status": "in_progress",
+                    "category": "Branding",
+                    "deadline": "2025-12-31T23:59:59Z",
+                    "total_workflows": 5,
+                    "completed_workflows": 2,
+                    "progress_percentage": 40,
+                    "is_overdue": false,
+                    "created_at": "2025-11-06T12:00:00Z",
+                    "updated_at": "2025-11-06T14:00:00Z"
+                }
+            ]
+        }
+    """
+    try:
+        from content.models import CreativeProject
+
+        projects = CreativeProject.objects.filter(user=request.user).order_by('-created_at')
+
+        project_data = []
+        for project in projects:
+            project_data.append({
+                'id': str(project.id),
+                'name': project.name,
+                'description': project.description,
+                'goal': project.goal,
+                'status': project.status,
+                'category': project.category,
+                'tags': project.tags,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+                'total_workflows': project.total_workflows,
+                'completed_workflows': project.completed_workflows,
+                'progress_percentage': project.progress_percentage,
+                'is_overdue': project.is_overdue,
+                'is_shared': project.is_shared,
+                'created_at': project.created_at.isoformat(),
+                'updated_at': project.updated_at.isoformat()
+            })
+
+        logger.info(f"✅ Loaded {len(project_data)} projects for user {request.user.username}")
+
+        return Response({'projects': project_data})
+
+    except Exception as e:
+        logger.error(f"❌ Error listing projects: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_project(request):
+    """
+    Create a new creative project
+    Session 60: Phase C.1.2 - Project Management API
+
+    POST /api/projects/
+    Body:
+        {
+            "name": "Brand Launch Campaign",
+            "description": "Complete brand identity for new startup",
+            "goal": "Create professional brand assets",
+            "deadline": "2025-12-31T23:59:59Z" (optional),
+            "category": "Branding" (optional),
+            "tags": ["logo", "branding", "social"] (optional)
+        }
+
+    Returns:
+        {
+            "success": true,
+            "project": { ... project data ... }
+        }
+    """
+    try:
+        from content.models import CreativeProject
+        from django.utils.dateparse import parse_datetime
+
+        # Validate required fields
+        name = request.data.get('name', '').strip()
+        description = request.data.get('description', '').strip()
+        goal = request.data.get('goal', '').strip()
+
+        if not name:
+            return Response({
+                'error': 'Project name is required'
+            }, status=400)
+
+        if not goal:
+            return Response({
+                'error': 'Project goal is required'
+            }, status=400)
+
+        # Optional fields
+        deadline_str = request.data.get('deadline')
+        deadline = None
+        if deadline_str:
+            deadline = parse_datetime(deadline_str)
+
+        category = request.data.get('category', '')
+        tags = request.data.get('tags', [])
+
+        # Create project
+        project = CreativeProject.objects.create(
+            user=request.user,
+            name=name,
+            description=description,
+            goal=goal,
+            deadline=deadline,
+            category=category,
+            tags=tags
+        )
+
+        logger.info(f"✅ Created project '{name}' for user {request.user.username}")
+
+        return Response({
+            'success': True,
+            'project': {
+                'id': str(project.id),
+                'name': project.name,
+                'description': project.description,
+                'goal': project.goal,
+                'status': project.status,
+                'category': project.category,
+                'tags': project.tags,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+                'total_workflows': project.total_workflows,
+                'completed_workflows': project.completed_workflows,
+                'progress_percentage': project.progress_percentage,
+                'created_at': project.created_at.isoformat()
+            }
+        }, status=201)
+
+    except Exception as e:
+        logger.error(f"❌ Error creating project: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_project(request, project_id):
+    """
+    Get detailed information about a specific project
+    Session 60: Phase C.1.2 - Project Management API
+
+    GET /api/projects/<uuid:project_id>/
+
+    Returns:
+        {
+            "project": {
+                ... project data ...,
+                "workflows": [
+                    {
+                        "id": "uuid",
+                        "workflow_name": "Logo Creator",
+                        "workflow_type": "logo_creator",
+                        "status": "completed",
+                        "order": 0,
+                        "notes": "Main logo design",
+                        "created_at": "...",
+                        "result_count": 3
+                    }
+                ]
+            }
+        }
+    """
+    try:
+        from content.models import CreativeProject
+
+        # Session 60: Using UUID for project lookup
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        # Get all workflows in this project
+        workflows_data = []
+        for pw in project.workflows.all():
+            workflows_data.append({
+                'id': str(pw.id),
+                'workflow_history_id': str(pw.workflow_history.id),
+                'workflow_name': pw.workflow_history.workflow_name,
+                'workflow_type': pw.workflow_history.workflow_type,
+                'status': pw.workflow_history.status,
+                'order': pw.order,
+                'notes': pw.notes,
+                'added_at': pw.added_at.isoformat(),
+                'result_count': pw.workflow_history.result_count,
+                'execution_time': pw.workflow_history.execution_time
+            })
+
+        project_data = {
+            'id': str(project.id),
+            'name': project.name,
+            'description': project.description,
+            'goal': project.goal,
+            'status': project.status,
+            'category': project.category,
+            'tags': project.tags,
+            'deadline': project.deadline.isoformat() if project.deadline else None,
+            'total_workflows': project.total_workflows,
+            'completed_workflows': project.completed_workflows,
+            'progress_percentage': project.progress_percentage,
+            'is_overdue': project.is_overdue,
+            'is_shared': project.is_shared,
+            'created_at': project.created_at.isoformat(),
+            'updated_at': project.updated_at.isoformat(),
+            'workflows': workflows_data
+        }
+
+        return Response({'project': project_data})
+
+    except CreativeProject.DoesNotExist:
+        return Response({
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error getting project: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_project(request, project_id):
+    """
+    Update an existing project
+    Session 60: Phase C.1.2 - Project Management API
+
+    PUT/PATCH /api/projects/<uuid:project_id>/
+    Body:
+        {
+            "name": "Updated Name" (optional),
+            "description": "..." (optional),
+            "goal": "..." (optional),
+            "status": "in_progress" (optional),
+            "deadline": "..." (optional),
+            "category": "..." (optional),
+            "tags": [...] (optional)
+        }
+
+    Returns:
+        {
+            "success": true,
+            "project": { ... updated project data ... }
+        }
+    """
+    try:
+        from content.models import CreativeProject
+        from django.utils.dateparse import parse_datetime
+
+        # Session 60: Using UUID for project lookup
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        # Update fields if provided
+        if 'name' in request.data:
+            project.name = request.data['name'].strip()
+
+        if 'description' in request.data:
+            project.description = request.data['description'].strip()
+
+        if 'goal' in request.data:
+            project.goal = request.data['goal'].strip()
+
+        if 'status' in request.data:
+            status = request.data['status']
+            valid_statuses = ['planning', 'in_progress', 'review', 'completed', 'archived']
+            if status in valid_statuses:
+                project.status = status
+
+        if 'deadline' in request.data:
+            deadline_str = request.data['deadline']
+            if deadline_str:
+                project.deadline = parse_datetime(deadline_str)
+            else:
+                project.deadline = None
+
+        if 'category' in request.data:
+            project.category = request.data['category']
+
+        if 'tags' in request.data:
+            project.tags = request.data['tags']
+
+        project.save()
+
+        logger.info(f"✅ Updated project '{project.name}' for user {request.user.username}")
+
+        return Response({
+            'success': True,
+            'project': {
+                'id': str(project.id),
+                'name': project.name,
+                'description': project.description,
+                'goal': project.goal,
+                'status': project.status,
+                'category': project.category,
+                'tags': project.tags,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+                'progress_percentage': project.progress_percentage,
+                'updated_at': project.updated_at.isoformat()
+            }
+        })
+
+    except CreativeProject.DoesNotExist:
+        return Response({
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error updating project: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_project(request, project_id):
+    """
+    Delete a project
+    Session 60: Phase C.1.2 - Project Management API
+
+    DELETE /api/projects/<uuid:project_id>/
+
+    Returns:
+        {
+            "success": true,
+            "message": "Project deleted successfully"
+        }
+    """
+    try:
+        from content.models import CreativeProject
+
+        # Session 60: Using UUID for project lookup
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        project_name = project.name
+        project.delete()
+
+        logger.info(f"✅ Deleted project '{project_name}' for user {request.user.username}")
+
+        return Response({
+            'success': True,
+            'message': f"Project '{project_name}' deleted successfully"
+        })
+
+    except CreativeProject.DoesNotExist:
+        return Response({
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error deleting project: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_workflow_to_project(request, project_id):
+    """
+    Add a workflow to a project
+    Session 60: Phase C.1.2 - Project Management API
+
+    POST /api/projects/<uuid:project_id>/workflows/
+    Body:
+        {
+            "workflow_history_id": "uuid",
+            "order": 0 (optional),
+            "notes": "Main logo design" (optional)
+        }
+
+    Returns:
+        {
+            "success": true,
+            "project_workflow": { ... }
+        }
+    """
+    try:
+        from content.models import CreativeProject, ProjectWorkflow, WorkflowHistory
+
+        # Session 60: Using UUID for project lookup
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        workflow_history_id = request.data.get('workflow_history_id')
+        if not workflow_history_id:
+            return Response({
+                'error': 'workflow_history_id is required'
+            }, status=400)
+
+        # Session 60: Using UUID for workflow lookup
+        workflow_history = WorkflowHistory.objects.get(
+            id=workflow_history_id,
+            user=request.user
+        )
+
+        # Check if already in project
+        existing = ProjectWorkflow.objects.filter(
+            project=project,
+            workflow_history=workflow_history
+        ).exists()
+
+        if existing:
+            return Response({
+                'error': 'Workflow already in this project'
+            }, status=400)
+
+        # Get order (default to end of list)
+        order = request.data.get('order')
+        if order is None:
+            # Add to end
+            max_order = project.workflows.count()
+            order = max_order
+
+        notes = request.data.get('notes', '')
+
+        # Create link
+        project_workflow = ProjectWorkflow.objects.create(
+            project=project,
+            workflow_history=workflow_history,
+            order=order,
+            notes=notes
+        )
+
+        logger.info(f"✅ Added workflow '{workflow_history.workflow_name}' to project '{project.name}'")
+
+        return Response({
+            'success': True,
+            'project_workflow': {
+                'id': str(project_workflow.id),
+                'project_id': str(project.id),
+                'workflow_history_id': str(workflow_history.id),
+                'workflow_name': workflow_history.workflow_name,
+                'order': project_workflow.order,
+                'notes': project_workflow.notes,
+                'added_at': project_workflow.added_at.isoformat()
+            }
+        }, status=201)
+
+    except CreativeProject.DoesNotExist:
+        return Response({
+            'error': 'Project not found'
+        }, status=404)
+    except WorkflowHistory.DoesNotExist:
+        return Response({
+            'error': 'Workflow not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error adding workflow to project: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_workflow_from_project(request, project_id, workflow_id):
+    """
+    Remove a workflow from a project
+    Session 60: Phase C.1.2 - Project Management API
+
+    DELETE /api/projects/<uuid:project_id>/workflows/<uuid:workflow_id>/
+
+    Returns:
+        {
+            "success": true,
+            "message": "Workflow removed from project"
+        }
+    """
+    try:
+        from content.models import CreativeProject, ProjectWorkflow
+
+        # Session 60: Using UUID for project lookup
+        project = CreativeProject.objects.get(id=project_id, user=request.user)
+
+        # Session 60: Using UUID for ProjectWorkflow lookup
+        project_workflow = ProjectWorkflow.objects.get(
+            id=workflow_id,
+            project=project
+        )
+
+        workflow_name = project_workflow.workflow_history.workflow_name
+        project_workflow.delete()
+
+        logger.info(f"✅ Removed workflow '{workflow_name}' from project '{project.name}'")
+
+        return Response({
+            'success': True,
+            'message': f"Workflow '{workflow_name}' removed from project"
+        })
+
+    except CreativeProject.DoesNotExist:
+        return Response({
+            'error': 'Project not found'
+        }, status=404)
+    except ProjectWorkflow.DoesNotExist:
+        return Response({
+            'error': 'Workflow not in this project'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error removing workflow from project: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+# ===================================================================
+# SESSION 61: PHASE C.2.1 - PORTFOLIO VIEW API
+# ===================================================================
+# Portfolio aggregates ALL content (images, videos, audio) from ALL projects
+# Provides unified view with filtering and sorting capabilities
+# ===================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_portfolio(request):
+    """
+    GET /api/portfolio/
+
+    Aggregate all content (images, videos, audio) from all user's creative projects
+
+    Query Parameters:
+    - project_id: Filter by specific project (UUID)
+    - content_type: Filter by type (image/video/audio)
+    - date_from: Start date (ISO format)
+    - date_to: End date (ISO format)
+    - sort_by: Sort field (created_at/project_name/type) default: -created_at
+    """
+    try:
+        # Import models locally
+        from content.models import ImageHistory, VideoHistory
+        from django.utils.dateparse import parse_datetime
+
+        logger.info(f"📊 Loading portfolio for user: {request.user.username}")
+
+        # Get query parameters
+        project_id = request.GET.get('project_id')
+        content_type = request.GET.get('content_type')
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+        sort_by = request.GET.get('sort_by', '-created_at')
+
+        # Base filters
+        image_filter = {'user': request.user}
+        video_filter = {'user': request.user}
+        audio_filter = {'user': request.user}
+
+        # Apply date filtering
+        if date_from:
+            try:
+                from_date = parse_datetime(date_from)
+                if from_date:
+                    image_filter['created_at__gte'] = from_date
+                    video_filter['created_at__gte'] = from_date
+                    audio_filter['created_at__gte'] = from_date
+            except Exception as e:
+                logger.warning(f"⚠️ Invalid date_from: {date_from}")
+
+        if date_to:
+            try:
+                to_date = parse_datetime(date_to)
+                if to_date:
+                    image_filter['created_at__lte'] = to_date
+                    video_filter['created_at__lte'] = to_date
+                    audio_filter['created_at__lte'] = to_date
+            except Exception as e:
+                logger.warning(f"⚠️ Invalid date_to: {date_to}")
+
+        # Collect content items
+        portfolio_items = []
+
+        # Query images
+        if not content_type or content_type == 'image':
+            images = ImageHistory.objects.filter(**image_filter).select_related('user')
+            for img in images:
+                # Find associated projects via WorkflowHistory
+                projects = []
+                if hasattr(img, 'workflow_executions') and img.workflow_executions.exists():
+                    for wf in img.workflow_executions.all():
+                        project_workflows = wf.projects.select_related('project').all()
+                        for pw in project_workflows:
+                            if not project_id or str(pw.project.id) == project_id:
+                                projects.append({
+                                    'id': str(pw.project.id),
+                                    'name': pw.project.name,
+                                    'status': pw.project.status
+                                })
+
+                # Skip if project filter doesn't match
+                if project_id and not projects:
+                    continue
+
+                portfolio_items.append({
+                    'id': str(img.id),
+                    'type': 'image',
+                    'content_url': img.get_full_url(),
+                    'thumbnail_url': img.get_thumbnail_url(),
+                    'prompt': img.prompt,
+                    'model': img.model_used,
+                    'style': img.style,
+                    'operation_type': img.image_type,
+                    'created_at': img.created_at.isoformat(),
+                    'view_count': img.view_count,
+                    'download_count': img.download_count,
+                    'is_favorite': img.is_favorite,
+                    'projects': projects,
+                    'metadata': {
+                        'width': img.image_width,
+                        'height': img.image_height,
+                        'file_size': img.file_size_bytes,
+                        'parameters': img.parameters
+                    }
+                })
+
+        # Query videos
+        if not content_type or content_type == 'video':
+            videos = VideoHistory.objects.filter(**video_filter).select_related('user')
+            for vid in videos:
+                # Find associated projects
+                projects = []
+                if hasattr(vid, 'workflow_executions') and vid.workflow_executions.exists():
+                    for wf in vid.workflow_executions.all():
+                        project_workflows = wf.projects.select_related('project').all()
+                        for pw in project_workflows:
+                            if not project_id or str(pw.project.id) == project_id:
+                                projects.append({
+                                    'id': str(pw.project.id),
+                                    'name': pw.project.name,
+                                    'status': pw.project.status
+                                })
+
+                if project_id and not projects:
+                    continue
+
+                portfolio_items.append({
+                    'id': str(vid.id),
+                    'type': 'video',
+                    'content_url': vid.video_url,
+                    'thumbnail_url': vid.thumbnail_url or vid.video_url,
+                    'prompt': vid.prompt,
+                    'operation_type': vid.video_type,
+                    'created_at': vid.created_at.isoformat(),
+                    'view_count': vid.view_count,
+                    'download_count': vid.download_count,
+                    'is_favorite': vid.is_favorite,
+                    'projects': projects,
+                    'metadata': {
+                        'duration': vid.duration,
+                        'width': vid.video_width,
+                        'height': vid.video_height,
+                        'provider': 'runway',
+                        'model': vid.model_used,
+                        'status': vid.status
+                    }
+                })
+
+        # Query audio
+        # TODO: Implement AudioHistory model first (currently using Runway ML but no model tracking)
+        # if not content_type or content_type == 'audio':
+        #     audio_items = AudioHistory.objects.filter(**audio_filter).select_related('user')
+        #     for aud in audio_items:
+        #         # Find associated projects
+        #         projects = []
+        #         if hasattr(aud, 'workflow_executions') and aud.workflow_executions.exists():
+        #             for wf in aud.workflow_executions.all():
+        #                 project_workflows = wf.projects.select_related('project').all()
+        #                 for pw in project_workflows:
+        #                     if not project_id or str(pw.project.id) == project_id:
+        #                         projects.append({
+        #                             'id': str(pw.project.id),
+        #                             'name': pw.project.name,
+        #                             'status': pw.project.status
+        #                         })
+        #
+        #         if project_id and not projects:
+        #             continue
+        #
+        #         portfolio_items.append({
+        #             'id': str(aud.id),
+        #             'type': 'audio',
+        #             'content_url': aud.audio_url,
+        #             'thumbnail_url': None,
+        #             'prompt': aud.prompt,
+        #             'operation_type': aud.operation_type,
+        #             'created_at': aud.created_at.isoformat(),
+        #             'view_count': aud.view_count,
+        #             'download_count': aud.download_count,
+        #             'is_favorite': aud.is_favorite,
+        #             'projects': projects,
+        #             'metadata': {
+        #                 'duration': aud.duration,
+        #                 'voice': aud.voice,
+        #                 'provider': 'runway'
+        #             }
+        #         })
+
+        # Sort results
+        if sort_by == 'created_at':
+            portfolio_items.sort(key=lambda x: x['created_at'])
+        elif sort_by == '-created_at':
+            portfolio_items.sort(key=lambda x: x['created_at'], reverse=True)
+        elif sort_by == 'type':
+            portfolio_items.sort(key=lambda x: x['type'])
+        elif sort_by == 'project_name':
+            # Sort by first project name if exists
+            portfolio_items.sort(key=lambda x: x['projects'][0]['name'] if x['projects'] else 'zzzz')
+
+        # Get summary stats
+        stats = {
+            'total_items': len(portfolio_items),
+            'images': sum(1 for item in portfolio_items if item['type'] == 'image'),
+            'videos': sum(1 for item in portfolio_items if item['type'] == 'video'),
+            'audio': sum(1 for item in portfolio_items if item['type'] == 'audio'),
+            'favorites': sum(1 for item in portfolio_items if item['is_favorite']),
+            'total_views': sum(item['view_count'] for item in portfolio_items),
+            'total_downloads': sum(item['download_count'] for item in portfolio_items)
+        }
+
+        logger.info(f"✅ Portfolio loaded: {stats['total_items']} items ({stats['images']} images, {stats['videos']} videos, {stats['audio']} audio)")
+
+        return Response({
+            'success': True,
+            'portfolio': portfolio_items,
+            'stats': stats,
+            'filters': {
+                'project_id': project_id,
+                'content_type': content_type,
+                'date_from': date_from,
+                'date_to': date_to,
+                'sort_by': sort_by
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error loading portfolio: {str(e)}")
         return Response({
             'error': str(e)
         }, status=500)
