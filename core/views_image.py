@@ -4930,11 +4930,13 @@ def get_portfolio(request):
     - date_from: Start date (ISO format)
     - date_to: End date (ISO format)
     - sort_by: Sort field (created_at/project_name/type) default: -created_at
+    - search: Search across prompts, models, styles (Session 62: Phase C.2.1)
     """
     try:
         # Import models locally
         from content.models import ImageHistory, VideoHistory
         from django.utils.dateparse import parse_datetime
+        from django.db.models import Q
 
         logger.info(f"📊 Loading portfolio for user: {request.user.username}")
 
@@ -4944,6 +4946,7 @@ def get_portfolio(request):
         date_from = request.GET.get('date_from')
         date_to = request.GET.get('date_to')
         sort_by = request.GET.get('sort_by', '-created_at')
+        search_query = request.GET.get('search', '').strip()  # Session 62: Phase C.2.1
 
         # Base filters
         image_filter = {'user': request.user}
@@ -4976,7 +4979,18 @@ def get_portfolio(request):
 
         # Query images
         if not content_type or content_type == 'image':
-            images = ImageHistory.objects.filter(**image_filter).select_related('user')
+            images_query = ImageHistory.objects.filter(**image_filter).select_related('user')
+
+            # Session 62: Phase C.2.1 - Apply search filter
+            if search_query:
+                images_query = images_query.filter(
+                    Q(prompt__icontains=search_query) |
+                    Q(model_used__icontains=search_query) |
+                    Q(style__icontains=search_query) |
+                    Q(image_type__icontains=search_query)
+                )
+
+            images = images_query
             for img in images:
                 # Find associated projects via WorkflowHistory
                 projects = []
@@ -5019,7 +5033,17 @@ def get_portfolio(request):
 
         # Query videos
         if not content_type or content_type == 'video':
-            videos = VideoHistory.objects.filter(**video_filter).select_related('user')
+            videos_query = VideoHistory.objects.filter(**video_filter).select_related('user')
+
+            # Session 62: Phase C.2.1 - Apply search filter
+            if search_query:
+                videos_query = videos_query.filter(
+                    Q(prompt__icontains=search_query) |
+                    Q(model_used__icontains=search_query) |
+                    Q(video_type__icontains=search_query)
+                )
+
+            videos = videos_query
             for vid in videos:
                 # Find associated projects
                 projects = []
