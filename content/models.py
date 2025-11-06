@@ -2004,10 +2004,11 @@ class WorkflowHistory(UnifiedBaseModel):
         help_text="Complete workflow configuration (steps, parameters, etc.)"
     )
 
-    input_image_id = models.IntegerField(
+    # Session 59: Fixed IntegerField → UUIDField (ImageHistory uses UUID primary keys)
+    input_image_id = models.UUIDField(
         null=True,
         blank=True,
-        help_text="ImageHistory ID if workflow used an input image"
+        help_text="ImageHistory UUID if workflow used an input image"
     )
 
     # Execution tracking
@@ -2176,3 +2177,201 @@ class WorkflowFavorite(UnifiedBaseModel):
         self.use_count += 1
         self.last_used_at = timezone.now()
         self.save(update_fields=['use_count', 'last_used_at'])
+
+
+# =============================================================================
+# SESSION 60: PHASE C - DECISION COMMAND / PROJECT MANAGEMENT
+# =============================================================================
+
+class CreativeProject(UnifiedBaseModel):
+    """
+    A creative project containing multiple workflows
+    Session 60: Phase C.1.1 - Project Management System
+
+    Examples:
+    - "Brand Launch Campaign" (logo + social media + marketing materials)
+    - "Client Portfolio" (multiple portraits + upscaling)
+    - "Social Media Series" (style explorer + variations)
+    """
+
+    # User identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='creative_projects',
+        help_text="User who owns this project"
+    )
+
+    # Project details
+    name = models.CharField(
+        max_length=200,
+        help_text="Project name (e.g., 'Brand Launch Campaign')"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed description of the project"
+    )
+
+    goal = models.TextField(
+        help_text="What's the objective of this project?"
+    )
+
+    # Timeline
+    deadline = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Project deadline"
+    )
+
+    # Project status
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('planning', 'Planning'),
+            ('in_progress', 'In Progress'),
+            ('review', 'Under Review'),
+            ('completed', 'Completed'),
+            ('archived', 'Archived')
+        ],
+        default='planning',
+        help_text="Current project status"
+    )
+
+    # Metadata and tracking
+    total_workflows = models.PositiveIntegerField(
+        default=0,
+        help_text="Total number of workflows in this project"
+    )
+
+    completed_workflows = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of completed workflows"
+    )
+
+    # Organization
+    category = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Project category (e.g., 'Branding', 'Marketing', 'Personal')"
+    )
+
+    tags = models.JSONField(
+        default=list,
+        help_text="Project tags for organization"
+    )
+
+    # Collaboration (future feature)
+    is_shared = models.BooleanField(
+        default=False,
+        help_text="Whether project is shared with others"
+    )
+
+    class Meta:
+        verbose_name = "Creative Project"
+        verbose_name_plural = "Creative Projects"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['deadline']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+    @property
+    def progress_percentage(self):
+        """Calculate project completion percentage"""
+        if self.total_workflows == 0:
+            return 0
+        return int((self.completed_workflows / self.total_workflows) * 100)
+
+    @property
+    def is_overdue(self):
+        """Check if project is past deadline"""
+        if not self.deadline:
+            return False
+        return timezone.now() > self.deadline and self.status not in ['completed', 'archived']
+
+    def update_workflow_counts(self):
+        """Recalculate workflow counts from linked workflows"""
+        from django.db.models import Count, Q
+
+        counts = self.workflows.aggregate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(workflow_history__status='completed'))
+        )
+
+        self.total_workflows = counts['total'] or 0
+        self.completed_workflows = counts['completed'] or 0
+        self.save(update_fields=['total_workflows', 'completed_workflows'])
+
+
+class ProjectWorkflow(models.Model):
+    """
+    Links workflows to projects
+    Session 60: Phase C.1.1 - Project Management System
+
+    Many-to-many relationship between CreativeProject and WorkflowHistory
+    with additional metadata (order, notes, etc.)
+    """
+
+    # Relationships
+    # Session 60: Using UUIDField for foreign keys (following UUID pattern)
+    project = models.ForeignKey(
+        CreativeProject,
+        on_delete=models.CASCADE,
+        related_name='workflows',
+        help_text="Project this workflow belongs to"
+    )
+
+    workflow_history = models.ForeignKey(
+        WorkflowHistory,
+        on_delete=models.CASCADE,
+        related_name='projects',
+        help_text="Workflow execution linked to this project"
+    )
+
+    # Organization
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Order in project sequence (0-indexed)"
+    )
+
+    notes = models.TextField(
+        blank=True,
+        help_text="Notes about this workflow in the project context"
+    )
+
+    # Timestamps
+    added_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When workflow was added to project"
+    )
+
+    class Meta:
+        verbose_name = "Project Workflow"
+        verbose_name_plural = "Project Workflows"
+        ordering = ['order', 'added_at']
+        indexes = [
+            models.Index(fields=['project', 'order']),
+        ]
+        # Prevent duplicate workflow assignments to same project
+        unique_together = [['project', 'workflow_history']]
+
+    def __str__(self):
+        return f"{self.project.name} - {self.workflow_history.workflow_name}"
+
+    def save(self, *args, **kwargs):
+        """Override save to update project counts"""
+        super().save(*args, **kwargs)
+        # Update project workflow counts
+        self.project.update_workflow_counts()
+
+    def delete(self, *args, **kwargs):
+        """Override delete to update project counts"""
+        project = self.project
+        super().delete(*args, **kwargs)
+        # Update project workflow counts after deletion
+        project.update_workflow_counts()

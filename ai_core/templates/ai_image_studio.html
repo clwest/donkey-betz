@@ -11569,9 +11569,9 @@
                         🤖
                     </button>
 
-                    <!-- AI Assistant Panel -->
+                    <!-- AI Assistant Panel (Session 62: Enlarged for better readability) -->
                     <div id="aiAssistantPanel" class="shadow-lg"
-                         style="position: fixed; bottom: 100px; right: 30px; width: 400px; max-height: 600px;
+                         style="position: fixed; bottom: 100px; right: 30px; width: 700px; max-height: 750px;
                                 background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); border: 3px solid rgba(251, 191, 36, 0.5);
                                 border-radius: 20px; z-index: 1049; display: none; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 191, 36, 0.3);">
 
@@ -11596,9 +11596,9 @@
                             </div>
                         </div>
 
-                        <!-- Chat Messages -->
-                        <div id="aiChatMessages" class="p-3" style="max-height: 350px; overflow-y: auto;">
-                            <div class="alert alert-info mb-2" style="font-size: 14px;">
+                        <!-- Chat Messages (Session 62: Larger area + bigger font) -->
+                        <div id="aiChatMessages" class="p-3" style="max-height: 500px; overflow-y: auto; font-size: 15px;">
+                            <div class="alert alert-info mb-2" style="font-size: 15px;">
                                 👋 Hi! I'm your AI assistant. I can help you:
                                 <ul class="mb-0 mt-2" style="font-size: 13px;">
                                     <li>Generate images, videos, and audio</li>
@@ -11789,7 +11789,7 @@
 
                 const messageHTML = `
                     <div id="${messageId}" class="mb-2 ${role === 'user' ? 'text-end' : ''}" ${isTemporary ? 'data-temporary="true"' : ''}>
-                        <div class="d-inline-block p-2 rounded" style="max-width: 80%; background: ${role === 'user' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(100, 116, 139, 0.2)'}; font-size: 14px; position: relative;">
+                        <div class="d-inline-block p-2 rounded" style="max-width: 85%; background: ${role === 'user' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(100, 116, 139, 0.2)'}; font-size: 15px; line-height: 1.6; position: relative;">
                             ${role === 'user' ? '👤' : '🤖'} ${content}
                             ${actionButtons}
                         </div>

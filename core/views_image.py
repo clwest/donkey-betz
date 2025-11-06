@@ -4156,6 +4156,10 @@ def assistant_chat(request):
         # Session 59: Phase B.4 - Get user preferences for personalized assistance
         user_prefs = get_user_preferences(request.user)
 
+        # Session 62: Phase C.3.2 - Get user's projects for strategic planning
+        from content.models import CreativeProject
+        user_projects = CreativeProject.objects.filter(user=request.user).order_by('-created_at')[:5]
+
         # Build personalized system instructions based on user history
         ASSISTANT_INSTRUCTIONS = """You are a helpful AI assistant for the Donkey Betz AI Studio platform.
 
@@ -4166,12 +4170,16 @@ The platform provides:
 - **Video Generation**: Text-to-video and image-to-video (Runway ML)
 - **Audio Generation**: Voice synthesis, sound effects, music
 - **AI Workflows**: 6 professional templates (Logo Creator, Portrait Enhancer, Style Explorer, Social Media Pack, Product Mockup, Creative Upscale)
+- **Projects & Campaigns**: Organize workflows into projects, use campaign templates (Brand Launch, Client Portfolio, Content Series, Marketing Materials, Product Launch)
 
 Your role:
 - Answer questions about platform features and capabilities
 - Provide creative advice for image, video, and audio generation
 - Explain how to use different tools and workflows
 - Give tips for better prompts and results
+- Provide STRATEGIC PLANNING advice for campaigns and projects
+- Suggest workflow sequences for different creative goals
+- Help users plan timelines and organize their creative work
 - Be friendly, concise, and helpful
 
 Keep responses under 200 words. Be conversational and practical."""
@@ -4217,6 +4225,18 @@ Keep responses under 200 words. Be conversational and practical."""
             personalization += "\nUSE THIS CONTEXT to give personalized, relevant advice. Mention their preferences when helpful!"
 
             ASSISTANT_INSTRUCTIONS += personalization
+
+        # Session 62: Phase C.3.2 - Add project context for strategic planning
+        if user_projects.exists():
+            project_context = "\n\n**ACTIVE PROJECTS:**\n"
+            for project in user_projects:
+                project_context += f"- {project.name} ({project.status}): {project.goal}\n"
+                project_context += f"  Category: {project.category}, Workflows: {project.total_workflows}, Progress: {project.progress_percentage}%\n"
+                if project.deadline:
+                    project_context += f"  Deadline: {project.deadline.strftime('%Y-%m-%d')}\n"
+
+            project_context += "\nProvide strategic advice based on their active projects. Suggest workflows, timelines, and organization strategies!"
+            ASSISTANT_INSTRUCTIONS += project_context
 
         # Build input with conversation history if provided
         input_text = f"User question: {user_message}"
