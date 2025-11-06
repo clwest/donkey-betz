@@ -7716,16 +7716,14 @@
                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
                                                font-family: inherit;">
                                     </div>
-
                                     <div style="margin-bottom: 1rem;">
                                         <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎨 Colors:</label>
                                         <input type="text" id="logoColors"
-                                               placeholder="e.g., navy blue and gold, green and white, red"
+                                               placeholder="e.g., navy blue and gold, green and white"
                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
                                                font-family: inherit;">
                                     </div>
-
                                     <div style="margin-bottom: 1rem;">
                                         <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🏭 Industry/Type:</label>
                                         <select id="logoIndustry"
@@ -7746,14 +7744,240 @@
                                             <option value="other">Other</option>
                                         </select>
                                     </div>
-
                                     <div style="margin-bottom: 1rem;">
                                         <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">📝 Additional Details (optional):</label>
                                         <textarea id="logoAdditionalDetails" rows="2"
-                                                  placeholder="e.g., modern and minimalist, playful mascot, geometric shapes"
+                                                  placeholder="e.g., modern and minimalist, playful mascot"
                                                   style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
                                                   border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
                                                   font-family: inherit; resize: vertical;"></textarea>
+                                    </div>
+                                </div>
+                            ` : workflowType === 'portrait-enhancer' ? `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">👤 Subject Description:</label>
+                                        <input type="text" id="portraitSubject"
+                                               placeholder="e.g., professional woman in 30s, CEO headshot, athlete"
+                                               style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                               border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                               font-family: inherit;">
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎭 Style/Mood:</label>
+                                        <select id="portraitStyle"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select style (optional)</option>
+                                            <option value="professional">Corporate / Professional</option>
+                                            <option value="casual">Casual / Friendly</option>
+                                            <option value="dramatic">Dramatic / Artistic</option>
+                                            <option value="natural">Natural / Candid</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">💡 Lighting:</label>
+                                        <select id="portraitLighting"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select lighting (optional)</option>
+                                            <option value="studio">Studio lighting</option>
+                                            <option value="natural">Natural light</option>
+                                            <option value="dramatic">Dramatic side lighting</option>
+                                            <option value="soft">Soft diffused</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🖼️ Background:</label>
+                                        <select id="portraitBackground"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select background (optional)</option>
+                                            <option value="neutral">Neutral gray</option>
+                                            <option value="blurred">Blurred bokeh</option>
+                                            <option value="office">Office environment</option>
+                                            <option value="outdoor">Outdoor natural</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            ` : workflowType === 'social-media-pack' ? `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">📱 Content Description:</label>
+                                        <input type="text" id="socialContent"
+                                               placeholder="e.g., food photo, fitness post, product showcase"
+                                               style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                               border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                               font-family: inherit;">
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🌐 Platform:</label>
+                                        <select id="socialPlatform"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select platform (optional)</option>
+                                            <option value="instagram">Instagram</option>
+                                            <option value="pinterest">Pinterest</option>
+                                            <option value="facebook">Facebook</option>
+                                            <option value="linkedin">LinkedIn</option>
+                                            <option value="tiktok">TikTok</option>
+                                            <option value="twitter">Twitter / X</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">✨ Mood/Vibe:</label>
+                                        <select id="socialMood"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select mood (optional)</option>
+                                            <option value="energetic">Energetic</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="elegant">Elegant</option>
+                                            <option value="fun">Fun / Playful</option>
+                                            <option value="minimalist">Minimalist</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎨 Color Scheme:</label>
+                                        <input type="text" id="socialColors"
+                                               placeholder="e.g., vibrant and bright, pastel tones, bold contrasts"
+                                               style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                               border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                               font-family: inherit;">
+                                    </div>
+                                </div>
+                            ` : workflowType === 'product-mockup' ? `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">📦 Product Description:</label>
+                                        <input type="text" id="productDescription"
+                                               placeholder="e.g., coffee mug, phone case, watch, sneakers"
+                                               style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                               border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                               font-family: inherit;">
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🖼️ Background Style:</label>
+                                        <select id="productBackground"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select background (optional)</option>
+                                            <option value="white">White / Clean</option>
+                                            <option value="lifestyle">Lifestyle scene</option>
+                                            <option value="dark">Dark / Dramatic</option>
+                                            <option value="marble">Marble surface</option>
+                                            <option value="wooden">Wooden table</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">💡 Lighting:</label>
+                                        <select id="productLighting"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select lighting (optional)</option>
+                                            <option value="natural">Natural daylight</option>
+                                            <option value="studio">Studio lighting</option>
+                                            <option value="dramatic">Dramatic side lighting</option>
+                                            <option value="overhead">Overhead</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎯 Context:</label>
+                                        <select id="productContext"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select context (optional)</option>
+                                            <option value="hand">Hand holding</option>
+                                            <option value="surface">On surface</option>
+                                            <option value="floating">Floating</option>
+                                            <option value="lifestyle">In use / lifestyle</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            ` : workflowType === 'creative-upscale' ? `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">⬆️ Enhancement Focus:</label>
+                                        <select id="upscaleFocus"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select focus (optional)</option>
+                                            <option value="sharpen">Sharpen details</option>
+                                            <option value="colors">Enhance colors</option>
+                                            <option value="textures">Improve textures</option>
+                                            <option value="artistic">Add artistic refinement</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎯 Quality Target:</label>
+                                        <select id="upscaleQuality"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select quality (optional)</option>
+                                            <option value="4k">4K resolution</option>
+                                            <option value="max">Maximum detail</option>
+                                            <option value="balanced">Balanced enhancement</option>
+                                        </select>
+                                    </div>
+                                    <div style="color: #a78bfa; font-size: 0.9rem; margin-top: 1rem; padding: 0.75rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                                        💡 Tip: Upload your image below, then click "Improve My Prompt" for AI suggestions!
+                                    </div>
+                                </div>
+                            ` : workflowType === 'style-explorer' ? `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎨 Subject/Scene:</label>
+                                        <input type="text" id="styleSubject"
+                                               placeholder="e.g., sunset landscape, forest scene, city skyline"
+                                               style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                               border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                               font-family: inherit;">
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🖌️ Style Preference:</label>
+                                        <select id="stylePreference"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select style (optional)</option>
+                                            <option value="photorealistic">Photorealistic</option>
+                                            <option value="artistic">Artistic / Painterly</option>
+                                            <option value="cinematic">Cinematic</option>
+                                            <option value="fantasy">Fantasy</option>
+                                            <option value="minimalist">Minimalist</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">✨ Mood:</label>
+                                        <select id="styleMood"
+                                                style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                                border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                                font-family: inherit;">
+                                            <option value="">Select mood (optional)</option>
+                                            <option value="dramatic">Dramatic</option>
+                                            <option value="serene">Serene</option>
+                                            <option value="energetic">Energetic</option>
+                                            <option value="mystical">Mystical</option>
+                                            <option value="professional">Professional</option>
+                                        </select>
+                                    </div>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="color: #fcd34d; display: block; margin-bottom: 0.5rem; font-weight: 600;">🎨 Color Palette:</label>
+                                        <input type="text" id="stylePalette"
+                                               placeholder="e.g., warm sunset tones, cool blues and greens"
+                                               style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.1);
+                                               border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 10px; color: #fcd34d;
+                                               font-family: inherit;">
                                     </div>
                                 </div>
                             ` : `
@@ -7920,8 +8144,9 @@
             const improveBtn = document.getElementById('improvePromptBtn');
             const displayDiv = document.getElementById('improvedPromptDisplay');
 
-            // Session 61: Build complete prompt from Logo Creator form fields
+            // Session 61: Build complete prompt from workflow-specific form fields
             let userPrompt = '';
+
             if (workflowType === 'logo-creator') {
                 const businessName = document.getElementById('logoBusinessName')?.value.trim();
                 const colors = document.getElementById('logoColors')?.value.trim();
@@ -7933,31 +8158,106 @@
                     return;
                 }
 
-                // Build complete prompt from structured fields
                 let parts = [businessName];
                 if (colors) parts.push(`${colors} color scheme`);
                 if (industry) {
                     const industryMap = {
-                        'tech': 'technology/software company',
-                        'coffee': 'coffee shop/café',
-                        'fitness': 'fitness/gym',
-                        'food': 'restaurant/food business',
-                        'finance': 'finance/business',
-                        'health': 'healthcare/medical',
-                        'education': 'education/learning',
-                        'retail': 'retail/shopping',
-                        'creative': 'creative/art business',
-                        'construction': 'construction/trades',
-                        'other': ''
+                        'tech': 'technology/software company', 'coffee': 'coffee shop/café',
+                        'fitness': 'fitness/gym', 'food': 'restaurant/food business',
+                        'finance': 'finance/business', 'health': 'healthcare/medical',
+                        'education': 'education/learning', 'retail': 'retail/shopping',
+                        'creative': 'creative/art business', 'construction': 'construction/trades', 'other': ''
                     };
                     if (industryMap[industry]) parts.push(`for ${industryMap[industry]}`);
                 }
                 if (additionalDetails) parts.push(additionalDetails);
-
                 userPrompt = parts.join(', ');
-                console.log('📝 Built prompt from form fields:', userPrompt);
+                console.log('📝 Built prompt from Logo Creator fields:', userPrompt);
+
+            } else if (workflowType === 'portrait-enhancer') {
+                const subject = document.getElementById('portraitSubject')?.value.trim();
+                const style = document.getElementById('portraitStyle')?.value;
+                const lighting = document.getElementById('portraitLighting')?.value;
+                const background = document.getElementById('portraitBackground')?.value;
+
+                if (!subject) {
+                    alert('Please enter a subject description!');
+                    return;
+                }
+
+                let parts = [subject];
+                if (style) parts.push(`${style} style`);
+                if (lighting) parts.push(`with ${lighting}`);
+                if (background) parts.push(`${background} background`);
+                userPrompt = parts.join(', ');
+                console.log('📝 Built prompt from Portrait Enhancer fields:', userPrompt);
+
+            } else if (workflowType === 'social-media-pack') {
+                const content = document.getElementById('socialContent')?.value.trim();
+                const platform = document.getElementById('socialPlatform')?.value;
+                const mood = document.getElementById('socialMood')?.value;
+                const colors = document.getElementById('socialColors')?.value.trim();
+
+                if (!content) {
+                    alert('Please enter a content description!');
+                    return;
+                }
+
+                let parts = [content];
+                if (platform) parts.push(`for ${platform}`);
+                if (mood) parts.push(`${mood} mood`);
+                if (colors) parts.push(colors);
+                userPrompt = parts.join(', ');
+                console.log('📝 Built prompt from Social Media Pack fields:', userPrompt);
+
+            } else if (workflowType === 'product-mockup') {
+                const product = document.getElementById('productDescription')?.value.trim();
+                const background = document.getElementById('productBackground')?.value;
+                const lighting = document.getElementById('productLighting')?.value;
+                const context = document.getElementById('productContext')?.value;
+
+                if (!product) {
+                    alert('Please enter a product description!');
+                    return;
+                }
+
+                let parts = [product];
+                if (background) parts.push(`${background} background`);
+                if (lighting) parts.push(`with ${lighting}`);
+                if (context) parts.push(context);
+                userPrompt = parts.join(', ');
+                console.log('📝 Built prompt from Product Mockup fields:', userPrompt);
+
+            } else if (workflowType === 'creative-upscale') {
+                const focus = document.getElementById('upscaleFocus')?.value;
+                const quality = document.getElementById('upscaleQuality')?.value;
+
+                let parts = ['enhance image'];
+                if (focus) parts.push(`focus on ${focus}`);
+                if (quality) parts.push(`target ${quality}`);
+                userPrompt = parts.join(', ');
+                console.log('📝 Built prompt from Creative Upscale fields:', userPrompt);
+
+            } else if (workflowType === 'style-explorer') {
+                const subject = document.getElementById('styleSubject')?.value.trim();
+                const stylePreference = document.getElementById('stylePreference')?.value;
+                const mood = document.getElementById('styleMood')?.value;
+                const palette = document.getElementById('stylePalette')?.value.trim();
+
+                if (!subject) {
+                    alert('Please enter a subject/scene description!');
+                    return;
+                }
+
+                let parts = [subject];
+                if (stylePreference) parts.push(`${stylePreference} style`);
+                if (mood) parts.push(`${mood} mood`);
+                if (palette) parts.push(palette);
+                userPrompt = parts.join(', ');
+                console.log('📝 Built prompt from Style Explorer fields:', userPrompt);
+
             } else {
-                // Regular workflow - use textarea
+                // Fallback to generic textarea
                 const promptTextarea = document.getElementById('workflowModalPrompt');
                 if (!promptTextarea) {
                     console.error('❌ Prompt textarea not found');
@@ -8500,48 +8800,95 @@
             const modal = document.getElementById('workflowPromptModal');
             const uploadInput = document.getElementById('workflowModalUpload');
 
-            // Session 61: Build complete prompt from Logo Creator form fields OR use textarea
+            // Session 61: Build complete prompt from workflow-specific form fields
             let userPrompt = '';
+
             if (workflowType === 'logo-creator') {
                 const businessName = document.getElementById('logoBusinessName')?.value.trim();
                 const colors = document.getElementById('logoColors')?.value.trim();
                 const industry = document.getElementById('logoIndustry')?.value;
                 const additionalDetails = document.getElementById('logoAdditionalDetails')?.value.trim();
-
-                if (!businessName) {
-                    alert('Please enter a business name or concept!');
-                    return;
-                }
-
-                // Build complete prompt from structured fields
+                if (!businessName) { alert('Please enter a business name or concept!'); return; }
                 let parts = [businessName];
                 if (colors) parts.push(`${colors} color scheme`);
                 if (industry) {
                     const industryMap = {
-                        'tech': 'technology/software company',
-                        'coffee': 'coffee shop/café',
-                        'fitness': 'fitness/gym',
-                        'food': 'restaurant/food business',
-                        'finance': 'finance/business',
-                        'health': 'healthcare/medical',
-                        'education': 'education/learning',
-                        'retail': 'retail/shopping',
-                        'creative': 'creative/art business',
-                        'construction': 'construction/trades',
-                        'other': ''
+                        'tech': 'technology/software company', 'coffee': 'coffee shop/café', 'fitness': 'fitness/gym',
+                        'food': 'restaurant/food business', 'finance': 'finance/business', 'health': 'healthcare/medical',
+                        'education': 'education/learning', 'retail': 'retail/shopping', 'creative': 'creative/art business',
+                        'construction': 'construction/trades', 'other': ''
                     };
                     if (industryMap[industry]) parts.push(`for ${industryMap[industry]}`);
                 }
                 if (additionalDetails) parts.push(additionalDetails);
-
                 userPrompt = parts.join(', ');
-                console.log('📝 Built prompt from form fields for execution:', userPrompt);
+                console.log('📝 [Execute] Built prompt from Logo Creator fields:', userPrompt);
+
+            } else if (workflowType === 'portrait-enhancer') {
+                const subject = document.getElementById('portraitSubject')?.value.trim();
+                const style = document.getElementById('portraitStyle')?.value;
+                const lighting = document.getElementById('portraitLighting')?.value;
+                const background = document.getElementById('portraitBackground')?.value;
+                if (!subject) { alert('Please enter a subject description!'); return; }
+                let parts = [subject];
+                if (style) parts.push(`${style} style`);
+                if (lighting) parts.push(`with ${lighting}`);
+                if (background) parts.push(`${background} background`);
+                userPrompt = parts.join(', ');
+                console.log('📝 [Execute] Built prompt from Portrait Enhancer fields:', userPrompt);
+
+            } else if (workflowType === 'social-media-pack') {
+                const content = document.getElementById('socialContent')?.value.trim();
+                const platform = document.getElementById('socialPlatform')?.value;
+                const mood = document.getElementById('socialMood')?.value;
+                const colors = document.getElementById('socialColors')?.value.trim();
+                if (!content) { alert('Please enter a content description!'); return; }
+                let parts = [content];
+                if (platform) parts.push(`for ${platform}`);
+                if (mood) parts.push(`${mood} mood`);
+                if (colors) parts.push(colors);
+                userPrompt = parts.join(', ');
+                console.log('📝 [Execute] Built prompt from Social Media Pack fields:', userPrompt);
+
+            } else if (workflowType === 'product-mockup') {
+                const product = document.getElementById('productDescription')?.value.trim();
+                const background = document.getElementById('productBackground')?.value;
+                const lighting = document.getElementById('productLighting')?.value;
+                const context = document.getElementById('productContext')?.value;
+                if (!product) { alert('Please enter a product description!'); return; }
+                let parts = [product];
+                if (background) parts.push(`${background} background`);
+                if (lighting) parts.push(`with ${lighting}`);
+                if (context) parts.push(context);
+                userPrompt = parts.join(', ');
+                console.log('📝 [Execute] Built prompt from Product Mockup fields:', userPrompt);
+
+            } else if (workflowType === 'creative-upscale') {
+                const focus = document.getElementById('upscaleFocus')?.value;
+                const quality = document.getElementById('upscaleQuality')?.value;
+                let parts = ['enhance image'];
+                if (focus) parts.push(`focus on ${focus}`);
+                if (quality) parts.push(`target ${quality}`);
+                userPrompt = parts.join(', ');
+                console.log('📝 [Execute] Built prompt from Creative Upscale fields:', userPrompt);
+
+            } else if (workflowType === 'style-explorer') {
+                const subject = document.getElementById('styleSubject')?.value.trim();
+                const stylePreference = document.getElementById('stylePreference')?.value;
+                const mood = document.getElementById('styleMood')?.value;
+                const palette = document.getElementById('stylePalette')?.value.trim();
+                if (!subject) { alert('Please enter a subject/scene description!'); return; }
+                let parts = [subject];
+                if (stylePreference) parts.push(`${stylePreference} style`);
+                if (mood) parts.push(`${mood} mood`);
+                if (palette) parts.push(palette);
+                userPrompt = parts.join(', ');
+                console.log('📝 [Execute] Built prompt from Style Explorer fields:', userPrompt);
+
             } else {
-                // Regular workflow - use textarea
+                // Fallback to generic textarea
                 const promptInput = document.getElementById('workflowModalPrompt');
                 userPrompt = promptInput ? promptInput.value.trim() : '';
-
-                // Validation
                 if (promptInput && !userPrompt) {
                     alert('Please enter a prompt!');
                     return;
