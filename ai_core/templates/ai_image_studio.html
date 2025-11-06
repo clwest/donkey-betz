@@ -1120,6 +1120,20 @@
                     📊 All Gallery
                 </button>
             </li>
+
+            <!-- Projects (Session 60: Phase C.1.3) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button" role="tab" title="Manage creative projects and workflows">
+                    📁 Projects
+                </button>
+            </li>
+
+            <!-- Portfolio (Session 61: Phase C.2.2) -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="portfolio-tab" data-bs-toggle="tab" data-bs-target="#portfolio" type="button" role="tab" title="View all content from all projects">
+                    🎨 Portfolio
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -3899,6 +3913,242 @@
             </div>
             <!-- END ALL GALLERY TAB -->
 
+            <!-- PROJECTS TAB (Session 60: Phase C.1.3) -->
+            <div class="tab-pane fade" id="projects" role="tabpanel">
+                <h3 class="mb-4">📁 Creative Projects</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info mb-4">
+                    <strong>✨ Organize Your Creative Work</strong><br>
+                    Group workflows into projects, track progress, and manage deadlines!<br>
+                    <small class="text-muted">Perfect for client work, campaigns, and creative collections</small>
+                </div>
+
+                <!-- Create New Project Button -->
+                <div class="mb-4">
+                    <button id="create-project-btn" class="btn btn-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                        ➕ Create New Project
+                    </button>
+                </div>
+
+                <!-- Project List -->
+                <div id="projects-list" class="row">
+                    <!-- Projects will be loaded here -->
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading projects...</p>
+                    </div>
+                </div>
+
+                <!-- Create/Edit Project Modal -->
+                <div class="modal fade" id="project-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" id="project-modal-title">Create New Project</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="project-form">
+                                    <input type="hidden" id="project-id" value="">
+
+                                    <div class="mb-3">
+                                        <label for="project-name" class="form-label">Project Name *</label>
+                                        <input type="text" class="form-control" id="project-name" required placeholder="e.g., Brand Launch Campaign">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="project-goal" class="form-label">Goal/Objective *</label>
+                                        <textarea class="form-control" id="project-goal" rows="2" required placeholder="What do you want to achieve with this project?"></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="project-description" class="form-label">Description</label>
+                                        <textarea class="form-control" id="project-description" rows="3" placeholder="Detailed project description..."></textarea>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="project-category" class="form-label">Category</label>
+                                            <input type="text" class="form-control" id="project-category" placeholder="e.g., Branding, Marketing">
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label for="project-deadline" class="form-label">Deadline</label>
+                                            <input type="datetime-local" class="form-control" id="project-deadline">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="project-status" class="form-label">Status</label>
+                                        <select class="form-select" id="project-status">
+                                            <option value="planning">📋 Planning</option>
+                                            <option value="in_progress">🚀 In Progress</option>
+                                            <option value="review">👀 Under Review</option>
+                                            <option value="completed">✅ Completed</option>
+                                            <option value="archived">📦 Archived</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="project-tags" class="form-label">Tags (comma-separated)</label>
+                                        <input type="text" class="form-control" id="project-tags" placeholder="logo, branding, social-media">
+                                        <small class="text-muted">Separate tags with commas</small>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" id="save-project-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                                    💾 Save Project
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Detail Modal -->
+                <div class="modal fade" id="project-detail-modal" tabindex="-1">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" id="project-detail-title">Project Details</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="project-detail-content">
+                                    <!-- Project details will be loaded here -->
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-warning" id="edit-project-btn">
+                                    ✏️ Edit Project
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- END PROJECTS TAB -->
+
+            <!-- PORTFOLIO TAB (Session 61: Phase C.2.2) -->
+            <div class="tab-pane fade" id="portfolio" role="tabpanel">
+                <h3 class="mb-4">🎨 Portfolio</h3>
+                <p class="text-muted">View all your creative content from all projects in one unified gallery.</p>
+
+                <!-- Stats Summary -->
+                <div id="portfolio-stats" class="row mb-4">
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-items">0</h5>
+                                <small>Total Items</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-images">0</h5>
+                                <small>Images</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-videos">0</h5>
+                                <small>Videos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-audio">0</h5>
+                                <small>Audio</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-favorites">0</h5>
+                                <small>Favorites</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="mb-0" id="total-views">0</h5>
+                                <small>Total Views</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Filter by Project</label>
+                                <select id="portfolio-project-filter" class="form-select">
+                                    <option value="">All Projects</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Content Type</label>
+                                <select id="portfolio-type-filter" class="form-select">
+                                    <option value="">All Types</option>
+                                    <option value="image">Images</option>
+                                    <option value="video">Videos</option>
+                                    <option value="audio">Audio</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Sort By</label>
+                                <select id="portfolio-sort" class="form-select">
+                                    <option value="-created_at">Newest First</option>
+                                    <option value="created_at">Oldest First</option>
+                                    <option value="type">By Type</option>
+                                    <option value="project_name">By Project</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button id="apply-portfolio-filters" class="btn w-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                    🔍 Apply Filters
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button id="reset-portfolio-filters" class="btn btn-outline-secondary w-100">
+                                    🔄 Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Gallery -->
+                <div id="portfolio-gallery" class="row g-3">
+                    <div class="col-12 text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading portfolio...</span>
+                        </div>
+                        <p class="mt-2">Loading your portfolio...</p>
+                    </div>
+                </div>
+
+            </div>
+            <!-- END PORTFOLIO TAB -->
+
         </div>
         <!-- END TAB CONTENT -->
     </div>
@@ -3925,6 +4175,37 @@
                 }
             }
             return null;
+        }
+
+        // General Cookie Helper (for any cookie name)
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const trimmed = cookie.trim();
+                if (trimmed.startsWith(name + '=')) {
+                    return decodeURIComponent(trimmed.substring(name.length + 1));
+                }
+            }
+            return null;
+        }
+
+        // Show notification helper
+        function showNotification(message, type = 'info') {
+            // Create a simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type}`;
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; animation: slideIn 0.3s ease-out;';
+            toast.innerHTML = `
+                <strong>${type === 'success' ? '✅' : type === 'danger' ? '❌' : 'ℹ️'}</strong> ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            document.body.appendChild(toast);
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         // Authenticated Fetch Helper
@@ -6162,9 +6443,162 @@
             localStorage.setItem('workflowTemplates', JSON.stringify(workflowState.templates));
         }
 
+        // ========================================
+        // SESSION 59: PHASE B.4 - MEMORY SYSTEM
+        // User Preference Learning & Smart Defaults
+        // ========================================
+
+        // Global storage for user preferences
+        let userPreferences = {
+            has_history: false,
+            favorite_workflow: null,
+            favorite_styles: [],
+            favorite_models: [],
+            common_patterns: [],
+            recent_activity: []
+        };
+
+        // Fetch user preferences from backend
+        async function fetchUserPreferences() {
+            try {
+                console.log('🧠 Fetching user preferences...');
+                const response = await fetch('/api/assistant/preferences/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()  // Session 59: Fixed function name
+                    }
+                });
+
+                if (response.ok) {
+                    userPreferences = await response.json();
+                    console.log('✅ User preferences loaded:', userPreferences);
+
+                    // Show smart defaults hint if user has history
+                    if (userPreferences.has_history) {
+                        showSmartDefaultsHint();
+                    }
+                } else {
+                    console.warn('⚠️ Could not load user preferences');
+                }
+            } catch (error) {
+                console.error('❌ Error fetching user preferences:', error);
+            }
+        }
+
+        // Show hint that smart defaults are active
+        function showSmartDefaultsHint() {
+            if (!userPreferences.has_history) return;
+
+            const workflowsTab = document.querySelector('[data-tab="workflows"]');
+            if (workflowsTab && userPreferences.favorite_workflow) {
+                const favName = userPreferences.favorite_workflow.type.replace('_', ' ');
+                const badge = document.createElement('span');
+                badge.style.cssText = 'font-size: 0.75rem; color: #a78bfa; margin-left: 0.5rem;';
+                badge.textContent = '🧠 Smart';
+                badge.title = `Smart defaults active! You usually use ${favName}`;
+                workflowsTab.appendChild(badge);
+            }
+        }
+
+        // Apply smart defaults to workflow template based on user preferences
+        function applySmartDefaults(workflowType, template) {
+            if (!userPreferences.has_history) return template;
+
+            console.log(`🧠 Applying smart defaults to ${workflowType}...`);
+
+            // Apply preferred style if user has style preferences
+            if (userPreferences.favorite_styles && userPreferences.favorite_styles.length > 0) {
+                const preferredStyle = userPreferences.favorite_styles[0];
+
+                template.forEach(step => {
+                    if (step.operation === 'generate' && step.config) {
+                        // Only override if not already specified (except logo-creator which forces vector)
+                        if (workflowType !== 'logo-creator' && !step.config.style) {
+                            step.config.style = preferredStyle;
+                            console.log(`💡 Using preferred style: ${preferredStyle}`);
+                        }
+                    }
+                });
+            }
+
+            // Apply preferred model if user has model preferences
+            if (userPreferences.favorite_models && userPreferences.favorite_models.length > 0) {
+                const preferredModel = userPreferences.favorite_models[0];
+
+                template.forEach(step => {
+                    if (step.operation === 'generate' && step.config && !step.config.model) {
+                        step.config.model = preferredModel;
+                        console.log(`💡 Using preferred model: ${preferredModel}`);
+                    }
+                });
+            }
+
+            return template;
+        }
+
+        // Show contextual recommendation after workflow completion
+        function showContextualRecommendation(completedWorkflowType) {
+            if (!userPreferences.has_history) return;
+
+            // Check if user has a common pattern starting with this workflow
+            const patterns = userPreferences.common_patterns || [];
+            const matchingPattern = patterns.find(p => p.startsWith(completedWorkflowType));
+
+            if (matchingPattern) {
+                const nextWorkflow = matchingPattern.split('->')[1];
+                const nextName = nextWorkflow.replace('_', ' ').replace('-', ' ');
+
+                setTimeout(() => {
+                    const recommendDiv = document.createElement('div');
+                    recommendDiv.style.cssText = `
+                        position: fixed;
+                        bottom: 100px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 1rem 1.5rem;
+                        border-radius: 12px;
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+                        z-index: 10000;
+                        max-width: 300px;
+                        animation: slideInRight 0.3s ease-out;
+                    `;
+
+                    recommendDiv.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>💡</span>
+                            <span>Smart Suggestion</span>
+                        </div>
+                        <div style="font-size: 0.9rem; margin-bottom: 0.75rem;">
+                            You usually run <strong>${nextName}</strong> after this!
+                        </div>
+                        <button onclick="this.parentElement.remove(); useWorkflowTemplate('${nextWorkflow}', document.getElementById('workflowPrompt').value);"
+                                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+                                       color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; width: 100%;
+                                       font-weight: 600;">
+                            🚀 Run ${nextName}
+                        </button>
+                        <button onclick="this.parentElement.remove();"
+                                style="background: transparent; border: none; color: rgba(255,255,255,0.7);
+                                       padding: 0.5rem; cursor: pointer; width: 100%; margin-top: 0.5rem;">
+                            Maybe Later
+                        </button>
+                    `;
+
+                    document.body.appendChild(recommendDiv);
+
+                    // Auto-remove after 10 seconds
+                    setTimeout(() => recommendDiv.remove(), 10000);
+                }, 2000);  // Show 2 seconds after completion
+            }
+        }
+
         // Initialize workflow on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadWorkflowTemplatesFromStorage();
+            // Session 59: Fetch user preferences for smart defaults
+            fetchUserPreferences();
         });
 
         // ========== IMAGE SELECTION ==========
@@ -7148,12 +7582,12 @@
                 'logo-creator': {
                     name: '🎨 Logo Creator',
                     steps: [
-                        { operation: 'generate', prompt: '' },
+                        { operation: 'generate', prompt: '', style: 'vector' },  // Session 58: Force vector style
                         { operation: 'upscale_fast', prompt: 'N/A' },
                         { operation: 'remove_background', prompt: 'N/A' }
                     ],
                     needsPrompt: true,
-                    promptPlaceholder: 'Describe your logo (e.g., "Modern tech company logo with circuit board pattern")',
+                    promptPlaceholder: 'Describe the concept or symbolism (e.g., "Circuit board pattern for tech company")',
                     estimatedTime: '15'
                 },
                 'social-media-pack': {
@@ -7444,9 +7878,24 @@
                 return;
             }
 
-            // Show loading state
+            // Show loading state (Session 58: Enhanced visual feedback)
             improveBtn.disabled = true;
+            improveBtn.style.cursor = 'wait';
             improveBtn.innerHTML = '⏳ Improving...';
+
+            // Show status message
+            displayDiv.innerHTML = `
+                <div style="text-align: center; padding: 1rem;">
+                    <div style="color: #a78bfa; font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                        ✨ Prompt being enhanced by AI...
+                    </div>
+                    <div style="color: #c4b5fd; font-size: 0.9rem;">
+                        GPT-5 is analyzing and optimizing your prompt
+                    </div>
+                </div>
+            `;
+            displayDiv.style.display = 'block';
+            document.body.style.cursor = 'wait';  // Change entire page cursor
 
             try {
                 // Call backend API
@@ -7471,21 +7920,26 @@
                 // Cache the improved prompt
                 improvedPromptCache = data.improved_prompt;
 
-                // Display improved prompt with defensive null checks
-                const improvedTextDiv = document.getElementById('improvedPromptText');
-                if (!improvedTextDiv) {
-                    console.error('❌ improvedPromptText element not found!');
-                    alert('UI error: Could not display improved prompt. Please close and reopen the workflow.');
-                    return;
-                }
-
-                if (!displayDiv) {
-                    console.error('❌ improvedPromptDisplay element not found!');
-                    alert('UI error: Could not display improved prompt. Please close and reopen the workflow.');
-                    return;
-                }
-
-                improvedTextDiv.textContent = data.improved_prompt;
+                // Session 58: Recreate the structure with improved prompt (since we replaced it with loading message)
+                displayDiv.innerHTML = `
+                    <div style="color: #c4b5fd; margin-bottom: 0.75rem; line-height: 1.6;" id="improvedPromptText">
+                        ${data.improved_prompt}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="button" onclick="useImprovedPrompt()"
+                                style="flex: 1; min-width: 150px; padding: 0.5rem 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+                                border: 2px solid rgba(16, 185, 129, 0.5); border-radius: 8px; color: #10b981;
+                                font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            ✅ Use This Prompt
+                        </button>
+                        <button type="button" onclick="document.getElementById('improvedPromptDisplay').style.display='none'"
+                                style="flex: 1; min-width: 150px; padding: 0.5rem 1rem; background: rgba(239, 68, 68, 0.1);
+                                border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #ef4444;
+                                font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            ❌ Keep Original
+                        </button>
+                    </div>
+                `;
                 displayDiv.style.display = 'block';
 
                 // Scroll to show improved prompt
@@ -7494,10 +7948,13 @@
             } catch (error) {
                 console.error('❌ Error improving prompt:', error);
                 alert(`Failed to improve prompt: ${error.message}`);
+                displayDiv.style.display = 'none';  // Hide loading message on error
             } finally {
-                // Reset button
+                // Reset button and cursors (Session 58)
                 improveBtn.disabled = false;
+                improveBtn.style.cursor = 'pointer';
                 improveBtn.innerHTML = '✨ Improve My Prompt';
+                document.body.style.cursor = 'default';  // Restore page cursor
             }
         }
 
@@ -7984,7 +8441,7 @@
             // Build workflow based on type
             const workflowTemplates = {
                 'logo-creator': [
-                    { operation: 'generate', config: { prompt: userPrompt } },
+                    { operation: 'generate', config: { prompt: userPrompt, style: 'vector' } },  // Session 58: Force vector/flat design for logos
                     { operation: 'upscale_fast', config: {} },
                     { operation: 'remove_background', config: {} }
                 ],
@@ -8013,11 +8470,14 @@
                 ]
             };
 
-            const stepTemplates = workflowTemplates[workflowType];
+            let stepTemplates = workflowTemplates[workflowType];
             if (!stepTemplates) {
                 console.error('❌ Unknown workflow:', workflowType);
                 return;
             }
+
+            // Session 59: Phase B.4 - Apply smart defaults based on user preferences
+            stepTemplates = applySmartDefaults(workflowType, [...stepTemplates]);  // Clone array to avoid mutation
 
             // Convert templates to proper step objects with id, name, icon
             const steps = stepTemplates.map((template, index) => {
@@ -8041,13 +8501,14 @@
                 'creative-upscale': 'Creative Upscale'
             };
 
+            // Session 58: Fixed key names to match backend snake_case expectations
             workflowState.trackingInfo = {
-                workflowType: workflowType.replace('-', '_'),  // Convert to underscore format
-                workflowName: workflowNames[workflowType] || workflowType,
+                workflow_type: workflowType.replace('-', '_'),  // Convert to underscore format
+                workflow_name: workflowNames[workflowType] || workflowType,
                 prompt: userPrompt,
-                improvedPrompt: improvedPromptCache || '',  // Use improved prompt if exists
+                improved_prompt: improvedPromptCache || '',  // Use improved prompt if exists
                 config: { steps: steps.map(s => ({ operation: s.operation, config: s.config })) },
-                inputImageId: selectedGalleryImage ? selectedGalleryImage.id : null
+                input_image_id: selectedGalleryImage ? selectedGalleryImage.id : null
             };
 
             // If upload needed, handle image first
@@ -8233,6 +8694,11 @@
                     setTimeout(() => {
                         loadWorkflowHistory();
                     }, 1000);
+
+                    // Session 59: Phase B.4 - Show contextual recommendation based on user patterns
+                    if (workflowState.trackingInfo && workflowState.trackingInfo.workflow_type) {
+                        showContextualRecommendation(workflowState.trackingInfo.workflow_type);
+                    }
                 } catch (trackingError) {
                     console.error('⚠️ Failed to complete tracking (non-critical):', trackingError);
                 }
@@ -8324,16 +8790,17 @@
         function showFinalWorkflowResult(imageUrl) {
             const container = document.getElementById('workflowFinalImage');
 
-            // Check if this is a multi-generation workflow (all steps are 'generate' operations)
-            const allGenerate = workflowState.stepResults.every(result =>
-                result.step && result.step.operation === 'generate'
-            );
-
-            // If multi-generation workflow with 2+ results, show all in a grid
-            if (allGenerate && workflowState.stepResults.length >= 2) {
+            // Session 58: Show ALL images from ALL steps (not just when all are 'generate')
+            // This gives users a complete view of the workflow progression
+            if (workflowState.stepResults.length >= 2) {
                 const gridHTML = workflowState.stepResults.map((result, index) => {
-                    const styleName = result.step.config?.style || 'default';
-                    const displayName = styleName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    // Session 58: Show operation name and style (if applicable) - with null safety
+                    const operation = result.step?.operation || 'step';
+                    const operationLabel = operationMetadata[operation]?.name || operation;
+                    const styleName = result.step?.config?.style;  // Session 58: Fixed null safety
+                    const displayName = styleName
+                        ? `${operationLabel} (${styleName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')})`
+                        : operationLabel;
 
                     return `
                         <div style="text-align: center;">
@@ -8341,7 +8808,7 @@
                                  style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px;
                                         border: 2px solid #06b6d4; margin-bottom: 0.5rem;"
                                  alt="Result ${index + 1}">
-                            <p style="color: #06b6d4; font-weight: 600; margin: 0; font-size: 0.9rem;">${displayName}</p>
+                            <p style="color: #06b6d4; font-weight: 600; margin: 0; font-size: 0.9rem;">Step ${index + 1}: ${displayName}</p>
                         </div>
                     `;
                 }).join('');
@@ -8351,7 +8818,7 @@
                         ${gridHTML}
                     </div>
                     <p class="text-muted mt-2 text-center">
-                        <small>Generated ${workflowState.stepResults.length} variations | Total steps: ${workflowState.steps.length}</small>
+                        <small>✅ All ${workflowState.stepResults.length} workflow steps complete | Total execution time: ${((Date.now() - workflowState.startTime) / 1000).toFixed(1)}s</small>
                     </p>
                 `;
             } else {
@@ -10361,6 +10828,55 @@
                 this.isOpen = false;
                 this.context = this.getCurrentContext();
                 this.conversation = [];
+
+                // Session 58: Phase B.3 - Workflow definitions
+                this.workflows = {
+                    logo_creator: {
+                        name: 'Logo Creator',
+                        description: 'Generate professional iconic symbols and brand logos',
+                        keywords: ['logo', 'brand', 'company icon', 'business symbol', 'emblem', 'brand mark'],
+                        requiredInput: 'prompt',
+                        example: 'Create a logo for a coffee shop'
+                    },
+                    portrait_enhancer: {
+                        name: 'Portrait Enhancer',
+                        description: 'Transform portraits into professional photography quality',
+                        keywords: ['portrait', 'headshot', 'professional photo', 'enhance face', 'face photo', 'profile picture'],
+                        requiredInput: 'image',
+                        example: 'Enhance my portrait photo'
+                    },
+                    style_explorer: {
+                        name: 'Style Explorer',
+                        description: 'Generate images in 5 different artistic styles',
+                        keywords: ['style', 'artistic', 'different looks', 'variations', 'multiple styles', 'explore styles'],
+                        requiredInput: 'prompt',
+                        example: 'Show me different artistic styles of a mountain'
+                    },
+                    social_media_pack: {
+                        name: 'Social Media Pack',
+                        description: 'Create 3 variations perfect for social media posts',
+                        keywords: ['social media', 'instagram', 'facebook', 'twitter', 'post', 'social pack', 'social content'],
+                        requiredInput: 'prompt',
+                        example: 'Create social media content for my bakery'
+                    },
+                    product_mockup: {
+                        name: 'Product Mockup',
+                        description: 'Showcase products in professional lifestyle settings',
+                        keywords: ['product', 'mockup', 'showcase', 'display item', 'product photo', 'product shot'],
+                        requiredInput: 'image',
+                        example: 'Create a mockup for my product'
+                    },
+                    creative_upscale: {
+                        name: 'Creative Upscale',
+                        description: '4x upscale with AI enhancement and detail addition',
+                        keywords: ['upscale', 'enlarge', 'bigger', 'higher resolution', '4k', 'enhance resolution', 'improve quality'],
+                        requiredInput: 'image',
+                        example: 'Upscale and enhance my image'
+                    }
+                };
+
+                this.workflowHistory = null; // Will load on demand
+
                 this.setupUI();
                 this.setupEventListeners();
             }
@@ -10418,11 +10934,14 @@
                                 👋 Hi! I'm your AI assistant. I can help you:
                                 <ul class="mb-0 mt-2" style="font-size: 13px;">
                                     <li>Generate images, videos, and audio</li>
-                                    <li>Create professional workflows</li>
+                                    <li>Execute professional AI workflows</li>
                                     <li>Edit and enhance your content</li>
-                                    <li>Answer questions about features</li>
+                                    <li>Show your history and favorites</li>
                                 </ul>
-                                <small class="text-muted mt-2 d-block">Try: "Create a logo for my coffee shop"</small>
+                                <small class="text-muted mt-2 d-block"><strong>Try these:</strong></small>
+                                <small class="text-muted d-block">• "Create a logo for my coffee shop"</small>
+                                <small class="text-muted d-block">• "Show me different artistic styles of a mountain"</small>
+                                <small class="text-muted d-block">• "Show my workflow history"</small>
                             </div>
                         </div>
 
@@ -10512,6 +11031,12 @@
                 // Clear input
                 input.value = '';
 
+                // Session 58: Phase B.3 - Track conversation history for context
+                this.conversation.push({
+                    role: 'user',
+                    content: message
+                });
+
                 // Add user message to chat
                 this.addMessage('user', message);
 
@@ -10525,13 +11050,23 @@
                     // Remove typing indicator
                     this.removeMessage(typingId);
 
-                    // Add AI response with metadata (includes prompt if available)
-                    this.addMessage('assistant', response.message, false, {
-                        prompt: response.prompt || response.params?.prompt
+                    // Session 58: Phase B.3 - Track assistant response in conversation history
+                    this.conversation.push({
+                        role: 'assistant',
+                        content: response.message
                     });
 
-                    // Execute action if needed
-                    if (response.action) {
+                    // Add AI response with metadata (includes prompt if available)
+                    // Session 58: Phase B.3 - Add workflow execution button
+                    this.addMessage('assistant', response.message, false, {
+                        prompt: response.prompt || response.params?.prompt,
+                        showExecuteButton: response.showExecuteButton,
+                        action: response.action,
+                        params: response.params
+                    });
+
+                    // Execute action if needed (and not requiring user confirmation)
+                    if (response.action && !response.showExecuteButton) {
                         await this.executeAction(response.action, response.params);
                     }
 
@@ -10556,7 +11091,7 @@
                 let actionButtons = '';
                 if (role === 'assistant' && !isTemporary) {
                     actionButtons = `
-                        <div class="mt-2 d-flex gap-1">
+                        <div class="mt-2 d-flex gap-1 flex-wrap">
                             <button class="btn btn-sm btn-outline-light copy-btn"
                                     data-content="${content.replace(/"/g, '&quot;')}"
                                     style="font-size: 11px; padding: 2px 8px;"
@@ -10569,6 +11104,15 @@
                                         style="font-size: 11px; padding: 2px 8px;"
                                         title="Use this prompt">
                                     ✨ Use This
+                                </button>
+                            ` : ''}
+                            ${metadata.showExecuteButton ? `
+                                <button class="btn btn-sm btn-primary execute-workflow-btn"
+                                        data-action="${metadata.action}"
+                                        data-params='${JSON.stringify(metadata.params)}'
+                                        style="font-size: 11px; padding: 2px 8px;"
+                                        title="Execute this workflow">
+                                    🚀 Execute Workflow
                                 </button>
                             ` : ''}
                         </div>
@@ -10638,6 +11182,27 @@
                             }, 300);
                         });
                     }
+
+                    // Session 58: Phase B.3 - Execute workflow button
+                    const executeBtn = document.querySelector(`#${messageId} .execute-workflow-btn`);
+                    if (executeBtn) {
+                        executeBtn.addEventListener('click', async (e) => {
+                            const action = e.target.dataset.action;
+                            const params = JSON.parse(e.target.dataset.params);
+
+                            // Visual feedback - button disabled during execution
+                            e.target.disabled = true;
+                            e.target.innerHTML = '⏳ Executing...';
+
+                            try {
+                                await this.executeAction(action, params);
+                            } catch (error) {
+                                this.addMessage('assistant', `❌ Error executing workflow: ${error.message}`);
+                                e.target.disabled = false;
+                                e.target.innerHTML = '🚀 Execute Workflow';
+                            }
+                        });
+                    }
                 }
 
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -10653,39 +11218,79 @@
                 // Parse user intent and call appropriate endpoint
                 const intent = this.parseIntent(message);
 
-                if (intent.type === 'generate_image') {
+                // Session 58: Phase B.3 - Workflow handling
+                if (intent.type === 'workflow') {
+                    const workflow = this.workflows[intent.workflow];
+
+                    // Check if workflow requires image and we don't have one
+                    if (workflow.requiredInput === 'image') {
+                        return {
+                            message: `🎨 **${intent.workflowName}**\n\n${intent.description}\n\n⚠️ This workflow requires an image. Please:\n1. Upload an image in the Gallery tab, OR\n2. I'll switch to the workflow tab where you can upload one\n\n💡 ${workflow.example}`,
+                            action: 'open_workflow',
+                            params: { workflowType: intent.workflow, prompt: intent.extractedPrompt }
+                        };
+                    } else {
+                        // Prompt-based workflow
+                        return {
+                            message: `🎨 **${intent.workflowName}**\n\n${intent.description}\n\n✨ I'll use this prompt:\n"${intent.extractedPrompt}"\n\n🚀 Ready to execute this workflow?`,
+                            action: 'execute_workflow',
+                            params: { workflowType: intent.workflow, prompt: intent.extractedPrompt },
+                            showExecuteButton: true
+                        };
+                    }
+                }
+
+                // Show history
+                else if (intent.type === 'show_history') {
+                    return {
+                        message: '📜 **Your Workflow History**\n\nLet me load your recent workflows...',
+                        action: 'show_history'
+                    };
+                }
+
+                // Show favorites
+                else if (intent.type === 'show_favorites') {
+                    return {
+                        message: '⭐ **Your Favorite Workflows**\n\nLet me load your saved favorites...',
+                        action: 'show_favorites'
+                    };
+                }
+
+                // Generate image
+                else if (intent.type === 'generate_image') {
                     return {
                         message: `I'll generate that image for you! Let me use:\n\n"${intent.prompt}"\n\n💡 Click "✨ Use This" to fill the generate form!`,
                         action: 'generate_image',
                         params: { prompt: intent.prompt, style: intent.style || 'photorealistic' },
                         prompt: intent.prompt  // For copy/use buttons
                     };
-                } else if (intent.type === 'help') {
+                }
+
+                // Help
+                else if (intent.type === 'help') {
                     return this.getHelpResponse(intent.topic);
-                } else if (intent.type === 'workflow') {
-                    return {
-                        message: `Starting the "${intent.workflow}" workflow for you!`,
-                        action: 'run_workflow',
-                        params: { workflow: intent.workflow, ...intent.params }
-                    };
-                } else {
-                    // General AI response using optimize-prompt endpoint
-                    const response = await authenticatedFetch('/api/v1/gallery/optimize-prompt/', {
+                }
+
+                // General fallback - Session 58: Phase B.3 - Use GPT-5 Assistant Chat
+                else {
+                    // Call the new GPT-5 assistant chat endpoint
+                    const response = await authenticatedFetch('/api/assistant/chat/', {
                         method: 'POST',
                         body: JSON.stringify({
-                            prompt: message,
-                            style: 'photorealistic',
-                            quality: 'balanced',
-                            ai_mode: 'assistant'
+                            message: message,
+                            history: this.conversation.slice(-6)  // Last 6 messages for context
                         })
                     });
 
                     const data = await response.json();
 
-                    if (data.success && data.enhanced_prompt) {
+                    if (data.message) {
                         return {
-                            message: `I understand! Here's an enhanced version:\n\n"${data.enhanced_prompt.substring(0, 200)}${data.enhanced_prompt.length > 200 ? '...' : ''}"\n\n💡 Click "✨ Use This" to fill the generate form!`,
-                            prompt: data.enhanced_prompt  // Full prompt for copy/use
+                            message: data.message
+                        };
+                    } else if (data.error) {
+                        return {
+                            message: data.error
                         };
                     } else {
                         return {
@@ -10698,7 +11303,25 @@
             parseIntent(message) {
                 const lower = message.toLowerCase();
 
-                // Generate image intent
+                // Session 58: Phase B.3 - Enhanced workflow detection
+                // Check for workflow keywords (most specific first)
+                for (const [workflowType, workflow] of Object.entries(this.workflows)) {
+                    for (const keyword of workflow.keywords) {
+                        if (lower.includes(keyword)) {
+                            return {
+                                type: 'workflow',
+                                workflow: workflowType,
+                                workflowName: workflow.name,
+                                description: workflow.description,
+                                requiredInput: workflow.requiredInput,
+                                prompt: message,
+                                extractedPrompt: this.extractPromptFromMessage(message, workflow.keywords)
+                            };
+                        }
+                    }
+                }
+
+                // Generate image intent (fallback for general creation)
                 if (lower.includes('generate') || lower.includes('create image') || lower.includes('make') || lower.includes('draw')) {
                     return {
                         type: 'generate_image',
@@ -10706,31 +11329,44 @@
                     };
                 }
 
-                // Help intent
-                if (lower.includes('help') || lower.includes('how') || lower.includes('what')) {
+                // Help intent (only very specific help requests)
+                if (lower === 'help' || lower === 'help me' || lower.includes('what can you do') || lower.includes('what can you help')) {
                     return {
                         type: 'help',
                         topic: this.context
                     };
                 }
 
-                // Workflow intents
-                if (lower.includes('logo')) {
+                // Show history intent
+                if (lower.includes('history') || lower.includes('previous') || lower.includes('past workflows')) {
                     return {
-                        type: 'workflow',
-                        workflow: 'logo',
-                        params: { theme: message }
+                        type: 'show_history'
                     };
                 }
 
-                if (lower.includes('social') || lower.includes('instagram') || lower.includes('twitter')) {
+                // Show favorites intent
+                if (lower.includes('favorites') || lower.includes('favourite') || lower.includes('saved workflows')) {
                     return {
-                        type: 'workflow',
-                        workflow: 'social_pack'
+                        type: 'show_favorites'
                     };
                 }
 
                 return { type: 'general', message };
+            }
+
+            // Session 58: Phase B.3 - Extract clean prompt from message
+            extractPromptFromMessage(message, keywords) {
+                let cleaned = message;
+                // Remove workflow keywords
+                keywords.forEach(keyword => {
+                    const regex = new RegExp(keyword, 'gi');
+                    cleaned = cleaned.replace(regex, '');
+                });
+                // Remove common action words
+                cleaned = cleaned.replace(/(create|make|generate|show me|give me|i need|i want|can you)/gi, '');
+                // Clean up extra spaces
+                cleaned = cleaned.replace(/\s+/g, ' ').trim();
+                return cleaned || message;
             }
 
             getHelpResponse(topic) {
@@ -10767,12 +11403,19 @@
                         - Creating professional workflows
                         - Answering questions about features
 
-                        Just ask me naturally! For example:
-                        - "Create a logo for my startup"
-                        - "How do I remove backgrounds?"
-                        - "Make a social media pack"
+                        **🎨 Available Workflows:**
+                        • Logo Creator - "Create a logo for my coffee shop"
+                        • Portrait Enhancer - "Enhance my portrait photo"
+                        • Style Explorer - "Show me different artistic styles"
+                        • Social Media Pack - "Create social media content"
+                        • Product Mockup - "Create a product mockup"
+                        • Creative Upscale - "Upscale and enhance my image"
 
-                        💡 Use the Quick Actions buttons above!`
+                        **📜 View Your Work:**
+                        • "Show my workflow history"
+                        • "Show my favorites"
+
+                        Just ask me naturally! I'll understand and help! 💡`
                     }
                 };
 
@@ -10784,14 +11427,24 @@
                     case 'help':
                         this.addMessage('assistant', this.getHelpResponse(this.context).message);
                         break;
+
+                    // Session 58: Phase B.3 - Updated quick actions to use workflow system
                     case 'logo':
-                        this.addMessage('assistant', '🎨 Let\'s create a professional logo! What\'s your company/shop name?');
+                        this.sendMessage();  // Clear pending input
+                        document.getElementById('aiAssistantInput').value = 'Create a logo for my business';
+                        setTimeout(() => this.sendMessage(), 100);
                         break;
+
                     case 'social':
-                        this.addMessage('assistant', '📱 I\'ll create a social media pack! What\'s the main theme or subject?');
+                        this.sendMessage();
+                        document.getElementById('aiAssistantInput').value = 'Create social media content';
+                        setTimeout(() => this.sendMessage(), 100);
                         break;
+
                     case 'upscale':
-                        this.addMessage('assistant', '⬆️ To upscale an image, go to the 📁 Gallery tab, select an image, and click the upscale option. Or upload an image in the ⬆️ Upscale tab!');
+                        this.sendMessage();
+                        document.getElementById('aiAssistantInput').value = 'Upscale my image';
+                        setTimeout(() => this.sendMessage(), 100);
                         break;
                 }
             }
@@ -10817,9 +11470,131 @@
                         }, 500);
                         break;
 
-                    case 'run_workflow':
-                        this.addMessage('assistant', `⚙️ Workflow "${params.workflow}" would execute here. (Full implementation in next phase)`);
+                    // Session 58: Phase B.3 - Workflow execution
+                    case 'execute_workflow':
+                        await this.executeWorkflowFromChat(params.workflowType, params.prompt);
                         break;
+
+                    case 'open_workflow':
+                        this.openWorkflowTab(params.workflowType);
+                        this.addMessage('assistant', '✅ I\'ve switched to the AI Workflows tab. You can now upload an image and execute the workflow!');
+                        break;
+
+                    case 'show_history':
+                        await this.showWorkflowHistory();
+                        break;
+
+                    case 'show_favorites':
+                        await this.showWorkflowFavorites();
+                        break;
+
+                    case 'run_workflow':
+                        this.addMessage('assistant', `⚙️ Workflow "${params.workflow}" would execute here. (Legacy case)`);
+                        break;
+                }
+            }
+
+            // Session 58: Phase B.3 - Execute workflow from chat
+            async executeWorkflowFromChat(workflowType, prompt) {
+                try {
+                    this.addMessage('assistant', '🚀 Switching to AI Workflows tab and executing...');
+
+                    // Switch to AI Workflows tab
+                    const workflowsTab = document.getElementById('ai-workflows-tab');
+                    if (workflowsTab) {
+                        workflowsTab.click();
+                    }
+
+                    // Wait for tab to load
+                    await new Promise(resolve => setTimeout(resolve, 300));
+
+                    // Select the specific workflow
+                    const workflowButton = document.querySelector(`button[onclick*="${workflowType}"]`);
+                    if (workflowButton) {
+                        workflowButton.click();
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+
+                    // Fill in the prompt
+                    const workflowPromptField = document.getElementById('workflowPrompt');
+                    if (workflowPromptField) {
+                        workflowPromptField.value = prompt;
+
+                        // Scroll to the form
+                        workflowPromptField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        this.addMessage('assistant', `✅ Workflow ready! Prompt: "${prompt}"\n\n💡 Click "Execute Workflow" button to run it, or customize the settings first!`);
+                    } else {
+                        this.addMessage('assistant', '⚠️ Could not find workflow form. Please try manually from the AI Workflows tab.');
+                    }
+                } catch (error) {
+                    console.error('Error executing workflow from chat:', error);
+                    this.addMessage('assistant', `❌ Error: ${error.message}\n\nPlease try executing the workflow manually from the AI Workflows tab.`);
+                }
+            }
+
+            // Open workflow tab
+            openWorkflowTab(workflowType) {
+                // Switch to AI Workflows tab
+                const workflowsTab = document.getElementById('ai-workflows-tab');
+                if (workflowsTab) {
+                    workflowsTab.click();
+                }
+
+                // Wait and select workflow
+                setTimeout(() => {
+                    const workflowButton = document.querySelector(`button[onclick*="${workflowType}"]`);
+                    if (workflowButton) {
+                        workflowButton.click();
+                    }
+                }, 300);
+            }
+
+            // Session 58: Phase B.3 - Show workflow history
+            async showWorkflowHistory() {
+                try {
+                    const response = await authenticatedFetch('/api/workflows/history/?limit=5');
+                    const data = await response.json();
+
+                    if (data.results && data.results.length > 0) {
+                        let message = '📜 **Your Recent Workflows:**\n\n';
+                        data.results.forEach((workflow, index) => {
+                            message += `${index + 1}. **${workflow.workflow_name}**\n`;
+                            message += `   ${workflow.prompt.substring(0, 50)}${workflow.prompt.length > 50 ? '...' : ''}\n`;
+                            message += `   ⏱️ ${workflow.execution_time.toFixed(1)}s • ${workflow.created_at_relative || 'recently'}\n\n`;
+                        });
+                        message += `\n💡 Go to AI Workflows tab to see all history and favorites!`;
+                        this.addMessage('assistant', message);
+                    } else {
+                        this.addMessage('assistant', '📜 No workflow history yet. Start by executing a workflow! Try:\n• "Create a logo for my coffee shop"\n• "Generate social media content"');
+                    }
+                } catch (error) {
+                    console.error('Error loading workflow history:', error);
+                    this.addMessage('assistant', '❌ Could not load workflow history. Please check the AI Workflows tab manually.');
+                }
+            }
+
+            // Session 58: Phase B.3 - Show workflow favorites
+            async showWorkflowFavorites() {
+                try {
+                    const response = await authenticatedFetch('/api/workflows/favorites/');
+                    const data = await response.json();
+
+                    if (data.results && data.results.length > 0) {
+                        let message = '⭐ **Your Favorite Workflows:**\n\n';
+                        data.results.forEach((favorite, index) => {
+                            message += `${index + 1}. **${favorite.name}**\n`;
+                            message += `   ${favorite.workflow_history.workflow_name}\n`;
+                            message += `   Used ${favorite.use_count} times • Last used ${favorite.last_used_relative || 'recently'}\n\n`;
+                        });
+                        message += `\n💡 Go to AI Workflows tab to execute your favorites!`;
+                        this.addMessage('assistant', message);
+                    } else {
+                        this.addMessage('assistant', '⭐ No favorites yet. Execute a workflow and click the ⭐ star to save it as a favorite!');
+                    }
+                } catch (error) {
+                    console.error('Error loading workflow favorites:', error);
+                    this.addMessage('assistant', '❌ Could not load favorites. Please check the AI Workflows tab manually.');
                 }
             }
         }
@@ -12053,6 +12828,738 @@
 
         // ====================================================================
         // END ONBOARDING SYSTEM
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION 60: PHASE C.1.3 - PROJECT MANAGEMENT SYSTEM
+        // ====================================================================
+
+        // Project Management State
+        const projectManagement = {
+            currentProject: null,
+            projects: [],
+            projectModal: null,
+            detailModal: null
+        };
+
+        // Initialize Project Management
+        function initProjectManagement() {
+            // Initialize modals
+            projectManagement.projectModal = new bootstrap.Modal(document.getElementById('project-modal'));
+            projectManagement.detailModal = new bootstrap.Modal(document.getElementById('project-detail-modal'));
+
+            // Event listeners
+            document.getElementById('create-project-btn').addEventListener('click', () => {
+                openProjectModal();
+            });
+
+            document.getElementById('save-project-btn').addEventListener('click', () => {
+                saveProject();
+            });
+
+            document.getElementById('edit-project-btn').addEventListener('click', () => {
+                const projectId = document.getElementById('edit-project-btn').dataset.projectId;
+                const project = projectManagement.projects.find(p => p.id === projectId);
+                if (project) {
+                    projectManagement.detailModal.hide();
+                    openProjectModal(project);
+                }
+            });
+
+            // Load projects when Projects tab is shown
+            document.getElementById('projects-tab').addEventListener('click', () => {
+                loadProjects();
+            });
+        }
+
+        // Open project modal (create or edit)
+        function openProjectModal(project = null) {
+            const form = document.getElementById('project-form');
+            form.reset();
+
+            if (project) {
+                // Edit mode
+                document.getElementById('project-modal-title').textContent = 'Edit Project';
+                document.getElementById('project-id').value = project.id;
+                document.getElementById('project-name').value = project.name;
+                document.getElementById('project-goal').value = project.goal;
+                document.getElementById('project-description').value = project.description || '';
+                document.getElementById('project-category').value = project.category || '';
+                document.getElementById('project-status').value = project.status;
+                document.getElementById('project-tags').value = Array.isArray(project.tags) ? project.tags.join(', ') : '';
+
+                if (project.deadline) {
+                    const deadline = new Date(project.deadline);
+                    document.getElementById('project-deadline').value = deadline.toISOString().slice(0, 16);
+                }
+            } else {
+                // Create mode
+                document.getElementById('project-modal-title').textContent = 'Create New Project';
+                document.getElementById('project-id').value = '';
+                document.getElementById('project-status').value = 'planning';
+            }
+
+            projectManagement.projectModal.show();
+        }
+
+        // Save project (create or update)
+        async function saveProject() {
+            const projectId = document.getElementById('project-id').value;
+            const name = document.getElementById('project-name').value.trim();
+            const goal = document.getElementById('project-goal').value.trim();
+
+            if (!name || !goal) {
+                alert('Project name and goal are required!');
+                return;
+            }
+
+            const tags = document.getElementById('project-tags').value
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => t.length > 0);
+
+            const deadline = document.getElementById('project-deadline').value || null;
+
+            const data = {
+                name,
+                goal,
+                description: document.getElementById('project-description').value.trim(),
+                category: document.getElementById('project-category').value.trim(),
+                status: document.getElementById('project-status').value,
+                tags,
+                deadline
+            };
+
+            const saveBtn = document.getElementById('save-project-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '⏳ Saving...';
+
+            try {
+                let url, method;
+                if (projectId) {
+                    // Update existing project
+                    url = `/api/creative-projects/${projectId}/update/`;
+                    method = 'PATCH';
+                } else {
+                    // Create new project
+                    url = '/api/creative-projects/create/';
+                    method = 'POST';
+                }
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    projectManagement.projectModal.hide();
+                    loadProjects();
+                    showNotification(projectId ? 'Project updated successfully!' : 'Project created successfully!', 'success');
+                } else {
+                    showNotification(result.error || 'Failed to save project', 'danger');
+                }
+            } catch (error) {
+                console.error('Error saving project:', error);
+                showNotification('Error saving project', 'danger');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '💾 Save Project';
+            }
+        }
+
+        // Load all projects
+        async function loadProjects() {
+            const container = document.getElementById('projects-list');
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading projects...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/creative-projects/', {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                const data = await response.json();
+
+                if (data.projects) {
+                    projectManagement.projects = data.projects;
+                    renderProjects(data.projects);
+                } else {
+                    container.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <p class="text-danger">Error loading projects</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <p class="text-danger">Error loading projects</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render projects list
+        function renderProjects(projects) {
+            const container = document.getElementById('projects-list');
+
+            if (projects.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <p class="text-muted">No projects yet. Create your first project!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = projects.map(project => {
+                const statusEmoji = {
+                    'planning': '📋',
+                    'in_progress': '🚀',
+                    'review': '👀',
+                    'completed': '✅',
+                    'archived': '📦'
+                }[project.status] || '📋';
+
+                const statusColor = {
+                    'planning': '#6b7280',
+                    'in_progress': '#3b82f6',
+                    'review': '#f59e0b',
+                    'completed': '#10b981',
+                    'archived': '#6b7280'
+                }[project.status] || '#6b7280';
+
+                const progressColor = project.progress_percentage === 100 ? '#10b981' :
+                                    project.progress_percentage >= 50 ? '#f59e0b' : '#ef4444';
+
+                const deadline = project.deadline ? new Date(project.deadline).toLocaleDateString() : 'No deadline';
+                const isOverdue = project.is_overdue ? '<span class="badge bg-danger ms-2">OVERDUE</span>' : '';
+
+                return `
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card" style="background: #222; border: 1px solid #333; height: 100%;">
+                            <div class="card-body">
+                                <h5 class="card-title" style="color: #f59e0b;">
+                                    ${statusEmoji} ${project.name}
+                                </h5>
+                                <p class="card-text text-muted small">${project.goal}</p>
+
+                                <!-- Progress Bar -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small">Progress</span>
+                                        <span class="small">${project.progress_percentage}%</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px; background: #333;">
+                                        <div class="progress-bar" role="progressbar"
+                                             style="width: ${project.progress_percentage}%; background: ${progressColor};">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Project Info -->
+                                <div class="small mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Status:</span>
+                                        <span style="color: ${statusColor};">${statusEmoji} ${project.status.replace('_', ' ').toUpperCase()}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Workflows:</span>
+                                        <span>${project.completed_workflows}/${project.total_workflows}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Deadline:</span>
+                                        <span>${deadline} ${isOverdue}</span>
+                                    </div>
+                                    ${project.category ? `
+                                    <div class="d-flex justify-content-between">
+                                        <span>Category:</span>
+                                        <span>${project.category}</span>
+                                    </div>
+                                    ` : ''}
+                                </div>
+
+                                <!-- Tags -->
+                                ${project.tags && project.tags.length > 0 ? `
+                                <div class="mb-3">
+                                    ${project.tags.map(tag => `
+                                        <span class="badge bg-secondary me-1">${tag}</span>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+
+                                <!-- Actions -->
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-primary flex-fill" onclick="viewProjectDetails('${project.id}')">
+                                        👁️ View
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="openProjectModal(projectManagement.projects.find(p => p.id === '${project.id}'))">
+                                        ✏️ Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteProject('${project.id}')">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // View project details
+        async function viewProjectDetails(projectId) {
+            const detailContent = document.getElementById('project-detail-content');
+            detailContent.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading project details...</p>
+                </div>
+            `;
+
+            document.getElementById('edit-project-btn').dataset.projectId = projectId;
+            projectManagement.detailModal.show();
+
+            try {
+                const response = await fetch(`/api/creative-projects/${projectId}/`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                const data = await response.json();
+
+                if (data.project) {
+                    renderProjectDetails(data.project);
+                } else {
+                    detailContent.innerHTML = `
+                        <div class="text-center py-5">
+                            <p class="text-danger">Error loading project details</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading project details:', error);
+                detailContent.innerHTML = `
+                    <div class="text-center py-5">
+                        <p class="text-danger">Error loading project details</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render project details
+        function renderProjectDetails(project) {
+            const detailContent = document.getElementById('project-detail-content');
+            document.getElementById('project-detail-title').textContent = project.name;
+
+            const statusEmoji = {
+                'planning': '📋',
+                'in_progress': '🚀',
+                'review': '👀',
+                'completed': '✅',
+                'archived': '📦'
+            }[project.status] || '📋';
+
+            const deadline = project.deadline ? new Date(project.deadline).toLocaleString() : 'No deadline';
+
+            detailContent.innerHTML = `
+                <!-- Project Info -->
+                <div class="mb-4">
+                    <h5 style="color: #f59e0b;">Project Information</h5>
+                    <table class="table table-dark">
+                        <tr>
+                            <td style="width: 150px;"><strong>Status:</strong></td>
+                            <td>${statusEmoji} ${project.status.replace('_', ' ').toUpperCase()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Progress:</strong></td>
+                            <td>${project.progress_percentage}% (${project.completed_workflows}/${project.total_workflows} workflows)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Goal:</strong></td>
+                            <td>${project.goal}</td>
+                        </tr>
+                        ${project.description ? `
+                        <tr>
+                            <td><strong>Description:</strong></td>
+                            <td>${project.description}</td>
+                        </tr>
+                        ` : ''}
+                        <tr>
+                            <td><strong>Deadline:</strong></td>
+                            <td>${deadline} ${project.is_overdue ? '<span class="badge bg-danger">OVERDUE</span>' : ''}</td>
+                        </tr>
+                        ${project.category ? `
+                        <tr>
+                            <td><strong>Category:</strong></td>
+                            <td>${project.category}</td>
+                        </tr>
+                        ` : ''}
+                        ${project.tags && project.tags.length > 0 ? `
+                        <tr>
+                            <td><strong>Tags:</strong></td>
+                            <td>${project.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('')}</td>
+                        </tr>
+                        ` : ''}
+                        <tr>
+                            <td><strong>Created:</strong></td>
+                            <td>${new Date(project.created_at).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Last Updated:</strong></td>
+                            <td>${new Date(project.updated_at).toLocaleString()}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Workflows -->
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="color: #f59e0b;">Workflows (${project.workflows ? project.workflows.length : 0})</h5>
+                        <button class="btn btn-sm btn-success" onclick="alert('Add workflow feature coming in Phase C.2!')">
+                            ➕ Add Workflow
+                        </button>
+                    </div>
+
+                    ${project.workflows && project.workflows.length > 0 ? `
+                        <div class="list-group">
+                            ${project.workflows.map(wf => `
+                                <div class="list-group-item list-group-item-dark mb-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">${wf.workflow_name}</h6>
+                                            <p class="mb-1 small text-muted">${wf.workflow_type} - ${wf.status}</p>
+                                            ${wf.notes ? `<p class="mb-0 small">${wf.notes}</p>` : ''}
+                                        </div>
+                                        <div class="text-end">
+                                            <p class="mb-1 small">Order: ${wf.order + 1}</p>
+                                            <p class="mb-1 small">${wf.result_count || 0} results</p>
+                                            ${wf.execution_time ? `<p class="mb-0 small">${wf.execution_time}s</p>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="text-center py-4 text-muted">
+                            <p>No workflows in this project yet.</p>
+                            <p class="small">Click "Add Workflow" to add existing workflows to this project.</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // Delete project
+        async function deleteProject(projectId) {
+            const project = projectManagement.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            if (!confirm(`Are you sure you want to delete the project "${project.name}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/creative-projects/${projectId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    loadProjects();
+                    showNotification('Project deleted successfully', 'success');
+                } else {
+                    showNotification(result.error || 'Failed to delete project', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting project:', error);
+                showNotification('Error deleting project', 'danger');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initProjectManagement();
+        });
+
+        // Make functions global for onclick handlers
+        window.viewProjectDetails = viewProjectDetails;
+        window.deleteProject = deleteProject;
+
+        // ====================================================================
+        // END PROJECT MANAGEMENT SYSTEM
+        // ====================================================================
+
+        // ====================================================================
+        // PORTFOLIO SYSTEM (Session 61: Phase C.2.2)
+        // ====================================================================
+
+        const portfolioSystem = {
+            items: [],
+            projects: [],
+            stats: {},
+            currentFilters: {
+                project_id: '',
+                content_type: '',
+                sort_by: '-created_at'
+            }
+        };
+
+        // Load portfolio data
+        async function loadPortfolio() {
+            try {
+                const params = new URLSearchParams();
+                if (portfolioSystem.currentFilters.project_id) {
+                    params.append('project_id', portfolioSystem.currentFilters.project_id);
+                }
+                if (portfolioSystem.currentFilters.content_type) {
+                    params.append('content_type', portfolioSystem.currentFilters.content_type);
+                }
+                if (portfolioSystem.currentFilters.sort_by) {
+                    params.append('sort_by', portfolioSystem.currentFilters.sort_by);
+                }
+
+                const response = await fetch(`/api/portfolio/?${params.toString()}`, {
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    portfolioSystem.items = data.portfolio;
+                    portfolioSystem.stats = data.stats;
+                    updatePortfolioStats();
+                    renderPortfolioGallery();
+                } else {
+                    showNotification('Failed to load portfolio: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            } catch (error) {
+                console.error('Portfolio load error:', error);
+                showNotification('Error loading portfolio', 'danger');
+            }
+        }
+
+        // Update stats display
+        function updatePortfolioStats() {
+            document.getElementById('total-items').textContent = portfolioSystem.stats.total_items || 0;
+            document.getElementById('total-images').textContent = portfolioSystem.stats.images || 0;
+            document.getElementById('total-videos').textContent = portfolioSystem.stats.videos || 0;
+            document.getElementById('total-audio').textContent = portfolioSystem.stats.audio || 0;
+            document.getElementById('total-favorites').textContent = portfolioSystem.stats.favorites || 0;
+            document.getElementById('total-views').textContent = portfolioSystem.stats.total_views || 0;
+        }
+
+        // Render portfolio gallery
+        function renderPortfolioGallery() {
+            const gallery = document.getElementById('portfolio-gallery');
+
+            if (portfolioSystem.items.length === 0) {
+                gallery.innerHTML = `
+                    <div class="col-12 text-center">
+                        <p class="text-muted">No content found. Create some projects and generate content to see it here!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            portfolioSystem.items.forEach(item => {
+                const typeIcon = item.type === 'image' ? '🖼️' : item.type === 'video' ? '🎬' : '🎵';
+                const favoriteIcon = item.is_favorite ? '⭐' : '☆';
+
+                // Project tags
+                let projectTags = '';
+                if (item.projects && item.projects.length > 0) {
+                    projectTags = item.projects.map(p => `
+                        <span class="badge bg-secondary" style="font-size: 0.7rem;">${p.name}</span>
+                    `).join(' ');
+                }
+
+                // Thumbnail or placeholder
+                let thumbnail = '';
+                if (item.type === 'image') {
+                    thumbnail = `<img src="${item.content_url}" alt="Image" style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;">`;
+                } else if (item.type === 'video') {
+                    thumbnail = item.thumbnail_url
+                        ? `<img src="${item.thumbnail_url}" alt="Video" style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;">`
+                        : `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎬</span></div>`;
+                } else {
+                    thumbnail = `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎵</span></div>`;
+                }
+
+                html += `
+                    <div class="col-md-3">
+                        <div class="card h-100" style="cursor: pointer;" onclick="viewPortfolioItem('${item.id}', '${item.type}')">
+                            ${thumbnail}
+                            <div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">${typeIcon} ${item.type}</small>
+                                    <span style="font-size: 1.2rem;" onclick="event.stopPropagation(); togglePortfolioFavorite('${item.id}', '${item.type}')">${favoriteIcon}</span>
+                                </div>
+                                <p class="mb-1" style="font-size: 0.85rem; line-height: 1.3; max-height: 3.9rem; overflow: hidden;">${item.prompt || 'No description'}</p>
+                                <div class="mb-1">${projectTags}</div>
+                                <small class="text-muted">
+                                    👁️ ${item.view_count} | 📥 ${item.download_count}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            gallery.innerHTML = html;
+        }
+
+        // View portfolio item in modal
+        function viewPortfolioItem(itemId, itemType) {
+            const item = portfolioSystem.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            // Create dynamic modal with unique ID
+            const modalId = 'portfolio-modal-' + Date.now();
+            const modal = document.createElement('div');
+            modal.id = modalId;
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;';
+
+            let mediaHTML = '';
+            if (itemType === 'image') {
+                mediaHTML = `<img src="${item.content_url}" style="max-width: 90%; max-height: 70vh; object-fit: contain; border-radius: 8px;" alt="Portfolio image">`;
+            } else if (itemType === 'video') {
+                mediaHTML = `<video src="${item.content_url}" controls autoplay style="max-width: 90%; max-height: 70vh; border-radius: 8px;"></video>`;
+            } else if (itemType === 'audio') {
+                mediaHTML = `
+                    <div style="background: white; padding: 40px; border-radius: 12px; text-align: center;">
+                        <i class="bi bi-music-note-beamed" style="font-size: 64px; color: #667eea; margin-bottom: 20px;"></i>
+                        <audio src="${item.content_url}" controls autoplay style="width: 400px; max-width: 100%;"></audio>
+                    </div>
+                `;
+            }
+
+            modal.innerHTML = `
+                <div id="${modalId}-content" style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; cursor: pointer;">
+                    ${mediaHTML}
+                </div>
+                <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; max-width: 800px; width: 100%; margin-top: 20px;">
+                    <div style="color: white; margin-bottom: 10px;">
+                        <strong>Type:</strong> ${item.operation_type || itemType}
+                        ${item.model ? `<span style="margin-left: 20px;"><strong>Model:</strong> ${item.model}</span>` : ''}
+                    </div>
+                    <div style="color: #ccc; margin-bottom: 15px; font-style: italic;">
+                        ${item.prompt || 'No description available'}
+                    </div>
+                    <button id="${modalId}-download" class="btn btn-primary" style="margin-right: 10px;">
+                        <i class="bi bi-download"></i> Download
+                    </button>
+                    <button id="${modalId}-close" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> Close
+                    </button>
+                </div>
+            `;
+
+            // Add event listeners after appending
+            document.body.appendChild(modal);
+
+            // Click media area to close
+            document.getElementById(modalId + '-content').addEventListener('click', () => modal.remove());
+
+            // Download button
+            document.getElementById(modalId + '-download').addEventListener('click', () => {
+                window.open(item.content_url, '_blank');
+            });
+
+            // Close button
+            document.getElementById(modalId + '-close').addEventListener('click', () => modal.remove());
+        }
+
+        // Toggle favorite status
+        async function togglePortfolioFavorite(itemId, itemType) {
+            // This would call the appropriate toggle_favorite endpoint
+            // For now, just reload the portfolio
+            showNotification('Favorite toggle coming soon!', 'info');
+        }
+
+        // Load projects for filter dropdown
+        async function loadProjectsForFilter() {
+            try {
+                const response = await fetch('/api/creative-projects/', {
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await response.json();
+
+                if (data.projects) {
+                    portfolioSystem.projects = data.projects;
+
+                    const select = document.getElementById('portfolio-project-filter');
+                    select.innerHTML = '<option value="">All Projects</option>';
+
+                    data.projects.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.id;
+                        option.textContent = project.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+
+        // Apply filters
+        document.getElementById('apply-portfolio-filters')?.addEventListener('click', function() {
+            portfolioSystem.currentFilters.project_id = document.getElementById('portfolio-project-filter').value;
+            portfolioSystem.currentFilters.content_type = document.getElementById('portfolio-type-filter').value;
+            portfolioSystem.currentFilters.sort_by = document.getElementById('portfolio-sort').value;
+            loadPortfolio();
+        });
+
+        // Reset filters
+        document.getElementById('reset-portfolio-filters')?.addEventListener('click', function() {
+            document.getElementById('portfolio-project-filter').value = '';
+            document.getElementById('portfolio-type-filter').value = '';
+            document.getElementById('portfolio-sort').value = '-created_at';
+            portfolioSystem.currentFilters = {
+                project_id: '',
+                content_type: '',
+                sort_by: '-created_at'
+            };
+            loadPortfolio();
+        });
+
+        // Initialize portfolio when tab is shown
+        document.getElementById('portfolio-tab')?.addEventListener('shown.bs.tab', function() {
+            if (portfolioSystem.items.length === 0) {
+                loadProjectsForFilter();
+                loadPortfolio();
+            }
+        });
+
+        // Make functions available globally for onclick handlers
+        window.viewPortfolioItem = viewPortfolioItem;
+        window.togglePortfolioFavorite = togglePortfolioFavorite;
+
+        // END PORTFOLIO SYSTEM
         // ====================================================================
     </script>
 </body>
