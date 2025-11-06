@@ -12,7 +12,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     ContentTemplate, Document, DocumentEmbedding, KnowledgeBase,
     ContentGeneration, ContentWorkflow, WorkflowExecution, ContentAnalytics,
-    ImageHistory, VideoHistory
+    ImageHistory, VideoHistory, CreativeProject, ProjectWorkflow
 )
 
 
@@ -476,3 +476,129 @@ class VideoHistoryAdmin(admin.ModelAdmin):
             )
         return "No video"
     video_player.short_description = 'Video Player'
+
+
+# =============================================================================
+# SESSION 60: PHASE C - PROJECT MANAGEMENT ADMIN
+# =============================================================================
+
+@admin.register(CreativeProject)
+class CreativeProjectAdmin(admin.ModelAdmin):
+    """Admin interface for creative projects (Session 60: Phase C.1.1)"""
+
+    list_display = [
+        'name', 'user_name', 'status', 'progress_display',
+        'workflow_count', 'deadline', 'created_at'
+    ]
+    list_filter = ['status', 'category', 'is_shared', 'created_at']
+    search_fields = ['name', 'description', 'goal', 'tags']
+    readonly_fields = [
+        'id', 'progress_percentage', 'is_overdue',
+        'total_workflows', 'completed_workflows',
+        'created_at', 'updated_at'
+    ]
+
+    fieldsets = (
+        ('Project Information', {
+            'fields': ('user', 'name', 'description', 'goal')
+        }),
+        ('Timeline', {
+            'fields': ('deadline', 'status')
+        }),
+        ('Organization', {
+            'fields': ('category', 'tags')
+        }),
+        ('Progress', {
+            'fields': ('total_workflows', 'completed_workflows', 'progress_percentage', 'is_overdue'),
+            'classes': ('collapse',)
+        }),
+        ('Collaboration', {
+            'fields': ('is_shared',),
+            'classes': ('collapse',)
+        }),
+        ('System', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def user_name(self, obj):
+        return obj.user.username
+    user_name.short_description = 'User'
+
+    def workflow_count(self, obj):
+        return f"{obj.completed_workflows}/{obj.total_workflows}"
+    workflow_count.short_description = 'Workflows'
+
+    def progress_display(self, obj):
+        percentage = obj.progress_percentage
+        if percentage == 100:
+            color = '#10b981'  # Green
+        elif percentage >= 50:
+            color = '#f59e0b'  # Amber
+        else:
+            color = '#ef4444'  # Red
+
+        return format_html(
+            '<div style="width: 100px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">'
+            '<div style="width: {}%; background: {}; height: 20px; line-height: 20px; text-align: center; color: white; font-size: 11px; font-weight: bold;">'
+            '{}%'
+            '</div>'
+            '</div>',
+            percentage, color, percentage
+        )
+    progress_display.short_description = 'Progress'
+
+
+@admin.register(ProjectWorkflow)
+class ProjectWorkflowAdmin(admin.ModelAdmin):
+    """Admin interface for project-workflow links (Session 60: Phase C.1.1)"""
+
+    list_display = [
+        'project_name', 'workflow_name', 'order',
+        'workflow_status', 'added_at'
+    ]
+    list_filter = ['project__status', 'workflow_history__status', 'added_at']
+    search_fields = [
+        'project__name', 'workflow_history__workflow_name',
+        'notes'
+    ]
+    readonly_fields = ['added_at']
+
+    fieldsets = (
+        ('Links', {
+            'fields': ('project', 'workflow_history')
+        }),
+        ('Organization', {
+            'fields': ('order', 'notes')
+        }),
+        ('System', {
+            'fields': ('added_at',),
+            'classes': ('collapse',)
+        })
+    )
+
+    def project_name(self, obj):
+        return obj.project.name
+    project_name.short_description = 'Project'
+
+    def workflow_name(self, obj):
+        return obj.workflow_history.workflow_name
+    workflow_name.short_description = 'Workflow'
+
+    def workflow_status(self, obj):
+        status = obj.workflow_history.status
+        status_colors = {
+            'completed': '#10b981',  # Green
+            'running': '#3b82f6',  # Blue
+            'failed': '#ef4444',  # Red
+            'pending': '#6b7280',  # Gray
+            'cancelled': '#f59e0b',  # Amber
+        }
+        color = status_colors.get(status, '#6b7280')
+
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, status.upper()
+        )
+    workflow_status.short_description = 'Status'
