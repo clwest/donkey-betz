@@ -11666,7 +11666,7 @@
                         </div>
 
                         <!-- Chat Messages (Session 62: Larger area + bigger font) -->
-                        <div id="aiChatMessages" class="p-3" style="max-height: 500px; overflow-y: auto; font-size: 15px;">
+                        <div id="aiChatMessages" class="p-3" style="max-height: 500px; overflow-y: auto; font-size: 15px; background: rgba(0, 0, 0, 0.3);">
                             <div class="alert alert-info mb-2" style="font-size: 15px;">
                                 👋 Hi! I'm your AI assistant. I can help you:
                                 <ul class="mb-0 mt-2" style="font-size: 13px;">
@@ -11858,7 +11858,7 @@
 
                 const messageHTML = `
                     <div id="${messageId}" class="mb-2 ${role === 'user' ? 'text-end' : ''}" ${isTemporary ? 'data-temporary="true"' : ''}>
-                        <div class="d-inline-block p-2 rounded" style="max-width: 85%; background: ${role === 'user' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(100, 116, 139, 0.2)'}; font-size: 15px; line-height: 1.6; position: relative;">
+                        <div class="d-inline-block p-2 rounded" style="max-width: 85%; background: ${role === 'user' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(100, 116, 139, 0.5)'}; font-size: 15px; line-height: 1.6; position: relative;">
                             ${role === 'user' ? '👤' : '🤖'} ${content}
                             ${actionButtons}
                         </div>
@@ -12039,6 +12039,20 @@
 
             parseIntent(message) {
                 const lower = message.toLowerCase();
+
+                // Session 64: Detect uncertainty/help requests FIRST (before workflow matching)
+                // If user is asking for help/ideas/suggestions, don't treat it as a literal prompt
+                const uncertaintyPhrases = [
+                    'not sure', "don't know", "dont know", 'no idea', 'help me',
+                    'what prompt', 'what should i', 'need help', 'need ideas',
+                    'suggestions', 'recommend', 'advice', 'stuck', 'brain fart'
+                ];
+                const hasUncertainty = uncertaintyPhrases.some(phrase => lower.includes(phrase));
+
+                if (hasUncertainty) {
+                    // User needs help - send to GPT-5 for advice
+                    return { type: 'general', message };
+                }
 
                 // Session 58: Phase B.3 - Enhanced workflow detection
                 // Check for workflow keywords (most specific first)
