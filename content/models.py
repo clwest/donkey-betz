@@ -1581,7 +1581,7 @@ class ImageHistory(UnifiedBaseModel):
     """
     Track all AI-generated and edited images for user gallery
     """
-    
+
     # User identification
     user = models.ForeignKey(
         User,
@@ -1589,16 +1589,25 @@ class ImageHistory(UnifiedBaseModel):
         related_name='image_history',
         help_text="User who created/edited this image"
     )
-    
+
+    # Session 63: Phase C.4++ - Link images to projects for client management
+    project = models.ForeignKey(
+        'CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_images',
+        help_text="Optional project this image belongs to"
+    )
+
     # Image identification
     filename = models.CharField(
         max_length=255,
         help_text="Stored filename"
     )
     
-    file_path = models.CharField(
-        max_length=500,
-        help_text="Full path to image file in storage"
+    file_path = models.TextField(
+        help_text="Full path to image file in storage (can be data URI)"
     )
     
     thumbnail = models.CharField(
@@ -1729,11 +1738,17 @@ class ImageHistory(UnifiedBaseModel):
     
     def get_full_url(self):
         """Get full URL for the image"""
+        # Session 64: If file_path is already a data URI, return it directly
+        if self.file_path.startswith('data:'):
+            return self.file_path
         return default_storage.url(self.file_path)
     
     def get_thumbnail_url(self):
         """Get thumbnail URL or fallback to full image"""
         if self.thumbnail:
+            # Session 64: If thumbnail is a data URI, return it directly
+            if self.thumbnail.startswith('data:'):
+                return self.thumbnail
             return default_storage.url(self.thumbnail)
         return self.get_full_url()
     
@@ -1772,6 +1787,16 @@ class VideoHistory(UnifiedBaseModel):
         on_delete=models.CASCADE,
         related_name='video_history',
         help_text="User who created this video"
+    )
+
+    # Session 63: Phase C.4++ - Link videos to projects for client management
+    project = models.ForeignKey(
+        'CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='project_videos',
+        help_text="Optional project this video belongs to"
     )
 
     # Video identification
@@ -2264,6 +2289,13 @@ class CreativeProject(UnifiedBaseModel):
         max_length=50,
         blank=True,
         help_text="Project category (e.g., 'Branding', 'Marketing', 'Personal')"
+    )
+
+    # Session 63: Client intake field - professional agency-style form
+    colors = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Color palette for this project (e.g., 'navy blue, gold, white')"
     )
 
     tags = models.JSONField(
