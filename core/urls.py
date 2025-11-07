@@ -273,7 +273,7 @@ from core.views_image import (
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
     list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
-    start_workflow_execution, complete_workflow_execution, assistant_chat, get_user_preferences_api,
+    start_workflow_execution, complete_workflow_execution, execute_workflow_for_project, assistant_chat, get_user_preferences_api,
     # Session 60: Phase C.1.2 - Project Management API
     list_projects, create_project, get_project, update_project, delete_project,
     add_workflow_to_project, remove_workflow_from_project,
@@ -838,6 +838,9 @@ urlpatterns = [
 
     # Intelligent Prompt Improvement (Session 56: Phase B.1)
     path('api/workflows/improve-prompt/', improve_workflow_prompt, name='improve-workflow-prompt'),
+
+    # Session 63: Project-linked workflow execution
+    path('api/workflows/execute-for-project/', execute_workflow_for_project, name='execute-workflow-for-project'),
 
     # Workflow History & Favorites (Session 57: Phase B.2)
     path('api/workflows/execution/start/', start_workflow_execution, name='start-workflow-execution'),

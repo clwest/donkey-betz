@@ -2598,6 +2598,24 @@
                                         <div class="mb-3">
                                             <label class="form-label">Video Description</label>
                                             <textarea id="videoPrompt" class="form-control" rows="4" placeholder="A majestic eagle soaring through clouds at sunset..."></textarea>
+                                            <!-- Session 64: GPT-5 Enhancement for Video -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="improveVideoPrompt('text-to-video')">
+                                                ✨ Improve My Prompt
+                                            </button>
+                                        </div>
+
+                                        <!-- Session 64: Improved Prompt Display -->
+                                        <div id="improvedTextVideoPrompt" style="display: none;" class="mb-3">
+                                            <div class="p-3 rounded" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(168, 85, 247, 0.3);">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <strong style="color: #a855f7;">✨ Enhanced by GPT-5:</strong>
+                                                    <button type="button" class="btn-close btn-close-white btn-sm" onclick="document.getElementById('improvedTextVideoPrompt').style.display='none'"></button>
+                                                </div>
+                                                <div id="improvedTextVideoPromptText" style="color: #c4b5fd; font-size: 0.9rem; line-height: 1.6;"></div>
+                                                <button type="button" class="btn btn-sm btn-success mt-2" onclick="useImprovedVideoPrompt('text-to-video')">
+                                                    ✅ Use This Prompt
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <!-- Duration -->
@@ -2684,6 +2702,24 @@
                                         <div class="mb-3">
                                             <label class="form-label">Camera Movement</label>
                                             <textarea id="motionPrompt" class="form-control" rows="3" placeholder="Camera slowly zooms in..."></textarea>
+                                            <!-- Session 64: GPT-5 Enhancement for Video -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="improveVideoPrompt('image-to-video')">
+                                                ✨ Improve My Prompt
+                                            </button>
+                                        </div>
+
+                                        <!-- Session 64: Improved Prompt Display -->
+                                        <div id="improvedImageVideoPrompt" style="display: none;" class="mb-3">
+                                            <div class="p-3 rounded" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(168, 85, 247, 0.3);">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <strong style="color: #a855f7;">✨ Enhanced by GPT-5:</strong>
+                                                    <button type="button" class="btn-close btn-close-white btn-sm" onclick="document.getElementById('improvedImageVideoPrompt').style.display='none'"></button>
+                                                </div>
+                                                <div id="improvedImageVideoPromptText" style="color: #c4b5fd; font-size: 0.9rem; line-height: 1.6;"></div>
+                                                <button type="button" class="btn btn-sm btn-success mt-2" onclick="useImprovedVideoPrompt('image-to-video')">
+                                                    ✅ Use This Prompt
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <!-- Duration -->
@@ -2790,6 +2826,24 @@
                                             <div class="mb-3">
                                                 <label class="form-label">Prompt (Optional)</label>
                                                 <textarea class="form-control bg-dark text-light border-cyan" id="v2vPrompt" rows="2" placeholder="Describe how to modify the video..."></textarea>
+                                                <!-- Session 64: GPT-5 Enhancement for Video-to-Video -->
+                                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="improveVideoPrompt('video-to-video')">
+                                                    ✨ Improve My Prompt
+                                                </button>
+                                            </div>
+
+                                            <!-- Session 64: Improved Prompt Display -->
+                                            <div id="improvedV2VPrompt" style="display: none;" class="mb-3">
+                                                <div class="p-3 rounded" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(168, 85, 247, 0.3);">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <strong style="color: #a855f7;">✨ Enhanced by GPT-5:</strong>
+                                                        <button type="button" class="btn-close btn-close-white btn-sm" onclick="document.getElementById('improvedV2VPrompt').style.display='none'"></button>
+                                                    </div>
+                                                    <div id="improvedV2VPromptText" style="color: #c4b5fd; font-size: 0.9rem; line-height: 1.6;"></div>
+                                                    <button type="button" class="btn btn-sm btn-success mt-2" onclick="useImprovedVideoPrompt('video-to-video')">
+                                                        ✅ Use This Prompt
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <!-- Duration -->
@@ -4047,319 +4101,13 @@
             </div>
             <!-- END PORTFOLIO TAB -->
 
-            <!-- WORKFLOWS TAB (Session 62: Phase C.4 - Promoted from Images pill to top-level tab!) -->
-            <!-- Session 64: REMOVED Workflows tab content - functionality moved to Projects tab -->
-            <!-- Users now access workflows via: Projects → Create/View Project → Add Workflow button -->
-            <!-- This creates ONE clear path instead of two redundant entry points -->
-            <!--
-            <div class="tab-pane fade" id="workflows" role="tabpanel">
-                <h3 class="mb-4">🔄 AI Workflows</h3>
-                <p class="text-muted mb-4">Execute professional AI workflows for images, videos, and audio. Perfect for projects, campaigns, and content creation!</p>
-
-                <!-- PRE-BUILT WORKFLOWS SECTION -->
-                <div class="mb-5">
-                    <h4 class="mb-3" style="color: #fbbf24;">⚡ Quick Start Templates</h4>
-                    <p class="text-muted mb-4">Professional workflows ready to use with one click. Perfect for common tasks!</p>
-
-                    <div class="row g-3 mb-4">
-                        <!-- Logo Creator -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('logo-creator')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">🎨 Logo Creator</h5>
-                                    <p class="text-muted small mb-3">Generate → Upscale 4x → Remove BG</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Branding, icons, app logos</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~15 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Social Media Pack -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('social-media-pack')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">📱 Social Media Pack</h5>
-                                    <p class="text-muted small mb-3">Generate → 3 style variations</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Instagram, profiles, content</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~25 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Portrait Enhancer -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('portrait-enhancer')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">🖼️ Portrait Enhancer</h5>
-                                    <p class="text-muted small mb-3">Generate → Upscale 4K</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Headshots, avatars, profiles</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~12 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Product Mockup -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('product-mockup')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">📦 Product Mockup</h5>
-                                    <p class="text-muted small mb-3">Remove BG → Generate scene → Upscale</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> E-commerce, presentations</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~20 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Style Explorer -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('style-explorer')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">🎭 Style Explorer</h5>
-                                    <p class="text-muted small mb-3">Generate in 5 different styles</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Finding the right look</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~30 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Creative Upscale -->
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card h-100" style="background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(251, 191, 36, 0.3); cursor: pointer; transition: all 0.3s;" onclick="loadPrebuiltWorkflow('creative-upscale')">
-                                <div class="card-body">
-                                    <h5 style="color: #fbbf24;">✨ Creative Upscale</h5>
-                                    <p class="text-muted small mb-3">Upload → Creative upscale → Download</p>
-                                    <p class="small mb-0"><strong>Perfect for:</strong> Enhancing existing images</p>
-                                    <p class="small text-success mb-0 mt-2">⏱️ ~45 seconds</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Divider -->
-                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
-
-                <!-- CUSTOM WORKFLOW BUILDER -->
-                <div>
-                    <h4 class="mb-3" style="color: #fbbf24;">🛠️ Custom Workflow Builder</h4>
-                    <p class="text-muted mb-4">Build your own multi-step workflow for advanced automation.</p>
-
-                    <!-- Instructions -->
-                    <div class="alert mb-4" style="background: rgba(251, 191, 36, 0.1); border: 2px solid rgba(251, 191, 36, 0.3); color: #fcd34d;">
-                        <h5 class="alert-heading" style="color: #fbbf24;">📖 How to Use:</h5>
-                        <ol class="mb-2">
-                            <li>Select or upload an input image</li>
-                            <li>Add operations to your workflow (upscale, recolor, remove background, etc.)</li>
-                            <li>Reorder steps by dragging if needed</li>
-                            <li>Save as template for reuse (optional)</li>
-                            <li>Execute workflow and see results at each step</li>
-                        </ol>
-                        <p class="mb-0"><strong>💡 Pro Tip:</strong> Common workflows: Generate → Upscale → Remove BG, or Upload → Recolor → Inpaint</p>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- LEFT COLUMN: Workflow Builder -->
-                    <div class="col-lg-6">
-                        <div class="card bg-dark border-cyan mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title text-cyan mb-3">🎬 Build Your Workflow</h5>
-
-                                <!-- 1. Input Image Selection -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>1️⃣ Input Image</strong></label>
-                                    <div class="d-flex gap-2 mb-2">
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="selectWorkflowImageFromGallery()">
-                                            📊 Select from Gallery
-                                        </button>
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="document.getElementById('workflowImageUpload').click()">
-                                            📤 Upload New
-                                        </button>
-                                    </div>
-                                    <input type="file" id="workflowImageUpload" accept="image/*" style="display: none;" onchange="handleWorkflowImageUpload(event)">
-
-                                    <!-- Image Preview -->
-                                    <div id="workflowInputPreview" style="display: none;" class="mt-2">
-                                        <div class="border border-cyan rounded p-2">
-                                            <img id="workflowInputImage" src="" alt="Input Image" class="img-fluid rounded" style="max-height: 200px;">
-                                            <p class="text-muted small mb-0 mt-2" id="workflowInputInfo">No image selected</p>
-                                        </div>
-                                    </div>
-                                    <div id="workflowInputEmpty" class="border border-secondary rounded p-3 text-center text-muted">
-                                        <p class="mb-0">No input image selected</p>
-                                    </div>
-                                </div>
-
-                                <!-- 2. Add Operations -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>2️⃣ Add Operations</strong></label>
-                                    <div class="d-flex gap-2">
-                                        <select id="operationSelect" class="form-select">
-                                            <option value="">Choose an operation...</option>
-                                            <optgroup label="✨ Generate">
-                                                <option value="generate">Generate Image (Text-to-Image)</option>
-                                            </optgroup>
-                                            <optgroup label="🎨 Edit">
-                                                <option value="recolor">Search & Recolor</option>
-                                                <option value="erase">Erase Object</option>
-                                                <option value="inpaint">Inpaint (Fill Area)</option>
-                                                <option value="outpaint">Outpaint (Extend)</option>
-                                                <option value="remove_background">Remove Background</option>
-                                            </optgroup>
-                                            <optgroup label="📈 Upscale">
-                                                <option value="upscale_fast">Fast Upscale (4x)</option>
-                                                <option value="upscale_conservative">Conservative Upscale (4K)</option>
-                                                <option value="upscale_creative">Creative Upscale</option>
-                                            </optgroup>
-                                            <optgroup label="🎭 Control">
-                                                <option value="sketch">Sketch to Image</option>
-                                                <option value="structure">Structure Transfer</option>
-                                            </optgroup>
-                                        </select>
-                                        <button type="button" class="btn btn-cyan" onclick="addOperationToWorkflow()">
-                                            ➕ Add
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- 3. Workflow Steps List -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>3️⃣ Workflow Steps</strong></label>
-                                    <div id="workflowSteps" class="border border-cyan rounded p-3">
-                                        <p class="text-muted text-center mb-0" id="workflowStepsEmpty">No operations added yet</p>
-                                    </div>
-                                </div>
-
-                                <!-- 4. Template Management -->
-                                <div class="mb-4">
-                                    <label class="form-label"><strong>4️⃣ Templates (Optional)</strong></label>
-                                    <div class="d-flex gap-2">
-                                        <input type="text" id="workflowTemplateName" class="form-control" placeholder="Template name...">
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="saveWorkflowTemplate()">
-                                            💾 Save
-                                        </button>
-                                        <button type="button" class="btn btn-outline-cyan btn-sm" onclick="loadWorkflowTemplate()">
-                                            📂 Load
-                                        </button>
-                                    </div>
-                                    <div id="savedTemplates" class="mt-2"></div>
-                                </div>
-
-                                <!-- 5. Execute Controls -->
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-success btn-lg flex-grow-1" onclick="executeWorkflow()" id="executeWorkflowBtn" disabled>
-                                        ▶️ Execute Workflow
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger" onclick="clearWorkflow()">
-                                        🗑️ Clear
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT COLUMN: Progress & Results -->
-                    <div class="col-lg-6">
-                        <div class="card bg-dark border-cyan mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title text-cyan mb-3">📊 Execution Progress</h5>
-
-                                <!-- Progress Tracker -->
-                                <div id="workflowProgressContainer" style="display: none;" class="mb-4">
-                                    <div class="progress mb-2" style="height: 30px;">
-                                        <div id="workflowProgressBar" class="progress-bar bg-cyan" role="progressbar" style="width: 0%">
-                                            <span id="workflowProgressText">0%</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-muted mb-0" id="workflowCurrentStep">Ready to execute...</p>
-                                </div>
-
-                                <!-- Step Results -->
-                                <div id="workflowStepResults" class="workflow-results">
-                                    <p class="text-muted text-center">Results will appear here after execution</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Final Result -->
-                        <div id="workflowFinalResult" style="display: none;" class="card bg-dark border-cyan">
-                            <div class="card-body">
-                                <h5 class="card-title text-success mb-3">✅ Workflow Complete!</h5>
-                                <div id="workflowFinalImage"></div>
-                                <div class="d-flex gap-2 mt-3">
-                                    <button type="button" class="btn btn-cyan" onclick="downloadWorkflowResult()">
-                                        📥 Download Final Result
-                                    </button>
-                                    <button type="button" class="btn btn-outline-cyan" onclick="viewWorkflowHistory()">
-                                        📜 View All Steps
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Status Messages -->
-                <div id="workflowStatus" class="mt-3"></div>
-
-                <!-- Divider -->
-                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
-
-                <!-- WORKFLOW HISTORY SECTION (Session 57: Phase B.2) -->
-                <div class="mb-5">
-                    <h4 class="mb-3" style="color: #fbbf24;">📜 Workflow History</h4>
-                    <p class="text-muted mb-4">Your recent workflow executions. Re-run any workflow with one click!</p>
-
-                    <!-- History Filter Controls -->
-                    <div class="d-flex gap-2 mb-3">
-                        <select id="historyWorkflowTypeFilter" class="form-select" style="max-width: 200px;" onchange="loadWorkflowHistory()">
-                            <option value="">All Workflows</option>
-                            <option value="logo_creator">Logo Creator</option>
-                            <option value="portrait_enhancer">Portrait Enhancer</option>
-                            <option value="style_explorer">Style Explorer</option>
-                            <option value="social_media_pack">Social Media Pack</option>
-                            <option value="product_mockup">Product Mockup</option>
-                            <option value="creative_upscale">Creative Upscale</option>
-                        </select>
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="loadWorkflowHistory(true)">
-                            ⭐ Favorites Only
-                        </button>
-                        <button type="button" class="btn btn-outline-success btn-sm ms-auto" onclick="loadWorkflowHistory()">
-                            🔄 Refresh
-                        </button>
-                    </div>
-
-                    <!-- History List -->
-                    <div id="workflowHistoryList">
-                        <div class="text-center text-muted py-5">
-                            <p class="mb-2">Loading workflow history...</p>
-                            <div class="spinner-border spinner-border-sm text-warning" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Divider -->
-                <hr style="border-color: rgba(251, 191, 36, 0.3); margin: 3rem 0;">
-
-                <!-- WORKFLOW FAVORITES SECTION (Session 57: Phase B.2) -->
-                <div class="mb-5">
-                    <h4 class="mb-3" style="color: #fbbf24;">⭐ Favorite Workflows</h4>
-                    <p class="text-muted mb-4">Save your best workflows for quick access anytime.</p>
-
-                    <!-- Favorites List -->
-                    <div id="workflowFavoritesList">
-                        <div class="text-center text-muted py-5">
-                            <p class="mb-2">Loading favorites...</p>
-                            <div class="spinner-border spinner-border-sm text-warning" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-
-            </div>
-            -->
-            <!-- END WORKFLOWS TAB (Session 64: Commented out - use Projects tab instead) -->
+            <!-- Session 64: WORKFLOWS TAB COMPLETELY REMOVED (313 lines deleted) -->
+            <!-- ============================================================ -->
+            <!-- REASON: Pivoted to project-based workflow approach          -->
+            <!-- NEW PATH: Projects → Add Workflow → Execute                 -->
+            <!-- OLD PATH: Workflows tab with Quick Start Templates removed  -->
+            <!-- This eliminates redundancy and creates ONE clear user path  -->
+            <!-- ============================================================ -->
 
         </div>
         <!-- END TAB CONTENT -->
@@ -8719,6 +8467,146 @@
                 improveBtn.style.borderColor = 'rgba(139, 92, 246, 0.5)';
                 improveBtn.style.color = '#a78bfa';
             }, 2000);
+        }
+
+        // ========== VIDEO PROMPT IMPROVEMENT (Session 64) ==========
+
+        let improvedVideoPromptCache = null;
+
+        async function improveVideoPrompt(videoType) {
+            console.log('✨ Improving video prompt for:', videoType);
+
+            let promptTextarea;
+            let displayDiv;
+            let improveBtn;
+
+            if (videoType === 'text-to-video') {
+                promptTextarea = document.getElementById('videoPrompt');
+                displayDiv = document.getElementById('improvedTextVideoPrompt');
+                improveBtn = displayDiv ? displayDiv.previousElementSibling.querySelector('.btn-outline-primary') : null;
+            } else if (videoType === 'image-to-video') {
+                promptTextarea = document.getElementById('motionPrompt');
+                displayDiv = document.getElementById('improvedImageVideoPrompt');
+                improveBtn = displayDiv ? displayDiv.previousElementSibling.querySelector('.btn-outline-primary') : null;
+            } else if (videoType === 'video-to-video') {
+                promptTextarea = document.getElementById('v2vPrompt');
+                displayDiv = document.getElementById('improvedV2VPrompt');
+                improveBtn = displayDiv ? displayDiv.previousElementSibling.querySelector('.btn-outline-primary') : null;
+            }
+
+            if (!promptTextarea || !displayDiv) {
+                console.error('❌ Required elements not found');
+                return;
+            }
+
+            const userPrompt = promptTextarea.value.trim();
+            if (!userPrompt) {
+                alert('Please enter a prompt first!');
+                return;
+            }
+
+            // Show loading state
+            if (improveBtn) {
+                improveBtn.disabled = true;
+                improveBtn.style.cursor = 'wait';
+                improveBtn.innerHTML = '⏳ Improving...';
+            }
+
+            const promptTextId = videoType === 'text-to-video' ? 'improvedTextVideoPromptText' : 'improvedImageVideoPromptText';
+            const promptTextDiv = document.getElementById(promptTextId);
+
+            if (promptTextDiv) {
+                promptTextDiv.innerHTML = '✨ GPT-5 is analyzing and optimizing your video prompt...';
+            }
+            displayDiv.style.display = 'block';
+            document.body.style.cursor = 'wait';
+
+            try {
+                // Call backend API
+                const response = await authenticatedFetch('/api/workflows/improve-prompt/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: userPrompt,
+                        workflow_type: 'video-generation'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to improve prompt');
+                }
+
+                console.log('✅ Video prompt improved:', data.improved_prompt.substring(0, 100) + '...');
+
+                // Cache the improved prompt
+                improvedVideoPromptCache = {
+                    type: videoType,
+                    prompt: data.improved_prompt
+                };
+
+                // Display improved prompt
+                if (promptTextDiv) {
+                    promptTextDiv.innerHTML = data.improved_prompt;
+                }
+                displayDiv.style.display = 'block';
+
+            } catch (error) {
+                console.error('❌ Error improving video prompt:', error);
+                alert(`Failed to improve prompt: ${error.message}`);
+                displayDiv.style.display = 'none';
+            } finally {
+                // Restore button state
+                if (improveBtn) {
+                    improveBtn.disabled = false;
+                    improveBtn.style.cursor = 'pointer';
+                    improveBtn.innerHTML = '✨ Improve My Prompt';
+                }
+                document.body.style.cursor = 'default';
+            }
+        }
+
+        function useImprovedVideoPrompt(videoType) {
+            console.log('✅ Using improved video prompt for:', videoType);
+
+            if (!improvedVideoPromptCache || improvedVideoPromptCache.type !== videoType) {
+                console.error('❌ No cached video prompt for this type');
+                return;
+            }
+
+            let promptTextarea;
+            let displayDiv;
+
+            if (videoType === 'text-to-video') {
+                promptTextarea = document.getElementById('videoPrompt');
+                displayDiv = document.getElementById('improvedTextVideoPrompt');
+            } else if (videoType === 'image-to-video') {
+                promptTextarea = document.getElementById('motionPrompt');
+                displayDiv = document.getElementById('improvedImageVideoPrompt');
+            } else if (videoType === 'video-to-video') {
+                promptTextarea = document.getElementById('v2vPrompt');
+                displayDiv = document.getElementById('improvedV2VPrompt');
+            }
+
+            if (!promptTextarea) {
+                console.error('❌ Prompt textarea not found');
+                return;
+            }
+
+            // Apply improved prompt
+            promptTextarea.value = improvedVideoPromptCache.prompt;
+
+            // Hide display
+            if (displayDiv) {
+                displayDiv.style.display = 'none';
+            }
+
+            // Clear cache
+            improvedVideoPromptCache = null;
+
+            // Success feedback
+            showNotification('Video prompt improved! ✨', 'success', 2000);
         }
 
         // ========== WORKFLOW HISTORY & FAVORITES (Session 57: Phase B.2) ==========
