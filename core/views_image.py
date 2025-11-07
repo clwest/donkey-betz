@@ -4426,6 +4426,57 @@ Keep responses under 200 words. Be conversational and practical."""
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def transcribe_audio(request):
+    """
+    Transcribe audio using OpenAI Whisper API
+    Session 64: Voice input for AI Assistant
+
+    Accepts audio file and returns transcribed text.
+    User can then edit the text before sending to assistant.
+
+    Example:
+        Input: Audio blob (webm/mp4/wav)
+        Output: {"text": "I want to create a logo but I'm not sure what prompt to use"}
+    """
+    try:
+        # Get audio file from request
+        audio_file = request.FILES.get('audio')
+
+        if not audio_file:
+            return Response({
+                'error': 'No audio file provided'
+            }, status=400)
+
+        logger.info(f"🎤 Transcribing audio for {request.user.username} ({audio_file.size} bytes)")
+
+        # Call OpenAI Whisper API
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        # Whisper expects the file object directly
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            language="en"  # Can be removed to auto-detect
+        )
+
+        transcribed_text = transcript.text.strip()
+        logger.info(f"✅ Transcribed: '{transcribed_text[:100]}...'")
+
+        return Response({
+            'text': transcribed_text,
+            'success': True
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error transcribing audio: {str(e)}")
+        return Response({
+            'error': 'Failed to transcribe audio. Please try again!',
+            'details': str(e) if settings.DEBUG else None
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def start_workflow_execution(request):
     """
     Create workflow history record when workflow execution starts

@@ -11614,6 +11614,11 @@
 
                 this.workflowHistory = null; // Will load on demand
 
+                // Session 64: Voice input properties
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+
                 this.setupUI();
                 this.setupEventListeners();
             }
@@ -11687,11 +11692,16 @@
                             <div class="input-group">
                                 <input type="text" id="aiAssistantInput" class="form-control"
                                        placeholder="Ask me anything..." style="background: rgba(255, 255, 255, 0.05); border-color: rgba(251, 191, 36, 0.3); color: white;">
+                                <button class="btn btn-outline-light" id="aiAssistantVoice" type="button" title="Voice input (Whisper)">
+                                    🎤
+                                </button>
                                 <button class="btn btn-primary" id="aiAssistantSend" type="button">
                                     ➤ Send
                                 </button>
                             </div>
                             <small class="d-block mt-2" style="font-size: 11px; color: #fcd34d;">
+                                <span id="voiceStatus"></span>
+                                <span id="voiceStatusSeparator" style="display: none;"> • </span>
                                 Powered by Claude 3.5 Sonnet • Press Enter to send
                             </small>
                         </div>
@@ -11716,6 +11726,11 @@
                 // Send button
                 document.getElementById('aiAssistantSend').addEventListener('click', () => {
                     this.sendMessage();
+                });
+
+                // Session 64: Voice input button
+                document.getElementById('aiAssistantVoice').addEventListener('click', () => {
+                    this.toggleVoiceRecording();
                 });
 
                 // Enter key to send
@@ -12417,6 +12432,132 @@
                 } catch (error) {
                     console.error('Error loading workflow favorites:', error);
                     this.addMessage('assistant', '❌ Could not load favorites. Please check the AI Workflows tab manually.');
+                }
+            }
+
+            // Session 64: Voice input methods
+            async toggleVoiceRecording() {
+                if (this.isRecording) {
+                    this.stopRecording();
+                } else {
+                    await this.startRecording();
+                }
+            }
+
+            async startRecording() {
+                try {
+                    // Request microphone access
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                    // Create MediaRecorder
+                    this.mediaRecorder = new MediaRecorder(stream);
+                    this.audioChunks = [];
+
+                    // Collect audio data
+                    this.mediaRecorder.addEventListener('dataavailable', (event) => {
+                        this.audioChunks.push(event.data);
+                    });
+
+                    // Handle recording stop
+                    this.mediaRecorder.addEventListener('stop', () => {
+                        this.transcribeAudio();
+                        // Stop all tracks to release microphone
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+
+                    // Start recording
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+
+                    // Update UI
+                    const voiceBtn = document.getElementById('aiAssistantVoice');
+                    voiceBtn.innerHTML = '🔴';
+                    voiceBtn.classList.add('btn-danger');
+                    voiceBtn.classList.remove('btn-outline-light');
+
+                    const voiceStatus = document.getElementById('voiceStatus');
+                    const separator = document.getElementById('voiceStatusSeparator');
+                    voiceStatus.textContent = '🎤 Recording...';
+                    voiceStatus.style.color = '#ef4444';
+                    separator.style.display = 'inline';
+
+                } catch (error) {
+                    console.error('Error starting recording:', error);
+                    alert('Could not access microphone. Please check permissions.');
+                }
+            }
+
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+
+                    // Update UI
+                    const voiceBtn = document.getElementById('aiAssistantVoice');
+                    voiceBtn.innerHTML = '🎤';
+                    voiceBtn.classList.remove('btn-danger');
+                    voiceBtn.classList.add('btn-outline-light');
+
+                    const voiceStatus = document.getElementById('voiceStatus');
+                    const separator = document.getElementById('voiceStatusSeparator');
+                    voiceStatus.textContent = '⚡ Transcribing...';
+                    voiceStatus.style.color = '#fbbf24';
+                }
+            }
+
+            async transcribeAudio() {
+                try {
+                    // Create audio blob
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+
+                    // Create FormData
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.webm');
+
+                    // Send to backend
+                    const response = await authenticatedFetch('/api/assistant/transcribe/', {
+                        method: 'POST',
+                        body: formData,
+                        // Don't set Content-Type header - let browser set it with boundary for FormData
+                        headers: undefined
+                    });
+
+                    const data = await response.json();
+
+                    if (data.text) {
+                        // Fill input with transcribed text
+                        document.getElementById('aiAssistantInput').value = data.text;
+
+                        // Update status
+                        const voiceStatus = document.getElementById('voiceStatus');
+                        const separator = document.getElementById('voiceStatusSeparator');
+                        voiceStatus.textContent = '✅ Transcribed!';
+                        voiceStatus.style.color = '#22c55e';
+
+                        // Clear status after 3 seconds
+                        setTimeout(() => {
+                            voiceStatus.textContent = '';
+                            separator.style.display = 'none';
+                        }, 3000);
+
+                        // Focus input for editing
+                        document.getElementById('aiAssistantInput').focus();
+                    } else {
+                        throw new Error(data.error || 'Transcription failed');
+                    }
+
+                } catch (error) {
+                    console.error('Error transcribing audio:', error);
+
+                    const voiceStatus = document.getElementById('voiceStatus');
+                    const separator = document.getElementById('voiceStatusSeparator');
+                    voiceStatus.textContent = '❌ Transcription failed';
+                    voiceStatus.style.color = '#ef4444';
+
+                    setTimeout(() => {
+                        voiceStatus.textContent = '';
+                        separator.style.display = 'none';
+                    }, 3000);
                 }
             }
         }
