@@ -11618,6 +11618,8 @@
                 this.isRecording = false;
                 this.mediaRecorder = null;
                 this.audioChunks = [];
+                this.recordingStartTime = null;
+                this.audioStream = null;
 
                 this.setupUI();
                 this.setupEventListeners();
@@ -12448,26 +12450,44 @@
                 try {
                     // Request microphone access
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.audioStream = stream;
 
-                    // Create MediaRecorder
-                    this.mediaRecorder = new MediaRecorder(stream);
+                    // Create MediaRecorder with explicit options
+                    const options = { mimeType: 'audio/webm' };
+                    this.mediaRecorder = new MediaRecorder(stream, options);
                     this.audioChunks = [];
+                    this.recordingStartTime = Date.now();
 
-                    // Collect audio data
+                    // Collect audio data - this fires multiple times during recording
                     this.mediaRecorder.addEventListener('dataavailable', (event) => {
-                        this.audioChunks.push(event.data);
+                        if (event.data.size > 0) {
+                            console.log('🎤 Audio chunk received:', event.data.size, 'bytes');
+                            this.audioChunks.push(event.data);
+                        }
                     });
 
                     // Handle recording stop
-                    this.mediaRecorder.addEventListener('stop', () => {
-                        this.transcribeAudio();
+                    this.mediaRecorder.addEventListener('stop', async () => {
+                        console.log('🎤 Recording stopped, total chunks:', this.audioChunks.length);
+
+                        // Small delay to ensure all data is collected
+                        await new Promise(resolve => setTimeout(resolve, 100));
+
+                        // Process the audio
+                        await this.transcribeAudio();
+
                         // Stop all tracks to release microphone
-                        stream.getTracks().forEach(track => track.stop());
+                        if (this.audioStream) {
+                            this.audioStream.getTracks().forEach(track => track.stop());
+                            this.audioStream = null;
+                        }
                     });
 
-                    // Start recording
-                    this.mediaRecorder.start();
+                    // Start recording - collect data every 100ms to ensure we capture everything
+                    this.mediaRecorder.start(100);
                     this.isRecording = true;
+
+                    console.log('🎤 Recording started');
 
                     // Update UI
                     const voiceBtn = document.getElementById('aiAssistantVoice');
@@ -12477,7 +12497,7 @@
 
                     const voiceStatus = document.getElementById('voiceStatus');
                     const separator = document.getElementById('voiceStatusSeparator');
-                    voiceStatus.textContent = '🎤 Recording...';
+                    voiceStatus.textContent = '🎤 Recording... (speak for at least 1 sec)';
                     voiceStatus.style.color = '#ef4444';
                     separator.style.display = 'inline';
 
@@ -12489,6 +12509,21 @@
 
             stopRecording() {
                 if (this.mediaRecorder && this.isRecording) {
+                    // Check minimum recording duration
+                    const duration = Date.now() - this.recordingStartTime;
+                    console.log('🎤 Recording duration:', duration, 'ms');
+
+                    if (duration < 500) {
+                        alert('Recording too short! Please speak for at least 1 second.');
+                        // Continue recording
+                        return;
+                    }
+
+                    // Request any remaining data before stopping
+                    if (this.mediaRecorder.state === 'recording') {
+                        this.mediaRecorder.requestData();
+                    }
+
                     this.mediaRecorder.stop();
                     this.isRecording = false;
 
@@ -12507,12 +12542,19 @@
 
             async transcribeAudio() {
                 try {
-                    // Create audio blob
+                    // Create audio blob from all chunks
                     const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    console.log('🎤 Audio blob created:', audioBlob.size, 'bytes from', this.audioChunks.length, 'chunks');
+
+                    if (audioBlob.size === 0) {
+                        throw new Error('No audio data recorded');
+                    }
 
                     // Create FormData
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'recording.webm');
+
+                    console.log('🎤 Sending to Whisper...');
 
                     // Send to backend
                     const response = await authenticatedFetch('/api/assistant/transcribe/', {
@@ -12524,9 +12566,12 @@
 
                     const data = await response.json();
 
+                    console.log('🎤 Whisper response:', data);
+
                     if (data.text) {
                         // Fill input with transcribed text
                         document.getElementById('aiAssistantInput').value = data.text;
+                        console.log('✅ Transcribed text:', data.text);
 
                         // Update status
                         const voiceStatus = document.getElementById('voiceStatus');
