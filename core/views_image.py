@@ -4452,10 +4452,14 @@ def transcribe_audio(request):
         # Call OpenAI Whisper API
         client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-        # Whisper expects the file object directly
+        # Session 64: OpenAI expects a tuple (filename, file_bytes, content_type)
+        # Convert Django InMemoryUploadedFile to tuple format
+        audio_file.seek(0)  # Reset file pointer to beginning
+        file_tuple = (audio_file.name, audio_file.read(), audio_file.content_type)
+
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
-            file=audio_file,
+            file=file_tuple,
             language="en"  # Can be removed to auto-detect
         )
 
