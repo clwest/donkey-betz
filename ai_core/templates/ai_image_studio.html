@@ -11813,15 +11813,86 @@
                 }
             }
 
+            formatMessage(text) {
+                // Session 64: Format AI responses with paragraphs and bullet points
+                if (!text) return '';
+
+                // Split into lines
+                let lines = text.split('\n');
+                let formatted = '';
+                let inList = false;
+                let listType = null; // 'bullet' or 'number'
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+
+                    // Empty line - add paragraph break
+                    if (!line) {
+                        if (inList) {
+                            formatted += listType === 'bullet' ? '</ul>' : '</ol>';
+                            inList = false;
+                            listType = null;
+                        }
+                        formatted += '<br>';
+                        continue;
+                    }
+
+                    // Bullet point (-, •, *)
+                    if (line.match(/^[-•*]\s+/)) {
+                        if (!inList || listType !== 'bullet') {
+                            if (inList) formatted += listType === 'bullet' ? '</ul>' : '</ol>';
+                            formatted += '<ul style="margin: 0.5em 0; padding-left: 1.5em;">';
+                            inList = true;
+                            listType = 'bullet';
+                        }
+                        formatted += '<li>' + line.replace(/^[-•*]\s+/, '') + '</li>';
+                    }
+                    // Numbered list (1., 2., etc)
+                    else if (line.match(/^\d+\.\s+/)) {
+                        if (!inList || listType !== 'number') {
+                            if (inList) formatted += listType === 'bullet' ? '</ul>' : '</ol>';
+                            formatted += '<ol style="margin: 0.5em 0; padding-left: 1.5em;">';
+                            inList = true;
+                            listType = 'number';
+                        }
+                        formatted += '<li>' + line.replace(/^\d+\.\s+/, '') + '</li>';
+                    }
+                    // Regular text
+                    else {
+                        if (inList) {
+                            formatted += listType === 'bullet' ? '</ul>' : '</ol>';
+                            inList = false;
+                            listType = null;
+                        }
+                        formatted += line + '<br>';
+                    }
+                }
+
+                // Close any open list
+                if (inList) {
+                    formatted += listType === 'bullet' ? '</ul>' : '</ol>';
+                }
+
+                return formatted;
+            }
+
             addMessage(role, content, isTemporary = false, metadata = {}) {
                 const messagesDiv = document.getElementById('aiChatMessages');
                 const messageId = 'msg-' + Date.now();
 
+                // Session 64: Save original content for copy button before formatting
+                const originalContent = content;
+
+                // Session 64: Format assistant messages for readability
+                if (role === 'assistant' && !isTemporary) {
+                    content = this.formatMessage(content);
+                }
+
                 // Check if content looks like a prompt (for AI messages)
                 const isPromptMessage = role === 'assistant' && (
-                    content.includes('prompt') ||
-                    content.includes('generate') ||
-                    content.length > 100
+                    originalContent.includes('prompt') ||
+                    originalContent.includes('generate') ||
+                    originalContent.length > 100
                 );
 
                 // Build action buttons for AI messages
@@ -11830,7 +11901,7 @@
                     actionButtons = `
                         <div class="mt-2 d-flex gap-1 flex-wrap">
                             <button class="btn btn-sm btn-outline-light copy-btn"
-                                    data-content="${content.replace(/"/g, '&quot;')}"
+                                    data-content="${originalContent.replace(/"/g, '&quot;')}"
                                     style="font-size: 11px; padding: 2px 8px;"
                                     title="Copy message">
                                 📋 Copy
