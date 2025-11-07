@@ -11893,6 +11893,84 @@
                 return formatted;
             }
 
+            // Session 64: Detect prompts in GPT-5 responses and categorize them
+            // SIMPLIFIED FOR 7-YEAR-OLDS: If AI talks about creating, show buttons!
+            detectPromptsInMessage(message) {
+                const result = {
+                    hasImagePrompts: false,
+                    hasVideoPrompts: false,
+                    hasAudioPrompts: false,
+                    imagePrompts: [],
+                    videoPrompts: [],
+                    audioPrompts: []
+                };
+
+                const lower = message.toLowerCase();
+                console.log('🔍 Detecting prompts in message...', message.substring(0, 100) + '...');
+
+                // Extract ALL quoted text (prompts are usually in quotes)
+                const quotedTextRegex = /"([^"]+)"/g;
+                const matches = [...message.matchAll(quotedTextRegex)];
+                console.log(`📝 Found ${matches.length} quoted sections`);
+
+                matches.forEach(match => {
+                    const prompt = match[1].trim();
+
+                    // Skip very short matches (likely not prompts)
+                    if (prompt.length < 10) {
+                        console.log('⏭️ Skipping short quote:', prompt);
+                        return;
+                    }
+
+                    console.log('✅ Found prompt candidate:', prompt.substring(0, 50) + '...');
+
+                    // Determine type based on context around the quote
+                    const contextBefore = message.substring(Math.max(0, match.index - 100), match.index).toLowerCase();
+                    const contextAfter = message.substring(match.index + match[0].length, match.index + match[0].length + 100).toLowerCase();
+                    const fullContext = contextBefore + ' ' + prompt.toLowerCase() + ' ' + contextAfter;
+
+                    // Video indicators
+                    if (fullContext.includes('video') || fullContext.includes('footage') || fullContext.includes('clip') || fullContext.includes('motion')) {
+                        result.videoPrompts.push(prompt);
+                        result.hasVideoPrompts = true;
+                        console.log('🎬 Categorized as VIDEO');
+                    }
+                    // Audio indicators
+                    else if (fullContext.includes('audio') || fullContext.includes('sound') || fullContext.includes('voice') || fullContext.includes('music')) {
+                        result.audioPrompts.push(prompt);
+                        result.hasAudioPrompts = true;
+                        console.log('🎵 Categorized as AUDIO');
+                    }
+                    // Default to image (most common)
+                    else {
+                        result.imagePrompts.push(prompt);
+                        result.hasImagePrompts = true;
+                        console.log('🎨 Categorized as IMAGE (default)');
+                    }
+                });
+
+                // SIMPLE FALLBACK: If AI mentions image/logo/generate but no quotes found,
+                // show button anyway that just opens the Images tab (7-year-old friendly!)
+                if (result.imagePrompts.length === 0 && result.videoPrompts.length === 0 && result.audioPrompts.length === 0) {
+                    if (lower.includes('image') || lower.includes('logo') || lower.includes('generate') ||
+                        lower.includes('create') || lower.includes('prompt') || lower.includes('model:') ||
+                        lower.includes('style:')) {
+                        // Add a generic "Start Creating" button
+                        result.imagePrompts.push(''); // Empty prompt = just open tab
+                        result.hasImagePrompts = true;
+                        console.log('🎨 No quotes found, but AI is talking about creation - showing button!');
+                    }
+                }
+
+                console.log('🎯 Detection result:', {
+                    images: result.imagePrompts.length,
+                    videos: result.videoPrompts.length,
+                    audio: result.audioPrompts.length
+                });
+
+                return result;
+            }
+
             addMessage(role, content, isTemporary = false, metadata = {}) {
                 const messagesDiv = document.getElementById('aiChatMessages');
                 const messageId = 'msg-' + Date.now();
@@ -11905,43 +11983,97 @@
                     content = this.formatMessage(content);
                 }
 
-                // Check if content looks like a prompt (for AI messages)
-                const isPromptMessage = role === 'assistant' && (
-                    originalContent.includes('prompt') ||
-                    originalContent.includes('generate') ||
-                    originalContent.length > 100
-                );
+                // Session 64: Smart prompt detection and action buttons
+                const detectedPrompts = this.detectPromptsInMessage(originalContent);
 
                 // Build action buttons for AI messages
                 let actionButtons = '';
                 if (role === 'assistant' && !isTemporary) {
-                    actionButtons = `
-                        <div class="mt-2 d-flex gap-1 flex-wrap">
-                            <button class="btn btn-sm btn-outline-light copy-btn"
-                                    data-content="${originalContent.replace(/"/g, '&quot;')}"
+                    let buttons = [];
+
+                    // Copy button (always present)
+                    buttons.push(`
+                        <button class="btn btn-sm btn-outline-light copy-btn"
+                                data-content="${originalContent.replace(/"/g, '&quot;')}"
+                                style="font-size: 11px; padding: 2px 8px;"
+                                title="Copy message">
+                            📋 Copy
+                        </button>
+                    `);
+
+                    // Legacy "Use This" button for backwards compatibility
+                    if (metadata.prompt) {
+                        buttons.push(`
+                            <button class="btn btn-sm btn-outline-info use-prompt-btn"
+                                    data-prompt="${metadata.prompt.replace(/"/g, '&quot;')}"
                                     style="font-size: 11px; padding: 2px 8px;"
-                                    title="Copy message">
-                                📋 Copy
+                                    title="Use this prompt">
+                                ✨ Use This
                             </button>
-                            ${metadata.prompt ? `
-                                <button class="btn btn-sm btn-outline-info use-prompt-btn"
-                                        data-prompt="${metadata.prompt.replace(/"/g, '&quot;')}"
+                        `);
+                    }
+
+                    // Execute workflow button
+                    if (metadata.showExecuteButton) {
+                        buttons.push(`
+                            <button class="btn btn-sm btn-primary execute-workflow-btn"
+                                    data-action="${metadata.action}"
+                                    data-params='${JSON.stringify(metadata.params)}'
+                                    style="font-size: 11px; padding: 2px 8px;"
+                                    title="Execute this workflow">
+                                🚀 Execute Workflow
+                            </button>
+                        `);
+                    }
+
+                    // Session 64: Smart generation buttons based on detected prompts
+                    if (detectedPrompts.hasImagePrompts) {
+                        detectedPrompts.imagePrompts.forEach((prompt, index) => {
+                            const buttonLabel = prompt ?
+                                `🎨 Generate Image ${detectedPrompts.imagePrompts.length > 1 ? '#' + (index + 1) : ''}` :
+                                '🎨 Start Creating Image';
+                            const buttonTitle = prompt ?
+                                'Generate this image right now!' :
+                                'Open Images tab to start creating!';
+
+                            buttons.push(`
+                                <button class="btn btn-sm btn-success generate-image-btn"
+                                        data-prompt="${prompt.replace(/"/g, '&quot;')}"
                                         style="font-size: 11px; padding: 2px 8px;"
-                                        title="Use this prompt">
-                                    ✨ Use This
+                                        title="${buttonTitle}">
+                                    ${buttonLabel}
                                 </button>
-                            ` : ''}
-                            ${metadata.showExecuteButton ? `
-                                <button class="btn btn-sm btn-primary execute-workflow-btn"
-                                        data-action="${metadata.action}"
-                                        data-params='${JSON.stringify(metadata.params)}'
+                            `);
+                        });
+                    }
+
+                    if (detectedPrompts.hasVideoPrompts) {
+                        detectedPrompts.videoPrompts.forEach((prompt, index) => {
+                            buttons.push(`
+                                <button class="btn btn-sm btn-success generate-video-btn"
+                                        data-prompt="${prompt.replace(/"/g, '&quot;')}"
                                         style="font-size: 11px; padding: 2px 8px;"
-                                        title="Execute this workflow">
-                                    🚀 Execute Workflow
+                                        title="Generate this video right now!">
+                                    🎬 Generate Video ${detectedPrompts.videoPrompts.length > 1 ? '#' + (index + 1) : ''}
                                 </button>
-                            ` : ''}
-                        </div>
-                    `;
+                            `);
+                        });
+                    }
+
+                    if (detectedPrompts.hasAudioPrompts) {
+                        detectedPrompts.audioPrompts.forEach((prompt, index) => {
+                            buttons.push(`
+                                <button class="btn btn-sm btn-success generate-audio-btn"
+                                        data-prompt="${prompt.replace(/"/g, '&quot;')}"
+                                        style="font-size: 11px; padding: 2px 8px;"
+                                        title="Generate this audio right now!">
+                                    🎵 Generate Audio ${detectedPrompts.audioPrompts.length > 1 ? '#' + (index + 1) : ''}
+                                </button>
+                            `);
+                        });
+                    }
+
+                    actionButtons = `<div class="mt-2 d-flex gap-1 flex-wrap">${buttons.join('')}</div>`;
                 }
 
                 const messageHTML = `
@@ -12028,6 +12160,33 @@
                             }
                         });
                     }
+
+                    // Session 64: Generate Image buttons
+                    document.querySelectorAll(`#${messageId} .generate-image-btn`).forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const prompt = e.target.dataset.prompt;
+                            this.quickGenerateImage(prompt);
+                            this.close();  // Close assistant panel
+                        });
+                    });
+
+                    // Session 64: Generate Video buttons
+                    document.querySelectorAll(`#${messageId} .generate-video-btn`).forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const prompt = e.target.dataset.prompt;
+                            this.quickGenerateVideo(prompt);
+                            this.close();  // Close assistant panel
+                        });
+                    });
+
+                    // Session 64: Generate Audio buttons
+                    document.querySelectorAll(`#${messageId} .generate-audio-btn`).forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const prompt = e.target.dataset.prompt;
+                            this.quickGenerateAudio(prompt);
+                            this.close();  // Close assistant panel
+                        });
+                    });
                 }
 
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -12648,6 +12807,94 @@
                         separator.style.display = 'none';
                     }, 3000);
                 }
+            }
+
+            // Session 64: Quick generation helpers
+            quickGenerateImage(prompt) {
+                console.log('🎨 Quick generating image:', prompt || '(opening tab for manual input)');
+
+                // Switch to Images tab
+                const imagesTab = document.getElementById('images-tab');
+                if (imagesTab) imagesTab.click();
+
+                // Wait for tab switch, then switch to Generate pill
+                setTimeout(() => {
+                    const generatePill = document.getElementById('generate-pill');
+                    if (generatePill) generatePill.click();
+                }, 100);
+
+                // Wait a bit more, then fill prompt (if we have one)
+                setTimeout(() => {
+                    const promptField = document.getElementById('prompt');
+                    if (promptField) {
+                        if (prompt) {
+                            promptField.value = prompt;
+                            // Visual highlight
+                            promptField.style.background = 'rgba(34, 197, 94, 0.2)';
+                            setTimeout(() => {
+                                promptField.style.background = '';
+                            }, 2000);
+                            console.log('✅ Image prompt filled!');
+                        } else {
+                            // No prompt - just focus the field for manual input
+                            promptField.focus();
+                            console.log('✅ Image tab opened - ready for input!');
+                        }
+                        promptField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
+            }
+
+            quickGenerateVideo(prompt) {
+                console.log('🎬 Quick generating video:', prompt);
+
+                // Switch to Video tab
+                const videoTab = document.getElementById('video-tab');
+                if (videoTab) videoTab.click();
+
+                // Wait for tab switch, then fill prompt
+                setTimeout(() => {
+                    // Look for text-to-video prompt field
+                    const videoPromptField = document.getElementById('video_prompt');
+                    if (videoPromptField) {
+                        videoPromptField.value = prompt;
+                        videoPromptField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // Visual highlight
+                        videoPromptField.style.background = 'rgba(34, 197, 94, 0.2)';
+                        setTimeout(() => {
+                            videoPromptField.style.background = '';
+                        }, 2000);
+
+                        console.log('✅ Video prompt filled!');
+                    }
+                }, 300);
+            }
+
+            quickGenerateAudio(prompt) {
+                console.log('🎵 Quick generating audio:', prompt);
+
+                // Switch to Audio tab
+                const audioTab = document.getElementById('audio-tab');
+                if (audioTab) audioTab.click();
+
+                // Wait for tab switch, then fill prompt
+                setTimeout(() => {
+                    // Look for audio prompt field (usually text or voice text)
+                    const audioPromptField = document.getElementById('audio_text') || document.getElementById('tts_text');
+                    if (audioPromptField) {
+                        audioPromptField.value = prompt;
+                        audioPromptField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // Visual highlight
+                        audioPromptField.style.background = 'rgba(34, 197, 94, 0.2)';
+                        setTimeout(() => {
+                            audioPromptField.style.background = '';
+                        }, 2000);
+
+                        console.log('✅ Audio prompt filled!');
+                    }
+                }, 300);
             }
         }
 
