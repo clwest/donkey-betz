@@ -1241,7 +1241,8 @@ def inpaint_image(request):
 def outpaint_image(request):
     """
     Outpaint (extend) image beyond edges using Stability AI outpaint endpoint.
-    Requires: image file, direction (left/right/up/down), pixels (how much to extend), prompt
+    Session 64: Now supports multiple directions in one call!
+    Requires: image file, directions (comma-separated: left,right,up,down), pixels, prompt
     """
     try:
         if 'image' not in request.FILES:
@@ -1251,13 +1252,13 @@ def outpaint_image(request):
             }, status=400)
 
         prompt = request.POST.get('prompt', '').strip()
-        direction = request.POST.get('direction', '').strip().lower()
+        directions_str = request.POST.get('directions', '').strip().lower()  # Session 64: Changed from 'direction' to 'directions'
         pixels_str = request.POST.get('pixels', '').strip()
 
-        if not all([prompt, direction, pixels_str]):
+        if not all([prompt, directions_str, pixels_str]):
             return JsonResponse({
                 'success': False,
-                'error': 'Missing prompt, direction, or pixels'
+                'error': 'Missing prompt, directions, or pixels'
             }, status=400)
 
         try:
@@ -1268,13 +1269,23 @@ def outpaint_image(request):
                 'error': 'Invalid pixels value'
             }, status=400)
 
-        if direction not in ['left', 'right', 'up', 'down']:
+        # Session 64: Parse multiple directions (comma-separated)
+        directions = [d.strip() for d in directions_str.split(',') if d.strip()]
+
+        if not directions:
             return JsonResponse({
                 'success': False,
-                'error': 'Invalid direction (must be left/right/up/down)'
+                'error': 'No directions specified'
             }, status=400)
 
-        image_file = request.FILES['image']
+        # Validate all directions
+        valid_directions = ['left', 'right', 'up', 'down']
+        for direction in directions:
+            if direction not in valid_directions:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid direction: {direction} (must be left/right/up/down)'
+                }, status=400)
 
         stability_key = os.getenv('STABILITY_API_KEY') or settings.EXTERNAL_API_KEYS.get('STABILITY_API_KEY')
 
@@ -1284,61 +1295,73 @@ def outpaint_image(request):
                 'error': 'Stability AI API key not configured'
             }, status=500)
 
-        logger.info(f"📐 Outpaint request: {direction} by {pixels}px - {prompt}")
+        logger.info(f"📐 Multi-direction outpaint: {', '.join(directions)} by {pixels}px each - {prompt}")
+
+        # Session 64: Sequential outpainting - each uses result from previous
+        current_image_data = request.FILES['image'].read()
+        current_filename = request.FILES['image'].name
 
         url = "https://api.stability.ai/v2beta/stable-image/edit/outpaint"
-
-        files = {
-            'image': (image_file.name, image_file.read(), image_file.content_type)
-        }
-
-        data = {
-            'prompt': prompt,
-            direction: pixels,  # e.g., 'left': 500
-            'output_format': 'png'
-        }
-
         headers = {
             'Authorization': f'Bearer {stability_key}',
             'Accept': 'image/*'
         }
 
-        response = requests.post(url, headers=headers, files=files, data=data)
+        # Process each direction sequentially
+        for i, direction in enumerate(directions):
+            logger.info(f"  📐 Step {i+1}/{len(directions)}: Extending {direction}...")
 
-        if response.status_code == 200:
-            # Save to server
-            filename = f'outpainted_{direction}_{uuid.uuid4().hex[:8]}.png'
-            filepath = os.path.join('generated_images', filename)
-            saved_path = default_storage.save(filepath, ContentFile(response.content))
-            image_url = default_storage.url(saved_path)
+            files = {
+                'image': (current_filename, current_image_data, 'image/png')
+            }
 
-            logger.info(f"✅ Outpaint complete - saved to {saved_path}")
+            data = {
+                'prompt': prompt,
+                direction: pixels,  # e.g., 'left': 500
+                'output_format': 'png'
+            }
 
-            # Save to history (Session 36: Feature 9)
-            save_to_history(
-                user=request.user,
-                file_path=saved_path,
-                image_type='outpainted',
-                prompt=prompt,
-                parameters={
-                    'operation': 'outpaint',
-                    'direction': direction,
-                    'pixels': pixels,
-                    'prompt': prompt
-                }
-            )
+            response = requests.post(url, headers=headers, files=files, data=data)
 
-            return JsonResponse({
-                'success': True,
-                'image_url': image_url
-            })
-        else:
-            error_msg = response.text
-            logger.error(f"❌ Stability AI outpaint error: {error_msg}")
-            return JsonResponse({
-                'success': False,
-                'error': f'Stability AI error: {error_msg}'
-            }, status=500)
+            if response.status_code != 200:
+                error_msg = response.text
+                logger.error(f"❌ Stability AI outpaint error on {direction}: {error_msg}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Outpaint failed on {direction}: {error_msg}'
+                }, status=500)
+
+            # Use this result as input for next direction
+            current_image_data = response.content
+            logger.info(f"  ✅ {direction.capitalize()} extension complete")
+
+        # Save final result
+        filename = f'outpainted_{"_".join(directions)}_{uuid.uuid4().hex[:8]}.png'
+        filepath = os.path.join('generated_images', filename)
+        saved_path = default_storage.save(filepath, ContentFile(current_image_data))
+        image_url = default_storage.url(saved_path)
+
+        logger.info(f"✅ Multi-direction outpaint complete - saved to {saved_path}")
+
+        # Save to history (Session 36: Feature 9)
+        save_to_history(
+            user=request.user,
+            file_path=saved_path,
+            image_type='outpainted',
+            prompt=prompt,
+            parameters={
+                'operation': 'outpaint',
+                'directions': directions,  # Session 64: Save as list
+                'pixels': pixels,
+                'prompt': prompt
+            }
+        )
+
+        return JsonResponse({
+            'success': True,
+            'image_url': image_url,
+            'directions_completed': directions  # Session 64: Let frontend know what was done
+        })
 
     except Exception as e:
         logger.error(f"❌ Outpaint error: {str(e)}")
@@ -3281,56 +3304,70 @@ def improve_workflow_prompt(request):
         WORKFLOW_CONTEXTS = {
             'logo_creator': {
                 'context': 'logo design for businesses and brands',
-                'instructions': """You are a professional logo designer. The user has provided a business name or concept.
+                'instructions': """You are an AI prompt enhancement assistant. The user has already built a complete logo prompt with their chosen style (Character Mascot, Vector, Illustrative, etc.).
 
-Your task: Transform their input into a detailed logo design prompt that will generate a GRAPHIC LOGO ICON, not a photograph or realistic scene.
+Your task: ENHANCE the existing prompt by adding specific visual details that will improve the result. DO NOT rewrite or change the style.
 
-CRITICAL REQUIREMENTS:
-- Generate a LOGO ICON/SYMBOL, not a photo of people or objects
-- Think: Nike swoosh, Apple apple, donkey head icon - NOT "person working" or "room with lights"
-- Use SYMBOLIC, ICONIC, GRAPHIC DESIGN language
-- Emphasize flat design, vector art style, or minimalist icon aesthetic
-- AVOID requesting text/lettering (AI cannot render text accurately)
-- Focus on the visual mark/symbol only
+CRITICAL RULES:
+✅ KEEP the existing style (Character Mascot, Vector, Minimalist, etc.) - NEVER change it
+✅ KEEP the brand name, colors, and core concept
+✅ ADD helpful visual details (specific features, expressions, poses, details)
+✅ ADD quality markers (4K, professional, cinematic lighting)
+✅ Be like Claude helping the user - suggest improvements, don't rewrite
 
-EXAMPLES OF GOOD VS BAD PROMPTS:
-❌ Bad: "company logo"
-✅ Good: "minimalist vector logo of overlapping circles forming abstract 'M', navy blue and gold gradient, geometric design, clean lines, professional tech company branding, white background"
+❌ NEVER change "Character Mascot" to "minimalist vector"
+❌ NEVER change "DreamWorks animation" to "flat design"
+❌ NEVER override the user's style choice
+❌ NEVER add assumptions (like "sports betting" if not mentioned)
 
-❌ Bad: "Light Work logo"
-✅ Good: "modern logo icon of a light bulb with wrench incorporated, flat design style, navy blue and bright yellow colors, simple geometric shapes, suitable for handyman services branding, vector art"
+EXAMPLES OF ENHANCEMENT (Not Rewriting):
 
-❌ Bad: "donkey logo for betting"
-✅ Good: "stylized donkey head icon, confident expression, sleek geometric shapes, navy blue and gold color scheme, minimalist modern design, mascot-style vector logo, professional sports branding"
+Example 1:
+User's prompt: "Donkey Betz, gray-blue/orange/white colors, character mascot, DreamWorks style"
+❌ BAD (Rewriting): "Minimalist vector logo, flat design, avoid cartoonish"
+✅ GOOD (Enhancing): "Donkey Betz character mascot with VERY LONG PROMINENT BLACK-TIPPED EARS (key donkey feature), gray-blue colored body with white muzzle, wearing orange accent (vest or gear), confident smart expression, stocky muscular build (not sleek like horse), DreamWorks animation quality, expressive detailed face with personality, cinematic lighting, 4K resolution, professional character design"
 
-NEGATIVE PROMPTS (avoid these):
-- Photographic, realistic, 3D rendering
-- People, crowds, workers, staff
-- Text, letters, typography, words
-- Complex scenes, backgrounds, environments
-- Multiple objects or detailed illustrations
+Example 2:
+User's prompt: "Light Work handyman, navy blue and yellow, wrench and lightbulb, vector style"
+❌ BAD (Rewriting): "Character mascot, cartoon style"
+✅ GOOD (Enhancing): "Light Work handyman logo in clean vector style, light bulb with wrench incorporated, navy blue and bright yellow colors, simple geometric shapes, sharp clean lines, professional icon design, centered composition, white background, scalable vector art, modern minimalist aesthetic"
 
-STABILITY AI SUCCESS PATTERNS:
-- Specify "flat design", "vector art", "minimalist icon", "logo mark"
-- Use 2-3 colors maximum (specify exact colors or gradients)
-- Include geometric shapes, clean lines, simple forms
-- Mention "white background" or "transparent background"
-- Use industry-appropriate symbols (wrench=repair, lightbulb=ideas, etc.)
-- Keep composition simple and centered
+Example 3:
+User's prompt: "Coffee shop logo, warm browns, illustrative style, hand-drawn feel"
+❌ BAD (Rewriting): "Flat minimalist vector"
+✅ GOOD (Enhancing): "Coffee shop logo in hand-drawn illustrative style, warm brown tones with cream accents, artistic linework showing coffee cup with steam wisps, cozy approachable feel, sketch-like quality with personality, detailed but not cluttered, professional illustration quality, unique character"
 
-Consider:
-- Business name and any wordplay or meaning (translate to visual metaphor/icon)
-- Industry/trade (what symbolic icon represents this?)
-- Design elements (abstract shapes, stylized icons, geometric patterns)
-- Color psychology for the industry (2-3 colors max)
-- Design style (flat, minimalist, modern, geometric, mascot)
-- Overall aesthetic (clean, bold, memorable, scalable)
+YOUR ROLE:
+Think of yourself as Claude did in the conversation - the user said "donkey logo" and Claude said "Great! To make it clearly a DONKEY not a horse, emphasize: VERY LONG EARS with black tips, stocky build, gray-blue coloring, white muzzle."
 
-ALWAYS include phrases like: "logo icon", "graphic symbol", "flat design", "vector art", "minimalist emblem"
-NEVER use: "photograph", "realistic", "person working", "room with"
+That's enhancement. That's helpful. That's what you should do.
 
-Format your response as a single, clear prompt suitable for AI image generation.
-Keep it under 200 words but include all key details."""
+CRITICAL PROMPT STRUCTURE:
+Your enhanced prompt MUST follow this exact order (AI commits to subject in first 10 words!):
+
+1. **SUBJECT FIRST** - What creature/character (T-Rex, donkey, person, etc.)
+2. **POSE/ACTION** - What they're doing (standing, dancing, running, etc.)
+3. **CLOTHING/ACCESSORIES** - What they're wearing (emphasize heavily!)
+4. **STYLE** - Art style (DreamWorks, vector, minimalist, etc.)
+5. **COLORS** - Color scheme
+6. **DETAILS** - Background, lighting, mood
+
+Example with clothing:
+User: "T-Rex wearing disco ball necklace and bell-bottom pants"
+❌ WRONG ORDER: "WEARING sparkly disco ball necklace, DRESSED IN bell-bottom pants... T-Rex dinosaur character..."
+✅ CORRECT ORDER: "T-Rex dinosaur character standing upright in disco pose, WEARING sparkly disco ball necklace around neck, DRESSED IN purple bell-bottom pants with wide flared legs, platform shoes on feet, DreamWorks animation style..."
+
+WHY: If you say "WEARING disco necklace" first, AI generates a human wearing jewelry. If you say "T-Rex dinosaur" first, AI generates a T-Rex, then adds the jewelry to the T-Rex!
+
+CLOTHING EMPHASIS (after subject is established):
+- Use emphatic language: "WEARING [item]", "DRESSED IN [item]", "clearly visible [item]"
+- Repeat key items: "disco ball necklace... necklace shining... reflective necklace"
+- Describe vividly: colors, materials, fit, details
+- AI models ignore clothing unless heavily emphasized!
+
+IMPORTANT: Keep your enhanced prompt under 1200 characters total (Stability AI hard limit is 2000, but shorter is better for accuracy). Be specific but VERY concise - prioritize the most important visual details.
+
+Format your response as a single enhanced prompt. Keep the user's style sacred, just add helpful details."""
             },
             'portrait_enhancer': {
                 'context': 'professional portrait photography',
@@ -3556,10 +3593,11 @@ Format your response as a single, clear prompt suitable for AI image generation.
         logger.info(f"✨ Improving prompt for {workflow_type}: '{user_prompt[:50]}...'")
 
         # Use the new Responses API with GPT-5 (not Chat Completions API)
+        # Session 64: Changed from "transform" to "enhance" - GPT-5 should add details, not rewrite
         response = client.responses.create(
             model="gpt-5",
             instructions=workflow_context['instructions'],
-            input=f"User's prompt: {user_prompt}\n\nPlease transform this into an optimized {workflow_context['context']} prompt."
+            input=f"User's complete prompt (already includes their chosen style): {user_prompt}\n\nPlease ENHANCE this prompt by adding specific helpful visual details. Keep the style and core concept exactly as-is, just make it better with specific details."
         )
 
         logger.info(f"🔍 OpenAI Response: {response}")
@@ -4452,6 +4490,7 @@ def list_projects(request):
                 'goal': project.goal,
                 'status': project.status,
                 'category': project.category,
+                'colors': project.colors,  # Session 63: Professional agency intake field
                 'tags': project.tags,
                 'deadline': project.deadline.isoformat() if project.deadline else None,
                 'total_workflows': project.total_workflows,
@@ -4524,6 +4563,7 @@ def create_project(request):
             deadline = parse_datetime(deadline_str)
 
         category = request.data.get('category', '')
+        colors = request.data.get('colors', '')  # Session 63: Professional agency intake field
         tags = request.data.get('tags', [])
 
         # Create project
@@ -4534,6 +4574,7 @@ def create_project(request):
             goal=goal,
             deadline=deadline,
             category=category,
+            colors=colors,
             tags=tags
         )
 
@@ -4548,6 +4589,7 @@ def create_project(request):
                 'goal': project.goal,
                 'status': project.status,
                 'category': project.category,
+                'colors': project.colors,  # Session 63: Professional agency intake field
                 'tags': project.tags,
                 'deadline': project.deadline.isoformat() if project.deadline else None,
                 'total_workflows': project.total_workflows,
@@ -4621,6 +4663,7 @@ def get_project(request, project_id):
             'goal': project.goal,
             'status': project.status,
             'category': project.category,
+            'colors': project.colors,  # Session 63: Professional agency intake field
             'tags': project.tags,
             'deadline': project.deadline.isoformat() if project.deadline else None,
             'total_workflows': project.total_workflows,
@@ -4704,6 +4747,9 @@ def update_project(request, project_id):
         if 'category' in request.data:
             project.category = request.data['category']
 
+        if 'colors' in request.data:  # Session 63: Professional agency intake field
+            project.colors = request.data['colors']
+
         if 'tags' in request.data:
             project.tags = request.data['tags']
 
@@ -4720,6 +4766,7 @@ def update_project(request, project_id):
                 'goal': project.goal,
                 'status': project.status,
                 'category': project.category,
+                'colors': project.colors,  # Session 63: Professional agency intake field
                 'tags': project.tags,
                 'deadline': project.deadline.isoformat() if project.deadline else None,
                 'progress_percentage': project.progress_percentage,
@@ -5012,9 +5059,19 @@ def get_portfolio(request):
 
             images = images_query
             for img in images:
-                # Find associated projects via WorkflowHistory
+                # Session 63: Find associated projects - check direct project field first
                 projects = []
-                if hasattr(img, 'workflow_executions') and img.workflow_executions.exists():
+
+                # Session 63: Check direct project relationship (new approach)
+                if hasattr(img, 'project') and img.project:
+                    if not project_id or str(img.project.id) == project_id:
+                        projects.append({
+                            'id': str(img.project.id),
+                            'name': img.project.name,
+                            'status': img.project.status
+                        })
+                # Also check via WorkflowHistory (legacy approach)
+                elif hasattr(img, 'workflow_executions') and img.workflow_executions.exists():
                     for wf in img.workflow_executions.all():
                         project_workflows = wf.projects.select_related('project').all()
                         for pw in project_workflows:
@@ -5065,9 +5122,19 @@ def get_portfolio(request):
 
             videos = videos_query
             for vid in videos:
-                # Find associated projects
+                # Session 63: Find associated projects - check direct project field first
                 projects = []
-                if hasattr(vid, 'workflow_executions') and vid.workflow_executions.exists():
+
+                # Session 63: Check direct project relationship (new approach)
+                if hasattr(vid, 'project') and vid.project:
+                    if not project_id or str(vid.project.id) == project_id:
+                        projects.append({
+                            'id': str(vid.project.id),
+                            'name': vid.project.name,
+                            'status': vid.project.status
+                        })
+                # Also check via WorkflowHistory (legacy approach)
+                elif hasattr(vid, 'workflow_executions') and vid.workflow_executions.exists():
                     for wf in vid.workflow_executions.all():
                         project_workflows = wf.projects.select_related('project').all()
                         for pw in project_workflows:
@@ -5185,3 +5252,440 @@ def get_portfolio(request):
         return Response({
             'error': str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def execute_workflow_for_project(request):
+    """
+    Session 63: Execute workflow and link results to project
+    Endpoint: /api/workflows/execute-for-project/
+    """
+    try:
+        project_id = request.data.get('project_id')
+        workflow_type = request.data.get('workflow_type')
+        form_data = request.data.get('form_data')
+
+        if not all([project_id, workflow_type, form_data]):
+            return Response({
+                'success': False,
+                'error': 'Missing required fields: project_id, workflow_type, form_data'
+            }, status=400)
+
+        # Verify project exists and belongs to user
+        from content.models import CreativeProject
+        try:
+            project = CreativeProject.objects.get(id=project_id, user=request.user)
+        except CreativeProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        logger.info(f"🎨 Executing {workflow_type} for project: {project.name}")
+
+        # Session 63: Build prompt from form data AND PROJECT GOAL!
+        prompt = build_prompt_from_form(workflow_type, form_data, project)
+
+        if not prompt:
+            return Response({
+                'success': False,
+                'error': f'Could not build prompt for workflow type: {workflow_type}'
+            }, status=400)
+
+        logger.info(f"📝 Built prompt: {prompt}")
+
+        # Execute workflow based on type
+        results = []
+        error_messages = []  # Session 64: Collect error messages for debugging
+
+        if workflow_type == 'logo-creator':
+            # Session 64: Choose model based on logo style - SDXL for character mascots, Core for flat logos
+            logo_style = form_data.get('logoStyle', 'character-mascot')
+            model = 'sdxl' if logo_style == 'character-mascot' else 'core'
+
+            # Session 64: Truncate prompt if too long (SDXL limit is 2000 chars)
+            if len(prompt) > 2000:
+                logger.warning(f"⚠️ Prompt too long ({len(prompt)} chars), truncating intelligently")
+
+                # Session 64: Intelligent truncation - prioritize CRITICAL keywords
+                # GPT-5 puts clothing in the middle, which gets cut by naive truncation!
+
+                # Extract sentences with critical keywords (clothing, accessories, key features)
+                import re
+                critical_keywords = ['WEARING', 'DRESSED', 'PLATFORM', 'necklace', 'pants', 'shoes',
+                                   'outfit', 'clothing', 'accessory', 'bell-bottom', 'disco ball']
+
+                # Split into sentences
+                sentences = re.split(r'[.!?]\s+', prompt)
+
+                # Categorize sentences
+                critical_sentences = []
+                normal_sentences = []
+
+                for sent in sentences:
+                    if any(keyword.lower() in sent.lower() for keyword in critical_keywords):
+                        critical_sentences.append(sent)
+                    else:
+                        normal_sentences.append(sent)
+
+                # Build truncated prompt: critical details + as many normal details as fit
+                prompt_parts = []
+                char_count = 0
+
+                # Always include critical sentences (clothing!)
+                for sent in critical_sentences:
+                    if char_count + len(sent) + 2 < 1900:  # Leave room for period
+                        prompt_parts.append(sent)
+                        char_count += len(sent) + 2
+
+                # Add normal sentences until we hit limit
+                for sent in normal_sentences:
+                    if char_count + len(sent) + 2 < 1950:
+                        prompt_parts.append(sent)
+                        char_count += len(sent) + 2
+                    else:
+                        break
+
+                prompt = '. '.join(prompt_parts) + '.'
+                logger.info(f"📝 Intelligently truncated to {len(prompt)} chars, kept {len(critical_sentences)} critical sentences")
+                logger.info(f"📝 Truncated prompt: {prompt[:200]}...")
+
+            # Generate 1 logo (style already included in prompt by build_prompt_from_form)
+            # Session 64: Pass empty string as style since prompt already contains style terms
+            result = generate_image_with_stability(
+                prompt=prompt,
+                model=model,
+                style='',  # Use empty string to avoid applying additional style preset (prompt has style terms already)
+                user=request.user
+            )
+            if result and result.get('success'):
+                results.append(result)
+            elif result and result.get('error'):
+                error_messages.append(f"Logo generation failed: {result.get('error')}")
+            else:
+                error_messages.append("Logo generation returned no result")
+
+        elif workflow_type == 'portrait-enhancer':
+            # Generate 1 high-quality portrait
+            result = generate_image_with_stability(
+                prompt=prompt,
+                model='sd3',
+                style='photographic',
+                user=request.user
+            )
+            if result and result.get('success'):
+                results.append(result)
+
+        elif workflow_type == 'style-explorer':
+            # Generate 5 images in different styles
+            styles = ['photographic', 'digital-art', 'cinematic', 'anime', 'fantasy-art']
+            for style in styles:
+                result = generate_image_with_stability(
+                    prompt=prompt,
+                    model='sdxl',
+                    style=style,
+                    user=request.user
+                )
+                if result and result.get('success'):
+                    results.append(result)
+
+        elif workflow_type == 'social-media-pack':
+            # Generate 3 optimized images
+            for i in range(3):
+                result = generate_image_with_stability(
+                    prompt=prompt,
+                    model='sdxl',
+                    style='photographic',
+                    user=request.user
+                )
+                if result and result.get('success'):
+                    results.append(result)
+
+        elif workflow_type == 'product-mockup':
+            # Generate 1 product visualization
+            result = generate_image_with_stability(
+                prompt=prompt,
+                model='ultra',
+                style='photographic',
+                user=request.user
+            )
+            if result and result.get('success'):
+                results.append(result)
+
+        elif workflow_type == 'creative-upscale':
+            # Note: This requires an existing image - handle separately
+            return Response({
+                'success': False,
+                'error': 'Creative Upscale requires selecting an existing image first'
+            }, status=400)
+
+        # Link all generated images to the project
+        if results:
+            from content.models import ImageHistory
+            linked_count = 0
+
+            for result in results:
+                if result.get('image_id'):
+                    try:
+                        image = ImageHistory.objects.get(id=result['image_id'], user=request.user)
+                        image.project = project
+                        image.save()
+                        linked_count += 1
+                        logger.info(f"✅ Linked image {image.id} to project {project.name}")
+                    except ImageHistory.DoesNotExist:
+                        logger.warning(f"⚠️ Image {result['image_id']} not found")
+
+            logger.info(f"🎉 Successfully generated and linked {linked_count} assets to project {project.name}")
+
+            return Response({
+                'success': True,
+                'count': linked_count,
+                'message': f'Generated {linked_count} assets for {project.name}'
+            })
+        else:
+            # Session 64: Include actual error messages for debugging
+            error_detail = 'No images were generated'
+            if error_messages:
+                error_detail += ': ' + '; '.join(error_messages)
+
+            return Response({
+                'success': False,
+                'error': error_detail
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Error executing workflow for project: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def build_prompt_from_form(workflow_type, form_data, project=None):
+    """
+    Build prompt string from form data based on workflow type
+    Session 63: GOAL-DRIVEN prompt builder - Vision comes FIRST!
+    """
+    # Session 63: If user provided a custom prompt, use it directly
+    custom_prompt = form_data.get('customPrompt', '').strip()
+    if custom_prompt:
+        return custom_prompt
+
+    if workflow_type == 'logo-creator':
+        parts = []
+
+        # Session 64: CORE VISUAL SUBJECT FIRST! AI commits to the subject in first few tokens.
+        # If we say "Disco Dinosaur logo" first, AI generates disco (human dancer).
+        # If we say "T-Rex dinosaur in disco style" first, AI generates T-Rex!
+        details = form_data.get('additionalDetails', '')
+        if details:
+            parts.append(details)
+
+        # Session 64: Style terms come SECOND to reinforce the subject
+        logo_style = form_data.get('logoStyle', 'character-mascot')
+        style_map = {
+            'character-mascot': 'cool cartoon character mascot standing upright, anthropomorphic, DreamWorks animation style, expressive, detailed illustration, cinematic lighting, 4K resolution, professional quality',
+            'vector': 'professional vector art, flat design, clean lines, minimalist, iconic symbol, modern, simple shapes',
+            'illustrative': 'hand-drawn illustration style, artistic, detailed linework, creative, sketch-like quality, unique character',
+            'minimalist': 'minimalist design, simple and clean, negative space, modern, geometric, essential elements only',
+            'badge': 'badge design, emblem style, traditional, detailed ornamental, crest, vintage feel, professional seal',
+            'geometric': 'geometric shapes, abstract patterns, angular design, modern, mathematical precision, structured'
+        }
+        style_terms = style_map.get(logo_style, style_map['character-mascot'])
+        parts.append(style_terms)
+
+        # Business name comes AFTER subject is clear
+        business_name = form_data.get('businessName', '')
+        if business_name:
+            parts.append(f"for {business_name}")
+
+        colors = form_data.get('colors', '')
+        if colors:
+            parts.append(f'color scheme: {colors}')
+
+        # Session 63: Vision/Goal adds context but comes AFTER core subject
+        if project and project.goal:
+            parts.append(f"Brand vision: {project.goal.strip()}")
+
+        industry = form_data.get('industry', '')
+        if industry:
+            industry_map = {
+                'tech': 'technology company',
+                'coffee': 'coffee shop',
+                'fitness': 'fitness gym',
+                'food': 'restaurant',
+                'finance': 'financial services',
+                'health': 'healthcare',
+                'education': 'education',
+                'retail': 'retail store',
+                'creative': 'creative agency',
+                'construction': 'construction company'
+            }
+            parts.append(industry_map.get(industry, industry))
+
+        # Additional project context comes last
+        if project and project.description:
+            parts.append(project.description.strip())
+
+        parts.append('logo design')
+
+        return ', '.join(parts)
+
+    elif workflow_type == 'portrait-enhancer':
+        subject = form_data.get('subject', '')
+        style = form_data.get('style', '')
+        lighting = form_data.get('lighting', '')
+        background = form_data.get('background', '')
+
+        parts = [subject, 'professional portrait']
+
+        if style:
+            parts.append(style)
+
+        if lighting:
+            parts.append(f'{lighting}')
+
+        if background:
+            parts.append(f'{background} background')
+
+        parts.extend(['high quality', '4K', 'sharp focus', 'professional photography'])
+
+        return ', '.join(parts)
+
+    elif workflow_type == 'social-media-pack':
+        content = form_data.get('content', '')
+        platform = form_data.get('platform', '')
+        colors = form_data.get('colors', '')
+        mood = form_data.get('mood', '')
+
+        parts = [content]
+
+        if mood:
+            parts.append(mood)
+
+        if colors:
+            parts.append(f'colors: {colors}')
+
+        if platform:
+            parts.append(f'optimized for {platform}')
+
+        parts.extend(['high quality', 'professional', 'eye-catching'])
+
+        return ', '.join(parts)
+
+    elif workflow_type == 'product-mockup':
+        description = form_data.get('description', '')
+        colors = form_data.get('colors', '')
+        context = form_data.get('context', '')
+        style = form_data.get('style', '')
+
+        parts = [description]
+
+        if colors:
+            parts.append(colors)
+
+        if context:
+            context_map = {
+                'studio': 'studio white background',
+                'lifestyle': 'lifestyle in-use setting',
+                'desk': 'on modern desk workspace',
+                'outdoor': 'outdoor natural environment',
+                'premium': 'luxury premium setting'
+            }
+            parts.append(context_map.get(context, context))
+
+        if style:
+            parts.append(style)
+
+        parts.extend(['product photography', 'high quality', 'professional'])
+
+        return ', '.join(parts)
+
+    elif workflow_type == 'style-explorer':
+        subject = form_data.get('subject', '')
+        description = form_data.get('description', '')
+
+        parts = [subject]
+
+        if description:
+            parts.append(description)
+
+        return ', '.join(parts)
+
+    return None
+
+
+def generate_image_with_stability(prompt, model, style, user):
+    """
+    Helper function to generate image using Stability AI
+    Session 63: Wrapper around existing generation logic
+    """
+    try:
+        from content.image_generation import ImageGenerationService
+        from content.models import ImageHistory
+
+        service = ImageGenerationService()
+
+        # Map model to quality
+        quality_map = {
+            'core': 'fast',
+            'sdxl': 'balanced',
+            'sd3': 'high',
+            'ultra': 'premium'
+        }
+        quality = quality_map.get(model, 'balanced')
+
+        # Generate image
+        result = service.generate_image(
+            prompt=prompt,
+            size='1024x1024',
+            style=style,
+            quality=quality,
+            provider='stability',
+            negative_prompt='blurry, low quality, distorted',
+            num_images=1
+        )
+
+        if result.success and result.images:
+            # Get the first image
+            image_url = result.images[0]
+
+            # Save to ImageHistory
+            image_history = ImageHistory.objects.create(
+                user=user,
+                filename=image_url.split('/')[-1][:255],  # Session 63: Truncate to 255 chars for database constraint
+                file_path=image_url,
+                prompt=prompt,
+                model_used=model,  # Session 63: Fixed field name
+                style=style,
+                image_type='generated'  # Session 64: Fixed - 'generated' not 'generation' to match model choices
+            )
+
+            logger.info(f"✅ Generated and saved image {image_history.id}")
+
+            return {
+                'success': True,
+                'image_id': image_history.id,
+                'url': image_url
+            }
+        else:
+            # Session 64: Return error info instead of None
+            error_msg = getattr(result, 'error_message', 'Unknown error')
+            logger.error(f"❌ Image generation failed: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg
+            }
+
+    except Exception as e:
+        logger.error(f"❌ Error generating image: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # Session 64: Return error info instead of None
+        return {
+            'success': False,
+            'error': str(e)
+        }
