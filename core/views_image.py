@@ -4301,26 +4301,56 @@ def assistant_chat(request):
         user_projects = CreativeProject.objects.filter(user=request.user).order_by('-created_at')[:5]
 
         # Build personalized system instructions based on user history
-        ASSISTANT_INSTRUCTIONS = """You are a helpful AI assistant for the Donkey Betz AI Studio platform.
+        # Session 65: SUPER AI EXECUTOR - Emphasis on autonomous execution
+        ASSISTANT_INSTRUCTIONS = """You are an AI EXECUTOR for the Donkey Betz AI Studio platform.
 
-The platform provides:
-- **Image Generation**: 4 models (Core, SDXL, SD3, Ultra) with 69 style presets
-- **Image Editing**: Recolor, erase, inpaint, outpaint, remove background
-- **Image Upscaling**: Fast 4x, Conservative 4K, Creative upscale
-- **Video Generation**: Text-to-video and image-to-video (Runway ML)
-- **Audio Generation**: Voice synthesis, sound effects, music
-- **AI Workflows**: 6 professional templates (Logo Creator, Portrait Enhancer, Style Explorer, Social Media Pack, Product Mockup, Creative Upscale)
-- **Projects & Campaigns**: Organize workflows into projects, use campaign templates (Brand Launch, Client Portfolio, Content Series, Marketing Materials, Product Launch)
+**CRITICAL: When users want to CREATE content, USE YOUR TOOLS to do it for them immediately. Don't just give advice - EXECUTE!**
 
-Your role:
-- Answer questions about platform features and capabilities
-- Provide creative advice for image, video, and audio generation
-- Explain how to use different tools and workflows
-- Give tips for better prompts and results
-- Provide STRATEGIC PLANNING advice for campaigns and projects
-- Suggest workflow sequences for different creative goals
-- Help users plan timelines and organize their creative work
-- Be friendly, concise, and helpful
+You have these autonomous execution tools:
+- **generate_image** - Create images/logos/artwork (ONE image per call - if user wants variations, call multiple times!)
+  * For LOGOS: Be EXTREMELY detailed with prompts - specify vector style, clean lines, professional branding, scalable, multiple variations in composition
+  * Match video quality: If creating logo + video together, ensure logo prompt is as detailed and professional as video prompt
+- **generate_video** - Create videos/animations (ONE video per call)
+  * Always create cinematic, professional-quality promotional videos
+  * IMPORTANT: Keep video prompts under 900 characters (Runway ML limit is 1000)
+- **inpaint** - Fix specific areas of an existing image (perfect for fixing misspelled text in logos!)
+  * Use this to refine logos with text issues
+  * Requires: image_url (from previous generate_image), prompt (what to regenerate), mask_description (which area to fix)
+- **web_search** - Search Google for information
+
+**MULTI-PASS REFINEMENT WORKFLOW (for logos with text):**
+When creating logos with text:
+1. Generate the initial logo with generate_image
+2. AI image models often misspell text - this is normal!
+3. If the logo has text that needs to be specific (company name, tagline), consider calling inpaint to fix it
+4. Use inpaint with: image_url from step 1, prompt describing correct text, mask_description indicating which text area
+5. Return the refined final version
+
+Example multi-pass workflow:
+User: "Create a logo for Mountain Coffee Co."
+Step 1: Call generate_image → Get logo (text might say "Muntain Coffe")
+Step 2: Call inpaint with image_url, prompt="The text 'Mountain Coffee Co.' in clean sans-serif", mask_description="the company name text"
+Step 3: Return refined logo with correct text
+
+The platform also has:
+- Image Editing: Recolor, erase, inpaint, outpaint, remove background
+- Image Upscaling: Fast 4x, Conservative 4K, Creative upscale
+- AI Workflows: Logo Creator, Portrait Enhancer, Style Explorer, etc.
+- Projects & Campaigns: Organize workflows into projects
+
+**HOW TO RESPOND:**
+- User says "Create a logo" → CALL generate_image tool immediately! Don't just explain!
+- User says "Make a video" → CALL generate_video tool immediately!
+- User says "Search for trends" → CALL web_search tool immediately!
+- User asks "What can you do?" → Explain features (no tools needed)
+
+**MULTI-STEP EXECUTION (CRITICAL!):**
+When user requests MULTIPLE things (e.g., "search trends then create logo and video"), YOU MUST CALL ALL TOOLS IN ONE RESPONSE:
+- "Search trends then create logo" → Call web_search AND generate_image (both in same response!)
+- "Create logo and video" → Call generate_image AND generate_video (both in same response!)
+- DO NOT just search and stop! Complete ALL requested steps!
+
+**BE AN EXECUTOR, NOT JUST AN ADVISOR!** Take action when users want content created!
 
 Keep responses under 200 words. Be conversational and practical."""
 
@@ -4378,43 +4408,176 @@ Keep responses under 200 words. Be conversational and practical."""
             project_context += "\nProvide strategic advice based on their active projects. Suggest workflows, timelines, and organization strategies!"
             ASSISTANT_INSTRUCTIONS += project_context
 
-        # Build input with conversation history if provided
-        input_text = f"User question: {user_message}"
+        # Session 65: SUPER AI EXECUTOR - Function calling support
+        # Build messages array for Chat Completions API
+        messages = [
+            {"role": "system", "content": ASSISTANT_INSTRUCTIONS}
+        ]
 
+        # Add conversation history if provided
         if conversation_history and len(conversation_history) > 0:
-            # Include last 3 messages for context
-            recent_history = conversation_history[-3:]
-            history_text = "\n".join([
-                f"{'User' if msg.get('role') == 'user' else 'Assistant'}: {msg.get('content', '')}"
-                for msg in recent_history
-            ])
-            input_text = f"Recent conversation:\n{history_text}\n\nCurrent question: {user_message}"
+            # Include last 6 messages for context (same as before)
+            recent_history = conversation_history[-6:]
+            for msg in recent_history:
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                if role in ['user', 'assistant'] and content:
+                    messages.append({"role": role, "content": content})
 
-        # Call OpenAI GPT-5 using Responses API (same as workflow improvement)
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
+
+        # Define tools (functions) that GPT-5 can call
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_image",
+                    "description": "Generate an AI image using Stability AI. Use this when the user asks to create, generate, or make an image, logo, artwork, or visual content.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "prompt": {
+                                "type": "string",
+                                "description": "The detailed description of the image to generate. Be specific and descriptive."
+                            },
+                            "model": {
+                                "type": "string",
+                                "enum": ["core", "sdxl", "sd3", "ultra"],
+                                "description": "The AI model to use. sdxl is best for most cases, ultra for premium quality, sd3 for high detail, core for fast generation."
+                            },
+                            "style": {
+                                "type": "string",
+                                "description": "Optional style preset like 'vector', 'photographic', 'digital-art', etc."
+                            }
+                        },
+                        "required": ["prompt"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_video",
+                    "description": "Generate an AI video using Runway ML. Use this when the user asks to create a video, animation, or moving content.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "prompt": {
+                                "type": "string",
+                                "description": "The detailed description of the video to generate."
+                            },
+                            "duration": {
+                                "type": "number",
+                                "enum": [4, 6, 8],
+                                "description": "Duration in seconds. Must be 4, 6, or 8 (Runway ML requirement). Default: 6"
+                            }
+                        },
+                        "required": ["prompt"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "inpaint",
+                    "description": "Fix or regenerate specific areas of an existing image. Use this to fix text, correct details, or improve specific parts of an image. Perfect for fixing misspelled text in logos!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_url": {
+                                "type": "string",
+                                "description": "The URL of the image to edit (from a previous generate_image result)"
+                            },
+                            "prompt": {
+                                "type": "string",
+                                "description": "Description of what to regenerate in the masked area. Be specific! For text: 'The text COFFEE in bold sans-serif font'"
+                            },
+                            "mask_description": {
+                                "type": "string",
+                                "description": "Describe which part to fix, e.g., 'the text area at the bottom', 'the misspelled word in the center', 'the company name'"
+                            }
+                        },
+                        "required": ["image_url", "prompt", "mask_description"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "Search the web using Google. Use this when the user asks for current information, trends, research, or needs to find something online.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            }
+        ]
+
+        # Call OpenAI GPT-5 using Chat Completions API with function calling
         client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
         logger.info(f"💬 Assistant chat request from {request.user.username}: '{user_message[:50]}...'")
 
-        response = client.responses.create(
-            model="gpt-5",
-            instructions=ASSISTANT_INSTRUCTIONS,
-            input=input_text
+        # Session 65: Use Chat Completions API with tools instead of Responses API
+        # Use gpt-5-mini (same as Session 56) which supports function calling
+        logger.info(f"🤖 Calling GPT-5-mini with {len(tools)} tools available...")
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",  # Session 56 confirmed this works with Chat Completions API
+            messages=messages,
+            tools=tools,
+            tool_choice="auto"  # Let the model decide when to call tools
+            # Note: gpt-5-mini doesn't support max_tokens parameter
         )
 
-        assistant_response = response.output_text if hasattr(response, 'output_text') else None
+        # Check if the model wants to call a tool
+        response_message = response.choices[0].message
+        tool_calls = response_message.tool_calls
 
-        if not assistant_response:
-            logger.error(f"❌ GPT-5 returned empty response")
-            assistant_response = "I apologize, but I encountered an issue generating a response. Please try rephrasing your question!"
+        logger.info(f"🔍 GPT-4o response - tool_calls: {tool_calls}, content: {response_message.content[:100] if response_message.content else 'None'}...")
 
-        assistant_response = assistant_response.strip()
-        logger.info(f"✅ Assistant response generated ({len(assistant_response)} chars)")
+        if tool_calls:
+            # Model wants to execute a tool!
+            logger.info(f"🔧 AI wants to call {len(tool_calls)} tool(s)")
 
-        return Response({
-            'message': assistant_response,
-            'model': 'gpt-5',
-            'user_message': user_message
-        })
+            # Return tool call information to frontend
+            # Frontend will execute the tool and show progress
+            return Response({
+                'tool_calls': [
+                    {
+                        'id': tool_call.id,
+                        'name': tool_call.function.name,
+                        'arguments': json.loads(tool_call.function.arguments)
+                    }
+                    for tool_call in tool_calls
+                ],
+                'model': 'gpt-5-mini',
+                'user_message': user_message
+            })
+        else:
+            # Normal text response
+            assistant_response = response_message.content
+
+            if not assistant_response:
+                logger.error(f"❌ GPT-5 returned empty response")
+                assistant_response = "I apologize, but I encountered an issue generating a response. Please try rephrasing your question!"
+
+            assistant_response = assistant_response.strip()
+            logger.info(f"✅ Assistant response generated ({len(assistant_response)} chars)")
+
+            return Response({
+                'message': assistant_response,
+                'model': 'gpt-5-mini',
+                'user_message': user_message
+            })
 
     except Exception as e:
         logger.error(f"❌ Error in assistant chat: {str(e)}")
@@ -4477,6 +4640,599 @@ def transcribe_audio(request):
             'error': 'Failed to transcribe audio. Please try again!',
             'details': str(e) if settings.DEBUG else None
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def execute_tool(request):
+    """
+    Execute a tool called by GPT-5 function calling
+    Session 65: SUPER AI EXECUTOR - Autonomous tool execution
+
+    This endpoint receives tool execution requests from the AI assistant
+    and routes them to the appropriate service (Stability AI, Runway ML,
+    Serper search, spider network, email, etc.)
+
+    Expected JSON:
+    {
+        "tool_name": "generate_image",
+        "parameters": {
+            "prompt": "disco dinosaur logo",
+            "model": "sdxl",
+            "style": "vector"
+        }
+    }
+
+    Returns:
+    {
+        "success": true,
+        "result": {...},  # Tool-specific result
+        "tool_name": "generate_image"
+    }
+    """
+    try:
+        tool_name = request.data.get('tool_name')
+        parameters = request.data.get('parameters', {})
+
+        if not tool_name:
+            return Response({
+                'error': 'tool_name is required'
+            }, status=400)
+
+        logger.info(f"🔧 Executing tool: {tool_name} with params: {parameters}")
+
+        # Route to appropriate tool handler
+        if tool_name == 'generate_image':
+            result = _execute_generate_image(request.user, parameters)
+        elif tool_name == 'generate_video':
+            result = _execute_generate_video(request.user, parameters)
+        elif tool_name == 'inpaint':
+            result = _execute_inpaint(request.user, parameters)
+        elif tool_name == 'web_search':
+            result = _execute_web_search(parameters)
+        elif tool_name == 'scrape_website':
+            result = _execute_scrape_website(parameters)
+        elif tool_name == 'send_email':
+            result = _execute_send_email(request.user, parameters)
+        else:
+            return Response({
+                'error': f'Unknown tool: {tool_name}'
+            }, status=400)
+
+        logger.info(f"✅ Tool {tool_name} executed successfully")
+
+        return Response({
+            'success': True,
+            'result': result,
+            'tool_name': tool_name
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error executing tool {tool_name}: {str(e)}")
+        return Response({
+            'error': f'Failed to execute tool: {str(e)}',
+            'details': str(e) if settings.DEBUG else None
+        }, status=500)
+
+
+# ========================================
+# TOOL EXECUTION HANDLERS (Session 65)
+# ========================================
+
+def _execute_generate_image(user, parameters):
+    """
+    Execute image generation tool
+    Routes to Stability AI image generation
+
+    Session 65: Phase 2.1 - Autonomous image generation
+
+    Parameters:
+        prompt (str): Image description
+        model (str): Model to use (core/sdxl/sd3/ultra) - optional
+        style (str): Style preset - optional
+
+    Returns:
+        dict: {
+            'success': True,
+            'image_url': 'URL to generated image',
+            'image_id': 'History ID',
+            'prompt': 'Actual prompt used'
+        }
+    """
+    try:
+        prompt = parameters.get('prompt', '').strip()
+        model = parameters.get('model', 'sdxl')  # Default to sdxl (best balance)
+        style = parameters.get('style', '')  # Optional style
+
+        if not prompt:
+            raise ValueError("Prompt is required for image generation")
+
+        logger.info(f"🎨 Executor generating image: {prompt[:50]}... (model: {model}, style: {style})")
+
+        # Map model names to quality parameter
+        model_to_quality = {
+            'core': 'fast',
+            'sdxl': 'balanced',
+            'sd3': 'high',
+            'ultra': 'premium'
+        }
+        quality = model_to_quality.get(model, 'balanced')
+
+        # Use ImageGenerationService directly (same as gallery_generate)
+        from content.image_generation import ImageGenerationService
+
+        service = ImageGenerationService()
+        result = service.generate_image(
+            prompt=prompt,
+            size="1024x1024",
+            style=style if style else "photographic",
+            quality=quality,
+            provider='stability',
+            negative_prompt='blurry, low quality, distorted',
+            num_images=1
+        )
+
+        if not result.success:
+            raise Exception(f"Image generation failed: {result.error if hasattr(result, 'error') else 'Unknown error'}")
+
+        # Get the first generated image
+        images = result.images
+        if not images:
+            raise Exception("No images generated")
+
+        image_data = images[0]
+        image_url = image_data if isinstance(image_data, str) else image_data.get('url')
+
+        # Save image to storage
+        image_id = str(uuid.uuid4())
+        filename = f"generated_images/{user.id}/{image_id}.png"
+
+        # Handle base64 data URIs vs regular URLs
+        if image_url.startswith('data:image'):
+            # Extract base64 data from data URI
+            import re
+            base64_match = re.search(r'base64,(.+)', image_url)
+            if base64_match:
+                image_bytes = base64.b64decode(base64_match.group(1))
+                file_path = default_storage.save(filename, ContentFile(image_bytes))
+                saved_url = default_storage.url(file_path)
+            else:
+                raise Exception("Invalid base64 data URI")
+        else:
+            # Regular HTTP/HTTPS URL - download it
+            response = requests.get(image_url, timeout=30)
+            if response.status_code == 200:
+                file_path = default_storage.save(filename, ContentFile(response.content))
+                saved_url = default_storage.url(file_path)
+            else:
+                raise Exception(f"Failed to download image: {response.status_code}")
+
+        # Save to ImageHistory for tracking
+        history_record = save_to_history(
+            user=user,
+            file_path=file_path,
+            image_type='generated',
+            prompt=prompt,
+            parameters={'model': model, 'style': style, 'quality': quality},
+            model_used=model,
+            style=style,
+            parent_image=None
+        )
+
+        logger.info(f"✅ Executor generated image successfully: {saved_url}")
+
+        return {
+            'success': True,
+            'image_url': saved_url,
+            'image_id': history_record.id if history_record else None,
+            'prompt': prompt,
+            'model': model,
+            'style': style
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_generate_image: {str(e)}")
+        raise
+
+
+def _execute_generate_video(user, parameters):
+    """
+    Execute video generation tool
+    Routes to Runway ML video generation
+
+    Session 65: Phase 2.2 - Autonomous video generation
+
+    Parameters:
+        prompt (str): Video description
+        duration (int): Duration in seconds (5 or 10) - optional
+
+    Returns:
+        dict: {
+            'success': True,
+            'task_id': 'Runway task ID',
+            'content_id': 'Database ID',
+            'status': 'processing',
+            'message': 'Video generation started'
+        }
+    """
+    try:
+        prompt = parameters.get('prompt', '').strip()
+        duration = parameters.get('duration', 6)  # Default to 6 seconds (Runway ML accepts 4, 6, or 8)
+
+        if not prompt:
+            raise ValueError("Prompt is required for video generation")
+
+        # Validate duration - Runway ML only accepts 4, 6, or 8 seconds
+        if duration not in [4, 6, 8]:
+            logger.warning(f"⚠️ Invalid duration {duration}s, defaulting to 6s")
+            duration = 6
+
+        # Session 65: Runway ML has 1000 character prompt limit - truncate intelligently
+        MAX_PROMPT_LENGTH = 1000
+        if len(prompt) > MAX_PROMPT_LENGTH:
+            logger.warning(f"⚠️ Prompt too long ({len(prompt)} chars), truncating to {MAX_PROMPT_LENGTH}")
+            # Keep the first 950 chars and add ellipsis
+            prompt = prompt[:950] + "..."
+            logger.info(f"🎬 Truncated prompt: {prompt[:100]}...")
+
+        logger.info(f"🎬 Executor generating video: {prompt[:50]}... (duration: {duration}s)")
+
+        # Use Runway ML provider directly (same as text_to_video view)
+        from content.video_provider import runway_provider
+
+        result = runway_provider.text_to_video(
+            prompt=prompt,
+            duration=duration,
+            quality='veo3.1_fast',  # Use fast model for executor
+            style='realistic',
+            enhance_prompt=True,
+            enhancement_level='advanced',
+            ratio='1920:1080'
+        )
+
+        if not result.success:
+            raise Exception(f"Video generation failed: {result.error_message or 'Unknown error'}")
+
+        # Store generation request in database
+        from content.models import ContentGeneration
+        content = ContentGeneration.objects.create(
+            user=user,
+            prompt=prompt,
+            system_prompt=f"Generate a realistic style video",
+            generation_config={
+                'task_id': result.task_id,
+                'duration': duration,
+                'quality': 'veo3.1_fast',
+                'style': 'realistic',
+                'type': 'text_to_video',
+                'estimated_time': result.estimated_time,
+                'status': 'processing'
+            }
+        )
+
+        logger.info(f"✅ Executor started video generation: {result.task_id}")
+
+        return {
+            'success': True,
+            'task_id': result.task_id,
+            'content_id': content.id,
+            'status': result.status,
+            'estimated_time': result.estimated_time,
+            'message': 'Video generation started successfully'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_generate_video: {str(e)}")
+        raise
+
+
+def _execute_inpaint(user, parameters):
+    """
+    Execute inpaint tool to fix/regenerate specific areas of an image
+    Perfect for fixing text in logos!
+
+    Session 65: Multi-pass autonomous refinement
+
+    Parameters:
+        image_url (str): URL of image to edit
+        prompt (str): What to regenerate in the masked area
+        mask_description (str): Which area to fix
+
+    Returns:
+        dict: {
+            'success': True,
+            'image_url': 'URL of fixed image',
+            'image_id': 'Database ID',
+            'original_url': 'Original image URL',
+            'prompt': 'Inpaint prompt used'
+        }
+    """
+    try:
+        image_url = parameters.get('image_url', '').strip()
+        prompt = parameters.get('prompt', '').strip()
+        mask_description = parameters.get('mask_description', '').strip()
+
+        if not image_url or not prompt:
+            raise ValueError("image_url and prompt are required for inpainting")
+
+        logger.info(f"🖌️ Executor inpainting: {mask_description} -> {prompt[:50]}...")
+
+        # Use Stability AI Search and Replace (best for text fixes)
+        from content.image_generation import ImageGenerationService
+        service = ImageGenerationService()
+
+        # Download the source image
+        import requests
+
+        # Handle both absolute URLs and relative paths
+        if image_url.startswith('/'):
+            # Local path - convert to full URL
+            image_url = f"http://localhost:8000{image_url}"
+
+        response = requests.get(image_url, timeout=10)
+        response.raise_for_status()
+        image_data = response.content
+
+        # Use Stability AI's search and replace inpaint
+        # This is better than mask-based inpaint for fixing specific elements
+        result = service.inpaint_image(
+            image_data=image_data,
+            prompt=prompt,
+            search_prompt=mask_description,  # What to replace
+            output_format='png',
+            mode='search_and_replace'
+        )
+
+        if not result.get('success'):
+            raise Exception(f"Inpaint failed: {result.get('error', 'Unknown error')}")
+
+        # Save the inpainted image
+        import uuid
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+
+        image_id = uuid.uuid4()
+        filename = f"{user.id}/{image_id}.png"
+        filepath = f"generated_images/{filename}"
+
+        # Save to storage
+        saved_path = default_storage.save(filepath, ContentFile(result['image_data']))
+        saved_url = f"/media/{saved_path}"
+
+        # Save to ImageHistory
+        from content.models import ImageHistory
+        history_record = ImageHistory.objects.create(
+            user=user,
+            prompt=f"Inpaint: {prompt}",
+            image_url=saved_url,
+            image_type='inpaint',
+            model_used='sdxl',
+            style='inpaint',
+            image_width=1024,
+            image_height=1024
+        )
+
+        logger.info(f"✅ Executor inpaint complete: {saved_url}")
+
+        return {
+            'success': True,
+            'image_url': saved_url,
+            'image_id': history_record.id,
+            'original_url': image_url,
+            'prompt': prompt,
+            'mask_description': mask_description
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_inpaint: {str(e)}")
+        raise
+
+
+def _execute_web_search(parameters):
+    """
+    Execute web search tool
+    Uses Serper API for Google search
+
+    Session 65: Phase 2.3 - Autonomous web search
+
+    Parameters:
+        query (str): Search query
+
+    Returns:
+        dict: {
+            'success': True,
+            'results': [
+                {
+                    'title': 'Result title',
+                    'link': 'URL',
+                    'snippet': 'Description'
+                },
+                ...
+            ],
+            'query': 'Search query'
+        }
+    """
+    try:
+        query = parameters.get('query', '').strip()
+
+        if not query:
+            raise ValueError("Query is required for web search")
+
+        logger.info(f"🔍 Executor searching web: {query}")
+
+        # Use Serper API for Google search
+        serper_key = os.getenv('SERPER_API_KEY')
+        if not serper_key:
+            raise Exception("Serper API key not configured")
+
+        # Call Serper API
+        url = "https://google.serper.dev/search"
+        headers = {
+            "X-API-KEY": serper_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "q": query,
+            "num": 5  # Get top 5 results
+        }
+
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+
+        # Extract organic search results
+        results = []
+        organic = data.get('organic', [])
+        for item in organic[:5]:  # Top 5 results
+            results.append({
+                'title': item.get('title', ''),
+                'link': item.get('link', ''),
+                'snippet': item.get('snippet', '')
+            })
+
+        logger.info(f"✅ Executor found {len(results)} search results for '{query}'")
+
+        return {
+            'success': True,
+            'results': results,
+            'query': query
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_web_search: {str(e)}")
+        raise
+
+
+def _execute_scrape_website(parameters):
+    """
+    Execute website scraping tool
+    Simple web scraper to extract text content
+
+    Session 65: Phase 2.4 - Autonomous web scraping
+
+    Parameters:
+        url (str): Website URL to scrape
+
+    Returns:
+        dict: {
+            'success': True,
+            'url': 'URL scraped',
+            'title': 'Page title',
+            'text': 'Extracted text content (first 1000 chars)',
+            'links': ['list', 'of', 'links']
+        }
+    """
+    try:
+        url = parameters.get('url', '').strip()
+
+        if not url:
+            raise ValueError("URL is required for web scraping")
+
+        logger.info(f"🕷️ Executor scraping website: {url}")
+
+        # Simple scraping with requests + basic parsing
+        response = requests.get(url, timeout=10, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; DonkeyBetzBot/1.0)'
+        })
+        response.raise_for_status()
+
+        html = response.text
+
+        # Extract title (simple regex)
+        import re
+        title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
+        title = title_match.group(1) if title_match else 'No title'
+
+        # Extract links (simple regex)
+        link_matches = re.findall(r'href=["\']([^"\']+)["\']', html)
+        links = [link for link in link_matches if link.startswith('http')][:10]  # Top 10 links
+
+        # Extract text (remove HTML tags)
+        text = re.sub(r'<[^>]+>', ' ', html)
+        text = re.sub(r'\s+', ' ', text).strip()
+        text = text[:1000]  # First 1000 chars
+
+        logger.info(f"✅ Executor scraped {url}: {len(text)} chars, {len(links)} links")
+
+        return {
+            'success': True,
+            'url': url,
+            'title': title,
+            'text': text,
+            'links': links
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_scrape_website: {str(e)}")
+        raise
+
+
+def _execute_send_email(user, parameters):
+    """
+    Execute email sending tool
+    Uses Resend API for transactional email
+
+    Session 65: Phase 2.5 - Autonomous email sending
+
+    Parameters:
+        to_email (str): Recipient email
+        subject (str): Email subject
+        body (str): Email body (text or HTML)
+        attachments (list): Optional list of attachment URLs
+
+    Returns:
+        dict: {
+            'success': True,
+            'message_id': 'Resend message ID',
+            'to': 'recipient@email.com'
+        }
+    """
+    try:
+        to_email = parameters.get('to_email', '').strip()
+        subject = parameters.get('subject', '').strip()
+        body = parameters.get('body', '').strip()
+
+        if not to_email or not subject or not body:
+            raise ValueError("to_email, subject, and body are required for email")
+
+        logger.info(f"📧 Executor sending email to: {to_email}")
+
+        # Use Resend API
+        resend_key = os.getenv('RESEND_API_KEY')
+        if not resend_key:
+            raise Exception("Resend API key not configured")
+
+        # Call Resend API
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "from": "AI Assistant <noreply@donkeybetz.com>",
+            "to": [to_email],
+            "subject": subject,
+            "html": f"<p>{body}</p>"
+        }
+
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        message_id = data.get('id')
+
+        logger.info(f"✅ Executor sent email: {message_id}")
+
+        return {
+            'success': True,
+            'message_id': message_id,
+            'to': to_email
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_send_email: {str(e)}")
+        raise
 
 
 @api_view(['POST'])

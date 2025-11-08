@@ -11831,7 +11831,7 @@
             }
 
             formatMessage(text) {
-                // Session 64: Format AI responses with paragraphs and bullet points
+                // Session 65: Format AI responses with proper paragraphs, bullet points, and numbered lists
                 if (!text) return '';
 
                 // Split into lines
@@ -11839,55 +11839,79 @@
                 let formatted = '';
                 let inList = false;
                 let listType = null; // 'bullet' or 'number'
+                let currentParagraph = '';
 
                 for (let i = 0; i < lines.length; i++) {
                     let line = lines[i].trim();
 
-                    // Empty line - add paragraph break
+                    // Empty line - finish current paragraph and add spacing
                     if (!line) {
                         if (inList) {
                             formatted += listType === 'bullet' ? '</ul>' : '</ol>';
                             inList = false;
                             listType = null;
                         }
-                        formatted += '<br>';
+                        if (currentParagraph) {
+                            formatted += '<p style="margin: 0.75em 0;">' + currentParagraph + '</p>';
+                            currentParagraph = '';
+                        }
                         continue;
                     }
 
                     // Bullet point (-, •, *)
                     if (line.match(/^[-•*]\s+/)) {
+                        // Finish any current paragraph
+                        if (currentParagraph) {
+                            formatted += '<p style="margin: 0.75em 0;">' + currentParagraph + '</p>';
+                            currentParagraph = '';
+                        }
                         if (!inList || listType !== 'bullet') {
                             if (inList) formatted += listType === 'bullet' ? '</ul>' : '</ol>';
-                            formatted += '<ul style="margin: 0.5em 0; padding-left: 1.5em;">';
+                            formatted += '<ul style="margin: 0.75em 0; padding-left: 1.5em;">';
                             inList = true;
                             listType = 'bullet';
                         }
-                        formatted += '<li>' + line.replace(/^[-•*]\s+/, '') + '</li>';
+                        formatted += '<li style="margin: 0.25em 0;">' + line.replace(/^[-•*]\s+/, '') + '</li>';
                     }
                     // Numbered list (1., 2., etc)
                     else if (line.match(/^\d+\.\s+/)) {
+                        // Finish any current paragraph
+                        if (currentParagraph) {
+                            formatted += '<p style="margin: 0.75em 0;">' + currentParagraph + '</p>';
+                            currentParagraph = '';
+                        }
                         if (!inList || listType !== 'number') {
                             if (inList) formatted += listType === 'bullet' ? '</ul>' : '</ol>';
-                            formatted += '<ol style="margin: 0.5em 0; padding-left: 1.5em;">';
+                            formatted += '<ol style="margin: 0.75em 0; padding-left: 1.5em;">';
                             inList = true;
                             listType = 'number';
                         }
-                        formatted += '<li>' + line.replace(/^\d+\.\s+/, '') + '</li>';
+                        formatted += '<li style="margin: 0.25em 0;">' + line.replace(/^\d+\.\s+/, '') + '</li>';
                     }
-                    // Regular text
+                    // Regular text - accumulate into paragraph
                     else {
                         if (inList) {
                             formatted += listType === 'bullet' ? '</ul>' : '</ol>';
                             inList = false;
                             listType = null;
                         }
-                        formatted += line + '<br>';
+                        // Add to current paragraph with space
+                        if (currentParagraph) {
+                            currentParagraph += ' ' + line;
+                        } else {
+                            currentParagraph = line;
+                        }
                     }
                 }
 
                 // Close any open list
                 if (inList) {
                     formatted += listType === 'bullet' ? '</ul>' : '</ol>';
+                }
+
+                // Finish any remaining paragraph
+                if (currentParagraph) {
+                    formatted += '<p style="margin: 0.75em 0;">' + currentParagraph + '</p>';
                 }
 
                 return formatted;
@@ -11983,8 +12007,17 @@
                     content = this.formatMessage(content);
                 }
 
-                // Session 64: Smart prompt detection and action buttons
-                const detectedPrompts = this.detectPromptsInMessage(originalContent);
+                // Session 65: Skip prompt detection for temporary/progress messages AND tool result messages
+                // Tool results already show executed content - no need to offer buttons to re-execute
+                const isToolResult = originalContent.includes('✅ **Image Generated!**') ||
+                                   originalContent.includes('✅ **Video Generation Started!**') ||
+                                   originalContent.includes('✅ **Search Results') ||
+                                   originalContent.includes('✅ **Scraped:') ||
+                                   originalContent.includes('✅ **Email Sent!**');
+
+                const detectedPrompts = (isTemporary || isToolResult) ?
+                    { hasImagePrompts: false, hasVideoPrompts: false, hasAudioPrompts: false, imagePrompts: [], videoPrompts: [], audioPrompts: [] } :
+                    this.detectPromptsInMessage(originalContent);
 
                 // Build action buttons for AI messages
                 let actionButtons = '';
@@ -12199,88 +12232,78 @@
             }
 
             async callAI(message) {
-                // Parse user intent and call appropriate endpoint
-                const intent = this.parseIntent(message);
+                // Session 65: SUPER AI EXECUTOR - Skip frontend intent parsing entirely for general requests
+                // Send ALL requests directly to GPT-5-mini unless they're explicit commands
+                const lower = message.toLowerCase();
 
-                // Session 58: Phase B.3 - Workflow handling
-                if (intent.type === 'workflow') {
-                    const workflow = this.workflows[intent.workflow];
-
-                    // Check if workflow requires image and we don't have one
-                    if (workflow.requiredInput === 'image') {
-                        return {
-                            message: `🎨 **${intent.workflowName}**\n\n${intent.description}\n\n⚠️ This workflow requires an image. Please:\n1. Upload an image in the Gallery tab, OR\n2. I'll switch to the workflow tab where you can upload one\n\n💡 ${workflow.example}`,
-                            action: 'open_workflow',
-                            params: { workflowType: intent.workflow, prompt: intent.extractedPrompt }
-                        };
-                    } else {
-                        // Prompt-based workflow
-                        return {
-                            message: `🎨 **${intent.workflowName}**\n\n${intent.description}\n\n✨ I'll use this prompt:\n"${intent.extractedPrompt}"\n\n🚀 Ready to execute this workflow?`,
-                            action: 'execute_workflow',
-                            params: { workflowType: intent.workflow, prompt: intent.extractedPrompt },
-                            showExecuteButton: true
-                        };
-                    }
+                // Only handle these SPECIFIC frontend commands locally
+                if (lower === 'help' || lower === 'what can you do') {
+                    return this.getHelpResponse('general');
                 }
-
-                // Show history
-                else if (intent.type === 'show_history') {
+                if (lower.includes('show history') || lower.includes('show my history')) {
                     return {
                         message: '📜 **Your Workflow History**\n\nLet me load your recent workflows...',
                         action: 'show_history'
                     };
                 }
-
-                // Show favorites
-                else if (intent.type === 'show_favorites') {
+                if (lower.includes('show favorites') || lower.includes('show my favorites')) {
                     return {
                         message: '⭐ **Your Favorite Workflows**\n\nLet me load your saved favorites...',
                         action: 'show_favorites'
                     };
                 }
 
-                // Generate image
-                else if (intent.type === 'generate_image') {
-                    return {
-                        message: `I'll generate that image for you! Let me use:\n\n"${intent.prompt}"\n\n💡 Click "✨ Use This" to fill the generate form!`,
-                        action: 'generate_image',
-                        params: { prompt: intent.prompt, style: intent.style || 'photorealistic' },
-                        prompt: intent.prompt  // For copy/use buttons
-                    };
-                }
+                // Session 65: Everything else goes to GPT-5-mini executor for autonomous handling
+                // This includes: "create a logo", "make a video", "search for trends", etc.
 
-                // Help
-                else if (intent.type === 'help') {
-                    return this.getHelpResponse(intent.topic);
-                }
+                // OLD SYSTEM DISABLED - was intercepting creation requests
+                // Parse user intent and call appropriate endpoint
+                // const intent = this.parseIntent(message);
 
-                // General fallback - Session 58: Phase B.3 - Use GPT-5 Assistant Chat
-                else {
-                    // Call the new GPT-5 assistant chat endpoint
-                    const response = await authenticatedFetch('/api/assistant/chat/', {
+                // Session 65: ALL other requests go directly to GPT-5-mini executor
+                // No frontend intent parsing, no workflow interceptors
+                // Call the GPT-5-mini assistant chat endpoint with function calling
+                const response = await authenticatedFetch('/api/assistant/chat/', {
                         method: 'POST',
                         body: JSON.stringify({
                             message: message,
                             history: this.conversation.slice(-6)  // Last 6 messages for context
                         })
-                    });
+                });
 
-                    const data = await response.json();
+                const data = await response.json();
 
-                    if (data.message) {
-                        return {
-                            message: data.message
-                        };
-                    } else if (data.error) {
-                        return {
-                            message: data.error
-                        };
-                    } else {
-                        return {
-                            message: 'I can help you with images, videos, audio, and more! What would you like to create?'
-                        };
-                    }
+                // Session 65: Debug logging
+                console.log('📡 Backend response:', data);
+                console.log('🔧 Tool calls:', data.tool_calls);
+
+                // Session 65: Check if AI wants to execute tools
+                if (data.tool_calls && data.tool_calls.length > 0) {
+                    // AI wants to execute tools autonomously!
+                    console.log('🔧 AI requesting tool execution:', data.tool_calls);
+
+                    // Execute all tool calls
+                    const results = await this.executeTools(data.tool_calls);
+
+                    // Return results with inline rendering
+                    return {
+                        message: this.formatToolResults(results),
+                        tool_results: results
+                    };
+                }
+                // Normal text response
+                else if (data.message) {
+                    return {
+                        message: data.message
+                    };
+                } else if (data.error) {
+                    return {
+                        message: data.error
+                    };
+                } else {
+                    return {
+                        message: 'I can help you with images, videos, audio, and more! What would you like to create?'
+                    };
                 }
             }
 
@@ -12301,31 +12324,38 @@
                     return { type: 'general', message };
                 }
 
-                // Session 58: Phase B.3 - Enhanced workflow detection
-                // Check for workflow keywords (most specific first)
-                for (const [workflowType, workflow] of Object.entries(this.workflows)) {
-                    for (const keyword of workflow.keywords) {
-                        if (lower.includes(keyword)) {
-                            return {
-                                type: 'workflow',
-                                workflow: workflowType,
-                                workflowName: workflow.name,
-                                description: workflow.description,
-                                requiredInput: workflow.requiredInput,
-                                prompt: message,
-                                extractedPrompt: this.extractPromptFromMessage(message, workflow.keywords)
-                            };
-                        }
+                // Session 65: DISABLED workflow detection - let GPT-5 executor handle everything
+                // Workflows are still available but only if explicitly requested by name
+                // This allows the autonomous executor to handle creation requests directly
+
+                // Only trigger workflows if user explicitly mentions the workflow name
+                const explicitWorkflowTriggers = {
+                    'logo creator': 'logo_creator',
+                    'portrait enhancer': 'portrait_enhancer',
+                    'style explorer': 'style_explorer',
+                    'social media pack': 'social_media_pack',
+                    'product mockup': 'product_mockup',
+                    'creative upscale': 'creative_upscale'
+                };
+
+                for (const [trigger, workflowType] of Object.entries(explicitWorkflowTriggers)) {
+                    if (lower.includes(trigger)) {
+                        const workflow = this.workflows[workflowType];
+                        return {
+                            type: 'workflow',
+                            workflow: workflowType,
+                            workflowName: workflow.name,
+                            description: workflow.description,
+                            requiredInput: workflow.requiredInput,
+                            prompt: message,
+                            extractedPrompt: this.extractPromptFromMessage(message, workflow.keywords)
+                        };
                     }
                 }
 
-                // Generate image intent (fallback for general creation)
-                if (lower.includes('generate') || lower.includes('create image') || lower.includes('make') || lower.includes('draw')) {
-                    return {
-                        type: 'generate_image',
-                        prompt: message.replace(/(generate|create|make|draw|image|picture)/gi, '').trim()
-                    };
-                }
+                // Session 65: Removed old generate_image intent - now handled by GPT-5 function calling
+                // Image generation requests should go to the AI executor for autonomous execution
+                // The GPT-5 assistant will decide when to call generate_image tool
 
                 // Help intent (only very specific help requests)
                 if (lower === 'help' || lower === 'help me' || lower.includes('what can you do') || lower.includes('what can you help')) {
@@ -12418,6 +12448,138 @@
                 };
 
                 return helpTexts[topic] || helpTexts.general;
+            }
+
+            // Session 65: SUPER AI EXECUTOR - Tool execution methods
+            async executeTools(toolCalls) {
+                const results = [];
+
+                for (const toolCall of toolCalls) {
+                    const { name, arguments: params } = toolCall;
+
+                    // Session 65: Debug logging to see what GPT-5-mini is passing
+                    console.log('🔍 Tool call details:', { name, params, fullToolCall: toolCall });
+
+                    // Show progress message
+                    const progressMsg = this.getProgressMessage(name, params);
+                    const tempMsgId = this.addMessage('assistant', progressMsg, true);  // isTemporary=true, returns messageId
+
+                    try {
+                        // Execute tool via backend
+                        const response = await authenticatedFetch('/api/executor/run-tool/', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                tool_name: name,
+                                parameters: params
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        // Remove progress message
+                        if (tempMsgId) {
+                            this.removeMessage(tempMsgId);
+                        }
+
+                        if (data.success) {
+                            results.push({
+                                tool: name,
+                                success: true,
+                                result: data.result,
+                                params: params
+                            });
+                        } else {
+                            results.push({
+                                tool: name,
+                                success: false,
+                                error: data.error || 'Tool execution failed'
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Tool execution failed: ${name}`, error);
+                        if (tempMsgId) {
+                            this.removeMessage(tempMsgId);
+                        }
+                        results.push({
+                            tool: name,
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                }
+
+                return results;
+            }
+
+            getProgressMessage(toolName, params) {
+                // Session 65: Safe parameter access with defaults
+                try {
+                    if (toolName === 'generate_image' && params.prompt) {
+                        return `🎨 Generating image: "${params.prompt.substring(0, 50)}..."`;
+                    } else if (toolName === 'generate_video' && params.prompt) {
+                        return `🎬 Generating video: "${params.prompt.substring(0, 50)}..."`;
+                    } else if (toolName === 'web_search' && params.query) {
+                        return `🔍 Searching web for: "${params.query}"...`;
+                    } else if (toolName === 'scrape_website' && params.url) {
+                        return `🕷️ Scraping website: ${params.url}...`;
+                    } else if (toolName === 'send_email' && params.to_email) {
+                        return `📧 Sending email to: ${params.to_email}...`;
+                    }
+                } catch (e) {
+                    console.error('Error in getProgressMessage:', e);
+                }
+                return `🔧 Executing ${toolName}...`;
+            }
+
+            formatToolResults(results) {
+                let message = '';
+
+                for (const result of results) {
+                    if (result.success) {
+                        if (result.tool === 'generate_image') {
+                            message += `✅ **Image Generated!**\n\n`;
+                            message += `![Generated Image](${result.result.image_url})\n\n`;
+                            message += `📝 Prompt: "${result.params.prompt}"\n\n`;
+                            message += `🎨 Model: ${result.result.model || 'sdxl'}\n\n`;
+                            if (result.result.style) {
+                                message += `✨ Style: ${result.result.style}\n\n`;
+                            }
+                        } else if (result.tool === 'generate_video') {
+                            const minutes = Math.ceil(result.result.estimated_time / 60);
+                            message += `✅ **Video Generation Started!**\n\n`;
+                            message += `📹 Your video is being generated by Runway ML...\n\n`;
+                            message += `⏱️ Estimated time: ~${minutes} minutes (${result.result.estimated_time}s)\n\n`;
+                            message += `🔗 Task ID: ${result.result.task_id}\n\n`;
+                            message += `💡 **The video will appear in the Video Gallery tab once complete!**\n\n`;
+                            message += `🔄 Refresh the Video Gallery in ${minutes} minutes to see your video!\n\n`;
+                        } else if (result.tool === 'web_search') {
+                            message += `✅ **Search Results for "${result.result.query}":**\n\n`;
+                            for (const item of result.result.results.slice(0, 3)) {
+                                message += `**${item.title}**\n\n`;
+                                message += `${item.snippet}\n\n`;
+                                message += `🔗 ${item.link}\n\n`;
+                                message += `---\n\n`;  // Separator between results
+                            }
+                        } else if (result.tool === 'scrape_website') {
+                            message += `✅ **Scraped: ${result.result.title}**\n\n`;
+                            message += `${result.result.text}\n\n`;
+                            message += `🔗 ${result.result.url}\n`;
+                        } else if (result.tool === 'send_email') {
+                            message += `✅ **Email Sent!**\n\n`;
+                            message += `📧 To: ${result.result.to}\n`;
+                            message += `📨 Message ID: ${result.result.message_id}\n`;
+                        } else if (result.tool === 'inpaint') {
+                            message += `✅ **Image Refined!**\n\n`;
+                            message += `🖌️ Fixed: ${result.result.mask_description}\n\n`;
+                            message += `![Refined Image](${result.result.image_url})\n\n`;
+                            message += `📝 Refinement: "${result.result.prompt}"\n\n`;
+                        }
+                    } else {
+                        message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
+                    }
+                }
+
+                return message;
             }
 
             async handleQuickAction(action) {
