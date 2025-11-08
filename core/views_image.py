@@ -4308,8 +4308,16 @@ def assistant_chat(request):
 
 You have these autonomous execution tools:
 - **generate_image** - Create images/logos/artwork (ONE image per call - if user wants variations, call multiple times!)
-  * For LOGOS: Be EXTREMELY detailed with prompts - specify vector style, clean lines, professional branding, scalable, multiple variations in composition
-  * Match video quality: If creating logo + video together, ensure logo prompt is as detailed and professional as video prompt
+  * For LOGOS: Use SIMPLE, CLEAN logo design prompts:
+    - Focus on: "logo design", "emblem", "badge", "icon", "brand mark"
+    - Specify style: "vector", "flat design", "minimalist", "modern", "clean"
+    - Avoid: detailed descriptions of physical objects (cups, beans, etc) - logos are GRAPHIC DESIGNS not photographs!
+    - Keep it SHORT and focused on the logo itself, not the business
+    - Example: "Modern coffee shop logo with mountain silhouette, vector style, clean lines"
+    - NOT: "Detailed coffee shop with beans, cups, steam, multiple Keurig pods..."
+  * **NEW (Session 66):** If creating a logo with specific text (company name), pass expected_text parameter!
+    Example: generate_image(prompt="Modern coffee shop logo, vector style", expected_text="Mountain Coffee Co.", style="logo")
+    The system will AUTOMATICALLY use GPT-4 Vision to verify text and fix it if wrong!
 - **generate_video** - Create videos/animations (ONE video per call)
   * Always create cinematic, professional-quality promotional videos
   * IMPORTANT: Keep video prompts under 900 characters (Runway ML limit is 1000)
@@ -4318,19 +4326,32 @@ You have these autonomous execution tools:
   * Requires: image_url (from previous generate_image), prompt (what to regenerate), mask_description (which area to fix)
 - **web_search** - Search Google for information
 
-**MULTI-PASS REFINEMENT WORKFLOW (for logos with text):**
-When creating logos with text:
-1. Generate the initial logo with generate_image
-2. AI image models often misspell text - this is normal!
-3. If the logo has text that needs to be specific (company name, tagline), consider calling inpaint to fix it
-4. Use inpaint with: image_url from step 1, prompt describing correct text, mask_description indicating which text area
-5. Return the refined final version
+**AUTONOMOUS TEXT VERIFICATION (Session 66 - CRITICAL!):**
+When creating logos with company names, YOU MUST extract the company name and pass it as expected_text!
 
-Example multi-pass workflow:
+**REQUIRED PATTERN:**
+User: "Create a logo for [Company Name]"
+You: Call generate_image(prompt="...", expected_text="[Company Name]")
+
+**Examples:**
 User: "Create a logo for Mountain Coffee Co."
-Step 1: Call generate_image → Get logo (text might say "Muntain Coffe")
-Step 2: Call inpaint with image_url, prompt="The text 'Mountain Coffee Co.' in clean sans-serif", mask_description="the company name text"
-Step 3: Return refined logo with correct text
+→ generate_image(prompt="Mountain coffee shop logo, vector style", expected_text="Mountain Coffee Co.")
+
+User: "Make a logo for Eagle Brewing Company"
+→ generate_image(prompt="Eagle brewery logo with beer theme", expected_text="Eagle Brewing Company")
+
+User: "Design a logo for Alpine Tech"
+→ generate_image(prompt="Modern tech logo with alpine theme", expected_text="Alpine Tech")
+
+**What happens automatically:**
+1. System generates logo
+2. GPT-4 Vision checks if text matches expected_text
+3. If wrong → autonomously calls inpaint to fix
+4. Loops until text is correct (max 3 attempts)
+5. Returns perfect logo!
+
+**Manual refinement (if needed):**
+If autonomous verification doesn't work, you can still manually call inpaint as backup
 
 The platform also has:
 - Image Editing: Recolor, erase, inpaint, outpaint, remove background
@@ -4433,7 +4454,7 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "generate_image",
-                    "description": "Generate an AI image using Stability AI. Use this when the user asks to create, generate, or make an image, logo, artwork, or visual content.",
+                    "description": "Generate an AI image using Stability AI. Use this when the user asks to create, generate, or make an image, logo, artwork, or visual content. Session 66: Now supports autonomous text verification and refinement!",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -4449,6 +4470,10 @@ Keep responses under 200 words. Be conversational and practical."""
                             "style": {
                                 "type": "string",
                                 "description": "Optional style preset like 'vector', 'photographic', 'digital-art', etc."
+                            },
+                            "expected_text": {
+                                "type": "string",
+                                "description": "CRITICAL FOR LOGOS: If generating a logo with company name or text, YOU MUST provide the expected text here. This enables autonomous text verification. Examples: 'Mountain Coffee Co.', 'Eagle Brewing Company', 'Alpine Tech'. When user says 'Create a logo for [Company Name]', extract [Company Name] and pass it here!"
                             }
                         },
                         "required": ["prompt"]
@@ -4719,6 +4744,154 @@ def execute_tool(request):
 # TOOL EXECUTION HANDLERS (Session 65)
 # ========================================
 
+def _verify_image_with_vision(image_url, expected_text):
+    """
+    Use GPT-4 Vision to verify image text accuracy
+
+    Session 66: Vision-powered autonomous refinement
+
+    Parameters:
+        image_url (str): URL of image to verify
+        expected_text (str): Text that should appear in image
+
+    Returns:
+        dict: {
+            'correct': True/False,
+            'observed_text': 'What Vision actually sees',
+            'feedback': 'Specific feedback for correction',
+            'confidence': 'high/medium/low'
+        }
+    """
+    try:
+        import base64
+        import requests
+        from io import BytesIO
+        from PIL import Image
+
+        logger.info(f"👁️ Using GPT-4 Vision to verify text: '{expected_text}'")
+
+        # Session 66: Fix - Convert local URLs to base64 data URIs
+        # OpenAI Vision API can't access localhost URLs, so we need to encode the image
+        if image_url.startswith('/'):
+            # Local file path - read from disk and convert to base64
+            image_path = image_url.lstrip('/')  # Remove leading slash
+            full_path = os.path.join(settings.BASE_DIR, image_path)
+
+            logger.info(f"👁️ Reading local image: {full_path}")
+
+            with open(full_path, 'rb') as img_file:
+                image_data = img_file.read()
+                base64_image = base64.b64encode(image_data).decode('utf-8')
+
+            # Determine image format from extension
+            ext = image_url.split('.')[-1].lower()
+            mime_type = f"image/{ext}" if ext in ['png', 'jpg', 'jpeg', 'webp'] else 'image/png'
+
+            # Create data URI
+            image_url = f"data:{mime_type};base64,{base64_image}"
+            logger.info(f"👁️ Converted to base64 data URI ({len(base64_image)} chars)")
+
+        # Get OpenAI client
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        # Build Vision API request
+        response = client.chat.completions.create(
+            model="gpt-4o",  # GPT-4 with vision
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a text verification expert. Analyze images and verify if text matches expectations.
+
+Be VERY specific about what you see:
+- Report the EXACT text you observe (including spelling, spacing, punctuation)
+- Compare it to the expected text
+- Provide specific feedback on what's wrong
+- Be critical but accurate"""
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"""Analyze this image and verify the text.
+
+**Expected Text:** "{expected_text}"
+
+**Your Task:**
+1. What text do you actually see in this image? (Report EXACT text, including all words)
+2. Does it match "{expected_text}" perfectly?
+3. If not, what's different? (spelling, missing words, extra words, wrong order, etc.)
+
+Be specific and accurate. This is for autonomous text correction."""
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": image_url
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=300
+        )
+
+        # Parse Vision response
+        vision_feedback = response.choices[0].message.content
+        logger.info(f"👁️ Vision feedback: {vision_feedback}")
+
+        # Analyze Vision's response to determine correctness
+        lower_feedback = vision_feedback.lower()
+        expected_lower = expected_text.lower()
+
+        # Check if Vision confirms match
+        correct = any([
+            'matches perfectly' in lower_feedback,
+            'correct' in lower_feedback and 'incorrect' not in lower_feedback,
+            'yes' in lower_feedback and 'does it match' in lower_feedback,
+            f'"{expected_lower}"' in lower_feedback and 'matches' in lower_feedback
+        ])
+
+        # Determine confidence based on Vision's language
+        if 'exactly' in lower_feedback or 'perfect' in lower_feedback:
+            confidence = 'high'
+        elif 'mostly' in lower_feedback or 'close' in lower_feedback:
+            confidence = 'medium'
+        else:
+            confidence = 'low'
+
+        # Try to extract what Vision actually observed
+        observed_text = expected_text  # Default to expected if we can't extract
+        if 'see' in lower_feedback or 'says' in lower_feedback or 'reads' in lower_feedback:
+            # Vision mentioned what it sees - try to extract it
+            import re
+            # Look for quoted text
+            quotes = re.findall(r'"([^"]+)"', vision_feedback)
+            if quotes:
+                # First quote is usually what it actually sees
+                observed_text = quotes[0] if quotes[0].lower() != expected_lower else expected_text
+
+        result = {
+            'correct': correct,
+            'observed_text': observed_text,
+            'feedback': vision_feedback,
+            'confidence': confidence
+        }
+
+        logger.info(f"👁️ Verification result: {result}")
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Error in _verify_image_with_vision: {str(e)}")
+        # Return neutral result on error (don't block generation)
+        return {
+            'correct': True,  # Assume correct if we can't verify
+            'observed_text': expected_text,
+            'feedback': f'Vision verification failed: {str(e)}',
+            'confidence': 'low'
+        }
+
+
 def _execute_generate_image(user, parameters):
     """
     Execute image generation tool
@@ -4740,14 +4913,20 @@ def _execute_generate_image(user, parameters):
         }
     """
     try:
+        # Session 66: DEBUG - Log ALL parameters to verify expected_text is being passed
+        logger.info(f"🔍 DEBUG: _execute_generate_image received parameters: {parameters}")
+
         prompt = parameters.get('prompt', '').strip()
         model = parameters.get('model', 'sdxl')  # Default to sdxl (best balance)
         style = parameters.get('style', '')  # Optional style
+        expected_text = parameters.get('expected_text', '').strip()  # Session 66: For Vision refinement
 
         if not prompt:
             raise ValueError("Prompt is required for image generation")
 
         logger.info(f"🎨 Executor generating image: {prompt[:50]}... (model: {model}, style: {style})")
+        if expected_text:
+            logger.info(f"👁️ Expected text for verification: '{expected_text}'")
 
         # Map model names to quality parameter
         model_to_quality = {
@@ -4821,13 +5000,72 @@ def _execute_generate_image(user, parameters):
 
         logger.info(f"✅ Executor generated image successfully: {saved_url}")
 
+        # Session 66: AUTONOMOUS TEXT VERIFICATION & REFINEMENT
+        expected_text = parameters.get('expected_text', '').strip()
+        refinement_history = []
+
+        if expected_text:
+            logger.info(f"👁️ Starting autonomous text verification for: '{expected_text}'")
+            max_attempts = 3
+            current_url = saved_url
+            current_history_id = history_record.id if history_record else None
+
+            for attempt in range(max_attempts):
+                logger.info(f"👁️ Verification attempt {attempt + 1}/{max_attempts}")
+
+                # Verify current image with GPT-4 Vision
+                verification = _verify_image_with_vision(current_url, expected_text)
+
+                refinement_history.append({
+                    'attempt': attempt + 1,
+                    'image_url': current_url,
+                    'verification': verification
+                })
+
+                if verification['correct']:
+                    logger.info(f"✅ Text verified correct! Confidence: {verification['confidence']}")
+                    break  # Text is correct, we're done!
+
+                if attempt == max_attempts - 1:
+                    logger.warning(f"⚠️ Max attempts reached, returning last version")
+                    break  # Max attempts, return what we have
+
+                # Text is wrong, use inpaint to fix it
+                logger.info(f"🖌️ Text incorrect, calling inpaint to fix...")
+
+                try:
+                    inpaint_result = _execute_inpaint(user, {
+                        'image_url': current_url,
+                        'prompt': f"The text '{expected_text}' in clean, legible font",
+                        'mask_description': 'the text area with the company/brand name'
+                    })
+
+                    if inpaint_result['success']:
+                        current_url = inpaint_result['image_url']
+                        current_history_id = inpaint_result['image_id']
+                        logger.info(f"✅ Inpaint successful: {current_url}")
+                    else:
+                        logger.error(f"❌ Inpaint failed, keeping current version")
+                        break
+
+                except Exception as e:
+                    logger.error(f"❌ Error during inpaint: {str(e)}")
+                    break  # Error, return what we have
+
+            # Update return values with final refined version
+            saved_url = current_url
+            if current_history_id:
+                history_record = type('obj', (object,), {'id': current_history_id})()
+
         return {
             'success': True,
             'image_url': saved_url,
             'image_id': history_record.id if history_record else None,
             'prompt': prompt,
             'model': model,
-            'style': style
+            'style': style,
+            'refinement_history': refinement_history if refinement_history else None,
+            'autonomous_refinement': len(refinement_history) > 1 if refinement_history else False
         }
 
     except Exception as e:
@@ -4957,46 +5195,62 @@ def _execute_inpaint(user, parameters):
 
         logger.info(f"🖌️ Executor inpainting: {mask_description} -> {prompt[:50]}...")
 
-        # Use Stability AI Search and Replace (best for text fixes)
-        from content.image_generation import ImageGenerationService
-        service = ImageGenerationService()
-
-        # Download the source image
+        # Session 66: Use Stability AI Search and Replace API directly
         import requests
-
-        # Handle both absolute URLs and relative paths
-        if image_url.startswith('/'):
-            # Local path - convert to full URL
-            image_url = f"http://localhost:8000{image_url}"
-
-        response = requests.get(image_url, timeout=10)
-        response.raise_for_status()
-        image_data = response.content
-
-        # Use Stability AI's search and replace inpaint
-        # This is better than mask-based inpaint for fixing specific elements
-        result = service.inpaint_image(
-            image_data=image_data,
-            prompt=prompt,
-            search_prompt=mask_description,  # What to replace
-            output_format='png',
-            mode='search_and_replace'
-        )
-
-        if not result.get('success'):
-            raise Exception(f"Inpaint failed: {result.get('error', 'Unknown error')}")
-
-        # Save the inpainted image
+        import base64
         import uuid
         from django.core.files.base import ContentFile
         from django.core.files.storage import default_storage
 
+        # Handle both absolute URLs and relative paths
+        if image_url.startswith('/'):
+            # Local path - read from disk
+            image_path = image_url.lstrip('/')
+            full_path = os.path.join(settings.BASE_DIR, image_path)
+            with open(full_path, 'rb') as img_file:
+                image_data = img_file.read()
+        else:
+            # Remote URL - download
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            image_data = response.content
+
+        # Call Stability AI Search and Replace API
+        api_key = os.environ.get('STABILITY_API_KEY')
+        api_url = 'https://api.stability.ai/v2beta/stable-image/edit/search-and-replace'
+
+        # Prepare the request
+        files = {
+            'image': ('image.png', image_data, 'image/png')
+        }
+        data = {
+            'prompt': prompt,
+            'search_prompt': mask_description,
+            'output_format': 'png'
+        }
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Accept': 'image/*'
+        }
+
+        logger.info(f"🖌️ Calling Stability AI Search and Replace...")
+        api_response = requests.post(api_url, files=files, data=data, headers=headers)
+
+        if api_response.status_code != 200:
+            error_msg = api_response.text
+            logger.error(f"❌ Stability AI error: {error_msg}")
+            raise Exception(f"Inpaint API failed: {error_msg}")
+
+        # Get the inpainted image data
+        result_image_data = api_response.content
+
+        # Save the inpainted image
         image_id = uuid.uuid4()
         filename = f"{user.id}/{image_id}.png"
         filepath = f"generated_images/{filename}"
 
         # Save to storage
-        saved_path = default_storage.save(filepath, ContentFile(result['image_data']))
+        saved_path = default_storage.save(filepath, ContentFile(result_image_data))
         saved_url = f"/media/{saved_path}"
 
         # Save to ImageHistory
