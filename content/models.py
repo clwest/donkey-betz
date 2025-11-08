@@ -1824,6 +1824,7 @@ class VideoHistory(UnifiedBaseModel):
         choices=[
             ('text_to_video', 'Text to Video'),
             ('image_to_video', 'Image to Video'),
+            ('extend_video', 'Video Extension'),  # Session 66 Part 2: Runway Extend
         ],
         help_text="Type of video generation"
     )
@@ -1906,6 +1907,13 @@ class VideoHistory(UnifiedBaseModel):
         on_delete=models.SET_NULL,
         related_name='generated_videos',
         help_text="Source image if this is image-to-video"
+    )
+
+    # Session 66 Part 2: Parent video for extension tracking
+    parent_video_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        help_text="URL of parent video if this is an extension (for tracking 8s→18s→28s→38s chains)"
     )
 
     # Usage tracking
