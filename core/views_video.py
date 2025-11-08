@@ -1174,6 +1174,88 @@ def video_upscale_endpoint(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def extend_video_endpoint(request):
+    """
+    POST /api/v1/video/extend/
+    Extend video duration by generating continuation
+
+    Session 66 Part 2: Runway Extend feature!
+    Can extend up to 3 times: 8 → 18 → 28 → 38 seconds!
+
+    Form Data:
+        - video_url: URL of video from gallery (required)
+        - extension_seconds: 4, 6, 8, or 10 (default: 10 for max extension)
+        - prompt: Optional guidance for extension (default: continue motion)
+    """
+    try:
+        # Get video URL (must be from gallery)
+        video_url = request.POST.get('video_url', '').strip()
+        extension_seconds = int(request.POST.get('extension_seconds', 10))
+        prompt = request.POST.get('prompt', '').strip()
+
+        # Validate video URL provided
+        if not video_url:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Video URL from gallery is required'
+            }, status=400)
+
+        # Validate extension duration
+        if extension_seconds not in [4, 6, 8, 10]:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'Extension must be 4, 6, 8, or 10 seconds'
+            }, status=400)
+
+        logger.info(f"🎬 Extend Video request: {extension_seconds}s extension")
+        logger.info(f"📹 Source video: {video_url}")
+
+        # Call Runway ML extend feature
+        result = runway_provider.extend_video(
+            video_url=video_url,
+            extension_seconds=extension_seconds,
+            prompt=prompt if prompt else None,  # Use default if not provided
+            quality="gen4_aleph"  # Best quality for video-to-video
+        )
+
+        # Save to history if successful
+        if result.success and result.task_id:
+            VideoHistory.objects.create(
+                video_id=result.task_id,
+                user=request.user if request.user.is_authenticated else None,
+                video_type='extend_video',
+                prompt=prompt or f"Extended by {extension_seconds}s",
+                duration=extension_seconds,
+                model_used='gen4_aleph',
+                ratio="1280:720",
+                status='pending',
+                parent_video_url=video_url  # Track which video was extended
+            )
+
+        return JsonResponse({
+            'success': result.success,
+            'task_id': result.task_id if result.success else None,
+            'status': result.status,
+            'extension_seconds': extension_seconds,
+            'error_message': result.error_message if not result.success else None,
+            'message': f'Video extension started! Adding {extension_seconds}s' if result.success else 'Failed to start extension'
+        })
+
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error_message': f'Invalid input: {str(e)}'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ Video extend error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def character_performance_endpoint(request):
     """
     POST /api/v1/video/character-performance/

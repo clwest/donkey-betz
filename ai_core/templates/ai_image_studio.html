@@ -10125,7 +10125,7 @@
                         <p class="card-text small mb-2" style="height: 40px; overflow: hidden; text-overflow: ellipsis;">
                             ${video.prompt.substring(0, 60)}${video.prompt.length > 60 ? '...' : ''}
                         </p>
-                        <div class="d-flex gap-1">
+                        <div class="d-flex gap-1 mb-2">
                             <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); toggleVideoFavorite('${video.id}', this)">
                                 ${favoriteIcon}
                             </button>
@@ -10136,6 +10136,9 @@
                                 🗑️
                             </button>
                         </div>
+                        <button class="btn btn-sm btn-outline-success w-100" onclick="event.stopPropagation(); extendVideo('${video.id}', '${video.video_url}')" title="Extend video by 10 seconds">
+                            ⏩ Extend +10s
+                        </button>
                         <small class="text-muted d-block mt-2">
                             👁️ ${video.view_count} | 📥 ${video.download_count}
                         </small>
@@ -10219,6 +10222,102 @@
                 console.error('❌ Error downloading video:', error);
                 alert('Failed to download video. Please try again.');
             }
+        }
+
+        // Session 66 Part 2: Extend video functionality
+        async function extendVideo(videoId, videoUrl) {
+            console.log('⏩ Extending video:', videoId);
+
+            if (!confirm('Extend this video by 10 seconds? This will create a new extended video and use Runway credits.')) {
+                return;
+            }
+
+            try {
+                // Show loading feedback
+                const originalButton = event.target;
+                const originalText = originalButton.innerHTML;
+                originalButton.innerHTML = '⏳ Extending...';
+                originalButton.disabled = true;
+
+                // Call extend API
+                const formData = new FormData();
+                formData.append('video_url', videoUrl);
+                formData.append('extension_seconds', '10'); // Default 10 seconds
+
+                const response = await authenticatedFetch('/api/v1/video/extend/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Extension started! Task ID:', data.task_id);
+                    alert(`🎬 Video extension started!\n\nAdding ${data.extension_seconds}s to your video.\n\nYou can continue using the platform while we generate the extended video. It will appear in your gallery when ready (usually 30-90 seconds).`);
+
+                    // Restore button
+                    originalButton.innerHTML = originalText;
+                    originalButton.disabled = false;
+
+                    // Optional: Start polling for the extended video
+                    pollForExtendedVideo(data.task_id);
+                } else {
+                    console.error('❌ Extension failed:', data.error_message);
+                    alert('Failed to start video extension: ' + (data.error_message || 'Unknown error'));
+                    originalButton.innerHTML = originalText;
+                    originalButton.disabled = false;
+                }
+            } catch (error) {
+                console.error('❌ Error extending video:', error);
+                alert('Failed to extend video. Please try again.');
+                // Restore button on error
+                if (event && event.target) {
+                    event.target.innerHTML = '⏩ Extend +10s';
+                    event.target.disabled = false;
+                }
+            }
+        }
+
+        async function pollForExtendedVideo(taskId) {
+            console.log('🔄 Polling for extended video:', taskId);
+            let attempts = 0;
+            const maxAttempts = 30; // 30 attempts = 90 seconds
+
+            const checkStatus = async () => {
+                try {
+                    const response = await authenticatedFetch(`/api/v1/video/status/${taskId}/`);
+                    const data = await response.json();
+
+                    console.log(`🔄 Status check ${attempts + 1}/${maxAttempts}:`, data.status);
+
+                    if (data.status === 'completed') {
+                        console.log('✅ Extended video ready!');
+                        // Refresh gallery to show new video
+                        loadVideoGallery();
+                        // Show success notification
+                        alert('🎉 Extended video is ready! Check your gallery.');
+                        return;
+                    } else if (data.status === 'failed') {
+                        console.error('❌ Video extension failed:', data.error);
+                        alert('Video extension failed: ' + (data.error || 'Unknown error'));
+                        return;
+                    }
+
+                    // Continue polling if still processing
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkStatus, 3000); // Check every 3 seconds
+                    } else {
+                        console.log('⏰ Polling timeout - video may still be processing');
+                        alert('Video extension is taking longer than expected. Please check your gallery in a few minutes.');
+                    }
+                } catch (error) {
+                    console.error('❌ Error checking status:', error);
+                }
+            };
+
+            // Start polling after 5 seconds (give API time to start processing)
+            setTimeout(checkStatus, 5000);
         }
 
         // Global variable to store current video being played

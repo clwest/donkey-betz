@@ -266,6 +266,10 @@ from core.views_video import (
     increment_video_download, video_to_video_endpoint, video_upscale_endpoint,
     character_performance_endpoint
 )
+# Session 66 Part 2: DaVinci Resolve video editing
+from core.views_davinci import (
+    create_video_project_endpoint, check_davinci_status, chain_videos_simple
+)
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
@@ -792,7 +796,14 @@ urlpatterns = [
     path('api/v1/video/video-to-video/', video_to_video_endpoint, name='video-to-video'),
     path('api/v1/video/upscale/', video_upscale_endpoint, name='video-upscale'),
     path('api/v1/video/character-performance/', character_performance_endpoint, name='character-performance'),
+    # Session 66 Part 2: Video extension for longer videos (up to 40 seconds!)
+    path('api/v1/video/extend/', lambda r: __import__('core.views_video', fromlist=['extend_video_endpoint']).extend_video_endpoint(r), name='video-extend'),
     path('api/v1/video/status/<str:task_id>/', check_video_status, name='video-status'),
+
+    # Session 66 Part 2: DaVinci Resolve video editing endpoints
+    path('api/v1/davinci/status/', check_davinci_status, name='davinci-status'),
+    path('api/v1/davinci/create-project/', create_video_project_endpoint, name='davinci-create-project'),
+    path('api/v1/davinci/chain-videos/', chain_videos_simple, name='davinci-chain-videos'),
     path('api/v1/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
     path('api/v1/video/save/', save_video_to_gallery, name='save-video'),

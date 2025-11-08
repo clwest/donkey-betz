@@ -545,6 +545,70 @@ class RunwayMLProvider:
                 error_message=str(e)
             )
 
+    def extend_video(
+        self,
+        video_url: str,
+        extension_seconds: int = 10,
+        prompt: str = None,
+        quality: str = "gen4_aleph",
+        **kwargs
+    ) -> VideoGenerationResult:
+        """
+        Extend an existing video by generating a continuation
+
+        Session 66 Part 2: Runway Extend feature for longer videos!
+        Can extend up to 3 times (10+10+10 = 30 seconds of extension)
+        Combined with original video: 8 + 30 = 38-40 seconds total!
+
+        Args:
+            video_url: URL or path to video to extend
+            extension_seconds: Seconds to add (4-10, default 10 for max length)
+            prompt: Optional prompt to guide extension ("Continue the mountain panning motion")
+                   If not provided, will use "Continue the motion and atmosphere from the video"
+            quality: Model to use (gen4_aleph recommended for video-to-video)
+
+        Returns:
+            VideoGenerationResult with the extended video
+        """
+
+        if not self.api_key:
+            return VideoGenerationResult(
+                success=False,
+                error_message="RunwayML API key not configured"
+            )
+
+        try:
+            # Default prompt for continuation
+            if not prompt:
+                prompt = "Continue the motion and atmosphere from the video, maintaining the same style and camera movement"
+
+            logger.info(f"🎬 [RUNWAY EXTEND] Extending video by {extension_seconds}s")
+            logger.info(f"🎬 [RUNWAY EXTEND] Prompt: {prompt}")
+
+            # Use video_to_video to generate continuation
+            # This uses the end of the video as the starting point
+            result = self.video_to_video(
+                video_url=video_url,
+                prompt=prompt,
+                duration=extension_seconds,
+                quality=quality,
+                **kwargs
+            )
+
+            if result.success:
+                logger.info(f"✅ [RUNWAY EXTEND] Extension started! Task ID: {result.task_id}")
+            else:
+                logger.error(f"❌ [RUNWAY EXTEND] Extension failed: {result.error_message}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"RunwayML extend_video error: {str(e)}")
+            return VideoGenerationResult(
+                success=False,
+                error_message=str(e)
+            )
+
     def video_upscale(
         self,
         video_url: str,
