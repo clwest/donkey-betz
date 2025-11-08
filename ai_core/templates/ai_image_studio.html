@@ -10281,7 +10281,7 @@
         async function pollForExtendedVideo(taskId) {
             console.log('🔄 Polling for extended video:', taskId);
             let attempts = 0;
-            const maxAttempts = 30; // 30 attempts = 90 seconds
+            const maxAttempts = 60; // 60 attempts = 3 minutes (video extensions can take 2-3 min)
 
             const checkStatus = async () => {
                 try {
