@@ -12538,11 +12538,36 @@
                     if (result.success) {
                         if (result.tool === 'generate_image') {
                             message += `✅ **Image Generated!**\n\n`;
+
+                            // Session 66: Show autonomous refinement details if present
+                            if (result.result.autonomous_refinement && result.result.refinement_history) {
+                                const history = result.result.refinement_history;
+                                message += `🔍 **Autonomous Text Verification:**\n`;
+                                message += `- Generated initial logo\n`;
+                                message += `- GPT-4 Vision checked text accuracy\n`;
+
+                                if (history.length > 1) {
+                                    message += `- Fixed text issues automatically (${history.length - 1} refinement${history.length > 2 ? 's' : ''})\n`;
+                                }
+
+                                const final = history[history.length - 1];
+                                if (final.verification.correct) {
+                                    message += `- ✅ Text verified correct!\n\n`;
+                                } else {
+                                    message += `- ⚠️ Text verification attempted (${history.length} tries)\n\n`;
+                                }
+                            }
+
                             message += `![Generated Image](${result.result.image_url})\n\n`;
                             message += `📝 Prompt: "${result.params.prompt}"\n\n`;
                             message += `🎨 Model: ${result.result.model || 'sdxl'}\n\n`;
                             if (result.result.style) {
                                 message += `✨ Style: ${result.result.style}\n\n`;
+                            }
+
+                            // Show what text was verified if applicable
+                            if (result.params.expected_text) {
+                                message += `📋 Expected Text: "${result.params.expected_text}"\n\n`;
                             }
                         } else if (result.tool === 'generate_video') {
                             const minutes = Math.ceil(result.result.estimated_time / 60);

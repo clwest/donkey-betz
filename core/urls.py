@@ -273,7 +273,7 @@ from core.views_image import (
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
     list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
-    start_workflow_execution, complete_workflow_execution, execute_workflow_for_project, assistant_chat, transcribe_audio, get_user_preferences_api,
+    start_workflow_execution, complete_workflow_execution, execute_workflow_for_project, assistant_chat, transcribe_audio, execute_tool, get_user_preferences_api,
     # Session 60: Phase C.1.2 - Project Management API
     list_projects, create_project, get_project, update_project, delete_project,
     add_workflow_to_project, remove_workflow_from_project,
@@ -625,6 +625,7 @@ urlpatterns = [
     # Personal AI Assistant endpoints (Session 58: Phase B.3 - Using GPT-5)
     path('api/assistant/chat/', assistant_chat, name='personal-assistant-chat'),
     path('api/assistant/transcribe/', transcribe_audio, name='assistant-transcribe'),  # Session 64: Voice input
+    path('api/executor/run-tool/', execute_tool, name='executor-run-tool'),  # Session 65: SUPER AI EXECUTOR
     path('api/assistant/preferences/', get_user_preferences_api, name='user-preferences'),  # Session 59: Phase B.4
     path('api/assistant/context/', get_assistant_context, name='personal-assistant-context'),
     path('api/assistant/learning/', get_learning_summary, name='personal-assistant-learning'),
