@@ -9993,6 +9993,10 @@
                         // Store video URL for download
                         resultDiv.dataset.videoUrl = data.video_url;
 
+                        // Refresh Video Gallery (Session 68: Auto-refresh fix)
+                        console.log('🔄 Video completed - refreshing Video Gallery...');
+                        loadVideoGallery();
+
                     } else if (data.status === 'failed') {
                         clearInterval(pollInterval);
                         statusDiv.style.display = 'none';
