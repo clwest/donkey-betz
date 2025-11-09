@@ -9997,6 +9997,9 @@
                         console.log('🔄 Video completed - refreshing Video Gallery...');
                         loadVideoGallery();
 
+                        // Session 68: Multi-notification system for video completion
+                        notifyVideoComplete(mode);
+
                     } else if (data.status === 'failed') {
                         clearInterval(pollInterval);
                         statusDiv.style.display = 'none';
@@ -10589,6 +10592,119 @@
             selectedVideos.clear();
             updateChainControls();
             console.log('🧹 Selection cleared');
+        }
+
+        // Session 68: Multi-notification system for video completion
+        function notifyVideoComplete(mode) {
+            const videoType = mode === 'text' ? 'Text-to-Video' : 'Image-to-Video';
+            const message = `✅ Your ${videoType} is ready!`;
+
+            console.log('🔔 Notifying user:', message);
+
+            // 1. Browser Notification (native desktop notification)
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification('🎬 Video Complete!', {
+                        body: message,
+                        icon: '/static/favicon.ico',
+                        badge: '/static/favicon.ico',
+                        tag: 'video-complete',
+                        requireInteraction: false
+                    });
+                } else if (Notification.permission !== 'denied') {
+                    // Request permission for future notifications
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification('🎬 Video Complete!', {
+                                body: message,
+                                icon: '/static/favicon.ico'
+                            });
+                        }
+                    });
+                }
+            }
+
+            // 2. Audio Alert (short beep)
+            try {
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLYiTcIGWi77eefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUrgs/y14k4CBloue3nn00QDFCN4/C2YxwGOJLX8sx5LAUkd8fw3ZBACI');
+                audio.volume = 0.3;
+                audio.play().catch(e => console.log('Audio play failed:', e));
+            } catch (e) {
+                console.log('Audio notification not supported');
+            }
+
+            // 3. Visual Toast Notification (in-page banner)
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #06b6d4, #0891b2);
+                color: white;
+                padding: 20px 30px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-size: 16px;
+                font-weight: bold;
+                animation: slideInRight 0.3s ease-out;
+                cursor: pointer;
+                border: 2px solid #22d3ee;
+            `;
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">🎬</span>
+                    <div>
+                        <div style="font-size: 18px; margin-bottom: 4px;">Video Complete!</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Your ${videoType} is ready to watch</div>
+                    </div>
+                    <span style="font-size: 20px; margin-left: 10px;">✓</span>
+                </div>
+            `;
+
+            // Add animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from {
+                        transform: translateX(400px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+
+            document.body.appendChild(toast);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+
+            // Click to dismiss
+            toast.addEventListener('click', () => {
+                toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            });
+
+            // 4. Tab Title Flash (get user's attention)
+            const originalTitle = document.title;
+            let flashCount = 0;
+            const flashInterval = setInterval(() => {
+                document.title = flashCount % 2 === 0 ? '🎬 VIDEO READY!' : originalTitle;
+                flashCount++;
+                if (flashCount >= 6) {
+                    clearInterval(flashInterval);
+                    document.title = originalTitle;
+                }
+            }, 1000);
+
+            console.log('✅ All notifications sent!');
         }
 
         async function deleteSelectedVideos() {
