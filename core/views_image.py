@@ -5197,29 +5197,36 @@ def _execute_generate_video(user, parameters):
         if not result.success:
             raise Exception(f"Video generation failed: {result.error_message or 'Unknown error'}")
 
-        # Store generation request in database
-        from content.models import ContentGeneration
-        content = ContentGeneration.objects.create(
+        # Session 68: Create VideoHistory record (not just ContentGeneration!)
+        # This makes AI Assistant videos appear in Video Gallery
+        from content.models import VideoHistory
+        video = VideoHistory.objects.create(
             user=user,
+            video_id=result.task_id,
+            video_url='',  # Will be populated when video completes
+            video_type='text_to_video',
             prompt=prompt,
-            system_prompt=f"Generate a realistic style video",
-            generation_config={
-                'task_id': result.task_id,
+            parameters={
                 'duration': duration,
                 'quality': 'veo3.1_fast',
                 'style': 'realistic',
-                'type': 'text_to_video',
-                'estimated_time': result.estimated_time,
-                'status': 'processing'
-            }
+                'ratio': '1920:1080',
+                'enhance_prompt': True,
+                'enhancement_level': 'advanced'
+            },
+            model_used='veo3.1_fast',
+            duration=duration,
+            ratio='1920:1080',
+            status='processing'
         )
 
         logger.info(f"✅ Executor started video generation: {result.task_id}")
+        logger.info(f"📹 Created VideoHistory record: {video.id}")
 
         return {
             'success': True,
             'task_id': result.task_id,
-            'content_id': content.id,
+            'content_id': str(video.id),
             'status': result.status,
             'estimated_time': result.estimated_time,
             'message': 'Video generation started successfully'
