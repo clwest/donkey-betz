@@ -3231,9 +3231,12 @@
                                 <div class="alert alert-info d-flex justify-content-between align-items-center">
                                     <div>
                                         <strong id="selectedVideoCount">0 videos selected</strong>
-                                        <small class="ms-2 text-muted">Select 2+ videos to chain them together</small>
+                                        <small class="ms-2 text-muted">Select videos to chain or delete</small>
                                     </div>
                                     <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSelectedVideos()" id="deleteVideosBtn" disabled>
+                                            🗑️ Delete Selected
+                                        </button>
                                         <button class="btn btn-sm btn-outline-primary" onclick="clearVideoSelection()">
                                             Clear Selection
                                         </button>
@@ -10542,6 +10545,7 @@
             const controls = document.getElementById('chainVideosControls');
             const countDisplay = document.getElementById('selectedVideoCount');
             const chainBtn = document.getElementById('chainVideosBtn');
+            const deleteBtn = document.getElementById('deleteVideosBtn');
 
             // Update count display
             countDisplay.textContent = `${count} video${count !== 1 ? 's' : ''} selected`;
@@ -10560,7 +10564,14 @@
                 chainBtn.disabled = true;
             }
 
-            console.log('📊 Updated chain controls:', { count, enabled: count >= 2 });
+            // Enable/disable delete button (need at least 1 video)
+            if (count >= 1) {
+                deleteBtn.disabled = false;
+            } else {
+                deleteBtn.disabled = true;
+            }
+
+            console.log('📊 Updated chain controls:', { count, chainEnabled: count >= 2, deleteEnabled: count >= 1 });
         }
 
         function clearVideoSelection() {
@@ -10574,6 +10585,75 @@
             selectedVideos.clear();
             updateChainControls();
             console.log('🧹 Selection cleared');
+        }
+
+        async function deleteSelectedVideos() {
+            const count = selectedVideos.size;
+            if (count === 0) {
+                return;
+            }
+
+            // Confirmation dialog
+            const confirmed = confirm(`⚠️ Are you sure you want to delete ${count} video${count !== 1 ? 's' : ''}?\n\nThis action cannot be undone!`);
+            if (!confirmed) {
+                return;
+            }
+
+            console.log(`🗑️ Deleting ${count} videos...`);
+
+            // Get array of video IDs to delete
+            const videoIds = Array.from(selectedVideos.keys());
+            let successCount = 0;
+            let failCount = 0;
+
+            // Show progress in button
+            const deleteBtn = document.getElementById('deleteVideosBtn');
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = `🗑️ Deleting... (0/${count})`;
+            deleteBtn.disabled = true;
+
+            // Delete each video
+            for (let i = 0; i < videoIds.length; i++) {
+                const videoId = videoIds[i];
+                try {
+                    const response = await authenticatedFetch(`/api/v1/video/history/${videoId}/`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        successCount++;
+                        console.log(`✅ Deleted video ${i + 1}/${count}: ${videoId}`);
+                    } else {
+                        failCount++;
+                        console.error(`❌ Failed to delete video ${videoId}:`, data.error_message);
+                    }
+                } catch (error) {
+                    failCount++;
+                    console.error(`❌ Error deleting video ${videoId}:`, error);
+                }
+
+                // Update progress
+                deleteBtn.innerHTML = `🗑️ Deleting... (${i + 1}/${count})`;
+            }
+
+            // Restore button
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+
+            // Clear selection
+            clearVideoSelection();
+
+            // Show result
+            if (failCount === 0) {
+                alert(`✅ Successfully deleted ${successCount} video${successCount !== 1 ? 's' : ''}!`);
+            } else {
+                alert(`⚠️ Deleted ${successCount} video${successCount !== 1 ? 's' : ''}, ${failCount} failed.`);
+            }
+
+            // Refresh gallery
+            console.log('🔄 Refreshing video gallery...');
+            loadVideoGallery();
         }
 
         function openChainVideosModal() {
