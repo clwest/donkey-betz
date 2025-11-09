@@ -4543,6 +4543,70 @@ Keep responses under 200 words. Be conversational and practical."""
                         "required": ["query"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "chain_videos",
+                    "description": "Chain multiple videos together using DaVinci Resolve. Use this when the user asks to combine videos, chain clips, merge videos, or create a longer video from multiple clips. Requires DaVinci Resolve Studio ($200). Session 67: Professional video chaining with transitions!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_count": {
+                                "type": "number",
+                                "description": "Number of videos to chain (default: 2). User will select videos from gallery after."
+                            },
+                            "transition_type": {
+                                "type": "string",
+                                "enum": ["Cross Dissolve", "Fade", "Cut", "Wipe"],
+                                "description": "Type of transition between videos. Cross Dissolve is smooth blend, Fade is fade to black, Cut is instant, Wipe is directional. Default: Cross Dissolve"
+                            },
+                            "add_transitions": {
+                                "type": "boolean",
+                                "description": "Whether to add transitions between videos. Default: true"
+                            },
+                            "project_name": {
+                                "type": "string",
+                                "description": "Optional name for the chained video project"
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_brand_video",
+                    "description": "Create a complete brand video from concept to finished product using automated workflow. This orchestrates Runway ML video generation → video extension → DaVinci Resolve chaining with professional transitions and branding. Use when user wants a complete, polished brand video without manual steps. Session 67: End-to-end video creation!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "brand_name": {
+                                "type": "string",
+                                "description": "The brand or company name"
+                            },
+                            "concept": {
+                                "type": "string",
+                                "description": "The video concept or message (e.g., 'luxury coffee experience', 'eco-friendly technology', 'family fun')"
+                            },
+                            "style": {
+                                "type": "string",
+                                "enum": ["cinematic", "modern", "playful", "elegant", "energetic"],
+                                "description": "Visual style for the video. Cinematic = dramatic lighting, Modern = clean & minimal, Playful = colorful & fun, Elegant = sophisticated, Energetic = fast-paced"
+                            },
+                            "include_branding": {
+                                "type": "boolean",
+                                "description": "Whether to add brand name text overlay at start/end. Default: true"
+                            },
+                            "video_count": {
+                                "type": "number",
+                                "description": "Number of video clips to generate and chain together (2-5). Default: 3"
+                            }
+                        },
+                        "required": ["brand_name", "concept"]
+                    }
+                }
             }
         ]
 
@@ -4719,6 +4783,8 @@ def execute_tool(request):
             result = _execute_scrape_website(parameters)
         elif tool_name == 'send_email':
             result = _execute_send_email(request.user, parameters)
+        elif tool_name == 'create_brand_video':
+            result = _execute_create_brand_video(request.user, parameters)
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -5161,6 +5227,160 @@ def _execute_generate_video(user, parameters):
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_generate_video: {str(e)}")
+        raise
+
+
+def _execute_create_brand_video(user, parameters):
+    """
+    Execute automated brand video workflow
+    Session 67: End-to-end video creation orchestration
+
+    This creates a complete brand video by:
+    1. Generating video prompts based on concept and style
+    2. Creating multiple video clips with Runway ML
+    3. Returning task IDs for user to monitor
+    4. User can chain them with DaVinci once complete
+
+    Parameters:
+        brand_name (str): Brand or company name
+        concept (str): Video concept/message
+        style (str): Visual style (cinematic, modern, playful, elegant, energetic)
+        include_branding (bool): Add brand text overlays (default: true)
+        video_count (int): Number of clips to generate (default: 3)
+
+    Returns:
+        dict: {
+            'success': True,
+            'task_ids': ['id1', 'id2', 'id3'],
+            'prompts': ['prompt1', 'prompt2', 'prompt3'],
+            'estimated_time': 180,
+            'message': 'Brand video workflow started'
+        }
+    """
+    try:
+        brand_name = parameters.get('brand_name', '').strip()
+        concept = parameters.get('concept', '').strip()
+        style = parameters.get('style', 'modern')
+        include_branding = parameters.get('include_branding', True)
+        video_count = parameters.get('video_count', 3)
+
+        if not brand_name:
+            raise ValueError("Brand name is required")
+        if not concept:
+            raise ValueError("Concept is required")
+
+        # Validate video_count (2-5)
+        if video_count < 2 or video_count > 5:
+            logger.warning(f"⚠️ Invalid video_count {video_count}, defaulting to 3")
+            video_count = 3
+
+        logger.info(f"🎬 Creating brand video for {brand_name}: {concept} ({style} style, {video_count} clips)")
+
+        # Style-specific prompt modifiers
+        style_modifiers = {
+            'cinematic': 'dramatic lighting, cinematic composition, film grain, depth of field',
+            'modern': 'clean lines, minimalist, bright natural lighting, contemporary design',
+            'playful': 'vibrant colors, dynamic movement, fun energy, cheerful atmosphere',
+            'elegant': 'sophisticated, refined aesthetic, smooth movements, luxury feel',
+            'energetic': 'fast-paced, dynamic transitions, bold colors, high energy'
+        }
+
+        style_prompt = style_modifiers.get(style, style_modifiers['modern'])
+
+        # Generate prompts for each video clip
+        prompts = []
+        if video_count == 2:
+            prompts = [
+                f"{concept}, {style_prompt}, opening shot",
+                f"{brand_name} showcase, {concept}, {style_prompt}, closing scene"
+            ]
+        elif video_count == 3:
+            prompts = [
+                f"{concept}, {style_prompt}, establishing shot",
+                f"{brand_name} product or service, {concept}, {style_prompt}, detail view",
+                f"{concept}, {style_prompt}, powerful closing scene with {brand_name}"
+            ]
+        elif video_count == 4:
+            prompts = [
+                f"{concept}, {style_prompt}, opening sequence",
+                f"{brand_name} highlights, {concept}, {style_prompt}, feature showcase",
+                f"{concept} in action, {style_prompt}, dynamic demonstration",
+                f"{brand_name} finale, {concept}, {style_prompt}, memorable closing"
+            ]
+        else:  # 5 clips
+            prompts = [
+                f"{concept}, {style_prompt}, captivating opening",
+                f"{brand_name} introduction, {concept}, {style_prompt}",
+                f"{concept}, {style_prompt}, mid-point highlight",
+                f"{brand_name} key features, {concept}, {style_prompt}",
+                f"{concept}, {style_prompt}, impactful conclusion with {brand_name}"
+            ]
+
+        # Generate all videos using Runway ML
+        from content.video_provider import runway_provider
+        from content.models import ContentGeneration
+
+        task_ids = []
+        content_ids = []
+        total_estimated_time = 0
+
+        for i, prompt in enumerate(prompts):
+            logger.info(f"🎬 Generating clip {i+1}/{len(prompts)}: {prompt[:60]}...")
+
+            result = runway_provider.text_to_video(
+                prompt=prompt,
+                duration=8,  # 8 seconds per clip for professional feel
+                quality='veo3.1_fast',
+                style='realistic',
+                enhance_prompt=True,
+                enhancement_level='advanced',
+                ratio='1920:1080'
+            )
+
+            if not result.success:
+                logger.warning(f"⚠️ Clip {i+1} generation failed: {result.error_message}")
+                continue
+
+            # Store in database
+            content = ContentGeneration.objects.create(
+                user=user,
+                prompt=prompt,
+                system_prompt=f"Brand video for {brand_name} - Clip {i+1}/{len(prompts)}",
+                generation_config={
+                    'task_id': result.task_id,
+                    'duration': 8,
+                    'quality': 'veo3.1_fast',
+                    'style': style,
+                    'type': 'brand_video_clip',
+                    'brand_name': brand_name,
+                    'clip_number': i + 1,
+                    'total_clips': len(prompts),
+                    'estimated_time': result.estimated_time,
+                    'status': 'processing',
+                    'include_branding': include_branding
+                }
+            )
+
+            task_ids.append(result.task_id)
+            content_ids.append(str(content.id))
+            total_estimated_time += result.estimated_time
+
+        logger.info(f"✅ Started {len(task_ids)} video generations for {brand_name}")
+
+        return {
+            'success': True,
+            'brand_name': brand_name,
+            'task_ids': task_ids,
+            'content_ids': content_ids,
+            'prompts': prompts,
+            'video_count': len(task_ids),
+            'estimated_time': total_estimated_time,
+            'include_branding': include_branding,
+            'message': f'Started generating {len(task_ids)} video clips for {brand_name}. Videos will appear in your gallery when ready. Once complete, you can chain them together with transitions and branding!'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_create_brand_video: {str(e)}")
         raise
 
 

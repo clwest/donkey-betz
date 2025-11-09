@@ -4036,6 +4036,103 @@
                                     <small class="text-muted">Leave blank for auto-generated name</small>
                                 </div>
 
+                                <!-- Session 67: Advanced Features -->
+                                <hr style="border-color: #333;">
+                                <h6 class="mb-3">🎨 Advanced Features</h6>
+
+                                <!-- Text Overlays -->
+                                <div class="mb-4">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="enableTextOverlays">
+                                        <label class="form-check-label" for="enableTextOverlays">
+                                            <strong>📝 Add Text Overlay</strong>
+                                        </label>
+                                    </div>
+                                    <div id="textOverlayContainer" class="ms-4" style="display: none;">
+                                        <label for="overlayText" class="form-label">Text:</label>
+                                        <input type="text" id="overlayText" class="form-control mb-2" placeholder="Your Brand Name">
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="overlayPosition" class="form-label">Position:</label>
+                                                <select id="overlayPosition" class="form-select mb-2">
+                                                    <option value="center">Center</option>
+                                                    <option value="lower_third">Lower Third</option>
+                                                    <option value="upper_third">Upper Third</option>
+                                                    <option value="top_left">Top Left</option>
+                                                    <option value="top_right">Top Right</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="overlayFontSize" class="form-label">Font Size:</label>
+                                                <input type="number" id="overlayFontSize" class="form-control mb-2" value="72" min="20" max="200">
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="overlayStartTime" class="form-label">Start (seconds):</label>
+                                                <input type="number" id="overlayStartTime" class="form-control" value="0" min="0" step="0.5">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="overlayDuration" class="form-label">Duration (seconds):</label>
+                                                <input type="number" id="overlayDuration" class="form-control" value="3" min="0.5" step="0.5">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Background Music -->
+                                <div class="mb-4">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="enableBackgroundMusic">
+                                        <label class="form-check-label" for="enableBackgroundMusic">
+                                            <strong>🎵 Add Background Music</strong>
+                                        </label>
+                                    </div>
+                                    <div id="backgroundMusicContainer" class="ms-4" style="display: none;">
+                                        <label for="audioFile" class="form-label">Audio File:</label>
+                                        <input type="file" id="audioFile" class="form-control mb-2" accept="audio/*">
+                                        <small class="text-muted mb-2 d-block">Supported: MP3, WAV, AAC</small>
+
+                                        <label for="audioVolume" class="form-label">Volume:</label>
+                                        <input type="range" id="audioVolume" class="form-range" min="0" max="100" value="30">
+                                        <small class="text-muted">Volume: <span id="audioVolumeValue">30</span>%</small>
+                                    </div>
+                                </div>
+
+                                <!-- Color Grading -->
+                                <div class="mb-4">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="enableColorGrading">
+                                        <label class="form-check-label" for="enableColorGrading">
+                                            <strong>🎨 Apply Color Grading</strong>
+                                        </label>
+                                    </div>
+                                    <div id="colorGradingContainer" class="ms-4" style="display: none;">
+                                        <label for="colorGradePreset" class="form-label">Preset:</label>
+                                        <select id="colorGradePreset" class="form-select">
+                                            <option value="cinematic">🎬 Cinematic (teal & orange)</option>
+                                            <option value="vibrant">🌈 Vibrant (saturated colors)</option>
+                                            <option value="warm">☀️ Warm (golden hour)</option>
+                                            <option value="cool">❄️ Cool (blue tones)</option>
+                                            <option value="bw">⚫ Black & White</option>
+                                            <option value="vintage">📺 Vintage (faded look)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Render Quality -->
+                                <div class="mb-4">
+                                    <label for="renderQuality" class="form-label"><strong>📹 Render Quality:</strong></label>
+                                    <select id="renderQuality" class="form-select">
+                                        <option value="1920x1080" selected>1080p Full HD (recommended)</option>
+                                        <option value="1280x720">720p HD (faster)</option>
+                                        <option value="3840x2160">4K Ultra HD (requires DaVinci Studio)</option>
+                                    </select>
+                                    <small class="text-muted">Higher quality = longer render time</small>
+                                </div>
+
                                 <!-- Progress Indicator (hidden by default) -->
                                 <div id="chainProgress" class="alert alert-warning" style="display: none;">
                                     <div class="d-flex align-items-center">
@@ -10514,6 +10611,31 @@
             selectedVideos.forEach(video => totalDuration += video.duration);
             console.log('🎬 Total chained duration:', totalDuration, 'seconds');
 
+            // Session 67: Apply AI-suggested settings if available
+            if (window.aiSuggestedChainSettings) {
+                const settings = window.aiSuggestedChainSettings;
+
+                // Set transition type
+                if (settings.transitionType) {
+                    document.getElementById('transitionType').value = settings.transitionType;
+                }
+
+                // Set add transitions checkbox
+                if (settings.addTransitions !== undefined) {
+                    document.getElementById('addTransitions').checked = settings.addTransitions;
+                }
+
+                // Set project name
+                if (settings.projectName) {
+                    document.getElementById('chainProjectName').value = settings.projectName;
+                }
+
+                console.log('✨ Applied AI-suggested chain settings:', settings);
+
+                // Clear the settings after applying (one-time use)
+                window.aiSuggestedChainSettings = null;
+            }
+
             // Show modal using Bootstrap 5
             const modal = new bootstrap.Modal(document.getElementById('chain-videos-modal'));
             modal.show();
@@ -10522,11 +10644,17 @@
         async function executeChainVideos() {
             console.log('🎬 Executing video chain...');
 
-            // Get options
+            // Get basic options
             const addTransitions = document.getElementById('addTransitions').checked;
             const transitionType = addTransitions ? document.getElementById('transitionType').value : null;
             const transitionDuration = addTransitions ? parseFloat(document.getElementById('transitionDuration').value) : null;
             const projectName = document.getElementById('chainProjectName').value.trim() || null;
+
+            // Session 67: Get advanced options
+            const enableTextOverlay = document.getElementById('enableTextOverlays').checked;
+            const enableMusic = document.getElementById('enableBackgroundMusic').checked;
+            const enableGrading = document.getElementById('enableColorGrading').checked;
+            const renderQuality = document.getElementById('renderQuality').value;
 
             // Build video clips array (preserving order)
             const videoClips = [];
@@ -10538,7 +10666,11 @@
                 count: videoClips.length,
                 addTransitions,
                 transitionType,
-                projectName
+                projectName,
+                enableTextOverlay,
+                enableMusic,
+                enableGrading,
+                renderQuality
             });
 
             // Show progress
@@ -10553,6 +10685,36 @@
                 formData.append('video_clips', JSON.stringify(videoClips));
                 if (projectName) formData.append('project_name', projectName);
                 formData.append('add_transitions', addTransitions ? 'true' : 'false');
+
+                // Session 67: Add advanced parameters
+                // Text overlay
+                if (enableTextOverlay) {
+                    const textOverlays = [{
+                        text: document.getElementById('overlayText').value,
+                        position: document.getElementById('overlayPosition').value,
+                        font_size: parseInt(document.getElementById('overlayFontSize').value),
+                        start_second: parseFloat(document.getElementById('overlayStartTime').value),
+                        duration: parseFloat(document.getElementById('overlayDuration').value)
+                    }];
+                    formData.append('text_overlays', JSON.stringify(textOverlays));
+                }
+
+                // Background music
+                if (enableMusic) {
+                    const audioFile = document.getElementById('audioFile').files[0];
+                    if (audioFile) {
+                        formData.append('audio_file', audioFile);
+                        formData.append('audio_volume', parseFloat(document.getElementById('audioVolume').value) / 100);
+                    }
+                }
+
+                // Color grading
+                if (enableGrading) {
+                    formData.append('color_grade', document.getElementById('colorGradePreset').value);
+                }
+
+                // Render quality
+                formData.append('render_quality', renderQuality);
 
                 const response = await authenticatedFetch('/api/v1/davinci/chain-videos/', {
                     method: 'POST',
@@ -10595,6 +10757,45 @@
         }
 
         // ===== END VIDEO CHAINING FUNCTIONS =====
+
+        // Session 67: Advanced Features - Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Text overlay toggle
+            const textOverlayCheckbox = document.getElementById('enableTextOverlays');
+            const textOverlayContainer = document.getElementById('textOverlayContainer');
+            if (textOverlayCheckbox) {
+                textOverlayCheckbox.addEventListener('change', (e) => {
+                    textOverlayContainer.style.display = e.target.checked ? 'block' : 'none';
+                });
+            }
+
+            // Background music toggle
+            const musicCheckbox = document.getElementById('enableBackgroundMusic');
+            const musicContainer = document.getElementById('backgroundMusicContainer');
+            if (musicCheckbox) {
+                musicCheckbox.addEventListener('change', (e) => {
+                    musicContainer.style.display = e.target.checked ? 'block' : 'none';
+                });
+            }
+
+            // Color grading toggle
+            const gradingCheckbox = document.getElementById('enableColorGrading');
+            const gradingContainer = document.getElementById('colorGradingContainer');
+            if (gradingCheckbox) {
+                gradingCheckbox.addEventListener('change', (e) => {
+                    gradingContainer.style.display = e.target.checked ? 'block' : 'none';
+                });
+            }
+
+            // Audio volume slider
+            const volumeSlider = document.getElementById('audioVolume');
+            const volumeDisplay = document.getElementById('audioVolumeValue');
+            if (volumeSlider && volumeDisplay) {
+                volumeSlider.addEventListener('input', (e) => {
+                    volumeDisplay.textContent = e.target.value;
+                });
+            }
+        });
 
         // Global variable to store current video being played
         let currentPlayingVideo = null;
@@ -12835,6 +13036,46 @@
                     // Session 65: Debug logging to see what GPT-5-mini is passing
                     console.log('🔍 Tool call details:', { name, params, fullToolCall: toolCall });
 
+                    // Session 67: Intercept chain_videos to show UI instead of backend execution
+                    if (name === 'chain_videos') {
+                        const transitionType = params.transition_type || 'Cross Dissolve';
+                        const addTransitions = params.add_transitions !== false;  // Default true
+                        const videoCount = params.video_count || 2;
+                        const projectName = params.project_name || '';
+
+                        // Store AI-suggested settings globally
+                        window.aiSuggestedChainSettings = {
+                            transitionType: transitionType,
+                            addTransitions: addTransitions,
+                            projectName: projectName
+                        };
+
+                        // Switch to Video Gallery tab
+                        document.getElementById('videos-tab').click();
+
+                        // Show message to user
+                        this.addMessage('assistant', `🎬 **Let's chain your videos together!**\n\n` +
+                            `I've opened the Video Gallery. Please:\n\n` +
+                            `1. ✅ Select ${videoCount} or more videos by clicking the checkboxes\n` +
+                            `2. 🎬 Click "Chain Selected Videos" button\n` +
+                            `3. ⚙️ I've pre-configured the settings:\n` +
+                            `   - Transition: ${transitionType}\n` +
+                            `   - Add transitions: ${addTransitions ? 'Yes' : 'No'}\n` +
+                            (projectName ? `   - Project name: "${projectName}"\n\n` : '\n') +
+                            `Once you've selected your videos, just click the chain button and I'll render them together! 🎉`);
+
+                        results.push({
+                            tool: name,
+                            success: true,
+                            result: {
+                                message: 'Video chaining UI opened',
+                                settings: { transitionType, addTransitions, videoCount, projectName }
+                            },
+                            params: params
+                        });
+                        continue;  // Skip backend execution
+                    }
+
                     // Show progress message
                     const progressMsg = this.getProgressMessage(name, params);
                     const tempMsgId = this.addMessage('assistant', progressMsg, true);  // isTemporary=true, returns messageId
@@ -12899,6 +13140,8 @@
                         return `🕷️ Scraping website: ${params.url}...`;
                     } else if (toolName === 'send_email' && params.to_email) {
                         return `📧 Sending email to: ${params.to_email}...`;
+                    } else if (toolName === 'chain_videos') {
+                        return `🎬 Setting up video chaining...`;
                     }
                 } catch (e) {
                     console.error('Error in getProgressMessage:', e);
@@ -12973,6 +13216,25 @@
                             message += `🖌️ Fixed: ${result.result.mask_description}\n\n`;
                             message += `![Refined Image](${result.result.image_url})\n\n`;
                             message += `📝 Refinement: "${result.result.prompt}"\n\n`;
+                        } else if (result.tool === 'create_brand_video') {
+                            const minutes = Math.ceil(result.result.estimated_time / 60);
+                            message += `🎬 **Brand Video Creation Started!**\n\n`;
+                            message += `✨ Creating professional video for **${result.result.brand_name}**\n\n`;
+                            message += `📹 Generated ${result.result.video_count} video clips:\n\n`;
+
+                            result.result.prompts.forEach((prompt, i) => {
+                                message += `${i + 1}. ${prompt}\n`;
+                            });
+
+                            message += `\n⏱️ Total estimated time: ~${minutes} minutes\n\n`;
+                            message += `💡 **Videos will appear in the Video Gallery tab once complete!**\n\n`;
+                            message += `🔗 Once ready, you can:\n`;
+                            message += `- View them individually in the gallery\n`;
+                            message += `- Chain them together with transitions\n`;
+                            if (result.result.include_branding) {
+                                message += `- Add your brand name as text overlays\n`;
+                            }
+                            message += `\n🔄 Refresh the Video Gallery in ${minutes} minutes to see your brand video clips!\n\n`;
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;

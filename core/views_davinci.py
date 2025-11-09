@@ -16,6 +16,7 @@ IMPORTANT: Requires DaVinci Resolve Studio ($200)
 import json
 import logging
 import requests
+import time
 from pathlib import Path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -393,10 +394,65 @@ def chain_videos_simple(request):
                     duration=1.0
                 )
 
+        # Session 67: Add advanced features
+        # Text overlays
+        text_overlays_json = request.POST.get('text_overlays', '[]')
+        try:
+            text_overlays = json.loads(text_overlays_json)
+            for text_overlay in text_overlays:
+                logger.info(f"📝 Adding text overlay: {text_overlay.get('text')}")
+                davinci.add_text_overlay(
+                    text=text_overlay.get('text', ''),
+                    position=text_overlay.get('position', 'center'),
+                    start_second=text_overlay.get('start_second', 0),
+                    duration_seconds=text_overlay.get('duration', 3),
+                    font=text_overlay.get('font', 'Arial'),
+                    font_size=text_overlay.get('font_size', 72),
+                    color=text_overlay.get('color', '#FFFFFF')
+                )
+        except json.JSONDecodeError:
+            logger.warning("⚠️ Invalid text_overlays JSON, skipping")
+
+        # Background music
+        if 'audio_file' in request.FILES:
+            audio_file = request.FILES['audio_file']
+            audio_volume = float(request.POST.get('audio_volume', 0.3))
+
+            # Save audio to temp file
+            audio_path = temp_dir / f"audio_{int(time.time())}.{audio_file.name.split('.')[-1]}"
+            with open(audio_path, 'wb') as f:
+                for chunk in audio_file.chunks():
+                    f.write(chunk)
+
+            logger.info(f"🎵 Adding background music: {audio_path}")
+            davinci.add_audio(
+                audio_path=str(audio_path),
+                volume=audio_volume,
+                start_second=0
+            )
+
+        # Color grading
+        color_grade = request.POST.get('color_grade', '')
+        if color_grade:
+            logger.info(f"🎨 Applying color grading: {color_grade}")
+            # Note: DaVinci provider would need apply_color_grade() method
+            # For now, log it - implementation depends on DaVinci API capabilities
+            logger.warning(f"⚠️ Color grading '{color_grade}' requested but not yet implemented in provider")
+
         # Render
         logger.info(f"📹 Rendering chained video")
         output_path = str(temp_dir / f"{project_name.replace(' ', '_')}_chained.mp4")
-        render_result = davinci.render_project(output_path=output_path)
+
+        # Session 67: Get render quality from request
+        render_quality = request.POST.get('render_quality', '1920x1080')
+        logger.info(f"📹 Render quality: {render_quality}")
+
+        render_result = davinci.render_project(
+            output_path=output_path,
+            format='mp4',
+            quality='high',
+            resolution=render_quality
+        )
 
         if render_result.success:
             logger.info(f"✅ Video rendered successfully: {output_path}")
