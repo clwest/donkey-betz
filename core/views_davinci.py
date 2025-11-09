@@ -1,6 +1,7 @@
 """
 DaVinci Resolve Video Editing API Endpoints
 Session 66 Part 2: Professional video editing workflows
+Session 67: Frontend UI integration + database saving
 
 These endpoints enable:
 - Creating multi-clip video projects
@@ -14,11 +15,15 @@ IMPORTANT: Requires DaVinci Resolve Studio ($200)
 
 import json
 import logging
+import requests
+from pathlib import Path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.files.base import ContentFile
 
 from content.davinci_provider import get_davinci_provider
+from content.models import VideoHistory
 
 logger = logging.getLogger(__name__)
 
@@ -337,16 +342,44 @@ def chain_videos_simple(request):
                 'error_message': 'Failed to create project'
             }, status=500)
 
-        # Add clips
-        current_position = 0
-        for i, clip_url in enumerate(video_clips):
-            logger.info(f"📹 Adding clip {i+1}/{len(video_clips)}")
+        # Download videos to temp directory
+        temp_dir = Path('/tmp/davinci_chain')
+        temp_dir.mkdir(parents=True, exist_ok=True)
 
-            # TODO: Download video from URL if it's a URL
-            # For now, assume local paths
+        local_video_paths = []
+        total_duration = 0
+
+        for i, clip_url in enumerate(video_clips):
+            logger.info(f"📥 Downloading clip {i+1}/{len(video_clips)}: {clip_url}")
+
+            try:
+                # Download video
+                response = requests.get(clip_url, timeout=30)
+                response.raise_for_status()
+
+                # Save to temp file
+                temp_path = temp_dir / f"clip_{i+1}.mp4"
+                temp_path.write_bytes(response.content)
+                local_video_paths.append(str(temp_path))
+
+                logger.info(f"✅ Downloaded {len(response.content) / 1024:.1f} KB to {temp_path}")
+
+                # Assume 8s per clip for duration calculation (could use ffprobe for accuracy)
+                total_duration += 8
+            except Exception as e:
+                logger.error(f"❌ Failed to download clip {i+1}: {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error_message': f'Failed to download video {i+1}: {str(e)}'
+                }, status=500)
+
+        # Add clips to timeline
+        current_position = 0
+        for i, video_path in enumerate(local_video_paths):
+            logger.info(f"📹 Adding clip {i+1}/{len(local_video_paths)} to timeline")
 
             davinci.add_clip_to_timeline(
-                video_path=clip_url,
+                video_path=video_path,
                 position_seconds=current_position
             )
 
@@ -362,15 +395,56 @@ def chain_videos_simple(request):
 
         # Render
         logger.info(f"📹 Rendering chained video")
-        render_result = davinci.render_project()
+        output_path = str(temp_dir / f"{project_name.replace(' ', '_')}_chained.mp4")
+        render_result = davinci.render_project(output_path=output_path)
 
         if render_result.success:
-            return JsonResponse({
-                'success': True,
-                'video_path': render_result.video_path,
-                'duration': render_result.duration,
-                'message': f'Successfully chained {len(video_clips)} videos!'
-            })
+            logger.info(f"✅ Video rendered successfully: {output_path}")
+
+            # Save to VideoHistory database (Session 67)
+            try:
+                # Read the rendered video file
+                with open(output_path, 'rb') as video_file:
+                    video_content = video_file.read()
+
+                # Create VideoHistory record
+                video_history = VideoHistory.objects.create(
+                    prompt=f"Chained video: {project_name} ({len(video_clips)} clips)",
+                    model_used="DaVinci Resolve Studio",
+                    video_type="chained_video",  # New type for chained videos
+                    duration=total_duration,
+                    status='completed'
+                )
+
+                # Save video file
+                video_history.file_path.save(
+                    f"chained_{video_history.id}.mp4",
+                    ContentFile(video_content),
+                    save=True
+                )
+
+                # Get the full URL for the video
+                video_url = request.build_absolute_uri(video_history.get_full_url())
+
+                logger.info(f"✅ Saved chained video to database: {video_history.id}")
+
+                return JsonResponse({
+                    'success': True,
+                    'video_url': video_url,
+                    'video_path': output_path,
+                    'duration': total_duration,
+                    'video_id': str(video_history.id),
+                    'message': f'Successfully chained {len(video_clips)} videos!'
+                })
+            except Exception as db_error:
+                logger.error(f"❌ Failed to save to database: {db_error}")
+                # Still return success but note database save failed
+                return JsonResponse({
+                    'success': True,
+                    'video_path': output_path,
+                    'duration': total_duration,
+                    'message': f'Successfully chained {len(video_clips)} videos! (Database save failed: {str(db_error)})'
+                })
         else:
             return JsonResponse({
                 'success': False,

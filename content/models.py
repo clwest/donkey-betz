@@ -1825,6 +1825,7 @@ class VideoHistory(UnifiedBaseModel):
             ('text_to_video', 'Text to Video'),
             ('image_to_video', 'Image to Video'),
             ('extend_video', 'Video Extension'),  # Session 66 Part 2: Runway Extend
+            ('chained_video', 'Chained Video'),  # Session 67: DaVinci Resolve chaining
         ],
         help_text="Type of video generation"
     )
