@@ -3225,6 +3225,26 @@
                             </div>
                         </div>
 
+                        <!-- Chain Videos Controls (Session 67) -->
+                        <div id="chainVideosControls" class="row mb-3" style="display: none;">
+                            <div class="col-12">
+                                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong id="selectedVideoCount">0 videos selected</strong>
+                                        <small class="ms-2 text-muted">Select 2+ videos to chain them together</small>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="clearVideoSelection()">
+                                            Clear Selection
+                                        </button>
+                                        <button class="btn btn-sm btn-primary" onclick="openChainVideosModal()" id="chainVideosBtn" disabled>
+                                            🎬 Chain Selected Videos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Video Grid -->
                         <div id="videoGalleryGrid" class="row g-3">
                             <div class="col-12 text-center text-muted py-5">
@@ -3960,6 +3980,75 @@
                             </div>
                             <div class="modal-footer" style="border-top: 1px solid #333;">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chain Videos Modal (Session 67) -->
+                <div class="modal fade" id="chain-videos-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #667eea;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title">🎬 Chain Videos Together</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <strong>Selected Videos:</strong> <span id="modalSelectedCount">0</span> videos will be chained together.
+                                </div>
+
+                                <!-- Video Preview List -->
+                                <div class="mb-4">
+                                    <h6>Video Order:</h6>
+                                    <div id="chainVideosList" class="list-group">
+                                        <!-- Videos will be listed here -->
+                                    </div>
+                                    <small class="text-muted">Videos will be chained in the order shown above</small>
+                                </div>
+
+                                <!-- Transition Settings -->
+                                <div class="mb-4">
+                                    <h6>Transition Settings:</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="addTransitions" checked>
+                                        <label class="form-check-label" for="addTransitions">
+                                            Add transitions between videos
+                                        </label>
+                                    </div>
+                                    <div id="transitionTypeContainer" class="ms-4">
+                                        <label for="transitionType" class="form-label">Transition Type:</label>
+                                        <select id="transitionType" class="form-select">
+                                            <option value="Cross Dissolve" selected>Cross Dissolve (smooth blend)</option>
+                                            <option value="Fade">Fade (fade to black)</option>
+                                            <option value="Cut">Cut (instant switch)</option>
+                                            <option value="Wipe">Wipe (directional transition)</option>
+                                        </select>
+                                        <label for="transitionDuration" class="form-label mt-2">Duration (seconds):</label>
+                                        <input type="number" id="transitionDuration" class="form-control" value="0.5" min="0.1" max="2.0" step="0.1">
+                                    </div>
+                                </div>
+
+                                <!-- Project Name -->
+                                <div class="mb-4">
+                                    <label for="chainProjectName" class="form-label">Project Name (optional):</label>
+                                    <input type="text" id="chainProjectName" class="form-control" placeholder="My Chained Video">
+                                    <small class="text-muted">Leave blank for auto-generated name</small>
+                                </div>
+
+                                <!-- Progress Indicator (hidden by default) -->
+                                <div id="chainProgress" class="alert alert-warning" style="display: none;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                        <span id="chainProgressText">Chaining videos...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="executeChainVideos()">
+                                    🎬 Chain Videos
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -10106,6 +10195,14 @@
 
             col.innerHTML = `
                 <div class="card bg-dark border-cyan h-100">
+                    <!-- Selection Checkbox (Session 67) -->
+                    <div class="position-absolute top-0 start-0 m-2" style="z-index: 10;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="videoCheckbox_${video.id}"
+                                   onchange="toggleVideoSelection('${video.id}', '${video.video_url}', '${video.prompt.replace(/'/g, "\\'")}', ${video.duration})"
+                                   style="width: 20px; height: 20px; cursor: pointer;">
+                        </div>
+                    </div>
                     <div class="position-relative" style="cursor: pointer;" onclick="playVideoInModal('${video.id}')">
                         ${hasImage ?
                             `<img src="${thumbnailSrc}" class="card-img-top" style="height: 150px; object-fit: cover;">` :
@@ -10319,6 +10416,185 @@
             // Start polling after 5 seconds (give API time to start processing)
             setTimeout(checkStatus, 5000);
         }
+
+        // ===== VIDEO CHAINING FUNCTIONS (Session 67) =====
+
+        // Global state for selected videos
+        const selectedVideos = new Map(); // Map<videoId, {url, prompt, duration}>
+
+        function toggleVideoSelection(videoId, videoUrl, prompt, duration) {
+            const checkbox = document.getElementById(`videoCheckbox_${videoId}`);
+
+            if (checkbox.checked) {
+                selectedVideos.set(videoId, {
+                    url: videoUrl,
+                    prompt: prompt,
+                    duration: duration
+                });
+                console.log('✅ Video selected:', videoId);
+            } else {
+                selectedVideos.delete(videoId);
+                console.log('❌ Video deselected:', videoId);
+            }
+
+            updateChainControls();
+        }
+
+        function updateChainControls() {
+            const count = selectedVideos.size;
+            const controls = document.getElementById('chainVideosControls');
+            const countDisplay = document.getElementById('selectedVideoCount');
+            const chainBtn = document.getElementById('chainVideosBtn');
+
+            // Update count display
+            countDisplay.textContent = `${count} video${count !== 1 ? 's' : ''} selected`;
+
+            // Show/hide controls based on selection
+            if (count > 0) {
+                controls.style.display = 'block';
+            } else {
+                controls.style.display = 'none';
+            }
+
+            // Enable/disable chain button (need at least 2 videos)
+            if (count >= 2) {
+                chainBtn.disabled = false;
+            } else {
+                chainBtn.disabled = true;
+            }
+
+            console.log('📊 Updated chain controls:', { count, enabled: count >= 2 });
+        }
+
+        function clearVideoSelection() {
+            // Uncheck all checkboxes
+            selectedVideos.forEach((_, videoId) => {
+                const checkbox = document.getElementById(`videoCheckbox_${videoId}`);
+                if (checkbox) checkbox.checked = false;
+            });
+
+            // Clear selection
+            selectedVideos.clear();
+            updateChainControls();
+            console.log('🧹 Selection cleared');
+        }
+
+        function openChainVideosModal() {
+            if (selectedVideos.size < 2) {
+                alert('Please select at least 2 videos to chain together.');
+                return;
+            }
+
+            // Update modal count
+            document.getElementById('modalSelectedCount').textContent = selectedVideos.size;
+
+            // Build video list in modal
+            const videosList = document.getElementById('chainVideosList');
+            videosList.innerHTML = '';
+
+            let order = 1;
+            selectedVideos.forEach((video, videoId) => {
+                const listItem = document.createElement('div');
+                listItem.className = 'list-group-item bg-dark border-cyan mb-2';
+                listItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>#${order}</strong>
+                            <span class="ms-2">${video.prompt.substring(0, 50)}${video.prompt.length > 50 ? '...' : ''}</span>
+                        </div>
+                        <span class="badge bg-primary">${video.duration}s</span>
+                    </div>
+                `;
+                videosList.appendChild(listItem);
+                order++;
+            });
+
+            // Calculate total duration
+            let totalDuration = 0;
+            selectedVideos.forEach(video => totalDuration += video.duration);
+            console.log('🎬 Total chained duration:', totalDuration, 'seconds');
+
+            // Show modal using Bootstrap 5
+            const modal = new bootstrap.Modal(document.getElementById('chain-videos-modal'));
+            modal.show();
+        }
+
+        async function executeChainVideos() {
+            console.log('🎬 Executing video chain...');
+
+            // Get options
+            const addTransitions = document.getElementById('addTransitions').checked;
+            const transitionType = addTransitions ? document.getElementById('transitionType').value : null;
+            const transitionDuration = addTransitions ? parseFloat(document.getElementById('transitionDuration').value) : null;
+            const projectName = document.getElementById('chainProjectName').value.trim() || null;
+
+            // Build video clips array (preserving order)
+            const videoClips = [];
+            selectedVideos.forEach((video, videoId) => {
+                videoClips.push(video.url);
+            });
+
+            console.log('📹 Chaining videos:', {
+                count: videoClips.length,
+                addTransitions,
+                transitionType,
+                projectName
+            });
+
+            // Show progress
+            const progressDiv = document.getElementById('chainProgress');
+            const progressText = document.getElementById('chainProgressText');
+            progressDiv.style.display = 'block';
+            progressText.textContent = 'Chaining videos...';
+
+            try {
+                // Call DaVinci chain-videos API
+                const formData = new FormData();
+                formData.append('video_clips', JSON.stringify(videoClips));
+                if (projectName) formData.append('project_name', projectName);
+                formData.append('add_transitions', addTransitions ? 'true' : 'false');
+
+                const response = await authenticatedFetch('/api/v1/davinci/chain-videos/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Videos chained successfully!');
+                    progressText.textContent = '✅ Videos chained successfully!';
+
+                    // Success alert
+                    alert(`🎉 Videos chained successfully!\n\nFinal video: ${data.duration.toFixed(1)} seconds\n\nThe chained video has been saved to your gallery!`);
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('chain-videos-modal'));
+                    modal.hide();
+
+                    // Clear selection
+                    clearVideoSelection();
+
+                    // Refresh gallery to show new video
+                    loadVideoGallery();
+                } else {
+                    console.error('❌ Chain failed:', data.error_message);
+                    progressText.textContent = '❌ Failed: ' + data.error_message;
+                    alert('Failed to chain videos: ' + data.error_message);
+                }
+            } catch (error) {
+                console.error('❌ Error chaining videos:', error);
+                progressText.textContent = '❌ Error: ' + error.message;
+                alert('Error chaining videos. Please try again.');
+            } finally {
+                // Hide progress after 3 seconds
+                setTimeout(() => {
+                    progressDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // ===== END VIDEO CHAINING FUNCTIONS =====
 
         // Global variable to store current video being played
         let currentPlayingVideo = null;
