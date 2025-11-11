@@ -15,6 +15,7 @@ IMPORTANT: Requires DaVinci Resolve Studio ($200)
 
 import json
 import logging
+import re
 import requests
 import shutil
 import time
@@ -353,24 +354,39 @@ def chain_videos_simple(request):
         total_duration = 0
 
         for i, clip_url in enumerate(video_clips):
-            logger.info(f"📥 Downloading clip {i+1}/{len(video_clips)}: {clip_url}")
+            logger.info(f"📥 Processing clip {i+1}/{len(video_clips)}: {clip_url}")
 
             try:
-                # Download video
-                response = requests.get(clip_url, timeout=30)
-                response.raise_for_status()
-
-                # Save to temp file
                 temp_path = temp_dir / f"clip_{i+1}.mp4"
-                temp_path.write_bytes(response.content)
-                local_video_paths.append(str(temp_path))
 
-                logger.info(f"✅ Downloaded {len(response.content) / 1024:.1f} KB to {temp_path}")
+                # Session 71: Handle both local files and external URLs
+                if clip_url.startswith('/media/'):
+                    # Local file - copy directly from filesystem
+                    local_file_path = Path(clip_url.lstrip('/'))  # Remove leading slash for relative path
+
+                    if not local_file_path.exists():
+                        # Try absolute path
+                        local_file_path = Path('/Users/donkeyking/development/unified-donkey-betz') / clip_url.lstrip('/')
+
+                    if local_file_path.exists():
+                        shutil.copy2(local_file_path, temp_path)
+                        file_size = local_file_path.stat().st_size / 1024
+                        logger.info(f"✅ Copied local file {file_size:.1f} KB to {temp_path}")
+                    else:
+                        raise FileNotFoundError(f"Local file not found: {clip_url}")
+                else:
+                    # External URL - download with requests
+                    response = requests.get(clip_url, timeout=30)
+                    response.raise_for_status()
+                    temp_path.write_bytes(response.content)
+                    logger.info(f"✅ Downloaded {len(response.content) / 1024:.1f} KB to {temp_path}")
+
+                local_video_paths.append(str(temp_path))
 
                 # Assume 8s per clip for duration calculation (could use ffprobe for accuracy)
                 total_duration += 8
             except Exception as e:
-                logger.error(f"❌ Failed to download clip {i+1}: {e}")
+                logger.error(f"❌ Failed to process clip {i+1}: {e}")
                 return JsonResponse({
                     'success': False,
                     'error_message': f'Failed to download video {i+1}: {str(e)}'
@@ -443,7 +459,10 @@ def chain_videos_simple(request):
 
         # Render
         logger.info(f"📹 Rendering chained video")
-        output_path = str(temp_dir / f"{project_name.replace(' ', '_')}_chained.mp4")
+        # Session 71: Sanitize project_name to remove invalid filename characters (colons, slashes, etc.)
+        safe_project_name = re.sub(r'[^\w\s-]', '', project_name)  # Remove special chars
+        safe_project_name = safe_project_name.replace(' ', '_')    # Replace spaces
+        output_path = str(temp_dir / f"{safe_project_name}_chained.mp4")
 
         # Session 67: Get render quality from request
         render_quality = request.POST.get('render_quality', '1920x1080')

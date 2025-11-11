@@ -3988,15 +3988,18 @@
                     </div>
                 </div>
 
+            </div>
+            <!-- END PROJECTS TAB -->
+
                 <!-- Chain Videos Modal (Session 67) -->
-                <div class="modal fade" id="chain-videos-modal" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #667eea;">
-                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                <div class="modal" id="chain-videos-modal" tabindex="-1" style="z-index: 9999; display: none;">
+                    <div class="modal-dialog modal-lg" style="z-index: 10000; width: 800px; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column;">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #667eea; max-height: 90vh; display: flex; flex-direction: column;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333; flex-shrink: 0;">
                                 <h5 class="modal-title">🎬 Chain Videos Together</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                <button type="button" class="btn-close btn-close-white" onclick="document.getElementById('chain-videos-modal').style.display='none'; document.body.style.overflow=''"></button>
                             </div>
-                            <div class="modal-body">
+                            <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 140px); flex: 1 1 auto;">
                                 <div class="alert alert-info">
                                     <strong>Selected Videos:</strong> <span id="modalSelectedCount">0</span> videos will be chained together.
                                 </div>
@@ -4144,8 +4147,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="modal-footer" style="border-top: 1px solid #333;">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <div class="modal-footer" style="border-top: 1px solid #333; flex-shrink: 0;">
+                                <button type="button" class="btn btn-secondary" onclick="document.getElementById('chain-videos-modal').style.display='none'; document.body.style.overflow=''">Cancel</button>
                                 <button type="button" class="btn btn-primary" onclick="executeChainVideos()">
                                     🎬 Chain Videos
                                 </button>
@@ -4153,9 +4156,6 @@
                         </div>
                     </div>
                 </div>
-
-            </div>
-            <!-- END PROJECTS TAB -->
 
             <!-- PORTFOLIO TAB (Session 61: Phase C.2.2) -->
             <div class="tab-pane fade" id="portfolio" role="tabpanel">
@@ -9965,11 +9965,16 @@
 
         // Poll video generation status
         async function pollVideoStatus(taskId, mode) {
+            // Session 69: Check if DOM elements exist (they won't for AI Assistant mode)
             const statusDiv = document.getElementById(`${mode}VideoStatus`);
             const progressBar = document.getElementById(`${mode}VideoProgress`);
             const statusText = document.getElementById(`${mode}VideoStatusText`);
             const resultDiv = document.getElementById(`${mode}VideoResult`);
             const playerDiv = document.getElementById(`${mode}VideoPlayer`);
+
+            const hasUI = statusDiv !== null;  // AI Assistant mode won't have UI elements
+
+            console.log(`🎬 Starting video polling for task ${taskId} (mode: ${mode}, hasUI: ${hasUI})`);
 
             const pollInterval = setInterval(async () => {
                 try {
@@ -9978,20 +9983,25 @@
 
                     if (data.status === 'completed') {
                         clearInterval(pollInterval);
-                        progressBar.style.width = '100%';
-                        statusDiv.style.display = 'none';
+                        console.log(`✅ Video completed! Task: ${taskId}`);
 
-                        // Show video player
-                        playerDiv.innerHTML = `
-                            <video controls class="w-100 rounded border border-cyan">
-                                <source src="${data.video_url}" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
-                        `;
-                        resultDiv.style.display = 'block';
+                        // Only update UI elements if they exist
+                        if (hasUI) {
+                            progressBar.style.width = '100%';
+                            statusDiv.style.display = 'none';
 
-                        // Store video URL for download
-                        resultDiv.dataset.videoUrl = data.video_url;
+                            // Show video player
+                            playerDiv.innerHTML = `
+                                <video controls class="w-100 rounded border border-cyan">
+                                    <source src="${data.video_url}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            `;
+                            resultDiv.style.display = 'block';
+
+                            // Store video URL for download
+                            resultDiv.dataset.videoUrl = data.video_url;
+                        }
 
                         // Refresh Video Gallery (Session 68: Auto-refresh fix)
                         console.log('🔄 Video completed - refreshing Video Gallery...');
@@ -10002,22 +10012,41 @@
 
                     } else if (data.status === 'failed') {
                         clearInterval(pollInterval);
-                        statusDiv.style.display = 'none';
-                        alert('Video generation failed: ' + (data.error || 'Unknown error'));
+                        console.error(`❌ Video failed! Task: ${taskId} - ${data.error}`);
+
+                        if (hasUI) {
+                            statusDiv.style.display = 'none';
+                            alert('Video generation failed: ' + (data.error || 'Unknown error'));
+                        }
 
                     } else {
-                        // Update progress
+                        // Update progress - only if UI exists
                         const progress = data.progress || 30;
-                        progressBar.style.width = progress + '%';
-                        statusText.textContent = data.message || 'Processing...';
+                        console.log(`⏳ Video processing: ${progress}% (task: ${taskId})`);
+
+                        if (hasUI && progressBar && statusText) {
+                            progressBar.style.width = progress + '%';
+                            statusText.textContent = data.message || 'Processing...';
+                        }
                     }
                 } catch (error) {
                     clearInterval(pollInterval);
-                    statusDiv.style.display = 'none';
-                    alert('Error checking video status: ' + error.message);
+                    console.error(`❌ Error polling video status: ${error.message}`);
+
+                    if (hasUI && statusDiv) {
+                        statusDiv.style.display = 'none';
+                    }
+
+                    // Don't alert for AI Assistant mode (no UI)
+                    if (hasUI) {
+                        alert('Error checking video status: ' + error.message);
+                    }
                 }
             }, 3000); // Poll every 3 seconds
         }
+
+        // Session 69: Make pollVideoStatus globally accessible for AI Assistant
+        window.pollVideoStatus = pollVideoStatus;
 
         // Select image from gallery for video (Session 44: Custom modal implementation)
         function selectImageFromGalleryForVideo() {
@@ -10837,8 +10866,142 @@
             }
 
             // Show modal using Bootstrap 5
-            const modal = new bootstrap.Modal(document.getElementById('chain-videos-modal'));
-            modal.show();
+            try {
+                console.log('🎬 Attempting to show modal...');
+                const modalElement = document.getElementById('chain-videos-modal');
+                console.log('🎬 Modal element:', modalElement);
+
+                if (!modalElement) {
+                    throw new Error('Modal element not found!');
+                }
+
+                // Session 70: NUCLEAR OPTION - Completely override Bootstrap CSS
+                console.log('🔍 Modal HTML:', modalElement.innerHTML.substring(0, 500));
+
+                // Remove all Bootstrap classes
+                modalElement.className = '';
+                modalElement.style.cssText = `
+                    display: block !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    z-index: 9999 !important;
+                    overflow: auto !important;
+                    background: rgba(0,0,0,0.5) !important;
+                    padding: 20px !important;
+                `;
+                document.body.style.overflow = 'hidden';
+
+                // Force modal-dialog styling - completely custom
+                const modalDialog = modalElement.querySelector('.modal-dialog');
+                console.log('🔍 Modal dialog element:', modalDialog);
+                console.log('🔍 Modal dialog children:', modalDialog ? modalDialog.children.length : 'NULL');
+
+                if (modalDialog) {
+                    // Don't remove class yet - check if that's the issue
+                    modalDialog.style.cssText = `
+                        display: block !important;
+                        width: 800px !important;
+                        max-width: 90vw !important;
+                        margin: 50px auto !important;
+                        position: relative !important;
+                        background: #1a1a1a !important;
+                        border: 2px solid #667eea !important;
+                        border-radius: 8px !important;
+                        padding: 20px !important;
+                        min-height: 500px !important;
+                    `;
+
+                    // Force height on all children
+                    Array.from(modalDialog.children).forEach(child => {
+                        child.style.display = 'block';
+                        child.style.minHeight = '400px';
+                        console.log('🔍 Child styled:', child.className);
+                    });
+                } else {
+                    console.error('❌ No modal-dialog found!');
+                }
+
+                // Force modal-content styling - completely custom
+                const modalContent = modalElement.querySelector('.modal-content');
+                console.log('🔍 Modal content element:', modalContent);
+
+                if (modalContent) {
+                    modalContent.style.cssText = `
+                        display: block !important;
+                        background: #1a1a1a !important;
+                        border: none !important;
+                        min-height: 500px !important;
+                        max-height: 80vh !important;
+                        overflow: visible !important;
+                        padding: 20px !important;
+                    `;
+
+                    // Force visibility on all children
+                    Array.from(modalContent.children).forEach(child => {
+                        child.style.display = 'block';
+                        console.log('🔍 Content child styled:', child.className);
+                    });
+                } else {
+                    console.error('❌ No modal-content found!');
+                }
+
+                console.log('✅ Modal shown with custom CSS (Bootstrap bypassed)!');
+
+                // Check parent chain for hidden elements
+                let parent = modalElement.parentElement;
+                let depth = 0;
+                while (parent && depth < 10) {
+                    const parentStyle = window.getComputedStyle(parent);
+                    console.log(`🔍 Parent ${depth}:`, {
+                        tag: parent.tagName,
+                        id: parent.id,
+                        class: parent.className,
+                        display: parentStyle.display,
+                        visibility: parentStyle.visibility,
+                        opacity: parentStyle.opacity,
+                        width: parentStyle.width,
+                        height: parentStyle.height
+                    });
+                    parent = parent.parentElement;
+                    depth++;
+                }
+
+                // Log final dimensions after 100ms
+                setTimeout(() => {
+                    const dialogRect = modalDialog ? modalDialog.getBoundingClientRect() : null;
+                    const contentRect = modalContent ? modalContent.getBoundingClientRect() : null;
+
+                    console.log('🎬 Final dimensions:', {
+                        dialog: dialogRect ? `${dialogRect.width}x${dialogRect.height}` : 'null',
+                        content: contentRect ? `${contentRect.width}x${contentRect.height}` : 'null'
+                    });
+
+                    if (dialogRect && dialogRect.width > 0) {
+                        console.log('🎉 MODAL IS VISIBLE!');
+                    } else {
+                        console.error('❌ Modal still has zero dimensions!');
+                        console.error('💡 TRY THIS: Move modal to document.body directly');
+
+                        // LAST RESORT: Move modal to body
+                        document.body.appendChild(modalElement);
+                        console.log('✅ Moved modal to body root');
+
+                        // Check dimensions again
+                        setTimeout(() => {
+                            const newDialogRect = modalDialog ? modalDialog.getBoundingClientRect() : null;
+                            console.log('🎬 After moving to body:', {
+                                dialog: newDialogRect ? `${newDialogRect.width}x${newDialogRect.height}` : 'null'
+                            });
+                        }, 50);
+                    }
+                }, 100);
+            } catch (error) {
+                console.error('❌ Error showing modal:', error);
+                alert('Error opening chain modal: ' + error.message);
+            }
         }
 
         async function executeChainVideos() {
@@ -10930,9 +11093,10 @@
                     // Success alert
                     alert(`🎉 Videos chained successfully!\n\nFinal video: ${data.duration.toFixed(1)} seconds\n\nThe chained video has been saved to your gallery!`);
 
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('chain-videos-modal'));
-                    modal.hide();
+                    // Close modal (Session 70: Manual close since we bypassed Bootstrap)
+                    const modalElement = document.getElementById('chain-videos-modal');
+                    modalElement.style.display = 'none';
+                    document.body.style.overflow = '';
 
                     // Clear selection
                     clearVideoSelection();
@@ -13250,8 +13414,13 @@
                             projectName: projectName
                         };
 
-                        // Switch to Video Gallery tab
-                        document.getElementById('videos-tab').click();
+                        // Switch to Video Gallery tab (Session 71: Fixed typo - 'video-tab' not 'videos-tab')
+                        const videoTab = document.getElementById('video-tab');
+                        if (videoTab) {
+                            videoTab.click();
+                        } else {
+                            console.warn('⚠️ Video tab not found, user must switch manually');
+                        }
 
                         // Show message to user
                         this.addMessage('assistant', `🎬 **Let's chain your videos together!**\n\n` +
@@ -13393,8 +13562,16 @@
                             message += `📹 Your video is being generated by Runway ML...\n\n`;
                             message += `⏱️ Estimated time: ~${minutes} minutes (${result.result.estimated_time}s)\n\n`;
                             message += `🔗 Task ID: ${result.result.task_id}\n\n`;
-                            message += `💡 **The video will appear in the Video Gallery tab once complete!**\n\n`;
-                            message += `🔄 Refresh the Video Gallery in ${minutes} minutes to see your video!\n\n`;
+                            message += `💡 **I'll notify you with 4 alerts when it's ready!** (Desktop, audio, toast, tab flash)\n\n`;
+                            message += `🎬 Video will auto-appear in the Video Gallery tab when complete!\n\n`;
+
+                            // Session 69: Start status polling so video auto-updates and notifications fire!
+                            if (result.result.task_id && typeof window.pollVideoStatus === 'function') {
+                                console.log('🎬 Starting video status polling for task:', result.result.task_id);
+                                setTimeout(() => window.pollVideoStatus(result.result.task_id, 'assistant'), 100);
+                            } else if (result.result.task_id) {
+                                console.error('❌ pollVideoStatus function not found - videos won\'t auto-update!');
+                            }
                         } else if (result.tool === 'web_search') {
                             message += `✅ **Search Results for "${result.result.query}":**\n\n`;
                             for (const item of result.result.results.slice(0, 3)) {
@@ -13427,14 +13604,24 @@
                             });
 
                             message += `\n⏱️ Total estimated time: ~${minutes} minutes\n\n`;
-                            message += `💡 **Videos will appear in the Video Gallery tab once complete!**\n\n`;
-                            message += `🔗 Once ready, you can:\n`;
+                            message += `💡 **I'll notify you with 4 alerts when each video completes!** (Desktop, audio, toast, tab flash)\n\n`;
+                            message += `🎬 Videos will auto-appear in the Video Gallery tab when ready!\n\n`;
+                            message += `🔗 Once complete, you can:\n`;
                             message += `- View them individually in the gallery\n`;
                             message += `- Chain them together with transitions\n`;
                             if (result.result.include_branding) {
                                 message += `- Add your brand name as text overlays\n`;
                             }
-                            message += `\n🔄 Refresh the Video Gallery in ${minutes} minutes to see your brand video clips!\n\n`;
+
+                            // Session 69: Start status polling for each brand video task
+                            if (result.result.task_ids && typeof window.pollVideoStatus === 'function') {
+                                result.result.task_ids.forEach((taskId, index) => {
+                                    console.log(`🎬 Starting video status polling for brand video ${index + 1}:`, taskId);
+                                    setTimeout(() => window.pollVideoStatus(taskId, 'assistant'), 100 + (index * 50));
+                                });
+                            } else if (result.result.task_ids) {
+                                console.error('❌ pollVideoStatus function not found - brand videos won\'t auto-update!');
+                            }
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
