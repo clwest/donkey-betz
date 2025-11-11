@@ -287,6 +287,12 @@ from core.views_image import (
     # Session 61: Phase C.2.1 - Portfolio View API
     get_portfolio
 )
+# Session 74: Character Training API
+from core.views_character_training import (
+    list_characters, get_character, create_character, submit_training,
+    check_training_status, toggle_favorite as toggle_character_favorite,
+    delete_character, training_requirements
+)
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
     orchestrate_multi_agent_task, suggest_agent, route_task, get_agent_status, health_check_agents,
@@ -856,6 +862,16 @@ urlpatterns = [
 
     # Featured Examples (Session 56: Phase A Task 2)
     path('api/images/examples/', get_featured_examples, name='featured-examples'),
+
+    # Session 74: Character Training API endpoints
+    path('api/characters/', list_characters, name='list-characters'),
+    path('api/characters/requirements/', training_requirements, name='training-requirements'),
+    path('api/characters/create/', create_character, name='create-character'),
+    path('api/characters/<int:character_id>/', get_character, name='get-character'),
+    path('api/characters/<int:character_id>/submit-training/', submit_training, name='submit-training'),
+    path('api/characters/<int:character_id>/training-status/', check_training_status, name='check-training-status'),
+    path('api/characters/<int:character_id>/toggle-favorite/', toggle_character_favorite, name='toggle-character-favorite'),
+    path('api/characters/<int:character_id>/delete/', delete_character, name='delete-character'),
 
     # Intelligent Prompt Improvement (Session 56: Phase B.1)
     path('api/workflows/improve-prompt/', improve_workflow_prompt, name='improve-workflow-prompt'),
