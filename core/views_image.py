@@ -4696,6 +4696,39 @@ Keep responses under 200 words. Be conversational and practical."""
                         "required": ["brand_name", "concept"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_character_from_prompt",
+                    "description": "Create a trainable character model by generating multiple variations of a character/logo from a text description. The AI will generate 5-7 consistent images with different angles, poses, and backgrounds, then automatically train a custom FLUX LoRA model (30-60 min training). Use when user wants to create a consistent character they can reuse. Session 74: AI-powered character training!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "character_description": {
+                                "type": "string",
+                                "description": "Detailed description of the character/logo to create (e.g., 'pixar style donkey running a robotics company', 'modern minimalist logo with letter M', 'cartoon superhero cat with red cape')"
+                            },
+                            "character_name": {
+                                "type": "string",
+                                "description": "Name for this character model (e.g., 'Robotics Donkey', 'My Company Logo'). If not provided, derived from description."
+                            },
+                            "trigger_word": {
+                                "type": "string",
+                                "description": "Trigger word to use in future prompts (short, uppercase, memorable). Default: 'TOK'. Examples: 'LOGO', 'HERO', 'MASCOT'"
+                            },
+                            "variation_count": {
+                                "type": "number",
+                                "description": "Number of variations to generate (5-7). More variations = better training but longer wait. Default: 6"
+                            },
+                            "style": {
+                                "type": "string",
+                                "description": "Visual style for the character (pixar, anime, realistic, cartoon, minimalist, professional). Default: extracted from description or 'professional'"
+                            }
+                        },
+                        "required": ["character_description"]
+                    }
+                }
             }
         ]
 
@@ -4882,6 +4915,8 @@ def execute_tool(request):
             result = _execute_add_music_to_video(request.user, parameters)
         elif tool_name == 'apply_color_grade':
             result = _execute_apply_color_grade(request.user, parameters)
+        elif tool_name == 'create_character_from_prompt':
+            result = _execute_create_character_from_prompt(request.user, parameters)
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -5831,6 +5866,203 @@ def _execute_apply_color_grade(user, parameters):
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_apply_color_grade: {str(e)}")
+        raise
+
+
+def _execute_create_character_from_prompt(user, parameters):
+    """
+    Execute character training set generation from natural language
+    Session 74: AI-powered character training integration!
+
+    This generates multiple image variations and creates a trainable character:
+    1. Parse character description and style
+    2. Generate 5-7 image variations with different angles/poses
+    3. Download generated images
+    4. Create character model and submit for training
+    5. Return status with training progress
+
+    Parameters:
+        character_description (str): Description of character/logo (REQUIRED)
+        character_name (str): Name for this character model (optional, derived from description)
+        trigger_word (str): Trigger word for prompts (default: 'TOK')
+        variation_count (int): Number of variations to generate 5-7 (default: 6)
+        style (str): Visual style (pixar, anime, realistic, cartoon, minimalist, professional)
+
+    Returns:
+        dict: {
+            'success': True,
+            'character_id': 123,
+            'character_name': 'Robotics Donkey',
+            'trigger_word': 'TOK',
+            'images_generated': 6,
+            'training_status': 'preparing',
+            'message': 'Character training set generated! Training will take 30-60 minutes.'
+        }
+    """
+    try:
+        import requests
+        import tempfile
+        import os
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from content.character_training import create_character_workflow
+        from content.image_generation import ImageGenerationService
+
+        # Extract parameters
+        character_description = parameters.get('character_description', '').strip()
+        character_name = parameters.get('character_name', '').strip()
+        trigger_word = parameters.get('trigger_word', 'TOK').strip().upper()
+        variation_count = parameters.get('variation_count', 6)
+        style = parameters.get('style', '').strip().lower()
+
+        # Validate required parameters
+        if not character_description:
+            raise ValueError("character_description is required")
+
+        # Derive character name from description if not provided
+        if not character_name:
+            # Take first 3-5 words and capitalize
+            words = character_description.split()[:4]
+            character_name = ' '.join(words).title()
+
+        # Validate variation_count (5-7)
+        if variation_count < 5:
+            logger.warning(f"⚠️ variation_count {variation_count} too low, setting to 5")
+            variation_count = 5
+        elif variation_count > 7:
+            logger.warning(f"⚠️ variation_count {variation_count} too high, setting to 7")
+            variation_count = 7
+
+        # Extract or default style
+        if not style or style == 'professional':
+            # Try to extract style from description
+            style_keywords = ['pixar', 'anime', 'realistic', 'cartoon', 'minimalist', '3d', '2d', 'watercolor', 'oil painting']
+            for keyword in style_keywords:
+                if keyword in character_description.lower():
+                    style = keyword
+                    break
+            if not style:
+                style = 'professional'
+
+        logger.info(f"🎨 Creating character training set:")
+        logger.info(f"   Character: {character_name}")
+        logger.info(f"   Description: {character_description}")
+        logger.info(f"   Trigger word: {trigger_word}")
+        logger.info(f"   Variations: {variation_count}")
+        logger.info(f"   Style: {style}")
+
+        # Create prompt variations for different angles/poses/contexts
+        prompt_variations = [
+            f"{character_description}, {style} style, front view, centered, well-lit, professional photography",
+            f"{character_description}, {style} style, side profile view, clear details, studio lighting",
+            f"{character_description}, {style} style, three-quarter angle, dynamic pose, professional composition",
+            f"{character_description}, {style} style, different angle, varied expression, high quality",
+            f"{character_description}, {style} style, close-up detail shot, sharp focus, professional",
+            f"{character_description}, {style} style, full body view, different background, cinematic lighting",
+            f"{character_description}, {style} style, alternate pose, varied composition, professional quality"
+        ]
+
+        # Use only the number of variations requested
+        prompt_variations = prompt_variations[:variation_count]
+
+        logger.info(f"📸 Generating {len(prompt_variations)} training images...")
+
+        # Initialize Image Generation Service
+        service = ImageGenerationService()
+
+        if not service.stability_key:
+            raise ValueError("Stability AI is not available. Please check STABILITY_API_KEY configuration.")
+
+        # Generate images and download them
+        temp_files = []
+        generated_images = []
+
+        for i, prompt in enumerate(prompt_variations):
+            logger.info(f"   Generating image {i+1}/{len(prompt_variations)}: {prompt[:60]}...")
+
+            # Generate image with Stability AI (using sd3 for consistency)
+            result = service.generate_image(
+                prompt=prompt,
+                provider='stability',
+                model='sd3',  # SD3 for good quality and consistency
+                size='1024x1024',
+                cfg_scale=7,  # Moderate adherence to prompt
+                steps=40  # Good quality
+            )
+
+            if not result.success:
+                logger.warning(f"⚠️ Image {i+1} generation failed: {result.error_message}")
+                continue
+
+            if not result.image_url:
+                logger.warning(f"⚠️ Image {i+1} has no URL")
+                continue
+
+            # Download image
+            logger.info(f"   Downloading image {i+1}...")
+            img_response = requests.get(result.image_url, timeout=30)
+
+            if img_response.status_code != 200:
+                logger.warning(f"⚠️ Failed to download image {i+1}")
+                continue
+
+            # Create SimpleUploadedFile for Django
+            filename = f"character_training_{i+1}.png"
+            uploaded_file = SimpleUploadedFile(
+                name=filename,
+                content=img_response.content,
+                content_type='image/png'
+            )
+
+            generated_images.append(uploaded_file)
+            logger.info(f"✅ Image {i+1} downloaded and ready")
+
+        if len(generated_images) < 5:
+            raise ValueError(f"Not enough images generated: {len(generated_images)}/5 minimum required")
+
+        logger.info(f"✅ Generated {len(generated_images)} training images successfully!")
+
+        # Create character with workflow
+        logger.info(f"📝 Creating character model and submitting for training...")
+
+        character, warnings = create_character_workflow(
+            user=user,
+            name=character_name,
+            description=character_description,
+            trigger_word=trigger_word,
+            image_files=generated_images,
+            training_steps=1000,  # Standard training steps
+            learning_rate=0.0004,  # Standard learning rate
+            auto_submit=True  # Automatically submit for training!
+        )
+
+        logger.info(f"🎉 Character training set created! ID: {character.id}")
+        logger.info(f"   Training Status: {character.training_status}")
+        logger.info(f"   Training ID: {character.training_id}")
+
+        return {
+            'success': True,
+            'character_id': character.id,
+            'character_name': character.name,
+            'description': character.description,
+            'trigger_word': character.trigger_word,
+            'images_generated': len(generated_images),
+            'training_images_count': character.training_images_count,
+            'training_status': character.training_status,
+            'training_id': character.training_id,
+            'warnings': warnings,
+            'estimated_time_minutes': 45,  # FLUX LoRA training takes 30-60 minutes
+            'message': f'🎉 Success! Generated {len(generated_images)} training images for "{character_name}" and submitted for training! Your custom character model will be ready in 30-60 minutes. You\'ll be able to generate consistent images using the trigger word "{trigger_word}" in your prompts.',
+            'instructions': f'Training has started! Check the Characters tab to monitor progress. Once complete (30-60 min), you can generate images by including "{trigger_word}" in your prompts. For example: "a portrait of {trigger_word}" or "{trigger_word} wearing a suit".',
+            'next_steps': [
+                'Wait 30-60 minutes for training to complete',
+                f'Check Characters tab for training progress',
+                f'Once complete, use "{trigger_word}" in your prompts',
+                f'Generate consistent variations of your character!'
+            ]
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_create_character_from_prompt: {str(e)}")
         raise
 
 
