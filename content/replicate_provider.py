@@ -86,6 +86,51 @@ class ReplicateProvider:
             self.available = False
 
 
+    def create_model_if_needed(self, destination: str) -> bool:
+        """
+        Create a model on Replicate if it doesn't exist
+
+        Args:
+            destination: Model destination (username/model-name)
+
+        Returns:
+            True if model exists or was created, False on error
+        """
+        if not destination or '/' not in destination:
+            logger.error(f"Invalid destination format: {destination}")
+            return False
+
+        try:
+            owner, name = destination.split('/', 1)
+
+            # Try to get the model - if it exists, we're done
+            try:
+                model = self.client.models.get(f"{owner}/{name}")
+                logger.info(f"✅ Model {destination} already exists")
+                return True
+            except ReplicateError as e:
+                if '404' not in str(e):
+                    # Some other error
+                    raise
+                # Model doesn't exist, create it
+                logger.info(f"📦 Creating new model: {destination}")
+
+            # Create the model
+            model = self.client.models.create(
+                owner=owner,
+                name=name,
+                visibility="private",  # Keep it private by default
+                hardware="gpu-t4",  # Default hardware
+                description=f"FLUX LoRA model for character: {name}"
+            )
+
+            logger.info(f"✅ Created model: {destination}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to create model {destination}: {str(e)}")
+            return False
+
     def train_character(
         self,
         training_zip_url: str,
@@ -116,15 +161,17 @@ class ReplicateProvider:
             )
 
         try:
-            # Training parameters
+            # Training parameters for Replicate's fast-flux-trainer
+            # Note: fast-flux-trainer uses 'lora_type' instead of 'learning_rate'
             training_params = {
                 "input_images": training_zip_url,
                 "trigger_word": trigger_word,
+                "lora_type": "subject",  # 'subject' for characters, 'style' for styles
                 "steps": steps,
-                "learning_rate": learning_rate,
             }
 
-            # Add optional parameters
+            # Add optional parameters (fast-flux-trainer ignores most of these)
+            # Keep for backward compatibility
             if kwargs.get('lora_rank'):
                 training_params['lora_rank'] = kwargs['lora_rank']
             if kwargs.get('batch_size'):
@@ -137,11 +184,33 @@ class ReplicateProvider:
 
             # Submit training job
             # Using the official FLUX LoRA trainer
+            # NOTE: Replicate REQUIRES a destination for training
+            if not destination:
+                return TrainingResult(
+                    success=False,
+                    error_message="Destination is required. Please create a model on Replicate.com first, then provide the destination as 'username/model-name'"
+                )
+
+            # Check if destination exists or try to create it
+            logger.info(f"   Checking destination: {destination}")
+            if not self.create_model_if_needed(destination):
+                # Model doesn't exist and can't be created - provide helpful error
+                return TrainingResult(
+                    success=False,
+                    error_message=f"Model '{destination}' doesn't exist and cannot be created automatically (permission denied). "
+                                f"Please manually create the model on Replicate.com: "
+                                f"https://replicate.com/create-model (Name: {destination.split('/')[-1]}, Visibility: Private)"
+                )
+
+            # Create training with destination
+            # Using Replicate's official fast-flux-trainer (faster than ostris trainer!)
+            logger.info(f"   Training with destination: {destination}")
+            logger.info(f"   Using fast-flux-trainer for faster training")
             training = self.client.trainings.create(
-                model="ostris/flux-dev-lora-trainer",
-                version="e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497",  # Latest stable version
+                model="replicate/fast-flux-trainer",
+                version="8b10794665aed907bb98a1a5324cd1d3a8bea0e9b31e65210967fb9c9e2e08ed",
                 input=training_params,
-                destination=destination  # Where to save the model
+                destination=destination
             )
 
             logger.info(f"✅ [REPLICATE] Training submitted: {training.id}")

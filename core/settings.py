@@ -293,6 +293,7 @@ EXTERNAL_API_KEYS = {
     'STABILITY_API_KEY': os.environ.get('STABILITY_API_KEY', ''),
     'RUNWAY_API_KEY': os.environ.get('RUNWAY_API_KEY', ''),
     'REPLICATE_API_KEY': os.environ.get('REPLICATE_API_TOKEN', ''),  # Character training via Replicate
+    'REPLICATE_USERNAME': os.environ.get('REPLICATE_USERNAME', 'donkeybetz'),  # Replicate account username
     'ELEVENLABS_API_KEY': os.environ.get('ELEVENLABS_API_KEY', ''),
     'GIPHY_API_KEY': os.environ.get('GIPHY_API_KEY', ''),
     'ALPHA_VANTAGE_API_KEY': os.environ.get('ALPHA_VANTAGE_API_KEY', ''),
