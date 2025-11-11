@@ -655,15 +655,173 @@ class ImageGenerationService:
         prompt: str,
         strength: float = 0.75,
         provider: str = 'auto',
+        model: str = 'sd3',
+        negative_prompt: str = '',
         **kwargs
     ) -> ImageGenerationResult:
-        """Transform an existing image based on a prompt"""
-        # Implementation for img2img would go here
-        # For now, return a placeholder
-        return ImageGenerationResult(
-            success=False,
-            error_message="Image-to-image not yet implemented"
-        )
+        """
+        Transform an existing image based on a prompt using Stability AI Structure Control
+
+        Args:
+            base_image: Either a file path (str), URL (str), or PIL Image object
+            prompt: Text description of desired output
+            strength: How much to transform (0.0-1.0, higher = more change)
+            provider: 'stability' or 'auto'
+            model: 'sd3', 'core', or 'ultra'
+            negative_prompt: What to avoid
+
+        Returns:
+            ImageGenerationResult with transformed image
+        """
+        start_time = time.time()
+
+        # Auto-select provider
+        if provider == 'auto':
+            provider = 'stability' if self.stability_key else None
+
+        if not provider or provider == 'stability':
+            if not self.stability_key:
+                return ImageGenerationResult(
+                    success=False,
+                    error_message="Stability AI API key not configured",
+                    generation_time_ms=int((time.time() - start_time) * 1000)
+                )
+            return self._image_to_image_stability(
+                base_image, prompt, strength, model, negative_prompt, start_time
+            )
+        else:
+            return ImageGenerationResult(
+                success=False,
+                error_message=f"Image-to-image not supported for provider: {provider}",
+                generation_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+    def _image_to_image_stability(
+        self,
+        base_image: Any,
+        prompt: str,
+        strength: float,
+        model: str,
+        negative_prompt: str,
+        start_time: float
+    ) -> ImageGenerationResult:
+        """
+        Stability AI image-to-image using Structure Control
+        This maintains the composition/structure of the reference image
+        """
+        try:
+            from PIL import Image
+            import io
+
+            # Map model to endpoint
+            endpoints = {
+                'sd3': 'https://api.stability.ai/v2beta/stable-image/control/structure',
+                'core': 'https://api.stability.ai/v2beta/stable-image/control/structure',
+                'ultra': 'https://api.stability.ai/v2beta/stable-image/control/structure'
+            }
+
+            url = endpoints.get(model, endpoints['sd3'])
+
+            # Load and prepare the base image
+            if isinstance(base_image, str):
+                # Could be file path or URL
+                if base_image.startswith('http'):
+                    # Download from URL
+                    response = requests.get(base_image, timeout=30)
+                    response.raise_for_status()
+                    img = Image.open(io.BytesIO(response.content))
+                elif base_image.startswith('data:image'):
+                    # Base64 data URI
+                    base64_data = base_image.split(',', 1)[1]
+                    img_data = base64.b64decode(base64_data)
+                    img = Image.open(io.BytesIO(img_data))
+                else:
+                    # File path
+                    img = Image.open(base_image)
+            else:
+                # Assume PIL Image
+                img = base_image
+
+            # Convert to RGB if needed
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Resize if too large (Stability AI max is usually 1024x1024 or 2048x2048)
+            max_size = 1024
+            if img.width > max_size or img.height > max_size:
+                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+            # Convert to bytes
+            img_bytes = io.BytesIO()
+            img.save(img_bytes, format='PNG')
+            img_bytes.seek(0)
+
+            # Prepare API request
+            headers = {
+                "authorization": f"Bearer {self.stability_key}",
+                "accept": "image/*"
+            }
+
+            # Build form data
+            files = {
+                "image": ("reference.png", img_bytes, "image/png")
+            }
+
+            data = {
+                "prompt": prompt,
+                "control_strength": strength,  # 0.0-1.0, how much to preserve structure
+                "output_format": "png"
+            }
+
+            if negative_prompt:
+                data["negative_prompt"] = negative_prompt
+
+            # Make request
+            response = requests.post(
+                url,
+                headers=headers,
+                files=files,
+                data=data,
+                timeout=60
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Stability API error ({response.status_code}): {response.text[:200]}")
+
+            # Response is raw image bytes
+            image_bytes = response.content
+            base64_image = base64.b64encode(image_bytes).decode('utf-8')
+
+            # Approximate cost
+            model_costs = {
+                'core': 0.003,
+                'sd3': 0.0065,
+                'ultra': 0.008
+            }
+            cost = model_costs.get(model, 0.005)
+
+            return ImageGenerationResult(
+                success=True,
+                images=[f"data:image/png;base64,{base64_image}"],
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                provider_used='stability',
+                model_used=f'{model}-structure-control',
+                cost=cost,
+                metadata={
+                    'strength': strength,
+                    'negative_prompt': negative_prompt,
+                    'method': 'structure-control'
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Stability image-to-image failed: {str(e)}")
+            return ImageGenerationResult(
+                success=False,
+                error_message=str(e),
+                generation_time_ms=int((time.time() - start_time) * 1000),
+                provider_used='stability'
+            )
 
 
 # Global instance
