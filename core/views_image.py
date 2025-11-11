@@ -4577,6 +4577,95 @@ Keep responses under 200 words. Be conversational and practical."""
             {
                 "type": "function",
                 "function": {
+                    "name": "add_text_to_video",
+                    "description": "Add text overlay to a video using DaVinci Resolve with PERFECT spelling. Use when user wants to add titles, captions, or text to a video. Supports different positions (center, lower_third, upper_third) and customization. Session 72: Voice-controlled text overlays!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "The text to display on the video. Will be spelled EXACTLY as provided - no AI text rendering issues!"
+                            },
+                            "position": {
+                                "type": "string",
+                                "enum": ["center", "lower_third", "upper_third"],
+                                "description": "Position of text on screen. center = middle of screen, lower_third = bottom area (good for names/captions), upper_third = top area. Default: center"
+                            },
+                            "start_second": {
+                                "type": "number",
+                                "description": "When to start showing text (in seconds from video start). Default: 0"
+                            },
+                            "duration": {
+                                "type": "number",
+                                "description": "How long to show text (in seconds). Default: 3"
+                            },
+                            "font_size": {
+                                "type": "number",
+                                "description": "Text size in points (36-144). Default: 72"
+                            },
+                            "video_selection": {
+                                "type": "string",
+                                "enum": ["last", "recent"],
+                                "description": "Which video to add text to. 'last' = most recent video, 'recent' = user will select from recent videos. Default: last"
+                            }
+                        },
+                        "required": ["text"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "add_music_to_video",
+                    "description": "Add background music or audio to a video using DaVinci Resolve. Supports volume control and audio mixing. Use when user wants to add music, soundtrack, or audio to enhance their video. Session 72: Voice-controlled audio mixing!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_selection": {
+                                "type": "string",
+                                "enum": ["last", "recent"],
+                                "description": "Which video to add music to. 'last' = most recent video, 'recent' = user will select from recent videos. Default: last"
+                            },
+                            "audio_volume": {
+                                "type": "number",
+                                "description": "Background music volume level (0.0 to 1.0). 0.0 = silent, 0.3 = quiet background, 0.5 = moderate, 1.0 = full volume. Default: 0.3"
+                            },
+                            "music_style": {
+                                "type": "string",
+                                "enum": ["cinematic", "upbeat", "calm", "dramatic", "corporate"],
+                                "description": "Style of background music to add (user would upload or select from library). Default: cinematic"
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "apply_color_grade",
+                    "description": "Apply professional color grading to a video using DaVinci Resolve (the industry-standard color grading tool). Use when user wants to make video look cinematic/warm/cool/vintage, apply a film look, adjust colors, or enhance visual style. Handles voice recognition variations like 'somatic' or 'sim-matic' (from 'cinematic'). Session 72: Voice-controlled color grading!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "style": {
+                                "type": "string",
+                                "enum": ["warm", "cool", "vintage", "modern", "dramatic", "soft", "vibrant"],
+                                "description": "Color grading style (SIMPLIFIED for voice recognition). warm = warm orange/teal cinematic tones, cool = cool blue tones, vintage = film look with grain, modern = clean and crisp, dramatic = bold high contrast, soft = muted gentle tones, vibrant = saturated colors. Default: warm. Note: System auto-handles 'somatic'/'sim-matic' as 'warm'."
+                            },
+                            "video_selection": {
+                                "type": "string",
+                                "enum": ["last", "recent"],
+                                "description": "Which video to apply color grading to. 'last' = most recent video, 'recent' = user will select from recent videos. Default: last"
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
                     "name": "create_brand_video",
                     "description": "Create a complete brand video from concept to finished product using automated workflow. This orchestrates Runway ML video generation → video extension → DaVinci Resolve chaining with professional transitions and branding. Use when user wants a complete, polished brand video without manual steps. Session 67: End-to-end video creation!",
                     "parameters": {
@@ -4787,6 +4876,12 @@ def execute_tool(request):
             result = _execute_create_brand_video(request.user, parameters)
         elif tool_name == 'chain_videos':
             result = _execute_chain_videos(request.user, parameters)
+        elif tool_name == 'add_text_to_video':
+            result = _execute_add_text_to_video(request.user, parameters)
+        elif tool_name == 'add_music_to_video':
+            result = _execute_add_music_to_video(request.user, parameters)
+        elif tool_name == 'apply_color_grade':
+            result = _execute_apply_color_grade(request.user, parameters)
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -5486,6 +5581,256 @@ def _execute_chain_videos(user, parameters):
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_chain_videos: {str(e)}")
+        raise
+
+
+def _execute_add_text_to_video(user, parameters):
+    """
+    Execute text overlay addition to video via DaVinci Resolve
+    Session 72: AI Assistant integration for text overlays!
+
+    This adds text to a user's video with perfect spelling:
+    1. Gets the user's most recent video (or lets them select)
+    2. Creates new DaVinci project with that video
+    3. Adds text overlay with specified parameters
+    4. Renders final video with text
+
+    Parameters:
+        text (str): Text to display (REQUIRED)
+        position (str): 'center', 'lower_third', or 'upper_third' (default: 'center')
+        start_second (float): When to start text (default: 0)
+        duration (float): How long to show text (default: 3)
+        font_size (int): Text size 36-144 (default: 72)
+        video_selection (str): 'last' or 'recent' (default: 'last')
+
+    Returns:
+        dict: {
+            'success': True,
+            'video_id': 'id',
+            'text': 'Welcome',
+            'message': 'Ready to add text overlay...'
+        }
+    """
+    try:
+        from content.models import VideoHistory
+
+        text = parameters.get('text', '').strip()
+        if not text:
+            raise ValueError("Text is required for overlay")
+
+        position = parameters.get('position', 'center')
+        start_second = parameters.get('start_second', 0)
+        duration = parameters.get('duration', 3)
+        font_size = parameters.get('font_size', 72)
+        video_selection = parameters.get('video_selection', 'last')
+
+        logger.info(f"📝 AI Assistant add_text_to_video: '{text}' at {position}, {start_second}s-{start_second+duration}s")
+
+        # Get user's most recent completed video
+        recent_video = VideoHistory.objects.filter(
+            user=user,
+            status='completed'
+        ).order_by('-created_at').first()
+
+        if not recent_video:
+            return {
+                'success': False,
+                'error': 'You have no completed videos in your gallery.',
+                'message': 'Please create a video first, then add text to it!'
+            }
+
+        logger.info(f"✅ Found video for text overlay: {recent_video.id} - {recent_video.prompt[:50]}")
+
+        return {
+            'success': True,
+            'video_id': str(recent_video.id),
+            'video_url': recent_video.video_url,
+            'video_prompt': recent_video.prompt[:100] if recent_video.prompt else "Untitled video",
+            'text': text,
+            'position': position,
+            'start_second': start_second,
+            'duration': duration,
+            'font_size': font_size,
+            'message': f'📝 Ready to add text overlay "{text}" to your video! The text will appear at {position} starting at {start_second} seconds for {duration} seconds.',
+            'instructions': f'This will create a NEW video with the text "{text}" overlaid on your {recent_video.prompt[:30] if recent_video.prompt else "video"}. The text will be spelled PERFECTLY (no AI text rendering issues!) using DaVinci Resolve. Click confirm to proceed!',
+            'note': '⚠️ Note: This creates a new video with text overlay. Your original video remains unchanged.'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_add_text_to_video: {str(e)}")
+        raise
+
+
+def _execute_add_music_to_video(user, parameters):
+    """
+    Execute background music addition to video via DaVinci Resolve
+    Session 72: AI Assistant integration for audio mixing!
+
+    This adds background music to a user's video:
+    1. Gets the user's most recent video (or lets them select)
+    2. User uploads audio file or selects from library
+    3. Creates new DaVinci project with video + audio
+    4. Renders final video with mixed audio
+
+    Parameters:
+        video_selection (str): 'last' or 'recent' (default: 'last')
+        audio_volume (float): Volume 0.0-1.0 (default: 0.3)
+        music_style (str): Style preference (default: 'cinematic')
+
+    Returns:
+        dict: {
+            'success': True,
+            'video_id': 'id',
+            'audio_volume': 0.3,
+            'message': 'Ready to add music...'
+        }
+    """
+    try:
+        from content.models import VideoHistory
+
+        video_selection = parameters.get('video_selection', 'last')
+        audio_volume = parameters.get('audio_volume', 0.3)
+        music_style = parameters.get('music_style', 'cinematic')
+
+        # Validate volume
+        audio_volume = max(0.0, min(1.0, audio_volume))
+
+        logger.info(f"🎵 AI Assistant add_music_to_video: volume={audio_volume}, style={music_style}")
+
+        # Get user's most recent completed video
+        recent_video = VideoHistory.objects.filter(
+            user=user,
+            status='completed'
+        ).order_by('-created_at').first()
+
+        if not recent_video:
+            return {
+                'success': False,
+                'error': 'You have no completed videos in your gallery.',
+                'message': 'Please create a video first, then add music to it!'
+            }
+
+        logger.info(f"✅ Found video for audio mixing: {recent_video.id} - {recent_video.prompt[:50]}")
+
+        return {
+            'success': True,
+            'video_id': str(recent_video.id),
+            'video_url': recent_video.video_url,
+            'video_prompt': recent_video.prompt[:100] if recent_video.prompt else "Untitled video",
+            'audio_volume': audio_volume,
+            'music_style': music_style,
+            'message': f'🎵 Ready to add {music_style} background music to your video! Volume will be set to {int(audio_volume * 100)}%.',
+            'instructions': f'This will create a NEW video with background music mixed into your {recent_video.prompt[:30] if recent_video.prompt else "video"}. You\'ll need to upload an audio file (MP3, WAV, etc.) or select from your audio library. The music will be mixed at {int(audio_volume * 100)}% volume. Click confirm and upload your audio file!',
+            'note': '⚠️ Note: This creates a new video with mixed audio. Your original video remains unchanged.',
+            'requires_audio_upload': True  # Frontend should show audio file upload dialog
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_add_music_to_video: {str(e)}")
+        raise
+
+
+def _execute_apply_color_grade(user, parameters):
+    """
+    Execute color grading application to video via DaVinci Resolve
+    Session 72: AI Assistant integration for color grading!
+
+    This applies professional color grading to a user's video:
+    1. Gets the user's most recent video (or lets them select)
+    2. Creates new DaVinci project with that video
+    3. Applies specified color grading style
+    4. Renders final video with enhanced colors
+
+    Parameters:
+        style (str): Color grading style (default: 'cinematic_warm')
+        video_selection (str): 'last' or 'recent' (default: 'last')
+
+    Returns:
+        dict: {
+            'success': True,
+            'video_id': 'id',
+            'style': 'cinematic_warm',
+            'message': 'Ready to apply color grading...'
+        }
+    """
+    try:
+        from content.models import VideoHistory
+
+        style = parameters.get('style', 'cinematic_warm').lower()
+        video_selection = parameters.get('video_selection', 'last')
+
+        # Session 72: Handle common Whisper transcription errors and variations
+        style_mappings = {
+            'somatic': 'cinematic_warm',
+            'somatic warm': 'cinematic_warm',
+            'sim-matic': 'cinematic_warm',
+            'cinematic': 'cinematic_warm',
+            'warm': 'cinematic_warm',
+            'cool': 'cinematic_cool',
+            'blue': 'cinematic_cool',
+            'vintage': 'vintage',
+            'retro': 'vintage',
+            'film': 'vintage',
+            'modern': 'modern',
+            'clean': 'modern',
+            'high contrast': 'high_contrast',
+            'dramatic': 'high_contrast',
+            'bold': 'high_contrast',
+            'soft': 'soft',
+            'muted': 'soft',
+            'gentle': 'soft',
+            'vibrant': 'vibrant',
+            'colorful': 'vibrant',
+            'saturated': 'vibrant'
+        }
+
+        # Map style or use default
+        style = style_mappings.get(style, style.replace(' ', '_'))
+
+        # Style descriptions
+        style_descriptions = {
+            'cinematic_warm': 'warm orange/teal tones for dramatic storytelling',
+            'cinematic_cool': 'cool blue tones for sci-fi/tech aesthetic',
+            'vintage': 'film look with grain and faded colors',
+            'modern': 'clean, crisp, and minimalist',
+            'high_contrast': 'bold dramatic look with deep blacks and bright highlights',
+            'soft': 'muted gentle tones for dreamy feel',
+            'vibrant': 'saturated colors for energetic content'
+        }
+
+        logger.info(f"🎨 AI Assistant apply_color_grade: style={style}")
+
+        # Get user's most recent completed video
+        recent_video = VideoHistory.objects.filter(
+            user=user,
+            status='completed'
+        ).order_by('-created_at').first()
+
+        if not recent_video:
+            return {
+                'success': False,
+                'error': 'You have no completed videos in your gallery.',
+                'message': 'Please create a video first, then apply color grading to it!'
+            }
+
+        logger.info(f"✅ Found video for color grading: {recent_video.id} - {recent_video.prompt[:50]}")
+
+        style_description = style_descriptions.get(style, 'professional color grading')
+
+        return {
+            'success': True,
+            'video_id': str(recent_video.id),
+            'video_url': recent_video.video_url,
+            'video_prompt': recent_video.prompt[:100] if recent_video.prompt else "Untitled video",
+            'style': style,
+            'style_description': style_description,
+            'message': f'🎨 Ready to apply {style.replace("_", " ")} color grading to your video! This will give it a {style_description} look.',
+            'instructions': f'This will create a NEW video with professional {style.replace("_", " ")} color grading applied to your {recent_video.prompt[:30] if recent_video.prompt else "video"}. DaVinci Resolve is the industry-standard tool used for Hollywood films! Your video will look like a professional production. Click confirm to proceed!',
+            'note': '⚠️ Note: This creates a new color-graded video. Your original video remains unchanged.'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_apply_color_grade: {str(e)}")
         raise
 
 

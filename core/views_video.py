@@ -429,10 +429,19 @@ def check_video_status(request, task_id):
         
         # Update database if we have a matching content
         try:
-            content = ContentGeneration.objects.get(
-                user=request.user,
-                metadata__task_id=task_id
-            )
+            # Session 70: Try both metadata (old) and generation_config (brand videos)
+            content = None
+            try:
+                content = ContentGeneration.objects.get(
+                    user=request.user,
+                    metadata__task_id=task_id
+                )
+            except ContentGeneration.DoesNotExist:
+                # Brand videos store task_id in generation_config
+                content = ContentGeneration.objects.get(
+                    user=request.user,
+                    generation_config__task_id=task_id
+                )
             
             # Update status
             if result.status == 'completed':
@@ -458,6 +467,14 @@ def check_video_status(request, task_id):
                     except ImageHistory.DoesNotExist:
                         pass
 
+                # Session 70: Use requested duration as fallback if Runway returns 0
+                video_duration = result.duration
+                if video_duration == 0:
+                    # Try generation_config first (brand videos), then metadata
+                    config = content.generation_config or {}
+                    video_duration = config.get('duration') or metadata.get('duration', 8)
+                    logger.info(f"⚠️ Runway returned duration=0, using fallback: {video_duration}s")
+
                 # Check if VideoHistory already exists for this task
                 video_history, created = VideoHistory.objects.get_or_create(
                     user=request.user,
@@ -469,7 +486,7 @@ def check_video_status(request, task_id):
                         'prompt': content.prompt,
                         'parameters': metadata,
                         'model_used': model_used,
-                        'duration': result.duration,
+                        'duration': video_duration,
                         'ratio': metadata.get('ratio', ''),
                         'status': 'completed',
                         'source_image': source_image,
@@ -482,6 +499,7 @@ def check_video_status(request, task_id):
                     video_history.video_url = result.video_url
                     video_history.thumbnail_url = result.thumbnail_url or ''
                     video_history.status = 'completed'
+                    video_history.duration = video_duration  # Session 70: Update duration too
                     video_history.generation_completed = timezone.now()
                     video_history.save()
 
@@ -500,8 +518,44 @@ def check_video_status(request, task_id):
                 content.save()
                 
         except ContentGeneration.DoesNotExist:
-            pass
-        
+            # Session 68: AI Assistant creates VideoHistory directly (not ContentGeneration)
+            # So we need to check for VideoHistory records and update them too!
+            try:
+                video_history = VideoHistory.objects.get(
+                    user=request.user,
+                    video_id=task_id
+                )
+
+                # Update VideoHistory status directly
+                if result.status == 'completed':
+                    video_history.video_url = result.video_url
+                    video_history.thumbnail_url = result.thumbnail_url or ''
+                    video_history.status = 'completed'
+                    video_history.generation_completed = timezone.now()
+                    video_history.save()
+                    logger.info(f"✅ AI Assistant video completed: {video_history.id} (task: {task_id})")
+
+                elif result.status == 'failed':
+                    video_history.status = 'failed'
+                    # Store error in parameters JSON
+                    params = video_history.parameters or {}
+                    params['error'] = result.error_message
+                    video_history.parameters = params
+                    video_history.save()
+                    logger.error(f"❌ AI Assistant video failed: {video_history.id} - {result.error_message}")
+
+                elif result.status == 'processing':
+                    # Store progress in parameters JSON
+                    params = video_history.parameters or {}
+                    params['progress'] = result.progress
+                    video_history.parameters = params
+                    video_history.save()
+                    logger.info(f"⏳ AI Assistant video processing: {video_history.id} - {result.progress}%")
+
+            except VideoHistory.DoesNotExist:
+                logger.warning(f"⚠️ No ContentGeneration or VideoHistory found for task: {task_id}")
+                pass
+
         # Return status response
         response_data = {
             'status': result.status,

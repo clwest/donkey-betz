@@ -538,3 +538,482 @@ def chain_videos_simple(request):
             'success': False,
             'error_message': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_text_overlay_endpoint(request):
+    """
+    POST /api/v1/davinci/add-text-overlay/
+    Add text overlay to a video using DaVinci Resolve
+    Session 72: Voice-controlled text overlays!
+
+    Form Data:
+        - video_id: UUID of source video (required)
+        - text: Text to display (required)
+        - position: 'center', 'lower_third', or 'upper_third' (default: 'center')
+        - start_second: When to show text (default: 0)
+        - duration: How long to show text in seconds (default: 3)
+        - font_size: Text size 36-144 (default: 72)
+        - project_name: Optional project name
+
+    Returns:
+        {
+            'success': bool,
+            'video_url': str,
+            'video_id': str,
+            'message': str
+        }
+    """
+    try:
+        davinci = get_davinci_provider()
+
+        if not davinci.studio_available:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'DaVinci Resolve Studio required. Free version does not support API.'
+            }, status=503)
+
+        # Parse parameters
+        video_id = request.POST.get('video_id', '').strip()
+        text = request.POST.get('text', '').strip()
+        position = request.POST.get('position', 'center')
+        start_second = float(request.POST.get('start_second', 0))
+        duration = float(request.POST.get('duration', 3))
+        font_size = int(request.POST.get('font_size', 72))
+        project_name = request.POST.get('project_name', f'Text_Overlay_{int(time.time())}')
+
+        if not video_id or not text:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'video_id and text are required'
+            }, status=400)
+
+        logger.info(f"📝 Adding text overlay '{text}' to video {video_id}")
+
+        # Get source video
+        video = VideoHistory.objects.get(id=video_id, user=request.user)
+
+        # Create temporary directory
+        temp_dir = Path('/tmp/davinci_text')
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Download source video
+        source_path = temp_dir / f"source_{video_id}.mp4"
+        if video.video_url.startswith('/media/'):
+            local_file = Path(video.video_url.lstrip('/'))
+            shutil.copy2(local_file, source_path)
+        else:
+            response = requests.get(video.video_url, timeout=30)
+            source_path.write_bytes(response.content)
+
+        logger.info(f"✅ Source video downloaded to {source_path}")
+
+        # Session 73: Use ffmpeg for text overlay (simpler and more reliable than Fusion!)
+        # Position mapping for ffmpeg
+        position_map = {
+            'center': '(w-text_w)/2:(h-text_h)/2',
+            'lower_third': '(w-text_w)/2:h*0.75',
+            'upper_third': '(w-text_w)/2:h*0.25'
+        }
+
+        ffmpeg_position = position_map.get(position, '(w-text_w)/2:(h-text_h)/2')
+
+        # Escape text for ffmpeg (handle special characters)
+        escaped_text = text.replace("'", "'\\''").replace(":", "\\:")
+
+        # Create output path
+        safe_project_name = re.sub(r'[^\w\s-]', '', project_name).replace(' ', '_')
+        output_path = str(temp_dir / f"{safe_project_name}_with_text.mp4")
+
+        logger.info(f"🎨 Using ffmpeg for text overlay (better than Fusion API!)")
+        logger.info(f"📝 Text: '{text}' at {position}")
+
+        # Build ffmpeg command for text overlay
+        # Uses drawtext filter with perfect spelling!
+        import subprocess
+
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', str(source_path),
+            '-vf', f"drawtext=text='{escaped_text}':fontfile=/System/Library/Fonts/Supplemental/Arial.ttf:fontsize={font_size}:fontcolor=white:borderw=2:bordercolor=black:x={ffmpeg_position.split(':')[0]}:y={ffmpeg_position.split(':')[1]}:enable='between(t,{start_second},{start_second + duration})'",
+            '-c:a', 'copy',  # Copy audio without re-encoding
+            '-y',  # Overwrite output
+            output_path
+        ]
+
+        logger.info(f"🎬 Running ffmpeg text overlay...")
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg error: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Text overlay failed: {result.stderr[:200]}'
+            }, status=500)
+
+        logger.info(f"✅ Text overlay complete!")
+
+        # Create a simple render result (ffmpeg already did the work!)
+        from content.davinci_provider import DaVinciRenderResult
+        render_result = DaVinciRenderResult(
+            success=True,
+            video_path=output_path,
+            project_name=project_name
+        )
+
+        if render_result.success:
+            # Save to database
+            media_dir = Path('media/generated_videos')
+            media_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_id = uuid.uuid4().hex[:8]
+            filename = f"text_overlay_{unique_id}.mp4"
+            destination = media_dir / filename
+
+            shutil.copy2(output_path, destination)
+
+            video_history = VideoHistory.objects.create(
+                user=request.user,
+                prompt=f"Text overlay: '{text}' on {video.prompt[:50]}",
+                model_used="DaVinci Resolve Studio",
+                video_type="text_overlay",
+                duration=video.duration or 8,
+                status='completed',
+                video_url=f"/media/generated_videos/{filename}"
+            )
+
+            video_url = request.build_absolute_uri(video_history.video_url)
+
+            return JsonResponse({
+                'success': True,
+                'video_url': video_url,
+                'video_id': str(video_history.id),
+                'message': f'Text overlay "{text}" added successfully!'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error_message': render_result.error_message
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Text overlay error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def apply_color_grading_endpoint(request):
+    """
+    POST /api/v1/davinci/apply-color-grading/
+    Apply color grading to a video using DaVinci Resolve
+    Session 72: Voice-controlled color grading!
+
+    Form Data:
+        - video_id: UUID of source video (required)
+        - style: Color grading style (default: 'cinematic_warm')
+        - project_name: Optional project name
+
+    Returns:
+        {
+            'success': bool,
+            'video_url': str,
+            'video_id': str,
+            'message': str
+        }
+    """
+    try:
+        davinci = get_davinci_provider()
+
+        if not davinci.studio_available:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'DaVinci Resolve Studio required.'
+            }, status=503)
+
+        # Parse parameters
+        video_id = request.POST.get('video_id', '').strip()
+        style = request.POST.get('style', 'cinematic_warm')
+        project_name = request.POST.get('project_name', f'Color_Grade_{int(time.time())}')
+
+        if not video_id:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'video_id is required'
+            }, status=400)
+
+        logger.info(f"🎨 Applying {style} color grading to video {video_id}")
+
+        # Get source video
+        video = VideoHistory.objects.get(id=video_id, user=request.user)
+
+        # Create temporary directory
+        temp_dir = Path('/tmp/davinci_color')
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Download source video
+        source_path = temp_dir / f"source_{video_id}.mp4"
+        if video.video_url.startswith('/media/'):
+            local_file = Path(video.video_url.lstrip('/'))
+            shutil.copy2(local_file, source_path)
+        else:
+            response = requests.get(video.video_url, timeout=30)
+            source_path.write_bytes(response.content)
+
+        logger.info(f"✅ Source video downloaded")
+
+        # Session 73: Use ffmpeg for color grading (much simpler than DaVinci!)
+        # Color grading filter presets
+        color_filters = {
+            'cinematic_warm': 'eq=contrast=1.1:brightness=0.05:saturation=1.2,curves=preset=warm',
+            'cinematic_cool': 'eq=contrast=1.1:saturation=1.1,colortemperature=9000',
+            'vintage': 'eq=contrast=1.2:saturation=0.8,curves=vintage,noise=alls=10:allf=t',
+            'modern': 'eq=contrast=1.05:brightness=0.02:saturation=1.05',
+            'high_contrast': 'eq=contrast=1.3:brightness=0.0:saturation=1.1',
+            'soft': 'eq=contrast=0.9:brightness=0.03:saturation=0.85,curves=preset=lighter',
+            'vibrant': 'eq=contrast=1.15:saturation=1.5:brightness=0.02'
+        }
+
+        # Get the filter for the requested style
+        color_filter = color_filters.get(style, color_filters['cinematic_warm'])
+
+        # Create output path
+        safe_project_name = re.sub(r'[^\w\s-]', '', project_name).replace(' ', '_')
+        output_path = str(temp_dir / f"{safe_project_name}_graded.mp4")
+
+        logger.info(f"🎨 Using ffmpeg for color grading: {style}")
+        logger.info(f"🎬 Filter: {color_filter}")
+
+        # Build ffmpeg command for color grading
+        import subprocess
+
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', str(source_path),
+            '-vf', color_filter,
+            '-c:a', 'copy',  # Copy audio without re-encoding
+            '-y',  # Overwrite output
+            output_path
+        ]
+
+        logger.info(f"🎬 Running ffmpeg color grading...")
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg error: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Color grading failed: {result.stderr[:200]}'
+            }, status=500)
+
+        logger.info(f"✅ Color grading complete!")
+
+        # Create a simple render result (ffmpeg already did the work!)
+        from content.davinci_provider import DaVinciRenderResult
+        render_result = DaVinciRenderResult(
+            success=True,
+            video_path=output_path,
+            project_name=project_name
+        )
+
+        if render_result.success:
+            # Save to database
+            media_dir = Path('media/generated_videos')
+            media_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_id = uuid.uuid4().hex[:8]
+            filename = f"color_graded_{unique_id}.mp4"
+            destination = media_dir / filename
+
+            shutil.copy2(output_path, destination)
+
+            video_history = VideoHistory.objects.create(
+                user=request.user,
+                prompt=f"{style} color grading on {video.prompt[:50]}",
+                model_used="DaVinci Resolve Studio",
+                video_type="color_graded",
+                duration=video.duration or 8,
+                status='completed',
+                video_url=f"/media/generated_videos/{filename}"
+            )
+
+            video_url = request.build_absolute_uri(video_history.video_url)
+
+            return JsonResponse({
+                'success': True,
+                'video_url': video_url,
+                'video_id': str(video_history.id),
+                'message': f'{style} color grading applied successfully!'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error_message': render_result.error_message
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Color grading error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_audio_to_video_endpoint(request):
+    """
+    POST /api/v1/davinci/add-audio-to-video/
+    Add background music/audio to a video using DaVinci Resolve
+    Session 73: Voice-controlled audio mixing!
+
+    Form Data:
+        - video_id: UUID of source video (required)
+        - audio_file: Audio file to mix (required)
+        - audio_volume: Volume 0.0-1.0 (default: 0.3)
+        - project_name: Optional project name
+
+    Returns:
+        {
+            'success': bool,
+            'video_url': str,
+            'video_id': str,
+            'message': str
+        }
+    """
+    try:
+        davinci = get_davinci_provider()
+
+        if not davinci.studio_available:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'DaVinci Resolve Studio required.'
+            }, status=503)
+
+        # Parse parameters
+        video_id = request.POST.get('video_id', '').strip()
+        audio_file = request.FILES.get('audio_file')
+        audio_volume = float(request.POST.get('audio_volume', 0.3))
+        project_name = request.POST.get('project_name', f'Audio_Mix_{int(time.time())}')
+
+        if not video_id or not audio_file:
+            return JsonResponse({
+                'success': False,
+                'error_message': 'video_id and audio_file are required'
+            }, status=400)
+
+        # Validate volume
+        audio_volume = max(0.0, min(1.0, audio_volume))
+
+        logger.info(f"🎵 Adding audio {audio_file.name} to video {video_id} at {audio_volume * 100}% volume")
+
+        # Get source video
+        video = VideoHistory.objects.get(id=video_id, user=request.user)
+
+        # Create temporary directory
+        temp_dir = Path('/tmp/davinci_audio')
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Download source video
+        source_path = temp_dir / f"source_{video_id}.mp4"
+        if video.video_url.startswith('/media/'):
+            local_file = Path(video.video_url.lstrip('/'))
+            shutil.copy2(local_file, source_path)
+        else:
+            response = requests.get(video.video_url, timeout=30)
+            source_path.write_bytes(response.content)
+
+        # Save uploaded audio file
+        audio_path = temp_dir / f"audio_{int(time.time())}{Path(audio_file.name).suffix}"
+        with open(audio_path, 'wb+') as f:
+            for chunk in audio_file.chunks():
+                f.write(chunk)
+
+        logger.info(f"✅ Source video and audio downloaded")
+
+        # Session 73: Use ffmpeg for audio mixing (much simpler than DaVinci!)
+        # Create output path
+        safe_project_name = re.sub(r'[^\w\s-]', '', project_name).replace(' ', '_')
+        output_path = str(temp_dir / f"{safe_project_name}_with_audio.mp4")
+
+        logger.info(f"🎵 Using ffmpeg for audio mixing at {audio_volume * 100}% volume")
+
+        # Build ffmpeg command for audio mixing
+        # Mixing strategy: Original video audio + new background audio
+        import subprocess
+
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', str(source_path),  # Video input (with original audio)
+            '-i', str(audio_path),   # Background music input
+            '-filter_complex', f'[1:a]volume={audio_volume}[a1];[0:a][a1]amix=inputs=2:duration=first:dropout_transition=2',
+            '-c:v', 'copy',  # Copy video without re-encoding
+            '-y',  # Overwrite output
+            output_path
+        ]
+
+        logger.info(f"🎬 Running ffmpeg audio mixing...")
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"❌ ffmpeg error: {result.stderr}")
+            return JsonResponse({
+                'success': False,
+                'error_message': f'Audio mixing failed: {result.stderr[:200]}'
+            }, status=500)
+
+        logger.info(f"✅ Audio mixing complete!")
+
+        # Create a simple render result (ffmpeg already did the work!)
+        from content.davinci_provider import DaVinciRenderResult
+        render_result = DaVinciRenderResult(
+            success=True,
+            video_path=output_path,
+            project_name=project_name
+        )
+
+        if render_result.success:
+            # Save to database
+            media_dir = Path('media/generated_videos')
+            media_dir.mkdir(parents=True, exist_ok=True)
+
+            unique_id = uuid.uuid4().hex[:8]
+            filename = f"audio_mix_{unique_id}.mp4"
+            destination = media_dir / filename
+
+            shutil.copy2(output_path, destination)
+
+            video_history = VideoHistory.objects.create(
+                user=request.user,
+                prompt=f"Audio mixing: {audio_file.name} on {video.prompt[:50]}",
+                model_used="DaVinci Resolve Studio",
+                video_type="audio_mixed",
+                duration=video.duration or 8,
+                status='completed',
+                video_url=f"/media/generated_videos/{filename}"
+            )
+
+            video_url = request.build_absolute_uri(video_history.video_url)
+
+            return JsonResponse({
+                'success': True,
+                'video_url': video_url,
+                'video_id': str(video_history.id),
+                'message': f'Audio "{audio_file.name}" mixed successfully at {int(audio_volume * 100)}% volume!'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error_message': render_result.error_message
+            }, status=500)
+
+    except Exception as e:
+        logger.error(f"❌ Audio mixing error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error_message': str(e)
+        }, status=500)

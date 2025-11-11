@@ -267,8 +267,11 @@ from core.views_video import (
     character_performance_endpoint
 )
 # Session 66 Part 2: DaVinci Resolve video editing
+# Session 72: Added text overlay and color grading endpoints
+# Session 73: Added audio mixing endpoint
 from core.views_davinci import (
-    create_video_project_endpoint, check_davinci_status, chain_videos_simple
+    create_video_project_endpoint, check_davinci_status, chain_videos_simple,
+    add_text_overlay_endpoint, apply_color_grading_endpoint, add_audio_to_video_endpoint
 )
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
@@ -804,6 +807,11 @@ urlpatterns = [
     path('api/v1/davinci/status/', check_davinci_status, name='davinci-status'),
     path('api/v1/davinci/create-project/', create_video_project_endpoint, name='davinci-create-project'),
     path('api/v1/davinci/chain-videos/', chain_videos_simple, name='davinci-chain-videos'),
+    # Session 72: Voice-controlled DaVinci features
+    path('api/v1/davinci/add-text-overlay/', add_text_overlay_endpoint, name='davinci-add-text'),
+    path('api/v1/davinci/apply-color-grading/', apply_color_grading_endpoint, name='davinci-color-grade'),
+    # Session 73: Audio mixing endpoint
+    path('api/v1/davinci/add-audio-to-video/', add_audio_to_video_endpoint, name='davinci-add-audio'),
     path('api/v1/video/<uuid:video_id>/', get_video_detail, name='video-detail'),
     path('api/v1/video/gallery/', video_gallery, name='video-gallery'),
     path('api/v1/video/save/', save_video_to_gallery, name='save-video'),

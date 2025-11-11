@@ -13511,6 +13511,12 @@
                         return `📧 Sending email to: ${params.to_email}...`;
                     } else if (toolName === 'chain_videos') {
                         return `🎬 Setting up video chaining...`;
+                    } else if (toolName === 'add_text_to_video' && params.text) {
+                        return `📝 Preparing text overlay: "${params.text}"...`;
+                    } else if (toolName === 'add_music_to_video') {
+                        return `🎵 Preparing audio mixing...`;
+                    } else if (toolName === 'apply_color_grade') {
+                        return `🎨 Preparing color grading...`;
                     }
                 } catch (e) {
                     console.error('Error in getProgressMessage:', e);
@@ -13622,6 +13628,79 @@
                             } else if (result.result.task_ids) {
                                 console.error('❌ pollVideoStatus function not found - brand videos won\'t auto-update!');
                             }
+                        } else if (result.tool === 'add_text_to_video') {
+                            // Session 72: Display text overlay results
+                            // Session 73: Add execution button
+                            message += `📝 **Ready to Add Text Overlay!**\n\n`;
+                            message += `✨ **Text:** "${result.result.text}"\n`;
+                            message += `📍 **Position:** ${result.result.position}\n`;
+                            message += `⏱️ **Timing:** ${result.result.start_second}s - ${result.result.start_second + result.result.duration}s\n`;
+                            message += `📏 **Font Size:** ${result.result.font_size}pt\n\n`;
+                            message += `🎬 **Video:** ${result.result.video_prompt}\n\n`;
+                            message += `${result.result.message}\n\n`;
+                            message += `${result.result.instructions}\n\n`;
+                            if (result.result.note) {
+                                message += `${result.result.note}\n\n`;
+                            }
+
+                            // Session 73: Store data and add execution button
+                            const textOverlayData = {
+                                video_id: result.result.video_id,
+                                text: result.result.text,
+                                position: result.result.position,
+                                start_second: result.result.start_second,
+                                duration: result.result.duration,
+                                font_size: result.result.font_size
+                            };
+                            const textOverlayId = 'text_overlay_' + Date.now();
+                            window[textOverlayId] = textOverlayData;
+
+                            message += `<button class="btn btn-primary" onclick="window.aiAssistant.executeTextOverlay('${textOverlayId}')" style="padding: 10px 20px; font-size: 16px; margin: 10px 0;">📝 Confirm & Add Text</button>\n\n`;
+                        } else if (result.tool === 'add_music_to_video') {
+                            // Session 72: Display music addition results
+                            // Session 73: Add execution button
+                            message += `🎵 **Ready to Add Background Music!**\n\n`;
+                            message += `🔊 **Volume:** ${Math.round(result.result.audio_volume * 100)}%\n`;
+                            message += `🎼 **Style:** ${result.result.music_style}\n\n`;
+                            message += `🎬 **Video:** ${result.result.video_prompt}\n\n`;
+                            message += `${result.result.message}\n\n`;
+                            message += `${result.result.instructions}\n\n`;
+                            if (result.result.note) {
+                                message += `${result.result.note}\n\n`;
+                            }
+
+                            // Session 73: Store data and add execution button
+                            const audioMixingData = {
+                                video_id: result.result.video_id,
+                                audio_volume: result.result.audio_volume,
+                                music_style: result.result.music_style
+                            };
+                            const audioMixingId = 'audio_mixing_' + Date.now();
+                            window[audioMixingId] = audioMixingData;
+
+                            message += `<button class="btn btn-primary" onclick="window.aiAssistant.executeAudioMixing('${audioMixingId}')" style="padding: 10px 20px; font-size: 16px; margin: 10px 0;">🎵 Upload Audio & Confirm</button>\n\n`;
+                        } else if (result.tool === 'apply_color_grade') {
+                            // Session 72: Display color grading results
+                            // Session 73: Add execution button
+                            message += `🎨 **Ready to Apply Color Grading!**\n\n`;
+                            message += `✨ **Style:** ${result.result.style.replace(/_/g, ' ')}\n`;
+                            message += `📖 **Look:** ${result.result.style_description}\n\n`;
+                            message += `🎬 **Video:** ${result.result.video_prompt}\n\n`;
+                            message += `${result.result.message}\n\n`;
+                            message += `${result.result.instructions}\n\n`;
+                            if (result.result.note) {
+                                message += `${result.result.note}\n\n`;
+                            }
+
+                            // Session 73: Store data and add execution button
+                            const colorGradeData = {
+                                video_id: result.result.video_id,
+                                style: result.result.style
+                            };
+                            const colorGradeId = 'color_grade_' + Date.now();
+                            window[colorGradeId] = colorGradeData;
+
+                            message += `<button class="btn btn-primary" onclick="window.aiAssistant.executeColorGrading('${colorGradeId}')" style="padding: 10px 20px; font-size: 16px; margin: 10px 0;">🎨 Confirm & Apply Color Grading</button>\n\n`;
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
@@ -13629,6 +13708,169 @@
                 }
 
                 return message;
+            }
+
+            // Session 73: DaVinci execution functions for voice commands
+            async executeTextOverlay(dataId) {
+                const data = window[dataId];
+                if (!data) {
+                    console.error('❌ Text overlay data not found:', dataId);
+                    return;
+                }
+
+                console.log('📝 Executing text overlay:', data);
+
+                // Show progress message
+                this.addMessage('assistant', `🎬 Rendering video with text "${data.text}"...\n\nThis may take 30-60 seconds. DaVinci Resolve is creating your video!`);
+
+                try {
+                    const formData = new FormData();
+                    formData.append('video_id', data.video_id);
+                    formData.append('text', data.text);
+                    formData.append('position', data.position);
+                    formData.append('start_second', data.start_second);
+                    formData.append('duration', data.duration);
+                    formData.append('font_size', data.font_size);
+
+                    const response = await authenticatedFetch('/api/v1/davinci/add-text-overlay/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.addMessage('assistant', `✅ **Text Overlay Complete!**\n\n` +
+                            `Your video with text "${data.text}" is ready!\n\n` +
+                            `📹 Video ID: ${result.video_id}\n\n` +
+                            `🎬 The video has been added to your gallery. Switch to the Video Gallery tab to see it!`);
+
+                        // Refresh video gallery if visible
+                        if (typeof window.loadVideoHistory === 'function') {
+                            console.log('🔄 Refreshing video gallery...');
+                            setTimeout(() => window.loadVideoHistory(), 1000);
+                        }
+                    } else {
+                        this.addMessage('assistant', `❌ **Error:**\n\n${result.error_message || 'Failed to add text overlay'}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Text overlay error:', error);
+                    this.addMessage('assistant', `❌ **Error:**\n\n${error.message || 'Failed to add text overlay. Make sure DaVinci Resolve Studio is running!'}`);
+                }
+
+                // Clean up stored data
+                delete window[dataId];
+            }
+
+            async executeColorGrading(dataId) {
+                const data = window[dataId];
+                if (!data) {
+                    console.error('❌ Color grading data not found:', dataId);
+                    return;
+                }
+
+                console.log('🎨 Executing color grading:', data);
+
+                // Show progress message
+                this.addMessage('assistant', `🎬 Applying ${data.style.replace(/_/g, ' ')} color grading...\n\nThis may take 30-60 seconds. DaVinci Resolve is creating your cinematic video!`);
+
+                try {
+                    const formData = new FormData();
+                    formData.append('video_id', data.video_id);
+                    formData.append('style', data.style);
+
+                    const response = await authenticatedFetch('/api/v1/davinci/apply-color-grading/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.addMessage('assistant', `✅ **Color Grading Complete!**\n\n` +
+                            `Your video with ${data.style.replace(/_/g, ' ')} color grading is ready!\n\n` +
+                            `📹 Video ID: ${result.video_id}\n\n` +
+                            `🎬 The video has been added to your gallery. Switch to the Video Gallery tab to see your Hollywood-style video!`);
+
+                        // Refresh video gallery if visible
+                        if (typeof window.loadVideoHistory === 'function') {
+                            console.log('🔄 Refreshing video gallery...');
+                            setTimeout(() => window.loadVideoHistory(), 1000);
+                        }
+                    } else {
+                        this.addMessage('assistant', `❌ **Error:**\n\n${result.error_message || 'Failed to apply color grading'}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Color grading error:', error);
+                    this.addMessage('assistant', `❌ **Error:**\n\n${error.message || 'Failed to apply color grading. Make sure DaVinci Resolve Studio is running!'}`);
+                }
+
+                // Clean up stored data
+                delete window[dataId];
+            }
+
+            async executeAudioMixing(dataId) {
+                const data = window[dataId];
+                if (!data) {
+                    console.error('❌ Audio mixing data not found:', dataId);
+                    return;
+                }
+
+                console.log('🎵 Executing audio mixing:', data);
+
+                // Create file input for audio upload
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'audio/*,.mp3,.wav,.m4a,.aac';
+
+                fileInput.onchange = async (e) => {
+                    const audioFile = e.target.files[0];
+                    if (!audioFile) {
+                        console.log('❌ No audio file selected');
+                        return;
+                    }
+
+                    // Show progress message
+                    this.addMessage('assistant', `🎬 Mixing ${audioFile.name} with your video at ${Math.round(data.audio_volume * 100)}% volume...\n\nThis may take 30-60 seconds. DaVinci Resolve is creating your video!`);
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('video_id', data.video_id);
+                        formData.append('audio_file', audioFile);
+                        formData.append('audio_volume', data.audio_volume);
+
+                        const response = await authenticatedFetch('/api/v1/davinci/add-audio-to-video/', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            this.addMessage('assistant', `✅ **Audio Mixing Complete!**\n\n` +
+                                `Your video with background music is ready!\n\n` +
+                                `📹 Video ID: ${result.video_id}\n\n` +
+                                `🎬 The video has been added to your gallery. Switch to the Video Gallery tab to hear it!`);
+
+                            // Refresh video gallery if visible
+                            if (typeof window.loadVideoHistory === 'function') {
+                                console.log('🔄 Refreshing video gallery...');
+                                setTimeout(() => window.loadVideoHistory(), 1000);
+                            }
+                        } else {
+                            this.addMessage('assistant', `❌ **Error:**\n\n${result.error_message || 'Failed to add audio'}`);
+                        }
+                    } catch (error) {
+                        console.error('❌ Audio mixing error:', error);
+                        this.addMessage('assistant', `❌ **Error:**\n\n${error.message || 'Failed to mix audio. Make sure DaVinci Resolve Studio is running!'}`);
+                    }
+
+                    // Clean up stored data
+                    delete window[dataId];
+                };
+
+                // Trigger file picker
+                fileInput.click();
             }
 
             async handleQuickAction(action) {
@@ -14113,6 +14355,7 @@
         let aiAssistant;
         window.addEventListener('DOMContentLoaded', () => {
             aiAssistant = new AIAssistant();
+            window.aiAssistant = aiAssistant;  // Session 73: Make globally accessible for button onclick
             console.log('🤖 AI Assistant initialized!');
         });
 
