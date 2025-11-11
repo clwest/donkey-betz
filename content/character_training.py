@@ -345,9 +345,24 @@ def submit_training_job(
     if not provider.available:
         raise TrainingWorkflowError("Replicate API not available")
 
+    # Build destination if not provided (optional - will try but may fallback)
+    # Format: username/model-name (e.g., "donkeybetz/donny-pixel")
+    if not destination:
+        replicate_username = settings.EXTERNAL_API_KEYS.get('REPLICATE_USERNAME', 'donkeybetz')
+        # Sanitize character name for model name (lowercase, hyphens only)
+        model_name = character.name.lower().replace(' ', '-').replace('_', '-')
+        # Remove any special characters
+        model_name = ''.join(c for c in model_name if c.isalnum() or c == '-')
+        destination = f"{replicate_username}/{model_name}"
+        logger.info(f"🎯 Attempting destination: {destination} (will fallback to weights URL if model creation fails)")
+
     # Submit training
     try:
         logger.info(f"📤 Submitting training job for character: {character.name}")
+        if destination:
+            logger.info(f"   Destination: {destination}")
+        else:
+            logger.info(f"   Destination: None (weights URL will be returned)")
         logger.info(f"   Trigger word: {character.trigger_word}")
         logger.info(f"   Images: {character.training_images_count}")
         logger.info(f"   Steps: {character.training_steps}")
