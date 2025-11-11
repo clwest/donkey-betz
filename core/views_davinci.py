@@ -16,7 +16,9 @@ IMPORTANT: Requires DaVinci Resolve Studio ($200)
 import json
 import logging
 import requests
+import shutil
 import time
+import uuid
 from pathlib import Path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -457,30 +459,34 @@ def chain_videos_simple(request):
         if render_result.success:
             logger.info(f"✅ Video rendered successfully: {output_path}")
 
-            # Save to VideoHistory database (Session 67)
+            # Save to VideoHistory database (Session 70: Fixed video_url field)
             try:
-                # Read the rendered video file
-                with open(output_path, 'rb') as video_file:
-                    video_content = video_file.read()
+                # Ensure media directory exists
+                media_dir = Path('media/generated_videos')
+                media_dir.mkdir(parents=True, exist_ok=True)
 
-                # Create VideoHistory record
+                # Generate unique filename
+                unique_id = uuid.uuid4().hex[:8]
+                filename = f"chained_{unique_id}.mp4"
+                destination = media_dir / filename
+
+                # Copy rendered video to media directory
+                shutil.copy2(output_path, destination)
+                logger.info(f"📦 Copied video to: {destination}")
+
+                # Create VideoHistory record (Session 70: Use video_url not file_path!)
                 video_history = VideoHistory.objects.create(
+                    user=request.user,  # Required field!
                     prompt=f"Chained video: {project_name} ({len(video_clips)} clips)",
                     model_used="DaVinci Resolve Studio",
                     video_type="chained_video",  # New type for chained videos
                     duration=total_duration,
-                    status='completed'
-                )
-
-                # Save video file
-                video_history.file_path.save(
-                    f"chained_{video_history.id}.mp4",
-                    ContentFile(video_content),
-                    save=True
+                    status='completed',
+                    video_url=f"/media/generated_videos/{filename}"  # Local media URL
                 )
 
                 # Get the full URL for the video
-                video_url = request.build_absolute_uri(video_history.get_full_url())
+                video_url = request.build_absolute_uri(video_history.video_url)
 
                 logger.info(f"✅ Saved chained video to database: {video_history.id}")
 

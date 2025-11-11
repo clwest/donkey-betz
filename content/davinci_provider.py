@@ -444,33 +444,158 @@ class DaVinciResolveProvider:
             )
 
         try:
+            import time
             logger.info(f"📹 Rendering project...")
 
             # Generate output path if not provided
             if not output_path:
-                import time
                 timestamp = int(time.time())
                 output_path = f"/tmp/davinci_render_{timestamp}.{format}"
 
-            # Set render settings
-            # Note: Actual implementation uses project.SetRenderSettings()
-            # and project.AddRenderJob()
+            # Session 70: REAL DaVinci Resolve Studio rendering!
+            # Parse resolution
+            width, height = resolution.split('x')
 
-            # Start render
-            # Note: This is synchronous - real implementation should be async
-            # or provide progress callbacks
+            logger.info(f"📹 Setting render config: {width}x{height}, {format}, {quality}")
 
-            logger.info(f"✅ Render complete: {output_path}")
+            # Step 1: Set format and codec (MUST be done first!)
+            codec_map = {
+                'mp4': 'H264',
+                'mov': 'H264',
+                'avi': 'H264'
+            }
+            codec = codec_map.get(format, 'H264')
+
+            logger.info(f"🔧 Setting format to {format} and codec to {codec}")
+            format_success = self.current_project.SetCurrentRenderFormatAndCodec(format, codec)
+            if not format_success:
+                logger.error(f"❌ Failed to set format/codec")
+                return DaVinciRenderResult(
+                    success=False,
+                    error_message=f"Failed to set render format ({format}) and codec ({codec})"
+                )
+
+            logger.info(f"✅ Format and codec set")
+
+            # Step 2: Set render settings
+            render_settings = {
+                "SelectAllFrames": 1,
+                "TargetDir": os.path.dirname(output_path),
+                "CustomName": os.path.basename(output_path).replace(f'.{format}', '')
+            }
+
+            logger.info(f"🔧 Applying render settings: {render_settings}")
+
+            # Apply render settings to project
+            success = self.current_project.SetRenderSettings(render_settings)
+            if not success:
+                logger.error("❌ Failed to set render settings")
+                return DaVinciRenderResult(
+                    success=False,
+                    error_message="Failed to configure render settings"
+                )
+
+            logger.info(f"✅ Render settings applied")
+
+            # Get project manager to add render job
+            job_id = self.current_project.AddRenderJob()
+            if not job_id:
+                logger.error("❌ Failed to add render job")
+                return DaVinciRenderResult(
+                    success=False,
+                    error_message="Failed to add render job to queue"
+                )
+
+            logger.info(f"✅ Render job added: {job_id}")
+
+            # Check render jobs before starting
+            all_jobs = self.current_project.GetRenderJobList()
+            logger.info(f"📋 Current render jobs: {all_jobs}")
+
+            # Start rendering (Session 70: Use project.StartRendering(), not project_manager!)
+            logger.info(f"📹 Starting render via Project.StartRendering()...")
+            render_start_result = self.current_project.StartRendering()
+            logger.info(f"📹 StartRendering() returned: {render_start_result}")
+
+            # Give it a moment to start
+            time.sleep(2)
+
+            # Check if rendering actually started (use project, not project_manager)
+            is_rendering_initial = self.current_project.IsRenderingInProgress()
+            logger.info(f"📹 IsRenderingInProgress (initial check): {is_rendering_initial}")
+
+            # Wait for render to complete (poll every second)
+            max_wait = 300  # 5 minutes timeout
+            elapsed = 0
+            render_started = False
+
+            while elapsed < max_wait:
+                # Check if rendering is still in progress
+                is_rendering = self.current_project.IsRenderingInProgress()
+
+                if is_rendering and not render_started:
+                    render_started = True
+                    logger.info(f"🎬 Render actually started!")
+
+                if not is_rendering:
+                    if render_started:
+                        logger.info(f"✅ Rendering completed in {elapsed} seconds!")
+                        break
+                    elif elapsed > 5:
+                        # Render never started after 5 seconds
+                        logger.error(f"❌ Render never started after {elapsed}s")
+
+                        # Check job status
+                        for job_id_check in all_jobs:
+                            status = self.current_project.GetRenderJobStatus(job_id_check)
+                            logger.error(f"   Job {job_id_check} status: {status}")
+
+                        return DaVinciRenderResult(
+                            success=False,
+                            error_message=f"Render job added but never started. Check DaVinci Resolve Deliver page."
+                        )
+
+                time.sleep(1)
+                elapsed += 1
+
+                # Log progress every 5 seconds
+                if elapsed % 5 == 0:
+                    logger.info(f"⏳ Waiting for render... ({elapsed}s) - IsRendering: {is_rendering}")
+
+            if elapsed >= max_wait:
+                logger.error(f"❌ Render timeout after {max_wait}s")
+                return DaVinciRenderResult(
+                    success=False,
+                    error_message=f"Render timeout after {max_wait} seconds"
+                )
+
+            # Verify output file exists
+            expected_output = output_path
+            if not os.path.exists(expected_output):
+                # DaVinci might add .mp4 extension
+                expected_output = output_path if output_path.endswith(f'.{format}') else f"{output_path}.{format}"
+
+            if not os.path.exists(expected_output):
+                logger.error(f"❌ Rendered file not found: {expected_output}")
+                return DaVinciRenderResult(
+                    success=False,
+                    error_message=f"Rendered file not found at {expected_output}"
+                )
+
+            file_size = os.path.getsize(expected_output) / (1024 * 1024)  # MB
+            logger.info(f"✅ Render complete: {expected_output} ({file_size:.1f} MB)")
 
             return DaVinciRenderResult(
                 success=True,
-                video_path=output_path,
+                video_path=expected_output,
                 project_name=self.current_project.GetName() if self.current_project else None,
                 duration=self._get_timeline_duration(),
                 metadata={
                     'format': format,
                     'quality': quality,
-                    'resolution': resolution
+                    'resolution': resolution,
+                    'file_size_mb': file_size,
+                    'render_time_seconds': elapsed
                 }
             )
 
