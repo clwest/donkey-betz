@@ -4785,6 +4785,8 @@ def execute_tool(request):
             result = _execute_send_email(request.user, parameters)
         elif tool_name == 'create_brand_video':
             result = _execute_create_brand_video(request.user, parameters)
+        elif tool_name == 'chain_videos':
+            result = _execute_chain_videos(request.user, parameters)
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -5388,6 +5390,102 @@ def _execute_create_brand_video(user, parameters):
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_create_brand_video: {str(e)}")
+        raise
+
+
+def _execute_chain_videos(user, parameters):
+    """
+    Execute video chaining via DaVinci Resolve
+    Session 71: AI Assistant integration for video chaining!
+
+    This guides the user to chain their videos together:
+    1. Gets the user's most recent videos from gallery
+    2. Returns video IDs and instructions
+    3. Frontend auto-selects videos and opens chain modal
+
+    Parameters:
+        video_count (int): Number of videos to chain (default: 2)
+        transition_type (str): Transition style (default: 'Cross Dissolve')
+        add_transitions (bool): Add transitions (default: true)
+        project_name (str): Optional project name
+
+    Returns:
+        dict: {
+            'success': True,
+            'video_ids': ['id1', 'id2', ...],
+            'video_count': 2,
+            'transition_type': 'Cross Dissolve',
+            'message': 'Ready to chain 2 videos...'
+        }
+    """
+    try:
+        from content.models import VideoHistory
+
+        video_count = parameters.get('video_count', 2)
+        transition_type = parameters.get('transition_type', 'Cross Dissolve')
+        add_transitions = parameters.get('add_transitions', True)
+        project_name = parameters.get('project_name', None)
+
+        # Validate video_count
+        if video_count < 2:
+            raise ValueError("Need at least 2 videos to chain")
+        if video_count > 10:
+            logger.warning(f"⚠️ video_count {video_count} is high, limiting to 10")
+            video_count = 10
+
+        logger.info(f"🎬 AI Assistant chain_videos: {video_count} videos, {transition_type} transitions")
+
+        # Get user's most recent completed videos
+        recent_videos = VideoHistory.objects.filter(
+            user=user,
+            status='completed'
+        ).order_by('-created_at')[:video_count]
+
+        if recent_videos.count() < video_count:
+            available_count = recent_videos.count()
+            return {
+                'success': False,
+                'error': f'You only have {available_count} completed videos in your gallery. Need {video_count} videos to chain.',
+                'available_count': available_count,
+                'requested_count': video_count,
+                'message': f'Please create more videos first, or try chaining {available_count} videos instead.'
+            }
+
+        # Get video IDs and URLs
+        video_ids = [str(v.id) for v in recent_videos]
+        video_urls = []
+        video_prompts = []
+
+        for v in recent_videos:
+            # Get video URL (either external CDN or local media)
+            if v.video_url:
+                video_urls.append(v.video_url)
+            else:
+                logger.warning(f"⚠️ Video {v.id} has no video_url")
+
+            video_prompts.append(v.prompt[:100] if v.prompt else "Untitled video")
+
+        logger.info(f"✅ Found {len(video_ids)} videos for chaining: {video_ids}")
+
+        # Calculate estimated duration
+        total_duration = sum([v.duration or 8 for v in recent_videos])
+
+        return {
+            'success': True,
+            'video_ids': video_ids,
+            'video_urls': video_urls,
+            'video_prompts': video_prompts,
+            'video_count': len(video_ids),
+            'transition_type': transition_type,
+            'add_transitions': add_transitions,
+            'project_name': project_name or f"AI Chained Video {len(video_ids)} clips",
+            'total_duration': total_duration,
+            'message': f'🎬 Ready to chain {len(video_ids)} videos together! Your {video_count} most recent videos have been selected. The chained video will be approximately {total_duration} seconds long with {transition_type} transitions.',
+            'instructions': 'The videos have been auto-selected in your gallery. Click the "Chain Videos" button to create your final video!'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_chain_videos: {str(e)}")
         raise
 
 
