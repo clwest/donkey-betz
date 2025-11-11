@@ -4734,13 +4734,13 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "edit_character_training_image",
-                    "description": "Edit a specific training image for a character with natural language instructions. Regenerates the image with the requested changes (e.g., 'make ears bigger', 'change background to white', 'make more cartoonish'). Use when user wants to refine a training image before starting the training process. Session 75: Image editing workflow!",
+                    "description": "Edit a specific training image for a character with natural language instructions. Can use another image as reference for style matching (e.g., 'make image 1 look like image 0'). Regenerates the image with the requested changes (e.g., 'make ears bigger', 'change background to white', 'make more cartoonish'). Use when user wants to refine a training image before starting the training process. If character_id is not known, uses most recent character automatically. Session 75: Image editing workflow with image-to-image!",
                     "parameters": {
                         "type": "object",
                         "properties": {
                             "character_id": {
                                 "type": "number",
-                                "description": "ID of the character model being trained"
+                                "description": "ID of the character model being trained (optional - if not provided, uses most recent character)"
                             },
                             "image_number": {
                                 "type": "number",
@@ -4753,9 +4753,17 @@ Keep responses under 200 words. Be conversational and practical."""
                             "apply_to_all": {
                                 "type": "boolean",
                                 "description": "If true, applies this edit to all images in the training set. Default: false (only edit specified image)"
+                            },
+                            "reference_image_number": {
+                                "type": "number",
+                                "description": "Optional: Use another image as a style/structure reference. When provided, uses image-to-image to make the edited image match the reference (e.g., 'make image 1 look like image 0' would set reference_image_number to 0). This preserves the composition and style of the reference image."
+                            },
+                            "strength": {
+                                "type": "number",
+                                "description": "Optional: How much to preserve the reference image structure (0.0-1.0). Default: 0.65. Lower = more like reference, Higher = more creative freedom. Only used when reference_image_number is provided."
                             }
                         },
-                        "required": ["character_id", "image_number", "edit_instruction"]
+                        "required": ["image_number", "edit_instruction"]
                     }
                 }
             }
@@ -6028,19 +6036,33 @@ def _execute_create_character_from_prompt(user, parameters):
                 logger.warning(f"⚠️ Image {i+1} has no URL")
                 continue
 
-            # Download image
-            logger.info(f"   Downloading image {i+1}...")
-            img_response = requests.get(result.images[0], timeout=30)
+            # Get image data (handle both URLs and base64 data URIs)
+            image_url = result.images[0]
+            logger.info(f"   Processing image {i+1}...")
 
-            if img_response.status_code != 200:
-                logger.warning(f"⚠️ Failed to download image {i+1}")
-                continue
+            if image_url.startswith('data:image'):
+                # Base64 data URI - decode directly
+                import base64
+                # Extract base64 data after the comma
+                base64_data = image_url.split(',', 1)[1]
+                image_content = base64.b64decode(base64_data)
+                logger.info(f"   Decoded base64 image {i+1}")
+            else:
+                # HTTP URL - download
+                logger.info(f"   Downloading image {i+1} from URL...")
+                img_response = requests.get(image_url, timeout=30)
+
+                if img_response.status_code != 200:
+                    logger.warning(f"⚠️ Failed to download image {i+1}")
+                    continue
+
+                image_content = img_response.content
 
             # Create SimpleUploadedFile for Django
             filename = f"character_training_{i+1}.png"
             uploaded_file = SimpleUploadedFile(
                 name=filename,
-                content=img_response.content,
+                content=image_content,
                 content_type='image/png'
             )
 
@@ -6136,20 +6158,48 @@ def _execute_edit_character_training_image(user, parameters):
         dict: Updated character data with all training images
     """
     try:
+        from content.models import CharacterModel, CharacterTrainingImage
+
         character_id = parameters.get('character_id')
         image_number = parameters.get('image_number')
         edit_instruction = parameters.get('edit_instruction', '').strip()
         apply_to_all = parameters.get('apply_to_all', False)
+        reference_image_number = parameters.get('reference_image_number')
+        strength = parameters.get('strength', 0.65)  # Default: preserve reference structure moderately
 
-        logger.info(f"✏️ Editing training image for character {character_id}, image #{image_number}")
+        logger.info(f"✏️ Editing training image - character_id: {character_id}, image #{image_number}")
         logger.info(f"   Edit: '{edit_instruction}'")
         logger.info(f"   Apply to all: {apply_to_all}")
+        if reference_image_number is not None:
+            logger.info(f"   🎨 Using image #{reference_image_number} as reference (strength: {strength})")
 
         # Get character and verify ownership
-        try:
-            character = CharacterModel.objects.get(id=character_id, user=user)
-        except CharacterModel.DoesNotExist:
-            raise ValueError(f"Character {character_id} not found or you don't have access")
+        if character_id:
+            try:
+                character = CharacterModel.objects.get(id=character_id, user=user)
+                logger.info(f"✅ Using specified character: {character.id} - {character.name}")
+            except CharacterModel.DoesNotExist:
+                logger.warning(f"⚠️ Character {character_id} not found, trying most recent character...")
+                character = None
+        else:
+            logger.info(f"ℹ️ No character_id provided, using most recent character...")
+            character = None
+
+        # If character not found or not provided, use most recent
+        if not character:
+            character = CharacterModel.objects.filter(
+                user=user,
+                training_status='pending'  # Only pending (not yet submitted)
+            ).order_by('-created_at').first()
+
+            if not character:
+                # If no pending characters, just get the most recent one
+                character = CharacterModel.objects.filter(user=user).order_by('-created_at').first()
+
+            if not character:
+                raise ValueError(f"No characters found for editing")
+
+            logger.info(f"✅ Using most recent character: {character.id} - {character.name}")
 
         # Get images to edit
         if apply_to_all:
@@ -6168,8 +6218,17 @@ def _execute_edit_character_training_image(user, parameters):
         service = ImageGenerationService()
 
         # Check Stability AI availability
-        if 'stability' not in service.available_providers:
+        if not service.stability_key:
             raise ValueError("Stability AI is not available. Cannot generate edited images.")
+
+        # Get reference image if provided
+        reference_image = None
+        if reference_image_number is not None:
+            try:
+                reference_image = character.training_images.get(order=reference_image_number)
+                logger.info(f"✅ Found reference image #{reference_image_number}: {reference_image.image.path}")
+            except CharacterTrainingImage.DoesNotExist:
+                raise ValueError(f"Reference image #{reference_image_number} not found in character training set")
 
         edited_count = 0
         for training_image in images_to_edit:
@@ -6191,41 +6250,68 @@ def _execute_edit_character_training_image(user, parameters):
             # Combine: base + angle + edit instruction
             edited_prompt = f"{base_prompt}, {angle_desc}, {edit_instruction}"
 
-            logger.info(f"   Generating edited image #{training_image.order} with prompt: '{edited_prompt[:100]}...'")
+            # Check if we should use image-to-image with reference
+            if reference_image:
+                logger.info(f"   🎨 Generating image #{training_image.order} using image-to-image from reference #{reference_image_number}")
+                logger.info(f"      Prompt: '{edited_prompt[:100]}...'")
+                logger.info(f"      Strength: {strength} (lower = more like reference)")
 
-            # Generate new image
-            result = service.generate_image(
-                provider='stability',
-                model='sd3',
-                prompt=edited_prompt,
-                width=1024,
-                height=1024,
-                user=user,
-                save_to_history=False  # Don't clutter history with training images
-            )
+                # Use image-to-image with reference image
+                result = service.image_to_image(
+                    base_image=reference_image.image.path,
+                    prompt=edited_prompt,
+                    strength=strength,
+                    model='sd3',
+                    provider='stability'
+                )
+            else:
+                logger.info(f"   Generating edited image #{training_image.order} with prompt: '{edited_prompt[:100]}...'")
 
-            # Download the new image
+                # Generate new image from scratch
+                result = service.generate_image(
+                    provider='stability',
+                    model='sd3',
+                    prompt=edited_prompt,
+                    width=1024,
+                    height=1024,
+                    user=user,
+                    save_to_history=False  # Don't clutter history with training images
+                )
+
+            # Get image data (handle both URLs and base64 data URIs)
             import requests
+            import base64
             from django.core.files.base import ContentFile
 
-            img_response = requests.get(result.images[0], timeout=30)
-            img_response.raise_for_status()
+            image_url = result.images[0]
+
+            if image_url.startswith('data:image'):
+                # Base64 data URI - decode directly
+                logger.info(f"   Decoding base64 image...")
+                base64_data = image_url.split(',', 1)[1]
+                image_content = base64.b64decode(base64_data)
+            else:
+                # HTTP URL - download
+                logger.info(f"   Downloading image from URL...")
+                img_response = requests.get(image_url, timeout=30)
+                img_response.raise_for_status()
+                image_content = img_response.content
 
             # Replace the old image file
             old_filename = training_image.original_filename
             training_image.image.save(
                 old_filename,
-                ContentFile(img_response.content),
+                ContentFile(image_content),
                 save=False
             )
 
             # Update metadata
             from PIL import Image
             import io
-            img = Image.open(io.BytesIO(img_response.content))
+            img = Image.open(io.BytesIO(image_content))
             training_image.width = img.width
             training_image.height = img.height
-            training_image.file_size = len(img_response.content)
+            training_image.file_size = len(image_content)
             training_image.validation_notes = f"Edited: {edit_instruction}"
             training_image.save()
 

@@ -1,6 +1,6 @@
-# 🚀 Session 75 - START HERE
+# 🚀 Session 76 - START HERE
 **Date:** November 11, 2025
-**Last Session:** 74 - AI-Powered Character Training (COMPLETE) ✅
+**Last Session:** 75 - Character Image Editing with Image-to-Image (COMPLETE) ✅
 **Current Status:** 99.9% Reality Score | 32/32 Features Working! 🏆
 **Server:** Should be running on port 8000
 
@@ -18,228 +18,313 @@ make start
 open http://localhost:8000/ai-studio/
 ```
 
-### 3. Read Session 74 Recap (2 min)
-Session 74 built complete AI-powered character training system:
-- ✅ Voice command: "Create a pixar style donkey" → generates 6 training images!
-- ✅ User tested: Created donkey successfully! 🦙
-- ✅ Complete system: DB → API → UI → AI Assistant Integration
-
-**BUT User's Key Insight:** "We need to edit images before training!"
+### 3. Read Session 75 Recap (2 min)
+Session 75 delivered complete image-to-image style transfer:
+- ✅ Natural language: "Make image 1 look like image 0" → works!
+- ✅ Stability AI Structure Control integrated
+- ✅ 5 critical bugs fixed (base64, imports, fallbacks)
+- ✅ Complete editing workflow operational
 
 ---
 
-## 🎯 Today's Mission: Character Image Editing Workflow
+## 🎯 Today's Mission: Comprehensive API Route Audit
 
 ### Problem Statement
-Current flow auto-submits for training immediately after generating images. User needs to:
-1. **Review** generated images before training
-2. **Edit** images with natural language ("Make ears bigger", "Change background")
-3. **Iterate** until satisfied (edit → regenerate → review loop)
-4. **Approve explicitly** before submitting for 30-60 min training
+We have 4 major API providers integrated:
+1. **Stability AI** (13 features)
+2. **Runway ML** (17 endpoints)
+3. **ElevenLabs** (Audio generation)
+4. **OpenAI** (GPT-5, DALL-E)
+
+**User Request:** "Review ALL API routes to make sure we have everything connected."
 
 ### Goal
-Transform: `Generate → Auto-train`
-Into: `Generate → Review → Edit (optional) → Approve → Train`
+Comprehensive audit of every API endpoint to verify:
+- ✅ Route exists and is accessible
+- ✅ Authentication working
+- ✅ Frontend connected to backend
+- ✅ Error handling proper
+- ✅ Documentation complete
+- ❌ Identify any gaps or missing features
 
 ---
 
-## 📋 Session 75 Priorities
+## 📋 Session 76 Priorities
 
-### Phase 1: Add Review Step (1-2 hours)
+### Phase 1: Stability AI Audit (1-2 hours)
 
-**Task 1.1: Modify _execute_create_character_from_prompt**
-```python
-# Current behavior:
-create_character_workflow(..., auto_submit=True)  # ❌ Too aggressive
+**Documented Features (13 total):**
+1. Image Generation (4 models: Core, SDXL, SD3, Ultra)
+2. Image Editing (Recolor)
+3. Image Editing (Erase)
+4. Image Editing (Inpaint)
+5. Image Editing (Outpaint)
+6. Background Removal
+7. Image Upscaling (Fast 4x)
+8. Image Upscaling (Conservative 4K)
+9. Image Upscaling (Creative)
+10. Control (Sketch)
+11. Control (Structure) ← **NEW in Session 75!**
+12. Search & Replace
+13. Image-to-Video
 
-# New behavior:
-create_character_workflow(..., auto_submit=False)  # ✅ Wait for approval
-```
+**Audit Tasks:**
+- [ ] Map each feature to backend code
+- [ ] Verify API endpoints in use
+- [ ] Check frontend integration
+- [ ] Test each feature (spot check)
+- [ ] Document any gaps
 
-**Location:** core/views_image.py line 6034
-
-**Task 1.2: Add Image Preview to Response**
-```python
-return {
-    'success': True,
-    'character_id': character.id,
-    'character_name': character.name,
-    'training_images': [
-        {'id': img.id, 'url': img.image.url, 'order': img.order}
-        for img in saved_images
-    ],
-    'message': 'Generated 6 training images! Review them and say "These look perfect" to start training.',
-    'next_action': 'review'  # Frontend shows review UI
-}
-```
-
-**Task 1.3: Add Frontend Review UI**
-- Show generated images in thumbnail grid
-- Display character metadata (name, trigger word)
-- Add action buttons:
-  - ✅ "Approve & Train" (submits for training)
-  - ✏️ "Edit Images" (opens editing interface)
-  - 🔄 "Regenerate All" (starts over)
-  - 🗑️ "Cancel" (deletes character)
+**Files to Review:**
+- `content/image_generation.py`
+- `core/views_image.py`
+- `ai_core/templates/ai_image_studio.html`
+- `STABILITY_AI_COMPLETE_FEATURE_MATRIX.md`
 
 ---
 
-### Phase 2: Implement Image Editing (2-3 hours)
+### Phase 2: Runway ML Audit (1-2 hours)
 
-**Task 2.1: Create New AI Assistant Tool**
-```python
-{
-    "name": "edit_character_training_image",
-    "description": "Edit a specific training image with natural language instructions",
-    "parameters": {
-        "character_id": "ID of character being trained",
-        "image_id": "ID of specific image to edit (or 'all' for all images)",
-        "edit_instruction": "Natural language edit ('Make ears bigger', 'Change background to white')"
-    }
-}
+**Documented Endpoints (17 total):**
+
+**Video Generation:**
+1. Text-to-Video (Gen-3 Alpha Turbo)
+2. Image-to-Video
+3. Extend Video
+
+**Video Editing:**
+4. Remove Background (Video)
+5. Inpaint (Video)
+6. Expand/Uncrop (Video)
+
+**Video Enhancement:**
+7. Upscale Video
+8. Interpolate Frame
+9. Erase & Replace
+
+**Image Tools:**
+10. Expand Image
+11. Background Removal (Image)
+
+**Audio:**
+12. Lip Sync
+13. Generate Audio (Dialogues)
+14. Generate Audio (Captions)
+15. Generate Audio (Timestamps)
+16. Generate Audio (Sound Effects)
+17. Generate Audio (Music)
+
+**Audit Tasks:**
+- [ ] Map each endpoint to backend code
+- [ ] Verify API integration
+- [ ] Check frontend integration
+- [ ] Test video generation pipeline
+- [ ] Document any gaps
+
+**Files to Review:**
+- `content/video_provider.py`
+- `core/views_video.py`
+- `ai_core/templates/ai_image_studio.html` (video sections)
+- `RUNWAY_ML_COMPLETE_FEATURE_MATRIX.md`
+
+---
+
+### Phase 3: ElevenLabs Audit (30 mins - 1 hour)
+
+**Audio Features:**
+1. Text-to-Speech
+2. Voice Library
+3. Voice Cloning
+4. Sound Effects
+5. Audio History
+
+**Audit Tasks:**
+- [ ] Verify ElevenLabs API key configured
+- [ ] Map audio features to backend code
+- [ ] Check frontend integration
+- [ ] Test audio generation
+- [ ] Document any gaps
+
+**Files to Review:**
+- `core/views_audio.py` (if exists)
+- `core/views_image.py` (AI Assistant audio tools)
+- `ai_core/templates/ai_image_studio.html` (audio section)
+
+---
+
+### Phase 4: OpenAI Audit (30 mins - 1 hour)
+
+**OpenAI Features:**
+1. GPT-5-mini (AI Assistant function calling)
+2. GPT-5 (Personal Assistant)
+3. DALL-E 3 (Image generation fallback)
+4. Whisper (Voice input)
+5. Text-to-Speech (Voice output)
+
+**Audit Tasks:**
+- [ ] Verify OpenAI API key configured
+- [ ] Check GPT-5 integration in AI Assistant
+- [ ] Verify DALL-E fallback works
+- [ ] Test voice input/output
+- [ ] Document any gaps
+
+**Files to Review:**
+- `core/views_image.py` (AI Assistant)
+- `content/image_generation.py` (DALL-E fallback)
+- `ai_core/templates/ai_image_studio.html` (voice input)
+
+---
+
+### Phase 5: Create Comprehensive Report (1 hour)
+
+**Deliverable:** `docs/SESSION_76_API_AUDIT_REPORT.md`
+
+**Report Sections:**
+1. **Executive Summary**
+   - Total routes audited
+   - Connection status overview
+   - Critical gaps identified
+
+2. **Stability AI**
+   - 13 features mapped
+   - Connection status per feature
+   - Frontend integration status
+   - Gaps identified
+
+3. **Runway ML**
+   - 17 endpoints mapped
+   - Connection status per endpoint
+   - Frontend integration status
+   - Gaps identified
+
+4. **ElevenLabs**
+   - Audio features mapped
+   - Connection status
+   - Frontend integration status
+   - Gaps identified
+
+5. **OpenAI**
+   - Features mapped
+   - Connection status
+   - Integration status
+   - Gaps identified
+
+6. **Recommendations**
+   - Priority gaps to fill
+   - Optimization opportunities
+   - Documentation needs
+
+---
+
+## 🔍 Audit Methodology
+
+### For Each API Feature:
+
+1. **Backend Code Check**
+   ```python
+   # Find the implementation
+   grep -r "feature_name" content/
+   grep -r "api_endpoint" core/
+   ```
+
+2. **Frontend Integration Check**
+   ```bash
+   # Find the UI elements
+   grep -r "feature_name" ai_core/templates/
+   ```
+
+3. **Route Check**
+   ```bash
+   # Find the URL patterns
+   grep -r "path.*feature" core/urls.py
+   ```
+
+4. **Spot Test**
+   - Open AI Studio
+   - Navigate to feature
+   - Verify it works
+   - Check error handling
+
+5. **Document Status**
+   - ✅ Fully Connected & Working
+   - ⚠️ Partially Connected (backend exists, no UI)
+   - ❌ Not Connected (no backend)
+   - 🔧 Needs Fixes
+
+---
+
+## 📊 Expected Outcomes
+
+### Comprehensive Inventory
+- Complete map of all API integrations
+- Clear status of each feature
+- Identified gaps and missing connections
+
+### Actionable Report
+- Prioritized list of missing features
+- Clear recommendations for next steps
+- Documentation of current state
+
+### System Confidence
+- Know exactly what works
+- Know exactly what doesn't
+- Have roadmap for 100% coverage
+
+---
+
+## 🧪 Quick Verification Commands
+
+### Check API Keys
+```bash
+python3 scripts/test_api_keys.py
 ```
 
-**Task 2.2: Implement Execution Function**
-```python
-def _execute_edit_character_training_image(user, parameters):
-    """
-    Edit training image with natural language instruction
-
-    Workflow:
-    1. Get character and image
-    2. Parse edit instruction
-    3. Generate new image with edit applied
-    4. Download and replace old image
-    5. Update database
-    6. Return updated image URL
-    """
-    character_id = parameters.get('character_id')
-    image_id = parameters.get('image_id')
-    edit_instruction = parameters.get('edit_instruction')
-
-    # Get image
-    training_image = CharacterTrainingImage.objects.get(id=image_id, character_model__user=user)
-
-    # Get original prompt from character context
-    original_prompt = f"{training_image.character_model.description}, angle {training_image.order}"
-
-    # Apply edit instruction
-    edited_prompt = f"{original_prompt}, {edit_instruction}"
-
-    # Generate new image
-    service = ImageGenerationService()
-    result = service.generate_image(prompt=edited_prompt, model='sd3', size='1024x1024')
-
-    # Download and save
-    img_response = requests.get(result.image_url)
-    training_image.image.save(training_image.original_filename, ContentFile(img_response.content))
-
-    return {
-        'success': True,
-        'image_id': training_image.id,
-        'new_url': training_image.image.url,
-        'message': f'Image edited: {edit_instruction}'
-    }
+### Check Running Services
+```bash
+make status
+lsof -i :8000  # Django
+lsof -i :6379  # Redis
 ```
 
-**Task 2.3: Add Routing Entry**
-```python
-elif tool_name == 'edit_character_training_image':
-    result = _execute_edit_character_training_image(request.user, parameters)
+### Search for API Calls
+```bash
+# Stability AI
+grep -r "api.stability.ai" content/ core/
+
+# Runway ML
+grep -r "api.runwayml.com" content/ core/
+
+# ElevenLabs
+grep -r "api.elevenlabs.io" content/ core/
+
+# OpenAI
+grep -r "api.openai.com" content/ core/
 ```
 
 ---
 
-### Phase 3: Create Approval Workflow (1 hour)
+## 📁 Key File Locations
 
-**Task 3.1: Add Approval UI**
-- Modal with all images displayed
-- Checklist confirming:
-  - [ ] All images look good
-  - [ ] Character name is correct
-  - [ ] Trigger word is memorable
-  - [ ] Ready for 30-60 min training
-- "Start Training" button (calls submit endpoint)
+### Backend API Code:
+- **Stability:** `content/image_generation.py`
+- **Runway:** `content/video_provider.py`
+- **ElevenLabs:** `core/views_audio.py` (?)
+- **OpenAI:** `core/views_image.py` (AI Assistant)
 
-**Task 3.2: Update Character Library**
-- Show "Review Pending" status for new characters
-- Add "Review & Submit" button
-- Highlight characters awaiting review
+### Frontend UI:
+- **Main UI:** `ai_core/templates/ai_image_studio.html`
+- **Common JS:** `core/static/js/unified_v2/common.js`
 
-**Task 3.3: Add Voice Command for Approval**
-```python
-# User can say:
-"These look perfect, train it!"
-"Submit my character for training"
-"Start training my {character_name}"
+### URL Routing:
+- **Main URLs:** `core/urls.py`
+- **Image URLs:** Check for image/ routes
+- **Video URLs:** Check for video/ routes
+- **Audio URLs:** Check for audio/ routes
 
-# AI calls:
-POST /api/characters/<id>/submit-training/
-```
-
----
-
-## 🎤 Example Voice Workflow
-
-```
-USER: "Create a pixar style donkey running a robotics company"
-
-AI: "Generating 6 training images..."
-[6 images appear in review grid]
-
-AI: "Here are your training images! Would you like to edit any before training?"
-
-USER: "Make the ears bigger on the third one"
-
-AI: "Editing image 3 to make the ears bigger..."
-[Image 3 regenerates with bigger ears]
-
-AI: "Image 3 updated! How does it look?"
-
-USER: "Perfect! Also change the background to white on all images"
-
-AI: "Changing backgrounds to white on all 6 images..."
-[All images regenerate with white backgrounds]
-
-AI: "All images updated! Ready to start training?"
-
-USER: "These look perfect, train it!"
-
-AI: "Training started! Your 'Pixar Style Donkey Running' character will be ready in 30-60 minutes.
-     You'll receive a notification when complete. Use trigger word 'TOK' in your prompts!"
-```
-
----
-
-## 📁 File Reference
-
-### Modified in Session 74:
-- `content/models.py` - CharacterModel & CharacterTrainingImage
-- `content/replicate_provider.py` (NEW) - FLUX LoRA integration
-- `content/character_training.py` (NEW) - Business logic
-- `core/views_character_training.py` (NEW) - REST API endpoints
-- `core/urls.py` - 8 new API routes
-- `ai_image_studio.html` - 🧑‍🎨 Characters tab (+800 lines)
-- `core/views_image.py` - create_character_from_prompt tool (+198 lines)
-
-### Will Modify in Session 75:
-- `core/views_image.py` - Add edit_character_training_image tool (~150 lines)
-- `ai_image_studio.html` - Add review & editing UI (~450 lines)
-- `core/views_character_training.py` (optional) - Add replace-image endpoint
-
----
-
-## 📚 Documentation
-
-**Read These Before Starting:**
-1. **docs/SESSION_74_CHARACTER_TRAINING_COMPLETE.md** - Complete session 74 report
-2. **CLAUDE.md** - Updated with Session 74 accomplishments
-
-**Code References:**
-- Tool definition: `core/views_image.py:4700-4732`
-- Execution function: `core/views_image.py:5870-6065`
-- Business logic: `content/character_training.py:493-553` (create_character_workflow)
-- Database models: `content/models.py` (CharacterModel, CharacterTrainingImage)
+### Documentation:
+- **Stability:** `STABILITY_AI_COMPLETE_FEATURE_MATRIX.md`
+- **Runway:** `RUNWAY_ML_COMPLETE_FEATURE_MATRIX.md`
+- **Session Docs:** `docs/SESSION_*.md`
 
 ---
 
@@ -250,49 +335,65 @@ AI: "Training started! Your 'Pixar Style Donkey Running' character will be ready
 - ✅ All Runway ML features (17/17)
 - ✅ All DaVinci features (5/5)
 - ✅ Voice-controlled video editing (frame-accurate!)
-- ✅ **Character training foundation (NEW!)**
-
-**Character Training System:**
-- ✅ Database models (CharacterModel, CharacterTrainingImage)
-- ✅ Replicate FLUX LoRA integration
-- ✅ Business logic (validation, ZIP, submission)
-- ✅ REST API (8 endpoints)
-- ✅ Full UI (drag & drop, library, progress)
-- ✅ AI Assistant integration (voice commands)
-- ✅ 6/6 tests passing
-- ⏳ Image editing workflow (Session 75)
+- ✅ **Character training with AI-powered editing (NEW!)**
+- ✅ **Image-to-image style transfer (NEW!)**
 
 **Reality Score:** 99.9% ✅
 
 ---
 
-## 🎯 Session 75 Goal
+## 🎯 Session 76 Goal
 
-**Transform:** Generate → Auto-train ❌
-**Into:** Generate → Review → Edit → Approve → Train ✅
+**Transform:** "We think everything is connected"
+**Into:** "We KNOW everything is connected (with documentation to prove it!)"
 
-**User's Vision:**
-> "We need to be able to use the Assistant to do editing of the images to get everything exactly like we want it before we start trying to recreate and train on the image!"
-
-**Our Mission:**
-Build the editing workflow so users can perfect their training images before committing to 30-60 minutes of training time. No more training on imperfect images!
-
----
-
-## 🚀 LET'S BUILD THE EDITING WORKFLOW!
-
-**Start with Phase 1:** Add review step (change auto_submit to False, add preview UI)
-
-**Then Phase 2:** Implement editing tool (natural language image edits)
-
-**Finally Phase 3:** Create approval workflow (explicit user confirmation)
-
-**Expected Duration:** 4-6 hours for complete implementation
-
-**Expected Outcome:** Perfect training images before submission! ✨
+**Success Criteria:**
+1. ✅ Complete audit of all 4 API providers
+2. ✅ Comprehensive report with all routes mapped
+3. ✅ Clear status of each feature (✅/⚠️/❌/🔧)
+4. ✅ Identified gaps with priority ranking
+5. ✅ Recommendations for next steps
 
 ---
 
-**Ready? Let's make character training even more amazing!** 🤖🎨🚀
+## 💡 Audit Tips
 
-**See you in Session 75!** 👋
+### Be Systematic
+- Go provider by provider
+- Go feature by feature
+- Document as you go
+
+### Use Real Tests
+- Don't assume - verify!
+- Open UI and click buttons
+- Check console for errors
+
+### Document Everything
+- Create detailed findings
+- Include file paths and line numbers
+- Screenshot any issues
+
+### Think Holistically
+- Is the feature accessible to users?
+- Does error handling work?
+- Is it documented?
+
+---
+
+## 🚀 LET'S AUDIT EVERYTHING!
+
+**Start with Phase 1:** Stability AI (13 features)
+**Then Phase 2:** Runway ML (17 endpoints)
+**Then Phase 3:** ElevenLabs (5 features)
+**Then Phase 4:** OpenAI (5 features)
+**Finally Phase 5:** Create comprehensive report
+
+**Expected Duration:** 4-6 hours for complete audit
+
+**Expected Outcome:** Complete confidence in our API integrations! ✨
+
+---
+
+**Ready? Let's make sure everything is connected!** 🔌🚀
+
+**See you in Session 76!** 👋
