@@ -2628,7 +2628,7 @@
 
                                     <!-- Image Upload Section -->
                                     <div class="mb-4">
-                                        <label class="form-label">Training Images * (10-20 images)</label>
+                                        <label class="form-label">Training Images * (5-20 images)</label>
 
                                         <!-- Drag & Drop Zone -->
                                         <div id="dropZone" class="border rounded p-5 text-center" style="border-style: dashed !important; border-width: 2px; background: #f8f9fa; cursor: pointer; transition: all 0.3s;">
@@ -2647,7 +2647,7 @@
                                         <div class="alert alert-light mt-3" style="font-size: 0.9rem;">
                                             <strong>📋 Requirements:</strong>
                                             <ul class="mb-0 mt-2" style="font-size: 0.85rem;">
-                                                <li>Minimum: 10 images, Maximum: 20 images</li>
+                                                <li>Minimum: 5 images, Maximum: 20 images</li>
                                                 <li>Format: JPEG, PNG, or WEBP</li>
                                                 <li>Resolution: 512x512 to 2048x2048 pixels</li>
                                                 <li>File size: Max 10MB per image</li>
@@ -18213,8 +18213,8 @@
             const fileArray = Array.from(files);
 
             // Validate file count
-            if (fileArray.length < 10) {
-                showCharacterError('Please select at least 10 images (you selected ' + fileArray.length + ')');
+            if (fileArray.length < 5) {
+                showCharacterError('Please select at least 5 images (you selected ' + fileArray.length + ')');
                 return;
             }
 
