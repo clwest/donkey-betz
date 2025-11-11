@@ -2426,3 +2426,302 @@ class ProjectWorkflow(models.Model):
         super().delete(*args, **kwargs)
         # Update project workflow counts after deletion
         project.update_workflow_counts()
+
+
+# ==============================================================================
+# CHARACTER TRAINING MODELS (Session 74: Replicate Integration)
+# ==============================================================================
+
+class CharacterModel(models.Model):
+    """
+    Trained character model for consistent image generation
+    Uses Replicate's FLUX LoRA training for character consistency
+
+    Workflow:
+    1. User uploads 10-12 training images
+    2. System creates zip file and submits to Replicate
+    3. Training takes 30-60 minutes
+    4. Once complete, model can generate unlimited consistent images
+    """
+
+    # User & identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='character_models',
+        help_text="User who owns this character"
+    )
+
+    name = models.CharField(
+        max_length=100,
+        help_text="Character name (e.g., 'RoboBuddy', 'LogoMascot')"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Description of the character"
+    )
+
+    trigger_word = models.CharField(
+        max_length=50,
+        default="TOK",
+        help_text="Trigger word to use in prompts for this character"
+    )
+
+    # Replicate training details
+    replicate_model_owner = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Replicate model owner (username)"
+    )
+
+    replicate_model_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Replicate model name"
+    )
+
+    replicate_version_id = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Specific version ID of trained model"
+    )
+
+    training_id = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Replicate training job ID"
+    )
+
+    # Training status
+    training_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('preparing', 'Preparing'),
+            ('pending', 'Pending'),
+            ('training', 'Training'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        default='preparing',
+        help_text="Current training status"
+    )
+
+    training_progress = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Training progress percentage (0-100)"
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if training failed"
+    )
+
+    # Training data
+    training_images_count = models.IntegerField(
+        default=0,
+        help_text="Number of training images uploaded"
+    )
+
+    training_zip_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to training images zip file"
+    )
+
+    training_zip_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        help_text="Public URL for training zip (for Replicate)"
+    )
+
+    # Training parameters
+    training_steps = models.IntegerField(
+        default=1000,
+        help_text="Number of training steps"
+    )
+
+    learning_rate = models.FloatField(
+        default=0.0004,
+        help_text="Learning rate for training"
+    )
+
+    # Timing
+    training_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When training started"
+    )
+
+    training_completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When training completed"
+    )
+
+    training_duration_seconds = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Total training time in seconds"
+    )
+
+    # Usage tracking
+    generations_count = models.IntegerField(
+        default=0,
+        help_text="Number of images generated with this character"
+    )
+
+    last_used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time this character was used for generation"
+    )
+
+    # Display
+    thumbnail = models.ImageField(
+        upload_to='character_training/thumbnails/',
+        null=True,
+        blank=True,
+        help_text="Thumbnail image representing this character"
+    )
+
+    # Metadata
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Whether this character can be used by other users"
+    )
+
+    is_favorite = models.BooleanField(
+        default=False,
+        help_text="User has marked this as favorite"
+    )
+
+    tags = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Comma-separated tags for organization"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When character was created"
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Last update time"
+    )
+
+    class Meta:
+        verbose_name = "Character Model"
+        verbose_name_plural = "Character Models"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'training_status']),
+            models.Index(fields=['training_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.trigger_word}) - {self.training_status}"
+
+    def get_full_model_path(self):
+        """Get full Replicate model path"""
+        if self.replicate_model_owner and self.replicate_model_name:
+            return f"{self.replicate_model_owner}/{self.replicate_model_name}"
+        return None
+
+    def increment_usage(self):
+        """Increment generation counter"""
+        self.generations_count += 1
+        self.last_used_at = timezone.now()
+        self.save(update_fields=['generations_count', 'last_used_at'])
+
+
+class CharacterTrainingImage(models.Model):
+    """
+    Individual training image uploaded by user for character training
+    Stores metadata about each image in the training set
+    """
+
+    # Relationship
+    character_model = models.ForeignKey(
+        CharacterModel,
+        on_delete=models.CASCADE,
+        related_name='training_images',
+        help_text="Character model this image belongs to"
+    )
+
+    # Image file
+    image = models.ImageField(
+        upload_to='character_training/uploads/',
+        help_text="Training image file"
+    )
+
+    # File metadata
+    original_filename = models.CharField(
+        max_length=255,
+        help_text="Original filename when uploaded"
+    )
+
+    file_size = models.IntegerField(
+        help_text="File size in bytes"
+    )
+
+    # Image dimensions
+    width = models.IntegerField(
+        help_text="Image width in pixels"
+    )
+
+    height = models.IntegerField(
+        help_text="Image height in pixels"
+    )
+
+    # Image quality checks
+    is_valid = models.BooleanField(
+        default=True,
+        help_text="Whether image passes quality checks"
+    )
+
+    validation_notes = models.TextField(
+        blank=True,
+        help_text="Notes about validation (warnings, suggestions)"
+    )
+
+    # Processing
+    is_processed = models.BooleanField(
+        default=False,
+        help_text="Whether image has been processed for training"
+    )
+
+    processed_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to processed/optimized image"
+    )
+
+    # Order in training set
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Order in training set"
+    )
+
+    # Timestamps
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When image was uploaded"
+    )
+
+    class Meta:
+        verbose_name = "Character Training Image"
+        verbose_name_plural = "Character Training Images"
+        ordering = ['order', 'uploaded_at']
+        indexes = [
+            models.Index(fields=['character_model', 'order']),
+        ]
+
+    def __str__(self):
+        return f"{self.original_filename} ({self.character_model.name})"
