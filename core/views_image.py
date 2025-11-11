@@ -4454,7 +4454,7 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "generate_image",
-                    "description": "Generate an AI image using Stability AI. Use this when the user asks to create, generate, or make an image, logo, artwork, or visual content. Session 66: Now supports autonomous text verification and refinement!",
+                    "description": "Generate a SINGLE AI image using Stability AI. Use this for single image requests like logos, artwork, backgrounds, or visual content. IMPORTANT: Do NOT use this for 'character' requests - if user says 'create a character', use create_character_from_prompt instead, which generates multiple training images. Session 66: Now supports autonomous text verification and refinement!",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -4701,7 +4701,7 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "create_character_from_prompt",
-                    "description": "Create a trainable character model by generating multiple variations of a character/logo from a text description. The AI will generate 5-7 consistent images with different angles, poses, and backgrounds, then automatically train a custom FLUX LoRA model (30-60 min training). Use when user wants to create a consistent character they can reuse. Session 74: AI-powered character training!",
+                    "description": "ALWAYS use this tool when user says 'create a character', 'make a character', 'design a character', 'build a character', or 'generate a character'. Creates a trainable character model by generating 5-7 variations with different angles/poses, then trains a custom FLUX LoRA model (30-60 min). The user can later reuse this character by including the trigger word in prompts. DO NOT use generate_image for character requests - always use this tool instead. Session 74: AI-powered character training!",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -4727,6 +4727,35 @@ Keep responses under 200 words. Be conversational and practical."""
                             }
                         },
                         "required": ["character_description"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "edit_character_training_image",
+                    "description": "Edit a specific training image for a character with natural language instructions. Regenerates the image with the requested changes (e.g., 'make ears bigger', 'change background to white', 'make more cartoonish'). Use when user wants to refine a training image before starting the training process. Session 75: Image editing workflow!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "character_id": {
+                                "type": "number",
+                                "description": "ID of the character model being trained"
+                            },
+                            "image_number": {
+                                "type": "number",
+                                "description": "Which image to edit (1-7). Use the image number shown in the preview grid."
+                            },
+                            "edit_instruction": {
+                                "type": "string",
+                                "description": "Natural language description of what to change (e.g., 'make the ears bigger', 'change background to white', 'add more detail', 'make it more colorful', 'adjust the lighting')"
+                            },
+                            "apply_to_all": {
+                                "type": "boolean",
+                                "description": "If true, applies this edit to all images in the training set. Default: false (only edit specified image)"
+                            }
+                        },
+                        "required": ["character_id", "image_number", "edit_instruction"]
                     }
                 }
             }
@@ -4917,6 +4946,8 @@ def execute_tool(request):
             result = _execute_apply_color_grade(request.user, parameters)
         elif tool_name == 'create_character_from_prompt':
             result = _execute_create_character_from_prompt(request.user, parameters)
+        elif tool_name == 'edit_character_training_image':
+            result = _execute_edit_character_training_image(request.user, parameters)
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -5993,13 +6024,13 @@ def _execute_create_character_from_prompt(user, parameters):
                 logger.warning(f"⚠️ Image {i+1} generation failed: {result.error_message}")
                 continue
 
-            if not result.image_url:
+            if not result.images or len(result.images) == 0:
                 logger.warning(f"⚠️ Image {i+1} has no URL")
                 continue
 
             # Download image
             logger.info(f"   Downloading image {i+1}...")
-            img_response = requests.get(result.image_url, timeout=30)
+            img_response = requests.get(result.images[0], timeout=30)
 
             if img_response.status_code != 200:
                 logger.warning(f"⚠️ Failed to download image {i+1}")
@@ -6032,12 +6063,25 @@ def _execute_create_character_from_prompt(user, parameters):
             image_files=generated_images,
             training_steps=1000,  # Standard training steps
             learning_rate=0.0004,  # Standard learning rate
-            auto_submit=True  # Automatically submit for training!
+            auto_submit=False  # Wait for user review and approval!
         )
 
         logger.info(f"🎉 Character training set created! ID: {character.id}")
         logger.info(f"   Training Status: {character.training_status}")
-        logger.info(f"   Training ID: {character.training_id}")
+
+        # Get training images for preview
+        training_images = character.training_images.all().order_by('order')
+        training_images_data = [
+            {
+                'id': img.id,
+                'url': img.image.url if img.image else None,
+                'order': img.order,
+                'width': img.width,
+                'height': img.height,
+                'file_size': img.file_size
+            }
+            for img in training_images
+        ]
 
         return {
             'success': True,
@@ -6048,21 +6092,179 @@ def _execute_create_character_from_prompt(user, parameters):
             'images_generated': len(generated_images),
             'training_images_count': character.training_images_count,
             'training_status': character.training_status,
-            'training_id': character.training_id,
+            'training_images': training_images_data,
             'warnings': warnings,
             'estimated_time_minutes': 45,  # FLUX LoRA training takes 30-60 minutes
-            'message': f'🎉 Success! Generated {len(generated_images)} training images for "{character_name}" and submitted for training! Your custom character model will be ready in 30-60 minutes. You\'ll be able to generate consistent images using the trigger word "{trigger_word}" in your prompts.',
-            'instructions': f'Training has started! Check the Characters tab to monitor progress. Once complete (30-60 min), you can generate images by including "{trigger_word}" in your prompts. For example: "a portrait of {trigger_word}" or "{trigger_word} wearing a suit".',
+            'message': f'🎉 Generated {len(generated_images)} training images for "{character_name}"! Review them below. You can edit any images or say "These look perfect" to start training.',
+            'instructions': f'Review your training images below. If you want to edit any, just say "Make the ears bigger on image 3" or similar. When ready, say "These look perfect, train it!" to start the 30-60 minute training process.',
+            'next_action': 'review',  # Frontend should show review UI
             'next_steps': [
-                'Wait 30-60 minutes for training to complete',
-                f'Check Characters tab for training progress',
-                f'Once complete, use "{trigger_word}" in your prompts',
-                f'Generate consistent variations of your character!'
+                'Review the generated training images',
+                'Edit images if needed (optional)',
+                'Say "These look perfect, train it!" to start training',
+                f'After training, use "{trigger_word}" in your prompts!'
             ]
         }
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_create_character_from_prompt: {str(e)}")
+        raise
+
+
+def _execute_edit_character_training_image(user, parameters):
+    """
+    Edit a specific character training image with natural language instructions
+
+    Session 75: Image editing workflow for character training
+
+    Workflow:
+    1. Get character and specified image
+    2. Get original prompt/description from character
+    3. Apply edit instruction to prompt
+    4. Generate new image with edited prompt
+    5. Download and replace old image
+    6. Update database
+    7. Return updated character with all images
+
+    Parameters:
+        character_id (int): ID of character model
+        image_number (int): Which image to edit (1-7)
+        edit_instruction (str): Natural language edit
+        apply_to_all (bool): Apply to all images (default: False)
+
+    Returns:
+        dict: Updated character data with all training images
+    """
+    try:
+        character_id = parameters.get('character_id')
+        image_number = parameters.get('image_number')
+        edit_instruction = parameters.get('edit_instruction', '').strip()
+        apply_to_all = parameters.get('apply_to_all', False)
+
+        logger.info(f"✏️ Editing training image for character {character_id}, image #{image_number}")
+        logger.info(f"   Edit: '{edit_instruction}'")
+        logger.info(f"   Apply to all: {apply_to_all}")
+
+        # Get character and verify ownership
+        try:
+            character = CharacterModel.objects.get(id=character_id, user=user)
+        except CharacterModel.DoesNotExist:
+            raise ValueError(f"Character {character_id} not found or you don't have access")
+
+        # Get images to edit
+        if apply_to_all:
+            images_to_edit = character.training_images.all().order_by('order')
+            logger.info(f"   Editing all {images_to_edit.count()} images")
+        else:
+            # Get specific image by order number
+            try:
+                images_to_edit = [character.training_images.get(order=image_number)]
+                logger.info(f"   Editing only image #{image_number}")
+            except CharacterTrainingImage.DoesNotExist:
+                raise ValueError(f"Image #{image_number} not found in character training set")
+
+        # Initialize image generation service
+        from content.image_generation import ImageGenerationService
+        service = ImageGenerationService()
+
+        # Check Stability AI availability
+        if 'stability' not in service.available_providers:
+            raise ValueError("Stability AI is not available. Cannot generate edited images.")
+
+        edited_count = 0
+        for training_image in images_to_edit:
+            # Build edited prompt based on original character description
+            base_prompt = f"{character.description}, professional photography"
+
+            # Add angle/pose variation based on image order
+            angle_variations = {
+                1: "front view, centered, well-lit",
+                2: "side profile view, clear details",
+                3: "three-quarter angle, dynamic pose",
+                4: "different angle, varied expression",
+                5: "close-up detail shot, sharp focus",
+                6: "full body view, different background",
+                7: "alternate pose, varied composition"
+            }
+            angle_desc = angle_variations.get(training_image.order, "professional composition")
+
+            # Combine: base + angle + edit instruction
+            edited_prompt = f"{base_prompt}, {angle_desc}, {edit_instruction}"
+
+            logger.info(f"   Generating edited image #{training_image.order} with prompt: '{edited_prompt[:100]}...'")
+
+            # Generate new image
+            result = service.generate_image(
+                provider='stability',
+                model='sd3',
+                prompt=edited_prompt,
+                width=1024,
+                height=1024,
+                user=user,
+                save_to_history=False  # Don't clutter history with training images
+            )
+
+            # Download the new image
+            import requests
+            from django.core.files.base import ContentFile
+
+            img_response = requests.get(result.images[0], timeout=30)
+            img_response.raise_for_status()
+
+            # Replace the old image file
+            old_filename = training_image.original_filename
+            training_image.image.save(
+                old_filename,
+                ContentFile(img_response.content),
+                save=False
+            )
+
+            # Update metadata
+            from PIL import Image
+            import io
+            img = Image.open(io.BytesIO(img_response.content))
+            training_image.width = img.width
+            training_image.height = img.height
+            training_image.file_size = len(img_response.content)
+            training_image.validation_notes = f"Edited: {edit_instruction}"
+            training_image.save()
+
+            edited_count += 1
+            logger.info(f"   ✅ Image #{training_image.order} updated successfully")
+
+        # Get updated training images for response
+        training_images = character.training_images.all().order_by('order')
+        training_images_data = [
+            {
+                'id': img.id,
+                'url': img.image.url if img.image else None,
+                'order': img.order,
+                'width': img.width,
+                'height': img.height,
+                'file_size': img.file_size,
+                'validation_notes': img.validation_notes
+            }
+            for img in training_images
+        ]
+
+        logger.info(f"✅ Edited {edited_count} image(s) successfully!")
+
+        return {
+            'success': True,
+            'character_id': character.id,
+            'character_name': character.name,
+            'trigger_word': character.trigger_word,
+            'edited_count': edited_count,
+            'training_images': training_images_data,
+            'message': f'✅ Edited {edited_count} image(s) successfully! {edit_instruction.capitalize()}.',
+            'instructions': f'Review the updated images. When ready, say "These look perfect, train it!" to start training.',
+            'next_action': 'review'  # Show review UI again
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_edit_character_training_image: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
 
 

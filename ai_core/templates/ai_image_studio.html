@@ -14025,6 +14025,95 @@
                             window[colorGradeId] = colorGradeData;
 
                             message += `<button class="btn btn-primary" onclick="window.aiAssistant.executeColorGrading('${colorGradeId}')" style="padding: 10px 20px; font-size: 16px; margin: 10px 0;">🎨 Confirm & Apply Color Grading</button>\n\n`;
+                        } else if (result.tool === 'create_character_from_prompt') {
+                            // Session 75: Display character training image review UI
+                            message += `🎉 **Character Training Images Generated!**\n\n`;
+                            message += `📝 **Character:** ${result.result.character_name}\n`;
+                            message += `🏷️ **Trigger Word:** ${result.result.trigger_word}\n`;
+                            message += `📸 **Images:** ${result.result.images_generated} training images\n\n`;
+                            message += `${result.result.message}\n\n`;
+
+                            // Display training images in a grid
+                            if (result.result.training_images && result.result.training_images.length > 0) {
+                                message += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 15px 0;">`;
+                                result.result.training_images.forEach((img, index) => {
+                                    message += `
+                                        <div style="position: relative; border: 2px solid rgba(251, 191, 36, 0.3); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.3);">
+                                            <img src="${img.url}" alt="Training image ${img.order}" style="width: 100%; height: 150px; object-fit: cover;">
+                                            <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">
+                                                #${img.order}
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                message += `</div>\n\n`;
+                            }
+
+                            message += `${result.result.instructions}\n\n`;
+
+                            // Store character data for action buttons
+                            const characterData = {
+                                character_id: result.result.character_id,
+                                character_name: result.result.character_name,
+                                trigger_word: result.result.trigger_word,
+                                training_images: result.result.training_images
+                            };
+                            const characterDataId = 'character_' + Date.now();
+                            window[characterDataId] = characterData;
+
+                            // Action buttons
+                            message += `<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">\n`;
+                            message += `<button class="btn btn-success" onclick="window.aiAssistant.approveCharacterTraining('${characterDataId}')" style="padding: 10px 20px; font-size: 14px;">✅ These Look Perfect, Train It!</button>\n`;
+                            message += `<button class="btn btn-info" onclick="window.aiAssistant.switchToCharactersTab()" style="padding: 10px 20px; font-size: 14px;">🧑‍🎨 View in Characters Tab</button>\n`;
+                            message += `</div>\n\n`;
+
+                            message += `💡 **To edit an image,** just say: "Make the ears bigger on image 3" or "Change background to white on all images"\n\n`;
+                        } else if (result.tool === 'edit_character_training_image') {
+                            // Session 75: Display edited character images
+                            message += `✅ **Training Images Updated!**\n\n`;
+                            message += `📝 **Character:** ${result.result.character_name}\n`;
+                            message += `🏷️ **Trigger Word:** ${result.result.trigger_word}\n`;
+                            message += `✏️ **Edited:** ${result.result.edited_count} image(s)\n\n`;
+                            message += `${result.result.message}\n\n`;
+
+                            // Display updated training images
+                            if (result.result.training_images && result.result.training_images.length > 0) {
+                                message += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 15px 0;">`;
+                                result.result.training_images.forEach((img, index) => {
+                                    const isEdited = img.validation_notes && img.validation_notes.includes('Edited:');
+                                    const borderColor = isEdited ? 'rgba(34, 197, 94, 0.6)' : 'rgba(251, 191, 36, 0.3)';
+                                    message += `
+                                        <div style="position: relative; border: 2px solid ${borderColor}; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.3);">
+                                            <img src="${img.url}" alt="Training image ${img.order}" style="width: 100%; height: 150px; object-fit: cover;">
+                                            <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">
+                                                #${img.order}
+                                            </div>
+                                            ${isEdited ? '<div style="position: absolute; top: 5px; right: 5px; background: rgba(34, 197, 94, 0.9); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">✏️</div>' : ''}
+                                        </div>
+                                    `;
+                                });
+                                message += `</div>\n\n`;
+                            }
+
+                            message += `${result.result.instructions}\n\n`;
+
+                            // Store character data for action buttons
+                            const characterData = {
+                                character_id: result.result.character_id,
+                                character_name: result.result.character_name,
+                                trigger_word: result.result.trigger_word,
+                                training_images: result.result.training_images
+                            };
+                            const characterDataId = 'character_' + Date.now();
+                            window[characterDataId] = characterData;
+
+                            // Action buttons
+                            message += `<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">\n`;
+                            message += `<button class="btn btn-success" onclick="window.aiAssistant.approveCharacterTraining('${characterDataId}')" style="padding: 10px 20px; font-size: 14px;">✅ These Look Perfect, Train It!</button>\n`;
+                            message += `<button class="btn btn-info" onclick="window.aiAssistant.switchToCharactersTab()" style="padding: 10px 20px; font-size: 14px;">🧑‍🎨 View in Characters Tab</button>\n`;
+                            message += `</div>\n\n`;
+
+                            message += `💡 **To make more edits,** just say: "Make it more colorful on image 2" or "Adjust the lighting on all images"\n\n`;
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
@@ -14195,6 +14284,62 @@
 
                 // Trigger file picker
                 fileInput.click();
+            }
+
+            // Session 75: Character training approval functions
+            async approveCharacterTraining(dataId) {
+                const data = window[dataId];
+                if (!data) {
+                    console.error('❌ Character data not found:', dataId);
+                    return;
+                }
+
+                console.log('✅ Approving character training:', data);
+
+                // Show progress message
+                this.addMessage('assistant', `🚀 **Starting Training for "${data.character_name}"!**\n\nSubmitting ${data.training_images.length} training images to Replicate FLUX LoRA...\n\nThis will take 30-60 minutes. I'll notify you when it's complete!`);
+
+                try {
+                    const response = await authenticatedFetch(`/api/characters/${data.character_id}/submit-training/`, {
+                        method: 'POST'
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.addMessage('assistant', `✅ **Training Started Successfully!**\n\n` +
+                            `🎨 Character: "${data.character_name}"\n` +
+                            `🏷️ Trigger Word: ${data.trigger_word}\n` +
+                            `⏱️ Estimated Time: 30-60 minutes\n\n` +
+                            `💡 Check the 🧑‍🎨 Characters tab to monitor training progress!\n\n` +
+                            `Once complete, you can generate images by including "${data.trigger_word}" in your prompts.`);
+
+                        // Refresh character library if visible
+                        if (typeof window.loadCharacters === 'function') {
+                            console.log('🔄 Refreshing character library...');
+                            setTimeout(() => window.loadCharacters(), 1000);
+                        }
+                    } else {
+                        this.addMessage('assistant', `❌ **Error:**\n\n${result.error || 'Failed to submit training'}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Training submission error:', error);
+                    this.addMessage('assistant', `❌ **Error:**\n\n${error.message || 'Failed to submit character for training'}`);
+                }
+
+                // Clean up stored data
+                delete window[dataId];
+            }
+
+            switchToCharactersTab() {
+                console.log('🧑‍🎨 Switching to Characters tab');
+                const charactersTab = document.getElementById('characters-tab');
+                if (charactersTab) {
+                    charactersTab.click();
+                    this.addMessage('assistant', `✅ Switched to Characters tab! You can view your character and its training images there.`);
+                } else {
+                    this.addMessage('assistant', `❌ Characters tab not found. Make sure you're on the main AI Studio page.`);
+                }
             }
 
             async handleQuickAction(action) {
