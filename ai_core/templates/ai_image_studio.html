@@ -1100,6 +1100,13 @@
                 </button>
             </li>
 
+            <!-- Session 74: Character Training -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="character-training-tab" data-bs-toggle="tab" data-bs-target="#character-training" type="button" role="tab" title="Train custom character models for consistent generation">
+                    🧑‍🎨 Characters
+                </button>
+            </li>
+
             <!-- Video (Grouped) -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="video-tab" data-bs-toggle="tab" data-bs-target="#video" type="button" role="tab" title="AI Video Generation">
@@ -2539,6 +2546,323 @@
                 </div>
             </div>
             <!-- END VIDEO SELECTION MODAL -->
+
+            <!-- CHARACTER TRAINING TAB (Session 74: Phase 3) -->
+            <div class="tab-pane fade" id="character-training" role="tabpanel">
+                <h3 class="mb-4">🧑‍🎨 Character Training</h3>
+
+                <!-- Instructions -->
+                <div class="alert alert-info mb-4">
+                    <strong>✨ Train Custom Character Models</strong><br>
+                    Upload 10-20 images of your logo or character to train a consistent AI model. Generate infinite variations with your trigger word!<br>
+                    <small class="text-muted">Training time: 30-60 minutes | Model: FLUX LoRA</small>
+                </div>
+
+                <!-- Character Training Mode Pills -->
+                <ul class="nav nav-pills mb-4" id="characterModeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="create-character-pill" data-bs-toggle="pill" data-bs-target="#create-character-pane" type="button" role="tab">
+                            ➕ Create New
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="my-characters-pill" data-bs-toggle="pill" data-bs-target="#my-characters-pane" type="button" role="tab">
+                            📚 My Characters
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="character-help-pill" data-bs-toggle="pill" data-bs-target="#character-help-pane" type="button" role="tab">
+                            ❓ Help
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Character Mode Panes -->
+                <div class="tab-content">
+                    <!-- CREATE NEW CHARACTER PANE -->
+                    <div class="tab-pane fade show active" id="create-character-pane" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Create New Character Model</h5>
+
+                                <form id="characterTrainingForm" enctype="multipart/form-data">
+                                    <!-- Character Details -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <label for="characterName" class="form-label">Character Name *</label>
+                                            <input type="text" class="form-control" id="characterName" name="name" placeholder="e.g., My Company Logo" required>
+                                            <small class="text-muted">Give your character a memorable name</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="triggerWord" class="form-label">Trigger Word *</label>
+                                            <input type="text" class="form-control" id="triggerWord" name="trigger_word" placeholder="e.g., MYLOGO" value="TOK" required>
+                                            <small class="text-muted">Use this word in prompts to generate your character</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="characterDescription" class="form-label">Description (Optional)</label>
+                                        <textarea class="form-control" id="characterDescription" name="description" rows="2" placeholder="Describe your character or logo..."></textarea>
+                                    </div>
+
+                                    <!-- Training Configuration (Advanced) -->
+                                    <div class="mb-4">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedConfig">
+                                            ⚙️ Advanced Settings
+                                        </button>
+                                        <div class="collapse mt-3" id="advancedConfig">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="trainingSteps" class="form-label">Training Steps</label>
+                                                    <input type="number" class="form-control" id="trainingSteps" name="training_steps" value="1000" min="500" max="2000">
+                                                    <small class="text-muted">More steps = better quality but longer training</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="learningRate" class="form-label">Learning Rate</label>
+                                                    <input type="number" class="form-control" id="learningRate" name="learning_rate" value="0.0004" step="0.0001" min="0.0001" max="0.001">
+                                                    <small class="text-muted">Default: 0.0004 (recommended)</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Image Upload Section -->
+                                    <div class="mb-4">
+                                        <label class="form-label">Training Images * (10-20 images)</label>
+
+                                        <!-- Drag & Drop Zone -->
+                                        <div id="dropZone" class="border rounded p-5 text-center" style="border-style: dashed !important; border-width: 2px; background: #f8f9fa; cursor: pointer; transition: all 0.3s;">
+                                            <div id="dropZoneContent">
+                                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                                                <h5 class="mt-3">Drag & Drop Images Here</h5>
+                                                <p class="text-muted mb-3">or click to browse files</p>
+                                                <button type="button" class="btn btn-primary" id="browseBtn">
+                                                    📂 Browse Files
+                                                </button>
+                                                <input type="file" id="imageFileInput" name="images" multiple accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
+                                            </div>
+                                        </div>
+
+                                        <!-- Image Requirements -->
+                                        <div class="alert alert-light mt-3" style="font-size: 0.9rem;">
+                                            <strong>📋 Requirements:</strong>
+                                            <ul class="mb-0 mt-2" style="font-size: 0.85rem;">
+                                                <li>Minimum: 10 images, Maximum: 20 images</li>
+                                                <li>Format: JPEG, PNG, or WEBP</li>
+                                                <li>Resolution: 512x512 to 2048x2048 pixels</li>
+                                                <li>File size: Max 10MB per image</li>
+                                                <li>Best results: Clear, well-lit photos with consistent subject</li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Image Preview Grid -->
+                                        <div id="imagePreviewGrid" class="row g-3 mt-3" style="display: none;">
+                                            <!-- Preview thumbnails will be inserted here -->
+                                        </div>
+
+                                        <!-- Upload Progress -->
+                                        <div id="uploadProgress" class="mt-3" style="display: none;">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span>Validating images...</span>
+                                                <span id="uploadProgressText">0%</span>
+                                            </div>
+                                            <div class="progress">
+                                                <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Auto-Submit Option -->
+                                    <div class="form-check mb-4">
+                                        <input class="form-check-input" type="checkbox" id="autoSubmit" name="auto_submit" value="true" checked>
+                                        <label class="form-check-label" for="autoSubmit">
+                                            Automatically start training after upload
+                                        </label>
+                                    </div>
+
+                                    <!-- Validation Messages -->
+                                    <div id="validationMessages" class="mb-3" style="display: none;"></div>
+
+                                    <!-- Submit Button -->
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary btn-lg" id="createCharacterBtn" disabled>
+                                            <span id="createCharacterBtnText">🚀 Create & Train Character</span>
+                                            <span id="createCharacterBtnSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Estimated Cost/Time -->
+                                    <div class="text-center mt-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i> Training time: 30-60 minutes
+                                            | <i class="bi bi-info-circle"></i> You'll receive notifications when complete
+                                        </small>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MY CHARACTERS PANE -->
+                    <div class="tab-pane fade" id="my-characters-pane" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="card-title mb-0">My Character Models</h5>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary" id="refreshCharactersBtn">
+                                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                                        </button>
+                                        <select class="form-select form-select-sm d-inline-block ms-2" id="characterFilter" style="width: auto;">
+                                            <option value="all">All Characters</option>
+                                            <option value="completed">Ready to Use</option>
+                                            <option value="training">Training</option>
+                                            <option value="preparing">Preparing</option>
+                                            <option value="failed">Failed</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Characters Grid -->
+                                <div id="charactersGrid" class="row g-4">
+                                    <!-- Character cards will be inserted here -->
+                                </div>
+
+                                <!-- Loading State -->
+                                <div id="charactersLoading" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Loading your characters...</p>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div id="charactersEmpty" class="text-center py-5" style="display: none;">
+                                    <i class="bi bi-inbox" style="font-size: 4rem; color: #dee2e6;"></i>
+                                    <h5 class="mt-3">No Characters Yet</h5>
+                                    <p class="text-muted">Create your first character model to get started!</p>
+                                    <button class="btn btn-primary" onclick="document.getElementById('create-character-pill').click()">
+                                        ➕ Create Character
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HELP PANE -->
+                    <div class="tab-pane fade" id="character-help-pane" role="tabpanel">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Character Training Guide</h5>
+
+                                <div class="accordion" id="helpAccordion">
+                                    <!-- What is Character Training? -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#helpWhat">
+                                                What is Character Training?
+                                            </button>
+                                        </h2>
+                                        <div id="helpWhat" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                                            <div class="accordion-body">
+                                                <p>Character Training uses FLUX LoRA technology to train a custom AI model on your specific character, logo, or subject. This enables you to generate infinite consistent variations.</p>
+                                                <p><strong>Use Cases:</strong></p>
+                                                <ul>
+                                                    <li>Consistent logo variations for marketing</li>
+                                                    <li>Brand mascot in different scenarios</li>
+                                                    <li>Product photography with your product</li>
+                                                    <li>Character consistency across content</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- How to Prepare Images -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpPrepare">
+                                                How to Prepare Training Images
+                                            </button>
+                                        </h2>
+                                        <div id="helpPrepare" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                            <div class="accordion-body">
+                                                <p><strong>✅ Best Practices:</strong></p>
+                                                <ul>
+                                                    <li>Use 10-15 high-quality images (more is not always better)</li>
+                                                    <li>Include variety: different angles, backgrounds, lighting</li>
+                                                    <li>Keep subject consistent across all images</li>
+                                                    <li>Use well-lit, clear photos without heavy filters</li>
+                                                    <li>Square or near-square aspect ratios work best</li>
+                                                </ul>
+                                                <p><strong>❌ Avoid:</strong></p>
+                                                <ul>
+                                                    <li>Blurry or low-resolution images</li>
+                                                    <li>Heavy editing or filters</li>
+                                                    <li>Multiple subjects in one image</li>
+                                                    <li>Inconsistent subjects across images</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- How to Use Trained Characters -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpUse">
+                                                How to Use Trained Characters
+                                            </button>
+                                        </h2>
+                                        <div id="helpUse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                            <div class="accordion-body">
+                                                <p>Once training is complete (30-60 minutes), use your character in prompts:</p>
+                                                <ol>
+                                                    <li>Go to the Images tab → Generate</li>
+                                                    <li>Select your trained character from the dropdown</li>
+                                                    <li>Include the trigger word in your prompt (e.g., "TOK")</li>
+                                                    <li>Generate as usual!</li>
+                                                </ol>
+                                                <p><strong>Example Prompts:</strong></p>
+                                                <ul>
+                                                    <li>"TOK logo on a billboard in Times Square"</li>
+                                                    <li>"TOK character surfing at sunset"</li>
+                                                    <li>"TOK product on a modern desk, professional photography"</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Training Time & Cost -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#helpCost">
+                                                Training Time & Cost
+                                            </button>
+                                        </h2>
+                                        <div id="helpCost" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                            <div class="accordion-body">
+                                                <p><strong>Training Time:</strong></p>
+                                                <ul>
+                                                    <li>Typical: 30-60 minutes</li>
+                                                    <li>You'll receive notifications when complete</li>
+                                                    <li>You can close the browser - training continues server-side</li>
+                                                </ul>
+                                                <p><strong>What Happens During Training:</strong></p>
+                                                <ul>
+                                                    <li>Your images are processed and optimized</li>
+                                                    <li>A custom FLUX LoRA model is trained on your character</li>
+                                                    <li>The model learns the unique features of your subject</li>
+                                                    <li>Once complete, you can generate unlimited variations!</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END CHARACTER TRAINING TAB -->
 
             <!-- VIDEO TAB (Session 41: Runway ML Integration) -->
             <div class="tab-pane fade" id="video" role="tabpanel">
@@ -17819,6 +18143,512 @@
         window.togglePortfolioFavorite = togglePortfolioFavorite;
 
         // END PORTFOLIO SYSTEM
+        // ====================================================================
+
+        // ====================================================================
+        // CHARACTER TRAINING SYSTEM (Session 74: Phase 3)
+        // ====================================================================
+
+        // State management
+        const characterTrainingState = {
+            selectedFiles: [],
+            uploadedImages: [],
+            currentCharacter: null,
+            trainingPollingInterval: null
+        };
+
+        // Initialize character training when tab is shown
+        document.getElementById('character-training-tab')?.addEventListener('shown.bs.tab', function() {
+            loadMyCharacters();
+        });
+
+        // ===== MULTI-IMAGE UPLOAD =====
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('imageFileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const imagePreviewGrid = document.getElementById('imagePreviewGrid');
+        const createCharacterBtn = document.getElementById('createCharacterBtn');
+
+        // Browse button click
+        browseBtn?.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Drop zone click
+        dropZone?.addEventListener('click', (e) => {
+            if (e.target === dropZone || e.target.closest('#dropZoneContent')) {
+                fileInput.click();
+            }
+        });
+
+        // File input change
+        fileInput?.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // Drag & drop events
+        dropZone?.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#0d6efd';
+            dropZone.style.background = '#e7f1ff';
+        });
+
+        dropZone?.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#dee2e6';
+            dropZone.style.background = '#f8f9fa';
+        });
+
+        dropZone?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#dee2e6';
+            dropZone.style.background = '#f8f9fa';
+
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        function handleFiles(files) {
+            const fileArray = Array.from(files);
+
+            // Validate file count
+            if (fileArray.length < 10) {
+                showCharacterError('Please select at least 10 images (you selected ' + fileArray.length + ')');
+                return;
+            }
+
+            if (fileArray.length > 20) {
+                showCharacterError('Please select no more than 20 images (you selected ' + fileArray.length + ')');
+                return;
+            }
+
+            // Validate file types
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const invalidFiles = fileArray.filter(f => !validTypes.includes(f.type));
+
+            if (invalidFiles.length > 0) {
+                showCharacterError('Some files are not valid images. Only JPEG, PNG, and WEBP are supported.');
+                return;
+            }
+
+            // Store files
+            characterTrainingState.selectedFiles = fileArray;
+
+            // Show preview
+            displayImagePreviews(fileArray);
+
+            // Enable submit button
+            createCharacterBtn.disabled = false;
+        }
+
+        function displayImagePreviews(files) {
+            imagePreviewGrid.style.display = 'flex';
+            imagePreviewGrid.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    col.innerHTML = `
+                        <div class="position-relative">
+                            <img src="${e.target.result}" class="img-fluid rounded" style="aspect-ratio: 1; object-fit: cover; width: 100%;">
+                            <div class="position-absolute top-0 start-0 m-2">
+                                <span class="badge bg-primary">${index + 1}</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
+                                    onclick="removePreviewImage(${index})" title="Remove">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    `;
+                    imagePreviewGrid.appendChild(col);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Update drop zone to show count
+            document.getElementById('dropZoneContent').innerHTML = `
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">${files.length} Images Selected</h5>
+                <p class="text-muted mb-3">Click to change selection</p>
+            `;
+        }
+
+        window.removePreviewImage = function(index) {
+            characterTrainingState.selectedFiles.splice(index, 1);
+
+            if (characterTrainingState.selectedFiles.length === 0) {
+                imagePreviewGrid.style.display = 'none';
+                createCharacterBtn.disabled = true;
+                document.getElementById('dropZoneContent').innerHTML = `
+                    <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                    <h5 class="mt-3">Drag & Drop Images Here</h5>
+                    <p class="text-muted mb-3">or click to browse files</p>
+                    <button type="button" class="btn btn-primary" id="browseBtn">
+                        📂 Browse Files
+                    </button>
+                `;
+                // Re-attach event listener to new browse button
+                document.getElementById('browseBtn').addEventListener('click', () => {
+                    fileInput.click();
+                });
+            } else {
+                displayImagePreviews(characterTrainingState.selectedFiles);
+            }
+        };
+
+        // ===== FORM SUBMISSION =====
+
+        document.getElementById('characterTrainingForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            formData.append('name', document.getElementById('characterName').value);
+            formData.append('description', document.getElementById('characterDescription').value);
+            formData.append('trigger_word', document.getElementById('triggerWord').value);
+            formData.append('training_steps', document.getElementById('trainingSteps').value);
+            formData.append('learning_rate', document.getElementById('learningRate').value);
+            formData.append('auto_submit', document.getElementById('autoSubmit').checked);
+
+            // Append all images
+            characterTrainingState.selectedFiles.forEach((file, index) => {
+                formData.append('images', file);
+            });
+
+            // Disable button and show spinner
+            createCharacterBtn.disabled = true;
+            document.getElementById('createCharacterBtnSpinner').style.display = 'inline-block';
+            document.getElementById('createCharacterBtnText').textContent = 'Creating Character...';
+
+            try {
+                const response = await fetch('/api/characters/create/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show success message
+                    showCharacterSuccess('Character created successfully! ' + (data.warnings?.length > 0 ? 'Check warnings below.' : ''));
+
+                    // Show warnings if any
+                    if (data.warnings && data.warnings.length > 0) {
+                        showCharacterWarnings(data.warnings);
+                    }
+
+                    // Reset form
+                    document.getElementById('characterTrainingForm').reset();
+                    imagePreviewGrid.style.display = 'none';
+                    characterTrainingState.selectedFiles = [];
+                    document.getElementById('dropZoneContent').innerHTML = `
+                        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                        <h5 class="mt-3">Drag & Drop Images Here</h5>
+                        <p class="text-muted mb-3">or click to browse files</p>
+                        <button type="button" class="btn btn-primary" id="browseBtn">📂 Browse Files</button>
+                    `;
+
+                    // Switch to My Characters tab
+                    setTimeout(() => {
+                        document.getElementById('my-characters-pill').click();
+                        loadMyCharacters();
+                    }, 2000);
+
+                } else {
+                    showCharacterError(data.error || 'Failed to create character');
+                }
+
+            } catch (error) {
+                console.error('Character creation error:', error);
+                showCharacterError('Network error. Please try again.');
+            } finally {
+                // Re-enable button
+                createCharacterBtn.disabled = false;
+                document.getElementById('createCharacterBtnSpinner').style.display = 'none';
+                document.getElementById('createCharacterBtnText').textContent = '🚀 Create & Train Character';
+            }
+        });
+
+        // ===== CHARACTER LIBRARY =====
+
+        async function loadMyCharacters() {
+            const grid = document.getElementById('charactersGrid');
+            const loading = document.getElementById('charactersLoading');
+            const empty = document.getElementById('charactersEmpty');
+
+            grid.innerHTML = '';
+            loading.style.display = 'block';
+            empty.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/characters/');
+                const data = await response.json();
+
+                loading.style.display = 'none';
+
+                if (data.success && data.characters.length > 0) {
+                    data.characters.forEach(character => {
+                        renderCharacterCard(character, grid);
+                    });
+
+                    // Start polling for training characters
+                    startTrainingPolling();
+                } else {
+                    empty.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Failed to load characters:', error);
+                loading.style.display = 'none';
+                showCharacterError('Failed to load characters');
+            }
+        }
+
+        function renderCharacterCard(character, container) {
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6 col-lg-4';
+            col.dataset.characterId = character.id;
+            col.dataset.status = character.training_status;
+
+            const statusBadge = getStatusBadge(character.training_status);
+            const favoriteIcon = character.is_favorite ? '⭐' : '☆';
+
+            col.innerHTML = `
+                <div class="card h-100">
+                    ${character.thumbnail ? `<img src="${character.thumbnail}" class="card-img-top" style="height: 200px; object-fit: cover;">` :
+                      '<div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;"><i class="bi bi-person-circle" style="font-size: 4rem; color: #dee2e6;"></i></div>'}
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">${character.name}</h6>
+                            <button class="btn btn-sm btn-link p-0" onclick="toggleCharacterFavorite(${character.id})" title="${character.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">
+                                ${favoriteIcon}
+                            </button>
+                        </div>
+                        <p class="card-text small text-muted">${character.description || 'No description'}</p>
+                        <div class="mb-2">
+                            ${statusBadge}
+                            ${character.training_status === 'training' || character.training_status === 'pending' ?
+                              `<div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                     style="width: ${character.training_progress}%" id="progress-${character.id}"></div>
+                              </div>` : ''}
+                        </div>
+                        <div class="d-flex gap-2">
+                            ${character.can_generate ?
+                              '<button class="btn btn-sm btn-primary flex-fill" onclick="useCharacter(' + character.id + ')">Use</button>' :
+                              '<button class="btn btn-sm btn-secondary flex-fill" disabled>Not Ready</button>'}
+                            <button class="btn btn-sm btn-outline-secondary" onclick="viewCharacterDetails(' + character.id + ')" title="View Details">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCharacter(' + character.id + ')" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        <div class="d-flex justify-content-between">
+                            <span>Trigger: <code>${character.trigger_word}</code></span>
+                            <span>${character.training_images_count} images</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(col);
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'preparing': '<span class="badge bg-secondary">Preparing</span>',
+                'pending': '<span class="badge bg-warning">Pending</span>',
+                'training': '<span class="badge bg-info">Training</span>',
+                'completed': '<span class="badge bg-success">Ready</span>',
+                'failed': '<span class="badge bg-danger">Failed</span>',
+                'cancelled': '<span class="badge bg-secondary">Cancelled</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+        }
+
+        // ===== TRAINING PROGRESS POLLING =====
+
+        function startTrainingPolling() {
+            // Clear existing interval
+            if (characterTrainingState.trainingPollingInterval) {
+                clearInterval(characterTrainingState.trainingPollingInterval);
+            }
+
+            // Poll every 30 seconds
+            characterTrainingState.trainingPollingInterval = setInterval(async () => {
+                const trainingCards = document.querySelectorAll('[data-status="training"], [data-status="pending"]');
+
+                if (trainingCards.length === 0) {
+                    // No training characters, stop polling
+                    clearInterval(characterTrainingState.trainingPollingInterval);
+                    return;
+                }
+
+                for (const card of trainingCards) {
+                    const characterId = card.dataset.characterId;
+                    await updateCharacterStatus(characterId);
+                }
+            }, 30000);
+        }
+
+        async function updateCharacterStatus(characterId) {
+            try {
+                const response = await fetch(`/api/characters/${characterId}/training-status/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update progress bar if exists
+                    const progressBar = document.getElementById(`progress-${characterId}`);
+                    if (progressBar) {
+                        progressBar.style.width = `${data.training_progress}%`;
+                    }
+
+                    // If status changed to completed, reload the card
+                    if (data.training_status === 'completed' || data.training_status === 'failed') {
+                        loadMyCharacters();
+
+                        if (data.training_status === 'completed') {
+                            showCharacterSuccess(`Character "${data.name}" training completed! You can now use it for generation.`);
+                        } else {
+                            showCharacterError(`Character "${data.name}" training failed: ${data.error_message}`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to update character status:', error);
+            }
+        }
+
+        // ===== CHARACTER ACTIONS =====
+
+        window.toggleCharacterFavorite = async function(characterId) {
+            try {
+                const response = await fetch(`/api/characters/${characterId}/toggle-favorite/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    loadMyCharacters();
+                }
+            } catch (error) {
+                console.error('Failed to toggle favorite:', error);
+            }
+        };
+
+        window.useCharacter = function(characterId) {
+            // Switch to Images tab and select this character
+            document.getElementById('images-tab').click();
+            // TODO: In Phase 4, add character selection to image generation
+            showCharacterSuccess('Character selected! (Integration with image generation coming in Phase 4)');
+        };
+
+        window.viewCharacterDetails = async function(characterId) {
+            try {
+                const response = await fetch(`/api/characters/${characterId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // TODO: Show modal with character details
+                    alert(`Character: ${data.character.name}\nStatus: ${data.character.training_status}\nTrigger: ${data.character.trigger_word}\nImages: ${data.character.training_images_count}`);
+                }
+            } catch (error) {
+                console.error('Failed to load character details:', error);
+            }
+        };
+
+        window.deleteCharacter = async function(characterId) {
+            if (!confirm('Are you sure you want to delete this character? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/characters/${characterId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showCharacterSuccess('Character deleted successfully');
+                    loadMyCharacters();
+                } else {
+                    showCharacterError(data.error || 'Failed to delete character');
+                }
+            } catch (error) {
+                console.error('Failed to delete character:', error);
+                showCharacterError('Failed to delete character');
+            }
+        };
+
+        // Refresh button
+        document.getElementById('refreshCharactersBtn')?.addEventListener('click', loadMyCharacters);
+
+        // Character filter
+        document.getElementById('characterFilter')?.addEventListener('change', (e) => {
+            const filter = e.target.value;
+            const cards = document.querySelectorAll('#charactersGrid > div');
+
+            cards.forEach(card => {
+                if (filter === 'all' || card.dataset.status === filter) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // ===== MESSAGE HELPERS =====
+
+        function showCharacterSuccess(message) {
+            const container = document.getElementById('validationMessages');
+            container.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+            container.style.display = 'block';
+
+            setTimeout(() => {
+                container.style.display = 'none';
+            }, 5000);
+        }
+
+        function showCharacterError(message) {
+            const container = document.getElementById('validationMessages');
+            container.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+            container.style.display = 'block';
+        }
+
+        function showCharacterWarnings(warnings) {
+            const container = document.getElementById('validationMessages');
+            const warningList = warnings.map(w => `<li>${w}</li>`).join('');
+            container.innerHTML += `<div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <strong>Warnings:</strong>
+                <ul class="mb-0 mt-2">${warningList}</ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+
+        // END CHARACTER TRAINING SYSTEM
         // ====================================================================
     </script>
 </body>
