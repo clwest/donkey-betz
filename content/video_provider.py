@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from django.conf import settings
 from django.core.files.base import ContentFile
+from core.error_messages import ErrorMessageBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +72,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         try:
@@ -111,9 +113,10 @@ class RunwayMLProvider:
             )
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
-                    error_message=f"RunwayML API error ({response.status_code}): {response.text}"
+                    error_message=error["user_message"]
                 )
 
             data = response.json()
@@ -155,9 +158,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         try:
@@ -208,9 +212,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
-                    error_message=f"RunwayML API error ({response.status_code}): {response.text}"
+                    error_message=error["user_message"]
                 )
 
             data = response.json()
@@ -238,9 +243,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         try:
@@ -251,10 +257,11 @@ class RunwayMLProvider:
             )
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
                     task_id=task_id,
-                    error_message=f"Failed to check status ({response.status_code}): {response.text}"
+                    error_message=error["user_message"]
                 )
 
             data = response.json()
@@ -503,9 +510,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         try:
@@ -549,9 +557,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
-                    error_message=f"RunwayML API error ({response.status_code}): {response.text}"
+                    error_message=error["user_message"]
                 )
 
             data = response.json()
@@ -597,9 +606,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         try:
@@ -647,9 +657,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         try:
@@ -675,9 +686,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
-                    error_message=f"RunwayML API error ({response.status_code}): {response.text}"
+                    error_message=error["user_message"]
                 )
 
             data = response.json()
@@ -715,9 +727,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -759,9 +772,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"RunwayML API error ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -797,9 +811,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -834,9 +849,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"RunwayML API error ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -870,9 +886,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -900,9 +917,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"RunwayML API error ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -947,9 +965,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return VideoGenerationResult(
                 success=False,
-                error_message="RunwayML API key not configured"
+                error_message=error["user_message"]
             )
 
         if not reference_video_url:
@@ -1004,9 +1023,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return VideoGenerationResult(
                     success=False,
-                    error_message=f"RunwayML API error ({response.status_code}): {response.text}"
+                    error_message=error["user_message"]
                 )
 
             data = response.json()
@@ -1034,9 +1054,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -1047,9 +1068,10 @@ class RunwayMLProvider:
             )
 
             if response.status_code not in [200, 204]:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"Failed to cancel task ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             return {
@@ -1070,9 +1092,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -1083,9 +1106,10 @@ class RunwayMLProvider:
             )
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"Failed to get organization ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -1108,9 +1132,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -1121,9 +1146,10 @@ class RunwayMLProvider:
             )
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"Failed to get usage ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -1164,9 +1190,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -1198,9 +1225,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"Voice dubbing failed ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -1236,9 +1264,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -1261,9 +1290,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"Voice isolation failed ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()
@@ -1304,9 +1334,10 @@ class RunwayMLProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("Runway ML", "RUNWAY_API_KEY")
             return {
                 "success": False,
-                "error_message": "RunwayML API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -1340,9 +1371,10 @@ class RunwayMLProvider:
             logger.info(f"📥 [RUNWAY] Response status: {response.status_code}")
 
             if response.status_code != 200:
+                error = ErrorMessageBuilder.parse_api_error("Runway ML", response.status_code, response.text)
                 return {
                     "success": False,
-                    "error_message": f"Speech-to-speech failed ({response.status_code}): {response.text}"
+                    "error_message": error["user_message"]
                 }
 
             data = response.json()

@@ -19,6 +19,7 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 
 from django.conf import settings
+from core.error_messages import ErrorMessageBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ class ReplicateProvider:
         if not self.available:
             return TrainingResult(
                 success=False,
-                error_message="Replicate API not available or not configured"
+                error_message=ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
             )
 
         try:
@@ -251,7 +252,7 @@ class ReplicateProvider:
         if not self.available:
             return {
                 "success": False,
-                "error_message": "Replicate API not available"
+                "error_message": ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
             }
 
         try:
@@ -428,7 +429,7 @@ class ReplicateProvider:
         if not self.available:
             return {
                 "success": False,
-                "error_message": "Replicate API not available"
+                "error_message": ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")["user_message"]
             }
 
         try:
