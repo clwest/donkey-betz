@@ -559,9 +559,10 @@ def check_video_status(request, task_id):
         # Return status response
         response_data = {
             'status': result.status,
-            'progress': result.progress
+            'progress': result.progress,
+            'progress_message': result.progress_message
         }
-        
+
         if result.status == 'completed':
             response_data.update({
                 'video_url': result.video_url,
@@ -570,11 +571,11 @@ def check_video_status(request, task_id):
             })
         elif result.status == 'failed':
             response_data['error'] = result.error_message
-        
+
         # Add estimated remaining time for processing
         if result.status in ['pending', 'processing']:
             response_data['estimated_remaining'] = max(0, result.estimated_time - result.progress)
-        
+
         return JsonResponse(response_data)
         
     except Exception as e:

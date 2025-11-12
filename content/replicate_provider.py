@@ -264,20 +264,56 @@ class ReplicateProvider:
                 "logs": training.logs if hasattr(training, 'logs') else None,
             }
 
-            # Add progress estimate based on status
+            # Add progress estimate based on status with detailed messages
             if training.status == "starting":
-                result["progress"] = 5
+                result["progress"] = 10
+                result["progress_message"] = "🚀 Preparing training environment..."
             elif training.status == "processing":
-                result["progress"] = 50  # Rough estimate, can be refined
+                # Try to parse logs for better progress estimation
+                progress = 50  # Default mid-point
+                progress_message = "🧠 Training character model..."
+
+                # Parse logs to estimate progress more accurately
+                if result.get("logs"):
+                    logs = result["logs"]
+                    # Look for epoch/step information in logs
+                    if "epoch" in logs.lower():
+                        # Try to extract epoch progress
+                        # Most LoRA training is 10-50 epochs
+                        # This is a rough estimation
+                        if "epoch 1/" in logs.lower() or "epoch 2/" in logs.lower():
+                            progress = 20
+                            progress_message = "🎨 Training initial patterns..."
+                        elif "epoch 3/" in logs.lower() or "epoch 4/" in logs.lower() or "epoch 5/" in logs.lower():
+                            progress = 40
+                            progress_message = "🖼️ Learning character features..."
+                        elif "epoch 6/" in logs.lower() or "epoch 7/" in logs.lower() or "epoch 8/" in logs.lower():
+                            progress = 60
+                            progress_message = "✨ Refining character details..."
+                        elif "epoch 9/" in logs.lower() or "epoch 10/" in logs.lower():
+                            progress = 80
+                            progress_message = "🎯 Finalizing model..."
+                        else:
+                            # Later epochs
+                            progress = 90
+                            progress_message = "🏁 Almost complete..."
+
+                result["progress"] = progress
+                result["progress_message"] = progress_message
             elif training.status == "succeeded":
                 result["progress"] = 100
+                result["progress_message"] = "✅ Character training complete!"
                 # Extract model info
                 if training.output:
                     result["model_version"] = training.output.get("version")
                     result["weights_url"] = training.output.get("weights")
             elif training.status == "failed":
                 result["progress"] = 0
+                result["progress_message"] = "❌ Training failed"
                 result["error"] = training.error if hasattr(training, 'error') else "Training failed"
+            elif training.status == "canceled":
+                result["progress"] = 0
+                result["progress_message"] = "⚠️ Training canceled"
 
             return result
 

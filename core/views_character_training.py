@@ -359,6 +359,7 @@ def check_training_status(request, character_id):
             'name': character.name,
             'training_status': character.training_status,
             'training_progress': character.training_progress,
+            'progress_message': status_result.get('progress_message', ''),
             'training_id': character.training_id,
             'model_version': character.replicate_version_id,
             'error_message': character.error_message,
