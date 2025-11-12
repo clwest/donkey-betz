@@ -10458,6 +10458,106 @@
         // Session 69: Make pollVideoStatus globally accessible for AI Assistant
         window.pollVideoStatus = pollVideoStatus;
 
+        // Session 81: Poll audio task status (similar to video polling)
+        async function pollAudioStatus(taskId, audioType) {
+            console.log(`🎵 Starting audio polling for task ${taskId} (type: ${audioType})`);
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    // Use audio status endpoint (Session 81 fix: was /api/v1/tasks/, now /api/v1/audio/status/)
+                    const response = await authenticatedFetch(`/api/v1/audio/status/${taskId}/`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed' || data.status === 'SUCCEEDED') {
+                        clearInterval(pollInterval);
+                        console.log(`✅ Audio completed! Task: ${taskId}`);
+
+                        // Refresh gallery
+                        console.log('🔄 Audio completed - refreshing galleries...');
+                        // TODO: loadAudioGallery() when we create audio gallery
+
+                        // Notify user (Session 81 FIX: Add to conversation history so GPT-5-mini can see the audio URL!)
+                        if (window.aiAssistant) {
+                            const audioUrl = data.audio_url;  // Session 81: Backend returns audio_url field
+
+                            // Session 81 FIX: Make audio_url VERY explicit for GPT-5-mini to extract
+                            const completionMessage = `✅ **${audioType === 'speech' ? 'Speech' : 'Sound Effect'} Ready!**\n\n` +
+                                `🎵 Your audio is complete!\n\n` +
+                                `**AUDIO_URL:** ${audioUrl}\n\n` +
+                                `<audio controls style="width: 100%; margin: 10px 0;">\n` +
+                                `  <source src="${audioUrl}" type="audio/mpeg">\n` +
+                                `  Your browser does not support the audio element.\n` +
+                                `</audio>\n\n` +
+                                `📥 [Download Audio](${audioUrl})\n\n` +
+                                `💡 You can now use this audio with "Add music to my last video"!`;
+
+                            // Add to UI
+                            window.aiAssistant.addMessage('assistant', completionMessage);
+
+                            // Session 81 FIX: Add to conversation history so OpenAI can see it!
+                            window.aiAssistant.conversation.push({
+                                role: 'assistant',
+                                content: completionMessage
+                            });
+
+                            // Session 81: Store audio URL globally for easy backend access
+                            window.mostRecentAudioUrl = audioUrl;
+                            console.log('📌 Stored most recent audio URL:', audioUrl);
+                        }
+
+                        // Desktop notification
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification('🎵 Audio Ready!', {
+                                body: `Your ${audioType === 'speech' ? 'speech' : 'sound effect'} has been generated!`,
+                                icon: '/static/images/logo.png'
+                            });
+                        }
+
+                        // Audio notification (bell sound)
+                        try {
+                            const audio = new Audio('/static/sounds/notification.mp3');
+                            audio.play().catch(e => console.log('Audio notification failed:', e));
+                        } catch (e) {
+                            console.log('Audio notification not available:', e);
+                        }
+
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        console.error(`❌ Audio failed! Task: ${taskId} - ${data.error_message}`);
+
+                        if (window.aiAssistant) {
+                            const errorMessage = `❌ **Audio Generation Failed**\n\n` +
+                                `Error: ${data.error_message || 'Unknown error'}\n\n` +
+                                `Please try again!`;
+
+                            // Add to UI
+                            window.aiAssistant.addMessage('assistant', errorMessage);
+
+                            // Session 81 FIX: Add to conversation history
+                            window.aiAssistant.conversation.push({
+                                role: 'assistant',
+                                content: errorMessage
+                            });
+                        }
+
+                    } else {
+                        // Still processing
+                        const progress = data.progress || 30;
+                        console.log(`⏳ Audio processing: ${progress}% (task: ${taskId})`);
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    console.error(`❌ Error polling audio status: ${error.message}`);
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        // Session 81: Make pollAudioStatus globally accessible for AI Assistant
+        window.pollAudioStatus = pollAudioStatus;
+
+        // Session 81: Store most recent audio URL globally for easy access
+        window.mostRecentAudioUrl = null;
+
         // Select image from gallery for video (Session 44: Custom modal implementation)
         function selectImageFromGalleryForVideo() {
             console.log('🔍 [VIDEO] Opening custom gallery modal');
@@ -14037,15 +14137,40 @@
                             window[audioMixingId] = audioMixingData;
 
                             message += `<button class="btn btn-primary" onclick="window.aiAssistant.executeAudioMixing('${audioMixingId}')" style="padding: 10px 20px; font-size: 16px; margin: 10px 0;">🎵 Upload Audio & Confirm</button>\n\n`;
+                        } else if (result.tool === 'show_recent_videos') {
+                            // Session 84: Display recent videos with numbers
+                            message += result.result.message || '📹 Your Recent Videos';
+
+                            if (result.result.instructions) {
+                                message += `\n\n${result.result.instructions}`;
+                            }
+
+                            // Store video list in window for later reference
+                            if (result.result.videos && result.result.videos.length > 0) {
+                                window.recentVideosList = result.result.videos;
+                                console.log('📹 Stored video list:', window.recentVideosList);
+                            }
                         } else if (result.tool === 'apply_color_grade') {
                             // Session 72: Display color grading results
                             // Session 73: Add execution button
+                            // Session 84: Add undefined checks before .replace()
                             message += `🎨 **Ready to Apply Color Grading!**\n\n`;
-                            message += `✨ **Style:** ${result.result.style.replace(/_/g, ' ')}\n`;
-                            message += `📖 **Look:** ${result.result.style_description}\n\n`;
-                            message += `🎬 **Video:** ${result.result.video_prompt}\n\n`;
-                            message += `${result.result.message}\n\n`;
-                            message += `${result.result.instructions}\n\n`;
+
+                            if (result.result.style) {
+                                message += `✨ **Style:** ${result.result.style.replace(/_/g, ' ')}\n`;
+                            }
+                            if (result.result.style_description) {
+                                message += `📖 **Look:** ${result.result.style_description}\n\n`;
+                            }
+                            if (result.result.video_prompt) {
+                                message += `🎬 **Video:** ${result.result.video_prompt}\n\n`;
+                            }
+                            if (result.result.message) {
+                                message += `${result.result.message}\n\n`;
+                            }
+                            if (result.result.instructions) {
+                                message += `${result.result.instructions}\n\n`;
+                            }
                             if (result.result.note) {
                                 message += `${result.result.note}\n\n`;
                             }
@@ -14053,7 +14178,7 @@
                             // Session 73: Store data and add execution button
                             const colorGradeData = {
                                 video_id: result.result.video_id,
-                                style: result.result.style
+                                style: result.result.style || 'cinematic'
                             };
                             const colorGradeId = 'color_grade_' + Date.now();
                             window[colorGradeId] = colorGradeData;
@@ -14148,6 +14273,64 @@
                             message += `</div>\n\n`;
 
                             message += `💡 **To make more edits,** just say: "Make it more colorful on image 2" or "Adjust the lighting on all images"\n\n`;
+                        } else if (result.tool === 'generate_speech') {
+                            // Session 82: ElevenLabs speech generation (immediate completion)
+                            if (result.result.status === 'completed' && result.result.audio_url) {
+                                // ElevenLabs returns audio immediately - display it!
+                                message += `✅ **Speech Ready!**\n\n`;
+                                message += `🎵 Your audio is complete!\n\n`;
+                                message += `**AUDIO_URL:** ${result.result.audio_url}\n\n`;
+                                message += `<audio controls src="${result.result.audio_url}" style="width: 100%; margin: 10px 0;"></audio>\n\n`;
+                                message += `📥 [Download Audio](${result.result.audio_url})\n\n`;
+                                message += `💡 You can now use this audio with "Add music to my last video"!\n\n`;
+                            } else {
+                                // Fallback for async providers (Runway)
+                                const minutes = Math.ceil(result.result.estimated_time / 60);
+                                message += `✅ **Speech Generation Started!**\n\n`;
+                                message += `🗣️ Generating speech with **${result.result.voice}**'s voice...\n\n`;
+                                message += `📝 Text: "${result.result.text_preview}"\n\n`;
+                                message += `⏱️ Estimated time: ~${result.result.estimated_time} seconds\n\n`;
+                                message += `🔗 Task ID: ${result.result.task_id}\n\n`;
+                                message += `💡 **I'll notify you when it's ready!** (Desktop + audio + in-chat player)\n\n`;
+                                message += `🎵 You'll be able to play it right here in the chat!\n\n`;
+
+                                // Start audio polling
+                                if (result.result.task_id && typeof window.pollAudioStatus === 'function') {
+                                    console.log('🎵 Starting audio status polling for task:', result.result.task_id);
+                                    setTimeout(() => window.pollAudioStatus(result.result.task_id, 'speech'), 100);
+                                } else if (result.result.task_id) {
+                                    console.error('❌ pollAudioStatus function not found - audio won\'t auto-update!');
+                                }
+                            }
+                        } else if (result.tool === 'generate_sound_effect') {
+                            // Session 82: ElevenLabs sound generation (immediate completion)
+                            if (result.result.status === 'completed' && result.result.audio_url) {
+                                // ElevenLabs returns audio immediately - display it!
+                                message += `✅ **Sound Effect Ready!**\n\n`;
+                                message += `🔊 Your ${result.result.duration}s sound effect is complete!\n\n`;
+                                message += `📝 Description: "${result.result.description}"\n\n`;
+                                message += `**AUDIO_URL:** ${result.result.audio_url}\n\n`;
+                                message += `<audio controls src="${result.result.audio_url}" style="width: 100%; margin: 10px 0;"></audio>\n\n`;
+                                message += `📥 [Download Audio](${result.result.audio_url})\n\n`;
+                                message += `💡 You can now use this audio with "Add music to my last video"!\n\n`;
+                            } else {
+                                // Fallback for async providers (Runway)
+                                const minutes = Math.ceil(result.result.estimated_time / 60);
+                                message += `✅ **Sound Effect Generation Started!**\n\n`;
+                                message += `🔊 Generating ${result.result.duration}s sound effect: "${result.result.description}"\n\n`;
+                                message += `⏱️ Estimated time: ~${result.result.estimated_time} seconds\n\n`;
+                                message += `🔗 Task ID: ${result.result.task_id}\n\n`;
+                                message += `💡 **I'll notify you when it's ready!** (Desktop + audio + in-chat player)\n\n`;
+                                message += `🎵 You'll be able to play it right here in the chat!\n\n`;
+
+                                // Start audio polling
+                                if (result.result.task_id && typeof window.pollAudioStatus === 'function') {
+                                    console.log('🎵 Starting audio status polling for task:', result.result.task_id);
+                                    setTimeout(() => window.pollAudioStatus(result.result.task_id, 'sound_effect'), 100);
+                                } else if (result.result.task_id) {
+                                    console.error('❌ pollAudioStatus function not found - audio won\'t auto-update!');
+                                }
+                            }
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
@@ -14218,8 +14401,11 @@
 
                 console.log('🎨 Executing color grading:', data);
 
+                // Session 84: Add undefined check before .replace()
+                const styleName = (data.style || 'cinematic').replace(/_/g, ' ');
+
                 // Show progress message
-                this.addMessage('assistant', `🎬 Applying ${data.style.replace(/_/g, ' ')} color grading...\n\nThis may take 30-60 seconds. DaVinci Resolve is creating your cinematic video!`);
+                this.addMessage('assistant', `🎬 Applying ${styleName} color grading...\n\nThis may take 30-60 seconds. DaVinci Resolve is creating your cinematic video!`);
 
                 try {
                     const formData = new FormData();
@@ -14234,8 +14420,9 @@
                     const result = await response.json();
 
                     if (result.success) {
+                        // Session 84: Use the styleName variable we already created
                         this.addMessage('assistant', `✅ **Color Grading Complete!**\n\n` +
-                            `Your video with ${data.style.replace(/_/g, ' ')} color grading is ready!\n\n` +
+                            `Your video with ${styleName} color grading is ready!\n\n` +
                             `📹 Video ID: ${result.video_id}\n\n` +
                             `🎬 The video has been added to your gallery. Switch to the Video Gallery tab to see your Hollywood-style video!`);
 
@@ -14245,7 +14432,10 @@
                             setTimeout(() => window.loadVideoHistory(), 1000);
                         }
                     } else {
-                        this.addMessage('assistant', `❌ **Error:**\n\n${result.error_message || 'Failed to apply color grading'}`);
+                        // Session 84: Better error reporting
+                        const errorMsg = result.error_message || result.error || result.message || 'Failed to apply color grading';
+                        this.addMessage('assistant', `❌ **Error:**\n\n${errorMsg}\n\n${result.instructions || 'Make sure DaVinci Resolve Studio is running.'}`);
+                        console.error('❌ Backend error:', result);
                     }
                 } catch (error) {
                     console.error('❌ Color grading error:', error);

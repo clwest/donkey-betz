@@ -767,15 +767,16 @@ def apply_color_grading_endpoint(request):
         logger.info(f"✅ Source video downloaded")
 
         # Session 73: Use ffmpeg for color grading (much simpler than DaVinci!)
+        # Session 81: Fixed invalid curves presets - using valid ffmpeg syntax
         # Color grading filter presets
         color_filters = {
-            'cinematic_warm': 'eq=contrast=1.1:brightness=0.05:saturation=1.2,curves=preset=warm',
-            'cinematic_cool': 'eq=contrast=1.1:saturation=1.1,colortemperature=9000',
-            'vintage': 'eq=contrast=1.2:saturation=0.8,curves=vintage,noise=alls=10:allf=t',
-            'modern': 'eq=contrast=1.05:brightness=0.02:saturation=1.05',
-            'high_contrast': 'eq=contrast=1.3:brightness=0.0:saturation=1.1',
-            'soft': 'eq=contrast=0.9:brightness=0.03:saturation=0.85,curves=preset=lighter',
-            'vibrant': 'eq=contrast=1.15:saturation=1.5:brightness=0.02'
+            'cinematic_warm': 'eq=contrast=1.1:brightness=0.05:saturation=1.2,colortemperature=5500',  # Warm orange tones
+            'cinematic_cool': 'eq=contrast=1.1:saturation=1.1,colortemperature=9000',  # Cool blue tones
+            'vintage': 'eq=contrast=1.2:saturation=0.8,curves=vintage,noise=alls=10:allf=t',  # Film look with grain
+            'modern': 'eq=contrast=1.05:brightness=0.02:saturation=1.05',  # Clean and crisp
+            'high_contrast': 'eq=contrast=1.3:brightness=0.0:saturation=1.1',  # Bold dramatic look
+            'soft': 'eq=contrast=0.9:brightness=0.03:saturation=0.85,curves=lighter',  # Muted gentle tones (lighter is valid)
+            'vibrant': 'eq=contrast=1.15:saturation=1.5:brightness=0.02'  # Saturated colors
         }
 
         # Get the filter for the requested style
