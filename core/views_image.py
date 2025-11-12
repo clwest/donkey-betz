@@ -4321,6 +4321,73 @@ You have these autonomous execution tools:
 - **generate_video** - Create videos/animations (ONE video per call)
   * Always create cinematic, professional-quality promotional videos
   * IMPORTANT: Keep video prompts under 900 characters (Runway ML limit is 1000)
+- **generate_speech** - Create professional voiceovers/narration from text (ONE audio per call)
+  * Uses ElevenLabs Eleven v3 for industry-leading voice quality (1-2 second generation!)
+  * 12 professional voices available: Rachel (female, warm), Drew (male, clear), Clyde (male, deep), Paul (male, friendly), Aria (female, professional), etc.
+  * Example: generate_speech(text="Welcome to our platform", voice="Rachel")
+  * IMPORTANT: This creates REAL audio files - don't just respond with text!
+- **generate_sound_effect** - Create sound effects from descriptions (ONE sound per call)
+  * Generate any sound: thunder, whoosh, door slam, ocean waves, etc.
+  * Example: generate_sound_effect(description="thunder clap", duration=3)
+  * IMPORTANT: This creates REAL audio files - don't just respond with text!
+
+**VIDEO EDITING WITH DAVINCI RESOLVE (Session 84 - NEW!):**
+- **show_recent_videos** - Show user's videos with numbers for easy reference
+  * User says "show my videos" or "list videos" → CALL show_recent_videos!
+  * Displays videos like: "1. 🎬 Snowboarder on mountain", "2. 🦅 Eagle drone footage"
+  * User can then reference by number: "chain videos 1 and 2"
+  * IMPORTANT: Call this when user needs to select specific videos!
+
+- **apply_color_grade** - Apply professional color grading to videos using DaVinci Resolve
+  * Styles: 'cinematic' (teal/orange Hollywood), 'vibrant' (boosted colors), 'vintage' (film look), 'noir' (B&W), 'warm' (golden hour), 'cool' (blue tones)
+  * Example: apply_color_grade(style="cinematic", intensity=0.7)
+  * User says "make my video cinematic" → CALL apply_color_grade immediately!
+  * This creates a NEW color-graded video (original unchanged)
+
+- **edit_video** - Perform multiple editing operations on videos in one command!
+  * Can: chain videos, add text overlays, apply color grading, mix audio
+  * Example operations:
+    - Chain videos: {type: "chain", transition: "Cross Dissolve", duration: 1.0}
+    - Add text: {type: "text", text: "Welcome", position: "center", start: 0, duration: 3}
+    - Color grade: {type: "color_grade", style: "cinematic", intensity: 0.7}
+    - Add audio: {type: "audio", volume: 0.3}
+  * User says "chain my last 3 videos, add a title, and make it cinematic" → CALL edit_video with operations list!
+  * This is the MASTER tool for complex editing workflows
+
+**VIDEO SELECTION TIPS:**
+- If user asks to chain/edit SPECIFIC videos → First call show_recent_videos so they can see their options!
+- User says "chain the snowboarder and eagle videos" → You'll need video numbers, so show videos first
+- User says "chain my last 2 videos" → This is clear, no need to show videos
+- When unsure which videos user wants → Always show videos first!
+
+**NUMBERED VIDEO REFERENCES (Session 84 - SIMPLIFIED!):**
+When user says "chain videos 5 and 8":
+1. Extract the numbers: 5 and 8
+2. Call edit_video with video_numbers=[5, 8]
+3. Backend automatically converts numbers to video IDs!
+
+**IMPORTANT: Use video_numbers parameter for numbered references!**
+
+Example flows:
+- User: "Chain videos 5 and 8" → edit_video(video_numbers=[5, 8], operations=[{type: "chain"}])
+- User: "Make videos 3 and 7 cinematic" → edit_video(video_numbers=[3, 7], operations=[{type: "color_grade", style: "cinematic"}])
+- User: "Chain my last 2 videos" → edit_video(video_selection="last_2", operations=[{type: "chain"}])
+
+**VIDEO NUMBERS vs VIDEO IDs:**
+- video_numbers=[5, 8] → Simple! Use when user mentions numbers
+- video_ids=['uuid1', 'uuid2'] → Advanced! Use only when you have actual UUIDs
+- video_selection="last_2" → Simple! Use for "last X videos"
+
+**VIDEO EDITING PATTERNS:**
+- "Make my video cinematic" → apply_color_grade(style="cinematic")
+- "Add title to my video" → edit_video(operations=[{type:"text", text:"Title"}])
+- "Chain my last 3 videos" → edit_video(video_selection="last_3", operations=[{type:"chain"}])
+- "Chain videos and add title" → edit_video(operations=[{type:"chain"}, {type:"text", text:"Title"}])
+- "Make it warmer" / "add warm look" → apply_color_grade(style="warm")
+- "Make it look like a film" → apply_color_grade(style="vintage")
+- "Black and white" → apply_color_grade(style="noir")
+
+**OTHER TOOLS:**
 - **inpaint** - Fix specific areas of an existing image (perfect for fixing misspelled text in logos!)
   * Use this to refine logos with text issues
   * Requires: image_url (from previous generate_image), prompt (what to regenerate), mask_description (which area to fix)
@@ -4362,6 +4429,11 @@ The platform also has:
 **HOW TO RESPOND:**
 - User says "Create a logo" → CALL generate_image tool immediately! Don't just explain!
 - User says "Make a video" → CALL generate_video tool immediately!
+- User says "Generate speech" → CALL generate_speech tool immediately! Don't just respond with text!
+- User says "Create a sound effect" → CALL generate_sound_effect tool immediately!
+- User says "Make my video cinematic" → CALL apply_color_grade tool immediately!
+- User says "Chain my videos" → CALL edit_video tool immediately!
+- User says "Add a title" → CALL edit_video tool immediately!
 - User says "Search for trends" → CALL web_search tool immediately!
 - User asks "What can you do?" → Explain features (no tools needed)
 
@@ -4617,7 +4689,7 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "add_music_to_video",
-                    "description": "Add background music or audio to a video using DaVinci Resolve. Supports volume control and audio mixing. Use when user wants to add music, soundtrack, or audio to enhance their video. Session 72: Voice-controlled audio mixing!",
+                    "description": "Add background music or audio to a video using DaVinci Resolve. Session 82: AUTOMATIC AUDIO DETECTION! When user says 'add that speech/audio to video', ALWAYS call this function even if you can't find audio URL in conversation. VideoAgent will automatically query AudioAgent for most recent audio. DO NOT ask user for audio URL - just call the function! Extract audio_url from conversation if visible (look for '**AUDIO_URL:**'), otherwise omit it and VideoAgent handles the rest autonomously!",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -4626,6 +4698,10 @@ Keep responses under 200 words. Be conversational and practical."""
                                 "enum": ["last", "recent"],
                                 "description": "Which video to add music to. 'last' = most recent video, 'recent' = user will select from recent videos. Default: last"
                             },
+                            "audio_url": {
+                                "type": "string",
+                                "description": "OPTIONAL! URL of audio file to add. Session 82: If user says 'add that speech/audio', try to find '**AUDIO_URL:**' in recent messages. If found, pass it here. If NOT found, OMIT this parameter entirely (don't pass empty string) and VideoAgent will automatically query AudioAgent for most recent audio. This is AUTONOMOUS AGENT COMMUNICATION - let the agents handle it!"
+                            },
                             "audio_volume": {
                                 "type": "number",
                                 "description": "Background music volume level (0.0 to 1.0). 0.0 = silent, 0.3 = quiet background, 0.5 = moderate, 1.0 = full volume. Default: 0.3"
@@ -4633,7 +4709,7 @@ Keep responses under 200 words. Be conversational and practical."""
                             "music_style": {
                                 "type": "string",
                                 "enum": ["cinematic", "upbeat", "calm", "dramatic", "corporate"],
-                                "description": "Style of background music to add (user would upload or select from library). Default: cinematic"
+                                "description": "Style of background music to add (user would upload or select from library). Only used if audio_url not provided. Default: cinematic"
                             }
                         },
                         "required": []
@@ -4766,6 +4842,183 @@ Keep responses under 200 words. Be conversational and practical."""
                         "required": ["image_number", "edit_instruction"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_speech",
+                    "description": "Generate speech/voiceover from text using Runway ML text-to-speech. Use when user wants to create voiceover, narration, or spoken audio. Supports multiple voices (Rachel, Drew, Clyde, Paul, Aria, Domi, Dave). Session 81: Audio generation tools!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "The text to convert to speech. Can be a phrase, sentence, or paragraph."
+                            },
+                            "voice": {
+                                "type": "string",
+                                "enum": ["Rachel", "Drew", "Clyde", "Paul", "Aria", "Domi", "Dave"],
+                                "description": "Voice to use for speech generation. Rachel (female, warm), Drew (male, clear), Clyde (male, deep), Paul (male, friendly), Aria (female, professional), Domi (female, energetic), Dave (male, casual). Default: Rachel"
+                            }
+                        },
+                        "required": ["text"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_sound_effect",
+                    "description": "Generate sound effects from text description using Runway ML. Use when user wants to create sound effects, audio atmospheres, or background sounds. Can generate any sound described in text (thunder, door slam, whoosh, water flowing, etc.). Session 81: Audio generation tools!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "description": {
+                                "type": "string",
+                                "description": "Detailed description of the sound effect to generate. Be specific! Examples: 'thunder clap', 'heavy door slam', 'ocean waves crashing', 'whoosh sound', 'car engine starting'"
+                            },
+                            "duration": {
+                                "type": "number",
+                                "description": "Duration of the sound effect in seconds (0.5 to 30). Default: 5"
+                            }
+                        },
+                        "required": ["description"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "apply_color_grade",
+                    "description": "Apply professional color grading to a video using DaVinci Resolve. Use when user wants to make their video look more cinematic, vibrant, warm, cool, vintage, or noir. This creates a NEW video with the color grade applied. Session 84: DaVinci Agent-based video editing!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_selection": {
+                                "type": "string",
+                                "enum": ["last", "video_id"],
+                                "description": "Which video to color grade. 'last' = most recent video. Default: 'last'"
+                            },
+                            "video_id": {
+                                "type": "string",
+                                "description": "Video ID if video_selection is 'video_id'. Optional."
+                            },
+                            "style": {
+                                "type": "string",
+                                "enum": ["cinematic", "vibrant", "vintage", "noir", "warm", "cool"],
+                                "description": "Color grading style. cinematic=teal/orange Hollywood look, vibrant=boosted saturation, vintage=film-like warm tones, noir=black & white high contrast, warm=golden hour, cool=blue/teal tones. Default: cinematic"
+                            },
+                            "intensity": {
+                                "type": "number",
+                                "description": "How strong the color grade is (0.0-1.0). 0.3=subtle, 0.5=balanced, 0.7=strong, 1.0=maximum. Default: 0.5"
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "edit_video",
+                    "description": "Perform multiple editing operations on videos using DaVinci Resolve. This is the master video editing tool that can chain videos, add text overlays, apply color grading, and mix audio all in one go. Use this when user wants to do multiple edits at once (e.g., 'chain my videos, add a title, and color grade them'). Session 84: DaVinci Agent-based multi-operation editing! IMPORTANT: When user says 'chain videos 5 and 8', use video_numbers=[5, 8] parameter!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "video_selection": {
+                                "type": "string",
+                                "enum": ["last", "last_2", "last_3", "last_4", "last_5", "specific_ids"],
+                                "description": "Which videos to edit. Use 'specific_ids' when user specifies video numbers (e.g., 'chain videos 5 and 8'). Default: 'last'. NOTE: When user provides video numbers, you can omit this field and just use video_numbers parameter!"
+                            },
+                            "video_numbers": {
+                                "type": "array",
+                                "items": {"type": "number"},
+                                "description": "Session 84: Video numbers to edit (e.g., [5, 8] for 'chain videos 5 and 8'). Backend automatically converts numbers to video IDs. EASIEST way to reference specific videos! Example: user says 'chain videos 5 and 8' → video_numbers=[5, 8]"
+                            },
+                            "video_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Specific video UUIDs to edit (advanced usage). For most cases, use video_numbers instead! Example: ['uuid1', 'uuid2']"
+                            },
+                            "operations": {
+                                "type": "array",
+                                "description": "List of editing operations to perform in sequence. Operations: {type:'chain'}, {type:'text', text:'Hello', position:'center', start:0, duration:3}, {type:'color_grade', style:'cinematic', intensity:0.7}, {type:'audio', volume:0.3}",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "enum": ["chain", "text", "color_grade", "audio"],
+                                            "description": "Operation type"
+                                        },
+                                        "text": {
+                                            "type": "string",
+                                            "description": "Text to overlay (for type='text')"
+                                        },
+                                        "position": {
+                                            "type": "string",
+                                            "enum": ["center", "lower_third", "upper_third", "top", "bottom"],
+                                            "description": "Text position (for type='text'). Default: center"
+                                        },
+                                        "start": {
+                                            "type": "number",
+                                            "description": "Start time in seconds (for type='text'). Default: 0"
+                                        },
+                                        "duration": {
+                                            "type": "number",
+                                            "description": "Duration in seconds (for type='text' or type='chain' transitions). Default: 3 for text, 1.0 for transitions"
+                                        },
+                                        "font_size": {
+                                            "type": "number",
+                                            "description": "Font size 36-144 (for type='text'). Default: 72"
+                                        },
+                                        "style": {
+                                            "type": "string",
+                                            "enum": ["cinematic", "vibrant", "vintage", "noir", "warm", "cool"],
+                                            "description": "Color grade style (for type='color_grade'). Default: cinematic"
+                                        },
+                                        "intensity": {
+                                            "type": "number",
+                                            "description": "Color grade intensity 0.0-1.0 (for type='color_grade'). Default: 0.5"
+                                        },
+                                        "transition": {
+                                            "type": "string",
+                                            "enum": ["Cross Dissolve", "Fade", "Wipe", "Slide"],
+                                            "description": "Transition type (for type='chain'). Default: Cross Dissolve"
+                                        },
+                                        "volume": {
+                                            "type": "number",
+                                            "description": "Audio volume 0.0-1.0 (for type='audio'). Default: 0.3"
+                                        }
+                                    },
+                                    "required": ["type"]
+                                }
+                            },
+                            "project_name": {
+                                "type": "string",
+                                "description": "Optional project name for DaVinci Resolve. Auto-generated if not provided."
+                            }
+                        },
+                        "required": ["operations"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "show_recent_videos",
+                    "description": "Show the user's recent videos with numbers so they can reference specific videos. Use this when user asks 'show my videos', 'list videos', 'what videos do I have', or when they need to select specific videos to edit. Session 84: Video selection enhancement!",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "number",
+                                "description": "Number of recent videos to show (default: 10, max: 20)"
+                            }
+                        },
+                        "required": []
+                    }
+                }
             }
         ]
 
@@ -4863,14 +5116,20 @@ def transcribe_audio(request):
         # Call OpenAI Whisper API
         client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-        # Session 64: OpenAI expects a tuple (filename, file_bytes, content_type)
-        # Convert Django InMemoryUploadedFile to tuple format
-        audio_file.seek(0)  # Reset file pointer to beginning
-        file_tuple = (audio_file.name, audio_file.read(), audio_file.content_type)
+        # Session 81: Convert Django InMemoryUploadedFile to BytesIO for OpenAI SDK
+        # OpenAI SDK doesn't accept Django's file object directly
+        from io import BytesIO
+        audio_file.seek(0)
+        audio_bytes = audio_file.read()
+        audio_file_like = BytesIO(audio_bytes)
+
+        # Session 83: Always use .webm extension (frontend sends audio/webm format)
+        # This ensures OpenAI Whisper recognizes the format correctly
+        audio_file_like.name = "recording.webm"
 
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
-            file=file_tuple,
+            file=audio_file_like,
             language="en"  # Can be removed to auto-detect
         )
 
@@ -4947,15 +5206,38 @@ def execute_tool(request):
         elif tool_name == 'chain_videos':
             result = _execute_chain_videos(request.user, parameters)
         elif tool_name == 'add_text_to_video':
-            result = _execute_add_text_to_video(request.user, parameters)
+            # Session 81: Route to VideoAgent
+            from agents.video_agent import get_video_agent
+            video_agent = get_video_agent(user=request.user)
+            result = video_agent.add_text_to_video(**parameters)
         elif tool_name == 'add_music_to_video':
-            result = _execute_add_music_to_video(request.user, parameters)
+            # Session 81: Route to VideoAgent (auto-queries AudioAgent)
+            from agents.video_agent import get_video_agent
+            video_agent = get_video_agent(user=request.user)
+            result = video_agent.add_music_to_video(**parameters)
         elif tool_name == 'apply_color_grade':
+            # Session 84: Route to enhanced execution function
             result = _execute_apply_color_grade(request.user, parameters)
+        elif tool_name == 'edit_video':
+            # Session 84: Master orchestrator for multi-operation editing
+            result = _execute_edit_video(request.user, parameters)
+        elif tool_name == 'show_recent_videos':
+            # Session 84: Show recent videos with numbers
+            result = _execute_show_recent_videos(request.user, parameters)
         elif tool_name == 'create_character_from_prompt':
             result = _execute_create_character_from_prompt(request.user, parameters)
         elif tool_name == 'edit_character_training_image':
             result = _execute_edit_character_training_image(request.user, parameters)
+        elif tool_name == 'generate_speech':
+            # Session 81: Route to AudioAgent (stores state in memory)
+            from agents.audio_agent import get_audio_agent
+            audio_agent = get_audio_agent(user=request.user)
+            result = audio_agent.generate_speech(**parameters)
+        elif tool_name == 'generate_sound_effect':
+            # Session 81: Route to AudioAgent (stores state in memory)
+            from agents.audio_agent import get_audio_agent
+            audio_agent = get_audio_agent(user=request.user)
+            result = audio_agent.generate_sound_effect(**parameters)
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'
@@ -5739,15 +6021,18 @@ def _execute_add_music_to_video(user, parameters):
     """
     Execute background music addition to video via DaVinci Resolve
     Session 72: AI Assistant integration for audio mixing!
+    Session 81: Added support for audio_url from generated audio!
 
     This adds background music to a user's video:
     1. Gets the user's most recent video (or lets them select)
-    2. User uploads audio file or selects from library
-    3. Creates new DaVinci project with video + audio
-    4. Renders final video with mixed audio
+    2. If audio_url provided: Use that audio directly (from generate_speech/generate_sound_effect)
+    3. If no audio_url: User uploads audio file or selects from library
+    4. Creates new DaVinci project with video + audio
+    5. Renders final video with mixed audio
 
     Parameters:
         video_selection (str): 'last' or 'recent' (default: 'last')
+        audio_url (str): URL of generated audio (optional, Session 81)
         audio_volume (float): Volume 0.0-1.0 (default: 0.3)
         music_style (str): Style preference (default: 'cinematic')
 
@@ -5755,6 +6040,7 @@ def _execute_add_music_to_video(user, parameters):
         dict: {
             'success': True,
             'video_id': 'id',
+            'audio_url': 'url' (if provided),
             'audio_volume': 0.3,
             'message': 'Ready to add music...'
         }
@@ -5763,13 +6049,14 @@ def _execute_add_music_to_video(user, parameters):
         from content.models import VideoHistory
 
         video_selection = parameters.get('video_selection', 'last')
+        audio_url = parameters.get('audio_url')  # Session 81: Optional audio URL
         audio_volume = parameters.get('audio_volume', 0.3)
         music_style = parameters.get('music_style', 'cinematic')
 
         # Validate volume
         audio_volume = max(0.0, min(1.0, audio_volume))
 
-        logger.info(f"🎵 AI Assistant add_music_to_video: volume={audio_volume}, style={music_style}")
+        logger.info(f"🎵 AI Assistant add_music_to_video: volume={audio_volume}, style={music_style}, audio_url={'provided' if audio_url else 'none'}")
 
         # Get user's most recent completed video
         recent_video = VideoHistory.objects.filter(
@@ -5786,18 +6073,57 @@ def _execute_add_music_to_video(user, parameters):
 
         logger.info(f"✅ Found video for audio mixing: {recent_video.id} - {recent_video.prompt[:50]}")
 
-        return {
-            'success': True,
-            'video_id': str(recent_video.id),
-            'video_url': recent_video.video_url,
-            'video_prompt': recent_video.prompt[:100] if recent_video.prompt else "Untitled video",
-            'audio_volume': audio_volume,
-            'music_style': music_style,
-            'message': f'🎵 Ready to add {music_style} background music to your video! Volume will be set to {int(audio_volume * 100)}%.',
-            'instructions': f'This will create a NEW video with background music mixed into your {recent_video.prompt[:30] if recent_video.prompt else "video"}. You\'ll need to upload an audio file (MP3, WAV, etc.) or select from your audio library. The music will be mixed at {int(audio_volume * 100)}% volume. Click confirm and upload your audio file!',
-            'note': '⚠️ Note: This creates a new video with mixed audio. Your original video remains unchanged.',
-            'requires_audio_upload': True  # Frontend should show audio file upload dialog
-        }
+        # Session 81: If audio_url is provided, we can proceed directly (no upload needed)
+        # Session 83: EXECUTE IMMEDIATELY instead of returning confirmation!
+        if audio_url:
+            logger.info(f"🎵 Session 83: Audio URL provided, executing mixing immediately...")
+
+            # Call VideoAgent to actually mix the audio
+            from agents.video_agent import VideoAgent
+
+            video_agent = VideoAgent(user=user)
+            result = video_agent.add_music_to_video(
+                video_selection='last',
+                audio_url=audio_url,
+                audio_volume=audio_volume
+            )
+
+            # Session 83: Return the actual mixed video result, not confirmation
+            if result.get('success'):
+                logger.info(f"✅ Session 83: Audio mixing executed successfully!")
+                return {
+                    'success': True,
+                    'video_url': result.get('video_url'),
+                    'video_id': result.get('video_id', str(recent_video.id)),
+                    'audio_volume': audio_volume,
+                    'music_style': 'custom audio',  # Since we used provided audio
+                    'video_prompt': result.get('video_prompt', recent_video.prompt[:100] if recent_video.prompt else "Untitled video"),
+                    'message': f'✅ Audio successfully added to video!',
+                    'instructions': f'The video has been rendered with audio at {int(audio_volume * 100)}% volume.',
+                    'note': '🎬 Your new video is ready in the Video Gallery!'
+                }
+            else:
+                logger.error(f"❌ Session 83: Audio mixing failed: {result.get('error')}")
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Audio mixing failed'),
+                    'message': '❌ Failed to mix audio with video',
+                    'instructions': 'Please check the logs for details.'
+                }
+        else:
+            # No audio_url provided - require manual upload (original behavior)
+            return {
+                'success': True,
+                'video_id': str(recent_video.id),
+                'video_url': recent_video.video_url,
+                'video_prompt': recent_video.prompt[:100] if recent_video.prompt else "Untitled video",
+                'audio_volume': audio_volume,
+                'music_style': music_style,
+                'message': f'🎵 Ready to add {music_style} background music to your video! Volume will be set to {int(audio_volume * 100)}%.',
+                'instructions': f'This will create a NEW video with background music mixed into your {recent_video.prompt[:30] if recent_video.prompt else "video"}. You\'ll need to upload an audio file (MP3, WAV, etc.) or select from your audio library. The music will be mixed at {int(audio_volume * 100)}% volume. Click confirm and upload your audio file!',
+                'note': '⚠️ Note: This creates a new video with mixed audio. Your original video remains unchanged.',
+                'requires_audio_upload': True  # Frontend should show audio file upload dialog
+            }
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_add_music_to_video: {str(e)}")
@@ -5808,103 +6134,420 @@ def _execute_apply_color_grade(user, parameters):
     """
     Execute color grading application to video via DaVinci Resolve
     Session 72: AI Assistant integration for color grading!
+    Session 84: Enhanced with VideoAgent DaVinci method - NOW ACTUALLY EXECUTES!
 
     This applies professional color grading to a user's video:
     1. Gets the user's most recent video (or lets them select)
-    2. Creates new DaVinci project with that video
+    2. Calls VideoAgent to create DaVinci project
     3. Applies specified color grading style
     4. Renders final video with enhanced colors
+    5. Returns the actual color-graded video!
 
     Parameters:
-        style (str): Color grading style (default: 'cinematic_warm')
-        video_selection (str): 'last' or 'recent' (default: 'last')
+        style (str): Color grading style (default: 'cinematic')
+        video_selection (str): 'last' or 'video_id' (default: 'last')
+        video_id (str): Video ID if video_selection is 'video_id'
+        intensity (float): Color grade intensity 0.0-1.0 (default: 0.5)
 
     Returns:
         dict: {
             'success': True,
-            'video_id': 'id',
-            'style': 'cinematic_warm',
-            'message': 'Ready to apply color grading...'
+            'video_id': 'new_video_id',
+            'video_url': 'url',
+            'style': 'cinematic',
+            'intensity': 0.5,
+            'message': 'Color grade applied!'
+        }
+    """
+    try:
+        from content.models import VideoHistory
+        from agents.video_agent import VideoAgent
+
+        # Get parameters
+        style = parameters.get('style', 'cinematic').lower()
+        video_selection = parameters.get('video_selection', 'last')
+        video_id = parameters.get('video_id')
+        intensity = parameters.get('intensity', 0.5)
+
+        # Session 84: Map old style names to new ones for backwards compatibility
+        style_mappings = {
+            'cinematic_warm': 'warm',
+            'cinematic_cool': 'cool',
+            'somatic': 'cinematic',
+            'somatic warm': 'warm',
+            'sim-matic': 'cinematic',
+            'blue': 'cool',
+            'retro': 'vintage',
+            'film': 'vintage',
+            'modern': 'vibrant',
+            'clean': 'vibrant',
+            'high_contrast': 'noir',
+            'dramatic': 'noir',
+            'bold': 'vibrant',
+            'soft': 'warm',
+            'muted': 'vintage',
+            'gentle': 'warm',
+            'colorful': 'vibrant',
+            'saturated': 'vibrant'
+        }
+
+        # Map style or use as-is if it's already a valid new style
+        valid_styles = ['cinematic', 'vibrant', 'vintage', 'noir', 'warm', 'cool']
+        if style not in valid_styles:
+            style = style_mappings.get(style, 'cinematic')
+
+        # Ensure intensity is in range
+        intensity = max(0.0, min(1.0, intensity))
+
+        logger.info(f"🎨 AI Assistant apply_color_grade: style={style}, intensity={intensity}")
+
+        # Get video
+        if video_selection == 'video_id' and video_id:
+            try:
+                video = VideoHistory.objects.get(id=video_id, user=user, status='completed')
+            except VideoHistory.DoesNotExist:
+                return {
+                    'success': False,
+                    'error': f'Video not found: {video_id}',
+                    'message': 'The specified video was not found.'
+                }
+        else:
+            # Get most recent video
+            video = VideoHistory.objects.filter(
+                user=user,
+                status='completed'
+            ).order_by('-created_at').first()
+
+            if not video:
+                return {
+                    'success': False,
+                    'error': 'You have no completed videos in your gallery.',
+                    'message': 'Please create a video first, then apply color grading to it!'
+                }
+
+        logger.info(f"✅ Found video for color grading: {video.id} - {video.prompt[:50]}")
+
+        # Session 84: ACTUALLY EXECUTE COLOR GRADING using VideoAgent!
+        logger.info(f"🎬 Session 84: Executing color grading with VideoAgent...")
+
+        video_agent = VideoAgent(user=user)
+        result = video_agent.apply_color_grade_davinci(
+            video_id=str(video.id),
+            style=style,
+            intensity=intensity
+        )
+
+        # Return result
+        if result.get('success'):
+            logger.info(f"✅ Session 84: Color grading executed successfully!")
+            return {
+                'success': True,
+                'video_id': result.get('video_id'),
+                'video_url': result.get('video_url'),
+                'style': style,
+                'intensity': intensity,
+                'original_video': str(video.id),
+                'message': result.get('message', f'✅ {style.capitalize()} color grade applied successfully!'),
+                'instructions': f'Your video has been color graded with a professional {style} look at {int(intensity * 100)}% intensity!',
+                'note': '🎬 Your new color-graded video is ready in the Video Gallery!'
+            }
+        else:
+            logger.error(f"❌ Session 84: Color grading failed: {result.get('error')}")
+            # Session 84: Include all fields even in error response so frontend doesn't crash
+            style_descriptions = {
+                'cinematic': 'Teal & orange Hollywood look',
+                'vibrant': 'Boosted saturation and vivid colors',
+                'vintage': 'Retro film aesthetic',
+                'noir': 'High contrast black & white',
+                'warm': 'Golden hour glow',
+                'cool': 'Blue tones and icy feel'
+            }
+            return {
+                'success': False,
+                'error': result.get('error', 'Color grading failed'),
+                'error_message': result.get('error', 'Color grading failed'),
+                'message': '❌ Failed to apply color grade',
+                'instructions': 'Please check the logs for details. DaVinci Resolve Studio must be running.',
+                'style': style,
+                'style_description': style_descriptions.get(style, 'Professional color grading'),
+                'video_prompt': video.prompt[:50] if video.prompt else 'Unknown video',
+                'video_id': str(video.id)
+            }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_apply_color_grade: {str(e)}", exc_info=True)
+        raise
+
+
+def _execute_edit_video(user, parameters):
+    """
+    Execute multi-operation video editing via DaVinci Resolve
+    Session 84: Master orchestrator for complex video editing workflows!
+
+    This performs multiple editing operations in sequence:
+    - Chain videos together with transitions
+    - Add text overlays
+    - Apply color grading
+    - Mix audio/music
+
+    Parameters:
+        video_selection (str): 'last', 'last_2', 'last_3', etc.
+        operations (list): List of operation dicts with 'type' and parameters
+        project_name (str): Optional project name
+
+    Returns:
+        dict: {
+            'success': True,
+            'video_id': 'new_video_id',
+            'video_url': 'url',
+            'operations_applied': 4,
+            'duration': 24.0,
+            'message': 'Video edited successfully!'
+        }
+    """
+    try:
+        from content.models import VideoHistory
+        from agents.video_agent import VideoAgent
+
+        # Get parameters
+        video_selection = parameters.get('video_selection', 'last')
+        operations = parameters.get('operations', [])
+        project_name = parameters.get('project_name')
+        provided_video_ids = parameters.get('video_ids', [])
+        video_numbers = parameters.get('video_numbers', [])  # Session 84: NEW! Support for video numbers
+
+        # Validate operations
+        if not operations or len(operations) == 0:
+            return {
+                'success': False,
+                'error': 'No operations specified',
+                'message': 'Please specify at least one editing operation (chain, text, color_grade, or audio).'
+            }
+
+        logger.info(f"🎬 AI Assistant edit_video: {len(operations)} operations on {video_selection}")
+
+        # Session 84: Handle video numbers (e.g., "chain videos 5 and 8")
+        if video_numbers and len(video_numbers) > 0:
+            logger.info(f"📹 Converting video numbers to IDs: {video_numbers}")
+
+            # Get all completed videos ordered by creation date (most recent first)
+            all_videos = list(VideoHistory.objects.filter(
+                user=user,
+                status='completed'
+            ).order_by('-created_at'))
+
+            if len(all_videos) == 0:
+                return {
+                    'success': False,
+                    'error': 'No videos found',
+                    'message': 'You have no completed videos yet.'
+                }
+
+            # Convert video numbers to IDs (numbers are 1-indexed in UI)
+            video_ids = []
+            for num in video_numbers:
+                # Convert to 0-indexed array position
+                idx = num - 1
+
+                if idx < 0 or idx >= len(all_videos):
+                    return {
+                        'success': False,
+                        'error': f'Video number {num} out of range',
+                        'message': f'Video {num} does not exist. You have {len(all_videos)} videos.'
+                    }
+
+                video_ids.append(str(all_videos[idx].id))
+
+            logger.info(f"✅ Converted numbers {video_numbers} to IDs: {video_ids}")
+
+        # Session 84: Handle specific video IDs (for numbered references)
+        elif video_selection == 'specific_ids' and provided_video_ids:
+            logger.info(f"📹 Using specific video IDs: {provided_video_ids}")
+            video_ids = provided_video_ids
+
+            # Validate that these videos exist
+            videos = VideoHistory.objects.filter(
+                id__in=video_ids,
+                user=user,
+                status='completed'
+            )
+
+            if videos.count() != len(video_ids):
+                return {
+                    'success': False,
+                    'error': f'Some video IDs not found. Found {videos.count()}, expected {len(video_ids)}',
+                    'message': 'Some of the specified videos were not found or are not completed yet.'
+                }
+        else:
+            # Parse video_selection to get count
+            if video_selection == 'last':
+                video_count = 1
+            elif video_selection.startswith('last_'):
+                try:
+                    video_count = int(video_selection.split('_')[1])
+                except (IndexError, ValueError):
+                    video_count = 1
+            else:
+                video_count = 1
+
+            # Get videos
+            videos = VideoHistory.objects.filter(
+                user=user,
+                status='completed'
+            ).order_by('-created_at')[:video_count]
+
+            if videos.count() < video_count:
+                return {
+                    'success': False,
+                    'error': f'Not enough videos. Found {videos.count()}, need {video_count}',
+                    'message': f'You only have {videos.count()} completed videos. Please create more videos first.'
+                }
+
+            video_ids = [str(v.id) for v in videos]
+
+        logger.info(f"✅ Found {len(video_ids)} videos for editing: {video_ids}")
+
+        # Session 84: EXECUTE VIDEO EDITING using VideoAgent!
+        logger.info(f"🎬 Session 84: Executing multi-operation edit with VideoAgent...")
+
+        video_agent = VideoAgent(user=user)
+        result = video_agent.create_edited_video(
+            video_ids=video_ids,
+            operations=operations,
+            project_name=project_name
+        )
+
+        # Return result
+        if result.get('success'):
+            logger.info(f"✅ Session 84: Multi-operation edit executed successfully!")
+
+            # Build operation summary
+            op_types = [op.get('type', 'unknown') for op in operations]
+            op_summary = ', '.join(op_types)
+
+            return {
+                'success': True,
+                'video_id': result.get('video_id'),
+                'video_url': result.get('video_url'),
+                'operations_applied': result.get('operations_applied', len(operations)),
+                'duration': result.get('duration'),
+                'project_name': result.get('project_name'),
+                'video_count': len(video_ids),
+                'operations_summary': op_summary,
+                'message': result.get('message', f'✅ Video edited successfully with {result.get("operations_applied")} operations!'),
+                'instructions': f'Your video has been edited with {result.get("operations_applied")} operations: {op_summary}',
+                'note': '🎬 Your new edited video is ready in the Video Gallery!'
+            }
+        else:
+            logger.error(f"❌ Session 84: Video editing failed: {result.get('error')}")
+            return {
+                'success': False,
+                'error': result.get('error', 'Video editing failed'),
+                'operations_applied': result.get('operations_applied', 0),
+                'message': '❌ Failed to edit video',
+                'instructions': 'Please check the logs for details. DaVinci Resolve Studio must be running.'
+            }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_edit_video: {str(e)}", exc_info=True)
+        raise
+
+
+def _execute_show_recent_videos(user, parameters):
+    """
+    Show user's recent videos with numbers for easy reference
+    Session 84: Video selection enhancement!
+
+    Parameters:
+        count (int): Number of videos to show (default: 10, max: 20)
+
+    Returns:
+        dict: {
+            'success': True,
+            'videos': [list of video info],
+            'message': 'Here are your recent videos...'
         }
     """
     try:
         from content.models import VideoHistory
 
-        style = parameters.get('style', 'cinematic_warm').lower()
-        video_selection = parameters.get('video_selection', 'last')
+        # Get parameters
+        count = min(int(parameters.get('count', 10)), 20)  # Max 20
 
-        # Session 72: Handle common Whisper transcription errors and variations
-        style_mappings = {
-            'somatic': 'cinematic_warm',
-            'somatic warm': 'cinematic_warm',
-            'sim-matic': 'cinematic_warm',
-            'cinematic': 'cinematic_warm',
-            'warm': 'cinematic_warm',
-            'cool': 'cinematic_cool',
-            'blue': 'cinematic_cool',
-            'vintage': 'vintage',
-            'retro': 'vintage',
-            'film': 'vintage',
-            'modern': 'modern',
-            'clean': 'modern',
-            'high contrast': 'high_contrast',
-            'dramatic': 'high_contrast',
-            'bold': 'high_contrast',
-            'soft': 'soft',
-            'muted': 'soft',
-            'gentle': 'soft',
-            'vibrant': 'vibrant',
-            'colorful': 'vibrant',
-            'saturated': 'vibrant'
-        }
+        logger.info(f"📹 Showing {count} recent videos for user {user.username}")
 
-        # Map style or use default
-        style = style_mappings.get(style, style.replace(' ', '_'))
-
-        # Style descriptions
-        style_descriptions = {
-            'cinematic_warm': 'warm orange/teal tones for dramatic storytelling',
-            'cinematic_cool': 'cool blue tones for sci-fi/tech aesthetic',
-            'vintage': 'film look with grain and faded colors',
-            'modern': 'clean, crisp, and minimalist',
-            'high_contrast': 'bold dramatic look with deep blacks and bright highlights',
-            'soft': 'muted gentle tones for dreamy feel',
-            'vibrant': 'saturated colors for energetic content'
-        }
-
-        logger.info(f"🎨 AI Assistant apply_color_grade: style={style}")
-
-        # Get user's most recent completed video
-        recent_video = VideoHistory.objects.filter(
+        # Get recent completed videos
+        videos = VideoHistory.objects.filter(
             user=user,
             status='completed'
-        ).order_by('-created_at').first()
+        ).order_by('-created_at')[:count]
 
-        if not recent_video:
+        if videos.count() == 0:
             return {
-                'success': False,
-                'error': 'You have no completed videos in your gallery.',
-                'message': 'Please create a video first, then apply color grading to it!'
+                'success': True,
+                'videos': [],
+                'count': 0,
+                'message': "📹 **No Videos Yet**\n\nYou haven't created any videos yet! Try generating one first.",
+                'instructions': 'Use commands like "generate a video of mountains" to create your first video!'
             }
 
-        logger.info(f"✅ Found video for color grading: {recent_video.id} - {recent_video.prompt[:50]}")
+        # Build video list with numbers
+        video_list = []
+        message_lines = [f"📹 **Your Recent Videos** ({videos.count()} found):\n"]
 
-        style_description = style_descriptions.get(style, 'professional color grading')
+        for idx, video in enumerate(videos, 1):
+            # Emoji based on video type
+            type_emoji = {
+                'text_to_video': '🎬',
+                'image_to_video': '🖼️',
+                'video_to_video': '🔄',
+                'extended': '⏱️',
+                'chained': '🔗',
+                'color_graded': '🎨',
+                'text_overlay': '📝',
+                'multi_edit': '✨',
+                'upscaled': '⬆️'
+            }.get(video.video_type, '🎥')
+
+            # Clean up prompt
+            prompt_text = video.prompt[:60] if video.prompt else "Untitled video"
+            if len(video.prompt or '') > 60:
+                prompt_text += "..."
+
+            # Add to message
+            message_lines.append(f"**{idx}.** {type_emoji} {prompt_text}")
+
+            # Add to video list for reference
+            video_list.append({
+                'number': idx,
+                'id': str(video.id),
+                'prompt': video.prompt,
+                'video_type': video.video_type,
+                'duration': video.duration,
+                'url': video.video_url
+            })
+
+        message = "\n".join(message_lines)
+        message += "\n\n💡 **How to use:**\n"
+        message += "• \"Chain videos 3 and 4\"\n"
+        message += "• \"Make video 2 cinematic\"\n"
+        message += "• \"Chain the snowboarder and eagle videos\""
+
+        logger.info(f"✅ Displayed {len(video_list)} videos")
+
+        # Store video list in session for number-based reference
+        # We'll use this in the next step when implementing number-based selection
 
         return {
             'success': True,
-            'video_id': str(recent_video.id),
-            'video_url': recent_video.video_url,
-            'video_prompt': recent_video.prompt[:100] if recent_video.prompt else "Untitled video",
-            'style': style,
-            'style_description': style_description,
-            'message': f'🎨 Ready to apply {style.replace("_", " ")} color grading to your video! This will give it a {style_description} look.',
-            'instructions': f'This will create a NEW video with professional {style.replace("_", " ")} color grading applied to your {recent_video.prompt[:30] if recent_video.prompt else "video"}. DaVinci Resolve is the industry-standard tool used for Hollywood films! Your video will look like a professional production. Click confirm to proceed!',
-            'note': '⚠️ Note: This creates a new color-graded video. Your original video remains unchanged.'
+            'videos': video_list,
+            'count': len(video_list),
+            'message': message,
+            'instructions': 'You can now reference these videos by number or description!'
         }
 
     except Exception as e:
-        logger.error(f"❌ Error in _execute_apply_color_grade: {str(e)}")
+        logger.error(f"❌ Error in _execute_show_recent_videos: {str(e)}", exc_info=True)
         raise
 
 
@@ -8046,3 +8689,146 @@ def generate_image_with_stability(prompt, model, style, user):
             'success': False,
             'error': str(e)
         }
+
+
+def _execute_generate_speech(user, parameters):
+    """
+    Execute speech generation via Runway ML text-to-speech
+    Session 81: AI Assistant integration for audio generation!
+
+    This generates speech/voiceover from text:
+    1. Gets text and voice parameters
+    2. Calls Runway ML text-to-speech API
+    3. Returns task ID for polling
+
+    Parameters:
+        text (str): Text to convert to speech (required)
+        voice (str): Voice name (Rachel, Drew, Clyde, Paul, Aria, Domi, Dave) - default: Rachel
+
+    Returns:
+        dict: {
+            'success': True,
+            'task_id': 'uuid',
+            'voice': 'Rachel',
+            'text_preview': 'first 50 chars...',
+            'estimated_time': 10,
+            'message': 'Generating speech...'
+        }
+    """
+    try:
+        from content.video_provider import runway_provider
+
+        text = parameters.get('text', '').strip()
+        voice = parameters.get('voice', 'Rachel')
+
+        if not text:
+            return {
+                'success': False,
+                'error': 'Text is required for speech generation',
+                'message': 'Please provide text to convert to speech!'
+            }
+
+        logger.info(f"🗣️ AI Assistant generate_speech: voice={voice}, text={text[:50]}...")
+
+        # Call Runway ML text-to-speech
+        result = runway_provider.text_to_speech(
+            text=text,
+            voice=voice
+        )
+
+        if not result.get('success'):
+            return {
+                'success': False,
+                'error': result.get('error_message', 'Speech generation failed'),
+                'message': f'Failed to generate speech: {result.get("error_message", "Unknown error")}'
+            }
+
+        logger.info(f"✅ Speech generation started: task_id={result.get('task_id')}")
+
+        return {
+            'success': True,
+            'task_id': result.get('task_id'),
+            'voice': voice,
+            'text_preview': text[:50] + ('...' if len(text) > 50 else ''),
+            'estimated_time': result.get('estimated_time', 10),
+            'message': f'🗣️ Generating speech with {voice}\'s voice... This will take about {result.get("estimated_time", 10)} seconds.',
+            'instructions': f'Your speech is being generated! The voice will say: "{text[:100]}{"..." if len(text) > 100 else ""}". You\'ll be notified when it\'s ready.',
+            'audio_type': 'speech'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_generate_speech: {str(e)}")
+        raise
+
+
+def _execute_generate_sound_effect(user, parameters):
+    """
+    Execute sound effect generation via Runway ML text-to-sound
+    Session 81: AI Assistant integration for audio generation!
+
+    This generates sound effects from text descriptions:
+    1. Gets description and duration parameters
+    2. Calls Runway ML text-to-sound API
+    3. Returns task ID for polling
+
+    Parameters:
+        description (str): Description of the sound effect (required)
+        duration (float): Duration in seconds (0.5 to 30) - default: 5
+
+    Returns:
+        dict: {
+            'success': True,
+            'task_id': 'uuid',
+            'description': 'thunder clap',
+            'duration': 5.0,
+            'estimated_time': 10,
+            'message': 'Generating sound effect...'
+        }
+    """
+    try:
+        from content.video_provider import runway_provider
+
+        description = parameters.get('description', '').strip()
+        duration = parameters.get('duration', 5.0)
+
+        if not description:
+            return {
+                'success': False,
+                'error': 'Description is required for sound effect generation',
+                'message': 'Please describe the sound effect you want to create!'
+            }
+
+        # Validate duration
+        duration = max(0.5, min(30.0, float(duration)))
+
+        logger.info(f"🔊 AI Assistant generate_sound_effect: description={description}, duration={duration}s")
+
+        # Call Runway ML text-to-sound
+        result = runway_provider.text_to_sound(
+            prompt=description,
+            duration=duration
+        )
+
+        if not result.get('success'):
+            return {
+                'success': False,
+                'error': result.get('error_message', 'Sound effect generation failed'),
+                'message': f'Failed to generate sound effect: {result.get("error_message", "Unknown error")}'
+            }
+
+        logger.info(f"✅ Sound effect generation started: task_id={result.get('task_id')}")
+
+        return {
+            'success': True,
+            'task_id': result.get('task_id'),
+            'description': description,
+            'duration': duration,
+            'estimated_time': result.get('estimated_time', int(duration) + 5),
+            'message': f'🔊 Generating {duration}s sound effect: "{description}"... This will take about {result.get("estimated_time", int(duration) + 5)} seconds.',
+            'instructions': f'Your sound effect is being generated! Creating a {duration}-second audio clip of: "{description}". You\'ll be notified when it\'s ready.',
+            'audio_type': 'sound_effect'
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error in _execute_generate_sound_effect: {str(e)}")
+        raise

@@ -270,35 +270,33 @@ def create_training_zip(character: CharacterModel) -> str:
 
 def get_training_zip_public_url(character: CharacterModel) -> str:
     """
-    Get public URL for training ZIP file
+    Get public URL for training ZIP file OR upload to Replicate
 
-    For development: Returns Django media URL
+    For local development: Uploads file to Replicate's storage
     For production: Would return CDN/S3 URL
 
     Args:
         character: CharacterModel with training_zip_path
 
     Returns:
-        Public URL to ZIP file
+        Public URL to ZIP file or file handle for Replicate
     """
 
     if not character.training_zip_path:
         raise TrainingWorkflowError("No training ZIP file found")
 
-    # For development: Use Django media URL
-    # In production, you'd upload to S3/CDN and return that URL
-    media_url = settings.MEDIA_URL.rstrip('/')
-    zip_url = f"{media_url}/{character.training_zip_path}"
+    # Get absolute path to ZIP file
+    zip_full_path = os.path.join(settings.MEDIA_ROOT, character.training_zip_path)
 
-    # If running on localhost, need full URL for Replicate
-    if 'localhost' in settings.ALLOWED_HOSTS or '127.0.0.1' in settings.ALLOWED_HOSTS:
-        # You'll need to use ngrok or similar for local development
-        logger.warning(
-            "⚠️  Running on localhost - Replicate needs public URL. "
-            "Consider using ngrok or uploading ZIP to S3."
-        )
+    if not os.path.exists(zip_full_path):
+        raise TrainingWorkflowError(f"Training ZIP file not found at: {zip_full_path}")
 
-    return zip_url
+    # For localhost, we need to upload the file to Replicate's storage
+    # Replicate accepts file handles directly
+    logger.info(f"📤 Using local file for Replicate upload: {zip_full_path}")
+
+    # Return the file handle - Replicate SDK will handle the upload
+    return open(zip_full_path, 'rb')
 
 
 def submit_training_job(
@@ -328,16 +326,24 @@ def submit_training_job(
     if not character.training_zip_path:
         raise TrainingWorkflowError("Training ZIP not created yet")
 
-    # Get public URL for ZIP
+    # Get training ZIP (file handle for upload or URL)
     try:
-        zip_url = get_training_zip_public_url(character)
+        zip_file_or_url = get_training_zip_public_url(character)
 
-        # Store URL in character
-        character.training_zip_url = zip_url
+        # For file handles, store the local path for reference
+        if hasattr(zip_file_or_url, 'read'):
+            # It's a file handle
+            character.training_zip_url = f"local:{character.training_zip_path}"
+            logger.info(f"📤 Will upload local file to Replicate")
+        else:
+            # It's a URL
+            character.training_zip_url = zip_file_or_url
+            logger.info(f"📤 Using public URL: {zip_file_or_url}")
+
         character.save(update_fields=['training_zip_url', 'updated_at'])
 
     except Exception as e:
-        raise TrainingWorkflowError(f"Failed to get public URL: {str(e)}")
+        raise TrainingWorkflowError(f"Failed to prepare training file: {str(e)}")
 
     # Get Replicate provider
     provider = get_replicate_provider()
@@ -369,12 +375,17 @@ def submit_training_job(
         logger.info(f"   Learning rate: {character.learning_rate}")
 
         result = provider.train_character(
-            training_zip_url=zip_url,
+            training_zip_url=zip_file_or_url,  # Can be file handle or URL
             trigger_word=character.trigger_word,
             steps=character.training_steps,
             learning_rate=character.learning_rate,
             destination=destination
         )
+
+        # Close file handle if we opened one
+        if hasattr(zip_file_or_url, 'close'):
+            zip_file_or_url.close()
+            logger.info(f"📁 Closed file handle")
 
         if not result.success:
             raise TrainingWorkflowError(f"Training submission failed: {result.error_message}")
@@ -407,6 +418,13 @@ def submit_training_job(
         }
 
     except Exception as e:
+        # Close file handle if we opened one
+        if 'zip_file_or_url' in locals() and hasattr(zip_file_or_url, 'close'):
+            try:
+                zip_file_or_url.close()
+            except:
+                pass
+
         # Update character with error
         character.training_status = 'failed'
         character.error_message = str(e)

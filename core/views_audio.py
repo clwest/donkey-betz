@@ -255,6 +255,20 @@ def check_audio_status(request, task_id):
             'error_message': result.error_message if not result.success else None
         }
 
+        # Session 81: Update AudioAgent state when audio completes
+        if result.status in ['completed', 'SUCCEEDED'] and result.video_url:
+            try:
+                from agents.audio_agent import get_audio_agent
+                audio_agent = get_audio_agent(user=request.user)
+                audio_agent.update_audio_status(
+                    task_id=task_id,
+                    audio_url=result.video_url,
+                    status='completed'
+                )
+                logger.info(f"✅ Updated AudioAgent state for completed audio: {task_id}")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to update AudioAgent state: {e}")
+
         return JsonResponse(response_data)
 
     except Exception as e:
