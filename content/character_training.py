@@ -510,6 +510,7 @@ def update_training_status(character: CharacterModel) -> Dict[str, Any]:
             'success': True,
             'status': new_status,
             'progress': progress,
+            'progress_message': status_result.get('progress_message', ''),
             'replicate_status': replicate_status,
             'training_id': character.training_id,
             'model_version': character.replicate_version_id if new_status == 'completed' else None

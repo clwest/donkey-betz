@@ -10432,11 +10432,12 @@
                     } else {
                         // Update progress - only if UI exists
                         const progress = data.progress || 30;
-                        console.log(`⏳ Video processing: ${progress}% (task: ${taskId})`);
+                        const progressMessage = data.progress_message || 'Processing...';
+                        console.log(`⏳ Video processing: ${progress}% - ${progressMessage} (task: ${taskId})`);
 
                         if (hasUI && progressBar && statusText) {
                             progressBar.style.width = progress + '%';
-                            statusText.textContent = data.message || 'Processing...';
+                            statusText.textContent = progressMessage;
                         }
                     }
                 } catch (error) {
@@ -18886,6 +18887,13 @@
                     const progressBar = document.getElementById(`progress-${characterId}`);
                     if (progressBar) {
                         progressBar.style.width = `${data.training_progress}%`;
+                    }
+
+                    // Update progress message if exists
+                    const progressText = document.getElementById(`progress-text-${characterId}`);
+                    if (progressText && data.progress_message) {
+                        progressText.textContent = data.progress_message;
+                        console.log(`🎨 Character training: ${data.training_progress}% - ${data.progress_message}`);
                     }
 
                     // If status changed to completed, reload the card

@@ -29,6 +29,7 @@ class VideoGenerationResult:
     error_message: str = ""
     estimated_time: int = 0
     progress: int = 0
+    progress_message: str = ""
 
 
 class RunwayMLProvider:
@@ -271,18 +272,42 @@ class RunwayMLProvider:
 
             mapped_status = status_map.get(status, status.lower())
 
-            # Calculate progress based on status
+            # Calculate progress based on status with better estimation
             progress = 0
-            if mapped_status == 'processing':
-                progress = data.get('progress', 50)
+            progress_message = ""
+
+            if mapped_status == 'pending':
+                progress = 10
+                progress_message = "🎬 Preparing generation..."
+            elif mapped_status == 'processing':
+                # Get actual progress from API if available, otherwise estimate
+                api_progress = data.get('progress')
+                if api_progress is not None:
+                    progress = int(api_progress)
+                else:
+                    # Estimate progress based on typical generation time
+                    # Most videos take 60-90 seconds, so we can estimate
+                    progress = 50  # Mid-point default
+
+                # Provide detailed progress messages
+                if progress < 30:
+                    progress_message = "🎥 Generating initial frames..."
+                elif progress < 60:
+                    progress_message = "🎬 Creating video sequence..."
+                elif progress < 90:
+                    progress_message = "✨ Finalizing video..."
+                else:
+                    progress_message = "🎉 Almost ready..."
             elif mapped_status == 'completed':
                 progress = 100
+                progress_message = "✅ Video generation complete!"
 
             result = VideoGenerationResult(
                 success=mapped_status == 'completed',
                 task_id=task_id,
                 status=mapped_status,
-                progress=progress
+                progress=progress,
+                progress_message=progress_message
             )
 
             # Add video URL if completed
