@@ -12,6 +12,7 @@ import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from django.conf import settings
+from core.error_messages import ErrorMessageBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -83,9 +84,10 @@ class ElevenLabsProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("ElevenLabs", "ELEVENLABS_API_KEY")
             return {
                 "success": False,
-                "error_message": "ElevenLabs API key not configured"
+                "error_message": error["user_message"]
             }
 
         # Get voice ID from name
@@ -147,17 +149,11 @@ class ElevenLabsProvider:
             logger.info(f"📥 Response status: {response.status_code}")
 
             if response.status_code != 200:
-                error_msg = f"ElevenLabs API error ({response.status_code})"
-                try:
-                    error_data = response.json()
-                    error_msg += f": {error_data.get('detail', {}).get('message', response.text)}"
-                except:
-                    error_msg += f": {response.text[:200]}"
-
-                logger.error(f"❌ {error_msg}")
+                error = ErrorMessageBuilder.parse_api_error("ElevenLabs", response.status_code, response.text)
+                logger.error(f"❌ {error['user_message']}")
                 return {
                     "success": False,
-                    "error_message": error_msg
+                    "error_message": error["user_message"]
                 }
 
             # Save audio to temp file and upload to storage
@@ -219,9 +215,10 @@ class ElevenLabsProvider:
         """
 
         if not self.api_key:
+            error = ErrorMessageBuilder.api_key_error("ElevenLabs", "ELEVENLABS_API_KEY")
             return {
                 "success": False,
-                "error_message": "ElevenLabs API key not configured"
+                "error_message": error["user_message"]
             }
 
         try:
@@ -251,17 +248,11 @@ class ElevenLabsProvider:
             logger.info(f"📥 Response status: {response.status_code}")
 
             if response.status_code != 200:
-                error_msg = f"ElevenLabs API error ({response.status_code})"
-                try:
-                    error_data = response.json()
-                    error_msg += f": {error_data.get('detail', {}).get('message', response.text)}"
-                except:
-                    error_msg += f": {response.text[:200]}"
-
-                logger.error(f"❌ {error_msg}")
+                error = ErrorMessageBuilder.parse_api_error("ElevenLabs", response.status_code, response.text)
+                logger.error(f"❌ {error['user_message']}")
                 return {
                     "success": False,
-                    "error_message": error_msg
+                    "error_message": error["user_message"]
                 }
 
             # Save audio data

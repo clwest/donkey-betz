@@ -18,6 +18,7 @@ from PIL import Image
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from core.error_messages import ErrorMessageBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -277,9 +278,10 @@ class ImageGenerationService:
     ) -> ImageGenerationResult:
         """Generate images using OpenAI DALL-E"""
         if not self.openai_client:
+            error = ErrorMessageBuilder.api_key_error("OpenAI", "OPENAI_API_KEY")
             return ImageGenerationResult(
                 success=False,
-                error_message="OpenAI client not initialized",
+                error_message=error["user_message"],
                 generation_time_ms=int((time.time() - start_time) * 1000)
             )
         
@@ -354,9 +356,10 @@ class ImageGenerationService:
         - 'ultra' / 'premium': Stable Image Ultra (flagship, best quality)
         """
         if not self.stability_key:
+            error = ErrorMessageBuilder.api_key_error("Stability AI", "STABILITY_API_KEY")
             return ImageGenerationResult(
                 success=False,
-                error_message="Stability AI API key not configured",
+                error_message=error["user_message"],
                 generation_time_ms=int((time.time() - start_time) * 1000)
             )
 
@@ -447,7 +450,8 @@ class ImageGenerationService:
             response = requests.post(url, headers=headers, json=body)
 
             if response.status_code != 200:
-                raise Exception(f"SDXL error: {response.text}")
+                error = ErrorMessageBuilder.parse_api_error("Stability AI", response.status_code, response.text)
+                raise Exception(error["user_message"])
 
             data = response.json()
 
@@ -547,7 +551,8 @@ class ImageGenerationService:
                 )
 
                 if response.status_code != 200:
-                    raise Exception(f"{model.upper()} error ({response.status_code}): {response.text[:200]}")
+                    error = ErrorMessageBuilder.parse_api_error("Stability AI", response.status_code, response.text)
+                    raise Exception(error["user_message"])
 
                 # Response is raw image bytes
                 image_bytes = response.content
@@ -596,9 +601,10 @@ class ImageGenerationService:
     ) -> ImageGenerationResult:
         """Generate images using Replicate"""
         if not self.replicate_client:
+            error = ErrorMessageBuilder.api_key_error("Replicate", "REPLICATE_API_KEY")
             return ImageGenerationResult(
                 success=False,
-                error_message="Replicate client not initialized",
+                error_message=error["user_message"],
                 generation_time_ms=int((time.time() - start_time) * 1000)
             )
         
