@@ -1720,7 +1720,37 @@ class ImageHistory(UnifiedBaseModel):
         default=list,
         help_text="User-defined tags for organization"
     )
-    
+
+    # CreativeDirectorAgent fields (Session 90 - Multi-option generation + learning)
+    seed = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Random seed used for generation (enables exact reproduction)"
+    )
+
+    generation_batch_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="UUID linking related options generated together"
+    )
+
+    option_number = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Option number in batch (1, 2, 3, etc.)"
+    )
+
+    was_selected = models.BooleanField(
+        default=False,
+        help_text="Did user select this option? (agent learns from this!)"
+    )
+
+    selection_timestamp = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When user selected this option"
+    )
+
     class Meta:
         verbose_name = "Image History"
         verbose_name_plural = "Image History"
@@ -1731,6 +1761,9 @@ class ImageHistory(UnifiedBaseModel):
             models.Index(fields=['model_used']),
             models.Index(fields=['style']),
             models.Index(fields=['is_favorite']),
+            # CreativeDirectorAgent indexes
+            models.Index(fields=['generation_batch_id']),
+            models.Index(fields=['user', 'was_selected']),
         ]
     
     def __str__(self):
@@ -2725,3 +2758,100 @@ class CharacterTrainingImage(models.Model):
 
     def __str__(self):
         return f"{self.original_filename} ({self.character_model.name})"
+
+
+# Session 90: CreativeDirectorAgent - User Preference Learning
+class UserCreativePreference(models.Model):
+    """
+    Track user's creative preferences for AI-powered personalization.
+
+    The CreativeDirectorAgent learns which styles, models, and aesthetics
+    each user prefers by analyzing their choices. Over time, the agent gets
+    smarter at generating options the user will love!
+
+    Philosophy: AI suggests → Human chooses → Agent learns → Gets better!
+    """
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='creative_preferences',
+        help_text="User these preferences belong to"
+    )
+
+    # Style preferences (learned from user choices)
+    preferred_styles = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of preferred styles (photographic, digital-art, etc.) ordered by preference"
+    )
+
+    preferred_models = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of preferred AI models (sdxl, ultra, etc.) ordered by preference"
+    )
+
+    # Advanced preferences (future enhancement)
+    color_preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Color palette preferences (warm: 0.7, cool: 0.3, etc.)"
+    )
+
+    composition_preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Composition preferences (centered: 0.6, rule_of_thirds: 0.9, etc.)"
+    )
+
+    # Learning statistics
+    total_choices = models.IntegerField(
+        default=0,
+        help_text="Total number of choices user has made (agent learning progress)"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When user started using CreativeDirector"
+    )
+
+    last_updated = models.DateTimeField(
+        auto_now=True,
+        help_text="Last time preferences were updated"
+    )
+
+    class Meta:
+        verbose_name = "User Creative Preference"
+        verbose_name_plural = "User Creative Preferences"
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['total_choices']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.total_choices} choices learned"
+
+    def get_learning_stage(self):
+        """Get user's learning stage for messaging"""
+        if self.total_choices == 0:
+            return "new"
+        elif self.total_choices < 5:
+            return "learning"
+        elif self.total_choices < 10:
+            return "patterns"
+        else:
+            return "knows_taste"
+
+    def get_learning_message(self):
+        """Get personalized message based on learning stage"""
+        stage = self.get_learning_stage()
+
+        messages = {
+            "new": "I'm ready to learn your creative taste!",
+            "learning": f"I'm learning... {self.total_choices} choices recorded!",
+            "patterns": f"Pattern emerging! {self.total_choices} choices analyzed",
+            "knows_taste": f"I know your taste! {self.total_choices} choices learned"
+        }
+
+        return messages.get(stage, "Learning your preferences...")
