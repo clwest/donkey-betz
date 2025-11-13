@@ -284,7 +284,7 @@ class CreativeDirectorAgent:
                 details={
                     'image_id': selected_image_id,
                     'seed': selected_image.seed,
-                    'model': selected_image.model,
+                    'model': selected_image.model_used,
                     'style': selected_image.style,
                     'total_choices': self.preferences.total_choices,
                     'learning_stage': self.preferences.get_learning_stage(),
@@ -419,15 +419,15 @@ class CreativeDirectorAgent:
             insights['style'] = f"Learning you prefer '{selected_image.style}' style"
 
         # Update model preferences
-        if selected_image.model:
+        if selected_image.model_used:
             models = self.preferences.preferred_models or []
 
-            if selected_image.model in models:
-                models.remove(selected_image.model)
-            models.insert(0, selected_image.model)
+            if selected_image.model_used in models:
+                models.remove(selected_image.model_used)
+            models.insert(0, selected_image.model_used)
 
             self.preferences.preferred_models = models[:3]
-            insights['model'] = f"Learning you prefer '{selected_image.model}' model"
+            insights['model'] = f"Learning you prefer '{selected_image.model_used}' model"
 
         # Save updated preferences
         self.preferences.save()
