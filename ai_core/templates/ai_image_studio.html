@@ -986,6 +986,26 @@
                 justify-content: space-between;
             }
         }
+
+        /* AI Assistant Chat Scrollbar Styling */
+        #aiChatMessages::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #aiChatMessages::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        #aiChatMessages::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.6), rgba(245, 158, 11, 0.6));
+            border-radius: 10px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+        }
+
+        #aiChatMessages::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.9));
+        }
     </style>
 </head>
 <body>
@@ -4714,7 +4734,7 @@
                 </div>
 
                 <!-- Chat Messages -->
-                <div id="aiChatMessages" class="p-3" style="flex: 1; overflow-y: auto; font-size: 14px; background: rgba(0, 0, 0, 0.3);">
+                <div id="aiChatMessages" class="p-3" style="flex: 1; overflow-y: auto; font-size: 14px; background: rgba(0, 0, 0, 0.3); max-height: calc(100vh - 300px); scroll-behavior: smooth;">
                     <div class="alert alert-info mb-2" style="font-size: 14px;">
                         👋 Hi! I'm your AI assistant. I can help you:
                         <ul class="mb-0 mt-2" style="font-size: 12px;">
@@ -6012,6 +6032,12 @@
                             <small class="text-muted">${typeEmoji} ${img.image_type.replace('_', ' ')}</small>
                             ${img.style ? `<span class="badge" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1f2937; font-weight: 600; font-size: 11px; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);">${img.style.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>` : ''}
                         </div>
+                        <div class="d-flex align-items-center justify-content-between mb-2" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.2)); padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.4);">
+                            <span style="font-weight: 700; color: #22d3ee; font-size: 13px;">🆔 Image ${img.id}</span>
+                            <button class="btn btn-sm" onclick="copyImageId(${img.id}, this)" style="padding: 2px 8px; font-size: 11px; background: rgba(6, 182, 212, 0.3); border: 1px solid rgba(6, 182, 212, 0.5); color: #22d3ee; border-radius: 6px;" title="Copy image ID for voice commands">
+                                📋 Copy ID
+                            </button>
+                        </div>
                         ${img.prompt ? `<p class="card-text small mb-1" title="${img.prompt}">${img.prompt.substring(0, 50)}${img.prompt.length > 50 ? '...' : ''}</p>` : ''}
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">${img.width}x${img.height}${img.model_used ? ` • ${img.model_used.toUpperCase()}` : ''}</small>
@@ -6044,6 +6070,33 @@
                 'background_removed': '🎭'
             };
             return emojiMap[type] || '🖼️';
+        }
+
+        // Session 93: Copy image ID for voice commands
+        async function copyImageId(imageId, button) {
+            try {
+                await navigator.clipboard.writeText(imageId.toString());
+
+                // Visual feedback
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '✅ Copied!';
+                button.style.background = 'rgba(34, 197, 94, 0.4)';
+                button.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+                button.style.color = '#22c55e';
+
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.style.background = 'rgba(6, 182, 212, 0.3)';
+                    button.style.borderColor = 'rgba(6, 182, 212, 0.5)';
+                    button.style.color = '#22d3ee';
+                }, 2000);
+
+                // Also show toast notification
+                showToast(`Image ID ${imageId} copied! Use in voice commands like "Save image ${imageId} as template"`, 'success');
+            } catch (error) {
+                console.error('Copy error:', error);
+                showToast('Failed to copy image ID', 'error');
+            }
         }
 
         async function toggleFavorite(imageId, button) {
@@ -13716,12 +13769,24 @@
 
                 // Session 65: ALL other requests go directly to GPT-5-mini executor
                 // No frontend intent parsing, no workflow interceptors
+
+                // Session 92: Strip images from conversation history to prevent context overflow!
+                // Base64 image data causes 4M+ token overflows
+                const sanitizedHistory = this.conversation.slice(-6).map(msg => {
+                    if (msg.role === 'assistant' && msg.content) {
+                        // Remove all <img> tags with base64 data
+                        const cleaned = msg.content.replace(/<img[^>]*src="data:image[^"]*"[^>]*>/gi, '[IMAGE]');
+                        return { ...msg, content: cleaned };
+                    }
+                    return msg;
+                });
+
                 // Call the GPT-5-mini assistant chat endpoint with function calling
                 const response = await authenticatedFetch('/api/assistant/chat/', {
                         method: 'POST',
                         body: JSON.stringify({
                             message: message,
-                            history: this.conversation.slice(-6)  // Last 6 messages for context
+                            history: sanitizedHistory  // Sanitized history without base64 images
                         })
                 });
 

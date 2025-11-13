@@ -112,6 +112,10 @@ class CreativeDirectorAgent:
         batch_id = uuid.uuid4()
 
         # Session 92: Pre-select DIVERSE styles for maximum variety (if no style specified)
+        # Session 92.1: Ignore "vector" style (GPT-5 often defaults to this for logos) - force diversity!
+        if style == "vector" or style == "digital-art":
+            style = None  # Treat common defaults as no style preference
+
         diverse_styles = None
         if style is None:
             # Pick COUNT different styles randomly
