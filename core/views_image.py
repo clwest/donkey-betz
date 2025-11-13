@@ -4526,7 +4526,7 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "generate_image",
-                    "description": "Generate a SINGLE AI image using Stability AI. Use this for single image requests like logos, artwork, backgrounds, or visual content. IMPORTANT: Do NOT use this for 'character' requests - if user says 'create a character', use create_character_from_prompt instead, which generates multiple training images. Session 66: Now supports autonomous text verification and refinement!",
+                    "description": "Generate a SINGLE AI image using Stability AI. Use ONLY when user explicitly wants ONE image. IMPORTANT: If user wants MULTIPLE images (e.g., 'three logos', 'several banners', 'variations'), use generate_with_options instead which provides choice + learning! Also: Do NOT use this for 'character' requests - use create_character_from_prompt instead. Session 66: Now supports autonomous text verification and refinement!",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -5024,13 +5024,13 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "generate_with_options",
-                    "description": "Generate 3-5 creative VARIATIONS of the SAME concept and let user pick favorite. AI learns from their choice! Session 90: CreativeDirectorAgent integration. IMPORTANT: Pass a SINGLE concept prompt (e.g., 'coffee shop logo'), NOT multiple concepts. The agent will generate COUNT variations with DIFFERENT STYLES automatically for maximum variety.",
+                    "description": "Generate 3-5 creative VARIATIONS of the SAME concept and let user pick favorite. AI learns from their choice! Works for ANY content type: logos, banners, icons, artwork, backgrounds, etc. Session 90: CreativeDirectorAgent integration. IMPORTANT: Pass a SINGLE concept prompt (e.g., 'coffee shop logo' or 'social media banner'), NOT multiple concepts. The agent will generate COUNT variations with DIFFERENT STYLES automatically for maximum variety.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "prompt": {"type": "string", "description": "SINGLE concept to generate (e.g., 'coffee shop logo'). Do NOT include multiple concepts or style descriptions - just the subject. CreativeDirectorAgent will add diverse styles automatically."},
+                            "prompt": {"type": "string", "description": "SINGLE concept to generate (e.g., 'coffee shop logo', 'social media banner', 'app icon', 'background image'). Do NOT include multiple concepts or style descriptions - just the subject. CreativeDirectorAgent will add diverse styles automatically."},
                             "count": {"type": "integer", "default": 3, "description": "Number of variations to generate (3-5). Each will use DIFFERENT creative style automatically."},
-                            "style": {"type": "string", "description": "OPTIONAL: Force specific style for ALL variations. If omitted, CreativeDirectorAgent chooses diverse styles from 69 options (photographic, vector, oil_painting, anime, cyberpunk, watercolor, pixel_art, impressionist, etc). LEAVE BLANK for maximum variety!"},
+                            "style": {"type": "string", "description": "CRITICAL: DO NOT PASS THIS PARAMETER unless user explicitly requests a specific style (e.g., 'make them all photographic'). For logos, banners, icons, or ANY content - OMIT THIS PARAMETER to enable automatic style diversity! The agent will intelligently choose 3 DIFFERENT styles from 69 options. Passing this parameter forces ALL variations to use the SAME style (defeats the purpose!). Only use if user says 'make them all [style]'."},
                             "model": {"type": "string", "enum": ["core", "sdxl", "sd3", "ultra"], "description": "AI model. sdxl recommended."}
                         },
                         "required": ["prompt"]
