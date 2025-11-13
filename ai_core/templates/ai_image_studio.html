@@ -13739,10 +13739,26 @@
                     // Execute all tool calls
                     const results = await this.executeTools(data.tool_calls);
 
+                    // Session 92: Strip image URLs from tool_results to prevent context overflow!
+                    // Base64 image data is HUGE (4.6M+ tokens) - only send metadata to GPT-5
+                    const resultsForGPT5 = JSON.parse(JSON.stringify(results)); // Deep copy
+                    resultsForGPT5.forEach(r => {
+                        if (r.result && r.result.options) {
+                            // Strip image_url from each option, keep metadata only
+                            r.result.options.forEach(opt => {
+                                if (opt.image_url) delete opt.image_url;
+                            });
+                        }
+                        if (r.result && r.result.image_url) {
+                            // Also strip single image_url if present
+                            delete r.result.image_url;
+                        }
+                    });
+
                     // Return results with inline rendering
                     return {
-                        message: this.formatToolResults(results),
-                        tool_results: results
+                        message: this.formatToolResults(results), // Use full results for display
+                        tool_results: resultsForGPT5 // Use stripped results for GPT-5
                     };
                 }
                 // Normal text response
