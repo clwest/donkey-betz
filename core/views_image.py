@@ -5019,6 +5019,70 @@ Keep responses under 200 words. Be conversational and practical."""
                         "required": []
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_with_options",
+                    "description": "Generate 3-5 creative VARIATIONS of the SAME concept and let user pick favorite. AI learns from their choice! Session 90: CreativeDirectorAgent integration. IMPORTANT: Pass a SINGLE concept prompt (e.g., 'coffee shop logo'), NOT multiple concepts. The agent will generate COUNT variations with DIFFERENT STYLES automatically for maximum variety.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "prompt": {"type": "string", "description": "SINGLE concept to generate (e.g., 'coffee shop logo'). Do NOT include multiple concepts or style descriptions - just the subject. CreativeDirectorAgent will add diverse styles automatically."},
+                            "count": {"type": "integer", "default": 3, "description": "Number of variations to generate (3-5). Each will use DIFFERENT creative style automatically."},
+                            "style": {"type": "string", "description": "OPTIONAL: Force specific style for ALL variations. If omitted, CreativeDirectorAgent chooses diverse styles from 69 options (photographic, vector, oil_painting, anime, cyberpunk, watercolor, pixel_art, impressionist, etc). LEAVE BLANK for maximum variety!"},
+                            "model": {"type": "string", "enum": ["core", "sdxl", "sd3", "ultra"], "description": "AI model. sdxl recommended."}
+                        },
+                        "required": ["prompt"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "save_as_template",
+                    "description": "Save image as reusable template for exact reproduction. Stores seed for perfect consistency! Session 90: TemplateManagerAgent integration.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {"type": "integer", "description": "Image to save"},
+                            "template_name": {"type": "string", "description": "Name for template"},
+                            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags like ['logo', 'coffee']"}
+                        },
+                        "required": ["image_id", "template_name"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "train_brand_style",
+                    "description": "Train FLUX LoRA on brand aesthetic. Takes 30-60 min but enables perfect brand consistency with trigger word. Session 90: BrandStyleAgent integration.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "brand_name": {"type": "string", "description": "Brand name"},
+                            "image_ids": {"type": "array", "items": {"type": "integer"}, "description": "5-10 images"},
+                            "auto_submit": {"type": "boolean", "default": False, "description": "Start training immediately?"}
+                        },
+                        "required": ["brand_name", "image_ids"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "refine_image",
+                    "description": "Refine image with natural language: 'make it bigger', 'change to blue', 'add more contrast', etc. Session 90: IterationAgent integration.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "image_id": {"type": "integer", "description": "Image to refine"},
+                            "refinement_request": {"type": "string", "description": "Natural language refinement"}
+                        },
+                        "required": ["image_id", "refinement_request"]
+                    }
+                }
             }
         ]
 
@@ -5238,6 +5302,52 @@ def execute_tool(request):
             from agents.audio_agent import get_audio_agent
             audio_agent = get_audio_agent(user=request.user)
             result = audio_agent.generate_sound_effect(**parameters)
+        elif tool_name == 'generate_with_options':
+            # Session 90: Route to WorkflowCoordinatorAgent - Multi-generation with learning
+            from ai_core.agents.workflow_coordinator_agent import WorkflowCoordinatorAgent
+            agent = WorkflowCoordinatorAgent(user=request.user)
+            result = agent.execute_generate_with_options_workflow(
+                prompt=parameters.get('prompt'),
+                count=parameters.get('count', 3),
+                style=parameters.get('style'),
+                model=parameters.get('model')
+            )
+
+            # Store batch_id for later reference
+            if result.get('success'):
+                # TODO: Store in session or context manager
+                logger.info(f"✅ Generated {len(result.get('options', []))} options, batch_id: {result.get('batch_id')}")
+
+        elif tool_name == 'save_as_template':
+            # Session 90: Route to WorkflowCoordinatorAgent - Template creation
+            from ai_core.agents.workflow_coordinator_agent import WorkflowCoordinatorAgent
+            agent = WorkflowCoordinatorAgent(user=request.user)
+            result = agent.execute_save_as_template_workflow(
+                image_id=parameters.get('image_id'),
+                template_name=parameters.get('template_name'),
+                tags=parameters.get('tags', []),
+                also_add_to_references=True
+            )
+
+        elif tool_name == 'train_brand_style':
+            # Session 90: Route to WorkflowCoordinatorAgent - Brand training
+            from ai_core.agents.workflow_coordinator_agent import WorkflowCoordinatorAgent
+            agent = WorkflowCoordinatorAgent(user=request.user)
+            result = agent.execute_train_brand_style_workflow(
+                brand_name=parameters.get('brand_name'),
+                image_ids=parameters.get('image_ids'),
+                auto_submit=parameters.get('auto_submit', False)
+            )
+
+        elif tool_name == 'refine_image':
+            # Session 90: Route to IterationAgent - Natural language refinement
+            from ai_core.agents.iteration_agent import IterationAgent
+            agent = IterationAgent(user=request.user)
+            result = agent.refine_image(
+                image_id=parameters.get('image_id'),
+                refinement_request=parameters.get('refinement_request')
+            )
+
         else:
             return Response({
                 'error': f'Unknown tool: {tool_name}'

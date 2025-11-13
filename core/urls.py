@@ -293,6 +293,30 @@ from core.views_character_training import (
     check_training_status, toggle_favorite as toggle_character_favorite,
     delete_character, training_requirements
 )
+# Session 90: CreativeDirectorAgent - Partnership Model
+from core.views_creative_director import (
+    generate_options, record_choice, get_recommendation,
+    get_user_preferences, get_batch_history
+)
+# Session 90: Complete Agent Ecosystem
+from core.views_agent_ecosystem import (
+    # Template Manager
+    save_as_template, generate_from_template, list_templates, delete_template,
+    # Version Control
+    track_generation, rate_version, list_versions, get_perfect_versions,
+    # Brand Style
+    create_brand_style, submit_brand_training, check_brand_training_status, list_brand_styles,
+    # Reference Library
+    add_reference, list_references, delete_reference,
+    # Editing Orchestrator
+    execute_single_edit, create_editing_workflow, execute_editing_workflow,
+    # Iteration Agent
+    refine_image,
+    # Workflow Coordinator
+    execute_workflow_generate_with_options, execute_workflow_save_as_template,
+    execute_workflow_train_brand_style, execute_workflow_refine_and_perfect,
+    get_ecosystem_status
+)
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
     orchestrate_multi_agent_task, suggest_agent, route_task, get_agent_status, health_check_agents,
@@ -872,6 +896,46 @@ urlpatterns = [
     path('api/characters/<int:character_id>/training-status/', check_training_status, name='check-training-status'),
     path('api/characters/<int:character_id>/toggle-favorite/', toggle_character_favorite, name='toggle-character-favorite'),
     path('api/characters/<int:character_id>/delete/', delete_character, name='delete-character'),
+
+    # Session 90: CreativeDirectorAgent - Partnership Model API
+    path('api/creative-director/generate-options/', generate_options, name='creative-director-generate-options'),
+    path('api/creative-director/record-choice/', record_choice, name='creative-director-record-choice'),
+    path('api/creative-director/recommendation/', get_recommendation, name='creative-director-recommendation'),
+    path('api/creative-director/preferences/', get_user_preferences, name='creative-director-preferences'),
+    path('api/creative-director/batch-history/', get_batch_history, name='creative-director-batch-history'),
+
+    # Session 90: Complete Agent Ecosystem API
+    # Template Manager
+    path('api/agents/templates/save/', save_as_template, name='agent-save-template'),
+    path('api/agents/templates/generate/', generate_from_template, name='agent-generate-from-template'),
+    path('api/agents/templates/', list_templates, name='agent-list-templates'),
+    path('api/agents/templates/<str:template_id>/', delete_template, name='agent-delete-template'),
+    # Version Control
+    path('api/agents/versions/track/', track_generation, name='agent-track-generation'),
+    path('api/agents/versions/rate/', rate_version, name='agent-rate-version'),
+    path('api/agents/versions/', list_versions, name='agent-list-versions'),
+    path('api/agents/versions/perfect/', get_perfect_versions, name='agent-get-perfect-versions'),
+    # Brand Style
+    path('api/agents/brand-styles/create/', create_brand_style, name='agent-create-brand-style'),
+    path('api/agents/brand-styles/train/', submit_brand_training, name='agent-submit-brand-training'),
+    path('api/agents/brand-styles/<int:character_id>/status/', check_brand_training_status, name='agent-check-brand-training-status'),
+    path('api/agents/brand-styles/', list_brand_styles, name='agent-list-brand-styles'),
+    # Reference Library
+    path('api/agents/references/add/', add_reference, name='agent-add-reference'),
+    path('api/agents/references/', list_references, name='agent-list-references'),
+    path('api/agents/references/<str:reference_id>/', delete_reference, name='agent-delete-reference'),
+    # Editing Orchestrator
+    path('api/agents/editing/execute/', execute_single_edit, name='agent-execute-single-edit'),
+    path('api/agents/editing/workflow/', create_editing_workflow, name='agent-create-editing-workflow'),
+    path('api/agents/editing/workflow/execute/', execute_editing_workflow, name='agent-execute-editing-workflow'),
+    # Iteration Agent
+    path('api/agents/iteration/refine/', refine_image, name='agent-refine-image'),
+    # Workflow Coordinator
+    path('api/agents/workflows/generate-with-options/', execute_workflow_generate_with_options, name='agent-workflow-generate-options'),
+    path('api/agents/workflows/save-as-template/', execute_workflow_save_as_template, name='agent-workflow-save-template'),
+    path('api/agents/workflows/train-brand-style/', execute_workflow_train_brand_style, name='agent-workflow-train-brand'),
+    path('api/agents/workflows/refine-and-perfect/', execute_workflow_refine_and_perfect, name='agent-workflow-refine-perfect'),
+    path('api/agents/status/', get_ecosystem_status, name='agent-ecosystem-status'),
 
     # Intelligent Prompt Improvement (Session 56: Phase B.1)
     path('api/workflows/improve-prompt/', improve_workflow_prompt, name='improve-workflow-prompt'),

@@ -1401,11 +1401,35 @@
                             </div>
                         </div>
 
-                        <!-- Generate Button -->
-                        <button type="submit" class="btn btn-primary w-100 mb-3">
-                            <span id="btnText">🎨 Generate Image</span>
-                            <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
-                        </button>
+                        <!-- Generate Buttons -->
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <span id="btnText">🎨 Generate Image</span>
+                                <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
+                            </button>
+
+                            <!-- Session 90: CreativeDirectorAgent - Generate Multiple Options -->
+                            <button type="button" class="btn btn-outline-warning" id="generateOptionsBtn">
+                                <span id="optionsBtnText">✨ Generate 3 Options (AI learns your taste!)</span>
+                                <span id="optionsBtnSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
+                            </button>
+                        </div>
+
+                        <!-- Learning Progress Indicator -->
+                        <div id="learningProgress" class="mb-3" style="display: none;">
+                            <div class="card" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0" style="color: #fbbf24;">🎯 AI Learning Your Taste</h6>
+                                        <span class="badge bg-warning" id="learningStage">New</span>
+                                    </div>
+                                    <div class="progress mb-2" style="height: 8px; background: rgba(255,255,255,0.1);">
+                                        <div class="progress-bar bg-warning" role="progressbar" id="learningProgressBar" style="width: 0%"></div>
+                                    </div>
+                                    <small id="learningMessage" style="color: #fcd34d;"></small>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Status -->
                         <div id="status"></div>
@@ -4485,6 +4509,35 @@
                     </div>
                 </div>
 
+                <!-- Session 90: CreativeDirectorAgent - Options Selection Modal -->
+                <div class="modal" id="options-modal" tabindex="-1" style="z-index: 9999; display: none;">
+                    <div class="modal-dialog modal-xl" style="z-index: 10000; max-width: 1200px;">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #fbbf24;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <div>
+                                    <h5 class="modal-title">✨ Choose Your Favorite Option</h5>
+                                    <small class="text-muted" id="optionsModalSubtitle">Pick the option you like best - the AI will learn your taste!</small>
+                                </div>
+                                <button type="button" class="btn-close btn-close-white" onclick="closeOptionsModal()"></button>
+                            </div>
+                            <div class="modal-body" style="overflow-y: auto; max-height: 70vh;">
+                                <!-- Learning Message -->
+                                <div id="optionsLearningMessage" class="alert alert-warning mb-4" style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3);">
+                                    <strong id="optionsLearningText"></strong>
+                                </div>
+
+                                <!-- Options Grid -->
+                                <div class="row g-3" id="optionsGrid">
+                                    <!-- Options will be dynamically added here -->
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" onclick="closeOptionsModal()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             <!-- PORTFOLIO TAB (Session 61: Phase C.2.2) -->
             <div class="tab-pane fade" id="portfolio" role="tabpanel">
                 <h3 class="mb-4">🎨 Portfolio</h3>
@@ -5955,10 +6008,13 @@
                         </div>
                     </div>
                     <div class="card-body p-2">
-                        <small class="text-muted">${typeEmoji} ${img.image_type.replace('_', ' ')}</small>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <small class="text-muted">${typeEmoji} ${img.image_type.replace('_', ' ')}</small>
+                            ${img.style ? `<span class="badge" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1f2937; font-weight: 600; font-size: 11px; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);">${img.style.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>` : ''}
+                        </div>
                         ${img.prompt ? `<p class="card-text small mb-1" title="${img.prompt}">${img.prompt.substring(0, 50)}${img.prompt.length > 50 ? '...' : ''}</p>` : ''}
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">${img.width}x${img.height}</small>
+                            <small class="text-muted">${img.width}x${img.height}${img.model_used ? ` • ${img.model_used.toUpperCase()}` : ''}</small>
                             <div>
                                 <button class="btn btn-sm btn-link p-0 me-2" onclick="toggleFavorite('${img.id}', this)" title="Favorite">
                                     <span class="favorite-icon">${favoriteIcon}</span>
@@ -5967,8 +6023,7 @@
                                 <button class="btn btn-sm btn-link p-0 text-danger" onclick="deleteImage('${img.id}', this)" title="Delete">🗑️</button>
                             </div>
                         </div>
-                        ${img.model_used ? `<small class="text-muted d-block mt-1">Model: ${img.model_used}</small>` : ''}
-                        ${img.style ? `<small class="text-muted d-block">Style: ${img.style}</small>` : ''}
+                        ${img.seed ? `<small class="text-muted d-block mt-1">🎲 Seed: ${img.seed}</small>` : ''}
                     </div>
                 </div>
             `;
@@ -14332,6 +14387,47 @@
                                     console.error('❌ pollAudioStatus function not found - audio won\'t auto-update!');
                                 }
                             }
+                        } else if (result.tool === 'generate_with_options') {
+                            // Session 92: Display creative options with selection UI
+                            message += `🎨 **Here are ${result.result.options.length} creative options!**\n\n`;
+                            message += `${result.result.learning_message}\n\n`;
+
+                            // Display options in a grid with metadata
+                            message += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin: 20px 0;">`;
+
+                            result.result.options.forEach((option, index) => {
+                                message += `
+                                    <div style="border: 3px solid rgba(251, 191, 36, 0.3); border-radius: 12px; overflow: hidden; background: rgba(0,0,0,0.3); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(251, 191, 36, 0.8)'" onmouseout="this.style.borderColor='rgba(251, 191, 36, 0.3)'">
+                                        <img src="${option.image_url}" alt="Option ${option.option_number}" style="width: 100%; height: 280px; object-fit: cover; border-bottom: 2px solid rgba(251, 191, 36, 0.2);">
+                                        <div style="padding: 15px;">
+                                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #fbbf24;">
+                                                Option ${option.option_number}
+                                            </div>
+                                            <div style="font-size: 13px; color: #d1d5db; margin-bottom: 5px;">
+                                                ✨ <strong>Style:</strong> ${option.style.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </div>
+                                            <div style="font-size: 13px; color: #d1d5db; margin-bottom: 5px;">
+                                                🎨 <strong>Model:</strong> ${option.model.toUpperCase()}
+                                            </div>
+                                            <div style="font-size: 13px; color: #d1d5db; margin-bottom: 12px;">
+                                                🎲 <strong>Seed:</strong> ${option.seed}
+                                            </div>
+                                            <button
+                                                class="btn btn-primary"
+                                                onclick="window.aiAssistant.selectFavoriteOption('${option.id}', '${result.result.batch_id}')"
+                                                style="width: 100%; padding: 10px; font-size: 14px; font-weight: bold; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s;"
+                                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 5px 15px rgba(251, 191, 36, 0.4)'"
+                                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'"
+                                            >
+                                                ⭐ Pick This One!
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+
+                            message += `</div>\n\n`;
+                            message += `💡 **Pick your favorite and I'll learn your creative taste!** Each choice helps me understand what you love.\n\n`;
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
@@ -14445,6 +14541,60 @@
 
                 // Clean up stored data
                 delete window[dataId];
+            }
+
+            // Session 92: Selection handler for generate_with_options
+            async selectFavoriteOption(imageId, batchId) {
+                console.log('⭐ User selected favorite:', { imageId, batchId });
+
+                // Show feedback message
+                this.addMessage('assistant', `⭐ **Great choice!** I'm learning your creative taste...\n\n🧠 Recording your preference...`);
+
+                try {
+                    // Call CreativeDirectorAgent.record_choice()
+                    const response = await authenticatedFetch('/api/creative-director/record-choice/', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            selected_image_id: imageId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Show learning insights
+                        let learningMsg = `✅ **Choice Recorded!**\n\n`;
+                        learningMsg += `${result.feedback_message}\n\n`;
+
+                        if (result.insights && Object.keys(result.insights).length > 0) {
+                            learningMsg += `🧠 **What I Learned:**\n`;
+                            if (result.insights.style) {
+                                learningMsg += `- ${result.insights.style}\n`;
+                            }
+                            if (result.insights.model) {
+                                learningMsg += `- ${result.insights.model}\n`;
+                            }
+                            learningMsg += `\n`;
+                        }
+
+                        learningMsg += `📊 **Your Creative Profile:**\n`;
+                        learningMsg += `- Total choices: ${result.total_choices}\n`;
+                        learningMsg += `- Learning stage: ${result.learning_stage}\n\n`;
+
+                        if (result.preferred_styles && result.preferred_styles.length > 0) {
+                            learningMsg += `🎨 **Your Favorite Styles:** ${result.preferred_styles.slice(0, 3).join(', ')}\n\n`;
+                        }
+
+                        learningMsg += `💡 Keep making choices and I'll get even better at understanding your taste!`;
+
+                        this.addMessage('assistant', learningMsg);
+                    } else {
+                        this.addMessage('assistant', `⚠️ **Note:** I couldn't record your choice, but the image is still saved!\n\nError: ${result.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Error recording choice:', error);
+                    this.addMessage('assistant', `⚠️ **Note:** I couldn't record your choice, but the image is still saved!\n\nError: ${error.message}`);
+                }
             }
 
             async executeAudioMixing(dataId) {
