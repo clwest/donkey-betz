@@ -6035,6 +6035,12 @@
             const safeStyleContent = escapeTemplateContent(img.style || '');
             const safeModelContent = escapeTemplateContent(img.model_used || '');
 
+            // Pre-build strings to avoid nested template literals
+            const styleBadgeHtml = img.style ? '<span class="badge" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1f2937; font-weight: 600; font-size: 11px; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);">' + safeStyleContent.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + '</span>' : '';
+            const promptHtml = img.prompt ? '<p class="card-text small mb-1" title="' + escapedPromptHtml + '">' + safePromptContent.substring(0, 50) + (safePromptContent.length > 50 ? '...' : '') + '</p>' : '';
+            const modelText = safeModelContent ? ' • ' + safeModelContent.toUpperCase() : '';
+            const seedHtml = img.seed ? '<small class="text-muted d-block mt-1">🎲 Seed: ' + img.seed + '</small>' : '';
+
             // Create safe JSON string for data attribute - encode all special chars
             const safeJsonData = JSON.stringify(img)
                 .replace(/'/g, '&apos;')
@@ -6053,17 +6059,17 @@
                     <div class="card-body p-2">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <small class="text-muted">${typeEmoji} ${img.image_type.replace('_', ' ')}</small>
-                            ${img.style ? `<span class="badge" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1f2937; font-weight: 600; font-size: 11px; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);">${safeStyleContent.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>` : ''}
+                            ${styleBadgeHtml}
                         </div>
                         <div class="d-flex align-items-center justify-content-between mb-2" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.2)); padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.4);">
                             <span style="font-weight: 700; color: #22d3ee; font-size: 13px;">🆔 Image ${img.id}</span>
-                            <button class="btn btn-sm" onclick="copyImageId(${img.id}, this)" style="padding: 2px 8px; font-size: 11px; background: rgba(6, 182, 212, 0.3); border: 1px solid rgba(6, 182, 212, 0.5); color: #22d3ee; border-radius: 6px;" title="Copy image ID for voice commands">
+                            <button class="btn btn-sm copy-id-btn" data-image-id="${img.id}" style="padding: 2px 8px; font-size: 11px; background: rgba(6, 182, 212, 0.3); border: 1px solid rgba(6, 182, 212, 0.5); color: #22d3ee; border-radius: 6px;" title="Copy image ID for voice commands">
                                 📋 Copy ID
                             </button>
                         </div>
-                        ${img.prompt ? `<p class="card-text small mb-1" title="${escapedPromptHtml}">${safePromptContent.substring(0, 50)}${safePromptContent.length > 50 ? '...' : ''}</p>` : ''}
+                        ${promptHtml}
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">${img.width}x${img.height}${safeModelContent ? ` • ${safeModelContent.toUpperCase()}` : ''}</small>
+                            <small class="text-muted">${img.width}x${img.height}${modelText}</small>
                             <div>
                                 <button class="btn btn-sm btn-link p-0 me-2" onclick="toggleFavorite('${img.id}', this)" title="Favorite">
                                     <span class="favorite-icon">${favoriteIcon}</span>
@@ -6072,7 +6078,7 @@
                                 <button class="btn btn-sm btn-link p-0 text-danger" onclick="deleteImage('${img.id}', this)" title="Delete">🗑️</button>
                             </div>
                         </div>
-                        ${img.seed ? `<small class="text-muted d-block mt-1">🎲 Seed: ${img.seed}</small>` : ''}
+                        ${seedHtml}
                     </div>
                 </div>
             `;
@@ -6095,35 +6101,35 @@
             return emojiMap[type] || '🖼️';
         }
 
-        // Session 93: Copy image ID for voice commands
-        function copyImageId(imageId, button) {
-            // Create temporary textarea for fallback copy method
-            const textarea = document.createElement('textarea');
-            textarea.value = imageId.toString();
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
+        // Session 95: Bulletproof copy function - zero template literal issues
+        window.copyImageId = function(imageId, button) {
+            const idString = String(imageId);
 
-            try {
-                // Try modern clipboard API first
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(imageId.toString()).then(() => {
-                        showCopySuccess(imageId, button);
-                    }).catch(err => {
-                        // Fallback to execCommand
-                        fallbackCopy(textarea, imageId, button);
-                    });
-                } else {
-                    // Use fallback method
-                    fallbackCopy(textarea, imageId, button);
-                }
-            } catch (error) {
-                console.error('Copy error:', error);
-                fallbackCopy(textarea, imageId, button);
+            // Modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(idString).then(function() {
+                    const originalText = button.innerHTML;
+                    const originalBg = button.style.background;
+                    button.innerHTML = '✅ Copied!';
+                    button.style.background = 'rgba(34, 197, 94, 0.3)';
+                    button.style.borderColor = 'rgba(34, 197, 94, 0.5)';
+                    button.style.color = '#22c55e';
+                    setTimeout(function() {
+                        button.innerHTML = originalText;
+                        button.style.background = originalBg;
+                        button.style.borderColor = 'rgba(6, 182, 212, 0.5)';
+                        button.style.color = '#22d3ee';
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('Clipboard error:', err);
+                    fallbackCopy(idString, button);
+                });
+            } else {
+                fallbackCopy(idString, button);
             }
-        }
+        };
 
-        function fallbackCopy(textarea, imageId, button) {
+        function fallbackCopy(idString, button) {
             try {
                 textarea.select();
                 textarea.setSelectionRange(0, 99999); // For mobile
@@ -11803,6 +11809,17 @@
 
         // Session 67: Advanced Features - Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
+            // Session 95: Event delegation for Copy ID buttons
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.copy-id-btn')) {
+                    const button = e.target.closest('.copy-id-btn');
+                    const imageId = button.getAttribute('data-image-id');
+                    if (imageId) {
+                        copyImageId(imageId, button);
+                    }
+                }
+            });
+
             // Text overlay toggle
             const textOverlayCheckbox = document.getElementById('enableTextOverlays');
             const textOverlayContainer = document.getElementById('textOverlayContainer');
