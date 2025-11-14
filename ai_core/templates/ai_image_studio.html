@@ -6019,10 +6019,15 @@
             const favoriteIcon = img.is_favorite ? '⭐' : '☆';
             const typeEmoji = getTypeEmoji(img.image_type);
 
+            // Session 94 Fix: Properly escape strings to prevent syntax errors
+            const escapedUrl = escapeJs(img.url);
+            const escapedPrompt = escapeJs(img.prompt || img.filename);
+            const escapedPromptHtml = (img.prompt || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
             col.innerHTML = `
                 <div class="card h-100 image-card" id="card-${img.id}" data-image-id="${img.id}">
                     <div style="position: relative;">
-                        <img src="${img.url}" class="card-img-top" alt="${img.filename}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImageFullsize('${img.url}', '${img.prompt || img.filename}')">
+                        <img src="${img.url}" class="card-img-top" alt="${img.filename}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="viewImageFullsize('${escapedUrl}', '${escapedPrompt}')">
                         <div style="position: absolute; top: 8px; left: 8px; z-index: 10; background: rgba(255,255,255,0.95); border-radius: 6px; padding: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                             <input type="checkbox" class="form-check-input image-select-checkbox" data-image-id="${img.id}" data-image-url="${img.url}" data-image-data='${JSON.stringify(img).replace(/'/g, "&apos;")}' style="width: 32px; height: 32px; cursor: pointer; border: 2px solid #444; margin: 0;">
                         </div>
@@ -6038,7 +6043,7 @@
                                 📋 Copy ID
                             </button>
                         </div>
-                        ${img.prompt ? `<p class="card-text small mb-1" title="${img.prompt}">${img.prompt.substring(0, 50)}${img.prompt.length > 50 ? '...' : ''}</p>` : ''}
+                        ${img.prompt ? `<p class="card-text small mb-1" title="${escapedPromptHtml}">${img.prompt.substring(0, 50)}${img.prompt.length > 50 ? '...' : ''}</p>` : ''}
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">${img.width}x${img.height}${img.model_used ? ` • ${img.model_used.toUpperCase()}` : ''}</small>
                             <div>
@@ -10983,13 +10988,17 @@
 
             // Session 94: Show actual video player instead of just thumbnails/icons
             // Match the unified gallery behavior for consistency
+            // Session 94 Fix: Properly escape strings in onclick handlers to prevent syntax errors
+            const escapedUrl = escapeJs(video.video_url);
+            const escapedPrompt = escapeJs(video.prompt);
+
             col.innerHTML = `
                 <div class="card bg-dark border-cyan h-100">
                     <!-- Selection Checkbox (Session 67) -->
                     <div class="position-absolute top-0 start-0 m-2" style="z-index: 10;">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="videoCheckbox_${video.id}"
-                                   onchange="toggleVideoSelection('${video.id}', '${video.video_url}', '${video.prompt.replace(/'/g, "\\'")}', ${video.duration})"
+                                   onchange="toggleVideoSelection('${video.id}', '${escapedUrl}', '${escapedPrompt}', ${video.duration})"
                                    style="width: 20px; height: 20px; cursor: pointer;">
                         </div>
                     </div>
@@ -11014,14 +11023,14 @@
                             <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); toggleVideoFavorite('${video.id}', this)">
                                 ${favoriteIcon}
                             </button>
-                            <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); downloadVideoFromGallery('${video.id}', '${video.video_url}')">
+                            <button class="btn btn-sm btn-outline-cyan flex-fill" onclick="event.stopPropagation(); downloadVideoFromGallery('${video.id}', '${escapedUrl}')">
                                 📥
                             </button>
                             <button class="btn btn-sm btn-outline-danger flex-fill" onclick="event.stopPropagation(); deleteVideoFromGallery('${video.id}')">
                                 🗑️
                             </button>
                         </div>
-                        <button class="btn btn-sm btn-outline-success w-100" onclick="event.stopPropagation(); extendVideo('${video.id}', '${video.video_url}')" title="Extend video by 10 seconds">
+                        <button class="btn btn-sm btn-outline-success w-100" onclick="event.stopPropagation(); extendVideo('${video.id}', '${escapedUrl}')" title="Extend video by 10 seconds">
                             ⏩ Extend +10s
                         </button>
                         <small class="text-muted d-block mt-2">
