@@ -1423,7 +1423,10 @@ def image_history(request):
         user = request.user
 
         # Start with user's images
-        queryset = ImageHistory.objects.filter(user=user)
+        # Session 94: Exclude data URI images (too large for JSON response)
+        queryset = ImageHistory.objects.filter(user=user).exclude(
+            file_path__startswith='data:'
+        )
 
         # Apply filters
         image_type = request.query_params.get('image_type')
@@ -3081,7 +3084,10 @@ def unified_gallery(request):
 
         # Fetch images if requested
         if media_type in ['all', 'images']:
-            image_queryset = ImageHistory.objects.filter(user=user)
+            # Session 94: Exclude data URI images (too large for JSON response)
+            image_queryset = ImageHistory.objects.filter(user=user).exclude(
+                file_path__startswith='data:'
+            )
 
             # Apply filters
             if is_favorite is not None:
@@ -3232,14 +3238,22 @@ def get_featured_examples(request):
 
         # Strategy: Get up to 12 recent generated images with variety
         # Prioritize diverse models and styles to showcase platform capabilities
+        # Session 94: Filter out data URI images (they're too large for JSON response)
+        from django.db.models import Q
         examples = ImageHistory.objects.filter(
             user=request.user,
             image_type='generated'  # ONLY show generated images!
+        ).exclude(
+            file_path__startswith='data:'  # Exclude base64 data URIs
         ).order_by('-created_at')[:12]
 
         # Format response
         formatted_examples = []
         for img in examples:
+            # Session 94: Additional safety check - skip if file_path is data URI or too long
+            if not img.file_path or img.file_path.startswith('data:') or len(img.file_path) > 500:
+                continue
+
             formatted_examples.append({
                 'id': str(img.id),
                 'url': img.file_path if img.file_path.startswith('http') else f'/media/{img.file_path}',

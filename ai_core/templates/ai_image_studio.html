@@ -6073,30 +6073,67 @@
         }
 
         // Session 93: Copy image ID for voice commands
-        async function copyImageId(imageId, button) {
+        function copyImageId(imageId, button) {
+            // Create temporary textarea for fallback copy method
+            const textarea = document.createElement('textarea');
+            textarea.value = imageId.toString();
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+
             try {
-                await navigator.clipboard.writeText(imageId.toString());
-
-                // Visual feedback
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '✅ Copied!';
-                button.style.background = 'rgba(34, 197, 94, 0.4)';
-                button.style.borderColor = 'rgba(34, 197, 94, 0.6)';
-                button.style.color = '#22c55e';
-
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                    button.style.background = 'rgba(6, 182, 212, 0.3)';
-                    button.style.borderColor = 'rgba(6, 182, 212, 0.5)';
-                    button.style.color = '#22d3ee';
-                }, 2000);
-
-                // Also show toast notification
-                showToast(`Image ID ${imageId} copied! Use in voice commands like "Save image ${imageId} as template"`, 'success');
+                // Try modern clipboard API first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(imageId.toString()).then(() => {
+                        showCopySuccess(imageId, button);
+                    }).catch(err => {
+                        // Fallback to execCommand
+                        fallbackCopy(textarea, imageId, button);
+                    });
+                } else {
+                    // Use fallback method
+                    fallbackCopy(textarea, imageId, button);
+                }
             } catch (error) {
                 console.error('Copy error:', error);
-                showToast('Failed to copy image ID', 'error');
+                fallbackCopy(textarea, imageId, button);
             }
+        }
+
+        function fallbackCopy(textarea, imageId, button) {
+            try {
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // For mobile
+                const successful = document.execCommand('copy');
+
+                if (successful) {
+                    showCopySuccess(imageId, button);
+                } else {
+                    alert(`Copy failed. Image ID: ${imageId}\n\nPlease manually type this ID in your voice command.`);
+                }
+            } catch (err) {
+                alert(`Copy not supported. Image ID: ${imageId}\n\nPlease manually type this ID in your voice command.`);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+
+        function showCopySuccess(imageId, button) {
+            // Visual feedback
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '✅ Copied!';
+            button.style.background = 'rgba(34, 197, 94, 0.4)';
+            button.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+            button.style.color = '#22c55e';
+
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.style.background = 'rgba(6, 182, 212, 0.3)';
+                button.style.borderColor = 'rgba(6, 182, 212, 0.5)';
+                button.style.color = '#22d3ee';
+            }, 2000);
+
+            console.log(`✅ Image ID ${imageId} copied to clipboard!`);
         }
 
         async function toggleFavorite(imageId, button) {
@@ -10944,10 +10981,8 @@
             const typeEmoji = video.video_type === 'text_to_video' ? '📝' : '🖼️';
             const favoriteIcon = video.is_favorite ? '⭐' : '☆';
 
-            // Determine what image to show
-            const thumbnailSrc = video.thumbnail_url || (video.source_image_url || '');
-            const hasImage = thumbnailSrc.length > 0;
-
+            // Session 94: Show actual video player instead of just thumbnails/icons
+            // Match the unified gallery behavior for consistency
             col.innerHTML = `
                 <div class="card bg-dark border-cyan h-100">
                     <!-- Selection Checkbox (Session 67) -->
@@ -10958,17 +10993,15 @@
                                    style="width: 20px; height: 20px; cursor: pointer;">
                         </div>
                     </div>
-                    <div class="position-relative" style="cursor: pointer;" onclick="playVideoInModal('${video.id}')">
-                        ${hasImage ?
-                            `<img src="${thumbnailSrc}" class="card-img-top" style="height: 150px; object-fit: cover;">` :
-                            `<div class="d-flex align-items-center justify-center bg-secondary" style="height: 150px;">
-                                <span class="text-white fs-1">🎬</span>
-                            </div>`
-                        }
-                        <div class="position-absolute bottom-0 end-0 bg-dark bg-opacity-75 px-2 py-1 rounded-start">
-                            <small>${video.duration}s</small>
-                        </div>
+                    <!-- Duration Badge -->
+                    <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                        <span class="badge bg-dark">${video.duration}s</span>
                     </div>
+                    <!-- Video Player (Session 94: Show actual video like unified gallery) -->
+                    <video class="card-img-top" controls style="max-height: 250px; object-fit: cover; background: #000;">
+                        <source src="${video.video_url}" type="video/mp4">
+                        Your browser does not support video playback.
+                    </video>
                     <div class="card-body p-2">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <small class="text-muted">${typeEmoji} ${video.video_type.replace('_', '-')}</small>
