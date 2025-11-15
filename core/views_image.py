@@ -6624,6 +6624,69 @@ def execute_tool(request):
                 logger.info(f"✅ Created boardroom session: {session.session_id}")
                 meeting_result['session_id'] = str(session.session_id)
 
+                # Session 99: Create co-leadership decision + log agent recommendations
+                from coleadership.services import start_decision, log_agent_recommendation
+                from agents.models import UnifiedAgentTemplate
+                from content.models import CreativeProject
+
+                # Get project if provided
+                project = None
+                if parameters.get('project_id'):
+                    try:
+                        project = CreativeProject.objects.get(
+                            project_id=parameters.get('project_id'),
+                            user=request.user
+                        )
+                    except CreativeProject.DoesNotExist:
+                        pass
+
+                # Create decision
+                decision = start_decision(
+                    project=project,
+                    session=session,
+                    user=request.user,
+                    title=parameters.get('topic'),
+                    description=meeting_result.get('summary', '')
+                )
+
+                # Log each agent's recommendation
+                agent_responses = meeting_result.get('agent_responses', {})
+                for agent_name, response_text in agent_responses.items():
+                    try:
+                        # Find agent template
+                        agent_template = UnifiedAgentTemplate.objects.get(name=agent_name)
+
+                        # Simple stance inference (can enhance later)
+                        stance = 'neutral'  # Default
+                        if 'recommend' in response_text.lower() or 'support' in response_text.lower():
+                            stance = 'support'
+                        elif 'concern' in response_text.lower() or 'risk' in response_text.lower():
+                            stance = 'concern'
+                        elif 'alternative' in response_text.lower():
+                            stance = 'alternative'
+
+                        # Log recommendation
+                        log_agent_recommendation(
+                            decision=decision,
+                            agent_template=agent_template,
+                            payload_dict={
+                                'stance': stance,
+                                'summary': response_text[:200],  # First 200 chars
+                                'recommendation': response_text,
+                                'risks': '',  # Can extract later
+                                'alternative_paths': [],
+                                'confidence': None,  # Can add later
+                                'time_horizon': ''
+                            }
+                        )
+                    except UnifiedAgentTemplate.DoesNotExist:
+                        logger.warning(f"Agent template not found: {agent_name}")
+                        continue
+
+                # Add decision_id to response
+                meeting_result['decision_id'] = str(decision.id)
+                logger.info(f"✅ Created co-leadership decision: {decision.id}")
+
             result = meeting_result
 
         else:
