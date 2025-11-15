@@ -255,6 +255,19 @@ def auto_create_project_from_session(session):
     session.auto_created_project = True
     session.save(update_fields=['project', 'auto_created_project'])
 
+    # Session 97: Link all session content to the newly created project
+    from content.models import ImageHistory, VideoHistory
+
+    # Update all images from this session to belong to the project
+    images_updated = ImageHistory.objects.filter(session=session).update(project=project)
+    logger.info(f"📸 Linked {images_updated} images to project '{project.name}'")
+
+    # Update all videos from this session to belong to the project
+    videos_updated = VideoHistory.objects.filter(session=session).update(project=project)
+    logger.info(f"🎬 Linked {videos_updated} videos to project '{project.name}'")
+
+    # Note: Audio doesn't have project field yet, skip for now
+
     logger.info(f"✨ Auto-created project '{project.name}' (ID: {project.id}) for session {session.session_id}")
     return project
 
@@ -3574,6 +3587,137 @@ def session_gallery(request):
 
     except Exception as e:
         logger.error(f"❌ Session gallery error: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_sessions(request):
+    """
+    List all AI sessions for the current user with filtering and sorting
+    Session 97: Session Management UI - List View
+
+    Query parameters:
+    - sort: 'newest' (default), 'oldest', 'most_content', 'alphabetical'
+    - project_filter: 'all' (default), 'with_project', 'no_project'
+    - content_filter: 'all' (default), 'images', 'videos', 'audio'
+
+    Returns:
+    {
+        "sessions": [
+            {
+                "session_id": "uuid",
+                "title": "Session title",
+                "created_at": "timestamp",
+                "updated_at": "timestamp",
+                "total_images": 5,
+                "total_videos": 2,
+                "total_audio": 1,
+                "project": {
+                    "id": "uuid",
+                    "name": "Project name"
+                } or null,
+                "first_prompt": "Original user request"
+            },
+            ...
+        ],
+        "stats": {
+            "total_sessions": 10,
+            "total_images": 45,
+            "total_videos": 12,
+            "total_audio": 5,
+            "sessions_with_projects": 6
+        }
+    }
+    """
+    try:
+        from content.models import AISession
+        from django.db.models import Q
+
+        user = request.user
+
+        # Get query parameters
+        sort_by = request.query_params.get('sort', 'newest')
+        project_filter = request.query_params.get('project_filter', 'all')
+        content_filter = request.query_params.get('content_filter', 'all')
+
+        # Base queryset
+        queryset = AISession.objects.filter(user=user)
+
+        # Apply project filter
+        if project_filter == 'with_project':
+            queryset = queryset.filter(project__isnull=False)
+        elif project_filter == 'no_project':
+            queryset = queryset.filter(project__isnull=True)
+
+        # Apply content filter
+        if content_filter == 'images':
+            queryset = queryset.filter(total_images__gt=0)
+        elif content_filter == 'videos':
+            queryset = queryset.filter(total_videos__gt=0)
+        elif content_filter == 'audio':
+            queryset = queryset.filter(total_audio__gt=0)
+
+        # Apply sorting
+        if sort_by == 'newest':
+            queryset = queryset.order_by('-created_at')
+        elif sort_by == 'oldest':
+            queryset = queryset.order_by('created_at')
+        elif sort_by == 'most_content':
+            # Sort by total content (images + videos + audio) descending
+            from django.db.models import F
+            queryset = queryset.annotate(
+                total_content=F('total_images') + F('total_videos') + F('total_audio')
+            ).order_by('-total_content')
+        elif sort_by == 'alphabetical':
+            queryset = queryset.order_by('title')
+
+        # Format sessions
+        sessions_data = []
+        for session in queryset:
+            session_data = {
+                'session_id': str(session.session_id),
+                'title': session.title,
+                'created_at': session.created_at.isoformat() if session.created_at else None,
+                'updated_at': session.updated_at.isoformat() if session.updated_at else None,
+                'total_images': session.total_images,
+                'total_videos': session.total_videos,
+                'total_audio': session.total_audio,
+                'first_prompt': session.first_prompt or '',
+                'project': None
+            }
+
+            # Include project info if linked
+            if session.project:
+                session_data['project'] = {
+                    'id': str(session.project.id),
+                    'name': session.project.name
+                }
+
+            sessions_data.append(session_data)
+
+        # Calculate stats
+        all_sessions = AISession.objects.filter(user=user)
+        stats = {
+            'total_sessions': all_sessions.count(),
+            'total_images': sum(s.total_images for s in all_sessions),
+            'total_videos': sum(s.total_videos for s in all_sessions),
+            'total_audio': sum(s.total_audio for s in all_sessions),
+            'sessions_with_projects': all_sessions.filter(project__isnull=False).count()
+        }
+
+        response_data = {
+            'sessions': sessions_data,
+            'stats': stats
+        }
+
+        logger.info(f"📊 List sessions: {len(sessions_data)} sessions returned for user {user.username}")
+        return Response(response_data)
+
+    except Exception as e:
+        logger.error(f"❌ List sessions error: {str(e)}")
         return Response({
             'error': str(e)
         }, status=500)
