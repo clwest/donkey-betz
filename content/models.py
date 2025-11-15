@@ -1600,6 +1600,16 @@ class ImageHistory(UnifiedBaseModel):
         help_text="Optional project this image belongs to"
     )
 
+    # Session 96: Weekend Project - Link images to AI conversation sessions
+    session = models.ForeignKey(
+        'AISession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='session_images',
+        help_text="AI session that created this image"
+    )
+
     # Image identification
     filename = models.CharField(
         max_length=255,
@@ -1784,7 +1794,24 @@ class ImageHistory(UnifiedBaseModel):
                 return self.thumbnail
             return default_storage.url(self.thumbnail)
         return self.get_full_url()
-    
+
+    def get_sequential_number(self):
+        """
+        Get sequential number for this image (per user, chronological)
+
+        Session 96 Weekend Project: Hybrid Image ID system
+        Returns 1-based sequential number for easy voice commands
+        Example: "Use image 12" instead of "Use image d4f7b3c2-8a9e-4d1f..."
+        """
+        # Count how many images this user has created BEFORE this one
+        earlier_images = ImageHistory.objects.filter(
+            user=self.user,
+            created_at__lt=self.created_at
+        ).count()
+
+        # Sequential number is count + 1 (1-based indexing)
+        return earlier_images + 1
+
     def increment_view_count(self):
         """Increment view counter"""
         self.view_count += 1
@@ -1830,6 +1857,16 @@ class VideoHistory(UnifiedBaseModel):
         blank=True,
         related_name='project_videos',
         help_text="Optional project this video belongs to"
+    )
+
+    # Session 96: Weekend Project - Link videos to AI conversation sessions
+    session = models.ForeignKey(
+        'AISession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='session_videos',
+        help_text="AI session that created this video"
     )
 
     # Video identification
@@ -2855,3 +2892,167 @@ class UserCreativePreference(models.Model):
         }
 
         return messages.get(stage, "Learning your preferences...")
+
+
+class AISession(UnifiedBaseModel):
+    """
+    Track AI Assistant conversations and link all created content
+
+    Session 96: Weekend Project - Fix orphaned content problem
+    Automatically create sessions from AI conversations and link all generated assets
+    """
+
+    # User identification
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='ai_sessions',
+        help_text="User who owns this session"
+    )
+
+    # Session identification
+    session_id = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        help_text="Unique session identifier for tracking"
+    )
+
+    # Session metadata
+    title = models.CharField(
+        max_length=255,
+        help_text="Session title (auto-generated or user-defined)"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Brief description of what was created in this session"
+    )
+
+    # Conversation data
+    conversation_transcript = models.JSONField(
+        default=list,
+        help_text="Complete conversation history (messages and responses)"
+    )
+
+    first_prompt = models.TextField(
+        blank=True,
+        help_text="The initial user prompt that started this session"
+    )
+
+    # Project linkage
+    project = models.ForeignKey(
+        'CreativeProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sessions',
+        help_text="Optional project this session belongs to (can auto-create)"
+    )
+
+    auto_created_project = models.BooleanField(
+        default=False,
+        help_text="Whether we auto-created a project from this session"
+    )
+
+    # Session status
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this session is currently active"
+    )
+
+    ended_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the session was ended/closed"
+    )
+
+    # Content counters (for quick stats)
+    total_images = models.PositiveIntegerField(
+        default=0,
+        help_text="Total images created in this session"
+    )
+
+    total_videos = models.PositiveIntegerField(
+        default=0,
+        help_text="Total videos created in this session"
+    )
+
+    total_audio = models.PositiveIntegerField(
+        default=0,
+        help_text="Total audio files created in this session"
+    )
+
+    # Session tags and categorization
+    tags = models.JSONField(
+        default=list,
+        help_text="Auto-generated and user-defined tags"
+    )
+
+    session_type = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=[
+            ('branding', 'Branding Package'),
+            ('logo_design', 'Logo Design'),
+            ('video_creation', 'Video Creation'),
+            ('content_package', 'Complete Content Package'),
+            ('exploration', 'Creative Exploration'),
+            ('refinement', 'Content Refinement'),
+            ('general', 'General Creation'),
+        ],
+        help_text="Type of creative work done in this session"
+    )
+
+    class Meta:
+        verbose_name = "AI Session"
+        verbose_name_plural = "AI Sessions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['session_id']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['project']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.user.username}) - {self.total_images}i/{self.total_videos}v/{self.total_audio}a"
+
+    def end_session(self):
+        """Mark session as ended"""
+        self.is_active = False
+        self.ended_at = timezone.now()
+        self.save(update_fields=['is_active', 'ended_at'])
+
+    def update_counters(self):
+        """Update content counters from related objects"""
+        self.total_images = self.session_images.count()
+        self.total_videos = self.session_videos.count()
+        self.total_audio = 0  # TODO: Add when AudioHistory model is ready
+        self.save(update_fields=['total_images', 'total_videos', 'total_audio'])
+
+    def get_all_content(self):
+        """Get all content created in this session"""
+        return {
+            'images': list(self.session_images.all()),
+            'videos': list(self.session_videos.all()),
+            # 'audio': list(self.session_audio.all()),  # TODO: Add when ready
+        }
+
+    def export_summary(self):
+        """Export session summary for display"""
+        return {
+            'session_id': str(self.session_id),
+            'title': self.title,
+            'description': self.description,
+            'created_at': self.created_at.isoformat(),
+            'is_active': self.is_active,
+            'total_images': self.total_images,
+            'total_videos': self.total_videos,
+            'total_audio': self.total_audio,
+            'first_prompt': self.first_prompt,
+            'tags': self.tags,
+            'session_type': self.session_type,
+            'project_id': self.project_id if self.project else None,
+            'project_name': self.project.name if self.project else None,
+        }

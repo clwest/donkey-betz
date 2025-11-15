@@ -3627,6 +3627,16 @@
                             </div>
                         </div>
 
+                        <!-- Session 96: Empty State for Video Gallery -->
+                        <div id="videoGalleryEmpty" class="text-center py-5" style="display: none;">
+                            <i class="bi bi-film" style="font-size: 4rem; color: #dee2e6;"></i>
+                            <h5 class="mt-3">No Videos Yet</h5>
+                            <p class="text-muted">Create your first AI video to get started!</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('text-video-pill').click()">
+                                🎬 Generate Video
+                            </button>
+                        </div>
+
                         <!-- Load More -->
                         <div id="videoGalleryLoadMore" class="text-center mt-4" style="display: none;">
                             <button class="btn btn-outline-cyan" onclick="loadMoreVideos()">
@@ -4006,6 +4016,21 @@
                 <div id="unifiedGalleryGrid" class="row g-3">
                     <div class="col-12 text-center py-5">
                         <p class="text-muted">Loading gallery...</p>
+                    </div>
+                </div>
+
+                <!-- Session 96: Empty State for All Gallery -->
+                <div id="unifiedGalleryEmpty" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #dee2e6;"></i>
+                    <h5 class="mt-3">No Content Yet</h5>
+                    <p class="text-muted">Start creating! Generate images, videos, or audio to see them here.</p>
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                        <button class="btn btn-primary" onclick="document.querySelector('[data-bs-target=&quot;#images&quot;]').click()">
+                            🖼️ Generate Image
+                        </button>
+                        <button class="btn btn-primary" onclick="document.querySelector('[data-bs-target=&quot;#video&quot;]').click()">
+                            🎬 Generate Video
+                        </button>
                     </div>
                 </div>
 
@@ -4688,6 +4713,21 @@
                     </div>
                 </div>
 
+                <!-- Session 96: Empty State for Portfolio -->
+                <div id="portfolioEmpty" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-palette" style="font-size: 4rem; color: #dee2e6;"></i>
+                    <h5 class="mt-3">Your Portfolio is Empty</h5>
+                    <p class="text-muted">Start creating amazing AI content to build your portfolio!</p>
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                        <button class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;" onclick="document.querySelector('[data-bs-target=&quot;#images&quot;]').click()">
+                            🖼️ Create Images
+                        </button>
+                        <button class="btn" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;" onclick="document.querySelector('[data-bs-target=&quot;#video&quot;]').click()">
+                            🎬 Create Videos
+                        </button>
+                    </div>
+                </div>
+
             </div>
             <!-- END PORTFOLIO TAB -->
 
@@ -4715,9 +4755,47 @@
                 <!-- Header -->
                 <div class="d-flex justify-content-between align-items-center p-3 border-bottom"
                      style="border-color: rgba(251, 191, 36, 0.3) !important; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15)); flex-shrink: 0;">
-                    <div>
+                    <div style="flex: 1;">
                         <h5 class="mb-0" style="color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); font-weight: 800;">🤖 AI Assistant</h5>
                         <small style="color: #fcd34d;">Always here to help</small>
+
+                        <!-- Session 96: Session Indicator -->
+                        <div id="sessionIndicator" style="display: none; margin-top: 8px; padding: 6px 10px; background: rgba(34, 197, 94, 0.15); border-left: 3px solid #22c55e; border-radius: 4px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 11px; color: #86efac; font-weight: 700;">📝 SESSION:</span>
+                                        <span id="sessionTitle" style="font-size: 11px; color: #d1fae5; font-weight: 600;"></span>
+                                    </div>
+                                    <div id="sessionCounters" style="font-size: 10px; color: #86efac; margin-top: 4px; display: none;">
+                                        <span id="imageCount"></span>
+                                        <span id="videoCount"></span>
+                                        <span id="audioCount"></span>
+                                    </div>
+                                </div>
+                                <button
+                                    id="viewSessionBtn"
+                                    onclick="window.aiAssistant.openSessionGallery()"
+                                    style="
+                                        background: rgba(34, 197, 94, 0.3);
+                                        border: 1px solid rgba(34, 197, 94, 0.5);
+                                        color: #22c55e;
+                                        padding: 4px 10px;
+                                        border-radius: 6px;
+                                        font-size: 10px;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        white-space: nowrap;
+                                        transition: all 0.2s;
+                                    "
+                                    onmouseover="this.style.background='rgba(34, 197, 94, 0.4)'"
+                                    onmouseout="this.style.background='rgba(34, 197, 94, 0.3)'"
+                                    title="View all content from this session"
+                                >
+                                    📂 View All
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <button id="aiSidebarClose" class="btn btn-sm btn-outline-light" title="Collapse sidebar">←</button>
                 </div>
@@ -6062,9 +6140,9 @@
                             ${styleBadgeHtml}
                         </div>
                         <div class="d-flex align-items-center justify-content-between mb-2" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.2)); padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.4);">
-                            <span style="font-weight: 700; color: #22d3ee; font-size: 13px;">🆔 Image ${img.id}</span>
-                            <button class="btn btn-sm copy-id-btn" data-image-id="${img.id}" style="padding: 2px 8px; font-size: 11px; background: rgba(6, 182, 212, 0.3); border: 1px solid rgba(6, 182, 212, 0.5); color: #22d3ee; border-radius: 6px;" title="Copy image ID for voice commands">
-                                📋 Copy ID
+                            <span style="font-weight: 700; color: #22d3ee; font-size: 13px;">🆔 Image #${img.sequential_number || img.id}</span>
+                            <button class="btn btn-sm copy-id-btn" data-image-number="${img.sequential_number || ''}" data-image-id="${img.id}" style="padding: 2px 8px; font-size: 11px; background: rgba(6, 182, 212, 0.3); border: 1px solid rgba(6, 182, 212, 0.5); color: #22d3ee; border-radius: 6px;" title="Copy sequential number for voice commands">
+                                📋 Copy
                             </button>
                         </div>
                         ${promptHtml}
@@ -6102,8 +6180,10 @@
         }
 
         // Session 95: Bulletproof copy function - zero template literal issues
-        window.copyImageId = function(imageId, button) {
+        // Session 96: Support display message for sequential numbers
+        window.copyImageId = function(imageId, button, displayMessage) {
             const idString = String(imageId);
+            const displayMsg = displayMessage || idString;
 
             // Modern clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -6114,6 +6194,7 @@
                     button.style.background = 'rgba(34, 197, 94, 0.3)';
                     button.style.borderColor = 'rgba(34, 197, 94, 0.5)';
                     button.style.color = '#22c55e';
+                    console.log('📋 Copied:', displayMsg);
                     setTimeout(function() {
                         button.innerHTML = originalText;
                         button.style.background = originalBg;
@@ -10920,12 +11001,15 @@
 
                 const grid = document.getElementById('videoGalleryGrid');
                 const loadMoreBtn = document.getElementById('videoGalleryLoadMore');
+                const emptyState = document.getElementById('videoGalleryEmpty');
 
                 if (data.success && data.videos && data.videos.length > 0) {
                     console.log('📹 Found', data.videos.length, 'videos');
                     console.log('📹 Grid element:', grid);
                     console.log('📹 Video data:', data.videos);
                     grid.innerHTML = '';
+                    grid.style.display = 'flex';
+                    emptyState.style.display = 'none';
 
                     data.videos.forEach(video => {
                         console.log('📹 Creating card for video:', video);
@@ -10943,12 +11027,9 @@
                     }
                 } else {
                     console.log('📹 No videos found or data.success is false:', { success: data.success, videoCount: data.videos?.length });
-                    grid.innerHTML = `
-                        <div class="col-12 text-center text-muted py-5">
-                            <h5>No videos yet</h5>
-                            <p>Generate your first video to see it here!</p>
-                        </div>
-                    `;
+                    // Session 96: Show dedicated empty state instead of inline message
+                    grid.style.display = 'none';
+                    emptyState.style.display = 'block';
                     loadMoreBtn.style.display = 'none';
                 }
             } catch (error) {
@@ -11810,11 +11891,17 @@
         // Session 67: Advanced Features - Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             // Session 95: Event delegation for Copy ID buttons
+            // Session 96: Prioritize sequential numbers for voice commands
             document.addEventListener('click', (e) => {
                 if (e.target.closest('.copy-id-btn')) {
                     const button = e.target.closest('.copy-id-btn');
+                    const sequentialNumber = button.getAttribute('data-image-number');
                     const imageId = button.getAttribute('data-image-id');
-                    if (imageId) {
+
+                    // Prefer sequential number for voice commands
+                    if (sequentialNumber && sequentialNumber !== '') {
+                        copyImageId(sequentialNumber, button, `Image #${sequentialNumber}`);
+                    } else if (imageId) {
                         copyImageId(imageId, button);
                     }
                 }
@@ -13202,6 +13289,10 @@
                 this.context = this.getCurrentContext();
                 this.conversation = [];
 
+                // Session 96: Session tracking for auto-project creation
+                this.sessionId = null;
+                this.sessionTitle = null;
+
                 // Session 58: Phase B.3 - Workflow definitions
                 this.workflows = {
                     logo_creator: {
@@ -13318,6 +13409,258 @@
                         this.context = this.getCurrentContext();
                     });
                 });
+            }
+
+            // Session 96: Update session indicator in UI
+            updateSessionIndicator(sessionData) {
+                if (!sessionData || !sessionData.session_id) return;
+
+                this.sessionId = sessionData.session_id;
+                this.sessionTitle = sessionData.title || 'New Session';
+
+                const indicator = document.getElementById('sessionIndicator');
+                const titleEl = document.getElementById('sessionTitle');
+                const countersEl = document.getElementById('sessionCounters');
+                const imageCount = document.getElementById('imageCount');
+                const videoCount = document.getElementById('videoCount');
+                const audioCount = document.getElementById('audioCount');
+
+                // Show indicator
+                indicator.style.display = 'block';
+                titleEl.textContent = this.sessionTitle;
+
+                // Update counters if provided
+                if (sessionData.total_images !== undefined || sessionData.total_videos !== undefined || sessionData.total_audio !== undefined) {
+                    countersEl.style.display = 'block';
+                    const parts = [];
+                    if (sessionData.total_images > 0) parts.push(`🖼️ ${sessionData.total_images} image${sessionData.total_images !== 1 ? 's' : ''}`);
+                    if (sessionData.total_videos > 0) parts.push(`🎬 ${sessionData.total_videos} video${sessionData.total_videos !== 1 ? 's' : ''}`);
+                    if (sessionData.total_audio > 0) parts.push(`🎵 ${sessionData.total_audio} audio`);
+
+                    imageCount.textContent = parts[0] || '';
+                    videoCount.textContent = parts[1] || '';
+                    audioCount.textContent = parts[2] || '';
+                }
+
+                console.log('📝 Session indicator updated:', this.sessionId, this.sessionTitle);
+            }
+
+            // Session 96: Show toast notification when project is auto-created
+            showProjectCreatedNotification(projectName, projectId) {
+                console.log('🎉 Project auto-created:', projectName, projectId);
+
+                // Create toast notification element
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    color: white;
+                    padding: 16px 24px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+                    z-index: 10000;
+                    max-width: 400px;
+                    animation: slideInRight 0.3s ease-out;
+                    border: 2px solid #34d399;
+                `;
+
+                toast.innerHTML = `
+                    <div style="display: flex; align-items: start; gap: 12px;">
+                        <div style="font-size: 32px; line-height: 1;">🎉</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">Project Created!</div>
+                            <div style="font-size: 14px; opacity: 0.95; margin-bottom: 12px;">${projectName}</div>
+                            <button
+                                onclick="window.aiAssistant.viewProject(${projectId}); this.parentElement.parentElement.parentElement.remove();"
+                                style="
+                                    background: rgba(255, 255, 255, 0.2);
+                                    border: 1px solid rgba(255, 255, 255, 0.3);
+                                    color: white;
+                                    padding: 6px 16px;
+                                    border-radius: 8px;
+                                    font-weight: 600;
+                                    font-size: 13px;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                "
+                                onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
+                                onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'"
+                            >
+                                📁 View Project
+                            </button>
+                        </div>
+                        <button
+                            onclick="this.parentElement.parentElement.remove();"
+                            style="
+                                background: none;
+                                border: none;
+                                color: white;
+                                font-size: 20px;
+                                cursor: pointer;
+                                opacity: 0.7;
+                                line-height: 1;
+                                padding: 0;
+                                margin: 0;
+                            "
+                            onmouseover="this.style.opacity='1'"
+                            onmouseout="this.style.opacity='0.7'"
+                        >×</button>
+                    </div>
+                `;
+
+                // Add animation keyframes if not already present
+                if (!document.getElementById('toast-animations')) {
+                    const style = document.createElement('style');
+                    style.id = 'toast-animations';
+                    style.textContent = `
+                        @keyframes slideInRight {
+                            from {
+                                transform: translateX(400px);
+                                opacity: 0;
+                            }
+                            to {
+                                transform: translateX(0);
+                                opacity: 1;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+
+                document.body.appendChild(toast);
+
+                // Auto-remove after 10 seconds
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 10000);
+            }
+
+            // Session 96: Navigate to Projects tab and show specific project
+            viewProject(projectId) {
+                console.log('📁 Navigating to project:', projectId);
+
+                // Switch to Projects tab
+                const projectsTab = document.querySelector('a[href="#projects"]');
+                if (projectsTab) {
+                    projectsTab.click();
+                    console.log('✅ Switched to Projects tab');
+
+                    // TODO: Implement project highlighting/filtering in Projects tab
+                    // This would require enhancement to the Projects tab to accept a project ID parameter
+                } else {
+                    console.warn('⚠️ Projects tab not found');
+                }
+            }
+
+            // Session 96: Open session gallery modal and load content
+            async openSessionGallery() {
+                if (!this.sessionId) {
+                    console.warn('⚠️ No active session');
+                    return;
+                }
+
+                console.log('📂 Opening session gallery:', this.sessionId);
+
+                // Show modal and loading state
+                const modal = document.getElementById('sessionGalleryModal');
+                const loadingState = document.getElementById('sessionLoadingState');
+                const emptyState = document.getElementById('sessionEmptyState');
+                const imagesSection = document.getElementById('sessionImagesSection');
+                const videosSection = document.getElementById('sessionVideosSection');
+
+                modal.style.display = 'block';
+                loadingState.style.display = 'block';
+                emptyState.style.display = 'none';
+                imagesSection.style.display = 'none';
+                videosSection.style.display = 'none';
+
+                try {
+                    // Fetch session content from API
+                    const response = await authenticatedFetch(`/api/v1/gallery/session/?session_id=${this.sessionId}`);
+                    const data = await response.json();
+
+                    loadingState.style.display = 'none';
+
+                    // Update header
+                    document.getElementById('sessionGalleryTitle').textContent = data.session.title;
+                    document.getElementById('sessionGallerySubtitle').textContent =
+                        `Created: ${new Date(data.session.created_at).toLocaleString()}`;
+
+                    // Show/hide sections based on content
+                    const hasImages = data.images && data.images.length > 0;
+                    const hasVideos = data.videos && data.videos.length > 0;
+
+                    if (!hasImages && !hasVideos) {
+                        emptyState.style.display = 'block';
+                        return;
+                    }
+
+                    // Display images
+                    if (hasImages) {
+                        imagesSection.style.display = 'block';
+                        document.getElementById('sessionImageCount').textContent = `(${data.images.length})`;
+                        const imagesGrid = document.getElementById('sessionImagesGrid');
+                        imagesGrid.innerHTML = '';
+
+                        data.images.forEach(img => {
+                            const col = document.createElement('div');
+                            col.className = 'col-md-4 col-sm-6';
+                            col.innerHTML = `
+                                <div class="card" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 8px; overflow: hidden;">
+                                    <img src="${img.url}" alt="${img.prompt || 'Generated image'}" style="width: 100%; aspect-ratio: 1; object-fit: cover;">
+                                    <div class="card-body" style="padding: 12px;">
+                                        <div style="font-size: 11px; color: #22d3ee; font-weight: 700; margin-bottom: 4px;">
+                                            🆔 Image #${img.sequential_number}
+                                        </div>
+                                        ${img.prompt ? `<p class="card-text" style="font-size: 12px; color: #94a3b8; margin: 0;">${img.prompt.substring(0, 60)}${img.prompt.length > 60 ? '...' : ''}</p>` : ''}
+                                        ${img.style ? `<div style="font-size: 10px; color: #fbbf24; margin-top: 4px;">${img.style}</div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                            imagesGrid.appendChild(col);
+                        });
+                    }
+
+                    // Display videos
+                    if (hasVideos) {
+                        videosSection.style.display = 'block';
+                        document.getElementById('sessionVideoCount').textContent = `(${data.videos.length})`;
+                        const videosGrid = document.getElementById('sessionVideosGrid');
+                        videosGrid.innerHTML = '';
+
+                        data.videos.forEach(vid => {
+                            const col = document.createElement('div');
+                            col.className = 'col-md-4 col-sm-6';
+                            col.innerHTML = `
+                                <div class="card" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 8px; overflow: hidden;">
+                                    <video src="${vid.url}" controls style="width: 100%; aspect-ratio: 16/9; object-fit: cover;"></video>
+                                    <div class="card-body" style="padding: 12px;">
+                                        ${vid.prompt ? `<p class="card-text" style="font-size: 12px; color: #94a3b8; margin: 0;">${vid.prompt.substring(0, 60)}${vid.prompt.length > 60 ? '...' : ''}</p>` : ''}
+                                        <div style="font-size: 10px; color: #a78bfa; margin-top: 4px;">${vid.duration}s • ${vid.status}</div>
+                                    </div>
+                                </div>
+                            `;
+                            videosGrid.appendChild(col);
+                        });
+                    }
+
+                    console.log('✅ Session gallery loaded:', data.images.length, 'images,', data.videos.length, 'videos');
+
+                } catch (error) {
+                    console.error('❌ Error loading session gallery:', error);
+                    loadingState.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    document.getElementById('sessionEmptyState').innerHTML = `
+                        <div style="font-size: 64px; margin-bottom: 16px;">⚠️</div>
+                        <h4 style="color: #cbd5e1; margin-bottom: 8px;">Error Loading Session</h4>
+                        <p>${error.message}</p>
+                    `;
+                }
             }
 
             toggle() {
@@ -13858,16 +14201,33 @@
                     return msg;
                 });
 
+                // Session 96: Include session_id in request if we have one
+                const requestBody = {
+                    message: message,
+                    history: sanitizedHistory  // Sanitized history without base64 images
+                };
+                if (this.sessionId) {
+                    requestBody.session_id = this.sessionId;
+                }
+
                 // Call the GPT-5-mini assistant chat endpoint with function calling
                 const response = await authenticatedFetch('/api/assistant/chat/', {
                         method: 'POST',
-                        body: JSON.stringify({
-                            message: message,
-                            history: sanitizedHistory  // Sanitized history without base64 images
-                        })
+                        body: JSON.stringify(requestBody)
                 });
 
                 const data = await response.json();
+
+                // Session 96: Update session indicator if backend returns session info
+                if (data.session_id) {
+                    this.updateSessionIndicator({
+                        session_id: data.session_id,
+                        title: data.session_title || message.substring(0, 50),
+                        total_images: data.total_images,
+                        total_videos: data.total_videos,
+                        total_audio: data.total_audio
+                    });
+                }
 
                 // Session 65: Debug logging
                 console.log('📡 Backend response:', data);
@@ -14123,12 +14483,21 @@
 
                     try {
                         // Execute tool via backend
+                        // Session 96: Include session_id for content linking
+                        const requestBody = {
+                            tool_name: name,
+                            parameters: params
+                        };
+                        if (this.sessionId) {
+                            requestBody.session_id = this.sessionId;
+                            console.log('🔗 Sending session_id with tool:', name, 'session:', this.sessionId);
+                        } else {
+                            console.warn('⚠️ No session_id available for tool:', name);
+                        }
+
                         const response = await authenticatedFetch('/api/executor/run-tool/', {
                             method: 'POST',
-                            body: JSON.stringify({
-                                tool_name: name,
-                                parameters: params
-                            })
+                            body: JSON.stringify(requestBody)
                         });
 
                         const data = await response.json();
@@ -14145,6 +14514,22 @@
                                 result: data.result,
                                 params: params
                             });
+
+                            // Session 96: Update session indicator with new counter values
+                            if (data.result && data.result.session_data) {
+                                this.updateSessionIndicator({
+                                    session_id: data.result.session_data.session_id,
+                                    title: this.sessionTitle,  // Keep existing title
+                                    total_images: data.result.session_data.total_images,
+                                    total_videos: data.result.session_data.total_videos,
+                                    total_audio: data.result.session_data.total_audio
+                                });
+                            }
+
+                            // Session 96: Check for auto-project creation
+                            if (data.result && data.result.project_created) {
+                                this.showProjectCreatedNotification(data.result.project_name, data.result.project_id);
+                            }
                         } else {
                             results.push({
                                 tool: name,
@@ -14586,6 +14971,70 @@
 
                             message += `</div>\n\n`;
                             message += `💡 **Pick your favorite and I'll learn your creative taste!** Each choice helps me understand what you love.\n\n`;
+                        } else if (result.tool === 'save_as_template') {
+                            // Session 95: Display template save results
+                            if (result.result && result.result.success) {
+                                message += `✅ **Template Saved!**\n\n`;
+                                message += `📝 **Name:** ${result.result.template_name}\n`;
+                                if (result.result.results && result.result.results.template_saved && result.result.results.template_saved.template) {
+                                    const template = result.result.results.template_saved.template;
+                                    if (template.style) {
+                                        message += `🎨 **Style:** ${template.style.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
+                                    }
+                                    if (template.model) {
+                                        message += `🖼️ **Model:** ${template.model.toUpperCase()}\n`;
+                                    }
+                                    if (template.seed) {
+                                        message += `🎲 **Seed:** ${template.seed}\n`;
+                                    }
+                                }
+                                message += `\n${result.result.message}\n\n`;
+                                message += `💡 **Use it anytime with:** "Use ${result.result.template_name} template" or "Create variation of ${result.result.template_name} template"\n\n`;
+                            } else {
+                                message += `❌ **Template Save Failed**\n\n`;
+                                message += `**Error:** ${result.result ? result.result.error : 'Unknown error'}\n\n`;
+                                if (result.result && result.result.error && result.result.error.includes('seed')) {
+                                    message += `💡 **This image doesn't have a seed.** Seed tracking was added in recent sessions - try saving a newly generated image instead!\n\n`;
+                                    message += `🎨 Generate a fresh image and you'll be able to save it as a template for perfect reproduction.\n\n`;
+                                }
+                            }
+                        } else if (result.tool === 'refine_image') {
+                            // Session 95: Display image refinement results
+                            if (result.result && result.result.success) {
+                                message += `✅ **Image Refined!**\n\n`;
+                                message += `🎨 **Request:** ${result.params.refinement_request}\n\n`;
+                                if (result.result.result_image_id || result.result.final_image_id) {
+                                    const refinedId = result.result.result_image_id || result.result.final_image_id;
+                                    message += `🆔 **New Image ID:** ${refinedId}\n\n`;
+                                    message += `💡 Check the Image Gallery to see your refined image!\n\n`;
+                                }
+                                if (result.result.operations_applied) {
+                                    message += `⚙️ **Operations Applied:** ${result.result.operations_applied}\n\n`;
+                                }
+                            } else {
+                                message += `❌ **Refinement Failed**\n\n`;
+                                message += `**Error:** ${result.result ? result.result.error : 'Unknown error'}\n\n`;
+                                message += `💡 Try rephrasing your request or use simpler edits like "make it bigger" or "change to blue tones"\n\n`;
+                            }
+                        } else if (result.tool === 'train_brand_style') {
+                            // Session 95: Display brand training results
+                            if (result.result && result.result.success) {
+                                message += `🎉 **Brand Style Training Started!**\n\n`;
+                                message += `✨ **Brand:** ${result.result.character_id}\n`;
+                                message += `🏷️ **Trigger Word:** ${result.result.trigger_word}\n`;
+                                message += `📸 **Training Images:** ${result.params.image_ids.length} images\n\n`;
+                                if (result.result.training_submitted) {
+                                    message += `⏱️ **Status:** Training in progress (30-60 minutes)\n\n`;
+                                    message += `💡 I'll notify you when training completes! Then you can generate images with your brand style using the trigger word "${result.result.trigger_word}"\n\n`;
+                                } else {
+                                    message += `✅ **Status:** Brand style created, ready to train\n\n`;
+                                    message += `💡 Submit for training when ready to enable your custom brand style!\n\n`;
+                                }
+                            } else {
+                                message += `❌ **Brand Training Failed**\n\n`;
+                                message += `**Error:** ${result.result ? result.result.error : 'Unknown error'}\n\n`;
+                                message += `💡 Make sure you have at least 5 images selected for brand training.\n\n`;
+                            }
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
@@ -15695,18 +16144,18 @@
         // Render Unified Gallery Items
         function renderUnifiedGallery(items) {
             const grid = document.getElementById('unifiedGalleryGrid');
+            const emptyState = document.getElementById('unifiedGalleryEmpty');
 
             if (items.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-12 text-center py-5">
-                        <h4 class="text-muted">📭 No content found</h4>
-                        <p class="text-muted">Try adjusting your filters or creating some content!</p>
-                    </div>
-                `;
+                // Session 96: Show dedicated empty state instead of inline message
+                grid.style.display = 'none';
+                emptyState.style.display = 'block';
                 return;
             }
 
             grid.innerHTML = '';
+            grid.style.display = 'flex';
+            emptyState.style.display = 'none';
 
             items.forEach(item => {
                 const col = document.createElement('div');
@@ -18414,16 +18863,17 @@
         // Render portfolio gallery
         function renderPortfolioGallery() {
             const gallery = document.getElementById('portfolio-gallery');
+            const emptyState = document.getElementById('portfolioEmpty');
 
             if (portfolioSystem.items.length === 0) {
-                gallery.innerHTML = `
-                    <div class="col-12 text-center">
-                        <p class="text-muted">No content found. Create some projects and generate content to see it here!</p>
-                    </div>
-                `;
+                // Session 96: Show dedicated empty state instead of inline message
+                gallery.style.display = 'none';
+                emptyState.style.display = 'block';
                 return;
             }
 
+            gallery.style.display = 'flex';
+            emptyState.style.display = 'none';
             let html = '';
             portfolioSystem.items.forEach(item => {
                 const typeIcon = item.type === 'image' ? '🖼️' : item.type === 'video' ? '🎬' : '🎵';
@@ -18442,9 +18892,8 @@
                 if (item.type === 'image') {
                     thumbnail = `<img src="${item.content_url}" alt="Image" style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;">`;
                 } else if (item.type === 'video') {
-                    thumbnail = item.thumbnail_url
-                        ? `<img src="${item.thumbnail_url}" alt="Video" style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;">`
-                        : `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎬</span></div>`;
+                    // Session 96: Show actual video with controls (consistent with Video Gallery)
+                    thumbnail = `<video src="${item.content_url}" controls style="width: 100%; height: 280px; object-fit: cover; border-radius: 8px;"></video>`;
                 } else {
                     thumbnail = `<div style="width: 100%; height: 280px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 4rem;">🎵</span></div>`;
                 }
@@ -19343,5 +19792,63 @@
         // END CHARACTER TRAINING SYSTEM
         // ====================================================================
     </script>
+
+    <!-- Session 96: Session Gallery Modal -->
+    <div id="sessionGalleryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10001; overflow-y: auto;">
+        <div style="max-width: 1200px; margin: 40px auto; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; position: relative; border: 2px solid rgba(251, 191, 36, 0.3);">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+                <div>
+                    <h3 id="sessionGalleryTitle" style="color: #fbbf24; font-weight: 800; margin-bottom: 8px;">Session Gallery</h3>
+                    <p id="sessionGallerySubtitle" style="color: #94a3b8; font-size: 14px; margin: 0;"></p>
+                </div>
+                <button
+                    onclick="document.getElementById('sessionGalleryModal').style.display='none'"
+                    style="
+                        background: none;
+                        border: none;
+                        color: #94a3b8;
+                        font-size: 32px;
+                        cursor: pointer;
+                        line-height: 1;
+                        padding: 0;
+                        transition: color 0.2s;
+                    "
+                    onmouseover="this.style.color='#fbbf24'"
+                    onmouseout="this.style.color='#94a3b8'"
+                >×</button>
+            </div>
+
+            <!-- Images Section -->
+            <div id="sessionImagesSection" style="margin-bottom: 32px;">
+                <h4 style="color: #22d3ee; font-weight: 700; font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    🖼️ Images <span id="sessionImageCount" style="font-size: 14px; color: #94a3b8;"></span>
+                </h4>
+                <div id="sessionImagesGrid" class="row g-3"></div>
+            </div>
+
+            <!-- Videos Section -->
+            <div id="sessionVideosSection" style="margin-bottom: 32px;">
+                <h4 style="color: #a78bfa; font-weight: 700; font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    🎬 Videos <span id="sessionVideoCount" style="font-size: 14px; color: #94a3b8;"></span>
+                </h4>
+                <div id="sessionVideosGrid" class="row g-3"></div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="sessionEmptyState" style="display: none; text-align: center; padding: 60px 20px; color: #94a3b8;">
+                <div style="font-size: 64px; margin-bottom: 16px;">📭</div>
+                <h4 style="color: #cbd5e1; margin-bottom: 8px;">No Content Yet</h4>
+                <p>Start creating images and videos to see them here!</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="sessionLoadingState" style="display: none; text-align: center; padding: 60px 20px; color: #94a3b8;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                <p>Loading session content...</p>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -276,7 +276,7 @@ from core.views_davinci import (
 from core.views_image import (
     gallery_generate, test_image_generation, optimize_image_prompt,
     image_history, toggle_favorite, delete_image, batch_download_images,
-    control_sketch, control_structure, execute_workflow_step, unified_gallery, unified_batch_download, unified_toggle_favorite,
+    control_sketch, control_structure, execute_workflow_step, unified_gallery, session_gallery, unified_batch_download, unified_toggle_favorite,
     track_image_view, track_image_download, get_featured_examples, improve_workflow_prompt,
     list_workflow_history, get_workflow_history, toggle_workflow_favorite, save_workflow_favorite,
     list_workflow_favorites, delete_workflow_favorite, rerun_workflow,
@@ -980,6 +980,7 @@ urlpatterns = [
 
     # Unified Gallery API (Session 53: Phase 2 & 3)
     path('api/v1/gallery/all/', unified_gallery, name='unified-gallery'),
+    path('api/v1/gallery/session/', session_gallery, name='session-gallery'),  # Session 96: Session content viewer
     path('api/v1/gallery/batch-download/', unified_batch_download, name='unified-batch-download'),
     path('api/v1/gallery/toggle-favorite/', unified_toggle_favorite, name='unified-toggle-favorite'),
     path('api/v1/content/library/', content_library, name='content-library'),

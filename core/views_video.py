@@ -475,12 +475,43 @@ def check_video_status(request, task_id):
                     video_duration = config.get('duration') or metadata.get('duration', 8)
                     logger.info(f"⚠️ Runway returned duration=0, using fallback: {video_duration}s")
 
+                # Session 96: Download video to local storage (prevent expired CDN URLs)
+                local_video_url = result.video_url
+                try:
+                    import requests
+                    from django.core.files.base import ContentFile
+                    from django.core.files.storage import default_storage
+
+                    # Download video from CDN
+                    logger.info(f"📥 Downloading video from CDN: {result.video_url[:80]}...")
+                    response = requests.get(result.video_url, timeout=120, stream=True)
+                    response.raise_for_status()
+
+                    # Read video content
+                    video_content = b''
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            video_content += chunk
+
+                    # Generate filename
+                    filename = f"videos/{request.user.id}/{task_id}.mp4"
+
+                    # Save to local storage
+                    file_path = default_storage.save(filename, ContentFile(video_content))
+                    local_video_url = default_storage.url(file_path)
+
+                    logger.info(f"✅ Video saved to local storage: {file_path}")
+                except Exception as download_error:
+                    logger.warning(f"⚠️ Failed to download video, using CDN URL: {str(download_error)}")
+                    # Fall back to CDN URL if download fails
+                    local_video_url = result.video_url
+
                 # Check if VideoHistory already exists for this task
                 video_history, created = VideoHistory.objects.get_or_create(
                     user=request.user,
                     video_id=task_id,
                     defaults={
-                        'video_url': result.video_url,
+                        'video_url': local_video_url,  # Session 96: Use local URL
                         'thumbnail_url': result.thumbnail_url or '',
                         'video_type': video_type,
                         'prompt': content.prompt,
@@ -496,7 +527,7 @@ def check_video_status(request, task_id):
 
                 # Update if already exists
                 if not created:
-                    video_history.video_url = result.video_url
+                    video_history.video_url = local_video_url  # Session 96: Use local URL
                     video_history.thumbnail_url = result.thumbnail_url or ''
                     video_history.status = 'completed'
                     video_history.duration = video_duration  # Session 70: Update duration too
@@ -714,7 +745,13 @@ def get_video_history(request):
         sort_by = request.GET.get('sort', '-created_at')  # Default newest first
 
         # Build query
-        queryset = VideoHistory.objects.filter(user=request.user)
+        # Session 96: Exclude videos with expired external CDN URLs
+        from django.db.models import Q
+        queryset = VideoHistory.objects.filter(user=request.user).exclude(
+            Q(video_url__icontains='cloudfront.net') |
+            Q(video_url__icontains='storage.googleapis.com') |
+            Q(video_url__icontains='_jwt=')
+        )
 
         # Apply filters
         if video_type:

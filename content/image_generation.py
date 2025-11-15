@@ -455,13 +455,16 @@ class ImageGenerationService:
 
             data = response.json()
 
-            # Extract base64 images
+            # Extract base64 images and seeds
             images = []
+            seeds = []
             for artifact in data.get("artifacts", []):
                 if artifact.get("finishReason") == "SUCCESS":
                     base64_image = artifact.get("base64")
+                    seed = artifact.get("seed")  # Extract seed for reproducibility
                     if base64_image:
                         images.append(f"data:image/png;base64,{base64_image}")
+                        seeds.append(seed if seed is not None else 0)
 
             return ImageGenerationResult(
                 success=True,
@@ -474,7 +477,8 @@ class ImageGenerationService:
                     'size': f"{width}x{height}",
                     'cfg_scale': cfg_scale,
                     'steps': steps,
-                    'negative_prompt': negative_prompt
+                    'negative_prompt': negative_prompt,
+                    'seeds': seeds  # Session 95: Add seeds for reproducibility
                 }
             )
 

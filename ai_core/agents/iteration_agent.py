@@ -58,7 +58,7 @@ class IterationAgent:
 
     def refine_image(
         self,
-        image_id: int,
+        image_id: str,  # Session 95: Changed to str for UUID support
         refinement_request: str
     ) -> Dict:
         """
