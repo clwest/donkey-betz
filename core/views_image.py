@@ -6634,7 +6634,7 @@ def execute_tool(request):
                 if parameters.get('project_id'):
                     try:
                         project = CreativeProject.objects.get(
-                            project_id=parameters.get('project_id'),
+                            id=parameters.get('project_id'),
                             user=request.user
                         )
                     except CreativeProject.DoesNotExist:
@@ -6686,8 +6686,8 @@ def execute_tool(request):
                 # Add decision_id, session_id, project_id to response (Session 100: Full integration)
                 meeting_result['decision_id'] = str(decision.id)
                 meeting_result['session_id'] = str(session.session_id) if session else None
-                meeting_result['project_id'] = str(project.project_id) if project else None
-                logger.info(f"✅ Created co-leadership decision: {decision.id} (session: {session.session_id if session else 'none'}, project: {project.project_id if project else 'none'})")
+                meeting_result['project_id'] = str(project.id) if project else None
+                logger.info(f"✅ Created co-leadership decision: {decision.id} (session: {session.session_id if session else 'none'}, project: {project.id if project else 'none'})")
 
             result = meeting_result
 
