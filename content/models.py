@@ -2388,6 +2388,12 @@ class CreativeProject(UnifiedBaseModel):
         help_text="Whether project is shared with others"
     )
 
+    # Session 97: Quick Starts default project
+    is_quick_starts = models.BooleanField(
+        default=False,
+        help_text="Special project for ad-hoc/spontaneous work"
+    )
+
     class Meta:
         verbose_name = "Creative Project"
         verbose_name_plural = "Creative Projects"
