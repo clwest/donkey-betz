@@ -2409,10 +2409,39 @@ class CreativeProject(UnifiedBaseModel):
 
     @property
     def progress_percentage(self):
-        """Calculate project completion percentage"""
-        if self.total_workflows == 0:
+        """
+        Calculate project completion percentage
+
+        Session 97: Enhanced to calculate from actual content when no workflows
+        - Workflow-based: If total_workflows > 0, use completed/total ratio
+        - Content-based: Count images + videos, 10 items = 100% progress
+        """
+        # Workflow-based progress (professional workflow system)
+        if self.total_workflows > 0:
+            return int((self.completed_workflows / self.total_workflows) * 100)
+
+        # Content-based progress (auto-created projects from AI sessions)
+        # Session 97: Count actual images and videos in project
+        try:
+            # Import here to avoid circular import
+            from content.models import ImageHistory, VideoHistory
+
+            # Count content items
+            image_count = ImageHistory.objects.filter(project=self).count()
+            video_count = VideoHistory.objects.filter(project=self).count()
+            total_content = image_count + video_count
+
+            # Calculate progress: 10 items = 100% (reasonable target for a project)
+            # Cap at 100% for projects with more content
+            if total_content == 0:
+                return 0
+
+            progress = min(100, int((total_content / 10) * 100))
+            return progress
+
+        except Exception:
+            # Fallback if query fails
             return 0
-        return int((self.completed_workflows / self.total_workflows) * 100)
 
     @property
     def is_overdue(self):
@@ -2998,7 +3027,10 @@ class AISession(UnifiedBaseModel):
     session_type = models.CharField(
         max_length=50,
         blank=True,
+        default='default',
         choices=[
+            ('default', 'Default Session'),
+            ('boardroom', 'Executive Boardroom Meeting'),
             ('branding', 'Branding Package'),
             ('logo_design', 'Logo Design'),
             ('video_creation', 'Video Creation'),
@@ -3007,7 +3039,42 @@ class AISession(UnifiedBaseModel):
             ('refinement', 'Content Refinement'),
             ('general', 'General Creation'),
         ],
-        help_text="Type of creative work done in this session"
+        help_text="Type of session or creative work"
+    )
+
+    # Boardroom meeting fields (Session 98)
+    participants = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of agent names participating in boardroom meetings"
+    )
+
+    meeting_topic = models.TextField(
+        blank=True,
+        help_text="Topic/agenda for boardroom meetings"
+    )
+
+    meeting_summary = models.TextField(
+        blank=True,
+        help_text="Summary of boardroom meeting discussion"
+    )
+
+    decisions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Decisions made during boardroom meeting"
+    )
+
+    action_items = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Action items from boardroom meeting"
+    )
+
+    agent_responses = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Individual agent responses in boardroom meetings"
     )
 
     class Meta:

@@ -4392,6 +4392,74 @@
                     </div>
                 </div>
 
+                <!-- Executive Boardroom Meeting Modal (Session 98) -->
+                <div class="modal fade" id="boardroom-meeting-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title">🏢 Start Executive Meeting</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted mb-4">Bring together CTO and COO agents for strategic discussions:</p>
+
+                                <form id="meeting-form">
+                                    <div class="mb-4">
+                                        <label for="meeting-topic" class="form-label" style="font-size: 1.1rem; font-weight: 600; color: #c4b5fd;">
+                                            📋 Meeting Topic *
+                                        </label>
+                                        <textarea class="form-control" id="meeting-topic" rows="3" required
+                                                  placeholder="Example: AI feature roadmap for Q1, Platform scalability strategy, User experience improvements"
+                                                  style="font-size: 1rem; background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; color: #e9d5ff;"></textarea>
+                                        <small class="text-muted d-block mt-2">
+                                            💡 Be specific about what you want to discuss - this will guide the conversation
+                                        </small>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="form-label" style="font-size: 1.1rem; font-weight: 600; color: #c4b5fd;">
+                                            👥 Participants
+                                        </label>
+                                        <div style="background: rgba(139, 92, 246, 0.1); padding: 1rem; border-radius: 8px; border: 2px solid rgba(139, 92, 246, 0.3);">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="participant-cto" value="CTOAgent" checked disabled>
+                                                <label class="form-check-label" for="participant-cto">
+                                                    <strong>🔧 CTO Agent</strong> - Technical architecture and implementation
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="participant-coo" value="COOAgent" checked disabled>
+                                                <label class="form-check-label" for="participant-coo">
+                                                    <strong>🏢 COO Agent</strong> - Operations planning and risk management
+                                                </label>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">
+                                                Phase 1: CTO + COO collaboration (more participants coming in Phase 2)
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="meeting-project" class="form-label">📁 Project Context (Optional)</label>
+                                        <select class="form-select" id="meeting-project" style="background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; color: #e9d5ff;">
+                                            <option value="">No specific project</option>
+                                            <!-- Projects will be loaded here -->
+                                        </select>
+                                        <small class="text-muted">Link this meeting to a project for context</small>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" id="start-meeting-submit-btn"
+                                        style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                    🚀 Start Meeting
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <!-- END PROJECTS TAB -->
 
@@ -4971,6 +5039,7 @@
                         <button class="btn btn-sm btn-outline-light quick-action" data-action="logo">🎨 Logo</button>
                         <button class="btn btn-sm btn-outline-light quick-action" data-action="social">📱 Social</button>
                         <button class="btn btn-sm btn-outline-light quick-action" data-action="upscale">⬆️ Upscale</button>
+                        <button class="btn btn-sm btn-outline-light" id="start-meeting-btn" title="Start executive boardroom meeting">🏢 Meeting</button>
                     </div>
                 </div>
 
@@ -13951,13 +14020,17 @@
             async loadProjects() {
                 console.log('📁 Loading projects...');
                 try {
-                    const response = await authenticatedFetch('/api/v1/projects/');
+                    // Session 97 Fix: Use correct endpoint for CreativeProjects
+                    const response = await authenticatedFetch('/api/creative-projects/');
                     const data = await response.json();
 
-                    if (data.success && data.projects) {
+                    // Session 97 Fix: API returns {projects: [...]} without success field
+                    if (data.projects && data.projects.length > 0) {
                         this.populateProjectDropdown(data.projects);
                         // Auto-select Quick Starts or last active project
                         await this.autoSelectProject(data.projects);
+                    } else {
+                        console.warn('⚠️ No projects found');
                     }
                 } catch (error) {
                     console.error('❌ Error loading projects:', error);
@@ -16209,6 +16282,9 @@
             aiAssistant = new AIAssistant();
             window.aiAssistant = aiAssistant;  // Session 73: Make globally accessible for button onclick
             console.log('🤖 AI Assistant initialized!');
+
+            // Session 97: Load projects into dropdown
+            aiAssistant.loadProjects();
         });
 
         // ====================================================================
@@ -20748,10 +20824,20 @@
                             >
                                 ▶️ Resume
                             </button>
+                            ${session.project && session.project.name === 'Quick Starts' ? `
+                                <button
+                                    onclick="promoteSessionToProject('${session.session_id}', '${session.title.replace(/'/g, "\\'")}')"
+                                    class="btn btn-sm"
+                                    style="flex: 1 1 45%; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none;"
+                                    title="Move this session to its own project"
+                                >
+                                    🚀 Move to Project
+                                </button>
+                            ` : ''}
                             <button
                                 onclick="viewSessionContent('${session.session_id}')"
                                 class="btn btn-sm btn-primary"
-                                style="flex: 1 1 45%;"
+                                style="flex: 1 1 ${session.project && session.project.name === 'Quick Starts' ? '45%' : '45%'};"
                                 ${totalContent === 0 ? 'disabled' : ''}
                                 title="View session content"
                             >
@@ -20874,6 +20960,93 @@
                 console.error('❌ Error loading session content:', error);
                 loadingState.style.display = 'none';
                 emptyState.style.display = 'block';
+            }
+        }
+
+        // Promote session to standalone project (Session 98: Quick Starts Promotion)
+        async function promoteSessionToProject(sessionId, sessionTitle) {
+            console.log(`🚀 Promoting session to project: ${sessionId}`);
+
+            // Prompt for project name
+            const projectName = prompt(
+                `Move "${sessionTitle}" to a new project?\n\n` +
+                'Enter a name for the new project:\n' +
+                '(Leave blank to use session title)',
+                sessionTitle
+            );
+
+            // User cancelled
+            if (projectName === null) {
+                return;
+            }
+
+            const finalProjectName = projectName.trim() || sessionTitle;
+
+            try {
+                const response = await fetch(`/api/v1/sessions/${sessionId}/promote/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        project_name: finalProjectName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log(`✅ ${data.message}`);
+                    console.log(`📁 New project: ${data.project.name} (${data.project.id})`);
+                    console.log(`📊 Content moved: ${data.content_moved.images} images, ${data.content_moved.videos} videos`);
+
+                    // Show success notification
+                    const toast = document.createElement('div');
+                    toast.className = 'toast';
+                    toast.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                        color: white;
+                        padding: 16px 24px;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        z-index: 10000;
+                        animation: slideIn 0.3s ease-out;
+                    `;
+                    toast.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 4px;">🚀 Session Promoted!</div>
+                        <div style="font-size: 13px; opacity: 0.9;">
+                            Moved to project "${data.project.name}"<br>
+                            ${data.content_moved.images} images, ${data.content_moved.videos} videos
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+
+                    setTimeout(() => {
+                        toast.style.animation = 'slideOut 0.3s ease-in';
+                        setTimeout(() => toast.remove(), 300);
+                    }, 4000);
+
+                    // Reload sessions list to reflect changes
+                    loadSessions();
+
+                    // Switch to the Projects tab to show the new project
+                    const projectsTab = document.getElementById('projects-tab');
+                    if (projectsTab) {
+                        setTimeout(() => {
+                            projectsTab.click();
+                        }, 500);
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to promote session');
+                }
+
+            } catch (error) {
+                console.error('❌ Error promoting session:', error);
+                alert(`Error promoting session: ${error.message}\n\n${error.message.includes('Quick Starts') ? 'This session is not in Quick Starts.' : 'Please try again.'}`);
             }
         }
 
@@ -21072,6 +21245,224 @@
         });
 
         // END SESSION MANAGEMENT UI
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION 98: EXECUTIVE BOARDROOM MEETING COORDINATION
+        // ====================================================================
+
+        // Initialize meeting modal on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const startMeetingBtn = document.getElementById('start-meeting-btn');
+            const meetingModal = new bootstrap.Modal(document.getElementById('boardroom-meeting-modal'));
+            const submitMeetingBtn = document.getElementById('start-meeting-submit-btn');
+
+            // Open modal when "Start Meeting" button is clicked
+            if (startMeetingBtn) {
+                startMeetingBtn.addEventListener('click', function() {
+                    console.log('🏢 Opening boardroom meeting modal...');
+                    loadProjectsForMeeting();
+                    meetingModal.show();
+                });
+            }
+
+            // Handle meeting submission
+            if (submitMeetingBtn) {
+                submitMeetingBtn.addEventListener('click', function() {
+                    startExecutiveMeeting();
+                });
+            }
+        });
+
+        // Load projects into meeting modal dropdown
+        async function loadProjectsForMeeting() {
+            const projectSelect = document.getElementById('meeting-project');
+            if (!projectSelect) return;
+
+            try {
+                const response = await fetch('/ai/projects/', {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                console.log(`📁 Loaded ${data.projects.length} projects for meeting`);
+
+                // Keep the "No specific project" option and add projects
+                projectSelect.innerHTML = '<option value="">No specific project</option>';
+
+                data.projects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.id;
+                    option.textContent = project.name;
+                    projectSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('❌ Failed to load projects for meeting:', error);
+            }
+        }
+
+        // Start executive meeting
+        async function startExecutiveMeeting() {
+            const topicInput = document.getElementById('meeting-topic');
+            const projectSelect = document.getElementById('meeting-project');
+            const submitBtn = document.getElementById('start-meeting-submit-btn');
+
+            const topic = topicInput.value.trim();
+            if (!topic) {
+                alert('Please enter a meeting topic');
+                return;
+            }
+
+            // Get selected project (if any)
+            const projectId = projectSelect.value || null;
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Starting Meeting...';
+
+            try {
+                console.log('🏢 Starting executive meeting:', topic);
+
+                // Build message to send to AI Assistant
+                const message = `Start executive meeting: ${topic}`;
+
+                // Add system message to chat
+                window.aiAssistant.addMessage('user', message);
+
+                // Prepare tool call parameters
+                const toolParams = {
+                    topic: topic,
+                    participants: ['CTOAgent', 'COOAgent']
+                };
+
+                if (projectId) {
+                    toolParams.project_id = projectId;
+                }
+
+                // Call the AI Assistant API directly
+                const response = await fetch('/ai/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        tool_choice: {
+                            type: 'function',
+                            function: { name: 'start_executive_meeting' }
+                        },
+                        tool_params: toolParams
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                console.log('✅ Meeting started:', data);
+
+                // Display meeting results in chat
+                displayMeetingResults(data);
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('boardroom-meeting-modal')).hide();
+
+                // Reset form
+                topicInput.value = '';
+                projectSelect.value = '';
+
+                // Show success notification
+                showNotification('🏢 Meeting Complete', 'Executive boardroom meeting successfully concluded');
+
+            } catch (error) {
+                console.error('❌ Failed to start meeting:', error);
+                alert('Failed to start meeting. Please try again.');
+                window.aiAssistant.addMessage('error', `Failed to start meeting: ${error.message}`);
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '🚀 Start Meeting';
+            }
+        }
+
+        // Display meeting results in chat
+        function displayMeetingResults(meetingData) {
+            if (!meetingData || !meetingData.result) {
+                console.error('❌ No meeting data to display');
+                return;
+            }
+
+            const result = meetingData.result;
+
+            // Build HTML for meeting results
+            let html = '<div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1)); padding: 16px; border-radius: 12px; border: 2px solid rgba(139, 92, 246, 0.4); margin: 12px 0;">';
+
+            // Header
+            html += '<div style="border-bottom: 2px solid rgba(139, 92, 246, 0.3); padding-bottom: 12px; margin-bottom: 12px;">';
+            html += '<h4 style="color: #c4b5fd; font-weight: 700; margin: 0 0 8px 0;">🏢 Executive Boardroom Meeting</h4>';
+            html += `<div style="font-size: 13px; color: #e9d5ff;"><strong>Topic:</strong> ${result.topic}</div>`;
+            html += `<div style="font-size: 12px; color: #c4b5fd; margin-top: 4px;">👥 ${result.participants.join(', ')}</div>`;
+            html += '</div>';
+
+            // Summary
+            if (result.summary) {
+                html += '<div style="margin-bottom: 16px;">';
+                html += '<h5 style="color: #fbbf24; font-weight: 600; font-size: 14px; margin-bottom: 8px;">📋 Summary</h5>';
+                html += `<div style="color: #e2e8f0; font-size: 13px; line-height: 1.6;">${result.summary}</div>`;
+                html += '</div>';
+            }
+
+            // Decisions
+            if (result.decisions && result.decisions.length > 0) {
+                html += '<div style="margin-bottom: 16px;">';
+                html += '<h5 style="color: #4ade80; font-weight: 600; font-size: 14px; margin-bottom: 8px;">✅ Decisions</h5>';
+                html += '<ul style="margin: 0; padding-left: 20px; color: #e2e8f0; font-size: 13px; line-height: 1.8;">';
+                result.decisions.forEach(decision => {
+                    html += `<li>${decision}</li>`;
+                });
+                html += '</ul>';
+                html += '</div>';
+            }
+
+            // Action Items
+            if (result.action_items && result.action_items.length > 0) {
+                html += '<div>';
+                html += '<h5 style="color: #22d3ee; font-weight: 600; font-size: 14px; margin-bottom: 8px;">🎯 Action Items</h5>';
+                html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                result.action_items.forEach(item => {
+                    const priorityColor = item.priority === 'high' ? '#ef4444' : item.priority === 'medium' ? '#f59e0b' : '#10b981';
+                    html += `<div style="background: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 8px; border-left: 3px solid ${priorityColor};">`;
+                    html += `<div style="color: #e2e8f0; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${item.task}</div>`;
+                    html += `<div style="font-size: 11px; color: #94a3b8;">`;
+                    html += `<span style="color: ${priorityColor}; font-weight: 700; text-transform: uppercase;">${item.priority}</span>`;
+                    html += ` • Owner: <span style="color: #c4b5fd;">${item.owner}</span>`;
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                html += '</div>';
+            }
+
+            // Session link (if available)
+            if (result.session_id) {
+                html += '<div style="margin-top: 16px; padding-top: 12px; border-top: 2px solid rgba(139, 92, 246, 0.3);">';
+                html += `<div style="font-size: 11px; color: #94a3b8;">📝 Session ID: <span style="color: #c4b5fd; font-family: monospace;">${result.session_id}</span></div>`;
+                html += '</div>';
+            }
+
+            html += '</div>';
+
+            // Add to chat
+            window.aiAssistant.addMessage('assistant', html);
+
+            console.log('✅ Meeting results displayed in chat');
+        }
+
+        // END EXECUTIVE BOARDROOM MEETING COORDINATION
         // ====================================================================
     </script>
 
