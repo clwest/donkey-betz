@@ -90,7 +90,8 @@ class WorkflowCoordinatorAgent:
         prompt: str,
         count: int = 3,
         style: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        session = None  # Session 96: For content linking
     ) -> Dict:
         """
         Execute "Generate with Options" workflow.
@@ -105,6 +106,7 @@ class WorkflowCoordinatorAgent:
             count: Number of options
             style: Optional style
             model: Optional model
+            session: AISession for linking generated content (Session 96)
 
         Returns:
             Dict with options and workflow info
@@ -115,7 +117,8 @@ class WorkflowCoordinatorAgent:
                 prompt=prompt,
                 count=count,
                 style=style,
-                model=model
+                model=model,
+                session=session  # Session 96: Pass session for linking
             )
 
             if not generation_result.get('options'):
@@ -143,7 +146,7 @@ class WorkflowCoordinatorAgent:
             #     }
             # )
 
-            return {
+            result = {
                 'success': True,
                 'workflow': 'generate_with_options',
                 'batch_id': generation_result['batch_id'],
@@ -152,6 +155,14 @@ class WorkflowCoordinatorAgent:
                 'tracked_versions': tracked_versions,
                 'message': f'✅ Generated {len(generation_result["options"])} options! Pick your favorite to help AI learn your taste.'
             }
+
+            # Session 96: Pass through project creation info if provided
+            if 'project_created' in generation_result:
+                result['project_created'] = generation_result['project_created']
+                result['project_id'] = generation_result.get('project_id')
+                result['project_name'] = generation_result.get('project_name')
+
+            return result
 
         except Exception as e:
             # self.memory.log_agent_action(
@@ -162,7 +173,7 @@ class WorkflowCoordinatorAgent:
 
     def execute_save_as_template_workflow(
         self,
-        image_id: int,
+        image_id: str,  # Session 95: Changed to str for UUID support
         template_name: str,
         tags: List[str] = None,
         also_add_to_references: bool = True
@@ -259,7 +270,7 @@ class WorkflowCoordinatorAgent:
     def execute_train_brand_style_workflow(
         self,
         brand_name: str,
-        image_ids: List[int],
+        image_ids: List[str],  # Session 95: Changed to List[str] for UUID support
         auto_submit: bool = False
     ) -> Dict:
         """

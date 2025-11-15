@@ -26,6 +26,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.utils import timezone  # Session 96 Weekend Project
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -35,11 +36,235 @@ logger = logging.getLogger(__name__)
 
 
 # ========================================
+# SESSION MANAGEMENT HELPERS (Session 96: Weekend Project)
+# ========================================
+
+def get_or_create_session(user, session_id=None, first_prompt=None):
+    """
+    Get existing session or create new one for AI Assistant conversations
+
+    Args:
+        user: User object
+        session_id: UUID of existing session (optional)
+        first_prompt: First user message in conversation (for new sessions)
+
+    Returns:
+        AISession object
+    """
+    from content.models import AISession
+    import uuid as uuid_lib
+
+    if session_id:
+        # Try to get existing session
+        try:
+            if isinstance(session_id, str):
+                session_id = uuid_lib.UUID(session_id)
+            session = AISession.objects.get(session_id=session_id, user=user, is_active=True)
+            logger.info(f"📝 Retrieved existing session: {session.session_id}")
+            return session
+        except AISession.DoesNotExist:
+            logger.warning(f"⚠️ Session {session_id} not found, creating new one")
+
+    # Create new session
+    # Generate title from first prompt (take first 50 chars or use generic)
+    if first_prompt:
+        title = first_prompt[:50] + ('...' if len(first_prompt) > 50 else '')
+    else:
+        title = f"AI Session {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+
+    session = AISession.objects.create(
+        user=user,
+        title=title,
+        first_prompt=first_prompt or '',
+        conversation_transcript=[],
+        is_active=True
+    )
+
+    logger.info(f"✨ Created new session: {session.session_id} - '{title}'")
+    return session
+
+
+def update_session_transcript(session, role, content):
+    """
+    Add message to session conversation transcript
+
+    Args:
+        session: AISession object
+        role: 'user' or 'assistant'
+        content: Message content
+    """
+    if not session:
+        return
+
+    session.conversation_transcript.append({
+        'role': role,
+        'content': content,
+        'timestamp': timezone.now().isoformat()
+    })
+    session.save(update_fields=['conversation_transcript'])
+
+
+def get_image_by_number(user, image_number):
+    """
+    Get image UUID from sequential number
+
+    Session 96 Weekend Project: Hybrid Image ID system
+    Allows AI Assistant to understand "Use image 12" commands
+
+    Args:
+        user: User object
+        image_number: Sequential number (1-based)
+
+    Returns:
+        ImageHistory object or None
+    """
+    from content.models import ImageHistory
+
+    try:
+        # Get all user's images ordered by creation date
+        images = ImageHistory.objects.filter(user=user).order_by('created_at')
+
+        # Sequential numbers are 1-based, list indices are 0-based
+        if image_number < 1:
+            return None
+
+        # Get the image at position (image_number - 1)
+        if image_number <= images.count():
+            return images[image_number - 1]
+
+        return None
+
+    except Exception as e:
+        logger.error(f"❌ Error getting image by number: {e}")
+        return None
+
+
+def increment_session_counter(session, content_type):
+    """
+    Increment session content counter and trigger auto-project creation if needed
+
+    Args:
+        session: AISession object
+        content_type: 'image', 'video', or 'audio'
+
+    Returns:
+        dict: Project creation info if project was auto-created, None otherwise
+    """
+    if not session:
+        return None
+
+    if content_type == 'image':
+        session.total_images += 1
+        session.save(update_fields=['total_images'])
+    elif content_type == 'video':
+        session.total_videos += 1
+        session.save(update_fields=['total_videos'])
+    elif content_type == 'audio':
+        session.total_audio += 1
+        session.save(update_fields=['total_audio'])
+
+    logger.info(f"📊 Session {session.session_id}: Updated {content_type} counter")
+
+    # Session 96 Weekend Project: Auto-create project if meaningful content created
+    # Trigger when: 3+ images OR 1+ video OR 2+ audio files
+    should_create_project = (
+        session.total_images >= 3 or
+        session.total_videos >= 1 or
+        session.total_audio >= 2
+    )
+
+    if should_create_project and not session.project and not session.auto_created_project:
+        logger.info(f"🎯 Auto-creating project for session {session.session_id}")
+        project = auto_create_project_from_session(session)
+        if project:
+            # Session 96: Return project info for frontend notification
+            return {
+                'project_created': True,
+                'project_id': project.id,
+                'project_name': project.name
+            }
+
+    return None
+
+
+def auto_create_project_from_session(session):
+    """
+    Automatically create a CreativeProject from an AI session
+
+    Session 96 Weekend Project: Auto-organize content into projects
+
+    Args:
+        session: AISession object with meaningful content
+    """
+    from content.models import CreativeProject
+
+    if not session:
+        return None
+
+    # Skip if already has project or already auto-created one
+    if session.project or session.auto_created_project:
+        return None
+
+    # Determine project name from session title
+    # Remove common AI prompt prefixes for cleaner project names
+    project_name = session.title
+    prefixes_to_remove = [
+        'create a ', 'create ', 'make a ', 'make ',
+        'generate a ', 'generate ', 'design a ', 'design ',
+        'build a ', 'build '
+    ]
+    project_name_lower = project_name.lower()
+    for prefix in prefixes_to_remove:
+        if project_name_lower.startswith(prefix):
+            project_name = project_name[len(prefix):]
+            break
+
+    # Capitalize first letter
+    project_name = project_name[0].upper() + project_name[1:] if project_name else session.title
+
+    # Determine project category based on session type and content
+    category = 'branding'  # Default
+    if session.session_type:
+        category_map = {
+            'logo_design': 'branding',
+            'video_creation': 'marketing',
+            'content_package': 'marketing',
+            'branding': 'branding',
+        }
+        category = category_map.get(session.session_type, 'branding')
+    elif session.total_videos > 0:
+        category = 'marketing'
+
+    # Generate project goal from first prompt
+    goal = session.first_prompt if session.first_prompt else f"Auto-created from AI session: {session.title}"
+    if len(goal) > 200:
+        goal = goal[:197] + '...'
+
+    # Create project
+    project = CreativeProject.objects.create(
+        user=session.user,
+        name=project_name,
+        category=category,
+        goal=goal,
+        status='active',
+        metadata={'auto_generated': True, 'source': 'ai_session'}  # Mark as auto-created
+    )
+
+    # Link session to project
+    session.project = project
+    session.auto_created_project = True
+    session.save(update_fields=['project', 'auto_created_project'])
+
+    logger.info(f"✨ Auto-created project '{project.name}' (ID: {project.id}) for session {session.session_id}")
+    return project
+
+
+# ========================================
 # IMAGE HISTORY HELPER (Session 36: Feature 9)
 # ========================================
 
 def save_to_history(user, file_path, image_type, prompt='', parameters=None,
-                    model_used='', style='', parent_image=None):
+                    model_used='', style='', parent_image=None, seed=None, session=None):
     """
     Helper function to save image to ImageHistory database.
 
@@ -52,6 +277,8 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
         model_used: Model name (core, sdxl, sd3, ultra)
         style: Style preset name
         parent_image: Parent ImageHistory object if this is an edit
+        seed: Random seed used for generation (for reproducibility) - Session 95
+        session: AISession object linking to conversation (Session 96 Weekend Project)
     """
     try:
         from content.models import ImageHistory
@@ -84,7 +311,9 @@ def save_to_history(user, file_path, image_type, prompt='', parameters=None,
             image_width=width,
             image_height=height,
             file_size_bytes=file_size,
-            parent_image=parent_image
+            parent_image=parent_image,
+            seed=seed,  # Session 95: Save seed for reproducibility
+            session=session  # Session 96 Weekend Project: Link to AI conversation
         )
 
         logger.info(f"✅ Saved to history: {image_type} - {history.filename} (ID: {history.id})")
@@ -217,7 +446,12 @@ def gallery_generate(request):
 
         # Save images and create records
         saved_images = []
-        for img_data in generated_images:
+        # Session 95: Extract seeds from result metadata if available
+        seeds = []
+        if hasattr(result, 'metadata') and result.metadata and 'seeds' in result.metadata:
+            seeds = result.metadata['seeds']
+
+        for img_index, img_data in enumerate(generated_images):
             try:
                 # Save to media storage
                 image_id = str(uuid.uuid4())
@@ -257,6 +491,9 @@ def gallery_generate(request):
                     }
                     model_used = quality_to_model.get(quality, 'sdxl')
 
+                    # Session 95: Get seed for this image if available
+                    image_seed = seeds[img_index] if img_index < len(seeds) else None
+
                     # Save to history (Session 36: Feature 9)
                     save_to_history(
                         user=user,
@@ -272,7 +509,8 @@ def gallery_generate(request):
                             'num_images': num_images
                         },
                         model_used=model_used,
-                        style=style
+                        style=style,
+                        seed=image_seed  # Session 95: Add seed for reproducibility
                     )
 
                     # Save image record (works for both base64 and HTTP URLs)
@@ -1463,6 +1701,8 @@ def image_history(request):
         for img in queryset:
             images.append({
                 'id': img.id,
+                'sequential_number': img.get_sequential_number(),  # Session 96: Hybrid ID system
+                'seed': img.seed,  # Session 95: For reproducibility
                 'filename': img.filename,
                 'url': img.get_full_url(),
                 'thumbnail_url': img.get_thumbnail_url(),
@@ -3125,7 +3365,12 @@ def unified_gallery(request):
 
         # Fetch videos if requested
         if media_type in ['all', 'videos']:
-            video_queryset = VideoHistory.objects.filter(user=user, status='completed')
+            # Session 96: Exclude videos with expired external CDN URLs
+            video_queryset = VideoHistory.objects.filter(user=user, status='completed').exclude(
+                Q(video_url__icontains='cloudfront.net') |
+                Q(video_url__icontains='storage.googleapis.com') |
+                Q(video_url__icontains='_jwt=')
+            )
 
             # Apply filters
             if is_favorite is not None:
@@ -3218,6 +3463,121 @@ def unified_gallery(request):
         return Response({
             'error': str(e)
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def session_gallery(request):
+    """
+    Get all content (images, videos, audio) for a specific AI session.
+    Session 96: Frontend Integration - Session content viewer
+
+    Query parameters:
+    - session_id: UUID of the session (required)
+
+    Returns:
+    {
+        "session": {
+            "session_id": "uuid",
+            "title": "Session title",
+            "created_at": "timestamp",
+            "total_images": 5,
+            "total_videos": 2,
+            "total_audio": 1
+        },
+        "images": [...],
+        "videos": [...],
+        "audio": [...]
+    }
+    """
+    try:
+        from content.models import AISession, ImageHistory, VideoHistory
+
+        user = request.user
+        session_id = request.query_params.get('session_id')
+
+        if not session_id:
+            return Response({
+                'error': 'session_id parameter is required'
+            }, status=400)
+
+        # Get session
+        try:
+            session = AISession.objects.get(session_id=session_id, user=user)
+        except AISession.DoesNotExist:
+            return Response({
+                'error': 'Session not found'
+            }, status=404)
+
+        # Get all images for this session
+        images = []
+        image_queryset = ImageHistory.objects.filter(
+            user=user,
+            session=session
+        ).exclude(
+            file_path__startswith='data:'  # Exclude data URIs
+        ).order_by('-created_at')
+
+        for img in image_queryset:
+            images.append({
+                'id': str(img.id),
+                'sequential_number': img.get_sequential_number(),
+                'url': img.get_full_url(),
+                'thumbnail_url': img.get_thumbnail_url(),
+                'prompt': img.prompt,
+                'image_type': img.image_type,
+                'model_used': img.model_used,
+                'style': img.style,
+                'seed': img.seed,
+                'created_at': img.created_at.isoformat(),
+                'is_favorite': img.is_favorite
+            })
+
+        # Get all videos for this session
+        videos = []
+        video_queryset = VideoHistory.objects.filter(
+            user=user,
+            session=session
+        ).order_by('-created_at')
+
+        for vid in video_queryset:
+            videos.append({
+                'id': str(vid.id),
+                'url': vid.video_url,
+                'thumbnail_url': vid.thumbnail_url,
+                'prompt': vid.prompt,
+                'video_type': vid.video_type,
+                'model_used': vid.model_used,
+                'duration': vid.duration,
+                'status': vid.status,
+                'created_at': vid.created_at.isoformat(),
+                'is_favorite': vid.is_favorite
+            })
+
+        # Build response
+        response_data = {
+            'session': {
+                'session_id': str(session.session_id),
+                'title': session.title,
+                'created_at': session.created_at.isoformat(),
+                'total_images': session.total_images,
+                'total_videos': session.total_videos,
+                'total_audio': session.total_audio
+            },
+            'images': images,
+            'videos': videos,
+            'audio': []  # TODO: Add audio when available
+        }
+
+        logger.info(f"📊 Session gallery: {session_id} - {len(images)} images, {len(videos)} videos")
+        return Response(response_data)
+
+    except Exception as e:
+        logger.error(f"❌ Session gallery error: {str(e)}")
+        return Response({
+            'error': str(e)
+        }, status=500)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -4301,11 +4661,22 @@ def assistant_chat(request):
     try:
         user_message = request.data.get('message', '').strip()
         conversation_history = request.data.get('history', [])  # Optional for context
+        session_id = request.data.get('session_id')  # Session 96 Weekend Project
 
         if not user_message:
             return Response({
                 'error': 'Message is required'
             }, status=400)
+
+        # Session 96 Weekend Project: Get or create AI session for tracking
+        session = get_or_create_session(
+            user=request.user,
+            session_id=session_id,
+            first_prompt=user_message if not session_id else None
+        )
+
+        # Store user message in session transcript
+        update_session_transcript(session, 'user', user_message)
 
         # Session 59: Phase B.4 - Get user preferences for personalized assistance
         user_prefs = get_user_preferences(request.user)
@@ -5055,11 +5426,11 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "save_as_template",
-                    "description": "Save image as reusable template for exact reproduction. Stores seed for perfect consistency! Session 90: TemplateManagerAgent integration.",
+                    "description": "Save image as reusable template for exact reproduction. Stores seed for perfect consistency! Session 90: TemplateManagerAgent integration. Use the UUID from Copy ID button (e.g. '351a3cf0-66c9-4cdc-990d-b4172e725b9d').",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "image_id": {"type": "integer", "description": "Image to save"},
+                            "image_id": {"type": "string", "description": "Image UUID (from Copy ID button)"},
                             "template_name": {"type": "string", "description": "Name for template"},
                             "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags like ['logo', 'coffee']"}
                         },
@@ -5071,12 +5442,12 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "train_brand_style",
-                    "description": "Train FLUX LoRA on brand aesthetic. Takes 30-60 min but enables perfect brand consistency with trigger word. Session 90: BrandStyleAgent integration.",
+                    "description": "Train FLUX LoRA on brand aesthetic. Takes 30-60 min but enables perfect brand consistency with trigger word. Session 90: BrandStyleAgent integration. Use UUIDs from Copy ID button.",
                     "parameters": {
                         "type": "object",
                         "properties": {
                             "brand_name": {"type": "string", "description": "Brand name"},
-                            "image_ids": {"type": "array", "items": {"type": "integer"}, "description": "5-10 images"},
+                            "image_ids": {"type": "array", "items": {"type": "string"}, "description": "5-10 image UUIDs (from Copy ID button)"},
                             "auto_submit": {"type": "boolean", "default": False, "description": "Start training immediately?"}
                         },
                         "required": ["brand_name", "image_ids"]
@@ -5087,11 +5458,11 @@ Keep responses under 200 words. Be conversational and practical."""
                 "type": "function",
                 "function": {
                     "name": "refine_image",
-                    "description": "Refine image with natural language: 'make it bigger', 'change to blue', 'add more contrast', etc. Session 90: IterationAgent integration.",
+                    "description": "Refine image with natural language: 'make it bigger', 'change to blue', 'add more contrast', etc. Session 90: IterationAgent integration. Use the UUID from Copy ID button.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "image_id": {"type": "integer", "description": "Image to refine"},
+                            "image_id": {"type": "string", "description": "Image UUID (from Copy ID button)"},
                             "refinement_request": {"type": "string", "description": "Natural language refinement"}
                         },
                         "required": ["image_id", "refinement_request"]
@@ -5139,7 +5510,12 @@ Keep responses under 200 words. Be conversational and practical."""
                     for tool_call in tool_calls
                 ],
                 'model': 'gpt-5-mini',
-                'user_message': user_message
+                'user_message': user_message,
+                'session_id': str(session.session_id),  # Session 96: Return session ID for tracking
+                'session_title': session.title,  # Session 96: Frontend integration
+                'total_images': session.total_images,  # Session 96: Frontend integration
+                'total_videos': session.total_videos,  # Session 96: Frontend integration
+                'total_audio': session.total_audio  # Session 96: Frontend integration
             })
         else:
             # Normal text response
@@ -5152,10 +5528,18 @@ Keep responses under 200 words. Be conversational and practical."""
             assistant_response = assistant_response.strip()
             logger.info(f"✅ Assistant response generated ({len(assistant_response)} chars)")
 
+            # Session 96 Weekend Project: Store assistant response in session transcript
+            update_session_transcript(session, 'assistant', assistant_response)
+
             return Response({
                 'message': assistant_response,
                 'model': 'gpt-5-mini',
-                'user_message': user_message
+                'user_message': user_message,
+                'session_id': str(session.session_id),  # Session 96: Return session ID for tracking
+                'session_title': session.title,  # Session 96: Frontend integration
+                'total_images': session.total_images,  # Session 96: Frontend integration
+                'total_videos': session.total_videos,  # Session 96: Frontend integration
+                'total_audio': session.total_audio  # Session 96: Frontend integration
             })
 
     except Exception as e:
@@ -5258,6 +5642,7 @@ def execute_tool(request):
     try:
         tool_name = request.data.get('tool_name')
         parameters = request.data.get('parameters', {})
+        session_id = request.data.get('session_id')  # Session 96 Weekend Project
 
         if not tool_name:
             return Response({
@@ -5266,11 +5651,16 @@ def execute_tool(request):
 
         logger.info(f"🔧 Executing tool: {tool_name} with params: {parameters}")
 
+        # Session 96 Weekend Project: Get session for linking generated content
+        session = None
+        if session_id:
+            session = get_or_create_session(user=request.user, session_id=session_id)
+
         # Route to appropriate tool handler
         if tool_name == 'generate_image':
-            result = _execute_generate_image(request.user, parameters)
+            result = _execute_generate_image(request.user, parameters, session=session)
         elif tool_name == 'generate_video':
-            result = _execute_generate_video(request.user, parameters)
+            result = _execute_generate_video(request.user, parameters, session=session)
         elif tool_name == 'inpaint':
             result = _execute_inpaint(request.user, parameters)
         elif tool_name == 'web_search':
@@ -5324,7 +5714,8 @@ def execute_tool(request):
                 prompt=parameters.get('prompt'),
                 count=parameters.get('count', 3),
                 style=parameters.get('style'),
-                model=parameters.get('model')
+                model=parameters.get('model'),
+                session=session  # Session 96: Pass session for content linking
             )
 
             # Store batch_id for later reference
@@ -5535,17 +5926,19 @@ Be specific and accurate. This is for autonomous text correction."""
         }
 
 
-def _execute_generate_image(user, parameters):
+def _execute_generate_image(user, parameters, session=None):
     """
     Execute image generation tool
     Routes to Stability AI image generation
 
     Session 65: Phase 2.1 - Autonomous image generation
+    Session 96: Weekend Project - Link generated images to AI session
 
     Parameters:
         prompt (str): Image description
         model (str): Model to use (core/sdxl/sd3/ultra) - optional
         style (str): Style preset - optional
+        session (AISession): AI conversation session - optional
 
     Returns:
         dict: {
@@ -5630,6 +6023,7 @@ def _execute_generate_image(user, parameters):
                 raise Exception(f"Failed to download image: {response.status_code}")
 
         # Save to ImageHistory for tracking
+        # Session 96 Weekend Project: Link to AI conversation session
         history_record = save_to_history(
             user=user,
             file_path=file_path,
@@ -5638,10 +6032,14 @@ def _execute_generate_image(user, parameters):
             parameters={'model': model, 'style': style, 'quality': quality},
             model_used=model,
             style=style,
-            parent_image=None
+            parent_image=None,
+            session=session  # Session 96: Link to AI conversation
         )
 
         logger.info(f"✅ Executor generated image successfully: {saved_url}")
+
+        # Session 96 Weekend Project: Update session counter and check for auto-project creation
+        project_info = increment_session_counter(session, 'image')
 
         # Session 66: AUTONOMOUS TEXT VERIFICATION & REFINEMENT
         expected_text = parameters.get('expected_text', '').strip()
@@ -5700,7 +6098,7 @@ def _execute_generate_image(user, parameters):
             if current_history_id:
                 history_record = type('obj', (object,), {'id': current_history_id})()
 
-        return {
+        result = {
             'success': True,
             'image_url': saved_url,
             'image_id': history_record.id if history_record else None,
@@ -5711,21 +6109,39 @@ def _execute_generate_image(user, parameters):
             'autonomous_refinement': len(refinement_history) > 1 if refinement_history else False
         }
 
+        # Session 96: Include project creation info if project was auto-created
+        if project_info:
+            result.update(project_info)
+
+        # Session 96: Include updated session counters for frontend indicator
+        if session:
+            session.refresh_from_db()  # Get latest counter values
+            result['session_data'] = {
+                'session_id': str(session.session_id),
+                'total_images': session.total_images,
+                'total_videos': session.total_videos,
+                'total_audio': session.total_audio
+            }
+
+        return result
+
     except Exception as e:
         logger.error(f"❌ Error in _execute_generate_image: {str(e)}")
         raise
 
 
-def _execute_generate_video(user, parameters):
+def _execute_generate_video(user, parameters, session=None):
     """
     Execute video generation tool
     Routes to Runway ML video generation
 
     Session 65: Phase 2.2 - Autonomous video generation
+    Session 96: Weekend Project - Link generated videos to AI session
 
     Parameters:
         prompt (str): Video description
         duration (int): Duration in seconds (5 or 10) - optional
+        session (AISession): AI conversation session - optional
 
     Returns:
         dict: {
@@ -5776,6 +6192,7 @@ def _execute_generate_video(user, parameters):
 
         # Session 68: Create VideoHistory record (not just ContentGeneration!)
         # This makes AI Assistant videos appear in Video Gallery
+        # Session 96 Weekend Project: Link to AI conversation session
         from content.models import VideoHistory
         video = VideoHistory.objects.create(
             user=user,
@@ -5794,13 +6211,17 @@ def _execute_generate_video(user, parameters):
             model_used='veo3.1_fast',
             duration=duration,
             ratio='1920:1080',
-            status='processing'
+            status='processing',
+            session=session  # Session 96: Link to AI conversation
         )
 
         logger.info(f"✅ Executor started video generation: {result.task_id}")
         logger.info(f"📹 Created VideoHistory record: {video.id}")
 
-        return {
+        # Session 96 Weekend Project: Update session counter and check for auto-project creation
+        project_info = increment_session_counter(session, 'video')
+
+        result_dict = {
             'success': True,
             'task_id': result.task_id,
             'content_id': str(video.id),
@@ -5808,6 +6229,12 @@ def _execute_generate_video(user, parameters):
             'estimated_time': result.estimated_time,
             'message': 'Video generation started successfully'
         }
+
+        # Session 96: Include project creation info if project was auto-created
+        if project_info:
+            result_dict.update(project_info)
+
+        return result_dict
 
     except Exception as e:
         logger.error(f"❌ Error in _execute_generate_video: {str(e)}")
@@ -8127,7 +8554,7 @@ def get_portfolio(request):
         # Import models locally
         from content.models import ImageHistory, VideoHistory
         from django.utils.dateparse import parse_datetime
-        from django.db.models import Q
+        from django.db.models import Q  # Session 96: Needed for video URL filtering
 
         logger.info(f"📊 Loading portfolio for user: {request.user.username}")
 
@@ -8234,7 +8661,12 @@ def get_portfolio(request):
 
         # Query videos
         if not content_type or content_type == 'video':
-            videos_query = VideoHistory.objects.filter(**video_filter).select_related('user')
+            # Session 96: Exclude videos with expired external CDN URLs
+            videos_query = VideoHistory.objects.filter(**video_filter).exclude(
+                Q(video_url__icontains='cloudfront.net') |
+                Q(video_url__icontains='storage.googleapis.com') |
+                Q(video_url__icontains='_jwt=')
+            ).select_related('user')
 
             # Session 62: Phase C.2.1 - Apply search filter
             if search_query:
@@ -8358,7 +8790,8 @@ def get_portfolio(request):
 
         logger.info(f"✅ Portfolio loaded: {stats['total_items']} items ({stats['images']} images, {stats['videos']} videos, {stats['audio']} audio)")
 
-        return Response({
+        # Session 96: Add no-cache headers to prevent browser caching of expired video URLs
+        response = Response({
             'success': True,
             'portfolio': portfolio_items,
             'stats': stats,
@@ -8370,6 +8803,10 @@ def get_portfolio(request):
                 'sort_by': sort_by
             }
         })
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
 
     except Exception as e:
         logger.error(f"❌ Error loading portfolio: {str(e)}")

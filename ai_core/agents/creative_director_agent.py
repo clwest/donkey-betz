@@ -11,12 +11,16 @@ Session 90 - The Perfect Workflow Implementation
 
 import random
 import uuid
+import base64
+import re
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 from content.models import ImageHistory, UserCreativePreference
 from content.image_generation import ImageGenerationService
@@ -137,6 +141,7 @@ class CreativeDirectorAgent:
 
         options = []
         errors = []  # Track errors for debugging
+        project_info = None  # Session 96: Track if project was auto-created
 
         for i in range(count):
             # Session 92: Use pre-selected diverse style for this option
@@ -170,14 +175,31 @@ class CreativeDirectorAgent:
                 if not result.success or not result.images:
                     raise Exception(result.error_message or "No images generated")
 
-                # Create ImageHistory record with correct field names
+                # Session 95: Download and save data URI to actual file storage
                 image_url = result.images[0]
-                filename = f"option_{i+1}_{batch_id}.png"
+                filename = f"generated_images/{self.user.id}/option_{i+1}_{batch_id}.png"
+
+                # Extract base64 data from data URI and save to storage
+                if image_url.startswith('data:image'):
+                    base64_match = re.search(r'base64,(.+)', image_url)
+                    if base64_match:
+                        image_data = base64.b64decode(base64_match.group(1))
+                        file_path = default_storage.save(filename, ContentFile(image_data))
+                        stored_url = default_storage.url(file_path)
+                    else:
+                        raise Exception("Invalid data URI format")
+                else:
+                    # Regular URL - save directly
+                    file_path = image_url
+                    stored_url = image_url
+
+                # Session 96: Extract session from kwargs if provided
+                session = kwargs.get('session')
 
                 image_history = ImageHistory.objects.create(
                     user=self.user,
                     filename=filename,
-                    file_path=image_url,
+                    file_path=file_path,  # Session 95: Now uses actual file path, not data URI
                     image_type='generated',
                     prompt=gen_params['prompt'],
                     model_used=gen_params['model'],
@@ -187,8 +209,17 @@ class CreativeDirectorAgent:
                     seed=seed,
                     generation_batch_id=batch_id,
                     option_number=i + 1,
-                    was_selected=False
+                    was_selected=False,
+                    session=session  # Session 96: Link to AI session for tracking
                 )
+
+                # Session 96: Update session counter for auto-project creation
+                if session:
+                    from core.views_image import increment_session_counter
+                    result_info = increment_session_counter(session, 'image')
+                    # Capture project creation info (only returned when threshold hit)
+                    if result_info and not project_info:
+                        project_info = result_info
 
                 options.append({
                     'id': image_history.id,
@@ -227,7 +258,7 @@ class CreativeDirectorAgent:
         # Generate learning message based on user's progress
         learning_message = self._get_learning_message(len(options))
 
-        return {
+        result = {
             'batch_id': str(batch_id),
             'options': options,
             'learning_message': learning_message,
@@ -235,6 +266,12 @@ class CreativeDirectorAgent:
             'learning_stage': self.preferences.get_learning_stage(),
             'errors': errors if errors else None  # Include errors for debugging
         }
+
+        # Session 96: Include project creation info if project was auto-created
+        if project_info:
+            result.update(project_info)
+
+        return result
 
     def record_choice(self, selected_image_id: int) -> Dict:
         """
