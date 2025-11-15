@@ -1,0 +1,53 @@
+name: donkey_os_cockpit
+description: Mobile cockpit for DonkeyOS AI platform - Human-AI Co-Leadership
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.4.0
+  riverpod_annotation: ^2.3.0
+
+  # Networking
+  http: ^1.1.0
+  dio: ^5.3.3
+
+  # JSON Serialization
+  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.1
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+
+  # Environment Configuration
+  flutter_dotenv: ^5.1.0
+
+  # UI Components
+  cupertino_icons: ^1.0.6
+  intl: ^0.18.1
+  cached_network_image: ^3.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation
+  build_runner: ^2.4.6
+  json_serializable: ^6.7.1
+  riverpod_generator: ^2.3.0
+  freezed: ^2.4.5
+
+  # Linting
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # App will use deep purple theme matching Django backend

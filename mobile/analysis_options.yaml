@@ -1,0 +1,24 @@
+# Flutter analysis options
+# Session 100 Part 13 - Flutter Cockpit
+
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Recommended rules
+    - avoid_print
+    - prefer_const_constructors
+    - prefer_const_literals_to_create_immutables
+    - use_key_in_widget_constructors
+    - prefer_final_fields
+    - unnecessary_null_aware_assignments
+    - prefer_is_empty
+    - prefer_is_not_empty
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  errors:
+    missing_required_param: error
+    missing_return: error

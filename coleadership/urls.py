@@ -10,6 +10,13 @@ from . import views
 app_name = 'coleadership'
 
 urlpatterns = [
+    # Boardroom meeting start (Session 100: Part 13 - Flutter integration)
+    path(
+        'boardroom/start/',
+        views.start_boardroom_meeting,
+        name='start-boardroom-meeting'
+    ),
+
     # Human decision commit
     path(
         'decisions/<uuid:decision_id>/human_decision/',

@@ -259,6 +259,172 @@ def get_stats(request):
         }, status=500)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_boardroom_meeting(request):
+    """
+    Start an executive boardroom meeting via REST API.
+
+    Session 100: Part 13 - Standalone boardroom meeting endpoint for Flutter client.
+
+    POST body:
+    {
+        "topic": "Q4 Product Launch Strategy",
+        "project_id": "uuid-optional",
+        "participants": ["CTOAgent", "CFOAgent", "MarketingAgent"]
+    }
+
+    Returns complete meeting data including:
+    - Agent perspectives
+    - Meeting summary
+    - Decisions made
+    - Action items with ownership
+    - session_id and decision_id for follow-up actions
+    """
+    try:
+        from agents.meeting_coordinator_agent import MeetingCoordinatorAgent
+        from content.models import AISession, CreativeProject
+        from agents.models import UnifiedAgentTemplate
+        from .services import start_decision, log_agent_recommendation
+        import uuid as uuid_module
+
+        # Extract parameters
+        topic = request.data.get('topic', '').strip()
+        project_id = request.data.get('project_id')
+        participants = request.data.get('participants', ['CTOAgent', 'COOAgent'])
+
+        # Validate required fields
+        if not topic:
+            return Response({
+                'error': 'topic is required'
+            }, status=400)
+
+        if not participants or not isinstance(participants, list):
+            return Response({
+                'error': 'participants must be a non-empty list of agent names'
+            }, status=400)
+
+        # Get project if provided
+        project = None
+        if project_id:
+            try:
+                # Validate UUID format
+                project_uuid = uuid_module.UUID(project_id)
+                project = CreativeProject.objects.get(
+                    project_id=project_uuid,
+                    user=request.user
+                )
+            except (CreativeProject.DoesNotExist, ValueError, TypeError):
+                # If UUID is invalid or project doesn't exist, just skip project linkage
+                logger.warning(f"Invalid or non-existent project_id: {project_id}")
+                pass
+
+        # Start the meeting
+        coordinator = MeetingCoordinatorAgent(user=request.user)
+        meeting_result = coordinator.start_meeting(
+            topic=topic,
+            project_id=project_id,
+            participants=participants
+        )
+
+        # Check if meeting was successful
+        if meeting_result.get('status') != 'complete':
+            return Response({
+                'error': 'Meeting failed to complete',
+                'details': meeting_result.get('message', 'Unknown error')
+            }, status=500)
+
+        # Create a boardroom AISession to store results
+        session = AISession.objects.create(
+            user=request.user,
+            title=f"Boardroom: {topic[:100]}",
+            session_type='boardroom',
+            meeting_topic=topic,
+            project=project,
+            participants=meeting_result.get('participants', []),
+            meeting_summary=meeting_result.get('summary', ''),
+            decisions=meeting_result.get('decisions', []),
+            action_items=meeting_result.get('action_items', []),
+            agent_responses=meeting_result.get('agent_responses', {}),
+            is_active=False,  # Meetings are one-shot
+            conversation_transcript=[{
+                'role': 'system',
+                'content': f"Executive meeting conducted: {topic}"
+            }]
+        )
+
+        logger.info(f"✅ Created boardroom session: {session.session_id}")
+
+        # Create co-leadership decision + log agent recommendations
+        decision = start_decision(
+            project=project,
+            session=session,
+            user=request.user,
+            title=topic,
+            description=meeting_result.get('summary', '')
+        )
+
+        # Log each agent's recommendation
+        agent_responses = meeting_result.get('agent_responses', {})
+        for agent_name, response_text in agent_responses.items():
+            try:
+                # Find agent template
+                agent_template = UnifiedAgentTemplate.objects.get(name=agent_name)
+
+                # Simple stance inference (can enhance later)
+                stance = 'neutral'  # Default
+                if 'recommend' in response_text.lower() or 'support' in response_text.lower():
+                    stance = 'support'
+                elif 'concern' in response_text.lower() or 'risk' in response_text.lower():
+                    stance = 'concern'
+                elif 'alternative' in response_text.lower():
+                    stance = 'alternative'
+
+                # Log recommendation
+                log_agent_recommendation(
+                    decision=decision,
+                    agent_template=agent_template,
+                    payload_dict={
+                        'stance': stance,
+                        'summary': response_text[:200],  # First 200 chars
+                        'recommendation': response_text,
+                        'risks': '',  # Can extract later
+                        'alternative_paths': [],
+                        'confidence': None,  # Can add later
+                        'time_horizon': ''
+                    }
+                )
+            except UnifiedAgentTemplate.DoesNotExist:
+                logger.warning(f"Agent template not found: {agent_name}")
+                continue
+
+        logger.info(f"✅ Boardroom meeting complete: {topic}")
+
+        # Return complete meeting data (matching existing format)
+        return Response({
+            'success': True,
+            'topic': topic,
+            'project_id': str(project.project_id) if project else None,
+            'participants': meeting_result.get('participants', []),
+            'agent_responses': meeting_result.get('agent_responses', {}),
+            'summary': meeting_result.get('summary', ''),
+            'decisions': meeting_result.get('decisions', []),
+            'action_items': meeting_result.get('action_items', []),
+            'met_at': meeting_result.get('met_at'),
+            'session_id': str(session.session_id),
+            'decision_id': str(decision.id)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error starting boardroom meeting: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to start boardroom meeting',
+            'details': str(e)
+        }, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_project_decisions(request, project_id):
