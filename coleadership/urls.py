@@ -30,4 +30,11 @@ urlpatterns = [
         views.get_stats,
         name='get-stats'
     ),
+
+    # Project decisions (Session 100: Part 2)
+    path(
+        'projects/<uuid:project_id>/decisions/',
+        views.get_project_decisions,
+        name='get-project-decisions'
+    ),
 ]
