@@ -21454,12 +21454,296 @@
                 html += '</div>';
             }
 
+            // Session 99: Co-Leadership Decision Commit UI
+            if (result.decision_id) {
+                html += '<div style="margin-top: 20px; padding: 16px; background: rgba(251, 191, 36, 0.08); border-radius: 10px; border: 2px solid rgba(251, 191, 36, 0.3);">';
+                html += '<h5 style="color: #fbbf24; font-weight: 700; font-size: 15px; margin-bottom: 12px;">💾 Commit Your Decision</h5>';
+                html += '<p style="font-size: 12px; color: #cbd5e1; margin-bottom: 16px;">You\'ve heard from the agents. Now it\'s your turn to decide.</p>';
+
+                // Chosen path summary (required)
+                html += '<div style="margin-bottom: 12px;">';
+                html += '<label style="display: block; font-size: 13px; color: #e2e8f0; font-weight: 600; margin-bottom: 6px;">What did you decide? *</label>';
+                html += `<textarea id="decision-summary-${result.decision_id}" rows="3" placeholder="Example: I'm going with the phased rollout approach because it minimizes risk while maintaining momentum..." style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 13px; resize: vertical;"></textarea>`;
+                html += '</div>';
+
+                // Justification (optional)
+                html += '<div style="margin-bottom: 12px;">';
+                html += '<label style="display: block; font-size: 13px; color: #e2e8f0; font-weight: 600; margin-bottom: 6px;">Why? (Optional)</label>';
+                html += `<textarea id="decision-justification-${result.decision_id}" rows="2" placeholder="Optional: Explain your reasoning..." style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 13px; resize: vertical;"></textarea>`;
+                html += '</div>';
+
+                // Override checkbox
+                html += '<div style="margin-bottom: 12px;">';
+                html += `<label style="display: flex; align-items: center; cursor: pointer; font-size: 13px; color: #e2e8f0;">`;
+                html += `<input type="checkbox" id="decision-override-${result.decision_id}" onchange="toggleOverrideAgent('${result.decision_id}')" style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">`;
+                html += '<span>I\'m overriding an AI recommendation</span>';
+                html += '</label>';
+                html += '</div>';
+
+                // Overridden agent select (conditional)
+                html += `<div id="overridden-agent-section-${result.decision_id}" style="display: none; margin-bottom: 12px;">`;
+                html += '<label style="display: block; font-size: 13px; color: #e2e8f0; font-weight: 600; margin-bottom: 6px;">Which agent are you overriding?</label>';
+                html += `<select id="overridden-agent-${result.decision_id}" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 13px;">`;
+                html += '<option value="">Select agent...</option>';
+                // Add CTO and COO options (we know they participated)
+                html += '<option value="cto">🔧 CTO Agent</option>';
+                html += '<option value="coo">🏢 COO Agent</option>';
+                html += '</select>';
+                html += '</div>';
+
+                // Save button
+                html += `<button onclick="saveHumanDecision('${result.decision_id}')" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1a1a1a; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(251, 191, 36, 0.4)';" onmouseout="this.style.transform=''; this.style.boxShadow='';">`;
+                html += '💾 Save My Decision';
+                html += '</button>';
+
+                html += '</div>';
+            }
+
             html += '</div>';
 
             // Add to chat
             window.aiAssistant.addMessage('assistant', html);
 
             console.log('✅ Meeting results displayed in chat');
+        }
+
+        // Session 99: Toggle override agent selection
+        function toggleOverrideAgent(decisionId) {
+            const checkbox = document.getElementById(`decision-override-${decisionId}`);
+            const section = document.getElementById(`overridden-agent-section-${decisionId}`);
+
+            if (checkbox && section) {
+                section.style.display = checkbox.checked ? 'block' : 'none';
+            }
+        }
+
+        // Session 99: Save human decision
+        async function saveHumanDecision(decisionId) {
+            const summaryInput = document.getElementById(`decision-summary-${decisionId}`);
+            const justificationInput = document.getElementById(`decision-justification-${decisionId}`);
+            const overrideCheckbox = document.getElementById(`decision-override-${decisionId}`);
+            const agentSelect = document.getElementById(`overridden-agent-${decisionId}`);
+
+            // Validate required field
+            const summary = summaryInput.value.trim();
+            if (!summary) {
+                alert('Please describe what you decided.');
+                summaryInput.focus();
+                return;
+            }
+
+            // Get form values
+            const justification = justificationInput.value.trim();
+            const isOverride = overrideCheckbox.checked;
+            let overriddenAgentId = null;
+
+            // If override is checked, validate agent selection
+            if (isOverride) {
+                const agentValue = agentSelect.value;
+                if (!agentValue) {
+                    alert('Please select which agent you are overriding.');
+                    agentSelect.focus();
+                    return;
+                }
+
+                // Map agent values to UUIDs (we'll need to fetch these)
+                // For now, we'll pass the agent name and let the backend handle it
+                overriddenAgentId = agentValue;
+            }
+
+            try {
+                console.log('💾 Saving human decision for:', decisionId);
+
+                // Prepare payload
+                const payload = {
+                    chosen_path_summary: summary,
+                    justification: justification,
+                    is_override: isOverride
+                };
+
+                // Add overridden agent if applicable
+                if (isOverride && overriddenAgentId) {
+                    payload.overridden_agent_id = overriddenAgentId;
+                }
+
+                // Call API
+                const response = await fetch(`/api/v1/coleadership/decisions/${decisionId}/human_decision/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Decision saved:', data);
+
+                // Show success message
+                showNotification('✅ Decision Committed', 'Your decision has been recorded successfully');
+
+                // Replace the form with a success message and outcome logging option
+                const formDiv = summaryInput.closest('div[style*="rgba(251, 191, 36, 0.08)"]');
+                if (formDiv) {
+                    formDiv.innerHTML = `
+                        <div id="decision-committed-${decisionId}" style="text-align: center; padding: 20px;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+                            <h5 style="color: #4ade80; font-weight: 700; margin-bottom: 8px;">Decision Committed</h5>
+                            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px;">Your decision has been recorded.</p>
+                            ${data.is_override ? '<div style="margin-top: 12px; margin-bottom: 12px; padding: 8px; background: rgba(251, 191, 36, 0.2); border-radius: 6px; font-size: 12px; color: #fbbf24;">🎯 Override recorded - we\'ll learn from this!</div>' : ''}
+                            <button onclick="showOutcomeForm('${decisionId}')" style="padding: 10px 20px; background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 8px;">
+                                📊 Log Outcome Now
+                            </button>
+                        </div>
+
+                        <!-- Outcome Logging Form (hidden initially) -->
+                        <div id="outcome-form-${decisionId}" style="display: none; padding: 16px;">
+                            <h5 style="color: #22d3ee; font-weight: 700; font-size: 15px; margin-bottom: 12px;">📊 Log What Happened</h5>
+                            <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 16px;">After implementing your decision, record the actual outcome.</p>
+
+                            <!-- Status -->
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; font-size: 13px; color: #e2e8f0; font-weight: 600; margin-bottom: 6px;">Outcome Status *</label>
+                                <select id="outcome-status-${decisionId}" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 13px;">
+                                    <option value="pending">⏳ Pending - Not yet resolved</option>
+                                    <option value="success">✅ Success - Worked out well</option>
+                                    <option value="failure">❌ Failure - Did not work</option>
+                                    <option value="mixed">🔄 Mixed - Partly successful</option>
+                                </select>
+                            </div>
+
+                            <!-- Attribution -->
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; font-size: 13px; color: #e2e8f0; font-weight: 600; margin-bottom: 6px;">Who was more correct? *</label>
+                                <select id="outcome-attribution-${decisionId}" style="width: 100%; padding: 8px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 13px;">
+                                    <option value="unknown">🤷 Unknown/Unclear</option>
+                                    <option value="ai">🤖 AI was more correct</option>
+                                    <option value="human">👤 Human was more correct</option>
+                                    <option value="both">🤝 Both were partly correct</option>
+                                </select>
+                            </div>
+
+                            <!-- Outcome Summary -->
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; color: #e2e8f0; font-weight: 600; margin-bottom: 6px;">What actually happened?</label>
+                                <textarea id="outcome-summary-${decisionId}" rows="4" placeholder="Describe the actual results, key learnings, and any surprises..." style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 13px; resize: vertical;"></textarea>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="hideOutcomeForm('${decisionId}')" style="flex: 1; padding: 10px; background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border: 1px solid #475569; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                    Cancel
+                                </button>
+                                <button onclick="saveOutcome('${decisionId}')" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%); color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
+                                    💾 Save Outcome
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('❌ Failed to save decision:', error);
+                alert(`Failed to save decision: ${error.message}\n\nPlease try again or contact support.`);
+            }
+        }
+
+        // Session 99: Show outcome form
+        function showOutcomeForm(decisionId) {
+            const committedDiv = document.getElementById(`decision-committed-${decisionId}`);
+            const formDiv = document.getElementById(`outcome-form-${decisionId}`);
+
+            if (committedDiv && formDiv) {
+                committedDiv.style.display = 'none';
+                formDiv.style.display = 'block';
+            }
+        }
+
+        // Session 99: Hide outcome form
+        function hideOutcomeForm(decisionId) {
+            const committedDiv = document.getElementById(`decision-committed-${decisionId}`);
+            const formDiv = document.getElementById(`outcome-form-${decisionId}`);
+
+            if (committedDiv && formDiv) {
+                formDiv.style.display = 'none';
+                committedDiv.style.display = 'block';
+            }
+        }
+
+        // Session 99: Save outcome
+        async function saveOutcome(decisionId) {
+            const statusSelect = document.getElementById(`outcome-status-${decisionId}`);
+            const attributionSelect = document.getElementById(`outcome-attribution-${decisionId}`);
+            const summaryTextarea = document.getElementById(`outcome-summary-${decisionId}`);
+
+            if (!statusSelect || !attributionSelect || !summaryTextarea) {
+                console.error('❌ Outcome form elements not found');
+                return;
+            }
+
+            const status = statusSelect.value;
+            const attribution = attributionSelect.value;
+            const outcomeSummary = summaryTextarea.value.trim();
+
+            try {
+                console.log('📊 Saving outcome for:', decisionId);
+
+                // Prepare payload
+                const payload = {
+                    status: status,
+                    attribution: attribution,
+                    outcome_summary: outcomeSummary,
+                    metrics: {}
+                };
+
+                // Call API
+                const response = await fetch(`/api/v1/coleadership/decisions/${decisionId}/outcome/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Outcome saved:', data);
+
+                // Show success notification
+                showNotification('📊 Outcome Logged', 'The outcome has been recorded successfully');
+
+                // Replace outcome form with success message
+                const parentDiv = statusSelect.closest('div[style*="padding: 16px"]').parentElement;
+                if (parentDiv) {
+                    parentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">📊</div>
+                            <h5 style="color: #22d3ee; font-weight: 700; margin-bottom: 8px;">Outcome Logged</h5>
+                            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 8px;">Your outcome has been recorded.</p>
+                            ${data.told_you_so_triggered ? `<div style="margin-top: 12px; padding: 12px; background: rgba(251, 191, 36, 0.15); border-radius: 8px; border: 2px solid rgba(251, 191, 36, 0.3);">
+                                <div style="font-size: 13px; color: #fbbf24; font-weight: 600; margin-bottom: 6px;">💬 Reflection</div>
+                                <div style="font-size: 12px; color: #e2e8f0; line-height: 1.6;">${data.told_you_so_message || 'Thank you for logging the outcome. We\'re learning together!'}</div>
+                            </div>` : ''}
+                            ${attribution === 'ai' ? '<div style="margin-top: 12px; padding: 8px; background: rgba(139, 92, 246, 0.2); border-radius: 6px; font-size: 12px; color: #c4b5fd;">🤖 AI recommendation was correct - learning noted!</div>' : ''}
+                            ${attribution === 'human' ? '<div style="margin-top: 12px; padding: 8px; background: rgba(251, 191, 36, 0.2); border-radius: 6px; font-size: 12px; color: #fbbf24;">👤 Human decision was correct - excellent judgment!</div>' : ''}
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('❌ Failed to save outcome:', error);
+                alert(`Failed to save outcome: ${error.message}\n\nPlease try again or contact support.`);
+            }
         }
 
         // END EXECUTIVE BOARDROOM MEETING COORDINATION
