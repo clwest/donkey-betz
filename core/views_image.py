@@ -6633,11 +6633,16 @@ def execute_tool(request):
                 project = None
                 if parameters.get('project_id'):
                     try:
+                        import uuid
+                        # Validate UUID format
+                        project_uuid = uuid.UUID(parameters.get('project_id'))
                         project = CreativeProject.objects.get(
-                            id=parameters.get('project_id'),
+                            id=project_uuid,
                             user=request.user
                         )
-                    except CreativeProject.DoesNotExist:
+                    except (CreativeProject.DoesNotExist, ValueError, TypeError):
+                        # If UUID is invalid or project doesn't exist, just skip project linkage
+                        logger.warning(f"Invalid or non-existent project_id: {parameters.get('project_id')}")
                         pass
 
                 # Create decision
