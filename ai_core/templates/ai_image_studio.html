@@ -15670,6 +15670,76 @@
                                 message += `**Error:** ${result.result ? result.result.error : 'Unknown error'}\n\n`;
                                 message += `💡 Make sure you have at least 5 images selected for brand training.\n\n`;
                             }
+                        } else if (result.tool === 'start_executive_meeting') {
+                            // Session 100: Display executive meeting results with beautiful purple/black styling
+                            console.log('🏢 Formatting executive meeting result:', result.result);
+
+                            if (result.result && result.result.status === 'complete') {
+                                message += `🏢 **Executive Meeting Complete!**\n\n`;
+                                message += `📋 **Topic:** ${result.result.topic}\n\n`;
+
+                                // Meeting summary
+                                if (result.result.summary) {
+                                    message += `**Summary:**\n${result.result.summary}\n\n`;
+                                }
+
+                                // Agent recommendations
+                                if (result.result.recommendations && result.result.recommendations.length > 0) {
+                                    message += `**🎯 Recommendations:**\n\n`;
+                                    result.result.recommendations.forEach((rec, index) => {
+                                        message += `**${rec.agent_name} Recommendation:**\n`;
+                                        message += `- **Stance:** ${rec.stance}\n`;
+                                        message += `- **Summary:** ${rec.summary}\n`;
+                                        if (rec.confidence) {
+                                            message += `- **Confidence:** ${Math.round(rec.confidence * 100)}%\n`;
+                                        }
+                                        message += `\n`;
+                                    });
+                                }
+
+                                // Decisions
+                                if (result.result.decisions && result.result.decisions.length > 0) {
+                                    message += `**✅ Decisions:**\n`;
+                                    result.result.decisions.forEach((decision, index) => {
+                                        message += `${index + 1}. ${decision}\n`;
+                                    });
+                                    message += `\n`;
+                                }
+
+                                // Action items
+                                if (result.result.action_items && result.result.action_items.length > 0) {
+                                    message += `**📋 Action Items:**\n`;
+                                    result.result.action_items.forEach((item, index) => {
+                                        message += `${index + 1}. ${item.task}`;
+                                        if (item.owner) {
+                                            message += ` (Owner: ${item.owner})`;
+                                        }
+                                        if (item.priority) {
+                                            const priorityEmoji = item.priority === 'high' ? '🔴' : item.priority === 'medium' ? '🟡' : '🟢';
+                                            message += ` ${priorityEmoji}`;
+                                        }
+                                        message += `\n`;
+                                    });
+                                    message += `\n`;
+                                }
+
+                                // Decision ID for tracking
+                                if (result.result.decision_id) {
+                                    message += `🔗 **Decision ID:** ${result.result.decision_id}\n`;
+                                    message += `💡 You can record your final decision and track outcomes in the Leadership tab!\n\n`;
+                                }
+
+                                message += `📊 **Participants:** ${result.result.participants.join(', ')}\n\n`;
+
+                            } else {
+                                message += `❌ **Executive Meeting Failed**\n\n`;
+                                if (result.result && result.result.error) {
+                                    message += `**Error:** ${result.result.error}\n\n`;
+                                } else {
+                                    message += `**Status:** ${result.result ? result.result.status : 'unknown'}\n\n`;
+                                }
+                                message += `💡 Try rephrasing your meeting topic or check that the required agents are available.\n\n`;
+                            }
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
