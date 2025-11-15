@@ -10338,3 +10338,131 @@ def _execute_generate_sound_effect(user, parameters):
     except Exception as e:
         logger.error(f"❌ Error in _execute_generate_sound_effect: {str(e)}")
         raise
+
+
+# ========================================
+# SESSION 100: LEADERSHIP DASHBOARD ENDPOINTS
+# ========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_executive_meetings(request):
+    """
+    List all executive boardroom meetings for the current user.
+
+    Session 100: Part 11 - Leadership Dashboard with Meeting History
+
+    Returns list of meetings with summary info:
+    - Meeting topic
+    - Participants
+    - Date/time
+    - Summary
+    - Decision count
+    - Action item count
+    """
+    try:
+        from intelligence.shared_memory import redis_client
+
+        # Scan for all meeting keys in meeting_coordinator's memory
+        # Keys are stored in db=2 with pattern: shared_memory:agent:meeting_coordinator:boardroom_meeting_*
+        pattern = "shared_memory:agent:meeting_coordinator:boardroom_meeting_*"
+        cursor = 0
+        meetings = []
+
+        while True:
+            cursor, keys = redis_client.scan(cursor, match=pattern, count=100)
+
+            for key in keys:
+                try:
+                    # Get meeting data
+                    data = redis_client.get(key)
+                    if data:
+                        meeting_wrapper = json.loads(data)
+                        # Meeting data is inside the 'content' field
+                        meeting = meeting_wrapper.get('content', meeting_wrapper)
+
+                        # Extract summary info
+                        meetings.append({
+                            'key': key.decode('utf-8') if isinstance(key, bytes) else key,
+                            'topic': meeting.get('topic', 'Untitled Meeting'),
+                            'participants': meeting.get('participants', []),
+                            'met_at': meeting.get('met_at'),
+                            'summary': meeting.get('summary', '')[:200],  # First 200 chars
+                            'decision_count': len(meeting.get('decisions', [])),
+                            'action_item_count': len(meeting.get('action_items', [])),
+                            'project_id': meeting.get('project_id')
+                        })
+                except Exception as e:
+                    logger.error(f"Error parsing meeting {key}: {str(e)}")
+                    continue
+
+            if cursor == 0:
+                break
+
+        # Sort by date (newest first)
+        meetings.sort(key=lambda x: x.get('met_at', ''), reverse=True)
+
+        logger.info(f"✅ Retrieved {len(meetings)} executive meetings for user {request.user.username}")
+
+        return Response({
+            'success': True,
+            'meetings': meetings,
+            'total': len(meetings)
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error listing executive meetings: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': 'Failed to retrieve meetings',
+            'details': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_meeting_details(request, meeting_key):
+    """
+    Get full details of a specific executive meeting.
+
+    Session 100: Part 11 - Returns complete meeting data:
+    - All executive perspectives
+    - Full summary
+    - All decisions
+    - All action items with ownership
+    - Participant info
+    """
+    try:
+        from intelligence.shared_memory import redis_client
+
+        # Get meeting data from Redis
+        data = redis_client.get(meeting_key)
+
+        if not data:
+            return Response({
+                'success': False,
+                'error': 'Meeting not found'
+            }, status=404)
+
+        meeting_wrapper = json.loads(data)
+        # Meeting data is inside the 'content' field
+        meeting = meeting_wrapper.get('content', meeting_wrapper)
+
+        logger.info(f"✅ Retrieved meeting details: {meeting.get('topic')}")
+
+        return Response({
+            'success': True,
+            'meeting': meeting
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error getting meeting details: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': 'Failed to retrieve meeting details',
+            'details': str(e)
+        }, status=500)
