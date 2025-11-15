@@ -5069,6 +5069,44 @@
                         </div>
                     </div>
 
+                    <!-- Session 100: Part 11 - Executive Meeting History -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card" style="background: #1a1a1a; border: 1px solid #333; color: #fff;">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 style="color: #9333ea; margin: 0;">💼 Executive Boardroom Meetings</h5>
+                                        <button class="btn btn-sm" style="background: linear-gradient(135deg, #9333ea 0%, #6b21a8 100%); color: white; border: none;" onclick="loadExecutiveMeetings()">
+                                            🔄 Refresh
+                                        </button>
+                                    </div>
+
+                                    <!-- Loading State -->
+                                    <div id="meetings-loading" class="text-center py-3" style="display: none;">
+                                        <div class="spinner-border spinner-border-sm" style="color: #9333ea;" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span class="ms-2 text-muted">Loading meetings...</span>
+                                    </div>
+
+                                    <!-- Meetings List -->
+                                    <div id="executive-meetings-list">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+
+                                    <!-- Empty State -->
+                                    <div id="meetings-empty" style="display: none; text-align: center; padding: 40px 20px;">
+                                        <i class="bi bi-people" style="font-size: 3rem; color: #9333ea; opacity: 0.5;"></i>
+                                        <p class="mt-3 text-muted">No executive meetings yet. Start a meeting with your AI executives!</p>
+                                        <p class="text-muted" style="font-size: 0.9rem;">
+                                            💡 Try: "Discuss pricing strategy with CFO, Marketing, and Strategy"
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Empty State -->
@@ -20367,8 +20405,9 @@
 
         // Session 100: Leadership Dashboard
         document.getElementById('leadership-tab')?.addEventListener('shown.bs.tab', function() {
-            console.log('🎯 Leadership tab activated - loading stats...');
+            console.log('🎯 Leadership tab activated - loading stats and meetings...');
             loadLeadershipStats();
+            loadExecutiveMeetings(); // Session 100: Part 11
         });
 
         // Session 100: Load Leadership Stats
@@ -20491,6 +20530,264 @@
 5. Log the outcome when you see results
 
 Your analytics will appear here automatically!`);
+        }
+
+        // Session 100: Part 11 - Load Executive Meetings
+        async function loadExecutiveMeetings() {
+            const loadingEl = document.getElementById('meetings-loading');
+            const listEl = document.getElementById('executive-meetings-list');
+            const emptyEl = document.getElementById('meetings-empty');
+
+            try {
+                loadingEl.style.display = 'block';
+                listEl.innerHTML = '';
+                emptyEl.style.display = 'none';
+
+                const response = await fetch('/api/leadership/meetings/', {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load meetings');
+
+                const data = await response.json();
+                const meetings = data.meetings || [];
+
+                loadingEl.style.display = 'none';
+
+                if (meetings.length === 0) {
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+
+                // Render each meeting
+                let html = '';
+                meetings.forEach((meeting, index) => {
+                    html += createMeetingCard(meeting, index);
+                });
+
+                listEl.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading executive meetings:', error);
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading meetings:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Session 100: Part 11 - Create Meeting Card
+        function createMeetingCard(meeting, index) {
+            const meetingDate = meeting.met_at ? new Date(meeting.met_at).toLocaleString() : 'Unknown date';
+            const participants = meeting.participants || [];
+            const participantNames = participants.map(p => p.replace('Agent', '')).join(', ');
+
+            return `
+                <div class="meeting-card mb-3" style="
+                    background: linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(107, 33, 168, 0.05) 100%);
+                    border: 1px solid rgba(147, 51, 234, 0.3);
+                    border-radius: 8px;
+                    padding: 16px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.borderColor='#9333ea'" onmouseout="this.style.borderColor='rgba(147, 51, 234, 0.3)'" onclick="toggleMeetingDetails('${meeting.key}', ${index})">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1;">
+                            <h6 style="color: #9333ea; font-weight: 600; margin-bottom: 8px;">
+                                💼 ${meeting.topic}
+                            </h6>
+                            <div style="font-size: 12px; color: #999; margin-bottom: 8px;">
+                                📅 ${meetingDate}
+                            </div>
+                            <div style="font-size: 13px; color: #ccc; margin-bottom: 8px;">
+                                👥 <strong>Participants:</strong> ${participantNames}
+                            </div>
+                            <div style="font-size: 12px; color: #aaa; margin-bottom: 8px;">
+                                ${meeting.summary}
+                            </div>
+                            <div style="display: flex; gap: 12px; font-size: 11px;">
+                                <span style="background: rgba(147, 51, 234, 0.2); color: #c4b5fd; padding: 4px 8px; border-radius: 4px;">
+                                    📋 ${meeting.decision_count} decisions
+                                </span>
+                                <span style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; padding: 4px 8px; border-radius: 4px;">
+                                    ✅ ${meeting.action_item_count} action items
+                                </span>
+                            </div>
+                        </div>
+                        <div style="margin-left: 16px;">
+                            <i id="meeting-chevron-${index}" class="bi bi-chevron-down" style="color: #9333ea; font-size: 20px; transition: transform 0.3s;"></i>
+                        </div>
+                    </div>
+
+                    <!-- Expandable Details -->
+                    <div id="meeting-details-${index}" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(147, 51, 234, 0.2);">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm" style="color: #9333ea;" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2 text-muted" style="font-size: 12px;">Loading meeting details...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Session 100: Part 11 - Toggle Meeting Details
+        async function toggleMeetingDetails(meetingKey, index) {
+            const detailsEl = document.getElementById(`meeting-details-${index}`);
+            const chevronEl = document.getElementById(`meeting-chevron-${index}`);
+
+            if (detailsEl.style.display === 'block') {
+                // Collapse
+                detailsEl.style.display = 'none';
+                chevronEl.style.transform = 'rotate(0deg)';
+                return;
+            }
+
+            // Expand
+            detailsEl.style.display = 'block';
+            chevronEl.style.transform = 'rotate(180deg)';
+
+            // Check if already loaded
+            if (detailsEl.dataset.loaded === 'true') {
+                return;
+            }
+
+            // Load meeting details
+            try {
+                // URL encode the meeting key
+                const encodedKey = encodeURIComponent(meetingKey);
+                const response = await fetch(`/api/leadership/meetings/${encodedKey}/`, {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load meeting details');
+
+                const data = await response.json();
+                const meeting = data.meeting;
+
+                // Render full meeting details
+                let html = '';
+
+                // Executive Perspectives
+                if (meeting.agent_responses && Object.keys(meeting.agent_responses).length > 0) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += '<h6 style="color: #9333ea; font-size: 14px; margin-bottom: 12px;">💼 Executive Perspectives:</h6>';
+
+                    Object.entries(meeting.agent_responses).forEach(([agentName, perspective]) => {
+                        if (perspective && perspective.trim().length > 0) {
+                            const displayName = agentName.replace('Agent', '');
+                            html += `
+                                <div style="
+                                    background: rgba(147, 51, 234, 0.05);
+                                    border-left: 3px solid #9333ea;
+                                    padding: 12px;
+                                    margin-bottom: 12px;
+                                    border-radius: 4px;
+                                ">
+                                    <div style="color: #9333ea; font-weight: 600; font-size: 13px; margin-bottom: 6px;">
+                                        ${displayName}:
+                                    </div>
+                                    <div style="color: #ccc; font-size: 13px; line-height: 1.6;">
+                                        ${perspective}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    html += '</div>';
+                }
+
+                // Decisions
+                if (meeting.decisions && meeting.decisions.length > 0) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += '<h6 style="color: #10b981; font-size: 14px; margin-bottom: 12px;">✅ Decisions Made:</h6>';
+                    html += '<ul style="margin: 0; padding-left: 20px; color: #ccc; font-size: 13px;">';
+                    meeting.decisions.forEach(decision => {
+                        html += `<li style="margin-bottom: 6px;">${decision}</li>`;
+                    });
+                    html += '</ul></div>';
+                }
+
+                // Action Items
+                if (meeting.action_items && meeting.action_items.length > 0) {
+                    html += '<div style="margin-bottom: 20px;">';
+                    html += '<h6 style="color: #3b82f6; font-size: 14px; margin-bottom: 12px;">📌 Action Items:</h6>';
+
+                    meeting.action_items.forEach(item => {
+                        const priorityColors = {
+                            'high': '#ef4444',
+                            'medium': '#f59e0b',
+                            'low': '#10b981'
+                        };
+                        const priorityColor = priorityColors[item.priority] || '#6b7280';
+                        const ownerDisplay = item.owner ? item.owner.replace('Agent', '') : 'Unassigned';
+
+                        html += `
+                            <div style="
+                                background: rgba(59, 130, 246, 0.05);
+                                border-left: 3px solid ${priorityColor};
+                                padding: 10px 12px;
+                                margin-bottom: 8px;
+                                border-radius: 4px;
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            ">
+                                <div style="flex: 1;">
+                                    <div style="color: #ccc; font-size: 13px;">
+                                        ${item.task}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center; margin-left: 12px;">
+                                    <span style="
+                                        background: rgba(147, 51, 234, 0.2);
+                                        color: #c4b5fd;
+                                        padding: 2px 8px;
+                                        border-radius: 4px;
+                                        font-size: 11px;
+                                        white-space: nowrap;
+                                    ">
+                                        👤 ${ownerDisplay}
+                                    </span>
+                                    <span style="
+                                        background: ${priorityColor}22;
+                                        color: ${priorityColor};
+                                        padding: 2px 8px;
+                                        border-radius: 4px;
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        text-transform: uppercase;
+                                        white-space: nowrap;
+                                    ">
+                                        ${item.priority}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                }
+
+                detailsEl.innerHTML = html;
+                detailsEl.dataset.loaded = 'true';
+
+            } catch (error) {
+                console.error('Error loading meeting details:', error);
+                detailsEl.innerHTML = `
+                    <div class="alert alert-danger" style="font-size: 13px;">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
         }
 
         // Export portfolio as HTML (Session 62: Phase C.2.2)

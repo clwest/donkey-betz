@@ -285,7 +285,9 @@ from core.views_image import (
     list_projects, create_project, get_project, update_project, delete_project,
     add_workflow_to_project, remove_workflow_from_project,
     # Session 61: Phase C.2.1 - Portfolio View API
-    get_portfolio
+    get_portfolio,
+    # Session 100: Part 11 - Leadership Dashboard API
+    list_executive_meetings, get_meeting_details
 )
 # Session 74: Character Training API
 from core.views_character_training import (
@@ -1178,7 +1180,11 @@ urlpatterns = [
     path('api/partnership/stats/', views_partnership.partnership_stats_api, name='partnership-stats-api'),
     path('api/partnership/health/', views_partnership.partnership_health_check, name='partnership-health'),
     path('api/v1/', include('backend.auto_endpoints.urls')),
-    
+
+    # Session 100: Part 11 - Leadership Dashboard Endpoints
+    path('api/leadership/meetings/', list_executive_meetings, name='list-executive-meetings'),
+    path('api/leadership/meetings/<str:meeting_key>/', get_meeting_details, name='get-meeting-details'),
+
     # TEST ROUTE DONE HERE line 973
     # REST framework browsable API (development only)
     path('api-auth/', include('rest_framework.urls')),
